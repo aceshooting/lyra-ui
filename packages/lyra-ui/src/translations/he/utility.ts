@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: 'מרענן עכשיו.',
   randomContentPause: 'השהה סיבוב',
   randomContentResume: 'המשך סיבוב',
+  randomContentNext: 'הצג אחר',
   exportButtonLabel: 'ייצוא',
   knownDateDay: 'יום',
   knownDateMonth: 'חודש',

@@ -274,6 +274,13 @@ An async `source` row can carry the same two fields (`start`, `end`) alongside i
   on-brand color rather than the quiet-text tokens). An unsupported value, including a raw
   attribute/property write outside this type, clamps to the `'outlined'` default
 - `placement: 'top' | 'bottom' = 'bottom'` (reflected; flip/shift can still keep the listbox in view)
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-popover>`:
+  always shows the open listbox in the browser top layer, placed `fixed` whatever the positioning
+  strategy resolves to, so it paints above a sibling surface stacked higher than a `z-index`ed fixed
+  or sticky header, toolbar or rail it sits in (see **Anchored overlays and the top layer** in
+  `llms/overlays.md`). Anchoring, RTL placement, focus, Escape and the transitions are unchanged and
+  no DOM node moves; it leaves the top layer once it settles closed. Unset, promotion happens only
+  when a trapping ancestor forces it.
 - `positioningStrategy: PlaceStrategy = 'fixed'` (attribute `positioning-strategy`, reflected) —
   the CSS positioning scheme the listbox is laid out with, spelled the same as on `lr-select`,
   `lr-popover`, `lr-dropdown`, `lr-tooltip` and `lr-color-picker`. `fixed` is this control's
@@ -936,6 +943,13 @@ exactly like the multi-option case, until the trigger is actually activated.
 - `hoist: boolean = false` (reflected) — switches Floating UI from its mapped absolute strategy to
   fixed positioning, escaping clipping containers. It also switches live while open; an effective
   direction change refreshes logical left/right placement by the same path
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-popover>`:
+  always shows the open listbox in the browser top layer, placed `fixed` whatever the positioning
+  strategy resolves to, so it paints above a sibling surface stacked higher than a `z-index`ed fixed
+  or sticky header, toolbar or rail it sits in (see **Anchored overlays and the top layer** in
+  `llms/overlays.md`). Anchoring, RTL placement, focus, Escape and the transitions are unchanged and
+  no DOM node moves; it leaves the top layer once it settles closed. Unset, promotion happens only
+  when a trapping ancestor forces it.
 - `positioningStrategy: PlaceStrategy = 'absolute'` (attribute `positioning-strategy`, reflected) —
   see `<lr-popover>` (`llms/components/lr-popover.md`). `hoist: boolean = false` is its retained
   exact alias; writing either spelling updates the other. This property always reports the
@@ -1989,12 +2003,13 @@ With no label text the part is hidden and no glyph is painted.
   so a halo is configured once instead of per component; additive, so the `:focus-visible` outline
   is untouched.
 
-`<lr-textarea>` now fills a definite-height host: place it inside a container with a resolved
-block size (a flex/grid item stretched to a track, or an ancestor with an explicit height) and
-the field's `form-control` → `textarea-wrapper` → the native `<textarea>` chain fills it instead
-of staying at its `rows`-derived intrinsic height. This has no effect and needs no opt-in for the
-ordinary case (an unsized host) — `resize="auto"`'s own growth and its
-`--lr-textarea-max-block-size` cap are unaffected either way.
+`<lr-textarea>` fills an explicitly sized host: give the host a block size (`block-size: 100%`
+inside a container with a resolved block size, a pixel size, or a flex/grid allocation) and the
+field's `form-control` → `textarea-wrapper` → the native `<textarea>` chain fills it instead of
+staying at its `rows`-derived intrinsic height. An unsized host stays content-sized, including
+inside a grid/flex item stretched to a taller row. With `resize="auto"`, content grows up to the
+`--lr-textarea-max-block-size` cap or a smaller explicit host allocation. Overflow stays scrollable,
+including when that allocation shrinks after the content renders.
 
 **Additional API surface:**
 
@@ -6601,6 +6616,13 @@ readonly LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; cou
   the catalog while the listbox is open keeps keyboard navigation valid: an active row beyond the
   new end is rehomed to the last remaining row. Arrow/Home/End/typeahead changes scroll the active
   owned option into nearest view after render; replacement and disconnect cancel stale scrolls.
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-popover>`:
+  always shows the open listbox in the browser top layer, placed `fixed` whatever the positioning
+  strategy resolves to, so it paints above a sibling surface stacked higher than a `z-index`ed fixed
+  or sticky header, toolbar or rail it sits in (see **Anchored overlays and the top layer** in
+  `llms/overlays.md`). Anchoring, RTL placement, focus, Escape and the transitions are unchanged and
+  no DOM node moves; it leaves the top layer once it settles closed. Unset, promotion happens only
+  when a trapping ancestor forces it.
 - `withoutFlags: boolean = false` (attribute `without-flags`) — omits each row's leading
   `<lr-flag language={tag} variant="compact">` (or `<lr-flag country={country} variant="compact">`
   when the entry sets `country`) and the trigger flag entirely (not just visually).

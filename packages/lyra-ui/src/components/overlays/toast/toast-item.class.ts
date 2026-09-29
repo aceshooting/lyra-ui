@@ -2,6 +2,7 @@ import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { composedParentElement } from '../../../internal/a11y.js';
+import { CustomElementUpgradeObserver } from '../../../internal/custom-element-upgrade-observer.js';
 import { composedAccessibilityTextResult } from '../../../internal/accessibility-visibility.js';
 import {
   acquireAnnouncementSink,
@@ -236,6 +237,11 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
   private pendingFocusRepair?: ComposedFocusRepairSnapshot;
   private focusReturnTarget?: HTMLElement;
   private messageObserver?: MutationObserver;
+  private readonly messageUpgrades = new CustomElementUpgradeObserver(() => {
+    if (!this.isConnected) return;
+    this.bindMessageObserverTargets();
+    this.recomputeMessageText();
+  });
   private politeSink?: AnnouncementSink;
   private assertiveSink?: AnnouncementSink;
   private lastAnnouncedMessage = '';
@@ -617,6 +623,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     this.removeEventListener('slotchange', this.onMessageSlotChange);
     this.messageObserver?.disconnect();
     this.messageObserver = undefined;
+    this.messageUpgrades.disconnect();
     this.politeSink?.release();
     this.politeSink = undefined;
     this.assertiveSink?.release();
@@ -897,6 +904,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
         const slotName = element.getAttribute('slot');
         if (slotName !== null && slotName !== '') return true;
         if (isActionableElement(element)) return true;
+        this.messageUpgrades.observeElement(element);
         return (
           element.hasAttribute('tabindex') &&
           element.getAttribute('tabindex') !== '-1'

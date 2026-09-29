@@ -367,9 +367,33 @@ describe('tasks slot default content', () => {
       'running',
       'success',
       'error',
-      'error',
+      'incomplete',
       'running',
     ]);
+  });
+
+  it('renders a cancelled step as incomplete and announces the task transition politely', async () => {
+    const el = await fixture<LyraAgentRun>(html`<lr-agent-run .run=${makeRun({ steps })}></lr-agent-run>`);
+    const taskList = el.shadowRoot!.querySelector('lr-task-list') as LyraTaskList;
+    await taskList.updateComplete;
+    el.run = makeRun({
+      status: { kind: 'cancelled' },
+      endedAt: Date.now(),
+      steps: steps.map((step) => step.status.kind === 'running'
+        ? { ...step, status: { kind: 'cancelled' } }
+        : step),
+    });
+    await el.updateComplete;
+    await taskList.updateComplete;
+    const row = taskList.shadowRoot!.querySelector<HTMLElement>('[data-id="step-2"]')!;
+    expect(row.dataset['status']).to.equal('incomplete');
+    expect(row.querySelector('.sr-only')!.textContent).to.equal('Incomplete');
+    expect(taskList.shadowRoot!.querySelector('[part="summary"]')!.textContent).to.contain('1 of 3');
+    const region = taskList.shadowRoot!.querySelector('lr-live-region')!;
+    expect(region.mode).to.equal('polite');
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    expect(region.shadowRoot!.querySelector('[part="region"]')!.textContent).to.equal('Read repository: Incomplete');
+    expect(el.shadowRoot!.querySelector('[part="status-badge"]')!.textContent!.trim()).to.equal('Cancelled');
   });
 
   it('does not route non-finite timestamps into elapsed-time rendering', async () => {

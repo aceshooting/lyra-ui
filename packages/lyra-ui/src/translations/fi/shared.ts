@@ -58,6 +58,7 @@ const strings: LyraLocaleStrings = {
   statusSuccess: 'Onnistui',
   statusError: 'Virhe',
   statusDenied: 'Estetty',
+  statusIncomplete: 'Keskeneräinen',
   restore: 'Palauta',
   navigation: 'Navigointi',
   attachmentUntitledFile: 'Nimetön tiedosto',

@@ -32,6 +32,15 @@ describe('lr-agent-trace', () => {
     expect(el.hiddenKinds).to.deep.equal([]);
   });
 
+  it('preserves incomplete spans through the composed trace tree', async () => {
+    const spans: LyraSpan[] = [{ id: 'stopped', name: 'Search', kind: 'tool', startMs: 0, endMs: 40, status: 'incomplete' }];
+    const el = await fixture<LyraAgentTrace>(html`<lr-agent-trace .spans=${spans}></lr-agent-trace>`);
+    const tree = el.shadowRoot!.querySelector<LyraTraceTree>('lr-trace-tree')!;
+    await tree.updateComplete;
+    expect(tree.spans[0]!.status).to.equal('incomplete');
+    expect(tree.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Incomplete');
+  });
+
   it('retains and reuses the one-read shared span projection without re-reading admitted source rows', async () => {
     const source: LyraSpan = {
       id: 'safe',

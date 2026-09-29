@@ -6015,6 +6015,16 @@
             "hasDefault": false
           },
           {
+            "name": "top-layer",
+            "property": "topLayer",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "trigger-collapses",
             "property": "triggerCollapses",
             "type": "boolean",
@@ -6227,6 +6237,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "topLayer",
+            "attribute": "top-layer",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "trigger",
@@ -6996,6 +7016,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "top-layer",
+            "property": "topLayer",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "properties": [
@@ -7061,6 +7091,16 @@
           {
             "name": "tooltip",
             "attribute": "tooltip",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "topLayer",
+            "attribute": "top-layer",
             "type": "boolean",
             "readonly": false,
             "reflects": true,
@@ -29316,6 +29356,16 @@
             "default": "undefined"
           },
           {
+            "name": "top-layer",
+            "property": "topLayer",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "value",
             "property": "value",
             "type": "string | string[]",
@@ -29865,6 +29915,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "undefined"
+          },
+          {
+            "name": "topLayer",
+            "attribute": "top-layer",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "validationMessage",
@@ -71562,7 +71622,55 @@
           }
         ],
         "cssStates": [],
-        "methods": [],
+        "methods": [
+          {
+            "name": "fit",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "options",
+                    "type": "{ padding?: number }",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "focusNode",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "options",
+                    "type": "{ zoom?: number }",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "Promise<boolean>"
+              }
+            ]
+          },
+          {
+            "name": "resetView",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          }
+        ],
         "staticProperties": [],
         "staticMethods": [],
         "moduleExports": [],
@@ -75356,6 +75464,16 @@
             "default": "m"
           },
           {
+            "name": "top-layer",
+            "property": "topLayer",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "trigger-display",
             "property": "triggerDisplay",
             "type": "LyraLocaleTriggerDisplay",
@@ -75545,6 +75663,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "m"
+          },
+          {
+            "name": "topLayer",
+            "attribute": "top-layer",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "triggerDisplay",
@@ -83102,6 +83230,11 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-surface-container-high)"
+          },
+          {
+            "name": "--lr-positioning-strategy",
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "cssStates": [
@@ -86224,6 +86357,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 300
+          },
+          {
+            "name": "top-layer",
+            "property": "topLayer",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "properties": [
@@ -86333,6 +86476,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 300
+          },
+          {
+            "name": "topLayer",
+            "attribute": "top-layer",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "slots": [
@@ -97818,6 +97971,7 @@
       },
       "dependencies": {
         "direct": [
+          "lr-icon",
           "lr-live-region"
         ],
         "transitive": [],
@@ -97858,6 +98012,16 @@
           {
             "name": "paused",
             "property": "paused",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "with-refresh",
+            "property": "withRefresh",
             "type": "boolean",
             "reflects": true,
             "inferred": false,
@@ -97905,6 +98069,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "withRefresh",
+            "attribute": "with-refresh",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "slots": [],
@@ -97917,7 +98091,7 @@
           },
           {
             "name": "lr-poll-due",
-            "type": "CustomEvent<null>",
+            "type": "CustomEvent<{ readonly manual: true } | null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -97937,6 +98111,10 @@
           },
           {
             "name": "pause-button",
+            "deprecated": null
+          },
+          {
+            "name": "refresh-button",
             "deprecated": null
           }
         ],
@@ -107387,7 +107565,9 @@
         "ledger": "scripts/fixtures/component-qualification.json"
       },
       "dependencies": {
-        "direct": [],
+        "direct": [
+          "lr-icon"
+        ],
         "transitive": [],
         "ledger": "scripts/fixtures/component-integration.json"
       },
@@ -107470,6 +107650,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "with-next",
+            "property": "withNext",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "properties": [
@@ -107542,6 +107732,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "withNext",
+            "attribute": "with-next",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "slots": [
@@ -107567,6 +107767,10 @@
         "parts": [
           {
             "name": "base",
+            "deprecated": null
+          },
+          {
+            "name": "next-button",
             "deprecated": null
           },
           {
@@ -107650,6 +107854,15 @@
               {
                 "parameters": [],
                 "returnType": "readonly Element[]"
+              }
+            ]
+          },
+          {
+            "name": "restart",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
               }
             ]
           }
@@ -114539,6 +114752,16 @@
             "default": ""
           },
           {
+            "name": "top-layer",
+            "property": "topLayer",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "value",
             "property": "value",
             "type": "string | string[]",
@@ -114925,6 +115148,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "topLayer",
+            "attribute": "top-layer",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "validationMessage",
@@ -128642,6 +128875,12 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-task-list-incomplete-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
+          },
+          {
             "name": "--lr-task-list-pending-color",
             "deprecated": null,
             "hasDefault": true,
@@ -140782,6 +141021,16 @@
             "default": 0
           },
           {
+            "name": "top-layer",
+            "property": "topLayer",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "trigger",
             "property": "trigger",
             "type": "string",
@@ -140972,6 +141221,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 0
+          },
+          {
+            "name": "topLayer",
+            "attribute": "top-layer",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "trigger",
@@ -146247,6 +146506,11 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-surface-container-high)"
+          },
+          {
+            "name": "--lr-positioning-strategy",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-voice-picker-gap",

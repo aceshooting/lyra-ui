@@ -2173,10 +2173,10 @@ matching its previous unconditional `scrollbar-width: auto`) — set either on `
 ancestor for one declaration to retheme every internal scroll container in the library, including
 `lr-table`, `lr-virtual-list`, `lr-scroller`, `lr-carousel`, and `lr-code-editor`.
 
-`base` is a flex column and `body` grows to fill whatever block space a definite-height host
-gives it, still capped by `--lr-code-block-max-height` and still independently scrollable. An
-unsized host is unaffected — this is a fill capability, not a change to the default
-content-sized rendering.
+`base` is a flex column and `body` grows to fill whatever block space an explicitly sized host
+(`block-size: 100%` in a bounded parent, a pixel size, or a flex/grid allocation) gives it, still
+capped by `--lr-code-block-max-height` and still independently scrollable. An unsized host stays
+content-sized, including inside a grid/flex item stretched to a taller row.
 
 `--lr-code-block-tab-size` carries the same default as `--lr-code-editor-tab-size`, so the editable
 and read-only code surfaces agree on what a literal tab looks like. It is declared as a `var()`
@@ -2359,7 +2359,7 @@ container. The last five are inline `var()` fallbacks at the point of use rather
 declarations, so a page-, container-, or theme-level value reaches them; see `<lr-code-block>` above
 for the full rationale, including why `<lr-markdown>`/`<lr-markdown-core>` must declare the tab-size
 fallback separately. `base` is a flex column and `body` grows to fill whatever block space a
-definite-height host gives it too, identically to `<lr-code-block>` above.
+explicitly sized host gives it too, identically to `<lr-code-block>` above.
 
 **Optional peer deps:** `shiki` (specifically its `shiki/core`, `shiki/engine/oniguruma`, the binary
 `shiki/onig.wasm` asset (the default; select `shiki/engine/javascript` instead via

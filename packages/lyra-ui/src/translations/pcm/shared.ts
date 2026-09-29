@@ -58,6 +58,7 @@ const strings: LyraLocaleStrings = {
   statusSuccess: 'E don work',
   statusError: 'E get wahala',
   statusDenied: 'Dem no allow am',
+  statusIncomplete: 'E no complete',
   restore: 'Restore am',
   navigation: 'How to move around',
   attachmentUntitledFile: 'File wey no get title',

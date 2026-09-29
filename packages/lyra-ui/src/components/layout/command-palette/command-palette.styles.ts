@@ -239,11 +239,14 @@ export const styles = css`
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  /* Label and description absorb a row's deficit before the shortcut does: flex shares shrink in
+     proportion to shrink factor x basis, so a large factor keeps a short shortcut whole while
+     the shortcut still shrinks once both have nothing left to give. */
   [part="label"] {
-    flex: 0 1 auto;
+    flex: 0 1000 auto;
   }
   [part="description"] {
-    flex: 1 1 auto;
+    flex: 1 1000 auto;
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-sm);
   }

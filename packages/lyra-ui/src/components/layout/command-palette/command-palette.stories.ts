@@ -108,3 +108,19 @@ export const CustomVirtualPitch: Story = {
     ]}
   ></lr-command-palette>`,
 };
+
+export const AboveNativeModal: Story = {
+  render: () => html`
+    <div>
+      <button @click=${(event: Event) => (event.currentTarget as HTMLElement).parentElement!.querySelector('dialog')!.showModal()}>Open native dialog</button>
+      <dialog>
+        <button @click=${(event: Event) => {
+          const overlay = (event.currentTarget as HTMLElement).closest('dialog')!.parentElement!.querySelector('lr-command-palette') as LyraCommandPalette;
+          overlay.openPalette();
+        }}>Open command palette</button>
+        <button @click=${(event: Event) => (event.currentTarget as HTMLElement).closest('dialog')!.close()}>Close native dialog</button>
+      </dialog>
+      <lr-command-palette .commands=${[{ commandId: 'new', label: 'New document' }]}></lr-command-palette>
+    </div>
+  `,
+};

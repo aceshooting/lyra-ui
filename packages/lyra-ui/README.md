@@ -50,6 +50,8 @@ and no runtime dependency on either project.
 | Toggle controls | [Toggle](./llms/components/lr-toggle.md) and [toggle group](./llms/components/lr-toggle-group.md) provide pressed-button state, single or multiple selection, keyboard navigation, and joined styling. |
 | Markdown and streaming | [Markdown](./llms/components/lr-markdown.md) supports optional code-block headers with exact-source copying, progressive streaming, GFM table scrollers and column alignment, and themed read-only task checkboxes. |
 | Tool results | [Tool-call blocks](./llms/components/lr-tool-call-block.md) provide expandable summaries and result presentation with controlled disclosure state. |
+| Popup placement | [Tooltip](./llms/components/lr-tooltip.md), [select](./llms/components/lr-select.md), [combobox](./llms/components/lr-combobox.md), [locale-picker](./llms/components/lr-locale-picker.md), navigation-menu and app-rail labels support opt-in `top-layer` placement above sibling stacking contexts. |
+| Progress and refresh | Task lists, traces and research progress distinguish incomplete work from failure. [Poll-status](./llms/components/lr-poll-status.md) offers `with-refresh`; [random-content](./llms/components/lr-random-content.md) offers `with-next` and `restart()`. [Knowledge-graph-explorer](./llms/components/lr-knowledge-graph-explorer.md) exposes `fit()`, `resetView()` and `focusNode()`. |
 | Languages | 66 optional complete message catalogs plus built-in English. The [`locales.json` manifest](./locales.json) lists canonical tags, authored source spellings, import paths and structural coverage. Import a [whole catalog](./llms/shared.md#ready-made-catalogs-aceshootinglyra-uitranslationslocalejs) (`@aceshooting/lyra-ui/translations/<locale>.js`) or only the [family slices](./llms/shared.md#smaller-catalogs-aceshootinglyra-uitranslationslocalefamilyjs) the application renders. |
 | Typography | [Typography utilities](./llms/shared.md#typography) apply a shared scale and reading styles to native content alongside custom elements. |
 
@@ -66,6 +68,22 @@ setLyraStyle({ accent: 'ruby' }); // keeps the other choices
 ```
 
 See the [changelog](CHANGELOG.md) for version-by-version changes and historical upgrade notes.
+
+## Upgrading to v23
+
+V23 removes eligible compatibility APIs deprecated before v22. Use the
+[migration guide](./llms/migration.md) and the `lyra-v21` migration profile to update older usage;
+review semantic changes that the codemod cannot safely rewrite. APIs first deprecated in v22
+remain available throughout v23, and upstream-mirrored names remain supported.
+
+Unsized textarea, code-block, code-block-core and code-editor components now follow their content.
+Where a layout needs them to fill a definite-height container, set `block-size: 100%` on the
+component itself. Details panels also use natural sizing in ordinary block containers. Auto-growing
+textareas keep content scrollable when their allocated height shrinks.
+
+Cancelled agent-run steps now appear as neutral incomplete steps in the default task list, with
+a polite incomplete announcement instead of a failed-step announcement. The run itself keeps its
+cancelled status and retry behavior.
 
 ## Install
 

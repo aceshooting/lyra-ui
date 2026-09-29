@@ -58,6 +58,7 @@ const strings: LyraLocaleStrings = {
   statusSuccess: 'Elongi',
   statusError: 'Libunga',
   statusDenied: 'Eboyi',
+  statusIncomplete: 'Esili te',
   restore: 'Zongisa',
   navigation: 'Nzela ya kotambola',
   attachmentUntitledFile: 'Fichier ezangi titre',

@@ -41,6 +41,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: 'Iyavuselela manje.',
   randomContentPause: 'Misa ukuzungezisa',
   randomContentResume: 'Qhubeka nokuzungezisa',
+  randomContentNext: 'Bonisa okunye',
   exportButtonLabel: 'Khipha',
   knownDateDay: 'Usuku',
   knownDateMonth: 'Inyanga',

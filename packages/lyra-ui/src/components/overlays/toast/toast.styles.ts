@@ -16,6 +16,20 @@ export const styles = css`
     --_lr-toast-width: var(--width, var(--lr-size-28rem));
     pointer-events: none;
   }
+  :host([popover]) {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    inline-size: auto;
+    block-size: auto;
+    overflow: visible;
+  }
+  :host::backdrop {
+    background: transparent;
+    pointer-events: none;
+  }
   [part="stack"] {
     display: flex;
     flex-direction: column;

@@ -41,6 +41,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: 'Ana sabuntawa yanzu.',
   randomContentPause: 'Dakatar da juyawa',
   randomContentResume: 'Ci gaba da juyawa',
+  randomContentNext: 'Nuna wani',
   exportButtonLabel: 'Fitarwa',
   knownDateDay: 'Rana',
   knownDateMonth: 'Wata',

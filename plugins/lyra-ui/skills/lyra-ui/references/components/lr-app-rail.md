@@ -17,6 +17,8 @@
 
 ## `lr-app-rail`
 
+The mobile navigation remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
+
 A responsive navigation rail, and the library's application sidebar, that adapts across three presentations as the _viewport_ narrows (not
 this element's own inline size): `'full'` (nav items show icon + label, inline), `'icon-only'` (a
 narrower inline rail, icons only), and `'mobile'` (hidden behind a toggle button; opening it shows a
@@ -96,6 +98,10 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   to a genuinely too-narrow-for-any-inline-rail viewport. Only consulted while `forceMode` is
   `'auto'` or unset (see above); an explicit `forceMode` value takes full priority.
   Unset (the default, `null`) reproduces the original breakpoint-only behavior exactly.
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — forwards `top-layer` to every
+  descendant `<lr-app-rail-item>` (its icon-only label flyout; see **Anchored overlays and the top
+  layer** in `llms/overlays.md`) so one attribute covers the rail. An item's own `top-layer` is
+  never overwritten; either one promotes.
 - `collapsible: boolean = false` (reflected) — opts in a desktop collapse control rendered inside
   `[part="header"]`. It flips the rail between its `'full'` and `'icon-only'` presentations by
   writing `preferredMode`, so the `mobile-breakpoint` keeps being tracked automatically and a
@@ -538,6 +544,14 @@ out of default-width compact rails, or use a rail that never collapses.
   has no built-in routing, so the consumer sets this per item (e.g. by comparing `href` against the
   current location). `active`, a deprecated alias in both property and attribute form, was removed
   in 16.0.0 (available since 11.2.0; eligible for removal from 13.0.0) — use `current`.
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-popover>`:
+  always shows the open icon-only label flyout in the browser top layer, placed `fixed` whatever the
+  positioning strategy resolves to, so it paints above a sibling surface stacked higher than a
+  `z-index`ed fixed or sticky header, toolbar or rail it sits in (see **Anchored overlays and the
+  top layer** in `llms/overlays.md`). Anchoring, RTL placement, focus, Escape and the transitions
+  are unchanged and no DOM node moves; it leaves the top layer once it settles closed. Unset,
+  promotion happens only when a trapping ancestor forces it. `<lr-app-rail top-layer>` applies it to
+  every descendant item without overwriting an item's own value.
 - `tooltip: boolean = false` (reflected) — opt-in hover or keyboard-focus flyout (the focused control matches `:focus-visible` and no pointer press preceded it)
   (`[part='tooltip']`) showing
   this item's label text while the rail's `icon-only` mode (set externally by the parent

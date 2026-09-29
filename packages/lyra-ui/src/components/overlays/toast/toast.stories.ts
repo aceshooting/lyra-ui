@@ -10,7 +10,7 @@ const meta: Meta = {
   parameters: {
     docs: {
       description: {
-        component: 'Click a button to fire a toast via the `toast()` helper — the ergonomic entry point that lazily mounts one `<lr-toast>` region per owner document and placement. The shared `LyraToastOptions` supports safe icon payloads/factories, actions, and explicit owner-document routing. All six logical placements stay inside the usable safe-area rectangle.',
+        component: 'Click a button to fire a toast via the `toast()` helper — the ergonomic entry point that lazily mounts one `<lr-toast>` region per owner document, active native-modal context and placement. The shared `LyraToastOptions` supports safe icon payloads/factories, actions, and explicit owner-document routing. All six logical placements stay inside the usable safe-area rectangle.',
       },
     },
   },
@@ -224,5 +224,28 @@ export const MappedStylingHooks: Story = {
       <lr-toast-item duration="0">The region now matches :state(visible).</lr-toast-item>
       <lr-toast-item duration="0" variant="success">The mapped gap and width aliases style this stack.</lr-toast-item>
     </lr-toast>
+  `,
+};
+
+
+export const NativeModal: Story = {
+  parameters: {
+    docs: { description: { story: 'Notifications opened from a native modal remain visible, actionable and announced inside its active context. Closing the modal discards its notifications.' } },
+  },
+  render: () => html`
+    <div>
+      <button @click=${(event: Event) => {
+        (event.currentTarget as HTMLElement).parentElement!.querySelector('dialog')!.showModal();
+      }}>Open native dialog</button>
+      <dialog>
+        <h2>Native modal notifications</h2>
+        <button @click=${() => toast({ message: 'Changes saved', duration: 0, action: {
+          label: 'Undo', onClick: () => { toast('Changes restored'); },
+        } })}>Save and notify</button>
+        <button @click=${(event: Event) => {
+          (event.currentTarget as HTMLElement).closest('dialog')!.close();
+        }}>Close dialog</button>
+      </dialog>
+    </div>
   `,
 };

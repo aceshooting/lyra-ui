@@ -115,7 +115,7 @@ export const styles = css`
      --lr-color-text-quiet; the other statuses keep their semantic hue -- see the mix below. */
   [part='row'][data-active]
     :is([part='detail'], [part='duration'], [part='tokens-in'], [part='tokens-out'], [part='cost']),
-  [part='row'][data-active] [part='status-text'][data-status='pending'] {
+  [part='row'][data-active] [part='status-text']:is([data-status='pending'], [data-status='incomplete']) {
     color: var(--lr-trace-tree-row-active-color, var(--lr-color-text));
   }
 
@@ -242,7 +242,7 @@ export const styles = css`
   [part='status-text'][data-status='running'] {
     color: var(--lr-trace-tree-running-color, var(--lr-color-brand));
   }
-  [part='status-text'][data-status='pending'] {
+  [part='status-text']:is([data-status='pending'], [data-status='incomplete']) {
     color: var(--lr-trace-tree-pending-color, var(--lr-color-text-quiet));
   }
 
@@ -268,7 +268,7 @@ export const styles = css`
   [part='bar'][data-status='denied'] {
     background: var(--lr-trace-tree-denied-color, var(--lr-color-warning));
   }
-  [part='bar'][data-status='pending'] {
+  [part='bar']:is([data-status='pending'], [data-status='incomplete']) {
     background: var(--lr-trace-tree-pending-color, var(--lr-color-text-quiet));
   }
   [part='bar'][data-status='running'] {

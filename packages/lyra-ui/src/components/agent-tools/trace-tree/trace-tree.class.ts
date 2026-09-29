@@ -13,7 +13,7 @@ import { styles } from './trace-tree.styles.js';
 import { MAX_RENDERED_LYRA_SPANS, normalizeLyraSpans, type LyraSpan } from './span.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_cost, LYRA_DEFAULT_details, LYRA_DEFAULT_duration, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_spanProjectionLimit, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut, LYRA_DEFAULT_traceTree, LYRA_DEFAULT_traceTreeMetricLabel, LYRA_DEFAULT_traceTreeSpanStatus } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_cost, LYRA_DEFAULT_details, LYRA_DEFAULT_duration, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_spanProjectionLimit, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut, LYRA_DEFAULT_traceTree, LYRA_DEFAULT_traceTreeMetricLabel, LYRA_DEFAULT_traceTreeSpanStatus } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraSpan } from './span.js';
@@ -88,6 +88,7 @@ const STATUS_LABEL_KEY: Record<LyraSpan['status'], string> = {
   success: 'statusSuccess',
   error: 'statusError',
   denied: 'statusDenied',
+  incomplete: 'statusIncomplete',
 };
 
 export interface LyraTraceTreeEventMap {
@@ -146,7 +147,7 @@ export interface LyraTraceTreeEventMap {
  * @cssprop [--lr-trace-tree-error-color=var(--lr-color-danger)] - Error status text and bar.
  * @cssprop [--lr-trace-tree-denied-color=var(--lr-color-warning)] - Denied status text and bar.
  * @cssprop [--lr-trace-tree-running-color=var(--lr-color-brand)] - Running status text and stripe.
- * @cssprop [--lr-trace-tree-pending-color=var(--lr-color-text-quiet)] - Pending status text and bar.
+ * @cssprop [--lr-trace-tree-pending-color=var(--lr-color-text-quiet)] - Pending and incomplete status text and bar.
  * @cssprop [--lr-trace-tree-bar-track-bg=var(--lr-color-surface-raised)] - Duration bar track.
  * @cssprop [--lr-trace-tree-max-indent=var(--lr-size-12rem)] - Maximum visual nesting indentation;
  *   semantic `aria-level` remains exact at deeper levels.
@@ -178,6 +179,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     spanProjectionLimit: LYRA_DEFAULT_spanProjectionLimit,
     statusDenied: LYRA_DEFAULT_statusDenied,
     statusError: LYRA_DEFAULT_statusError,
+    statusIncomplete: LYRA_DEFAULT_statusIncomplete,
     statusPending: LYRA_DEFAULT_statusPending,
     statusRunning: LYRA_DEFAULT_statusRunning,
     statusSuccess: LYRA_DEFAULT_statusSuccess,
@@ -200,7 +202,8 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
    * its nearest ancestor path reserve positions before ordinary input-order rows, so a controlled
    * selection remains current and revealable across the ceiling. Malformed parent cycles are
    * broken into roots so hostile trace data cannot recurse indefinitely. Foreign runtime
-   * `kind`/`status` values normalize to `'other'`/`'pending'` before rendering.
+   * `kind`/`status` values normalize to `'other'`/`'pending'` before rendering; `status: 'incomplete'`
+   * marks a span that ended without a result.
    */
   @property({ attribute: false }) spans: readonly LyraSpan[] = [];
   /** Controlled selection — the matching row carries `aria-current`/`data-active` and scrolls into view. */

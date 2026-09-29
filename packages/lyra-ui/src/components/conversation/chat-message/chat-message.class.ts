@@ -398,13 +398,14 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     return Array.from(this.children).some((el) => el.getAttribute('slot') === name);
   }
 
-  /** Whether this component's owner document has focus in one of the host's `slot="failure"`
-   *  children. Slotting doesn't move an element out of the light DOM -- the owner document's
-   *  `activeElement` reports the actual focused node regardless of where Shadow DOM projects it
-   *  for rendering -- so this walks the host's real children, same as `hasSlotted` above, rather
-   *  than anything shadow-root-relative. */
+  /** Whether focus is in one of the host's `slot="failure"` children. Slotting doesn't move an
+   *  element out of the light DOM, so this walks the host's real children, same as `hasSlotted`
+   *  above. Focus is read from the tree the message itself lives in (the document, or a consumer's
+   *  shadow root), which reports the failure child even when focus sits inside that child's own
+   *  shadow root; the owner document alone would report only the outermost consumer host. */
   private isFocusWithinFailureSlot(): boolean {
-    const active = activeElementIn(this.ownerDocument);
+    const root = this.getRootNode() as Document | ShadowRoot;
+    const active = activeElementIn(root.nodeType === Node.ELEMENT_NODE ? null : root);
     try {
       if (!active || active.nodeType !== Node.ELEMENT_NODE) return false;
       return Array.from(this.children).some((el) => el.getAttribute('slot') === 'failure' && el.contains(active));

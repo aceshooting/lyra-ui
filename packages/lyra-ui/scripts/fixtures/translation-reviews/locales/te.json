@@ -2,24 +2,24 @@
   "locale": "te",
   "direction": "ltr",
   "source": {
-    "keyCount": 1385,
-    "sha256": "sha256:09d7ebd99cfe8b1b1ba87d80b6e8776b2dcc9107247c61b252cc3649c759eb65"
+    "keyCount": 1387,
+    "sha256": "sha256:f53dcf1e850d1c261643443bee8054cb6cdb7097de1be272addcec6fce402e49"
   },
   "catalog": {
-    "keyCount": 1385,
-    "sha256": "sha256:ed759d61efc803b0b5d8dc566d0c8ff90dfa12efc0673aadaa64c4a48a2a86e1"
+    "keyCount": 1387,
+    "sha256": "sha256:04386bd46d3bbe2211e59052596009ef30f1a6ff55074282c7e5061e1ec3ea63"
   },
   "translator": {
     "status": "complete-original",
     "role": "project localization contributor",
     "completedAt": "2026-09-28",
-    "evidence": "Original AI-assisted translation covers all 1,315 English source messages in 12 family slices; technical identifiers and fixed notation were retained where appropriate. Updated 2026-09-28 with 69 original messages for change review, agent questions, permission rules, connectors, background runs, research progress and budgets. Placeholders and locale-specific plural forms are preserved; no upstream translated text was copied.\n\n2026-09-29 incremental pollRefresh review: added one original action label to this locale catalog, using existing refresh/update wording as context. The contribution remains AI-assisted and makes no human or native-speaker translator claim."
+    "evidence": "Original AI-assisted translation covers all 1,315 English source messages in 12 family slices; technical identifiers and fixed notation were retained where appropriate. Updated 2026-09-28 with 69 original messages for change review, agent questions, permission rules, connectors, background runs, research progress and budgets. Placeholders and locale-specific plural forms are preserved; no upstream translated text was copied.\n\n2026-09-29 incremental pollRefresh review: added one original action label to this locale catalog, using existing refresh/update wording as context. The contribution remains AI-assisted and makes no human or native-speaker translator claim.\n\n2026-09-29 incremental randomContentNext review: added one original action label (\"Show another\") to this locale catalog, using existing next/refresh wording as context. The contribution remains AI-assisted and makes no human or native-speaker translator claim.\n\n2026-09-29 incremental taskListStepIncompleteAnnounce entry: added a formatting-only announcement template that interpolates the caller-supplied label and already-localized status, with the catalog punctuation convention. This is AI-assisted project localization; no human or native-speaker translator claim is made."
   },
   "reviewer": {
     "status": "approved",
     "role": "independent localization reviewer",
     "reviewedAt": "2026-09-29",
-    "evidence": "AI-assisted independent semantic review read all 1,315 Telugu messages across 12 slices for meaning, register, and script. Corrected chart saturation terminology, pan instructions, input/output token labels, chart annotation wording, and selected-overflow formatting; audited exact English-identical templates. This is not native-speaker certification. Updated 2026-09-28: an independent AI-assisted review checked all 69 added messages for meaning, UI register, terminology and placeholders, and corrected the catalog before this snapshot. The research-source count was checked against the pinned CLDR categories, including locale-specific decimal and non-singular forms. The complete 1,384-key snapshot was checked for key coverage, value kinds, placeholders and exact-English message paths; only individually justified new cognates, loanwords and technical names were retained. This increment does not claim a new linguistic review of all older messages, human review or native-speaker certification.\n\n2026-09-29 incremental pollRefresh review: an AI-assisted bounded review checked this new action label for meaning, UI action wording and absence of placeholders or exact-English copy. This review covers only this addition, not prior catalog entries; no human or native-speaker certification is claimed."
+    "evidence": "AI-assisted independent semantic review read all 1,315 Telugu messages across 12 slices for meaning, register, and script. Corrected chart saturation terminology, pan instructions, input/output token labels, chart annotation wording, and selected-overflow formatting; audited exact English-identical templates. This is not native-speaker certification. Updated 2026-09-28: an independent AI-assisted review checked all 69 added messages for meaning, UI register, terminology and placeholders, and corrected the catalog before this snapshot. The research-source count was checked against the pinned CLDR categories, including locale-specific decimal and non-singular forms. The complete 1,384-key snapshot was checked for key coverage, value kinds, placeholders and exact-English message paths; only individually justified new cognates, loanwords and technical names were retained. This increment does not claim a new linguistic review of all older messages, human review or native-speaker certification.\n\n2026-09-29 incremental pollRefresh review: an AI-assisted bounded review checked this new action label for meaning, UI action wording and absence of placeholders or exact-English copy. This review covers only this addition, not prior catalog entries; no human or native-speaker certification is claimed.\n\n2026-09-29 incremental randomContentNext review: an AI-assisted bounded review checked this new action label for meaning, UI action wording and absence of placeholders or exact-English copy. This review covers only this addition, not prior catalog entries; no human or native-speaker certification is claimed.\n\n2026-09-29 incremental taskListStepIncompleteAnnounce review: an independent AI-assisted bounded review checked the announcement template in all 66 supported locale records for the supplied {label}/{status} placeholders, locale punctuation, and absence of untranslated English prose. The six locale-specific separator forms were checked; de-CH inherits its German template. This covers only this addition, not prior catalog entries, and claims no human or native-speaker certification."
   },
   "englishIdenticalAllowlist": [
     {
@@ -309,6 +309,10 @@
     {
       "messagePath": "statTrendAnnouncement",
       "rationale": "The message is composed only of dynamic placeholders and conventional punctuation; it contains no English prose."
+    },
+    {
+      "messagePath": "taskListStepIncompleteAnnounce",
+      "rationale": "Formatting template only: {label} and {status} are supplied values, with a punctuation separator and no natural-language words; the identical text preserves the status announcement format."
     },
     {
       "messagePath": "traceTreeMetricLabel",

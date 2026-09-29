@@ -21,15 +21,18 @@ import type { LyraLiveRegion } from '../../utility/live-region/live-region.class
 import { styles } from './task-list.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_item, LYRA_DEFAULT_items, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_taskListCompletedOfTotal, LYRA_DEFAULT_taskListLabel, LYRA_DEFAULT_taskListStepCompletedAnnounce, LYRA_DEFAULT_taskListStepFailedAnnounce, LYRA_DEFAULT_taskListStepStartedAnnounce, LYRA_DEFAULT_treeNodeMoved } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_item, LYRA_DEFAULT_items, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_taskListCompletedOfTotal, LYRA_DEFAULT_taskListLabel, LYRA_DEFAULT_taskListStepCompletedAnnounce, LYRA_DEFAULT_taskListStepFailedAnnounce, LYRA_DEFAULT_taskListStepIncompleteAnnounce, LYRA_DEFAULT_taskListStepStartedAnnounce, LYRA_DEFAULT_treeNodeMoved } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** A plan step's lifecycle state — not permission-gated, so there is no `denied` state here
- *  (unlike `<lr-tool-call-chip>`'s status vocabulary, which does need one). */
-export type TaskStatus = 'pending' | 'running' | 'success' | 'error';
+ *  (unlike `<lr-tool-call-chip>`'s status vocabulary, which does need one). `incomplete` is a step
+ *  that stopped without finishing (a cancelled run): neither a success nor a failure. */
+export type TaskStatus = 'pending' | 'running' | 'success' | 'error' | 'incomplete';
 
 function normalizeTaskStatus(value: unknown): TaskStatus {
-  return value === 'running' || value === 'success' || value === 'error' ? value : 'pending';
+  return value === 'running' || value === 'success' || value === 'error' || value === 'incomplete'
+    ? value
+    : 'pending';
 }
 
 const DEEP_NESTING_WARNING_KEY = 'lyra-task-list-nesting-depth';
@@ -103,7 +106,7 @@ interface PendingTaskReorder {
 
 // Mirrors the shared icon set's viewBox/stroke conventions (internal/icons.ts) without adding
 // task-list-specific glyphs there -- duplicated locally, matching lr-tool-call-chip's own
-// STATUS_ICON set (same four shapes, minus its 'denied' glyph, which has no TaskStatus
+// STATUS_ICON set (minus its 'denied' glyph, which has no TaskStatus
 // counterpart).
 const ICON_VIEW_BOX = '0 0 24 24';
 const ICON_STROKE_WIDTH = '1.75';
@@ -145,11 +148,17 @@ function errorIcon(): SVGTemplateResult {
   `);
 }
 
+/** A circle with a level dash: stopped short, neither succeeded nor failed. */
+function incompleteIcon(): SVGTemplateResult {
+  return icon(svg`<circle cx="12" cy="12" r="9"></circle><line x1="8" y1="12" x2="16" y2="12"></line>`);
+}
+
 const STATUS_ICON: Record<TaskStatus, () => SVGTemplateResult> = {
   pending: pendingIcon,
   running: runningIcon,
   success: successIcon,
   error: errorIcon,
+  incomplete: incompleteIcon,
 };
 
 const STATUS_LABEL_KEY: Record<TaskStatus, string> = {
@@ -157,6 +166,7 @@ const STATUS_LABEL_KEY: Record<TaskStatus, string> = {
   running: 'statusRunning',
   success: 'statusSuccess',
   error: 'statusError',
+  incomplete: 'statusIncomplete',
 };
 
 /**
@@ -221,6 +231,7 @@ const STATUS_LABEL_KEY: Record<TaskStatus, string> = {
  * @cssprop [--lr-task-list-running-color=var(--lr-color-brand)] - Running status icon color.
  * @cssprop [--lr-task-list-success-color=var(--lr-color-success)] - Success status icon color.
  * @cssprop [--lr-task-list-error-color=var(--lr-color-danger)] - Error status icon color.
+ * @cssprop [--lr-task-list-incomplete-color=var(--lr-color-text-quiet)] - Incomplete status icon color.
  * @cssprop [--lr-task-list-bg=var(--lr-color-surface)] - Fill of the outer card
  *   (`[part="base"]`) while `frame="card"`. `frame="plain"` still removes the fill entirely.
  * @cssprop [--lr-task-list-border-color=var(--lr-color-border)] - Colour of the outer card's
@@ -245,6 +256,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
     statusError: LYRA_DEFAULT_statusError,
+    statusIncomplete: LYRA_DEFAULT_statusIncomplete,
     statusPending: LYRA_DEFAULT_statusPending,
     statusRunning: LYRA_DEFAULT_statusRunning,
     statusSuccess: LYRA_DEFAULT_statusSuccess,
@@ -252,6 +264,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
     taskListLabel: LYRA_DEFAULT_taskListLabel,
     taskListStepCompletedAnnounce: LYRA_DEFAULT_taskListStepCompletedAnnounce,
     taskListStepFailedAnnounce: LYRA_DEFAULT_taskListStepFailedAnnounce,
+    taskListStepIncompleteAnnounce: LYRA_DEFAULT_taskListStepIncompleteAnnounce,
     taskListStepStartedAnnounce: LYRA_DEFAULT_taskListStepStartedAnnounce,
     treeNodeMoved: LYRA_DEFAULT_treeNodeMoved,
   };
@@ -399,6 +412,15 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
             region.announce(this.localize('taskListStepFailedAnnounce', undefined, { label: item.label }), {
               force: true,
             });
+          } else if (status === 'incomplete') {
+            region.mode = 'polite';
+            region.announce(
+              this.localize('taskListStepIncompleteAnnounce', undefined, {
+                label: item.label,
+                status: this.localize('statusIncomplete'),
+              }),
+              { force: true },
+            );
           }
         }
       }

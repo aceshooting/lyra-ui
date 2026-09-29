@@ -56,6 +56,7 @@ const strings: LyraLocaleStrings = {
   statusSuccess: 'Àṣeyọrí',
   statusError: 'Àṣìṣe',
   statusDenied: 'A kọ̀ ọ́',
+  statusIncomplete: 'Kò pé',
   restore: 'Mú padà',
   navigation: 'Ìtọ́sọ́nà',
   attachmentUntitledFile: 'Fáìlì tí kò ní àkọlé',

@@ -42,6 +42,13 @@ export const Default: Story = {
   render: () => html`<lr-span-waterfall style="max-width: 40rem" .spans=${spans}></lr-span-waterfall>`,
 };
 
+export const IncompleteSpan: Story = {
+  render: () => html`<lr-span-waterfall
+    style="max-width: 40rem"
+    .spans=${spans.map((span) => (span.status === 'running' ? { ...span, endMs: 700, status: 'incomplete' as const } : span))}
+  ></lr-span-waterfall>`,
+};
+
 export const HiddenAxis: Story = {
   render: () => html`<lr-span-waterfall style="max-width: 40rem" .spans=${spans} without-axis></lr-span-waterfall>`,
 };

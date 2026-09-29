@@ -82,7 +82,7 @@ export const FillHeightContainer: Story = {
     docs: {
       description: {
         story:
-          "Shares `code-block.styles.ts` with `lr-code-block`: the host, base and body carry an unconditional `block-size: 100%` chain, the same pattern `lr-file-input` and `lr-code-editor` already use. A no-op against an ordinary auto-height ancestor (see `Default`); sized inside a flex column with a definite block size, as here, the header keeps its natural size and the body grows to fill and scroll the remaining space instead of collapsing to its own content height.",
+          "Shares `code-block.styles.ts` with `lr-code-block`: the base and body carry a `block-size: 100%` chain. An unsized host stays content-sized (see `Default`); a host with an explicit block size, here `block-size: 100%` inside a flex column with a definite block size, keeps the header at its natural size and the body grows to fill and scroll the remaining space instead of collapsing to its own content height.",
       },
     },
   },

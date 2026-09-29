@@ -1,4 +1,5 @@
-import { expect } from '@open-wc/testing';
+import { expect, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
 import { confirm, type ConfirmOptions } from './confirm.js';
 import { registerLyraLocale, setLyraLocale } from '../../../internal/localization.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -319,4 +320,55 @@ it('is accessible while open', async () => {
 
   footerButtons(dialog)[0].click();
   await promise;
+});
+
+
+it('accepts a body-mounted confirmation above a native modal using the native pointer', async () => {
+  const native = document.createElement('dialog');
+  native.innerHTML = '<button>Original action</button>';
+  document.body.append(native);
+  native.showModal();
+  const result = confirm({ title: 'Confirm within native modal' });
+  const dialog = getMountedDialog();
+  let settled: boolean | undefined;
+  void result.then(value => { settled = value; });
+  try {
+    await dialog.updateComplete;
+    const action = footerButtons(dialog)[1];
+    await waitUntil(() => action.getBoundingClientRect().width > 0);
+    const bounds = action.getBoundingClientRect();
+    await sendMouse({ type: 'click', position: [Math.round(bounds.x + bounds.width / 2), Math.round(bounds.y + bounds.height / 2)] });
+    await waitUntil(() => settled !== undefined);
+    expect(settled).to.equal(true);
+    expect(native.open).to.equal(true);
+    expect(dialog.isConnected).to.equal(false);
+  } finally {
+    dialog.remove();
+    native.close();
+    native.remove();
+    await resetMouse();
+  }
+});
+
+it('dismisses only the confirmation on native Escape and removes its transient host', async () => {
+  const native = document.createElement('dialog');
+  native.innerHTML = '<button>Original action</button>';
+  document.body.append(native);
+  native.showModal();
+  const result = confirm({ title: 'Dismiss within native modal' });
+  const dialog = getMountedDialog();
+  let settled: boolean | undefined;
+  void result.then(value => { settled = value; });
+  try {
+    await dialog.updateComplete;
+    await sendKeys({ press: 'Escape' });
+    await waitUntil(() => settled !== undefined);
+    expect(settled).to.equal(false);
+    expect(native.open).to.equal(true);
+    expect(dialog.isConnected).to.equal(false);
+  } finally {
+    dialog.remove();
+    native.close();
+    native.remove();
+  }
 });

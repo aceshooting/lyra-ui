@@ -1998,3 +1998,19 @@ for (const appearance of ['outlined', 'filled-outlined'] as const) {
     expect(getComputedStyle(frame).borderTopColor).to.equal('rgb(10, 20, 30)');
   });
 }
+
+describe('empty header-actions wrapper', () => {
+  it('takes no layout space so the summary spans the whole header', async () => {
+    const el = await fixture<LyraDetails>(
+      html`<lr-details summary="More" style="inline-size: 400px">Body</lr-details>`,
+    );
+    const actions = el.shadowRoot!.querySelector<HTMLElement>('[part~="header-actions"]')!;
+    const header = el.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!;
+    const summary = el.shadowRoot!.querySelector<HTMLElement>('[part="summary"]')!;
+    expect(getComputedStyle(actions).display).to.equal('none');
+    expect(summary.getBoundingClientRect().width).to.be.closeTo(
+      header.getBoundingClientRect().width,
+      1,
+    );
+  });
+});

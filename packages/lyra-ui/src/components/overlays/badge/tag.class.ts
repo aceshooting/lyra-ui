@@ -1,3 +1,4 @@
+import { CustomElementUpgradeObserver } from '../../../internal/custom-element-upgrade-observer.js';
 import { html, nothing, type PropertyValues } from 'lit';
 import { query, state } from 'lit/decorators.js';
 import {
@@ -190,6 +191,11 @@ export class LyraTag extends LyraBadge<LyraTagEventMap, TagVariant> {
   // the button and the name would go stale. Only wired while the button exists, so a bulk list of
   // plain tags pays nothing for it. Mirrors `<lr-chip>`'s identical label observer.
   private labelObserver?: MutationObserver;
+  private readonly labelUpgrades = new CustomElementUpgradeObserver(() => {
+    if (!this.isConnected || !this.labelObserver) return;
+    this.bindLabelObserverTargets();
+    this.recomputeLabelText();
+  });
   private managedActionGroupRole = false;
   // A server renderer cannot inspect projected light DOM. Cache the browser-derived label so a
   // hydrating mount can reproduce the server's bare remove name first, then add context without
@@ -220,6 +226,7 @@ export class LyraTag extends LyraBadge<LyraTagEventMap, TagVariant> {
   override disconnectedCallback(): void {
     this.removeEventListener('slotchange', this.onLabelSlotChange);
     this.labelObserver?.disconnect();
+    this.labelUpgrades.disconnect();
     this.labelObserver = undefined;
     this.releaseHostActionRole();
     super.disconnectedCallback();
@@ -230,6 +237,7 @@ export class LyraTag extends LyraBadge<LyraTagEventMap, TagVariant> {
       ?.MutationObserver;
     if (!this.withRemove || !this.isConnected || !MutationObserverCtor) {
       this.labelObserver?.disconnect();
+      this.labelUpgrades.disconnect();
       this.labelObserver = undefined;
       return;
     }
@@ -245,7 +253,7 @@ export class LyraTag extends LyraBadge<LyraTagEventMap, TagVariant> {
   // remove button, so a light-DOM child moving to or from the decorative `start`/`end` slots
   // changes the name. Mirrors `<lr-chip>`'s identical binding.
   private bindLabelObserverTargets(): void {
-    bindAccessibleTextObserver(this.labelObserver, this, ['slot', 'role']);
+    bindAccessibleTextObserver(this.labelObserver, this, ['slot', 'role'], this.labelUpgrades);
   }
 
   // Only the default slot's own content names the remove button -- text living in the decorative

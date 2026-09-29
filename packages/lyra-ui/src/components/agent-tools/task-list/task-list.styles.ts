@@ -185,6 +185,9 @@ export const styles = [
     [part="item"][data-status="success"] [part="status-icon"] {
       color: var(--lr-task-list-success-color, var(--lr-color-success));
     }
+    [part="item"][data-status="incomplete"] [part="status-icon"] {
+      color: var(--lr-task-list-incomplete-color, var(--lr-color-text-quiet));
+    }
     [part="item"][data-status="error"] [part="status-icon"] {
       color: var(--lr-task-list-error-color, var(--lr-color-danger));
     }

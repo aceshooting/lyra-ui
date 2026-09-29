@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: 'Ó ń tún sọ di tuntun nísinsìnyí.',
   randomContentPause: 'Dá yíyí dúró',
   randomContentResume: 'Tẹ̀síwájú yíyí',
+  randomContentNext: 'Fi òmíràn hàn',
   exportButtonLabel: 'Ṣe ìkójáde',
   knownDateDay: 'Ọjọ́',
   knownDateMonth: 'Oṣù',

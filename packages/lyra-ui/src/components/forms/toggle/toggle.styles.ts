@@ -152,6 +152,12 @@ export const styles = css`
     white-space: nowrap;
   }
 
+  /* A detected icon-only label holds one glyph and no text, so there is nothing to ellipsize; the
+     clip only cut a glow (filter: drop-shadow) painted around the glyph to the label's own box. */
+  [part='label']:where([data-icon-only]) {
+    overflow: visible;
+  }
+
   [part='start'],
   [part='end'] {
     display: inline-flex;

@@ -44,7 +44,7 @@ export const styles = css`
     font-weight: var(--lr-font-weight-semibold);
     overflow-wrap: anywhere;
   }
-  [part='header-actions'] {
+  [part='header-actions']:where(:not([hidden])) {
     display: flex;
     align-items: center;
     flex-wrap: wrap;

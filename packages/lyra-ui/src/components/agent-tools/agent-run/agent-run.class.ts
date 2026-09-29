@@ -53,9 +53,8 @@ const STATUS_LABEL: Record<string, { key: string }> = {
 /** Coarsens the broader `AgentStatusKind` down to `<lr-task-list>`'s own narrower `TaskStatus`
  *  vocabulary, for the default tasks-slot content only (see `defaultTaskItems()`). Both
  *  `waiting-*` kinds map to `'running'` -- still in progress from the plan's point of view, even
- *  though it isn't actively executing -- and `cancelled` maps to `'error'`, the closest of
- *  `TaskStatus`'s four terminal-ish states since `<lr-task-list>` has no cancelled concept of its
- *  own. */
+ *  though it isn't actively executing -- and `cancelled` maps to `'incomplete'`, a stopped
+ *  step that neither succeeded nor failed. */
 const STEP_TO_TASK_STATUS: Record<string, TaskStatus> = {
   idle: 'pending',
   running: 'running',
@@ -64,7 +63,7 @@ const STEP_TO_TASK_STATUS: Record<string, TaskStatus> = {
   'waiting-approval': 'running',
   done: 'success',
   error: 'error',
-  cancelled: 'error',
+  cancelled: 'incomplete',
 };
 
 function toTaskItem(step: AgentStep): TaskItem {
@@ -131,7 +130,8 @@ export interface LyraAgentRunEventMap {
  * - **Tasks slot default content**: when the host doesn't slot anything into `tasks` and
  *   `run.steps` is non-empty, this component's own `<slot>` fallback renders a `<lr-task-list>`
  *   populated by mapping every `AgentStep` to a `TaskItem` (see `toTaskItem()`) — a plain data
- *   adapter between the two existing shapes, not new rendering.
+ *   adapter between the two existing shapes. Cancelled steps render as incomplete, with a neutral
+ *   icon and a polite status-change announcement; errors remain failures.
  * - **Status badge**: composes `<lr-badge>`. **Empty state**: composes `<lr-empty>` when `run` is
  *   `null`.
  *

@@ -315,7 +315,7 @@ it('treats an unparseable border measurement as zero while auto-growing', async 
 it('fills a bounded parent through the host, form-control, editor, and textarea chain', async () => {
   const wrapper = await fixture<HTMLElement>(html`
     <div style="block-size: 320px; inline-size: 320px">
-      <lr-code-editor value="const answer = 42;"></lr-code-editor>
+      <lr-code-editor style="block-size: 100%" value="const answer = 42;"></lr-code-editor>
     </div>
   `);
   const el = wrapper.querySelector('lr-code-editor') as LyraCodeEditor;
@@ -1895,4 +1895,42 @@ it('uses the editor as the only 200px scrollport for a 4,883-character source in
     expect(editor.selectionStart).to.equal(12);
     expect(editor.selectionEnd).to.equal(18);
   }
+});
+
+describe('unsized host in a stretched grid row', () => {
+  it('stays content-sized beside siblings, while an explicit host size still fills', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="inline-size: 400px">
+        <div style="display: grid">
+          <div class="row">
+            <div style="block-size: 40px"></div>
+            <lr-code-editor class="subject" value="const answer = 42;"></lr-code-editor>
+            <div style="block-size: 40px"></div>
+          </div>
+        </div>
+        <lr-code-editor class="reference" value="const answer = 42;"></lr-code-editor>
+        <div class="bounded" style="block-size: 480px">
+          <lr-code-editor
+            class="filled"
+            style="block-size: 100%"
+            value="const answer = 42;"
+          ></lr-code-editor>
+        </div>
+      </div>
+    `);
+    const subject = wrapper.querySelector<HTMLElement>('.subject')!;
+    const reference = wrapper.querySelector<HTMLElement>('.reference')!;
+    const filled = wrapper.querySelector<HTMLElement>('.filled')!;
+    await Promise.all(
+      [subject, reference, filled].map((el) => (el as LyraCodeEditor).updateComplete),
+    );
+    expect(
+      subject.getBoundingClientRect().height,
+      'unsized host ignores sibling height',
+    ).to.be.closeTo(reference.getBoundingClientRect().height, 1);
+    expect(filled.getBoundingClientRect().height, 'explicitly sized host fills').to.be.closeTo(
+      480,
+      1,
+    );
+  });
 });

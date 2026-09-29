@@ -5,6 +5,7 @@ import {
   deferredPlaceReady,
   deferredTrackRect,
   loadAnchoredOverlayRuntime,
+  syncTopLayerRelease,
   type AnchoredOverlayRuntime,
 } from './anchored-overlay-runtime.js';
 
@@ -215,4 +216,24 @@ it('honours an injected runtime without releaseTopLayer, where the optional rele
   expect(loaded.releaseTopLayer).to.equal(undefined);
   const element = document.createElement('div');
   expect(() => loaded.releaseTopLayer?.(element)).to.not.throw();
+});
+
+
+describe('top-layer release ordering', () => {
+  it('releases before synchronous placement with an already loaded runtime', async () => {
+    const order: string[] = [];
+    const loaded: AnchoredOverlayRuntime = {
+      ...runtime,
+      releaseTopLayer: () => { order.push('release'); },
+      place: () => { order.push('place'); return () => undefined; },
+    };
+    __setAnchoredOverlayRuntimeLoaderForTesting(() => Promise.resolve(loaded));
+    const ready = await loadAnchoredOverlayRuntime();
+    const anchor = document.createElement('button');
+    const popup = document.createElement('div');
+    syncTopLayerRelease(popup, true, false, ready);
+    ready.place(anchor, popup);
+    await Promise.resolve();
+    expect(order).to.deep.equal(['release', 'place']);
+  });
 });

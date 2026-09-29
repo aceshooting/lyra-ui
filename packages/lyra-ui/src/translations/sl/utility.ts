@@ -47,6 +47,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: 'Osveževanje poteka.',
   randomContentPause: 'Začasno ustavi menjavanje',
   randomContentResume: 'Nadaljuj menjavanje',
+  randomContentNext: 'Pokaži drugega',
   exportButtonLabel: 'Izvozi',
   knownDateDay: 'Dan',
   knownDateMonth: 'Mesec',

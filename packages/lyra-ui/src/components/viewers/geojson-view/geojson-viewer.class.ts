@@ -406,17 +406,27 @@ function analyzeGeoJson(value: unknown): GeoJsonAnalysis {
   return { value: root, metadata, featureCount: count, bounds };
 }
 
-/** Web-Mercator-fit approximation with padding -- fits `bbox` into a viewport without needing a
- *  loaded `maplibregl.Map` instance to ask (this bridge computes `center`/`zoom` before the map
- *  exists). Latitude span is weighted ~2x to roughly account for Mercator's pole-ward compression. */
+const FIT_PADDING = 24;
+const MAX_FIT_ZOOM = 18;
+
+/** True when the shifted (0..360) longitude span is narrower than the standard one. The epsilon
+ *  keeps float noise on a box that does not cross from reading as a crossing one. */
+function crossesAntimeridian(bounds: GeoBounds): boolean {
+  return (
+    bounds.maxShiftedLng - bounds.minShiftedLng <
+    bounds.maxLng - bounds.minLng - 1e-9
+  );
+}
+
+/** Placeholder camera shown until the map exists: a Web-Mercator-fit approximation with padding
+ *  (latitude span weighted ~2x). Once the map is constructed, `LyraMap.fitBounds()` replaces it
+ *  with an exact, size-aware fit. */
 function fitBboxToView(bounds: GeoBounds): {
   center: [number, number];
   zoom: number;
 } {
-  const standardSpan = bounds.maxLng - bounds.minLng;
-  const shiftedSpan = bounds.maxShiftedLng - bounds.minShiftedLng;
-  const crossesAntimeridian = shiftedSpan < standardSpan;
-  let centerLng = crossesAntimeridian
+  const crosses = crossesAntimeridian(bounds);
+  let centerLng = crosses
     ? (bounds.minShiftedLng + bounds.maxShiftedLng) / 2
     : (bounds.minLng + bounds.maxLng) / 2;
   if (centerLng > 180) centerLng -= 360;
@@ -425,12 +435,14 @@ function fitBboxToView(bounds: GeoBounds): {
     (bounds.minLat + bounds.maxLat) / 2,
   ];
   const lngSpan = Math.max(
-    crossesAntimeridian ? shiftedSpan : standardSpan,
+    crosses
+      ? bounds.maxShiftedLng - bounds.minShiftedLng
+      : bounds.maxLng - bounds.minLng,
     0.0001
   );
   const latSpan = Math.max(bounds.maxLat - bounds.minLat, 0.0001);
   const span = Math.max(lngSpan, latSpan * 2) * 1.4; // 40% padding so the shape doesn't touch the edges
-  const zoom = Math.max(0, Math.min(18, Math.floor(Math.log2(360 / span))));
+  const zoom = Math.max(0, Math.min(MAX_FIT_ZOOM, Math.floor(Math.log2(360 / span))));
   return { center, zoom };
 }
 
@@ -542,6 +554,7 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
 
   @state() private loadState: GeoJsonViewerState = { kind: 'idle' };
   @state() private mapReady = false;
+  private pendingFitBounds: GeoBounds | null = null;
   private generation = 0;
   private lastLoadSrc = '';
   private registeredMap: LyraMap | null = null;
@@ -637,10 +650,32 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
       );
     }
     this.syncMapCanvasReadyCallback();
+    this.fitLoadedData();
     if (changed.has('src'))
       this.scheduleAfterUpdate(() => {
         void this.load();
       });
+  }
+
+  private fitLoadedData(): void {
+    const bounds = this.pendingFitBounds;
+    const map = this.registeredMap;
+    if (!bounds || !map || this.loadState.kind !== 'loaded') return;
+    this.pendingFitBounds = null;
+    const crosses = crossesAntimeridian(bounds);
+    const west = crosses ? bounds.minShiftedLng : bounds.minLng;
+    const east = crosses ? bounds.maxShiftedLng : bounds.maxLng;
+    const fit = (): void => {
+      map.fitBounds(
+        [
+          [west, bounds.minLat],
+          [east, bounds.maxLat],
+        ],
+        { padding: FIT_PADDING, maxZoom: MAX_FIT_ZOOM, animate: false }
+      );
+    };
+    if (typeof map.fitBounds === 'function') fit();
+    else void customElements.whenDefined(map.localName).then(fit);
   }
 
   private async load(): Promise<void> {
@@ -675,6 +710,7 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
       const { center, zoom } = analysis.bounds
         ? fitBboxToView(analysis.bounds)
         : { center: [0, 0] as [number, number], zoom: 1 };
+      this.pendingFitBounds = analysis.bounds ?? null;
       const maplibre = this.forceMissingMaplibreForTesting
         ? null
         : await loadMaplibre();

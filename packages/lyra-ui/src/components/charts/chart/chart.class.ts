@@ -373,6 +373,8 @@ interface RuntimeChart {
   setDatasetVisibility(index: number, visible: boolean): void;
   getDataVisibility?(index: number): boolean;
   toggleDataVisibility?(index: number): void;
+  getZoomedScaleBounds?(): Record<string, { min: number; max: number } | undefined>;
+  zoomScale?(id: string, range: { min: number; max: number }, mode?: string): void;
 }
 
 /** Public structural view of the current Chart.js instance, without imposing `chart.js` as a
@@ -4982,6 +4984,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       nextPlugins.length === this.builtPlugins.length &&
       nextPlugins.every((plugin, index) => plugin === this.builtPlugins[index]);
     if (this.chart && this.builtType === effectiveType && samePlugins) {
+      const zoomedBounds = this.zoomed ? this.chart.getZoomedScaleBounds?.() : undefined;
       this.chart.data = config.data;
       this.chart.options = config.options ?? {};
       // Visibility is public controlled state rather than a private Chart.js metadata snapshot.
@@ -4990,6 +4993,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       // configured `hidden` default.
       this.applyDatasetVisibility();
       this.chart.update('none');
+      this.restoreZoomedBounds(this.chart, zoomedBounds);
       if (this.applyDatumVisibility()) this.chart.update('none');
       this.updateChartArea(this.chart);
       return;
@@ -5015,6 +5019,19 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   private drawIfVisible(): void {
     if (!this.isConnected || !this.visible) return;
     this.draw();
+  }
+
+  /** Re-applies the range the user zoomed or panned to, which a swap of the options object drops. */
+  private restoreZoomedBounds(
+    chart: RuntimeChart,
+    bounds: Record<string, { min: number; max: number } | undefined> | undefined
+  ): void {
+    if (!bounds || typeof chart.zoomScale !== 'function') return;
+    for (const [id, range] of Object.entries(bounds)) {
+      if (range && Number.isFinite(range.min) && Number.isFinite(range.max)) {
+        chart.zoomScale(id, { min: range.min, max: range.max }, 'none');
+      }
+    }
   }
 
   /** Destroys the peer instance and reconciles the Lyra-owned zoom state in one place. */

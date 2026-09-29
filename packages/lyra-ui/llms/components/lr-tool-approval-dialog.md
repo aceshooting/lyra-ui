@@ -17,11 +17,17 @@
 
 ## `lr-tool-approval-dialog`
 
+Opening above an existing native `dialog.showModal()` keeps this dialog interactive, including
+pointer input, keyboard focus, and Escape dismissal. Its host and slotted children remain in their
+authored DOM locations, and closing leaves the underlying native modal open.
+
 A human-in-the-loop gate: presents one proposed tool/function call (`toolName` + `args`) and blocks an
 agent from executing it until a person explicitly approves or denies it, with an optional inline
 "edit the arguments before approving" step. First-party invention (no Web Awesome equivalent). It
 keeps its own panel template rather than nesting `<lr-dialog>`, so it has no dependency on the
 general-purpose dialog component, while its modal behavior participates in the shared overlay stack.
+
+Closing returns focus to the element that held it when the dialog opened, including an opener the host re-shows only after the decision.
 
 Approve/Deny/Edit are built-in chrome, not a `footer` slot a consumer must assemble — there is exactly
 one correct action set for "approve this call". The `footer` slot is offered only for _supplementary_
@@ -44,9 +50,9 @@ renders at the start of the action row, before Deny/Edit/Approve.
 - `open: boolean = false` (reflected) — set it directly or use the lifecycle methods below
 - `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to backdrop-click
   dismissal; Escape and the built-in decision buttons remain available without it
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — a host attribute names the
-  host; the panel remains labelled by its visible heading rather than cloning the same name. A
-  direct property assignment made without the attribute can name the panel
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — a non-empty host attribute names
+  the semantic dialog owner, taking precedence over a direct property value. Without either, its
+  visible heading supplies the accessible name.
 - `proposalKey: string = ''` (attribute `proposal-key`) — immutable identity/generation for the
   open proposal. Change it whenever a source reuses the same visible tool name/arguments for a new
   proposal; draft, editing, validation-announcement, and pending-decision state reset immediately

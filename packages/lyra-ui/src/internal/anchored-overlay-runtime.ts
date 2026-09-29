@@ -1,4 +1,9 @@
-import type { place, placeAnchoredSurface, releaseTopLayer, trackRect } from './positioner.js';
+import type {
+  PlaceStrategy,
+  placeAnchoredSurface,
+  releaseTopLayer,
+  trackRect,
+} from './positioner.js';
 
 /** The positioning capability loaded on the first anchored surface open. */
 export interface AnchoredOverlayRuntime {
@@ -58,7 +63,7 @@ function releasePendingPopup(popup: HTMLElement, pending: PendingVisibility): vo
 }
 
 /** Starts positioning after the shared runtime chunk resolves and remains synchronously disposable. */
-export function deferredPlace(...args: Parameters<typeof place>): () => void {
+export function deferredPlace(...args: Parameters<typeof placeAnchoredSurface>): () => void {
   const [anchor, popup, options = {}] = args;
   const pendingVisibility = concealPendingPopup(popup);
   let active = true;
@@ -98,7 +103,9 @@ export function deferredPlace(...args: Parameters<typeof place>): () => void {
 }
 
 /** Adds first-placement readiness for callers whose open lifecycle must wait for real geometry. */
-export function deferredPlaceReady(...args: Parameters<typeof place>): DeferredOperationHandle {
+export function deferredPlaceReady(
+  ...args: Parameters<typeof placeAnchoredSurface>
+): DeferredOperationHandle {
   const [anchor, popup, options = {}] = args;
   const pendingVisibility = concealPendingPopup(popup);
   let active = true;
@@ -177,4 +184,40 @@ export function __setAnchoredOverlayRuntimeLoaderForTesting(
 ): void {
   runtimeLoader = loader ?? defaultRuntimeLoader;
   runtimePromise = undefined;
+}
+
+/**
+ * The placement options of an opt-in `top-layer` surface: a top-layer popup lays out against the
+ * viewport, so it is always placed `fixed`, whatever strategy the surface otherwise resolves to.
+ */
+export function topLayerPlacement(
+  topLayer: boolean,
+  strategy: PlaceStrategy,
+): { strategy: PlaceStrategy; topLayer: boolean } {
+  return { strategy: topLayer ? 'fixed' : strategy, topLayer };
+}
+
+/**
+ * Placement never demotes on its own, so a surface whose `topLayer` was just switched off calls
+ * this before re-placing to release the forced promotion; the next run promotes again only if an
+ * ancestor traps the popup. A caller placing synchronously with an already loaded runtime must
+ * pass it here, so the release precedes that placement. Returns the flag for the next call.
+ */
+export function syncTopLayerRelease(
+  popup: HTMLElement,
+  wasPromoted: boolean | undefined,
+  topLayer: boolean,
+  runtime?: AnchoredOverlayRuntime,
+): boolean {
+  if (wasPromoted && !topLayer) {
+    if (runtime) {
+      runtime.releaseTopLayer?.(popup);
+      return topLayer;
+    }
+    void loadAnchoredOverlayRuntime().then(
+      (runtime) => runtime.releaseTopLayer?.(popup),
+      () => undefined,
+    );
+  }
+  return topLayer;
 }

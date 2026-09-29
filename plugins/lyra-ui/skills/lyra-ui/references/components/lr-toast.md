@@ -183,10 +183,16 @@ toast({
 `ToastHandle = { item: Promise<LyraToastItem>; dismiss: () => void }`. The canonical options are
 shared byte-for-byte with the region's object-form `create()`, including `ownerDocument`, safe icon
 payloads/factories, actions, and the long `small`/`medium`/`large` size aliases. It lazily mounts
-(and re-mounts if removed) **one singleton `<lr-toast>` region per distinct `ownerDocument` and
-`placement`** on that document's body — a call targeting one placement/document never relocates
-toasts already showing in another. A foreign document must have the toast elements registered in
-its own custom-element registry; otherwise the returned `item` promise rejects explicitly.
+(and re-mounts if removed) **one singleton `<lr-toast>` region per owner document, active native-modal
+context and placement**. With no native modal it mounts on the document body. While a native
+`<dialog>` is open through `showModal()`, new notifications mount inside the topmost modal and enter
+the top layer so their actions remain reachable and the modal cannot clip them. For a Lyra native
+modal carrier, they use the host's slotted light DOM. Announcements use the same active context;
+background sources made inert by a native modal stay silent. Closing a native modal discards its
+notifications, including persistent ones; later calls use the remaining modal or the document body.
+Calls in one context never relocate notifications already showing in another. A foreign document
+must have the toast elements registered in its own custom-element registry; otherwise the returned
+`item` promise rejects explicitly.
 
 ```html
 <script type="module">

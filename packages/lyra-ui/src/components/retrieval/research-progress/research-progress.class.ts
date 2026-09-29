@@ -10,10 +10,10 @@ import { firstByIdentity } from '../../agent-tools/collection-identity.js';
 import { styles } from './research-progress.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_researchProgressEmpty, LYRA_DEFAULT_researchProgressLabel, LYRA_DEFAULT_researchProgressLimit, LYRA_DEFAULT_researchProgressSources, LYRA_DEFAULT_researchProgressStatusCompleted, LYRA_DEFAULT_researchProgressStatusFailed, LYRA_DEFAULT_researchProgressStatusPending, LYRA_DEFAULT_researchProgressStatusRunning, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_researchProgressEmpty, LYRA_DEFAULT_researchProgressLabel, LYRA_DEFAULT_researchProgressLimit, LYRA_DEFAULT_researchProgressSources, LYRA_DEFAULT_researchProgressStatusCompleted, LYRA_DEFAULT_researchProgressStatusFailed, LYRA_DEFAULT_researchProgressStatusPending, LYRA_DEFAULT_researchProgressStatusRunning, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusIncomplete } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-export type ResearchStepStatus = 'pending' | 'running' | 'completed' | 'failed';
+export type ResearchStepStatus = 'pending' | 'running' | 'completed' | 'failed' | 'incomplete';
 
 /** A host-owned research step. Source counts are optional nonnegative finite counts. */
 export interface ResearchStep {
@@ -25,18 +25,22 @@ export interface ResearchStep {
 }
 
 const MAX_RENDERED_STEPS = 100;
-const STATUSES: readonly ResearchStepStatus[] = ['pending', 'running', 'completed', 'failed'];
+const STATUSES: readonly ResearchStepStatus[] = ['pending', 'running', 'completed', 'failed', 'incomplete'];
 const STATUS_LABEL_KEY: Record<ResearchStepStatus, string> = {
   pending: 'researchProgressStatusPending',
   running: 'researchProgressStatusRunning',
   completed: 'researchProgressStatusCompleted',
   failed: 'researchProgressStatusFailed',
+  incomplete: 'statusIncomplete',
 };
 
 /**
  * `<lr-research-progress>` — an ordered, read-only view of host-owned research steps with a
  * completion summary. It does not run searches or infer step state. Assigned steps are detached
- * snapshots; blank ids and duplicate ids are omitted, and no more than 100 rows render.
+ * snapshots; blank ids and duplicate ids are omitted, and no more than 100 rows render. A step
+ * whose `status` is not one of `pending`, `running`, `completed`, `failed` or `incomplete` is kept
+ * and rendered as `pending` (it is not dropped); `incomplete` is a step that stopped without
+ * finishing (a cancelled run) and is not counted as completed.
  *
  * @customElement lr-research-progress
  * @csspart base - The named component group.
@@ -75,6 +79,7 @@ export class LyraResearchProgress extends LyraElement {
     researchProgressStatusRunning: LYRA_DEFAULT_researchProgressStatusRunning,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
+    statusIncomplete: LYRA_DEFAULT_statusIncomplete,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
@@ -88,13 +93,16 @@ export class LyraResearchProgress extends LyraElement {
   @property() label?: string;
 
   private get normalizedSteps(): ResearchStep[] {
-    const valid = (Array.isArray(this.steps) ? this.steps : []).filter((step): step is ResearchStep => {
+    const valid: ResearchStep[] = [];
+    for (const step of Array.isArray(this.steps) ? this.steps : []) {
       try {
-        return Boolean(step && typeof step.label === 'string' && STATUSES.includes(step.status));
+        if (step && typeof step.label === 'string') {
+          valid.push(STATUSES.includes(step.status) ? step : { ...step, status: 'pending' });
+        }
       } catch {
-        return false;
+        // A malformed row cannot suppress later valid steps.
       }
-    });
+    }
     return firstByIdentity(valid, (step) => step.id);
   }
 

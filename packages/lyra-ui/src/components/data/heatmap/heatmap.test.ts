@@ -3471,6 +3471,97 @@ describe("calendar weekday-label gutter", () => {
   });
 });
 
+describe("calendar month label collisions", () => {
+  async function paintedMonths(
+    days: string[],
+    monthLabelText?: (jsMonth: number, year: number) => string | undefined,
+    direction: 'ltr' | 'rtl' = 'ltr'
+  ): Promise<{ labels: Array<{ text: string; x: number; width: number }>; canvasWidth: number }> {
+    const el = (await fixture(html`
+      <lr-heatmap
+        dir=${direction}
+        .data=${{
+          kind: "calendar",
+          days: days.map((date) => ({ date, value: 1 })),
+          monthLabelText,
+        }}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
+    const ctx = canvas.getContext("2d")!;
+    const originalFillText = ctx.fillText;
+    const labels: Array<{ text: string; x: number; width: number }> = [];
+    ctx.fillText = ((text: string, x: number, y: number) => {
+      if (y < 20) labels.push({ text, x, width: ctx.measureText(text).width });
+      originalFillText.call(ctx, text, x, y);
+    }) as typeof ctx.fillText;
+    try {
+      (el as unknown as { draw(): void }).draw();
+    } finally {
+      ctx.fillText = originalFillText;
+    }
+    return { labels, canvasWidth: parseFloat(canvas.style.width) };
+  }
+
+  it("never paints two month labels over each other", async () => {
+    const { labels } = await paintedMonths(["2026-01-30", "2026-02-02", "2025-09-29", "2025-10-01"]);
+    expect(labels.length).to.be.greaterThan(0);
+    for (let i = 1; i < labels.length; i++) {
+      expect(labels[i]!.x).to.be.at.least(labels[i - 1]!.x + labels[i - 1]!.width);
+    }
+  });
+
+  it("keeps the later month when a short leading month collides with it", async () => {
+    const { labels } = await paintedMonths(["2025-09-28", "2025-09-29", "2025-09-30", "2025-10-01"]);
+    expect(labels.map((l) => l.text)).to.include("Oct");
+    expect(labels.map((l) => l.text)).to.not.include("Sep");
+  });
+
+  it("fits a month label wider than the canvas without clipping either edge", async () => {
+    const { labels, canvasWidth } = await paintedMonths(["2026-02-01"], () => "A very long month label indeed");
+    expect(labels.length).to.be.greaterThan(0);
+    for (const l of labels) {
+      expect(l.x).to.be.at.least(0);
+      expect(l.x + l.width).to.be.at.most(canvasWidth + 0.5);
+    }
+  });
+
+  it("keeps the calendar's physical month anchors inside the canvas under RTL", async () => {
+    const { labels, canvasWidth } = await paintedMonths(["2026-01-30", "2026-02-02", "2026-03-01"], undefined, 'rtl');
+    expect(labels.length).to.be.greaterThan(0);
+    for (let i = 0; i < labels.length; i++) {
+      expect(labels[i]!.x).to.be.at.least(0);
+      expect(labels[i]!.x + labels[i]!.width).to.be.at.most(canvasWidth + 0.5);
+      if (i > 0) expect(labels[i]!.x).to.be.at.least(labels[i - 1]!.x + labels[i - 1]!.width);
+    }
+  });
+
+  it("drops a short trailing month that collides with the month before it", async () => {
+    const { labels } = await paintedMonths(["2025-09-01", "2025-10-01", "2025-11-01", "2025-11-30", "2025-12-01"]);
+    for (let i = 1; i < labels.length; i++) {
+      expect(labels[i]!.x).to.be.at.least(labels[i - 1]!.x + labels[i - 1]!.width);
+    }
+    expect(labels.map((l) => l.text)).to.include("Nov");
+  });
+
+  it("lets a short month yield to its successor at any position, not only the second", async () => {
+    const { labels } = await paintedMonths(["2025-08-01", "2025-09-01", "2025-09-28", "2025-09-30", "2025-10-01", "2025-10-31"]);
+    for (let i = 1; i < labels.length; i++) {
+      expect(labels[i]!.x).to.be.at.least(labels[i - 1]!.x + labels[i - 1]!.width);
+    }
+    expect(labels.map((l) => l.text)).to.include("Oct");
+  });
+
+  it("keeps a month label that starts in the final week column inside the canvas", async () => {
+    const { labels, canvasWidth } = await paintedMonths(["2026-02-01", "2026-03-01"]);
+    expect(labels.map((l) => l.text).length).to.be.greaterThan(0);
+    for (const l of labels) {
+      expect(l.x + l.width).to.be.at.most(canvasWidth + 0.5);
+    }
+  });
+});
+
 describe("monthLabelText", () => {
   it("is undefined by default", async () => {
     const el = (await fixture(

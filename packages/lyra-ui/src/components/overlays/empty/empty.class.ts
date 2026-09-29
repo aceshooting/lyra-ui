@@ -5,7 +5,7 @@ import { renderInertPresentation } from '../../../internal/inert-presentation.js
 import {
   isAccessibilityVisible,
 } from '../../../internal/accessibility-visibility.js';
-import { composedAccessibilityText } from '../../../internal/announcement-text.js';
+import { AnnouncementUpgradeObserver } from '../../../internal/announcement-text.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
@@ -121,6 +121,11 @@ export class LyraEmpty extends LyraElement {
   private initialContentAnnounced = false;
   private announcementGeneration = 0;
   private lastAnnouncementText = '';
+  private announcementShadowRoots = new Set<ShadowRoot>();
+  private readonly announcementUpgrades = new AnnouncementUpgradeObserver(() => {
+    this.scheduleAnnouncement();
+    this.observeAnnouncementContent();
+  });
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -135,8 +140,8 @@ export class LyraEmpty extends LyraElement {
     const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
     if (MutationObserverCtor) {
       this.contentObserver = new MutationObserverCtor(() => {
-        this.observeAnnouncementContent();
         this.scheduleAnnouncement();
+        this.observeAnnouncementContent();
       });
       this.observeAnnouncementContent();
     }
@@ -146,6 +151,8 @@ export class LyraEmpty extends LyraElement {
     void this.updateComplete.then(() => {
       if (!this.isConnected || generation !== this.announcementGeneration) return;
       this.lastAnnouncementText = this.announcementText();
+      // Seeding may have discovered shadow roots of late-rendering children; observe them.
+      this.observeAnnouncementContent();
       this.announcementsArmed = true;
       // Opted-in initial content goes through the one existing announcement path, so accessibility
       // visibility and slot-flattened text resolve exactly as they do for a later change. `force`
@@ -162,6 +169,8 @@ export class LyraEmpty extends LyraElement {
     this.announcementGeneration += 1;
     this.contentObserver?.disconnect();
     this.contentObserver = undefined;
+    this.announcementShadowRoots.clear();
+    this.announcementUpgrades.disconnect();
     this.removeEventListener('slotchange', this.onForwardedSlotChange);
     this.announcementSink?.release();
     this.announcementSink = undefined;
@@ -177,6 +186,7 @@ export class LyraEmpty extends LyraElement {
       (changed.has('heading') || changed.has('description'))
     ) {
       this.announceCurrentContent();
+      this.observeAnnouncementContent();
     }
   }
 
@@ -245,13 +255,14 @@ export class LyraEmpty extends LyraElement {
         observer.observe(assigned, options);
       }
     }
+    for (const root of this.announcementShadowRoots) observer.observe(root, options);
   }
 
   private onForwardedSlotChange = (event: Event): void => {
     const slot = event.target as HTMLSlotElement;
     if (!this.announcementForwardingSlots().includes(slot)) return;
-    this.observeAnnouncementContent();
     this.scheduleAnnouncement();
+    this.observeAnnouncementContent();
   };
 
   /** Light-DOM mutation delivery precedes the slotchange/Lit update that unhides the corresponding
@@ -273,7 +284,10 @@ export class LyraEmpty extends LyraElement {
     this.announceCurrentContent();
   }
 
-  private slotContent(name?: string): { assigned: boolean; text: string } {
+  private slotContent(
+    roots: Set<ShadowRoot>,
+    name?: string,
+  ): { assigned: boolean; text: string } {
     const selector = name ? `slot[name="${name}"]` : 'slot:not([name])';
     const slot = this.shadowRoot?.querySelector<HTMLSlotElement>(selector);
     return {
@@ -281,15 +295,17 @@ export class LyraEmpty extends LyraElement {
       // empty or accessibility-hidden. Keep that fact separate from the flattened text extractor.
       assigned: (slot?.assignedNodes() ?? []).length > 0,
       text: (slot?.assignedNodes({ flatten: true }) ?? [])
-        .map((node) => composedAccessibilityText(node))
+        .map((node) => this.announcementUpgrades.collect(node, roots))
         .join(' '),
     };
   }
 
   private announcementText(): string {
+    const roots = new Set<ShadowRoot>();
+    this.announcementShadowRoots = roots;
     if (!isAccessibilityVisible(this)) return '';
-    const headingSlot = this.slotContent('heading');
-    const descriptionSlot = this.slotContent('description');
+    const headingSlot = this.slotContent(roots, 'heading');
+    const descriptionSlot = this.slotContent(roots, 'description');
     return [
       headingSlot.assigned ? headingSlot.text : this.heading,
       descriptionSlot.assigned ? descriptionSlot.text : this.description,

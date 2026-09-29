@@ -220,7 +220,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/details.class.ts",
-              "line": 461,
+              "line": 465,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -416,7 +416,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/details.class.ts",
-              "line": 461,
+              "line": 465,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -2290,6 +2290,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/app-rail/app-rail-focus-return.test.ts",
+          "src/components/layout/app-rail/app-rail-item-top-layer.test.ts",
           "src/components/layout/app-rail/app-rail-item.test.ts",
           "src/components/layout/app-rail/app-rail-mobile-shadow.test.ts",
           "src/components/layout/app-rail/app-rail-remediation.test.ts",
@@ -2713,6 +2714,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/app-rail/app-rail-focus-return.test.ts",
+          "src/components/layout/app-rail/app-rail-item-top-layer.test.ts",
           "src/components/layout/app-rail/app-rail-item.test.ts",
           "src/components/layout/app-rail/app-rail-mobile-shadow.test.ts",
           "src/components/layout/app-rail/app-rail-remediation.test.ts",
@@ -11000,7 +11002,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2735,
+              "line": 2762,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -11039,7 +11041,8 @@
           "src/components/forms/combobox/combobox-source-state.test.ts",
           "src/components/forms/combobox/combobox.test.ts",
           "src/components/forms/combobox/option.test.ts",
-          "src/components/forms/combobox/positioning-strategy.test.ts"
+          "src/components/forms/combobox/positioning-strategy.test.ts",
+          "src/components/forms/combobox/top-layer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
         "ssr": "src/ssr.ts"
@@ -11227,7 +11230,8 @@
         "tests": [
           "src/components/layout/command-palette/command-palette-remediation.test.ts",
           "src/components/layout/command-palette/command-palette-search-sizing.test.ts",
-          "src/components/layout/command-palette/command-palette.test.ts"
+          "src/components/layout/command-palette/command-palette.test.ts",
+          "src/components/layout/command-palette/native-modal.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
         "ssr": "src/ssr.ts"
@@ -14804,7 +14808,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/details.class.ts",
-              "line": 461,
+              "line": 465,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -14945,7 +14949,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/dialog/confirm.test.ts",
-              "test": "resolves false and removes the dialog on Escape",
+              "line": 2,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -15079,7 +15083,8 @@
           "src/components/overlays/dialog/confirm.test.ts",
           "src/components/overlays/dialog/dialog-close-composition.test.ts",
           "src/components/overlays/dialog/dialog-remediation.test.ts",
-          "src/components/overlays/dialog/dialog.test.ts"
+          "src/components/overlays/dialog/dialog.test.ts",
+          "src/components/overlays/dialog/native-modal.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
         "ssr": "src/ssr.ts"
@@ -17255,8 +17260,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 3,
+              "file": "src/components/overlays/overlay/dropdown-dialog-position.test.ts",
+              "line": 2,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -17266,8 +17271,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 117,
+              "file": "src/components/overlays/overlay/dropdown-dialog-position.test.ts",
+              "line": 17,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -17395,6 +17400,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/overlays/overlay/dropdown-dialog-position.test.ts",
           "src/components/overlays/overlay/dropdown.test.ts",
           "src/components/overlays/overlay/overlay-closed-layout.test.ts",
           "src/components/overlays/overlay/overlay-remediation.test.ts",
@@ -17408,6 +17414,7 @@
           "src/components/overlays/overlay/retired-style-hooks.test.ts",
           "src/components/overlays/overlay/tooltip-description.test.ts",
           "src/components/overlays/overlay/tooltip-lifecycle.test.ts",
+          "src/components/overlays/overlay/tooltip-top-layer.test.ts",
           "src/components/overlays/overlay/tooltip.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -18398,7 +18405,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/empty/empty.class.ts",
-              "line": 147,
+              "line": 152,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -23710,7 +23717,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.class.ts",
-              "line": 2469,
+              "line": 2470,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27021,7 +27028,8 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
-          "src/components/media/lightbox/lightbox.test.ts"
+          "src/components/media/lightbox/lightbox.test.ts",
+          "src/components/media/lightbox/native-modal.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
         "ssr": "src/ssr.ts"
@@ -27789,7 +27797,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.class.ts",
-              "line": 1188,
+              "line": 1221,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27829,7 +27837,8 @@
           "src/components/forms/locale-picker/locale-picker-option-display.test.ts",
           "src/components/forms/locale-picker/locale-picker-remediation.test.ts",
           "src/components/forms/locale-picker/locale-picker.test.ts",
-          "src/components/forms/locale-picker/positioning-strategy.test.ts"
+          "src/components/forms/locale-picker/positioning-strategy.test.ts",
+          "src/components/forms/locale-picker/top-layer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
         "ssr": "src/ssr.ts"
@@ -27952,8 +27961,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/map/map.test.ts",
-              "test": "lays a legend toggle out from the inline start under RTL",
+              "file": "src/components/media/map/map-legend-scroll.test.ts",
+              "line": 7,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -27969,8 +27978,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/map/map-remediation.test.ts",
-              "test": "keeps the ${peerClass} transform at the physical map origin in ${direction}",
+              "file": "src/components/media/map/map-legend-scroll.test.ts",
+              "test": "keeps a bounded scrolling legend accessible with a stable gutter in ${direction}",
               "kind": "320px allocation test signal"
             }
           ]
@@ -28085,7 +28094,9 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/media/map/map-legend-icon-border.test.ts",
           "src/components/media/map/map-legend-icon.test.ts",
+          "src/components/media/map/map-legend-scroll.test.ts",
           "src/components/media/map/map-loader.test.ts",
           "src/components/media/map/map-remediation.test.ts",
           "src/components/media/map/map.test.ts"
@@ -31217,7 +31228,8 @@
           "src/components/conversation/model-select/model-select-closed-layout.test.ts",
           "src/components/conversation/model-select/model-select-remediation.test.ts",
           "src/components/conversation/model-select/model-select-width-and-height-hooks.test.ts",
-          "src/components/conversation/model-select/model-select.test.ts"
+          "src/components/conversation/model-select/model-select.test.ts",
+          "src/components/conversation/model-select/positioning-strategy.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
         "ssr": "src/ssr.ts"
@@ -32108,7 +32120,8 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
-          "src/components/layout/navigation-menu/navigation-menu.test.ts"
+          "src/components/layout/navigation-menu/navigation-menu.test.ts",
+          "src/components/layout/navigation-menu/top-layer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
         "ssr": "src/ssr.ts"
@@ -33150,7 +33163,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2735,
+              "line": 2762,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -33189,7 +33202,8 @@
           "src/components/forms/combobox/combobox-source-state.test.ts",
           "src/components/forms/combobox/combobox.test.ts",
           "src/components/forms/combobox/option.test.ts",
-          "src/components/forms/combobox/positioning-strategy.test.ts"
+          "src/components/forms/combobox/positioning-strategy.test.ts",
+          "src/components/forms/combobox/top-layer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
         "ssr": "src/ssr.ts"
@@ -35572,7 +35586,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "keyboard",
           "reducedMotion",
           "visual",
           "forcedColors",
@@ -35589,15 +35602,26 @@
               "test": "is accessible",
               "target": "el",
               "state": "populated"
+            },
+            {
+              "file": "src/components/utility/poll-status/poll-status.test.ts",
+              "test": "requests manual refresh with a localized keyboard action and restarts just one automatic deadline",
+              "target": "el",
+              "state": "populated"
             }
           ],
           "exemption": null
         },
         "keyboard": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Interactive implementation detected without a recorded component keyboard-test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/utility/poll-status/poll-status.test.ts",
+              "line": 3,
+              "kind": "component keyboard assertion signal"
+            }
+          ]
         },
         "rtl": {
           "applicability": "applicable",
@@ -35702,7 +35726,6 @@
         }
       },
       "knownLimitations": [
-        "Interactive implementation detected without a recorded component keyboard-test signal.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -35791,8 +35814,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 3,
+              "file": "src/components/overlays/overlay/dropdown-dialog-position.test.ts",
+              "line": 2,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -35802,8 +35825,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 117,
+              "file": "src/components/overlays/overlay/dropdown-dialog-position.test.ts",
+              "line": 17,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -35929,6 +35952,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/overlays/overlay/dropdown-dialog-position.test.ts",
           "src/components/overlays/overlay/dropdown.test.ts",
           "src/components/overlays/overlay/overlay-closed-layout.test.ts",
           "src/components/overlays/overlay/overlay-remediation.test.ts",
@@ -35942,6 +35966,7 @@
           "src/components/overlays/overlay/retired-style-hooks.test.ts",
           "src/components/overlays/overlay/tooltip-description.test.ts",
           "src/components/overlays/overlay/tooltip-lifecycle.test.ts",
+          "src/components/overlays/overlay/tooltip-top-layer.test.ts",
           "src/components/overlays/overlay/tooltip.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -38714,6 +38739,12 @@
               "test": "is accessible while autoplaying",
               "target": "el",
               "state": "populated"
+            },
+            {
+              "file": "src/components/utility/random-content/random-content.test.ts",
+              "test": "the next button is axe-clean",
+              "target": "el",
+              "state": "populated"
             }
           ],
           "exemption": null
@@ -40096,8 +40127,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/responsive-panel/responsive-panel.test.ts",
-              "test": "closes on Escape and emits lr-close with reason \"escape\"",
+              "file": "src/components/layout/responsive-panel/native-modal.test.ts",
+              "line": 2,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -40124,8 +40155,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/responsive-panel/responsive-panel.test.ts",
-              "test": "contains unbroken header, body, and footer content in 320px LTR/RTL inline and overlay allocations",
+              "file": "src/components/layout/responsive-panel/native-modal.test.ts",
+              "test": "${tag} accepts pointer and focus and returns to its native opener on Escape",
               "kind": "320px allocation test signal"
             }
           ]
@@ -40228,6 +40259,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/responsive-panel/native-modal.test.ts",
           "src/components/layout/responsive-panel/responsive-panel.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -42213,6 +42245,7 @@
           "src/components/forms/select/positioning-strategy.test.ts",
           "src/components/forms/select/select-closed-layout.test.ts",
           "src/components/forms/select/select.test.ts",
+          "src/components/forms/select/top-layer.test.ts",
           "src/components/forms/select/unknown-option.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -43693,7 +43726,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/span-waterfall/span-waterfall.test.ts",
-              "test": "reverses the running-bar stripe crawl under dir=\"rtl\"",
+              "test": "keeps axis labels inside the chart and unoverlapped under dir=rtl",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -44698,7 +44731,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "rtl",
           "reducedMotion",
           "visual",
           "forcedColors",
@@ -44750,9 +44782,14 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/data/stat/stat.test.ts",
+              "test": "keeps number-first value and row values in reading order under dir=\"rtl\"",
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "applicable",
@@ -44846,7 +44883,6 @@
         }
       },
       "knownLimitations": [
-        "No component-local rendered RTL assertion is recorded.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -49462,7 +49498,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "keyboard",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -49483,9 +49518,14 @@
         },
         "keyboard": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Interactive implementation detected without a recorded component keyboard-test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/overlays/toast/toaster.test.ts",
+              "line": 2,
+              "kind": "component keyboard assertion signal"
+            }
+          ]
         },
         "rtl": {
           "applicability": "applicable",
@@ -49589,7 +49629,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toast-item.class.ts",
-              "line": 518,
+              "line": 524,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -49612,7 +49652,6 @@
         }
       },
       "knownLimitations": [
-        "Interactive implementation detected without a recorded component keyboard-test signal.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
@@ -49642,7 +49681,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "keyboard",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -49664,9 +49702,14 @@
         },
         "keyboard": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Interactive implementation detected without a recorded component keyboard-test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/overlays/toast/toaster.test.ts",
+              "line": 2,
+              "kind": "component keyboard assertion signal"
+            }
+          ]
         },
         "rtl": {
           "applicability": "applicable",
@@ -49759,7 +49802,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toast-item.class.ts",
-              "line": 518,
+              "line": 524,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -49782,7 +49825,6 @@
         }
       },
       "knownLimitations": [
-        "Interactive implementation detected without a recorded component keyboard-test signal.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -49883,8 +49925,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/toggle/toggle.test.ts",
-              "test": "ellipsizes a long label inside a 320px allocation without overflowing",
+              "file": "src/components/forms/toggle/toggle-icon-only-halo.test.ts",
+              "test": "releases the clip when a container query hides an sr-only-style label after mount",
               "kind": "320px allocation test signal"
             }
           ]
@@ -49976,6 +50018,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/toggle/toggle-icon-only-halo.test.ts",
           "src/components/forms/toggle/toggle.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -50390,7 +50433,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.test.ts",
-              "test": "closes on Escape and emits lr-close with reason \"escape\"",
+              "line": 1,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -51084,7 +51127,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-result-dialog/tool-result-dialog.test.ts",
-              "test": "closes on Escape and emits lr-close with reason \"escape\"",
+              "line": 2,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -51429,7 +51472,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-select-dialog/tool-select-dialog.test.ts",
-              "test": "closes on Escape and emits lr-close with reason \"escape\"",
+              "line": 1,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -51772,8 +51815,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 3,
+              "file": "src/components/overlays/overlay/dropdown-dialog-position.test.ts",
+              "line": 2,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -51783,8 +51826,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 117,
+              "file": "src/components/overlays/overlay/dropdown-dialog-position.test.ts",
+              "line": 17,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -51910,6 +51953,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/overlays/overlay/dropdown-dialog-position.test.ts",
           "src/components/overlays/overlay/dropdown.test.ts",
           "src/components/overlays/overlay/overlay-closed-layout.test.ts",
           "src/components/overlays/overlay/overlay-remediation.test.ts",
@@ -51923,6 +51967,7 @@
           "src/components/overlays/overlay/retired-style-hooks.test.ts",
           "src/components/overlays/overlay/tooltip-description.test.ts",
           "src/components/overlays/overlay/tooltip-lifecycle.test.ts",
+          "src/components/overlays/overlay/tooltip-top-layer.test.ts",
           "src/components/overlays/overlay/tooltip.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -51975,8 +52020,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/utility/tour/tour.test.ts",
-              "line": 4,
+              "file": "src/components/utility/tour/native-modal.test.ts",
+              "line": 2,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -52100,6 +52145,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/utility/tour/native-modal.test.ts",
           "src/components/utility/tour/positioning-strategy.test.ts",
           "src/components/utility/tour/tour.test.ts"
         ],
@@ -54096,7 +54142,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/voice-picker/voice-picker.class.ts",
-              "line": 971,
+              "line": 973,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -54131,6 +54177,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/voice-picker/positioning-strategy.test.ts",
           "src/components/conversation/voice-picker/voice-picker-closed-layout.test.ts",
           "src/components/conversation/voice-picker/voice-picker-remediation.test.ts",
           "src/components/conversation/voice-picker/voice-picker-width-and-height-hooks.test.ts",

@@ -20,6 +20,8 @@ import {
 import { isActionableElement } from '../../../internal/focus-navigation.js';
 import {
   deferredPlaceReady as place,
+  syncTopLayerRelease,
+  topLayerPlacement,
   waitForDeferredPlacement,
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
@@ -351,6 +353,24 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   set hoist(next: boolean) {
     this.positioningStrategy = next ? 'fixed' : 'absolute';
   }
+  /**
+   * Shows the open bubble in the browser top layer wherever the native Popover API exists, so it
+   * paints above every page layer whatever the stacking contexts around it. Use it inside a fixed
+   * or sticky header, toolbar or rail with its own `z-index` that a sibling surface stacked higher
+   * would otherwise cover: such an ancestor is only a stacking context, not a containing block, so
+   * the automatic top-layer escape never applies, and no `z-index` on the bubble can lift it out
+   * of that ancestor's context. While set, the bubble is placed with the `fixed` strategy whatever
+   * `positioning-strategy` resolves to; no DOM node moves, so anchoring, RTL placement, focus,
+   * Escape and the show/hide transition are unchanged. It stays promoted through its hide
+   * transition and leaves the top layer once it settles closed. Stacking contexts are deliberately
+   * not detected automatically. Without native Popover API support the bubble keeps its ordinary
+   * `z-index` stacking. Same contract as `<lr-popover>`'s `top-layer`. Changes apply live while
+   * open.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'top-layer', reflect: true }) topLayer = false;
+  /** Whether the last placement forced the top layer, so turning `topLayer` off demotes. */
+  private placedTopLayer?: boolean;
   /** Suppresses the arrow that otherwise points at the anchor. */
   @property({ type: Boolean, attribute: 'without-arrow', reflect: true }) withoutArrow = false;
   /** Where the arrow sits along the popup's edge. `anchor` tracks the anchor's centre. */
@@ -530,6 +550,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       changed.has('for') ||
       changed.has('anchor') ||
       changed.has('positioningStrategy') ||
+      changed.has('topLayer') ||
       changed.has('arrow') ||
       changed.has('withoutArrow') ||
       changed.has('arrowPlacement') ||
@@ -946,9 +967,13 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     if (this.open && anchor && popup) {
       const arrowPadding = Math.max(0, finiteNumber(this.arrowPadding, 0));
       this.placementPending = true;
+      this.placedTopLayer = syncTopLayerRelease(popup, this.placedTopLayer, this.topLayer);
       this.cleanup = place(anchor, popup, {
         placement: rtlAwarePlacement(this.placement, this),
-        strategy: resolveEffectivePositioningStrategy(this, this._positioningStrategy, 'absolute'),
+        ...topLayerPlacement(
+          this.topLayer,
+          resolveEffectivePositioningStrategy(this, this._positioningStrategy, 'absolute'),
+        ),
         offset: finiteNumber(this.distance, DEFAULT_DISTANCE),
         skidding: finiteNumber(this.skidding, 0),
         arrow: this.rendersArrow && arrowElement ? arrowElement : undefined,

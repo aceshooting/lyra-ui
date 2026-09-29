@@ -363,6 +363,12 @@ export const styles = css`
      marks it the same way -- the [hidden] rule above keeps the marker from orphaning a stray
      glyph when no label is set. */
   ${formControlRequiredMarker}
+  /* Each formatted value is its own first-strong bidi run, so a number-first string such as
+     2.4 MiB/s or -3 keeps its order under an RTL base direction; range ends isolate separately. */
+  [part='tooltip__content'],
+  [part='value'] [data-readout-end] {
+    unicode-bidi: plaintext;
+  }
   [part='value'] {
     flex: 0 0 auto;
     font-size: var(--lr-font-size-sm);

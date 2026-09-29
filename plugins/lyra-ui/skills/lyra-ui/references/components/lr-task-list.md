@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -25,7 +25,9 @@ confirmed moves are announced through an internal `<lr-live-region>`.
 
 **Properties:** `items: readonly TaskItem[] = []` (attribute: false) — `TaskItem { id: string; label: string;
 status: TaskStatus; detail?: string; children?: readonly TaskItem[] }` with `TaskStatus = 'pending' |
-'running' | 'success' | 'error'` (both exported here). `detail` is an optional secondary plain-text
+'running' | 'success' | 'error' | 'incomplete'` (both exported here). `incomplete` is a step that stopped
+without finishing (a cancelled run): a neutral level-dash glyph, the localized `statusIncomplete` text,
+a polite announcement, and it is not counted as completed. `detail` is an optional secondary plain-text
 line; `children` is exactly **one** level of sub-steps — a child's own `children` is ignored with a
 `console.warn`. Runtime non-record rows and rows without a nonempty string `id` are omitted before
 rendering, summaries, announcements, and reorder validation. While `reorderable`, every retained
@@ -86,8 +88,9 @@ rows at that size; `--lr-task-list-compact-body-padding` (default `var(--lr-spac
 var(--lr-space-s) var(--lr-space-s)`) — `[part="body"]` padding at that size;
 `--lr-task-list-pending-color` (default `var(--lr-color-text-quiet)`),
 `--lr-task-list-running-color` (default `var(--lr-color-brand)`),
-`--lr-task-list-success-color` (default `var(--lr-color-success)`), and
-`--lr-task-list-error-color` (default `var(--lr-color-danger)`) independently retint the matching
+`--lr-task-list-success-color` (default `var(--lr-color-success)`),
+`--lr-task-list-error-color` (default `var(--lr-color-danger)`), and
+`--lr-task-list-incomplete-color` (default `var(--lr-color-text-quiet)`) independently retint the matching
 status icons without changing shared status tokens. `--lr-task-list-bg` (default
 `var(--lr-color-surface)`), `--lr-task-list-border-color` (default `var(--lr-color-border)`) and
 `--lr-task-list-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome without a

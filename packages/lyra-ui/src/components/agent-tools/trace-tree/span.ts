@@ -8,10 +8,10 @@ import { finiteRange } from '../../../internal/numbers.js';
 
 export type LyraSpanKind = 'agent' | 'llm' | 'tool' | 'retriever' | 'embedding' | 'other';
 
-/** The same tool-lifecycle vocabulary `<lr-tool-call-chip>`'s `ToolCallStatus` and
- *  `<lr-tool-result-dialog>`'s `ToolResultStatus` build on (those two add only `incomplete`) -- a
- *  span standing in for a call reads identically to the call itself. */
-export type LyraSpanStatus = LyraToolStatus;
+/** The tool-call status vocabulary shared with `<lr-tool-call-chip>` and `<lr-tool-call-block>`:
+ *  the shared tool lifecycle plus `incomplete`, a span that ended without a result (an interrupted
+ *  stream, a cancelled run) -- a span standing in for a call reads identically to the call itself. */
+export type LyraSpanStatus = LyraToolStatus | 'incomplete';
 
 /** Normalizes foreign provider data before it reaches closed span-kind maps. */
 export function normalizeLyraSpanKind(value: unknown): LyraSpanKind {
@@ -36,6 +36,7 @@ export function normalizeLyraSpanStatus(value: unknown): LyraSpanStatus {
     case 'success':
     case 'error':
     case 'denied':
+    case 'incomplete':
       return value;
     default:
       return 'pending';

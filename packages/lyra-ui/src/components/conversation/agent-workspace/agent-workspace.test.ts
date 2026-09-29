@@ -1022,3 +1022,21 @@ it('forwards streaming-render to every message-parts renderer, defaulting to pla
     'the workspace message never rendered its settled heading progressively',
   );
 });
+
+describe('empty header-actions wrapper', () => {
+  it('takes no layout space until an action is slotted, then participates again', async () => {
+    const el = await fixture<LyraAgentWorkspace>(html`<lr-agent-workspace></lr-agent-workspace>`);
+    const actions = () => el.shadowRoot!.querySelector<HTMLElement>('[part="header-actions"]')!;
+    expect(getComputedStyle(actions()).display, 'empty wrapper').to.equal('none');
+
+    const button = document.createElement('button');
+    button.slot = 'header-actions';
+    button.textContent = 'Export';
+    el.append(button);
+    await waitUntil(() => getComputedStyle(actions()).display !== 'none');
+    expect(actions().getBoundingClientRect().width).to.be.greaterThan(0);
+
+    button.remove();
+    await waitUntil(() => getComputedStyle(actions()).display === 'none');
+  });
+});

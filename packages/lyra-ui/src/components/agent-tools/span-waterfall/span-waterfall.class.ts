@@ -13,7 +13,7 @@ import { styles } from './span-waterfall.styles.js';
 import { MAX_RENDERED_LYRA_SPANS, normalizeLyraSpans, type LyraSpan } from '../trace-tree/span.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_spanProjectionLimit, LYRA_DEFAULT_spanStartedAtOffset, LYRA_DEFAULT_spanWaterfall, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_spanProjectionLimit, LYRA_DEFAULT_spanStartedAtOffset, LYRA_DEFAULT_spanWaterfall, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraSpan } from '../trace-tree/span.js';
@@ -32,14 +32,16 @@ const STATUS_LABEL_KEY: Record<LyraSpan['status'], string> = {
   success: 'statusSuccess',
   error: 'statusError',
   denied: 'statusDenied',
+  incomplete: 'statusIncomplete',
 };
-/** success->success, error->danger, denied->warning, running->accent, pending->neutral outline. */
+/** success->success, error->danger, denied->warning, running->accent, pending and incomplete->neutral outline. */
 const STATUS_TONE: Record<LyraSpan['status'], string> = {
   success: 'success',
   error: 'danger',
   denied: 'warning',
   running: 'accent',
   pending: 'neutral',
+  incomplete: 'neutral',
 };
 
 /** Nice-numbers step (1/2/5 x 10^n) for axis tick spacing — the same small
@@ -159,6 +161,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     spanWaterfall: LYRA_DEFAULT_spanWaterfall,
     statusDenied: LYRA_DEFAULT_statusDenied,
     statusError: LYRA_DEFAULT_statusError,
+    statusIncomplete: LYRA_DEFAULT_statusIncomplete,
     statusPending: LYRA_DEFAULT_statusPending,
     statusRunning: LYRA_DEFAULT_statusRunning,
     statusSuccess: LYRA_DEFAULT_statusSuccess,
@@ -198,6 +201,8 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   private sortedCacheTruncated = false;
   /** Trace extent measured before the projection cap, so a truncated tail cannot shrink the axis. */
   private sortedCacheExtentEndMs = 0;
+  private axisObserver?: ResizeObserver;
+  private observedAxis?: Element;
   private limitAnnouncementSink?: AnnouncementSink;
   private limitAnnouncementInitialized = false;
   private previouslyTruncated = false;
@@ -209,9 +214,16 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     this.syncLimitAnnouncementSink();
     this.limitAnnouncementInitialized = this.hasUpdated;
     this.previouslyTruncated = this.sortedCacheTruncated;
+    if (this.hasUpdated) {
+      this.observeAxis();
+      this.fitAxisLabels();
+    }
   }
 
   override disconnectedCallback(): void {
+    this.axisObserver?.disconnect();
+    this.axisObserver = undefined;
+    this.observedAxis = undefined;
     this.limitAnnouncementSink?.release();
     this.limitAnnouncementSink = undefined;
     super.disconnectedCallback();
@@ -413,6 +425,60 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     }
     this.limitAnnouncementInitialized = true;
     this.previouslyTruncated = this.sortedCacheTruncated;
+    this.observeAxis();
+    if ([...changed.keys()].some((key) => key !== 'activeSpanId' && key !== 'focusedId')) this.fitAxisLabels();
+  }
+
+  private observeAxis(): void {
+    const axis = this.renderRoot.querySelector('[part="axis"]') ?? undefined;
+    if (axis === this.observedAxis) return;
+    this.axisObserver?.disconnect();
+    this.observedAxis = axis;
+    const ResizeObserverCtor = this.ownerDocument.defaultView?.ResizeObserver;
+    if (!axis || !ResizeObserverCtor) return;
+    this.axisObserver ??= new ResizeObserverCtor(() => this.fitAxisLabels());
+    this.axisObserver.observe(axis);
+  }
+
+  /** Re-anchors a tick label that would leave the axis at its inline-end edge and hides any label
+   *  that would overprint its neighbour; the terminal label wins over the interior label it collides
+   *  with. */
+  private fitAxisLabels(): void {
+    const axis = this.renderRoot.querySelector<HTMLElement>('[part="axis"]');
+    if (!axis) return;
+    const ticks = Array.from(axis.querySelectorAll<HTMLElement>('[part="tick"]'));
+    const labels = ticks.map((tick) => tick.querySelector<HTMLElement>('[part="tick-label"]')!);
+    for (const tick of ticks) tick.removeAttribute('data-fit');
+    for (const label of labels) label.removeAttribute('data-collapsed');
+    const axisRect = axis.getBoundingClientRect();
+    if (axisRect.width <= 0) return;
+    const rtl = this.ownerDocument.defaultView?.getComputedStyle(axis).direction === 'rtl';
+    // Inline position runs right-to-left under rtl; normalise so start <= end along the inline axis.
+    const span = (rect: DOMRect) => (rtl ? { start: -rect.right, end: -rect.left } : { start: rect.left, end: rect.right });
+    const axisSpan = span(axisRect);
+    const rects = labels.map((label) => label.getBoundingClientRect());
+    ticks.forEach((tick, index) => {
+      if (span(rects[index]!).end > axisSpan.end + 0.5) tick.setAttribute('data-fit', 'end');
+    });
+    const placed = labels
+      .map((label) => {
+        const { start, end } = span(label.getBoundingClientRect());
+        return { label, start, end };
+      })
+      .sort((a, b) => a.start - b.start);
+    const kept: typeof placed = [];
+    placed.forEach((entry, index) => {
+      const isTerminal = index === placed.length - 1;
+      while (kept.length > 1 && isTerminal && entry.start < kept[kept.length - 1]!.end) {
+        kept.pop()!.label.setAttribute('data-collapsed', '');
+      }
+      const previous = kept[kept.length - 1];
+      if (previous && entry.start < previous.end) {
+        entry.label.setAttribute('data-collapsed', '');
+      } else {
+        kept.push(entry);
+      }
+    });
   }
 
   private renderAxis(view: ViewWindow): TemplateResult {

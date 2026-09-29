@@ -63,12 +63,12 @@ export const NoResize: Story = {
 };
 
 /**
- * The host, `form-control`, `textarea-wrapper` and `textarea` parts all carry an unconditional
- * `block-size: 100%` chain, the same pattern `lr-file-input` and `lr-code-editor` already use. Set
- * on an ordinary auto-height ancestor it is a no-op (see `Default`); sized inside a flex column
- * with a definite block size, as here, the label and hint keep their natural size and the native
- * textarea fills and scrolls the remaining space. `resize="none"` keeps this demonstration free of
- * `resize="auto"`'s own JS-driven growth, which supersedes this CSS chain whenever it is active.
+ * The `form-control`, `textarea-wrapper` and `textarea` parts carry a `block-size: 100%` chain. An
+ * unsized host stays content-sized (see `Default`); a host with an explicit block size, here
+ * `block-size: 100%` inside a flex column with a definite block size, keeps the label and hint at
+ * their natural size while the native textarea fills and scrolls the remaining space.
+ * `resize="none"` keeps this demonstration free of `resize="auto"`'s own JS-driven growth, which
+ * supersedes this CSS chain whenever it is active.
  */
 export const FillHeightContainer: Story = {
   name: 'Fills a definite-height container',

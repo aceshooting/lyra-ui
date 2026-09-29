@@ -111,6 +111,22 @@ export const Failed: Story = {
   `,
 };
 
+export const Cancelled: Story = {
+  render: () => html`
+    <lr-agent-run
+      style="max-width: 40rem;"
+      .run=${{
+        ...runningRun,
+        status: { kind: 'cancelled' },
+        endedAt: Date.now(),
+        steps: steps.map((step) => step.status.kind === 'running'
+          ? { ...step, status: { kind: 'cancelled' as const } }
+          : step),
+      }}
+    ></lr-agent-run>
+  `,
+};
+
 export const WithToolsReasoningAndOutput: Story = {
   name: 'Composed with tools/reasoning/output slots',
   render: () => html`

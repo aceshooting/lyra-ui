@@ -58,6 +58,7 @@ const strings: LyraLocaleStrings = {
   statusSuccess: 'بریالی',
   statusError: 'تېروتنه',
   statusDenied: 'رد شوی',
+  statusIncomplete: 'نیمګړی',
   restore: 'بېرته راګرځول',
   navigation: 'لارموندنه',
   attachmentUntitledFile: 'بې‌سرلیکه دوتنه',

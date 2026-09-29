@@ -29,6 +29,13 @@ export const Running: Story = {
   render: () => html`<lr-research-progress style="max-inline-size: 42rem" .steps=${steps}></lr-research-progress>`,
 };
 
+export const Incomplete: Story = {
+  render: () => html`<lr-research-progress
+    style="max-inline-size: 42rem"
+    .steps=${steps.map((step) => (step.status === 'running' ? { ...step, status: 'incomplete' as const } : step))}
+  ></lr-research-progress>`,
+};
+
 export const Empty: Story = {
   render: () => html`<lr-research-progress style="max-inline-size: 42rem"></lr-research-progress>`,
 };

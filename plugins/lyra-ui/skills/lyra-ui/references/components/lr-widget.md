@@ -16,6 +16,8 @@
 
 ## `lr-widget`
 
+The fullscreen presentation remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
+
 A titled panel shell with an optional collapse toggle and an optional fullscreen-expand toggle.
 First-party invention (no `wa-*`/`sl-*` counterpart). Fullscreen promotes the same host element in
 place (a CSS state, not a clone/portal), so slotted content (a chart, a running simulation, scroll

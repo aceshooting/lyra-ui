@@ -25,6 +25,36 @@ describe('lr-research-progress', () => {
     expect(el.shadowRoot!.textContent).to.contain('Failed');
   });
 
+  it('renders an incomplete step as Incomplete with its own state and never inflates progress', async () => {
+    const el = await fixture<LyraResearchProgress>(html`<lr-research-progress
+      .steps=${[
+        { id: 'a', label: 'A', status: 'completed' },
+        { id: 'b', label: 'B', status: 'incomplete' },
+        { id: 'c', label: 'C', status: 'pending' },
+        { id: 'd', label: 'D', status: 'pending' },
+      ] as ResearchStep[]}
+    ></lr-research-progress>`);
+    const step = el.shadowRoot!.querySelector('[data-step-id="b"]') as HTMLElement;
+    expect(step.getAttribute('data-status')).to.equal('incomplete');
+    expect(step.querySelector('[part="status"]')!.textContent).to.equal('Incomplete');
+    expect(el.shadowRoot!.querySelector('[part="progress"]')!.getAttribute('aria-valuenow')).to.equal('25');
+    el.strings = { statusIncomplete: 'Inachevé' };
+    await el.updateComplete;
+    expect(step.querySelector('[part="status"]')!.textContent).to.equal('Inachevé');
+  });
+
+  it('keeps a step with an unrecognised status, shown as pending, instead of dropping it', async () => {
+    const el = await fixture<LyraResearchProgress>(html`<lr-research-progress
+      .steps=${[
+        { id: 'a', label: 'A', status: 'completed' },
+        { id: 'b', label: 'B', status: 'cancelled' },
+      ] as unknown as ResearchStep[]}
+    ></lr-research-progress>`);
+    const step = el.shadowRoot!.querySelector('[data-step-id="b"]') as HTMLElement;
+    expect(step.getAttribute('data-status')).to.equal('pending');
+    expect(el.shadowRoot!.querySelector('[part="progress"]')!.getAttribute('aria-valuenow')).to.equal('50');
+  });
+
   it('keeps first valid identities, caps mounted rows, owns the assigned snapshot, and updates on replacement', async () => {
     const many: ResearchStep[] = Array.from({ length: 102 }, (_, index) => ({
       id: `step-${index}`,

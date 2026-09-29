@@ -57,6 +57,13 @@ export const Default: Story = {
   render: () => html`<lr-task-list style="max-width: 32rem;" .items=${items}></lr-task-list>`,
 };
 
+export const Incomplete: Story = {
+  render: () => html`<lr-task-list
+    style="max-width: 32rem;"
+    .items=${items.map((item) => (item.status === 'running' ? { ...item, status: 'incomplete' as const } : item))}
+  ></lr-task-list>`,
+};
+
 export const WithNestedSubSteps: Story = {
   render: () => html`
     <lr-task-list

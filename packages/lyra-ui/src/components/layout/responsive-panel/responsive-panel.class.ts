@@ -1,3 +1,5 @@
+import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
+import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
@@ -173,7 +175,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, nativeModalCarrierStyles, styles];
 
   /** Whether the panel is open. In the inline presentation this just means visible/mounted; in
    *  the overlay presentation this is the actual modal open/closed state. */
@@ -239,6 +241,13 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   private lastTrigger?: HTMLElement;
   private readonly deferredFocusReturn = new DeferredFocusReturn();
   private overlayHandle?: OverlayHandle;
+  private readonly nativeModal = new NativeModalCarrier(this, {
+    onCancel: () => { if (this.overlayHandle?.isTopmost()) this.close('escape'); },
+    onUnexpectedClose: () => {
+      if (this.overlayHandle?.isTopmost()) this.close('escape');
+      if (this.open) this.nativeModal.show();
+    },
+  });
   private headerObserver?: MutationObserver;
   private headerObserverDocument?: Document;
   private headerObserverGeneration = 0;
@@ -333,6 +342,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   // mirrors lr-dialog's identical ordering rationale.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (this.open) this.nativeModal.show();
     if (!this.isFirstUpdate && changed.has('resolvedMode')) {
       this.emit('lr-mode-change', {
         mode: this.resolvedMode,
@@ -361,7 +371,10 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
       } else {
         this.activateOverlayChrome();
       }
-      this.queueOwnerMicrotask(() => this.overlayHandle?.focusInitial());
+      this.queueOwnerMicrotask(() => {
+        this.nativeModal.show();
+        this.overlayHandle?.focusInitial();
+      });
     }
     if (this.hasUpdated) {
       this.queueOwnerMicrotask(() => {
@@ -374,6 +387,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   }
 
   override disconnectedCallback(): void {
+    this.nativeModal.hide();
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
     this.resizeView?.removeEventListener('resize', this.onWindowResize);
@@ -420,6 +434,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   }
 
   private activateOverlayChrome(): void {
+    this.nativeModal.prepare();
     this.deferredFocusReturn.cancel();
     this.overlayHandle = activateOverlay({
       host: this,
@@ -434,6 +449,8 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   }
 
   private deactivateOverlayChrome(restoreFocus = true): void {
+    this.nativeModal.hide();
+    this.nativeModal.prepare(false);
     this.overlayHandle?.deactivate({ restoreFocus });
     this.overlayHandle = undefined;
   }
@@ -588,16 +605,16 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
     const overlay = this.effectiveMode === 'overlay';
     const accessibleName =
       this.accessibleLabel ?? (this.label || this.headingText || this.localize('responsivePanel'));
-    return html`
+    return this.nativeModal.render(html`
       <div part="base" class=${overlay ? 'overlay' : 'inline'}>
         ${overlay
           ? html`<div part="backdrop" @click=${this.onBackdropClick}></div>`
           : nothing}
         <div
           part="panel"
-          role=${overlay ? 'dialog' : nothing}
-          aria-modal=${overlay ? 'true' : nothing}
-          aria-label=${overlay ? accessibleName : nothing}
+          role=${overlay && !this.nativeModal.requested ? 'dialog' : nothing}
+          aria-modal=${overlay && !this.nativeModal.requested ? 'true' : nothing}
+          aria-label=${overlay && !this.nativeModal.requested ? accessibleName : nothing}
           tabindex=${overlay ? '-1' : nothing}
         >
           <div part="header" ?hidden=${!this.hasHeaderSlot}>
@@ -609,9 +626,10 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
           <div part="footer" ?hidden=${!this.hasFooterSlot}>
             <slot name="footer" @slotchange=${this.onFooterSlotChange}></slot>
           </div>
+          ${this.nativeModal.renderHelperSlot()}
         </div>
       </div>
-    `;
+    `, { label: accessibleName });
   }
 }
 

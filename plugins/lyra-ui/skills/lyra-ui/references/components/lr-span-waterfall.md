@@ -25,7 +25,7 @@ surrounding whitespace. The first valid admitted duplicate continues to win.
 
 **Properties:** `spans: LyraSpan[] = []` (attribute: false) — `LyraSpan { id: string; parentId?:
 string; name: string; kind: 'agent' | 'llm' | 'tool' | 'retriever' | 'embedding' | 'other';
-startMs: number; endMs?: number; status: 'pending' | 'running' | 'success' | 'error' | 'denied';
+startMs: number; endMs?: number; status: 'pending' | 'running' | 'success' | 'error' | 'denied' | 'incomplete';
 tokensIn?: number; tokensOut?: number; costText?: string; detail?: string }`, exported from
 `trace-tree/span.ts`. `startMs`/`endMs` are milliseconds **relative to the trace start**, not
 wall-clock timestamps; `endMs` is absent while the span is still running. `costText` is preformatted
@@ -60,7 +60,8 @@ when `spans` is empty), `limit` (the 500-span projection notice), and `live-regi
 The interactive `bar` keeps a 24px minimum target in both axes even when its duration-derived
 paint width would otherwise be only a few pixels.
 
-The terminal axis tick is end-aligned so its label remains inside the allocated chart width. Roving
+The terminal axis tick is end-aligned so its label remains inside the allocated chart width, and an
+interior tick label that would overprint a neighbour is hidden (the terminal label is kept). Roving
 keyboard focus is computed from the currently rendered/filtered span ids, so a hidden active span
 cannot leave the component with no `tabindex="0"` stop.
 

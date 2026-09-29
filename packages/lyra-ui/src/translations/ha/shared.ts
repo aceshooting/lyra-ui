@@ -58,6 +58,7 @@ const strings: LyraLocaleStrings = {
   statusSuccess: 'Nasara',
   statusError: 'Kuskure',
   statusDenied: 'An hana',
+  statusIncomplete: 'Bai cika ba',
   restore: 'Mayar',
   navigation: 'Kewayawa',
   attachmentUntitledFile: 'Fayil marar suna',

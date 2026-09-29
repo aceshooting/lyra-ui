@@ -383,7 +383,8 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   }
 
   /** Bound to every named slot whose assignment `render()` reads back through `hasSlotted()` --
-   *  `messages` (which decides how `safeUnreadStartIndex` is projected), `details`, and `composer`.
+   *  `messages` (which decides how `safeUnreadStartIndex` is projected), `details`, `composer`, and
+   *  `header-actions` (whose empty wrapper is hidden).
    *  A slot assignment change alone schedules no Lit update, so without this the branch is only
    *  ever evaluated at mount. */
   private onNamedSlotChange = (): void => {
@@ -467,7 +468,9 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
       <div part="base" role="region" aria-label=${label}>
         <div part="header">
           <h2 part="heading">${heading}</h2>
-          <span part="header-actions"><slot name="header-actions"></slot></span>
+          <span part="header-actions" ?hidden=${!this.hasSlotted('header-actions')}
+            ><slot name="header-actions" @slotchange=${this.onNamedSlotChange}></slot
+          ></span>
         </div>
         <div part="body" data-details=${hasDetails ? 'true' : 'false'}>
           <section part="conversation" aria-label=${this.localize('agentWorkspaceConversation')}>

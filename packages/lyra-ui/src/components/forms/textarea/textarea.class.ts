@@ -102,6 +102,11 @@ class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
  * `readonly` keeps the value focusable, selectable, copyable, and form-submittable while barring
  * user edits and constraint validation, matching the native textarea contract.
  *
+ * An unsized host follows its content. Set a host block size (such as `block-size: 100%` in a
+ * bounded parent) to fill that allocation, with label and hint chrome outside the text viewport.
+ * `resize="auto"` grows to the content up to `--lr-textarea-max-block-size`; a smaller host
+ * allocation takes precedence and overflowing text remains scrollable as that allocation changes.
+ *
  * Removing `label`, `hint`, `help-text` or `error-text` safely omits that content while preserving
  * native null property readback. Explicit empty strings stay empty; later text renders normally.
  *
@@ -798,7 +803,10 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
       : Number.POSITIVE_INFINITY;
     const contentBlockSize = ta.scrollHeight + borderBlock;
     ta.style.blockSize = `${Math.min(contentBlockSize, maxBlockSize)}px`;
-    ta.style.overflowY = contentBlockSize > maxBlockSize ? 'auto' : 'hidden';
+    // Always scrollable: the fitted height equals the content (no scrollbar), but flex shrink from
+    // a constraining parent can render the field smaller than its own cap, and that content must
+    // stay reachable rather than clipped.
+    ta.style.overflowY = 'auto';
   }
 
   /** Whether `debounce` is a real, positive delay -- mirrors `<lr-filter-bar>`'s own predicate for

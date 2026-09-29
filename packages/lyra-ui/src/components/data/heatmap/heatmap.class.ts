@@ -144,6 +144,7 @@ const FALLBACK_SELECTED_COLOR = '#1a7f37';
 // onMatrixKeyDown()/onCalendarKeyDown().
 const ARROW_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 const MS_PER_DAY = 86_400_000;
+const CAL_MONTH_LABEL_GAP = 2;
 
 interface OwnedAnimationFrame {
   owner: Window;
@@ -3075,9 +3076,27 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   ): void {
     ctx.fillStyle = this.labelColor(cs);
     ctx.font = this.labelFont(cs);
-    for (const month of monthLabels) {
-      ctx.fillText(month.label, this.columnXFor(month.week), CAL_LABEL_H - 4);
-    }
+    const canvasRight = this.columnXFor(Math.max(1, this.cachedCalendarGrid.weekCount));
+    const placed: { label: string; x: number; end: number; span: number }[] = [];
+    monthLabels.forEach((month, index) => {
+      const label = this.ellipsize(ctx, month.label, canvasRight);
+      if (!label) return;
+      const width = ctx.measureText(label).width;
+      // The canvas ends exactly at the last week column, so a label anchored there is shifted back
+      // inside (never past the start edge). When two labels would touch, the month covering fewer
+      // week columns (a partial month at either edge) yields; on a tie the earlier label stays.
+      const x = Math.max(0, Math.min(this.columnXFor(month.week), canvasRight - width));
+      const nextWeek = monthLabels[index + 1]?.week ?? Math.max(month.week + 1, this.cachedCalendarGrid.weekCount);
+      const entry = { label, x, end: x + width + CAL_MONTH_LABEL_GAP, span: nextWeek - month.week };
+      let previous = placed[placed.length - 1];
+      while (previous && entry.x < previous.end && entry.span > previous.span) {
+        placed.pop();
+        previous = placed[placed.length - 1];
+      }
+      if (previous && entry.x < previous.end) return;
+      placed.push(entry);
+    });
+    for (const { label, x } of placed) ctx.fillText(label, x, CAL_LABEL_H - 4);
     const available = this.calendarPadLeft - CAL_WEEKDAY_LABEL_INSET * 2;
     this.weekdayLabels(firstWeekStart).forEach((label, weekday) => {
       const shown = label ? this.ellipsize(ctx, label, available) : '';

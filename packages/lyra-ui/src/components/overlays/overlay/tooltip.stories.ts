@@ -229,3 +229,33 @@ export const PositioningStrategy: Story = {
     </div>
   `,
 };
+
+export const TopLayer: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A header with its own `z-index` is a stacking context: an overlay inside it paints beneath a sibling surface stacked higher, whatever `z-index` the overlay itself sets. `top-layer` opts the bubble into the browser top layer, above that sibling, without moving any DOM node. Open the unset control on the left to compare with the one on the right.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="block-size: 16rem">
+      <div
+        style="position: relative; z-index: 1000; display: flex; gap: var(--lr-space-l); padding: var(--lr-space-s) var(--lr-space-m); background: var(--lr-color-surface-raised)"
+      >
+        <lr-tooltip content="Covered by the sibling surface" placement="bottom">
+          <button slot="trigger">Unset</button>
+        </lr-tooltip>
+        <lr-tooltip content="Painted above the sibling surface" placement="bottom" top-layer>
+          <button slot="trigger">top-layer</button>
+        </lr-tooltip>
+      </div>
+      <div
+        style="position: relative; z-index: 1100; block-size: 12rem; padding: var(--lr-space-m); background: var(--lr-color-surface)"
+      >
+        Sibling surface (z-index: 1100)
+      </div>
+    </div>
+  `,
+};

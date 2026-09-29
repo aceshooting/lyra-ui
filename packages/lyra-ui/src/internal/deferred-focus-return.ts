@@ -3,6 +3,15 @@ import { composedContains, deepActiveElement } from './overlay-manager.js';
 
 type FocusReturnCandidate = HTMLElement | null | undefined;
 
+/** The element that held focus outside `host` when it opened -- the component's return target --
+ *  or `null` when focus was on nothing focusable or already inside `host`. */
+export function captureFocusReturnOpener(host: HTMLElement): HTMLElement | null {
+  const active = deepActiveElement(host.ownerDocument);
+  return active && typeof (active as HTMLElement).focus === 'function' && !composedContains(host, active)
+    ? (active as HTMLElement)
+    : null;
+}
+
 /** One close's deferred focus return -- see `DeferredFocusReturn.schedule()`. */
 export interface DeferredFocusReturnRequest {
   /** The closing component. Its update must complete before the pass runs, and a disconnected host

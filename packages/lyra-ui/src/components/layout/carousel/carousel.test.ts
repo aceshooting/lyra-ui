@@ -700,6 +700,52 @@ describe("Web Awesome carousel surface", () => {
       }
     }
   });
+
+  it("keeps autoplay paused while a slotted dropdown menu is open, even after :focus-within is lost", async () => {
+    await import("../../overlays/overlay/dropdown.js");
+    await import("../menu/menu.js");
+    await import("../menu/menu-item.js");
+    const el = await carousel(html`
+      <lr-carousel autoplay loop>
+        <lr-carousel-item>
+          <lr-dropdown style="--lr-transition-fast:0ms">
+            <button slot="trigger" type="button">Actions</button>
+            <lr-menu label="Actions"><lr-menu-item value="a">A</lr-menu-item></lr-menu>
+          </lr-dropdown>
+        </lr-carousel-item>
+        <lr-carousel-item>Two</lr-carousel-item>
+      </lr-carousel>
+    `);
+    const timer = () => (el as unknown as { timer?: number }).timer;
+    const dropdown = el.querySelector("lr-dropdown") as HTMLElement & {
+      show(): Promise<void>;
+      hide(options?: { focusTrigger?: boolean }): Promise<void>;
+    };
+    expect(timer()).to.not.be.undefined;
+    await dropdown.show();
+    await el.updateComplete;
+    // A top-layer popup makes some engines drop :focus-within on ancestors; the focusout
+    // reconciliation must not resume autoplay while the menu is open.
+    const nativeMatches = el.matches;
+    const ownMatches = Object.getOwnPropertyDescriptor(el, 'matches');
+    Object.defineProperty(el, 'matches', {
+      configurable: true,
+      value(this: Element, selector: string) {
+        return selector === ':focus-within' ? false : nativeMatches.call(this, selector);
+      },
+    });
+    try {
+      const viewport = el.shadowRoot!.querySelector('[part~="scroll-container"]') as HTMLElement;
+      viewport.dispatchEvent(new FocusEvent("focusout", { bubbles: true, composed: true }));
+      await aTimeout(20);
+      expect(timer()).to.be.undefined;
+    } finally {
+      if (ownMatches) Object.defineProperty(el, 'matches', ownMatches);
+      else Reflect.deleteProperty(el, 'matches');
+    }
+    await dropdown.hide({ focusTrigger: false });
+    await waitUntil(() => timer() !== undefined, "autoplay resumes after the menu closes");
+  });
 });
 
 it('inherits independent navigation and pagination hover/pressed paint from an ancestor', async () => {

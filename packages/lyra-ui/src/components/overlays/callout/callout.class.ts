@@ -6,7 +6,7 @@ import {
 } from '../../../internal/announcer.js';
 import { composedParentElement } from '../../../internal/active-element.js';
 import { isAccessibilityVisible } from '../../../internal/accessibility-visibility.js';
-import { composedAccessibilityText } from '../../../internal/announcement-text.js';
+import { AnnouncementUpgradeObserver } from '../../../internal/announcement-text.js';
 import {
   applyComposedFocusRepair,
   captureComposedFocusRepair,
@@ -354,6 +354,11 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
   private assertiveSink?: AnnouncementSink;
   private contentObserver?: MutationObserver;
   private lastAnnouncementText = '';
+  private announcementShadowRoots = new Set<ShadowRoot>();
+  private readonly announcementUpgrades = new AnnouncementUpgradeObserver(() => {
+    this.announceCurrentContent();
+    this.observeAnnouncementContent();
+  });
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -377,8 +382,8 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
               this.isAnnouncementMutation(record)
           )
         ) {
-          this.observeAnnouncementContent();
           this.announceCurrentContent();
+          this.observeAnnouncementContent();
         }
       });
       this.observeAnnouncementContent();
@@ -399,6 +404,8 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
       .then(() => {
         if (this.isConnected && generation === this.connectionGeneration) {
           this.lastAnnouncementText = this.announcementText();
+          // Seeding may have discovered shadow roots of late-rendering children; observe them.
+          this.observeAnnouncementContent();
           this.liveActive = true;
           // Opted-in initial content goes through the one existing announcement path, so it
           // resolves urgency, accessibility visibility and localized context identically to a
@@ -418,6 +425,8 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     this.lastAnnouncementText = '';
     this.contentObserver?.disconnect();
     this.contentObserver = undefined;
+    this.announcementShadowRoots.clear();
+    this.announcementUpgrades.disconnect();
     this.removeEventListener('slotchange', this.onForwardedSlotChange);
     this.politeSink?.release();
     this.politeSink = undefined;
@@ -435,6 +444,7 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
       changed.has('accessibleLabel')
     ) {
       this.announceCurrentContent(changed.has('open'));
+      this.observeAnnouncementContent();
     }
   }
 
@@ -525,13 +535,14 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
         observer.observe(assigned, options);
       }
     }
+    for (const root of this.announcementShadowRoots) observer.observe(root, options);
   }
 
   private onForwardedSlotChange = (event: Event): void => {
     const slot = event.target as HTMLSlotElement;
     if (!this.announcementForwardingSlots().includes(slot)) return;
-    this.observeAnnouncementContent();
     this.announceCurrentContent();
+    this.observeAnnouncementContent();
   };
 
   private normalizedText(value: string | null | undefined): string {
@@ -546,6 +557,8 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
   }
 
   private announcementText(): string {
+    const roots = new Set<ShadowRoot>();
+    this.announcementShadowRoots = roots;
     if (!isAccessibilityVisible(this)) return '';
     const hostLabel = this.hostAriaLabel;
     const context = this.normalizedText(
@@ -559,7 +572,7 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
             node.nodeType === 1 &&
             (node as Element).getAttribute('slot') === 'heading'
         )
-        .map((node) => composedAccessibilityText(node)),
+        .map((node) => this.announcementUpgrades.collect(node, roots)),
     ];
     const message = Array.from(this.childNodes)
       .filter((node) => {
@@ -567,7 +580,7 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
         const slotName = (node as Element).getAttribute('slot');
         return slotName === null || slotName === '';
       })
-      .map((node) => composedAccessibilityText(node));
+      .map((node) => this.announcementUpgrades.collect(node, roots));
     const content = this.normalizedText([...heading, ...message].join(' '));
     if (!context || context === content) return content;
     return content

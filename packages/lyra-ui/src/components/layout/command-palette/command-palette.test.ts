@@ -9,6 +9,7 @@ import {
 } from "@open-wc/testing";
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from "../../../../test/wtr-mouse.js";
 import "./command-palette.js";
+import { expectFocusReturnsToReshownOpener } from "../../../../test/hidden-opener.js";
 import type { LyraCommandPalette } from "./command-palette.js";
 import { styles } from "./command-palette.styles.js";
 
@@ -645,6 +646,28 @@ it("contains long labels and shortcuts inside a 320px dialog", async () => {
   await el.updateComplete;
   const list = el.shadowRoot!.querySelector('[part="list"]') as HTMLElement;
   expect(list.scrollWidth).to.be.at.most(list.clientWidth + 1);
+});
+
+it("keeps a short shortcut whole beside an overflowing label and description", async () => {
+  const el = (await fixture(
+    html`<lr-command-palette
+      style="--lr-command-palette-max-inline-size: 320px"
+      .commands=${[
+        {
+          commandId: "open",
+          label: "Open file",
+          description: "Search every file in the current workspace by name or path",
+          shortcut: "\u2318P",
+        },
+      ]}
+    ></lr-command-palette>`
+  )) as LyraCommandPalette;
+  el.openPalette();
+  await el.updateComplete;
+  const shortcut = el.shadowRoot!.querySelector('[part="shortcut"]') as HTMLElement;
+  const description = el.shadowRoot!.querySelector('[part="description"]') as HTMLElement;
+  expect(description.scrollWidth, "description overflows").to.be.greaterThan(description.clientWidth);
+  expect(shortcut.scrollWidth).to.be.at.most(shortcut.clientWidth);
 });
 
 it("traps focus by inerting sibling content while open, releasing it on close", async () => {
@@ -1913,4 +1936,21 @@ it('matches a non-Latin shortcut through its physical letter code', async () => 
   const el = await fixture<LyraCommandPalette>(html`<lr-command-palette hotkey="ctrl+k"></lr-command-palette>`);
   window.dispatchEvent(new KeyboardEvent('keydown', { key: 'л', code: 'KeyK', ctrlKey: true }));
   await el.updateComplete; expect(el.open).to.equal(true);
+});
+
+it("returns focus to an opener the host re-shows only after lr-close", async () => {
+  const el = (await fixture(html`<lr-command-palette></lr-command-palette>`)) as LyraCommandPalette;
+  el.commands = [{ commandId: 'one', label: 'One', onSelect: () => undefined }];
+  await expectFocusReturnsToReshownOpener({
+    host: el,
+    closeEvent: "lr-close",
+    open: async () => {
+      el.openPalette();
+      await el.updateComplete;
+    },
+    close: async () => {
+      el.close("api");
+      await el.updateComplete;
+    },
+  });
 });

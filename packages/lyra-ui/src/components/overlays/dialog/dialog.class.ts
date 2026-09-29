@@ -1,3 +1,5 @@
+import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
+import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -6,12 +8,10 @@ import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/he
 import {
   activateOverlay,
   collectFocusableElements,
-  composedContains,
-  deepActiveElement,
   type OverlayDeactivateOptions,
   type OverlayHandle,
 } from '../../../internal/overlay-manager.js';
-import { DeferredFocusReturn } from '../../../internal/deferred-focus-return.js';
+import { DeferredFocusReturn, captureFocusReturnOpener } from '../../../internal/deferred-focus-return.js';
 import { nextId } from '../../../internal/a11y.js';
 import {
   composedAccessibilityText,
@@ -87,7 +87,9 @@ export interface LyraDialogEventMap {
  * `<lr-dialog>` — a general-purpose modal/overlay. `role="dialog"`,
  * focus-trapped while open, dismissible via Escape or (opt-in) a backdrop click, and
  * scroll-locks the document for as long as it's open. While open it is promoted into the
- * browser top layer, so no consumer stacking context can render on top of it. The mapped
+ * browser top layer, so no consumer stacking context can render on top of it. If an existing native
+ * modal dialog would make this host inert, a native modal carrier inside the shadow root keeps the
+ * content interactive without moving the host or its slotted children. The mapped
  * `label` property renders as a visible title and the close affordance is present by default;
  * `without-close-button` plus either header-suppression spelling support custom chrome. `no-header` is
  * Shoelace's name for it and `without-header` is Web Awesome's; both are current upstream
@@ -271,7 +273,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles, nativeModalCarrierStyles];
 
   override attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
     super.attributeChangedCallback(name, oldValue, newValue);
@@ -381,6 +383,14 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   /** The pending close's `lr-after-hide` settle, awaited by the deferred focus return. */
   private hideSettled?: Promise<void>;
   private readonly deferredFocusReturn = new DeferredFocusReturn();
+  private readonly nativeModal = new NativeModalCarrier(this, {
+    onCancel: (event) => this.onNativeCancel(event),
+    onUnexpectedClose: (carrier) => {
+      if (!this.open || !this.modalSurface) return;
+      void this.closeFrom('api', carrier);
+      if (this.open) this.enterTopLayer();
+    },
+  });
   /** Set by `deactivateOverlay()` when a close defers releasing the scroll lock. Flushed once the
    *  exit animation actually finishes (`settleTransition()`'s `'lr-after-hide'` branch), or right
    *  away on disconnect/reopen, since nothing is left to visually protect in either case. */
@@ -431,15 +441,14 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
       this.hasFooterSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'footer');
       this.detectLightDomChrome();
     }
+    if (this.open && (changed.has('open') || changed.has('contained'))) {
+      this.nativeModal.prepare(this.modalSurface);
+    }
     if (changed.has('open')) {
       this.flushPendingScrollLockRelease();
       if (this.open) {
         this.deferredFocusReturn.cancel();
-        const active = deepActiveElement(this.ownerDocument);
-        this.focusReturnOpener =
-          active && typeof (active as HTMLElement).focus === 'function' && !composedContains(this, active)
-            ? (active as HTMLElement)
-            : null;
+        this.focusReturnOpener = captureFocusReturnOpener(this);
         if (this.isConnected && this.modalSurface) this.activateOverlay();
       } else {
         const hadOverlay = this.overlay !== undefined;
@@ -509,6 +518,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     this.resetBodyOverflowObserver();
     super.disconnectedCallback();
     this.overlay?.suspend();
+    this.nativeModal.hide();
     this.deferredFocusReturn.cancel();
     // Transient exit-animation state never survives a detach: a reattached dialog re-runs its
     // own lifecycle from scratch, and a pending after-event must not fire for a transition the
@@ -909,7 +919,9 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
    * `z-index` in the stylesheet remains as the fallback for a user agent without popover support.
    */
   protected enterTopLayer(): void {
-    if (!this.isConnected || typeof this.showPopover !== 'function') return;
+    if (!this.isConnected) return;
+    if (this.nativeModal.show()) return;
+    if (typeof this.showPopover !== 'function') return;
     if (this.getAttribute('popover') !== 'manual') this.setAttribute('popover', 'manual');
     try {
       if (!this.isTopLayer()) this.showPopover();
@@ -919,6 +931,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   }
 
   protected leaveTopLayer(): void {
+    this.nativeModal.hide();
     if (typeof this.hidePopover !== 'function') return;
     try {
       if (this.isTopLayer()) this.hidePopover();
@@ -926,6 +939,13 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
       // Already hidden, or never promoted.
     }
   }
+
+  private onNativeCancel = (event: Event): void => {
+    event.preventDefault();
+    if (!this.open || !this.overlay?.isTopmost()) return;
+    const panel = this.renderRoot.querySelector('[part~="panel"]') ?? this;
+    this.requestClose('keyboard', 'escape', panel);
+  };
 
   private isTopLayer(): boolean {
     try {
@@ -1016,15 +1036,14 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     const showHeader =
       !suppressHeader && (renderHeading || this.hasHeaderActionsSlot || !this.withoutCloseButton);
     const headingLevel = resolveHeadingLevel(this.headingLevel);
-    return html`
-      <div part="base">
+    return this.nativeModal.render(html`
         <div part="backdrop overlay" @click=${this.onBackdropClick}></div>
         <div
           part="panel dialog"
-          role=${this.open ? 'dialog' : nothing}
-          aria-modal=${this.open && this.modalSurface ? 'true' : nothing}
-          aria-label=${hasExplicitName ? explicitName : nothing}
-          aria-labelledby=${useHeadingForName ? this.headingId : nothing}
+          role=${this.open && !this.nativeModal.requested ? 'dialog' : nothing}
+          aria-modal=${this.open && this.modalSurface && !this.nativeModal.requested ? 'true' : nothing}
+          aria-label=${!this.nativeModal.requested && hasExplicitName ? explicitName : nothing}
+          aria-labelledby=${!this.nativeModal.requested && useHeadingForName ? this.headingId : nothing}
           tabindex="-1"
         >
           ${showHeader
@@ -1065,9 +1084,13 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
           <div part="footer" ?hidden=${!this.hasFooterSlot && !this.withFooter}>
             <slot name="footer" @slotchange=${this.onFooterSlotChange}></slot>
           </div>
+          ${this.nativeModal.renderHelperSlot()}
         </div>
-      </div>
-    `;
+    `, {
+      part: 'base',
+      label: hasExplicitName ? explicitName : undefined,
+      labelledBy: useHeadingForName ? this.headingId : undefined,
+    });
   }
 }
 

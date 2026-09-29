@@ -20,6 +20,7 @@ import type {
   LyraGraphEdge,
   LyraGraphNode,
 } from '../graph/graph.class.js';
+import { LyraGraph as LyraGraphElement } from '../graph/graph.class.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 import type { LyraGraphLegend } from '../graph-legend/graph-legend.class.js';
 import type { LyraPopover } from '../../overlays/overlay/popover.class.js';
@@ -921,6 +922,47 @@ describe('lr-knowledge-graph-explorer', () => {
       timeout: NODE_COUNT_TIMEOUT,
     });
     expect(popover.accessibleLabel).to.equal('Polonium');
+  });
+
+  it('fit() and resetView() drive the real lr-graph camera and focusNode() centers without selecting', async () => {
+    const el = await settledFixture();
+    const graph = graphEl(el);
+    const originalFit = LyraGraphElement.prototype.fit;
+    const fits: Array<{ host: unknown; options: { padding?: number } | undefined }> = [];
+    LyraGraphElement.prototype.fit = function (this: LyraGraph, options) {
+      fits.push({ host: this, options });
+      return originalFit.call(this, options);
+    };
+    try {
+      el.fit({ padding: 12 });
+      el.resetView();
+    } finally {
+      LyraGraphElement.prototype.fit = originalFit;
+    }
+    expect(fits.length).to.equal(2);
+    expect(fits.every((call) => call.host === graph)).to.equal(true);
+    expect(fits.map((call) => call.options)).to.deep.equal([{ padding: 12 }, undefined]);
+
+    expect(await el.focusNode('marie')).to.equal(true);
+    expect(await el.focusNode('no-such-node')).to.equal(false);
+    expect(el.selectedNodeId).to.equal(null);
+    expect(
+      el.shadowRoot!.querySelector('[part="detail-popover"]')?.hasAttribute('open') ?? false
+    ).to.equal(false);
+  });
+
+  it('focusNode() resolves false for a node hidden by hiddenTypes', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer
+        .nodes=${nodes}
+        .edges=${links}
+        .nodeTypes=${nodeTypes}
+        .hiddenTypes=${['person']}
+      ></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+    expect(await el.focusNode('marie')).to.equal(false);
+    expect(await el.focusNode('polonium')).to.equal(true);
   });
 
   it('does not emit selection-change for host-driven selectedNodeId assignments', async () => {

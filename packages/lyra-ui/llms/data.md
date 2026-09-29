@@ -2344,6 +2344,9 @@ weekday * (cellSize + CAL_GAP)`), consulted consistently by drawing, hit-testing
   locale-derived output. Lets month labels track the same locale signal (e.g. an app's own i18n
   store) as `weekdayLabelText` and the component's other localizable strings, instead of always
   following the browser/OS-language default.
+  Month labels are measured before painting: overlapping labels yield to the month occupying
+  more week columns, boundary labels shift inside the canvas, and labels wider than the entire
+  calendar are ellipsized. The calendar keeps its physical left-to-right axes under RTL.
 - `colorSteps?: readonly string[]` (attribute: false) — a clone-owned, bounded, frozen discrete array (≥2 entries) of CSS colors used as
   exact ramp steps instead of linearly interpolating between `--lr-heatmap-scale-lo`/`-hi`;
   governs both `mode`s and both `scale` values, discretizing whichever scale would otherwise

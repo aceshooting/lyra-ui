@@ -1,8 +1,11 @@
+import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
+import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
 import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraTextWrap } from '../../../internal/shared-unions.js';
+import { DeferredFocusReturn, captureFocusReturnOpener } from '../../../internal/deferred-focus-return.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { nextId } from '../../../internal/a11y.js';
 import { resolveLocalizedParts } from '../../../internal/localization-runtime.js';
@@ -138,6 +141,10 @@ export interface LyraToolApprovalDialogEventMap {
  * time the dialog transitions from closed to open, mirroring `editing`'s own reset-on-reopen
  * contract.
  *
+ * When opened above a native modal, the dialog remains interactive without moving its host or slots.
+ * Closing returns focus to the element that held it when the dialog opened, including an opener
+ * the host re-shows only after the decision.
+ *
  * @customElement lr-tool-approval-dialog
  * @slot footer - Optional supplementary content (e.g. a "remember this
  * choice" checkbox), rendered before the built-in Deny/Edit/Approve buttons.
@@ -161,7 +168,7 @@ export interface LyraToolApprovalDialogEventMap {
  * @event focus - Re-dispatched when the raw-JSON editor receives focus.
  * @event blur - Re-dispatched when the raw-JSON editor loses focus.
  * @csspart backdrop - The full-viewport scrim behind the panel.
- * @csspart panel - The dialog panel itself (`role="dialog"` while open).
+ * @csspart panel - The dialog panel itself.
  * @csspart header - The wrapper around the heading.
  * @csspart tool-name - The `toolName` text within the heading.
  * @csspart body - The wrapper around the args view/editor.
@@ -228,7 +235,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     return request;
   }
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, nativeModalCarrierStyles, styles];
 
   // `open`/`pendingAction` are accessor-backed rather than plain fields so `onApprove`/`onDeny` can tell
   // "a synchronous listener wrote here" apart from "nothing wrote here" -- see
@@ -266,9 +273,8 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   /** The proposed tool/function's name, e.g. `web_search`. Drives the heading and the dialog's accessible name. */
   @property({ attribute: 'tool-name' }) toolName = '';
 
-  /** Accessible name for the component. When assigned directly as a property without a host
-   *  attribute it names the dialog panel; a host `aria-label` remains on the host and the panel
-   *  stays labelled by its visible heading to avoid cloning the same owner. */
+  /** Accessible name for the dialog. A non-empty host `aria-label` takes precedence over a
+   *  direct property value; without either, the visible heading names the dialog. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   /** The proposed call's arguments — any JSON-serializable value, rendered via `<lr-json-viewer>` (or, while editing, stringified into the textarea). */
@@ -309,7 +315,20 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   /** `JSON.parse` failure message for `draftText`, or `''` while it parses cleanly. Empty string (not `undefined`) so it can drive `?hidden` directly. */
   @state() private draftError = '';
 
+  private readonly nativeModal = new NativeModalCarrier(this, {
+    onCancel: () => {
+      if (!this.open || !this.overlay?.isTopmost() || this.pendingAction != null) return;
+      this.close('escape');
+    },
+    onUnexpectedClose: () => {
+      if (!this.open) return;
+      this.nativeModal.hide();
+      this.close('api');
+    },
+  });
   private overlay?: OverlayHandle;
+  private focusReturnOpener: HTMLElement | null = null;
+  private readonly deferredFocusReturn = new DeferredFocusReturn();
   private errorAnnouncementSink?: AnnouncementSink;
   private suppressNextErrorAnnouncement = true;
   private readonly titleId = nextId('tool-approval-dialog-title');
@@ -337,6 +356,9 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     }
     if (changed.has('open')) {
       if (this.open) {
+        this.deferredFocusReturn.cancel();
+        this.focusReturnOpener = captureFocusReturnOpener(this);
+        this.nativeModal.prepare();
         this.activateOverlay();
         // Every open starts fresh in the read-only view -- a reused instance
         // must never carry a half-finished edit (or its error state), or a
@@ -344,8 +366,21 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
         // previous proposal was.
         this.resetProposalState();
       } else {
+        const hadOverlay = this.overlay !== undefined;
+        this.nativeModal.hide();
         this.overlay?.deactivate();
         this.overlay = undefined;
+        // The synchronous return keeps the established timing whenever the opener can already
+        // take focus; this covers an opener the host only re-shows afterward.
+        const opener = this.focusReturnOpener;
+        this.focusReturnOpener = null;
+        if (hadOverlay && opener && this.isConnected) {
+          this.deferredFocusReturn.schedule({
+            host: this,
+            candidates: () => [opener],
+            isCurrent: () => !this.open,
+          });
+        }
       }
     }
     const proposalChanged = changed.has('proposalKey') || changed.has('toolName') || changed.has('args');
@@ -368,6 +403,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   // them -- mirrors lr-dialog's identical ordering rationale.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (this.open) this.nativeModal.show();
     this.suppressNextErrorAnnouncement = false;
     if (changed.has('open') && this.open) {
       this.overlay?.focusInitial();
@@ -407,14 +443,22 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
       this.requestUpdate();
     }
     if (this.hasUpdated && this.open) {
+      this.nativeModal.prepare();
+      this.requestUpdate();
       this.activateOverlay();
-      queueMicrotask(() => this.overlay?.focusInitial());
+      void this.updateComplete.then(() => {
+        if (!this.open || !this.isConnected) return;
+        this.nativeModal.show();
+        this.overlay?.focusInitial();
+      });
     }
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.nativeModal.hide();
     this.overlay?.suspend();
+    this.deferredFocusReturn.cancel();
     this.errorAnnouncementSink?.release();
     this.errorAnnouncementSink = undefined;
     this.suppressNextErrorAnnouncement = true;
@@ -589,21 +633,20 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     const headingParts = resolveLocalizedParts(headingTemplate, (marker) =>
       this.localize('toolApprovalHeading', undefined, { tool: marker }),
     );
-    // An authored host label belongs to the custom-element host. A direct property assignment has
-    // no host attribute to preserve, so it instead names the actual dialog owner in this shadow tree.
-    const panelLabel = !this.hasAttribute('aria-label') &&
-      typeof this.accessibleLabel === 'string' &&
-      this.accessibleLabel.length > 0
-      ? this.accessibleLabel
-      : null;
-    return html`
+    const hostLabel = this.getAttribute('aria-label');
+    const panelLabel = hostLabel?.trim()
+      ? hostLabel
+      : typeof this.accessibleLabel === 'string' && this.accessibleLabel.trim()
+        ? this.accessibleLabel
+        : null;
+    return this.nativeModal.render(html`
       <div part="backdrop" @click=${this.onBackdropClick}></div>
       <div
         part="panel"
-        role=${this.open ? 'dialog' : nothing}
-        aria-modal=${this.open ? 'true' : nothing}
-        aria-label=${panelLabel ?? nothing}
-        aria-labelledby=${panelLabel === null ? this.titleId : nothing}
+        role=${this.open && !this.nativeModal.requested ? 'dialog' : nothing}
+        aria-modal=${this.open && !this.nativeModal.requested ? 'true' : nothing}
+        aria-label=${!this.nativeModal.requested ? panelLabel ?? nothing : nothing}
+        aria-labelledby=${!this.nativeModal.requested && panelLabel === null ? this.titleId : nothing}
         tabindex="-1"
       >
         <div part="header">
@@ -669,8 +712,9 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
             @click=${this.onApprove}
           >${this.localize('approve')}</lr-button>
         </div>
+        ${this.nativeModal.renderHelperSlot()}
       </div>
-    `;
+    `, { label: panelLabel, labelledBy: panelLabel === null ? this.titleId : null });
   }
 }
 

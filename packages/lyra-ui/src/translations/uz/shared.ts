@@ -58,6 +58,7 @@ const strings: LyraLocaleStrings = {
   statusSuccess: 'Muvaffaqiyatli',
   statusError: 'Xato',
   statusDenied: 'Rad etildi',
+  statusIncomplete: 'Tugallanmagan',
   restore: 'Tiklash',
   navigation: 'Navigatsiya',
   attachmentUntitledFile: 'Nomsiz fayl',

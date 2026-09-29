@@ -47,6 +47,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: 'Probíhá obnovení.',
   randomContentPause: 'Pozastavit střídání',
   randomContentResume: 'Obnovit střídání',
+  randomContentNext: 'Zobrazit jiný',
   exportButtonLabel: 'Exportovat',
   knownDateDay: 'Den',
   knownDateMonth: 'Měsíc',

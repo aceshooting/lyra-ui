@@ -58,6 +58,7 @@ const strings: LyraLocaleStrings = {
   statusSuccess: 'Sikeres',
   statusError: 'Hiba',
   statusDenied: 'Elutasítva',
+  statusIncomplete: 'Befejezetlen',
   restore: 'Visszaállítás',
   navigation: 'Navigáció',
   attachmentUntitledFile: 'Névtelen fájl',

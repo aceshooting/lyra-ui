@@ -1,3 +1,5 @@
+import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
+import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import {
   html,
@@ -387,7 +389,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  output as an unknown attribute. */
   protected static readonly knownUnobservedAttributes: readonly string[] = ['mode', 'dragging'];
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, nativeModalCarrierStyles, styles];
 
   /** Below this viewport width, the rail switches from `'full'` to
    *  `'icon-only'`. Any valid CSS length, used directly in a `max-width`
@@ -515,6 +517,16 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  the `[part="toggle"]` dismiss button. `false` (the default) reproduces today's exact output:
    *  no extra element, and `[part="header"]`'s own block layout unchanged. */
   @property({ type: Boolean, reflect: true }) collapsible = false;
+
+  /**
+   * Shows every descendant `<lr-app-rail-item>`'s open icon-only label flyout in the browser top
+   * layer, so one attribute on the rail covers all items instead of `top-layer` on each. An item's
+   * own `top-layer` still works and is never overwritten; the flyout is promoted when either is
+   * set. Same contract as `<lr-popover>`'s `top-layer`: placed `fixed`, no DOM node moves, and
+   * without native Popover API support the ordinary `z-index` stacking remains.
+   * @default false
+   */
+  @property({ type: Boolean, reflect: true, attribute: 'top-layer' }) topLayer = false;
 
   /** Direct reference to an external element that opens this rail's mobile overlay -- e.g. a
    *  hamburger button living in application chrome rather than this component's own built-in
@@ -731,6 +743,13 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   private overlayActive = false;
   private justOpened = false;
   private overlayHandle?: OverlayHandle;
+  private readonly nativeModal = new NativeModalCarrier(this, {
+    onCancel: () => { if (this.overlayHandle?.isTopmost()) this.setOpen(false); },
+    onUnexpectedClose: () => {
+      if (this.overlayHandle?.isTopmost()) this.setOpen(false);
+      if (this.overlayActive) this.nativeModal.show();
+    },
+  });
   private explicitTrigger?: HTMLElement;
   /** The focus-return target the open overlay was activated with, and whatever held focus outside
    *  this rail at that moment -- the first two candidates of the deferred focus return. */
@@ -1025,6 +1044,14 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   // rationale.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (this.overlayActive) this.nativeModal.show();
+    if (changed.has('topLayer')) {
+      for (const item of this.querySelectorAll<HTMLElement & { syncRailTopLayer?: () => void }>(
+        tag('app-rail-item'),
+      )) {
+        item.syncRailTopLayer?.();
+      }
+    }
     // `mode` has no Lit-managed accessor (see its getter doc), so its attribute reflection is
     // manual -- gated on `_lastReflectedMode` (not `changed.has('mode')`, since `mode` is never a
     // real reactive property `changed` could name) so a same-value update pass doesn't rewrite an
@@ -1117,7 +1144,10 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       } else {
         this.activateMobileOverlay();
       }
-      queueMicrotask(() => this.overlayHandle?.focusInitial());
+      queueMicrotask(() => {
+        this.nativeModal.show();
+        this.overlayHandle?.focusInitial();
+      });
     }
     if (this.hasUpdated) {
       queueMicrotask(() => {
@@ -1134,6 +1164,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.nativeModal.hide();
     if (this.hotkeyWindow) {
       this.hotkeyWindow.removeEventListener('keydown', this.onHotkeyKeyDown);
       unregisterHotkeyOwner(this.hotkeyWindow, this);
@@ -1185,6 +1216,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   }
 
   private activateMobileOverlay(): void {
+    this.nativeModal.prepare();
     const explicitTrigger = this.explicitTrigger;
     this.explicitTrigger = undefined;
     // A plain `undefined` (both `explicitTrigger` and the external `trigger`/`for` association
@@ -1226,6 +1258,8 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   }
 
   private deactivateMobileOverlay(restoreFocus = true): void {
+    this.nativeModal.hide();
+    this.nativeModal.prepare(false);
     const handle = this.overlayHandle;
     this.overlayHandle = undefined;
     this.deferredFocusReturn.cancel();
@@ -1728,7 +1762,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     const railWidthPx = this.effectiveRailWidthPx;
     const showCollapse = this.collapsible && !mobile;
     const expanded = this._mode !== 'icon-only';
-    return html`
+    return this.nativeModal.render(html`
       <button
         part="toggle"
         type="button"
@@ -1744,10 +1778,10 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
         id=${this.navId}
         part=${mobile ? 'panel' : 'base'}
         aria-label=${
-          this.accessibleLabel ?? (this.label ? this.label : this.localize('navigation'))
+          this.nativeModal.requested ? nothing : this.accessibleLabel ?? (this.label ? this.label : this.localize('navigation'))
         }
-        role=${this.overlayActive ? 'dialog' : 'navigation'}
-        aria-modal=${this.overlayActive ? 'true' : nothing}
+        role=${this.nativeModal.requested ? nothing : this.overlayActive ? 'dialog' : 'navigation'}
+        aria-modal=${this.overlayActive && !this.nativeModal.requested ? 'true' : nothing}
         tabindex=${this.overlayActive || !mobile ? '-1' : nothing}
         ?inert=${mobile && !this.open}
         @transitionend=${this.onPanelTransition}
@@ -1775,6 +1809,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
         <div part="footer" ?hidden=${!this.hasFooterSlot}>
           <slot name="footer" @slotchange=${this.onFooterSlotChange}></slot>
         </div>
+        ${this.nativeModal.renderHelperSlot()}
       </div>
       ${this.resizable && this._mode === 'full'
         ? html`<div
@@ -1791,7 +1826,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
             @keydown=${this.onResizerKeyDown}
           ><span part="resizer-track"></span></div>`
         : nothing}
-    `;
+    `, { label: this.accessibleLabel ?? (this.label || this.localize('navigation')) });
   }
 }
 

@@ -62,6 +62,7 @@ const strings: LyraLocaleStrings = {
   statusSuccess: 'Úspěch',
   statusError: 'Chyba',
   statusDenied: 'Zamítnuto',
+  statusIncomplete: 'Nedokončeno',
   restore: 'Obnovit',
   navigation: 'Navigace',
   attachmentUntitledFile: 'Soubor bez názvu',

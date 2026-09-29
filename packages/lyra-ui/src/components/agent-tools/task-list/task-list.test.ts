@@ -419,6 +419,27 @@ it('drops a malformed direct child instead of throwing, with or without reordera
   expect((reorderableChildRows[0] as HTMLElement).dataset['id']).to.equal('child');
 });
 
+it('renders an incomplete step with its own glyph, localized text and neutral color, not counted complete', async () => {
+  const el = (await fixture(html`<lr-task-list
+    .items=${[
+      { id: 'a', label: 'A', status: 'success' },
+      { id: 'b', label: 'B', status: 'incomplete' },
+      { id: 'c', label: 'C', status: 'pending' },
+    ] as TaskItem[]}
+  ></lr-task-list>`)) as LyraTaskList;
+  const row = el.shadowRoot!.querySelector('[data-id="b"]') as HTMLElement;
+  expect(row.dataset['status']).to.equal('incomplete');
+  expect(row.querySelector('.sr-only')!.textContent).to.equal('Incomplete');
+  const pendingIcon = el.shadowRoot!.querySelector('[data-id="c"] [part="status-icon"]')!.innerHTML;
+  expect(row.querySelector('[part="status-icon"]')!.innerHTML).to.not.equal(pendingIcon);
+  const icon = row.querySelector('[part="status-icon"]') as HTMLElement;
+  expect(getComputedStyle(icon).color).to.equal(resolvedColorToken(icon, '--lr-color-text-quiet'));
+  expect(el.shadowRoot!.textContent).to.contain('1 of 3');
+  el.strings = { statusIncomplete: 'Inachevé' };
+  await el.updateComplete;
+  expect(row.querySelector('.sr-only')!.textContent).to.equal('Inachevé');
+});
+
 describe('status-change announcements', () => {
   async function getLiveRegionText(el: LyraTaskList): Promise<string> {
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
@@ -467,6 +488,24 @@ describe('status-change announcements', () => {
     el.items = items.map((it) => (it.id === 'step-2' ? { ...it, status: 'success' } : it));
     await el.updateComplete;
     expect(await getLiveRegionText(el)).to.equal('Step completed: Search the web');
+  });
+
+  it('announces a step stopped mid-run (running -> incomplete) politely, as Incomplete', async () => {
+    const el = (await fixture(html`<lr-task-list .items=${items}></lr-task-list>`)) as LyraTaskList;
+    el.items = items.map((it) => (it.id === 'step-2' ? { ...it, status: 'incomplete' } : it));
+    await el.updateComplete;
+    const region = el.shadowRoot!.querySelector('lr-live-region')!;
+    expect(region.mode).to.equal('polite');
+    expect(await getLiveRegionText(el)).to.equal('Search the web: Incomplete');
+    el.items = items;
+    el.strings = {
+      statusIncomplete: 'Inachevé',
+      taskListStepIncompleteAnnounce: '{status} : {label}',
+    };
+    await el.updateComplete;
+    el.items = items.map((it) => (it.id === 'step-2' ? { ...it, status: 'incomplete' } : it));
+    await el.updateComplete;
+    expect(await getLiveRegionText(el)).to.equal('Inachevé : Search the web');
   });
 
   it('announces a step failing (running -> error), assertively', async () => {

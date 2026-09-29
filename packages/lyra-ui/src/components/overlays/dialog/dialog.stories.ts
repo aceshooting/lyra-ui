@@ -367,3 +367,38 @@ export const ReasonedDismissal: Story = {
     </div>
   `,
 };
+
+
+export const AboveNativeModal: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'Open a native modal, then a Lyra dialog mounted beside it. The Lyra controls remain interactive; Escape closes only the current dialog and focus returns to its opener.',
+      },
+    },
+  },
+  render: () => html`
+    <div>
+      <button @click=${(event: Event) => {
+        const scope = (event.currentTarget as HTMLElement).parentElement!;
+        scope.querySelector('dialog')!.showModal();
+      }}>Open native modal</button>
+      <dialog>
+        <h2>Native modal</h2>
+        <button @click=${(event: Event) => {
+          const native = (event.currentTarget as HTMLElement).closest('dialog')!;
+          void (native.parentElement!.querySelector('lr-dialog') as LyraDialog).show();
+        }}>Open project settings</button>
+        <button @click=${(event: Event) => {
+          (event.currentTarget as HTMLElement).closest('dialog')!.close();
+        }}>Close native modal</button>
+      </dialog>
+      <lr-dialog label="Project settings">
+        <label>Project name <input value="Example project" /></label>
+        <button slot="footer" @click=${(event: Event) => {
+          void ((event.currentTarget as HTMLElement).closest('lr-dialog') as LyraDialog).hide();
+        }}>Done</button>
+      </lr-dialog>
+    </div>
+  `,
+};

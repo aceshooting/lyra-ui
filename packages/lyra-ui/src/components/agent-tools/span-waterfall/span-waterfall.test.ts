@@ -435,6 +435,80 @@ describe('lr-span-waterfall', () => {
     expect(labelRect.left).to.be.at.least(axisRect.left - 1);
   });
 
+  for (const endMs of [1_230_000, 1_330_000]) {
+    it(`never paints overlapping or clipped axis labels on a 480px chart spanning ${endMs}ms`, async () => {
+      const container = document.createElement('div');
+      container.style.inlineSize = '480px';
+      const spans: LyraSpan[] = [
+        { id: 'a', name: 'long run', kind: 'agent', startMs: 0, endMs, status: 'success' },
+      ];
+      const el = (await fixture(html`<lr-span-waterfall .spans=${spans}></lr-span-waterfall>`, {
+        parentNode: container,
+      })) as LyraSpanWaterfall;
+      await el.updateComplete;
+      const axisRect = el.shadowRoot!.querySelector<HTMLElement>('[part="axis"]')!.getBoundingClientRect();
+      const shown = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="tick-label"]')]
+        .filter((label) => getComputedStyle(label).visibility !== 'hidden')
+        .map((label) => label.getBoundingClientRect())
+        .sort((a, b) => a.left - b.left);
+      expect(shown.length).to.be.greaterThan(1);
+      for (let i = 0; i < shown.length; i++) {
+        expect(shown[i]!.left).to.be.at.least(axisRect.left - 0.5);
+        expect(shown[i]!.right).to.be.at.most(axisRect.right + 0.5);
+        if (i > 0) expect(shown[i]!.left).to.be.at.least(shown[i - 1]!.right);
+      }
+    });
+  }
+
+  it('keeps axis labels inside the chart and unoverlapped under dir=rtl', async () => {
+    const container = document.createElement('div');
+    container.style.inlineSize = '480px';
+    container.dir = 'rtl';
+    const spans: LyraSpan[] = [
+      { id: 'a', name: 'long run', kind: 'agent', startMs: 0, endMs: 1_230_000, status: 'success' },
+    ];
+    const el = (await fixture(html`<lr-span-waterfall .spans=${spans}></lr-span-waterfall>`, {
+      parentNode: container,
+    })) as LyraSpanWaterfall;
+    await el.updateComplete;
+    const axisRect = el.shadowRoot!.querySelector<HTMLElement>('[part="axis"]')!.getBoundingClientRect();
+    const shown = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="tick-label"]')]
+      .filter((label) => getComputedStyle(label).visibility !== 'hidden')
+      .map((label) => label.getBoundingClientRect())
+      .sort((a, b) => b.right - a.right);
+    expect(shown.length).to.be.greaterThan(1);
+    for (let i = 0; i < shown.length; i++) {
+      expect(shown[i]!.left).to.be.at.least(axisRect.left - 0.5);
+      expect(shown[i]!.right).to.be.at.most(axisRect.right + 0.5);
+      if (i > 0) expect(shown[i]!.right).to.be.at.most(shown[i - 1]!.left + 0.5);
+    }
+  });
+
+  it('re-arms the axis observer after a disconnect and reconnect', async () => {
+    const container = document.createElement('div');
+    container.style.inlineSize = '480px';
+    const spans: LyraSpan[] = [
+      { id: 'a', name: 'long run', kind: 'agent', startMs: 0, endMs: 1_230_000, status: 'success' },
+    ];
+    const el = (await fixture(html`<lr-span-waterfall .spans=${spans}></lr-span-waterfall>`, {
+      parentNode: container,
+    })) as LyraSpanWaterfall;
+    await el.updateComplete;
+    const host = el.parentNode as HTMLElement;
+    host.removeChild(el);
+    host.appendChild(el);
+    await el.updateComplete;
+    const observed = (el as unknown as { observedAxis?: Element }).observedAxis;
+    expect(observed === el.shadowRoot!.querySelector('[part="axis"]')).to.equal(true);
+    host.style.inlineSize = '300px';
+    await waitUntil(() => {
+      const axisRect = el.shadowRoot!.querySelector<HTMLElement>('[part="axis"]')!.getBoundingClientRect();
+      return [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="tick-label"]')].every(
+        (label) => label.getBoundingClientRect().right <= axisRect.right + 0.5
+      );
+    });
+  });
+
   it('renders lr-empty when spans is empty', async () => {
     const el = (await fixture(html`<lr-span-waterfall></lr-span-waterfall>`)) as LyraSpanWaterfall;
     await el.updateComplete;
@@ -577,6 +651,24 @@ it('drops invalid span timestamps before they can poison otherwise valid geometr
   expect(el.shadowRoot!.querySelectorAll('[part="bar"]').length).to.equal(1);
   expect(el.shadowRoot!.innerHTML).to.not.include('NaN');
   expect(el.shadowRoot!.innerHTML).to.not.include('Infinity');
+});
+
+it('renders an incomplete span with the Incomplete label and a neutral tone', async () => {
+  const el = (await fixture(html`
+    <lr-span-waterfall
+      .spans=${[{ id: 't', name: 'search', kind: 'tool', status: 'incomplete', startMs: 0, endMs: 40 } satisfies LyraSpan]}
+    ></lr-span-waterfall>
+  `)) as LyraSpanWaterfall;
+  const bar = el.shadowRoot!.querySelector('[data-id="t"]') as HTMLButtonElement;
+  const status = el.shadowRoot!.querySelector('[part="status-text"]') as HTMLElement;
+  expect(bar.getAttribute('data-status')).to.equal('incomplete');
+  expect(bar.getAttribute('data-tone')).to.equal('neutral');
+  expect(bar.getAttribute('aria-label')).to.include('Incomplete');
+  expect(status.textContent).to.equal('Incomplete');
+  el.strings = { statusIncomplete: 'Inachevé' };
+  await el.updateComplete;
+  expect(bar.getAttribute('aria-label')).to.include('Inachevé');
+  expect(status.textContent).to.equal('Inachevé');
 });
 
 it('normalizes foreign runtime enum values before rendering and focusing a span', async () => {

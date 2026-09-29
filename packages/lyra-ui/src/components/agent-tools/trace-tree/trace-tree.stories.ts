@@ -46,6 +46,13 @@ export const Default: Story = {
   render: () => html`<lr-trace-tree style="max-width: 40rem" .spans=${spans}></lr-trace-tree>`,
 };
 
+export const IncompleteSpan: Story = {
+  render: () => html`<lr-trace-tree
+    style="max-width: 40rem"
+    .spans=${spans.map((span) => (span.status === 'running' ? { ...span, endMs: 700, status: 'incomplete' as const } : span))}
+  ></lr-trace-tree>`,
+};
+
 export const WithTokensAndCost: Story = {
   render: () => html`<lr-trace-tree style="max-width: 46rem" .spans=${spans} with-tokens with-cost></lr-trace-tree>`,
 };

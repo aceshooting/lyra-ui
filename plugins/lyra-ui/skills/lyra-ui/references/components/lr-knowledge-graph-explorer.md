@@ -99,6 +99,12 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   `graphExplorerLabel`. A non-empty host `aria-label` makes the host the sole overall owner; an
   explicitly empty host label stays empty on the group
 
+**Methods:** `fit(options?: { padding?: number })` frames every visible node in the composed
+graph (forwards to `lr-graph.fit()`); `resetView()` is `fit()` with the default padding, for a
+reset-view action; `focusNode(id, options?: { zoom? }): Promise<boolean>` centers a visible node
+without selecting it or opening the details popover (resolves `false` for an unknown or
+filtered-out id). None change `selectedNodeId` or filters.
+
 **Events:**
 
 - `lr-selection-change` (`detail: { selectedNodeId: string | null }`) — emitted after the explorer

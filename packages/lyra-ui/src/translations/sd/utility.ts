@@ -41,6 +41,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: 'هاڻي تازو ٿي رهيو آهي.',
   randomContentPause: 'گهمڻ روڪيو',
   randomContentResume: 'گهمڻ ٻيهر شروع ڪريو',
+  randomContentNext: 'ٻيو ڏيکاريو',
   exportButtonLabel: 'برآمد ڪريو',
   knownDateDay: 'ڏينهن',
   knownDateMonth: 'مهينو',

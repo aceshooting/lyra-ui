@@ -23,11 +23,9 @@ export const styles = css`
     --_lr-code-block-copy-color-active: var(--lr-icon-button-color-hover, var(--lr-color-brand));
     --_lr-code-block-copy-radius: var(--lr-radius);
     display: block;
-    /* A percentage block-size against an auto-height ancestor resolves to auto, so this is a
-       no-op for the content-sized default; it bites only once an ancestor gives this host a
-       definite block size. The chain must continue through [part='base'] and [part='body']
-       below or the fill breaks at whichever one is missing it. */
-    block-size: 100%;
+    /* Unsized, the host follows its content even inside a stretched grid/flex item; an explicit
+       host size gives the chain below a definite size to fill. The chain must continue through
+       [part='base'] and [part='body'] below or the fill breaks at whichever one is missing it. */
     font-size: var(--lr-font-size-sm);
   }
   [part='base'] {
@@ -187,9 +185,8 @@ export const styles = css`
     /* The code scrollport starts at the first column, including inside an RTL document. */
     direction: ltr;
     display: block;
-    /* Continues the chain from [part='base'] -- a no-op default (see :host's comment); the
-       max-block-size cap and overflow below are unaffected either way, and still apply on top of
-       whatever height this resolves to. */
+    /* Continues the chain from [part='base']; the max-block-size cap and overflow below still
+       apply on top of whatever height this resolves to. */
     flex: 1 1 auto;
     block-size: 100%;
     max-block-size: var(--lr-code-block-max-height, none);

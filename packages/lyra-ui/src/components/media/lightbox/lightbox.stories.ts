@@ -165,3 +165,19 @@ export const NarrowLongCaptions: Story = {
     style="position: static; inset: auto; display: flex; inline-size: 20rem; block-size: 30rem;"
   ></lr-lightbox>`,
 };
+
+export const AboveNativeModal: Story = {
+  render: () => html`
+    <div>
+      <button @click=${(event: Event) => (event.currentTarget as HTMLElement).parentElement!.querySelector('dialog')!.showModal()}>Open native dialog</button>
+      <dialog>
+        <button @click=${(event: Event) => {
+          const overlay = (event.currentTarget as HTMLElement).closest('dialog')!.parentElement!.querySelector('lr-lightbox') as LyraLightbox;
+          void overlay.show();
+        }}>Open lightbox</button>
+        <button @click=${(event: Event) => (event.currentTarget as HTMLElement).closest('dialog')!.close()}>Close native dialog</button>
+      </dialog>
+      <lr-lightbox .images=${images}></lr-lightbox>
+    </div>
+  `,
+};

@@ -58,6 +58,7 @@ const strings: LyraLocaleStrings = {
   statusSuccess: 'Imefaulu',
   statusError: 'Hitilafu',
   statusDenied: 'Imekataliwa',
+  statusIncomplete: 'Haijakamilika',
   restore: 'Rejesha',
   navigation: 'Urambazaji',
   attachmentUntitledFile: 'Faili lisilo na jina',

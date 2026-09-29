@@ -6,7 +6,10 @@ import {
 } from '../../../internal/lyra-element.js';
 import { installFormControlInternalsCapture } from '../../../internal/form-control-labels.js';
 import { chevronIcon, spinnerIcon } from '../../../internal/icons.js';
-import { tag } from '../../../internal/prefix.js';
+import {
+  hasIconOnlyDefaultContent,
+  IconOnlyLabelObserver,
+} from '../../../internal/icon-only-content.js';
 import { safeDownloadHref, safeLinkHref } from '../../../internal/safe-url.js';
 import {
   syncAriaControlsElements,
@@ -68,29 +71,6 @@ export interface LyraButtonEventMap {
   focus: FocusEvent;
   blur: FocusEvent;
   'lr-invalid': CustomEvent<null>;
-}
-
-/**
- * Whether `element` paints nothing while staying in the accessibility tree (or is hidden
- * outright), so it must not count as visible label content.
- *
- * Three shapes, in cost order. `<lr-visually-hidden>` is recognised by tag, since its own `:host`
- * rules are `!important` and cannot be overridden into visibility. `hidden`/`display: none`/
- * `visibility: hidden` are hidden outright. The third is the standard clip-path algorithm every
- * `.sr-only` copy in this library (and `styles/utilities.css`) uses: an absolutely positioned
- * hairline box clipped with `inset(50%)`. Computed style is read rather than class names, so a
- * consumer's own utility class -- whatever it is called -- is recognised too.
- *
- * Returns `false` with no window (SSR): nothing is painted there, so the client's first update is
- * the authority and guessing would make the server and client disagree.
- */
-function isVisuallyHidden(element: Element): boolean {
-  if (element.localName === tag('visually-hidden')) return true;
-  const view = element.ownerDocument.defaultView;
-  if (!view) return false;
-  const style = view.getComputedStyle(element);
-  if (style.display === 'none' || style.visibility === 'hidden') return true;
-  return style.position === 'absolute' && style.clipPath.startsWith('inset(50%');
 }
 
 /**
@@ -636,30 +616,21 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   /** Whether the default slot's visible content is a single icon-like element (see
    *  `hasIconOnlyDefaultContent()`). Seeded synchronously in `willUpdate` before the first paint,
    *  then kept current by the default slot's own `slotchange` for a DOM mutation AND by
-   *  `resizeObserver` below for a CSS-only visibility flip (a container/media query hiding or
+   *  `iconOnlyObserver` below for a CSS-only visibility flip (a container/media query hiding or
    *  revealing a slotted label) that mutates no DOM at all and so fires no `slotchange`. */
   @state() private isIconButton = false;
 
-  /** Watches `labelEl` -- the internal default-slot wrapper, never the host or `baseEl` -- so a
-   *  consumer's CSS-only rule (a container/media query hiding the visible label at a narrow width,
-   *  with no accompanying DOM mutation) still re-evaluates `isIconButton`. `slotchange` only fires
-   *  on a DOM mutation, and there is no `matchMedia` here bound to a breakpoint this component
-   *  doesn't know about, so a resize of the element that actually wraps the label is the
-   *  mechanism-agnostic signal a vanishing/returning label produces. Deliberately NOT the host or
-   *  `baseEl`: once `isIconButton` is `true`, `[part~='base'][data-icon-button]` gives `baseEl` (and
-   *  therefore the content-sized host) a fixed, definite `inline-size` that no longer depends on the
-   *  label at all -- watching either one would report a resize on the way IN, then never resize
-   *  again on the way back out no matter how much wider the label's own container becomes,
-   *  permanently wedging the button in icon-only mode. `labelEl`'s own box is never touched by
-   *  `data-icon-button`, so it keeps tracking the label's actual rendered presence in both
-   *  directions. Armed once `labelEl` exists (from `updated()`, and from a reconnect's
-   *  `connectedCallback`), torn down in `disconnectedCallback`. */
-  private resizeObserver?: ResizeObserver;
-  /** The pending "commit the recompute" animation-frame token armIconOnlyResizeObserver() schedules,
-   *  and the window that owns it -- both cleared in `disconnectedCallback` so a frame callback never
-   *  fires against a torn-down or reparented host. */
-  private iconOnlyResizeRaf?: number;
-  private iconOnlyResizeRafOwner?: Window;
+  /** Re-evaluates `isIconButton` when CSS alone hides or shows the slotted label (see
+   *  `IconOnlyLabelObserver`). Armed from `updated()` and a reconnect, disarmed on disconnect. */
+  private readonly iconOnlyObserver = new IconOnlyLabelObserver(
+    this,
+    () => this.labelEl,
+    () => this.isIconButton,
+    (next) => {
+      this.isIconButton = next;
+      this.syncButtonStates();
+    }
+  );
 
   // Matches either root: the native `<button>` (default) or the `<a>` rendered in anchor mode, so
   // `click()`/`focus()`/`blur()` work in both.
@@ -667,7 +638,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     | HTMLButtonElement
     | HTMLAnchorElement;
 
-  // The default-slot label wrapper -- see armIconOnlyResizeObserver() for why this, and not baseEl
+  // The default-slot label wrapper -- see IconOnlyLabelObserver for why this, and not baseEl
   // or the host itself, is the element the resize observer watches.
   @query('[part="label"]') private labelEl?: HTMLElement;
 
@@ -864,18 +835,12 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     // property happens to change. `labelEl` already exists on a reconnect (the shadow tree survives
     // disconnect); on the very first connect it does not yet, so this is a no-op until `updated()`
     // arms it after the first render -- mirrors textarea.class.ts's identical reconnect handling.
-    if (this.hasUpdated) this.armIconOnlyResizeObserver();
+    if (this.hasUpdated) this.iconOnlyObserver.arm();
   }
 
   override disconnectedCallback(): void {
     this.releaseExternalDescription();
-    this.resizeObserver?.disconnect();
-    this.resizeObserver = undefined;
-    if (this.iconOnlyResizeRaf !== undefined) {
-      this.iconOnlyResizeRafOwner?.cancelAnimationFrame(this.iconOnlyResizeRaf);
-    }
-    this.iconOnlyResizeRaf = undefined;
-    this.iconOnlyResizeRafOwner = undefined;
+    this.iconOnlyObserver.disarm();
     super.disconnectedCallback();
   }
 
@@ -929,70 +894,13 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   };
 
   private hasIconOnlyDefaultContent(): boolean {
-    const childElements = (this as unknown as { children?: HTMLCollection })
-      .children;
-    const elements = (childElements ? Array.from(childElements) : [])
-      .filter((element) => !element.getAttribute('slot'))
-      // A visually hidden label names the action for assistive technology and paints nothing, so
-      // counting it as content made an icon+`.sr-only` button -- the library's own recommended way
-      // to name an icon-only action without a tooltip -- render as a wide labelled button with a
-      // blank second column. It is invisible content; the square icon-only treatment applies.
-      .filter((element) => !isVisuallyHidden(element));
-    if (elements.length !== 1) return false;
-    const childNodes = (
-      this as unknown as { childNodes?: NodeListOf<ChildNode> }
-    ).childNodes;
-    const directText = (childNodes ? Array.from(childNodes) : [])
-      .filter((node) => node.nodeType === 3)
-      .map((node) => node.textContent ?? '')
-      .join('')
-      .trim();
-    return directText === '' && (elements[0]?.textContent ?? '').trim() === '';
+    return hasIconOnlyDefaultContent(this);
   }
 
   private onDefaultSlotChange = (): void => {
     this.isIconButton = this.hasIconOnlyDefaultContent();
     this.syncButtonStates();
   };
-
-  /** Starts watching `labelEl`, unless already watching, `labelEl` doesn't exist yet (true before
-   *  the first render), or the realm provides no `ResizeObserver` at all (absent under SSR).
-   *  Idempotent -- safe to call from every `updated()` and from a reconnect's `connectedCallback`. */
-  private armIconOnlyResizeObserver(): void {
-    const labelEl = this.labelEl;
-    if (this.resizeObserver || !labelEl) return;
-    const view = this.ownerDocument.defaultView;
-    const ResizeObserverCtor = view?.ResizeObserver;
-    if (!view || !ResizeObserverCtor) return;
-    this.resizeObserver = new ResizeObserverCtor(() => {
-      if (!this.isConnected || this.ownerDocument.defaultView !== view) return;
-      // Defer the actual recompute to the next animation frame, past this ResizeObserver
-      // delivery's own synchronous callback pass -- mirrors textarea.class.ts's identical
-      // armResizeObserver()/fitToContent() deferral, needed for the same underlying reason: a
-      // *microtask* still resolves inside the same delivery (Lit's own update scheduling is
-      // microtask-based, and the platform re-checks for further resizes only after the microtask
-      // queue drains), so committing there still trips Chromium's "ResizeObserver loop completed
-      // with undelivered notifications" the moment applying the flip changes [part~='base']'s own
-      // geometry -- verified empirically; only pushing the write past a real frame boundary avoids
-      // it. What hasIconOnlyDefaultContent() reads (the slotted label's computed visibility) is the
-      // consumer's CSS state, untouched by this recompute, so the value is stable across whatever
-      // delivery ends up observing the resulting resize.
-      if (this.iconOnlyResizeRaf !== undefined) {
-        this.iconOnlyResizeRafOwner?.cancelAnimationFrame(this.iconOnlyResizeRaf);
-      }
-      this.iconOnlyResizeRafOwner = view;
-      this.iconOnlyResizeRaf = view.requestAnimationFrame(() => {
-        this.iconOnlyResizeRaf = undefined;
-        this.iconOnlyResizeRafOwner = undefined;
-        if (!this.isConnected || this.ownerDocument.defaultView !== view) return;
-        const next = this.hasIconOnlyDefaultContent();
-        if (next === this.isIconButton) return;
-        this.isIconButton = next;
-        this.syncButtonStates();
-      });
-    });
-    this.resizeObserver.observe(labelEl);
-  }
 
   /** Whether the label takes the row's slack so a trailing affordance stays pinned to the trailing
    *  content edge. Exactly the caret and the `end`/`suffix` adornment qualify: both read as
@@ -1010,7 +918,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     // this is where the initial mount arms the observer -- idempotent past the first successful
     // call, mirroring how textarea.class.ts's own updated() re-arms its resize observer every
     // render instead of needing a dedicated firstUpdated() hook.
-    this.armIconOnlyResizeObserver();
+    this.iconOnlyObserver.arm();
     // Rendering can replace the native button with an anchor, and `loading` disables only the
     // rendered control. Reconcile validation after that mode transition so non-actions never block
     // their form, then restore the retained intrinsic/custom state when button mode returns.

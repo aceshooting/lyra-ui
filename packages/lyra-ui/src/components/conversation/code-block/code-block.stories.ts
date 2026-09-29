@@ -219,7 +219,7 @@ export const FillHeightContainer: Story = {
     docs: {
       description: {
         story:
-          "The host, base and body all carry an unconditional `block-size: 100%` chain, the same pattern `lr-file-input` and `lr-code-editor` already use. Set on an ordinary auto-height ancestor it is a no-op (see `Default`); sized inside a flex column with a definite block size, as here, the header keeps its natural size and the body grows to fill and scroll the remaining space instead of collapsing to its own content height.",
+          "The base and body carry a `block-size: 100%` chain. An unsized host stays content-sized (see `Default`); a host with an explicit block size, here `block-size: 100%` inside a flex column with a definite block size, keeps the header at its natural size and the body grows to fill and scroll the remaining space instead of collapsing to its own content height.",
       },
     },
   },

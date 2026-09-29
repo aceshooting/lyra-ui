@@ -502,3 +502,17 @@ export const ConsumerOwnedTrigger: Story = {
     </div>
   `,
 };
+
+
+export const FromNativeModal: Story = {
+  parameters: { docs: { description: { story: 'Open the native dialog, then open the layout surface. Its action remains usable, and Escape returns focus to the native opener.' } } },
+  render: () => html`<section>
+    <button @click=${(event: Event) => (event.currentTarget as HTMLElement).parentElement!.querySelector('dialog')!.showModal()}>Open native dialog</button>
+    <dialog><button @click=${(event: Event) => {
+      const panel = (event.currentTarget as HTMLElement).closest('section')!.querySelector('lr-multi-split')!;
+      panel.collapseState = 'floating';
+      panel.open = true;
+    }}>Open tools</button></dialog>
+    <lr-multi-split collapse="start" style="inline-size:400px;block-size:240px"><div aria-label="Tools"><button>Apply</button></div><div>Application content</div></lr-multi-split>
+  </section>`,
+};

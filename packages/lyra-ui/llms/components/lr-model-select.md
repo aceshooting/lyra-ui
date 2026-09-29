@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 29 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -265,6 +265,12 @@ surface together with every other floating surface in the library. `--lr-overlay
 `--lr-model-select-radius`, which still wins when set. The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
 decorative `var(--lr-color-border-subtle)` floating panels default to: this listbox belongs to the
 form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
+
+`--lr-positioning-strategy` — the listbox reads the same cascading `absolute`/`fixed`
+override documented on `<lr-popover>` each time it is positioned, falling back to its existing
+`fixed` default when no recognized value is set. `<lr-model-select>` has no per-instance
+`positioning-strategy` property; set the token on `:root`, a theme, or an ancestor to retune its
+listbox along with the other floating surfaces.
 
 **Optional peer deps:** none.
 

@@ -1,3 +1,4 @@
+import { focusAfterPointer } from '../../../../test/wtr-focus.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./chat-message.js";
@@ -1268,6 +1269,51 @@ describe("failure slot", () => {
         el.shadowRoot!.querySelector('[part="bubble"]')
     ).to.equal(true);
   });
+
+  for (const scope of ['light DOM', 'consumer shadow root'] as const) {
+    for (const child of ['plain button', 'shadow-hosting control'] as const) {
+      it(`keeps focus on the bubble when a ${child} in ${scope} clears the failed state`, async () => {
+        const host = (await fixture(html`<div></div>`)) as HTMLElement;
+        const parent: ParentNode =
+          scope === 'light DOM' ? host : host.attachShadow({ mode: 'open' });
+        const el = document.createElement('lr-chat-message') as LyraChatMessage;
+        el.status = 'failed';
+        let failure: HTMLElement;
+        let focusTarget: HTMLElement;
+        if (child === 'plain button') {
+          failure = document.createElement('button');
+          failure.textContent = 'Retry';
+          focusTarget = failure;
+        } else {
+          failure = document.createElement('div');
+          const inner = failure.attachShadow({ mode: 'open' });
+          focusTarget = document.createElement('button');
+          focusTarget.textContent = 'Retry';
+          inner.appendChild(focusTarget);
+        }
+        failure.slot = 'failure';
+        el.appendChild(failure);
+        parent.appendChild(el);
+        await el.updateComplete;
+        failure.addEventListener('click', () => {
+          el.status = 'sent';
+        });
+
+        await focusAfterPointer(focusTarget);
+        expect(
+          (focusTarget.getRootNode() as ShadowRoot | Document).activeElement === focusTarget
+        ).to.equal(true);
+        focusTarget.click();
+        await el.updateComplete;
+
+        expect(el.shadowRoot!.querySelector('slot[name="failure"]') == null).to.equal(true);
+        expect(
+          el.shadowRoot!.activeElement ===
+            el.shadowRoot!.querySelector('[part="bubble"]')
+        ).to.equal(true);
+      });
+    }
+  }
 
   it('degrades safely when the owner activeElement getter throws or returns a partial value during failure removal', async () => {
     const activeElementReads: readonly [string, () => unknown][] = [

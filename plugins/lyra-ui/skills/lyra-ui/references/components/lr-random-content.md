@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [utility](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/utility.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 2 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 3 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -34,11 +34,17 @@ children; nothing is moved or cloned.
 - `paused: boolean = false` (reflected) — suppresses autoplay. The built-in pause/resume action
   toggles this state; a programmatic assignment remains silent.
 - `autoplayInterval: number = 3000` (attribute `autoplay-interval`) — clamped to a 1000 ms floor
+- `withNext: boolean = false` (attribute `with-next`, reflected) — show a built-in refresh-glyph action
+  (localized via `randomContentNext`, "Show another") that calls `randomize()` and re-arms the autoplay timer, so a
+  manual pick is not replaced by a tick already in flight. It renders independently of `autoplay`
+  and, unlike the pause button, does not suspend autoplay while focused, so a click always re-arms the timer.
 
-**Methods:** `randomize(): readonly Element[]` — re-selects using the current `mode`, applies
+**Methods:** `restart(): void` — re-arms the autoplay timer for a full `autoplayInterval`; a no-op
+while autoplay is off, paused, focus-suspended, reduced-motion, or the pool has fewer than two
+candidates. `randomize(): readonly Element[]` — re-selects using the current `mode`, applies
 `hidden`/`aria-hidden`, emits `lr-content-change`, appends the exposed selection text to the shared
 polite announcement sink (even when `autoplay` is enabled), and returns the elements now shown.
-Does **not** reset or restart the autoplay timer.
+Does **not** reset or restart the autoplay timer; call `restart()` afterwards or use `with-next`.
 
 **Events:** `lr-content-change` (`detail: { readonly items: readonly Element[] }` — a frozen
 snapshot of the exact elements now shown, in display order). Fires on first render, on
@@ -67,7 +73,8 @@ stay silent too. A nested forwarding slot contributes flattened assigned content
 fallback; later assignment and assigned-node text/style/visibility changes announce only when they
 change the currently exposed selection, while initial distribution remains silent. `pause-button`
 — the localized autoplay pause/resume action, rendered
-only while `autoplay` is enabled and exposed as a toggle with `aria-pressed`.
+only while `autoplay` is enabled and exposed as a toggle with `aria-pressed`. `next-button` — the
+opt-in localized action rendered while `with-next` is set, sharing the pause button's styling.
 
 **Themeable custom properties:** Web Awesome aliases `--animation-duration` (default `300ms`),
 `--animation-easing` (default `ease`), and `--animation-translate` (default

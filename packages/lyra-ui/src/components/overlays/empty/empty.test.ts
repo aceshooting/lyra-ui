@@ -1,4 +1,5 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { LitElement } from 'lit';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import './empty.js';
 import type { LyraEmpty } from './empty.js';
@@ -935,4 +936,93 @@ describe('size ladder and the deprecated compact alias', () => {
     }
   });
 
+});
+
+describe('late-rendering child announcements', () => {
+  it('announces a swapped-in description once its custom element shadow content renders', async () => {
+    const tagName = 'lr-empty-late-render-test';
+    if (!customElements.get(tagName)) {
+      customElements.define(
+        tagName,
+        class extends HTMLElement {
+          private readonly root = this.attachShadow({ mode: 'open' });
+          connectedCallback(): void {
+            setTimeout(() => {
+              this.root.innerHTML = '<span>Late rendered detail</span>';
+            }, 20);
+          }
+        },
+      );
+    }
+    const el = (await fixture(html`<lr-empty heading="No results"></lr-empty>`)) as LyraEmpty;
+    await el.updateComplete;
+    const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)!;
+
+    const description = document.createElement(tagName);
+    description.slot = 'description';
+    el.append(description);
+    await waitUntil(() => sink.lastElementChild?.textContent === 'No results Late rendered detail');
+    el.remove();
+  });
+
+  it('announces an initially slotted description whose shadow content renders after arming', async () => {
+    const tagName = 'lr-empty-initial-late-test';
+    if (!customElements.get(tagName)) {
+      customElements.define(
+        tagName,
+        class extends HTMLElement {
+          private readonly root = this.attachShadow({ mode: 'open' });
+          connectedCallback(): void {
+            setTimeout(() => {
+              this.root.innerHTML = '<span>Late rendered detail</span>';
+            }, 300);
+          }
+        },
+      );
+    }
+    const el = document.createElement('lr-empty') as LyraEmpty;
+    el.heading = 'No results';
+    const description = document.createElement(tagName);
+    description.slot = 'description';
+    el.append(description);
+    document.body.append(el);
+    await el.updateComplete;
+    const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)!;
+    await waitUntil(() => sink.lastElementChild?.textContent === 'No results Late rendered detail');
+    el.remove();
+  });
+});
+
+
+describe('lazy custom-element announcement content', () => {
+  it('observes a Lit child defined after arming and its subsequent delayed render', async () => {
+    const tagName = `test-empty-lazy-lit-child-${crypto.randomUUID()}`;
+    let release!: () => void;
+    const renderReady = new Promise<void>((resolve) => { release = resolve; });
+    const el = document.createElement('lr-empty') as LyraEmpty;
+    const child = document.createElement(tagName);
+    el.heading = 'No results';
+    child.slot = 'description';
+    el.append(child);
+    document.body.append(el);
+    try {
+      await el.updateComplete;
+      customElements.define(tagName, class extends LitElement {
+        protected override async scheduleUpdate(): Promise<void> {
+          await renderReady;
+          await super.scheduleUpdate();
+        }
+        protected override render() { return html`<span>Lazy rendered detail</span>`; }
+      });
+      await customElements.whenDefined(tagName);
+      release();
+      const sink = document.querySelector<HTMLElement>(
+        `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+      )!;
+      await waitUntil(() => sink.lastElementChild?.textContent === 'No results Lazy rendered detail');
+    } finally {
+      release();
+      el.remove();
+    }
+  });
 });

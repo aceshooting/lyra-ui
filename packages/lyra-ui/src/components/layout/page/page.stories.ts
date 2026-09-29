@@ -185,3 +185,17 @@ export const MultipleCustomToggles: Story = {
     </lr-page>
   `,
 };
+
+
+export const FromNativeModal: Story = {
+  parameters: { docs: { description: { story: 'Open the native dialog, then open the layout surface. Its action remains usable, and Escape returns focus to the native opener.' } } },
+  render: () => html`<section>
+    <button @click=${(event: Event) => (event.currentTarget as HTMLElement).parentElement!.querySelector('dialog')!.showModal()}>Open native dialog</button>
+    <dialog><button @click=${(event: Event) => {
+      const panel = (event.currentTarget as HTMLElement).closest('section')!.querySelector('lr-page')!;
+
+      panel.navOpen = true;
+    }}>Open tools</button></dialog>
+    <lr-page style="inline-size:320px;block-size:240px"><button slot="navigation">Apply</button><p>Application content</p></lr-page>
+  </section>`,
+};

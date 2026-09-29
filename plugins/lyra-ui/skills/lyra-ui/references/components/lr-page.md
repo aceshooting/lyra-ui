@@ -16,6 +16,8 @@
 
 ## `lr-page`
 
+The mobile navigation drawer remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
+
 Semantic application/page shell with page-wide banner/header/subheader/footer regions, a compact
 menu, primary navigation, main header/content/footer, and an aside. It derives mobile versus
 desktop presentation from **its own allocated inline size**, not the viewport: a Page inside a

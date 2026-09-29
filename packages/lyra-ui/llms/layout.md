@@ -57,6 +57,8 @@ also accepted.
 
 ## `lr-multi-split`
 
+The floating pane remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
+
 Resizable panels for dashboard layouts. Direct **light-DOM children are the panels**; a divider is
 auto-inserted between each adjacent pair. Panels participating in persistence carry a unique,
 nonempty, whitespace-stable `panel-id`; this business identity stays independent from the platform
@@ -537,6 +539,8 @@ hit region expands independently; use `--divider-width` for the painted line and
 
 ## `lr-widget`
 
+The fullscreen presentation remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
+
 A titled panel shell with an optional collapse toggle and an optional fullscreen-expand toggle.
 First-party invention (no `wa-*`/`sl-*` counterpart). Fullscreen promotes the same host element in
 place (a CSS state, not a clone/portal), so slotted content (a chart, a running simulation, scroll
@@ -758,7 +762,8 @@ slide itself; they do not change the active slide or move focus away from it.
 - `autoplay: boolean = false` (attribute `autoplay`, reflected) and
   `autoplayInterval: number = 3000` (attribute `autoplay-interval`) — optional timed advance.
   Autoplay pauses while the page is hidden or the user is hovering, focusing, or dragging the
-  carousel, and remains off under `prefers-reduced-motion: reduce`.
+  carousel or while a dropdown, popover or context menu inside a slide is open, and remains off
+  under `prefers-reduced-motion: reduce`.
 - `navigation: boolean = false` (attribute `navigation`, reflected) — renders previous and next
   buttons
 - `pagination: boolean = false` (attribute `pagination`, reflected) — renders page indicators.
@@ -2332,6 +2337,8 @@ attributes marking library-owned light-DOM nodes are exported as `VIRTUAL_LIST_R
 
 ## `lr-app-rail`
 
+The mobile navigation remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
+
 A responsive navigation rail, and the library's application sidebar, that adapts across three presentations as the _viewport_ narrows (not
 this element's own inline size): `'full'` (nav items show icon + label, inline), `'icon-only'` (a
 narrower inline rail, icons only), and `'mobile'` (hidden behind a toggle button; opening it shows a
@@ -2411,6 +2418,10 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   to a genuinely too-narrow-for-any-inline-rail viewport. Only consulted while `forceMode` is
   `'auto'` or unset (see above); an explicit `forceMode` value takes full priority.
   Unset (the default, `null`) reproduces the original breakpoint-only behavior exactly.
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — forwards `top-layer` to every
+  descendant `<lr-app-rail-item>` (its icon-only label flyout; see **Anchored overlays and the top
+  layer** in `llms/overlays.md`) so one attribute covers the rail. An item's own `top-layer` is
+  never overwritten; either one promotes.
 - `collapsible: boolean = false` (reflected) — opts in a desktop collapse control rendered inside
   `[part="header"]`. It flips the rail between its `'full'` and `'icon-only'` presentations by
   writing `preferredMode`, so the `mobile-breakpoint` keeps being tracked automatically and a
@@ -2853,6 +2864,14 @@ out of default-width compact rails, or use a rail that never collapses.
   has no built-in routing, so the consumer sets this per item (e.g. by comparing `href` against the
   current location). `active`, a deprecated alias in both property and attribute form, was removed
   in 16.0.0 (available since 11.2.0; eligible for removal from 13.0.0) — use `current`.
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-popover>`:
+  always shows the open icon-only label flyout in the browser top layer, placed `fixed` whatever the
+  positioning strategy resolves to, so it paints above a sibling surface stacked higher than a
+  `z-index`ed fixed or sticky header, toolbar or rail it sits in (see **Anchored overlays and the
+  top layer** in `llms/overlays.md`). Anchoring, RTL placement, focus, Escape and the transitions
+  are unchanged and no DOM node moves; it leaves the top layer once it settles closed. Unset,
+  promotion happens only when a trapping ancestor forces it. `<lr-app-rail top-layer>` applies it to
+  every descendant item without overwriting an item's own value.
 - `tooltip: boolean = false` (reflected) — opt-in hover or keyboard-focus flyout (the focused control matches `:focus-visible` and no pointer press preceded it)
   (`[part='tooltip']`) showing
   this item's label text while the rail's `icon-only` mode (set externally by the parent
@@ -3075,6 +3094,8 @@ instead of stretching across the header row (mirroring `<lr-app-rail-item>`'s ow
 ---
 
 ## `lr-responsive-panel`
+
+The overlay presentation remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
 
 The same slotted content either docked inline in its containing layout or presented as a
 full-screen/bottom-sheet/side-anchored overlay, depending on the panel's allocated inline size.
@@ -4013,9 +4034,13 @@ card given only a resting shadow keeps that exact shadow on hover.
 
 ## `lr-command-palette`
 
+A command palette opened outside an existing native `dialog.showModal()` stays interactive through an internal native modal surface. Its host keeps its authored parent; Escape, close vetoes, and focus return retain their normal behavior.
+
 Searchable application command menu. Renders nothing at all while closed. Uses the same shared
 overlay infrastructure as `lr-dialog` (focus-trapping Tab, Escape dismissal, backdrop-click
 dismissal, ref-counted document scroll lock).
+
+Closing returns focus to the element that held it when the palette opened, including an opener the host re-shows only after the close.
 
 Hotkeys share last-connected eligible ownership with `lr-app-rail` in the same window. Removing the
 `hotkey` attribute disables the chord, and key-less browser autofill events are ignored. Non-ASCII
@@ -5229,6 +5254,8 @@ per-event aliases so a handler can name one event's type without restating the d
 
 ## `lr-page`
 
+The mobile navigation drawer remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
+
 Semantic application/page shell with page-wide banner/header/subheader/footer regions, a compact
 menu, primary navigation, main header/content/footer, and an aside. It derives mobile versus
 desktop presentation from **its own allocated inline size**, not the viewport: a Page inside a
@@ -6013,6 +6040,14 @@ shared region below the bar. It never uses `menu`/`menubar` roles — applicatio
 - `hideDelay: number = 150` (attribute `hide-delay`) — delay before a hover-opened panel closes once
   the pointer leaves the item.
 - `skipDelay: number = 300` (attribute `skip-delay`) — the hover grace window; `0` disables it.
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-popover>`:
+  always shows the open floating panel (a menu-level property that applies to every item panel) in
+  the browser top layer, placed `fixed` whatever the positioning strategy resolves to, so it paints
+  above a sibling surface stacked higher than a `z-index`ed fixed or sticky header, toolbar or rail
+  it sits in (see **Anchored overlays and the top layer** in `llms/overlays.md`). Anchoring, RTL
+  placement, focus, Escape and the transitions are unchanged and no DOM node moves; it leaves the
+  top layer once it settles closed. Unset, promotion happens only when a trapping ancestor forces
+  it.
 - `distance: number = 6` — gap in px between the anchor and a floating panel.
 - `collapsed` (read-only boolean getter) — whether the collapsed layout is active; `false` on the
   server and until the first measurement. Mirrored to the `collapsed` custom state.

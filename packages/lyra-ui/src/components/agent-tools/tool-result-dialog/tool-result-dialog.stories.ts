@@ -22,7 +22,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Assigning accessibleLabel directly names the inner dialog when no host aria-label is present. A host aria-label retains its separate host ownership, and an empty direct value uses the tool title. A full tool-call detail overlay: a status/duration header plus a `body` slot where a consumer typically places a `<lr-tab-group>` with Input/Preview/JSON/Raw panels. The component knows nothing about what is inside that slot -- it only supplies the modal chrome (focus trap, Escape dismiss, opt-in `lightDismiss`, scroll lock, a maximize toggle) around it. Long localized header content wraps within narrow allocations so the header actions remain reachable.',
+          'A non-empty host aria-label names the dialog before a direct accessibleLabel value; without either, the tool title names it. A full tool-call detail overlay: a status/duration header plus a `body` slot where a consumer typically places a `<lr-tab-group>` with Input/Preview/JSON/Raw panels. The component knows nothing about what is inside that slot -- it only supplies the modal chrome (focus trap, Escape dismiss, opt-in `lightDismiss`, scroll lock, a maximize toggle) around it. Long localized header content wraps within narrow allocations so the header actions remain reachable.',
       },
     },
   },
@@ -259,5 +259,30 @@ export const Narrow320: Story = {
         Long result content remains reachable in the narrow dialog allocation.
       </p>
     </lr-tool-result-dialog>
+  `,
+};
+
+
+/** The tool dialog is a sibling of the native modal and retains its authored slot ownership. */
+export const AboveNativeModal: Story = {
+  render: () => html`
+    <div>
+      <button @click=${(event: Event) => {
+        (event.currentTarget as HTMLElement).parentElement!.querySelector('dialog')!.showModal();
+      }}>Open native dialog</button>
+      <dialog>
+        <p>A native modal can open this tool dialog while remaining underneath it.</p>
+        <button @click=${(event: Event) => {
+          const native = (event.currentTarget as HTMLElement).closest('dialog')!;
+          (native.parentElement!.querySelector('lr-tool-result-dialog') as LyraToolResultDialog).show();
+        }}>Open tool dialog</button>
+        <button @click=${(event: Event) => (event.currentTarget as HTMLElement).closest('dialog')!.close()}>Close native dialog</button>
+      </dialog>
+      <lr-tool-result-dialog tool-name="read_document">
+        <button slot="footer" @click=${(event: Event) => {
+          ((event.currentTarget as HTMLElement).parentElement as LyraToolResultDialog).close();
+        }}>Done</button>
+      </lr-tool-result-dialog>
+    </div>
   `,
 };

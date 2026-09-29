@@ -594,3 +594,17 @@ export const SidebarInPage: Story = {
     })}><lr-app-rail slot="navigation" label="Workspace" frame="plain" mobile-breakpoint="0px" icon-only-breakpoint="0px" collapsible hotkey="mod+b">${sidebarItems()}</lr-app-rail><h2>Allocation-aware workspace</h2><p>Resize this story's container to reveal the page navigation toggle.</p></lr-page></div>`;
   },
 };
+
+
+export const FromNativeModal: Story = {
+  parameters: { docs: { description: { story: 'Open the native dialog, then open the layout surface. Its action remains usable, and Escape returns focus to the native opener.' } } },
+  render: () => html`<section>
+    <button @click=${(event: Event) => (event.currentTarget as HTMLElement).parentElement!.querySelector('dialog')!.showModal()}>Open native dialog</button>
+    <dialog><button @click=${(event: Event) => {
+      const panel = (event.currentTarget as HTMLElement).closest('section')!.querySelector('lr-app-rail')!;
+
+      panel.open = true;
+    }}>Open tools</button></dialog>
+    <lr-app-rail mobile-breakpoint="2000px" label="Tools"><button slot="header" style="margin-block-start:4rem">Apply</button></lr-app-rail>
+  </section>`,
+};

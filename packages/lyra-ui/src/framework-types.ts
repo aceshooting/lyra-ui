@@ -758,6 +758,7 @@ export interface LyraComponentTypeMap {
       | 'resizable'
       | 'storageKey'
       | 'strings'
+      | 'topLayer'
       | 'trigger'
       | 'triggerCollapses'
       | 'withoutToggle',
@@ -813,6 +814,7 @@ export interface LyraComponentTypeMap {
       'preferred-mode'?: LyraAppRail['preferredMode'];
       'rail-width'?: LyraAppRail['railWidth'];
       'storage-key'?: LyraAppRail['storageKey'];
+      'top-layer'?: LyraAppRail['topLayer'];
       'trigger-collapses'?: LyraAppRail['triggerCollapses'];
       'without-toggle'?: LyraAppRail['withoutToggle'];
     };
@@ -856,7 +858,8 @@ export interface LyraComponentTypeMap {
       | 'locale'
       | 'strings'
       | 'target'
-      | 'tooltip',
+      | 'tooltip'
+      | 'topLayer',
       {}
     >;
     events: LyraAppRailItemEventMap;
@@ -886,6 +889,7 @@ export interface LyraComponentTypeMap {
       | '--lr-positioning-strategy';
     attributeAliases: {
       'icon-only'?: LyraAttributeValue<boolean>;
+      'top-layer'?: LyraAppRailItem['topLayer'];
     };
   };
   'lr-approval-queue': {
@@ -2826,6 +2830,7 @@ export interface LyraComponentTypeMap {
       | 'spellcheck'
       | 'strings'
       | 'sync'
+      | 'topLayer'
       | 'validationTarget'
       | 'validators'
       | 'value'
@@ -2906,6 +2911,7 @@ export interface LyraComponentTypeMap {
       'overflow-text'?: LyraCombobox['overflowText'];
       'positioning-strategy'?: LyraCombobox['positioningStrategy'];
       'source-delay'?: LyraCombobox['sourceDelay'];
+      'top-layer'?: LyraCombobox['topLayer'];
       'visible-options'?: LyraCombobox['visibleOptions'];
       'with-clear'?: LyraCombobox['withClear'];
       'with-hint'?: LyraCombobox['withHint'];
@@ -6841,6 +6847,7 @@ export interface LyraComponentTypeMap {
       | 'required'
       | 'size'
       | 'strings'
+      | 'topLayer'
       | 'triggerDisplay'
       | 'value'
       | 'withoutFlags',
@@ -6883,6 +6890,7 @@ export interface LyraComponentTypeMap {
       'custom-error'?: LyraLocalePicker['customError'];
       'error-text'?: LyraLocalePicker['errorText'];
       'option-display'?: LyraLocalePicker['optionDisplay'];
+      'top-layer'?: LyraLocalePicker['topLayer'];
       'trigger-display'?: LyraLocalePicker['triggerDisplay'];
       'value'?: LyraLocalePicker['defaultValue'];
       'without-flags'?: LyraLocalePicker['withoutFlags'];
@@ -7507,7 +7515,8 @@ export interface LyraComponentTypeMap {
       | '--lr-overlay-border'
       | '--lr-overlay-radius'
       | '--lr-overlay-shadow-anchored'
-      | '--lr-overlay-surface';
+      | '--lr-overlay-surface'
+      | '--lr-positioning-strategy';
     attributeAliases: {
       'allow-custom'?: LyraModelSelect['allowCustom'];
       'autocorrect'?: LyraModelSelect['autoCorrect'];
@@ -7751,7 +7760,8 @@ export interface LyraComponentTypeMap {
       | 'panelAnchor'
       | 'showDelay'
       | 'skipDelay'
-      | 'strings',
+      | 'strings'
+      | 'topLayer',
       {}
     >;
     events: LyraNavigationMenuEventMap;
@@ -7768,6 +7778,7 @@ export interface LyraComponentTypeMap {
       'panel-anchor'?: LyraNavigationMenu['panelAnchor'];
       'show-delay'?: LyraNavigationMenu['showDelay'];
       'skip-delay'?: LyraNavigationMenu['skipDelay'];
+      'top-layer'?: LyraNavigationMenu['topLayer'];
     };
   };
   'lr-navigation-menu-item': {
@@ -8721,7 +8732,8 @@ export interface LyraComponentTypeMap {
       | 'locale'
       | 'nextInMs'
       | 'paused'
-      | 'strings',
+      | 'strings'
+      | 'withRefresh',
       {}
     >;
     events: LyraPollStatusEventMap;
@@ -8734,6 +8746,7 @@ export interface LyraComponentTypeMap {
       | '--lr-poll-status-pause-hover-color';
     attributeAliases: {
       'next-in-ms'?: LyraPollStatus['nextInMs'];
+      'with-refresh'?: LyraPollStatus['withRefresh'];
     };
   };
   'lr-popover': {
@@ -9511,7 +9524,8 @@ export interface LyraComponentTypeMap {
       | 'locale'
       | 'mode'
       | 'paused'
-      | 'strings',
+      | 'strings'
+      | 'withNext',
       {}
     >;
     events: LyraRandomContentEventMap;
@@ -9530,6 +9544,7 @@ export interface LyraComponentTypeMap {
       | '--lr-random-content-item-gap';
     attributeAliases: {
       'autoplay-interval'?: LyraRandomContent['autoplayInterval'];
+      'with-next'?: LyraRandomContent['withNext'];
     };
   };
   'lr-rating': {
@@ -10153,6 +10168,7 @@ export interface LyraComponentTypeMap {
       | 'strings'
       | 'sync'
       | 'title'
+      | 'topLayer'
       | 'value'
       | 'withClear'
       | 'withHint'
@@ -10220,6 +10236,7 @@ export interface LyraComponentTypeMap {
       'help-text'?: LyraSelect['helpText'];
       'max-options-visible'?: LyraSelect['maxOptionsVisible'];
       'positioning-strategy'?: LyraSelect['positioningStrategy'];
+      'top-layer'?: LyraSelect['topLayer'];
       'with-clear'?: LyraSelect['withClear'];
       'with-hint'?: LyraSelect['withHint'];
       'with-label'?: LyraSelect['withLabel'];
@@ -11377,6 +11394,7 @@ export interface LyraComponentTypeMap {
       | '--lr-task-list-compact-header-gap'
       | '--lr-task-list-compact-header-padding'
       | '--lr-task-list-error-color'
+      | '--lr-task-list-incomplete-color'
       | '--lr-task-list-pending-color'
       | '--lr-task-list-radius'
       | '--lr-task-list-running-color'
@@ -12391,6 +12409,7 @@ export interface LyraComponentTypeMap {
       | 'showDelay'
       | 'skidding'
       | 'strings'
+      | 'topLayer'
       | 'trigger'
       | 'withoutArrow',
       {}
@@ -12419,6 +12438,7 @@ export interface LyraComponentTypeMap {
       'hide-delay'?: LyraTooltip['hideDelay'];
       'positioning-strategy'?: LyraTooltip['positioningStrategy'];
       'show-delay'?: LyraTooltip['showDelay'];
+      'top-layer'?: LyraTooltip['topLayer'];
       'without-arrow'?: LyraTooltip['withoutArrow'];
     };
   };
@@ -12834,6 +12854,7 @@ export interface LyraComponentTypeMap {
       | '--lr-overlay-radius'
       | '--lr-overlay-shadow-anchored'
       | '--lr-overlay-surface'
+      | '--lr-positioning-strategy'
       | '--lr-voice-picker-gap'
       | '--lr-voice-picker-max-inline-size'
       | '--lr-voice-picker-open-border-color'

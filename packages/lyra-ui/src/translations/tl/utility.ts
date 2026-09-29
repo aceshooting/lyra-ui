@@ -41,6 +41,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: 'Nagre-refresh ngayon.',
   randomContentPause: 'I-pause ang pag-ikot',
   randomContentResume: 'Ipagpatuloy ang pag-ikot',
+  randomContentNext: 'Magpakita ng iba',
   exportButtonLabel: 'I-export',
   knownDateDay: 'Araw',
   knownDateMonth: 'Buwan',

@@ -16,10 +16,16 @@
 
 ## `lr-tool-select-dialog`
 
+Opening above an existing native `dialog.showModal()` keeps this dialog interactive, including
+pointer input, keyboard focus, and Escape dismissal. Its host and slotted children remain in their
+authored DOM locations, and closing leaves the underlying native modal open.
+
 A category-grouped, filterable, searchable tool-enablement dialog for picking which agent tools are
 available in a conversation. It keeps its own panel template rather than nesting `<lr-dialog>`, so
 it has no dependency on the general-purpose dialog, while its modal behavior participates in the
 shared overlay stack. First-party invention (no Web Awesome equivalent).
+
+Closing returns focus to the element that held it when the dialog opened, including an opener the host re-shows only after the close.
 
 Programmatic `selectedToolIds` and `useDefaults` replacements synchronize the live checkbox and
 switch state after user edits without emitting change events. Removing `search-placeholder` restores
@@ -63,9 +69,9 @@ string; disabled?: boolean; disabledReason?: string }` — one selectable agent 
   using the default tool set (`true`) or a custom selection (`false`).
 - `label?: string` — the dialog's visible heading and accessible name. Omission uses localized
   `selectTools`; every supplied string, including `"Select tools"` and `""`, remains literal.
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — a host attribute names the
-  host; the panel remains labelled by its visible heading instead of cloning that name. A direct
-  property assignment made without the attribute can name the panel.
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — a non-empty host attribute names
+  the semantic dialog owner, taking precedence over a direct property value. Without either, its
+  visible heading supplies the accessible name.
 - `searchPlaceholder?: string` (attribute `search-placeholder`) — omission uses localized
   `searchToolsPlaceholder`; every supplied string, including `"Search tools…"` and `""`, remains
   literal as placeholder copy. Empty/whitespace-only copy leaves the field visually empty while

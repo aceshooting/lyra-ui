@@ -121,7 +121,7 @@ container. The last five are inline `var()` fallbacks at the point of use rather
 declarations, so a page-, container-, or theme-level value reaches them; see `<lr-code-block>` above
 for the full rationale, including why `<lr-markdown>`/`<lr-markdown-core>` must declare the tab-size
 fallback separately. `base` is a flex column and `body` grows to fill whatever block space a
-definite-height host gives it too, identically to `<lr-code-block>` above.
+explicitly sized host gives it too, identically to `<lr-code-block>` above.
 
 **Optional peer deps:** `shiki` (specifically its `shiki/core`, `shiki/engine/oniguruma`, the binary
 `shiki/onig.wasm` asset (the default; select `shiki/engine/javascript` instead via

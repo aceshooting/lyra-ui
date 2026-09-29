@@ -1580,7 +1580,7 @@ export class LyraSlider extends LyraSliderBase {
 
   /** One value, or both handles joined by an en dash. Caller formatting is opt-in;
    * localized numeric data remains the default and nullish-result fallback. */
-  private readoutText(): string {
+  private readoutText(): string[] {
     const format = (value: number, handle: SliderHandle): string => {
       if (this.valueDisplay === 'formatted') {
         const text = this.valueFormatter ? this.valueFormatter(value, handle) : this.tooltipFormatter?.(value);
@@ -1588,8 +1588,8 @@ export class LyraSlider extends LyraSliderBase {
       }
       return this.formatValue(value);
     };
-    if (!this.range) return format(this.valueAsNumber, 'value');
-    return `${format(this.minValue, 'min')}–${format(this.maxValue, 'max')}`;
+    if (!this.range) return [format(this.valueAsNumber, 'value')];
+    return [format(this.minValue, 'min'), format(this.maxValue, 'max')];
   }
 
   /** The accessible name of the control as a whole — the single thumb's own
@@ -1727,7 +1727,9 @@ export class LyraSlider extends LyraSliderBase {
         ${this.label}<slot name="label" @slotchange=${this.onSlotChange}></slot>
       </div>`;
     const value = this.withValue
-      ? html`<span part="value" aria-hidden="true">${this.readoutText()}</span>`
+      ? html`<span part="value" aria-hidden="true"
+          >${this.readoutText().map((text, i) => html`${i > 0 ? '–' : nothing}<span data-readout-end>${text}</span>`)}</span
+        >`
       : nothing;
     const labelValue = this.withValue && this.valuePlacement === 'label';
     return html`

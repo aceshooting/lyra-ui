@@ -212,6 +212,23 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
   /** Gap (px) between the anchor and a floating panel. Negative values clamp to `0`. */
   @property({ type: Number }) distance = DEFAULT_DISTANCE;
 
+  /**
+   * Shows the open floating panel in the browser top layer wherever the native Popover API exists,
+   * so it paints above every page layer whatever the stacking contexts around it. Use it inside a
+   * fixed or sticky header, toolbar or rail with its own `z-index` that a sibling surface stacked
+   * higher would otherwise cover: such an ancestor is only a stacking context, not a containing
+   * block, so the automatic top-layer escape never applies, and no `z-index` on the panel can lift
+   * it out of that ancestor's context. While set, the panel is placed with the `fixed` strategy
+   * whatever `--lr-positioning-strategy` resolves to; no DOM node moves, so anchoring, RTL
+   * placement, focus, Escape and the show/hide transition are unchanged. It stays promoted through
+   * its hide transition and leaves the top layer once it settles closed. Stacking contexts are
+   * deliberately not detected automatically. Without native Popover API support the panel keeps
+   * its ordinary `z-index` stacking. Same contract as `<lr-popover>`'s `top-layer`. Changes apply
+   * live while open.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'top-layer', reflect: true }) topLayer = false;
+
   @state() private collapsedLayout = false;
   @state() private indicatorBox?: IndicatorBox;
 
@@ -229,6 +246,7 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
     anchor: (item) =>
       this._panelAnchor === 'item' ? (this.controllerFor(item)?.base() ?? null) : this.listElement,
     distance: () => finiteRange(this.distance, DEFAULT_DISTANCE, 0),
+    topLayer: () => this.topLayer,
     activate: (item) => this.activateItem(item),
     willOpen: (item) => this.itemWillOpen(item),
     changed: (item, open, source) => this.itemChanged(item, open, source),
@@ -344,7 +362,12 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
     const direction = this.effectiveDirection;
     const directionChanged = this.lastDirection !== undefined && direction !== this.lastDirection;
     this.lastDirection = direction;
-    if (changed.has('distance') || changed.has('panelAnchor') || directionChanged) {
+    if (
+      changed.has('distance') ||
+      changed.has('topLayer') ||
+      changed.has('panelAnchor') ||
+      directionChanged
+    ) {
       this.controllerFor(this.openItem)?.reposition();
     }
     if (

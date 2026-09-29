@@ -1,3 +1,4 @@
+import { getActiveNativeModal } from './native-modal-context.js';
 import { takeOverlayOrder, type OverlayOrderReservation } from './overlay-order.js';
 import { deepActiveElementIn } from './active-element.js';
 import {
@@ -40,6 +41,7 @@ export interface OverlayStackActivationOptions {
   host: HTMLElement;
   panel: () => HTMLElement | null;
   modalRoot?: () => HTMLElement | null;
+  auxiliaryRoots?: () => readonly HTMLElement[];
   onEscape: () => void;
   onBackdrop?: () => void;
   preferredInitialFocus?: () => HTMLElement | null;
@@ -78,6 +80,7 @@ export interface OverlayStackEntrySnapshot {
   readonly host: HTMLElement;
   readonly modal: boolean;
   readonly modalRoot?: () => HTMLElement | null;
+  readonly auxiliaryRoots?: () => readonly HTMLElement[];
 }
 
 export interface OverlayStackSnapshot {
@@ -173,11 +176,30 @@ function focusAutofocusTarget(panel: HTMLElement): boolean {
   return false;
 }
 
+function auxiliaryRoots(entry: OverlayEntry): HTMLElement[] {
+  const panel = entry.options.panel();
+  return [...new Set(entry.options.auxiliaryRoots?.() ?? [])].filter(
+    (root) => root.isConnected && root.ownerDocument === entry.state.document &&
+      (!panel || !composedContains(panel, root)),
+  );
+}
+
+function entryContainsFocus(entry: OverlayEntry, panel: HTMLElement, active: Element | null): boolean {
+  if (!entry.options.auxiliaryRoots) return composedContains(panel, active);
+  return active !== null && isComposedFocusAvailable(active) &&
+    [panel, ...auxiliaryRoots(entry)].some((root) => composedContains(root, active));
+}
+
+function entryFocusableElements(entry: OverlayEntry, panel: HTMLElement): HTMLElement[] {
+  if (!entry.options.auxiliaryRoots) return collectFocusableElements(panel);
+  return [...new Set([panel, ...auxiliaryRoots(entry)].flatMap((root) => collectFocusableElements(root)))];
+}
+
 function focusEntry(entry: OverlayEntry, preserveCurrent = true): void {
   const panel = entry.options.panel();
   if (!panel) return;
   const active = deepActiveElement(entry.state.document);
-  if (preserveCurrent && composedContains(panel, active)) return;
+  if (preserveCurrent && entryContainsFocus(entry, panel, active)) return;
 
   if (entry.initialFocusDecision === undefined) {
     entry.initialFocusDecision = entry.options.beforeInitialFocus?.() !== false;
@@ -196,7 +218,7 @@ function focusEntry(entry: OverlayEntry, preserveCurrent = true): void {
 function handleTab(state: OverlayDocumentState, entry: OverlayEntry, event: KeyboardEvent): void {
   const panel = entry.options.panel();
   if (!panel) return;
-  const focusable = collectFocusableElements(panel);
+  const focusable = entryFocusableElements(entry, panel);
   if (focusable.length === 0) {
     event.preventDefault();
     panel.focus();
@@ -221,7 +243,7 @@ function handleTab(state: OverlayDocumentState, entry: OverlayEntry, event: Keyb
     const next = focusable[activeIndex + (event.shiftKey ? -1 : 1)];
     // Overflowing scroll regions join the managed order even with tabindex="-1".
     // Native sequential navigation would skip these interior stops.
-    if (next && next.tabIndex < 0) {
+    if (next && (next.tabIndex < 0 || auxiliaryRoots(entry).length > 0)) {
       event.preventDefault();
       next.focus();
     }
@@ -234,6 +256,7 @@ function snapshotFor(state: OverlayDocumentState): OverlayStackSnapshot {
       host: entry.options.host,
       modal: entry.options.modal,
       modalRoot: entry.options.modalRoot,
+      auxiliaryRoots: entry.options.auxiliaryRoots,
     })),
   };
 }
@@ -270,7 +293,10 @@ function createState(doc: Document): OverlayDocumentState {
   state.onKeyDown = (event: KeyboardEvent) => {
     if (event.defaultPrevented || event.isComposing || event.keyCode === 229 || state.routingSuspensions.size > 0) return;
     const entry = state.stack[state.stack.length - 1];
-    if (!entry) return;
+    if (!entry || (event.key !== 'Escape' && event.key !== 'Tab')) return;
+    const nativeModal = getActiveNativeModal(doc);
+    const panel = entry.options.panel();
+    if (nativeModal && (!panel || !composedContains(nativeModal, panel))) return;
     if (event.key === 'Escape') {
       event.preventDefault();
       entry.options.onEscape();
@@ -440,7 +466,7 @@ function deactivateEntry(
 
 function panelHoldsFocus(entry: OverlayEntry): boolean {
   const panel = entry.options.panel();
-  return panel !== null && composedContains(panel, deepActiveElement(entry.state.document));
+  return panel !== null && entryContainsFocus(entry, panel, deepActiveElement(entry.state.document));
 }
 
 /**
@@ -488,7 +514,7 @@ export function activateOverlayStack(options: OverlayStackActivationOptions): Ov
       const panel = entry.options.panel();
       if (!panel) return false;
       const active = deepActiveElement(entry.state.document);
-      if (composedContains(panel, active)) return false;
+      if (entryContainsFocus(entry, panel, active)) return false;
       return focusAutofocusTarget(panel);
     },
     updateRestoreFocusTo: (target) => {

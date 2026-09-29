@@ -52,12 +52,12 @@ export const SvgCandidate: Story = {
 };
 
 export const SequenceAutoplay: Story = {
-  name: 'Sequential autoplay with a manual randomize() button',
+  name: 'Sequential autoplay with a built-in next button',
   render: () => html`
     <lr-random-content
-      id="story-sequence"
       mode="sequence"
       autoplay
+      with-next
       autoplay-interval="4000"
       animation="fade"
       aria-label="Announcement rotator"
@@ -66,17 +66,6 @@ export const SequenceAutoplay: Story = {
       <p>Announcement two</p>
       <p>Announcement three</p>
     </lr-random-content>
-    <button
-      type="button"
-      @click=${() =>
-        (
-          document.getElementById('story-sequence') as HTMLElement & {
-            randomize: () => void;
-          }
-        )?.randomize()}
-    >
-      Show next
-    </button>
   `,
 };
 

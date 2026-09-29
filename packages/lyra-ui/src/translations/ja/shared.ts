@@ -56,6 +56,7 @@ const strings: LyraLocaleStrings = {
   statusSuccess: '成功',
   statusError: 'エラー',
   statusDenied: '拒否',
+  statusIncomplete: '未完了',
   restore: '元に戻す',
   navigation: 'ナビゲーション',
   attachmentUntitledFile: '無題のファイル',

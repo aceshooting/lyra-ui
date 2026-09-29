@@ -13,7 +13,7 @@ import { literalSetConverter } from '../../../internal/converters.js';
 import { styles } from './random-content.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_randomContentPause, LYRA_DEFAULT_randomContentResume } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_randomContentNext, LYRA_DEFAULT_randomContentPause, LYRA_DEFAULT_randomContentResume } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type LyraRandomContentAnimation = 'none' | 'fade' | 'fade-up' | 'fade-down' | 'fade-left' | 'fade-right';
@@ -44,7 +44,8 @@ interface SelectionAnnouncementSnapshot {
  *
  * Not a form-associated control: it is a content-rotation primitive over
  * caller-supplied children, so the label/hint/error frame doesn't apply.
- * Its only built-in action is the autoplay pause/resume control.
+ * Its built-in actions are the autoplay pause/resume control and the opt-in `with-next` action
+ * that shows another selection.
  *
  * The host renders `display: block` by default, like the rest of this
  * family. A consumer needing an inline text-fragment swap inside a sentence
@@ -97,6 +98,7 @@ interface SelectionAnnouncementSnapshot {
  * `<lr-poll-status>`'s identical affordance.
  * @csspart base - The wrapping element around the default slot.
  * @csspart pause-button - The autoplay pause/resume action.
+ * @csspart next-button - The opt-in action that selects another item and re-arms autoplay.
  * @cssprop [--lr-animation-duration=300ms] - Mapped duration of the entrance animation.
  * @cssprop [--lr-animation-easing=ease] - Mapped easing function for the entrance animation.
  * @cssprop [--lr-animation-translate=var(--lr-size-0-5em)] - Mapped travel distance for directional animations.
@@ -116,6 +118,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    randomContentNext: LYRA_DEFAULT_randomContentNext,
     randomContentPause: LYRA_DEFAULT_randomContentPause,
     randomContentResume: LYRA_DEFAULT_randomContentResume,
   };
@@ -136,6 +139,11 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
 
   /** Whether the displayed selection automatically re-rolls on an interval. */
   @property({ type: Boolean, reflect: true }) autoplay = false;
+
+  /** Whether to show a built-in button that calls `randomize()` and re-arms the autoplay timer,
+   *  so a manual pick is not replaced moments later by a tick already in flight. `false` (the
+   *  default). */
+  @property({ type: Boolean, reflect: true, attribute: 'with-next' }) withNext = false;
 
   /** Whether autoplay is user-paused. Reflected for external state styling. */
   @property({ type: Boolean, reflect: true }) paused = false;
@@ -654,6 +662,15 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     return this.reselect();
   }
 
+  /**
+   * Re-arms the autoplay timer so the next tick is a full `autoplayInterval` away. Does nothing
+   * while autoplay is off, paused, suspended by focus or reduced motion, or the pool has fewer
+   * than two candidates.
+   */
+  restart(): void {
+    this.restartAutoplay();
+  }
+
   private stopAutoplay(): void {
     if (this.timer !== undefined) this.timerWindow?.clearInterval(this.timer);
     this.timer = undefined;
@@ -716,6 +733,13 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     this.emit('lr-pause-change', Object.freeze({ paused: this.paused }));
   };
 
+  // The button does not suspend autoplay on focus (the button
+  // is not the content being read), so a click always re-arms the timer.
+  private showNext = (): void => {
+    this.randomize();
+    this.restartAutoplay();
+  };
+
   override render(): TemplateResult {
     const hostLabel = this.getAttribute('aria-label');
     const multiple = finiteInteger(this.items, 1, 1, Number.MAX_SAFE_INTEGER) > 1;
@@ -731,6 +755,16 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
       >
         <slot @slotchange=${this.onSlotChange}></slot>
       </div>
+      ${this.withNext
+        ? html`<button
+            part="next-button"
+            type="button"
+            aria-label=${this.localize('randomContentNext')}
+            @click=${this.showNext}
+          >
+            <lr-icon name="refresh"></lr-icon>
+          </button>`
+        : nothing}
       ${this.autoplay
         ? html`<button
             part="pause-button"

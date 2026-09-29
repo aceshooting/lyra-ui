@@ -1508,3 +1508,30 @@ describe('size density', () => {
     expect(warnings).to.deep.equal([]);
   });
 });
+
+/** True when the text node's first `head` characters paint left of the rest (left-to-right reading order). */
+function paintsHeadFirst(host: Element, text: string, head: number): boolean {
+  const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT);
+  let node = walker.nextNode();
+  while (node && node.textContent !== text) node = walker.nextNode();
+  if (!node) return false;
+  const a = document.createRange();
+  a.setStart(node, 0);
+  a.setEnd(node, head);
+  const b = document.createRange();
+  b.setStart(node, head);
+  b.setEnd(node, text.length);
+  return a.getBoundingClientRect().left < b.getBoundingClientRect().left;
+}
+
+it('keeps number-first value and row values in reading order under dir="rtl"', async () => {
+  const wrap = (await fixture(html`
+    <div dir="rtl">
+      <lr-stat label="Throughput" value="2.4 MiB/s" .rows=${[{ label: 'x', value: '-12' }]}></lr-stat>
+    </div>
+  `)) as HTMLElement;
+  const stat = wrap.querySelector('lr-stat') as LyraStat;
+  await stat.updateComplete;
+  expect(paintsHeadFirst(stat.shadowRoot!.querySelector('[part="value"]')!, '2.4 MiB/s', 3)).to.equal(true);
+  expect(paintsHeadFirst(stat.shadowRoot!.querySelector('[part="row-value"]')!, '-12', 1)).to.equal(true);
+});

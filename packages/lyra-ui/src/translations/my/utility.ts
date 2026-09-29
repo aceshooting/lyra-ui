@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: 'ယခု ပြန်လည်စတင်နေသည်။',
   randomContentPause: 'လှည့်ပတ်မှုကို ခေတ္တရပ်ရန်',
   randomContentResume: 'လှည့်ပတ်မှုကို ပြန်စရန်',
+  randomContentNext: 'အခြားတစ်ခု ပြပါ',
   exportButtonLabel: 'ထုတ်ယူရန်',
   knownDateDay: 'နေ့',
   knownDateMonth: 'လ',

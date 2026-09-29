@@ -41,6 +41,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: 'अहिले ताजा हुँदैछ।',
   randomContentPause: 'घुमाइ रोक्नुहोस्',
   randomContentResume: 'घुमाइ फेरि सुरु गर्नुहोस्',
+  randomContentNext: 'अर्को देखाउनुहोस्',
   exportButtonLabel: 'निर्यात गर्नुहोस्',
   knownDateDay: 'दिन',
   knownDateMonth: 'महिना',

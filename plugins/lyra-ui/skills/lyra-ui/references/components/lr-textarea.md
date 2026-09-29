@@ -235,12 +235,13 @@ With no label text the part is hidden and no glyph is painted.
   so a halo is configured once instead of per component; additive, so the `:focus-visible` outline
   is untouched.
 
-`<lr-textarea>` now fills a definite-height host: place it inside a container with a resolved
-block size (a flex/grid item stretched to a track, or an ancestor with an explicit height) and
-the field's `form-control` → `textarea-wrapper` → the native `<textarea>` chain fills it instead
-of staying at its `rows`-derived intrinsic height. This has no effect and needs no opt-in for the
-ordinary case (an unsized host) — `resize="auto"`'s own growth and its
-`--lr-textarea-max-block-size` cap are unaffected either way.
+`<lr-textarea>` fills an explicitly sized host: give the host a block size (`block-size: 100%`
+inside a container with a resolved block size, a pixel size, or a flex/grid allocation) and the
+field's `form-control` → `textarea-wrapper` → the native `<textarea>` chain fills it instead of
+staying at its `rows`-derived intrinsic height. An unsized host stays content-sized, including
+inside a grid/flex item stretched to a taller row. With `resize="auto"`, content grows up to the
+`--lr-textarea-max-block-size` cap or a smaller explicit host allocation. Overflow stays scrollable,
+including when that allocation shrinks after the content renders.
 
 **Additional API surface:**
 

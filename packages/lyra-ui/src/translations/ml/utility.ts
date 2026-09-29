@@ -41,6 +41,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: 'ഇപ്പോൾ പുതുക്കുന്നു.',
   randomContentPause: 'റൊട്ടേഷൻ നിർത്തുക',
   randomContentResume: 'റൊട്ടേഷൻ പുനരാരംഭിക്കുക',
+  randomContentNext: 'മറ്റൊന്ന് കാണിക്കുക',
   exportButtonLabel: 'എക്സ്പോർട്ട് ചെയ്യുക',
   knownDateDay: 'ദിവസം',
   knownDateMonth: 'മാസം',

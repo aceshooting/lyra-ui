@@ -41,6 +41,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: 'Frissítés folyamatban.',
   randomContentPause: 'Váltakozás szüneteltetése',
   randomContentResume: 'Váltakozás folytatása',
+  randomContentNext: 'Másik megjelenítése',
   exportButtonLabel: 'Exportálás',
   knownDateDay: 'Nap',
   knownDateMonth: 'Hónap',

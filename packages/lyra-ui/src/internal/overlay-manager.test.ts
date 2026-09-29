@@ -1,4 +1,6 @@
 import { expect } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
+import { focusAfterPointer } from '../../test/wtr-focus.js';
 import { resolveAccessibleTrigger } from './a11y.js';
 import {
   activateOverlay,
@@ -23,6 +25,80 @@ function createOverlay(doc: Document, label: string) {
   doc.body.append(host);
   return { host, panel, first, last };
 }
+
+it('includes only owned auxiliary roots in modal inerting and deduplicated Tab order', async () => {
+  const overlay = createOverlay(document, 'auxiliary');
+  const auxiliary = document.createElement('div');
+  auxiliary.innerHTML = '<button>Helper action</button><button disabled>Disabled</button><span inert><button>Inert</button></span>';
+  const action = auxiliary.querySelector('button')!;
+  const sibling = document.createElement('button');
+  sibling.textContent = 'Unrelated pane';
+  overlay.host.prepend(auxiliary, sibling);
+  let roots = [auxiliary, auxiliary, overlay.panel];
+  const handle = activateOverlay({
+    host: overlay.host,
+    panel: () => overlay.panel,
+    modalRoot: () => overlay.panel,
+    auxiliaryRoots: () => roots,
+    onEscape: () => undefined,
+  });
+  try {
+    expect(auxiliary.inert).to.equal(false);
+    expect(sibling.inert).to.equal(true);
+    handle.focusInitial();
+    expect(deepActiveElement(document) === overlay.first).to.equal(true);
+    await sendKeys({ press: 'Tab' });
+    expect(deepActiveElement(document) === overlay.last).to.equal(true);
+    await sendKeys({ press: 'Tab' });
+    expect(deepActiveElement(document) === action).to.equal(true);
+    handle.focusInitial();
+    expect(deepActiveElement(document) === action, 'an owned helper keeps focus').to.equal(true);
+    await sendKeys({ press: 'Tab' });
+    expect(deepActiveElement(document) === overlay.first).to.equal(true);
+    await sendKeys({ press: 'Shift+Tab' });
+    expect(deepActiveElement(document) === action).to.equal(true);
+    auxiliary.hidden = true;
+    handle.focusInitial();
+    expect(deepActiveElement(document) === overlay.first, 'hidden helper content is excluded').to.equal(true);
+    roots = [overlay.panel];
+    const tab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+    document.dispatchEvent(tab);
+    expect(tab.defaultPrevented, 'a contained duplicate root preserves ordinary interior Tab').to.equal(false);
+    roots = [auxiliary];
+    auxiliary.hidden = false;
+    overlay.first.remove();
+    overlay.last.remove();
+    handle.focusInitial();
+    expect(deepActiveElement(document) === overlay.panel, 'auxiliary actions never replace primary initial focus').to.equal(true);
+  } finally {
+    handle.deactivate({ restoreFocus: false });
+  }
+  expect(sibling.inert).to.equal(false);
+});
+
+it('recognizes focus held by an auxiliary root when handing off to a nontrapping overlay', async () => {
+  const bottom = createOverlay(document, 'auxiliary-bottom');
+  const top = createOverlay(document, 'auxiliary-top');
+  const auxiliary = document.createElement('button');
+  auxiliary.textContent = 'Helper action';
+  top.host.append(auxiliary);
+  const bottomHandle = activateOverlay({
+    host: bottom.host, panel: () => bottom.panel, modal: false, trapFocus: false,
+    onEscape: () => undefined,
+  });
+  const topHandle = activateOverlay({
+    host: top.host, panel: () => top.panel, modal: false, trapFocus: false,
+    auxiliaryRoots: () => [auxiliary], onEscape: () => undefined,
+  });
+  try {
+    await focusAfterPointer(auxiliary, top.host);
+    topHandle.deactivate({ restoreFocus: false });
+    expect(deepActiveElement(document) === bottom.first).to.equal(true);
+  } finally {
+    topHandle.deactivate({ restoreFocus: false });
+    bottomHandle.deactivate({ restoreFocus: false });
+  }
+});
 
 async function waitForCondition(read: () => boolean, message: string): Promise<void> {
   const started = performance.now();

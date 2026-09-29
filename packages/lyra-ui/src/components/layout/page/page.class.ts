@@ -1,3 +1,5 @@
+import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
+import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
 import {
   html,
   nothing,
@@ -187,7 +189,7 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
    *  attribute does not draw an "unknown attribute" dev warning. */
   protected static readonly knownUnobservedAttributes: readonly string[] = ['disable-sticky'];
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, nativeModalCarrierStyles, styles];
 
   /** Presentation derived from the Page's allocated inline size. It begins at `desktop` so server
    * output is deterministic, then reflects the first live allocation measurement. */
@@ -234,6 +236,13 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
   private resizeObserver?: ResizeObserver;
   private resizeView?: Window;
   private overlayHandle?: OverlayHandle;
+  private readonly nativeModal = new NativeModalCarrier(this, {
+    onCancel: () => { if (this.overlayHandle?.isTopmost()) this.hideNavigation(); },
+    onUnexpectedClose: () => {
+      if (this.overlayHandle?.isTopmost()) this.hideNavigation();
+      if (this.navOpen && this.view === 'mobile') this.nativeModal.show();
+    },
+  });
   private navigationTriggerOwner?: HTMLElement;
   /** Whatever held focus outside the drawer when it opened -- the return target of a drawer opened
    *  from script, and the deferred return's candidate when no toggle owns the open. */
@@ -259,13 +268,17 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     if (this.hasUpdated && this.view === 'mobile' && this.navOpen) {
       if (this.overlayHandle?.isActive()) this.overlayHandle.resume();
       else this.syncOverlay();
-      queueMicrotask(() => this.overlayHandle?.focusInitial());
+      queueMicrotask(() => {
+        this.nativeModal.show();
+        this.overlayHandle?.focusInitial();
+      });
     }
     if (this.hasUpdated)
       queueMicrotask(() => this.isConnected && this.syncCustomToggle());
   }
 
   override disconnectedCallback(): void {
+    this.nativeModal.hide();
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
     this.resizeView?.removeEventListener('resize', this.onWindowResize);
@@ -284,6 +297,11 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (this.view === 'mobile' && this.navOpen && !this.overlayHandle) this.nativeModal.prepare();
+    if (this.view !== 'mobile' || !this.navOpen) {
+      this.nativeModal.hide();
+      this.nativeModal.prepare(false);
+    }
     if (changed.has('fragmentTargetId') && !this.fragmentTargetId) {
       this.fragmentTargetId = this.skipTargetId;
     }
@@ -294,6 +312,7 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
 
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
+    if (this.view === 'mobile' && this.navOpen) this.nativeModal.show();
     if (
       changed.has('mobileBreakpoint') &&
       changed.get('mobileBreakpoint') !== undefined
@@ -751,13 +770,13 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
 
         <div part="body">
           <div part="menu"><slot name="menu"></slot></div>
-          <div part="dialog-wrapper" @click=${this.onBackdropClick}>
+          ${this.nativeModal.render(html`<div part="dialog-wrapper" @click=${this.onBackdropClick}>
             <div
               id=${this.drawerId}
               part="drawer"
-              role=${overlayOpen ? 'dialog' : nothing}
-              aria-modal=${overlayOpen ? 'true' : nothing}
-              aria-label=${overlayOpen ? navigationLabel : nothing}
+              role=${overlayOpen && !this.nativeModal.requested ? 'dialog' : nothing}
+              aria-modal=${overlayOpen && !this.nativeModal.requested ? 'true' : nothing}
+              aria-label=${overlayOpen && !this.nativeModal.requested ? navigationLabel : nothing}
               aria-describedby=${overlayOpen && hostDescribedBy ? hostDescribedBy : nothing}
               aria-hidden=${mobile && !this.navOpen ? 'true' : nothing}
               tabindex=${overlayOpen ? '-1' : nothing}
@@ -776,8 +795,9 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
                   <slot name="navigation-footer"></slot>
                 </div>
               </nav>
+              ${this.nativeModal.renderHelperSlot()}
             </div>
-          </div>
+          </div>`, { label: navigationLabel, describedBy: hostDescribedBy })}
 
           <main id=${this.mainId} part="main" tabindex="-1">
             <div part="main-header"><slot name="main-header"></slot></div>

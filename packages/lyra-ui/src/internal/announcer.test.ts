@@ -1,4 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { getActiveNativeModal } from './native-modal-context.js';
 import {
   ANNOUNCEMENT_SINK_ATTRIBUTE,
   Announcer,
@@ -674,5 +675,44 @@ it('falls back to the default ttl for a NaN/negative messageTtlMs instead of swe
     expect(sinkTexts('polite'), 'a NaN ttl must not clamp to a ~0ms sweep').to.deep.equal(['sticky']);
   } finally {
     sink.release();
+  }
+});
+
+
+it('routes modal announcements inside the native modal and suppresses native-inert background sources', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div><button>Background</button><dialog><button>Modal</button></dialog></div>`);
+  const dialog = wrapper.querySelector('dialog')!;
+  const background = acquireAnnouncementSink('polite', { source: wrapper.querySelector('button')! });
+  const foreground = acquireAnnouncementSink('polite', { source: dialog.querySelector('button')! });
+  try {
+    dialog.showModal();
+    background.announce('Must remain silent');
+    foreground.announce('Modal status');
+    await waitUntil(() => dialog.querySelector('[data-lr-live-region]')?.textContent === 'Modal status');
+    expect(document.body.textContent?.includes('Must remain silent')).to.equal(false);
+    dialog.close();
+    background.announce('Page status');
+    await waitUntil(() => background.element.textContent?.includes('Page status') === true);
+    expect(background.element.parentElement === document.body).to.equal(true);
+  } finally {
+    foreground.release();
+    background.release();
+    dialog.close();
+  }
+});
+
+
+it('detects the topmost native modal by backdrop hit testing when focus is cleared', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div><dialog><button>Later opened</button></dialog><dialog><button>Earlier opened</button></dialog></div>`);
+  const [later, earlier] = wrapper.querySelectorAll('dialog');
+  try {
+    earlier!.showModal();
+    later!.showModal();
+    (document.activeElement as HTMLElement).blur();
+    expect(document.activeElement === document.body).to.equal(true);
+    expect(getActiveNativeModal(document) === later).to.equal(true);
+  } finally {
+    later!.close();
+    earlier!.close();
   }
 });

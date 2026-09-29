@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: 'Se actualizează acum.',
   randomContentPause: 'Întrerupe rotația',
   randomContentResume: 'Continuă rotația',
+  randomContentNext: 'Afișează altul',
   exportButtonLabel: 'Exportă',
   knownDateDay: 'Zi',
   knownDateMonth: 'Lună',

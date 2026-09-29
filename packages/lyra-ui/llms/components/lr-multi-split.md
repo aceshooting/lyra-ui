@@ -16,6 +16,8 @@
 
 ## `lr-multi-split`
 
+The floating pane remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
+
 Resizable panels for dashboard layouts. Direct **light-DOM children are the panels**; a divider is
 auto-inserted between each adjacent pair. Panels participating in persistence carry a unique,
 nonempty, whitespace-stable `panel-id`; this business identity stays independent from the platform

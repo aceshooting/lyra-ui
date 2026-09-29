@@ -16,9 +16,13 @@
 
 ## `lr-command-palette`
 
+A command palette opened outside an existing native `dialog.showModal()` stays interactive through an internal native modal surface. Its host keeps its authored parent; Escape, close vetoes, and focus return retain their normal behavior.
+
 Searchable application command menu. Renders nothing at all while closed. Uses the same shared
 overlay infrastructure as `lr-dialog` (focus-trapping Tab, Escape dismissal, backdrop-click
 dismissal, ref-counted document scroll lock).
+
+Closing returns focus to the element that held it when the palette opened, including an opener the host re-shows only after the close.
 
 Hotkeys share last-connected eligible ownership with `lr-app-rail` in the same window. Removing the
 `hotkey` attribute disables the chord, and key-less browser autofill events are ignored. Non-ASCII

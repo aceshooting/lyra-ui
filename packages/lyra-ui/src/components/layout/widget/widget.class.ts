@@ -1,3 +1,6 @@
+import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
+import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
+import { CustomElementUpgradeObserver } from '../../../internal/custom-element-upgrade-observer.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -273,7 +276,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, nativeModalCarrierStyles, styles];
 
   // `collapsed` is installed by `definePersistedProperty()` (the static block below), whose
   // accessor records whether the property was ever assigned -- Lit's own dirty-tracking can't
@@ -383,8 +386,21 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   @state() private hasSublabelSlot = false;
 
   private overlayHandle?: OverlayHandle;
+  private readonly nativeModal = new NativeModalCarrier(this, {
+    onCancel: () => { if (this.overlayHandle?.isTopmost()) this.dismissFullscreen(); },
+    onUnexpectedClose: () => {
+      if (this.overlayHandle?.isTopmost()) this.dismissFullscreen();
+      if (this.fullscreen) this.nativeModal.show();
+    },
+  });
   private explicitTrigger?: HTMLElement;
   private labelSlotObserver?: MutationObserver;
+  private readonly labelUpgrades = new CustomElementUpgradeObserver(() => {
+    if (!this.isConnected || !this.labelSlotObserver) return;
+    const assigned = this.shadowRoot?.querySelector<HTMLSlotElement>('slot[name="label"]')
+      ?.assignedElements({ flatten: true }) ?? [];
+    this.syncLabelSlot(assigned);
+  });
   private labelSlotObserverDocument?: Document;
   private labelSlotObserverGeneration = 0;
   private ownerRealmGeneration = 0;
@@ -486,6 +502,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   // preserving focus that is still on one of the visible header controls.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (this.fullscreen) this.nativeModal.show();
     // Each row's own content can alter scroll reachability without that row's own border box
     // changing at all -- the primary observers above only watch each row container itself, so
     // every current slotted action / rendered view-toggle rides along on its own controller's
@@ -552,7 +569,10 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
       } else {
         this.activateFullscreenOverlay();
       }
-      this.queueOwnerMicrotask(() => this.overlayHandle?.focusInitial());
+      this.queueOwnerMicrotask(() => {
+        this.nativeModal.show();
+        this.overlayHandle?.focusInitial();
+      });
     }
     if (this.hasUpdated) {
       this.queueOwnerMicrotask(() => {
@@ -564,6 +584,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.nativeModal.hide();
     super.disconnectedCallback();
     this.overlayHandle?.suspend();
     this.resetOwnerRealmWork();
@@ -597,6 +618,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   }
 
   private activateFullscreenOverlay(): void {
+    this.nativeModal.prepare();
     this.overlayHandle = activateOverlay({
       host: this,
       panel: () =>
@@ -611,6 +633,8 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   }
 
   private deactivateFullscreenOverlay(): void {
+    this.nativeModal.hide();
+    this.nativeModal.prepare(false);
     this.overlayHandle?.deactivate();
     this.overlayHandle = undefined;
   }
@@ -654,10 +678,11 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
         return;
       }
       this.labelSlotText = this.readLabelSlotText(assigned);
+      bindAccessibleTextObserver(observer, this, ['alt', 'aria-labelledby', 'slot'], this.labelUpgrades);
     });
     this.labelSlotObserver = observer;
     this.labelSlotObserverDocument = ownerDocument;
-    bindAccessibleTextObserver(observer, this, ['alt', 'aria-labelledby', 'slot']);
+    bindAccessibleTextObserver(observer, this, ['alt', 'aria-labelledby', 'slot'], this.labelUpgrades);
     for (const element of assigned) {
       observer.observe(element, {
         attributes: true,
@@ -678,6 +703,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   private resetLabelSlotObserver(): void {
     this.labelSlotObserverGeneration += 1;
     this.labelSlotObserver?.disconnect();
+    this.labelUpgrades.disconnect();
     this.labelSlotObserver = undefined;
     this.labelSlotObserverDocument = undefined;
   }
@@ -747,7 +773,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     const views = this.views;
     const fullscreenInset = sanitizeCssInset(this.fullscreenInset);
     const backdropInset = sanitizeCssInset(this.backdropInset);
-    return html`
+    return this.nativeModal.render(html`
       ${this.fullscreen
         ? html`<div
             part="backdrop"
@@ -759,9 +785,9 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
         : nothing}
       <div
         part="base"
-        role=${this.fullscreen ? 'dialog' : nothing}
-        aria-modal=${this.fullscreen ? 'true' : nothing}
-        aria-label=${this.fullscreen
+        role=${this.fullscreen && !this.nativeModal.requested ? 'dialog' : nothing}
+        aria-modal=${this.fullscreen && !this.nativeModal.requested ? 'true' : nothing}
+        aria-label=${this.fullscreen && !this.nativeModal.requested
           ? this.accessibleLabel ??
             (this.label ||
               this.labelSlotText ||
@@ -874,8 +900,9 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
                   </div>`
               )}
         </div>
+        ${this.nativeModal.renderHelperSlot()}
       </div>
-    `;
+    `, { label: this.accessibleLabel ?? (this.label || this.labelSlotText || this.localize('widgetFullscreenPanel')) });
   }
 }
 

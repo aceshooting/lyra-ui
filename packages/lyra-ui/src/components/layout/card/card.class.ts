@@ -1,3 +1,4 @@
+import { CustomElementUpgradeObserver } from '../../../internal/custom-element-upgrade-observer.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { activeElementIn } from '../../../internal/active-element.js';
@@ -248,6 +249,13 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   @state() private hasFooterActionsSlot = false;
   @state() private accessibleContentText = '';
   private contentObserver?: MutationObserver;
+  private readonly contentUpgrades = new CustomElementUpgradeObserver(() => {
+    if (!this.isConnected || !this.contentObserver) return;
+    this.recomputeAccessibleContentText();
+    bindAccessibleTextObserver(
+      this.contentObserver, this, ['alt', 'aria-labelledby', 'slot'], this.contentUpgrades,
+    );
+  });
   private contentObserverDocument?: Document;
   private contentObserverGeneration = 0;
   private semanticFocusOrigin?: Element;
@@ -444,10 +452,11 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
         return;
       }
       this.recomputeAccessibleContentText();
+      bindAccessibleTextObserver(observer, this, ['alt', 'aria-labelledby', 'slot'], this.contentUpgrades);
     });
     this.contentObserver = observer;
     this.contentObserverDocument = ownerDocument;
-    bindAccessibleTextObserver(observer, this, ['alt', 'aria-labelledby', 'slot']);
+    bindAccessibleTextObserver(observer, this, ['alt', 'aria-labelledby', 'slot'], this.contentUpgrades);
   }
 
   override disconnectedCallback(): void {
@@ -464,6 +473,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   private resetContentObserver(): void {
     this.contentObserverGeneration += 1;
     this.contentObserver?.disconnect();
+    this.contentUpgrades.disconnect();
     this.contentObserver = undefined;
     this.contentObserverDocument = undefined;
   }

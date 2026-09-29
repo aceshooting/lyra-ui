@@ -652,6 +652,27 @@ it('contains long details and suffix content in narrow LTR and RTL rows', async 
   }
 });
 
+it('keeps short details and suffix hints whole beside an overflowing label', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="inline-size: 224px">
+      <lr-menu label="Actions">
+        <lr-menu-item>
+          Export selection as comma-separated values
+          <span slot="details">\u2318\u21e7E</span>
+          <span slot="suffix">\u2318S</span>
+        </lr-menu-item>
+      </lr-menu>
+    </div>
+  `);
+  const item = wrapper.querySelector('lr-menu-item') as LyraMenuItem;
+  const label = item.shadowRoot!.querySelector<HTMLElement>('[part="label"]')!;
+  expect(label.scrollWidth, 'label overflows').to.be.greaterThan(label.clientWidth);
+  for (const name of ['details', 'suffix']) {
+    const part = item.shadowRoot!.querySelector<HTMLElement>(`[part="${name}"]`)!;
+    expect(part.scrollWidth, name).to.be.at.most(part.clientWidth);
+  }
+});
+
 it("keeps a keyboard-shortcut hint's own glyph order fixed under an inherited RTL direction, while the row's icon/label mirroring still applies", async () => {
   const wrapper = await fixture(html`
     <div dir="rtl" role="menu" aria-label="Actions">

@@ -38,6 +38,8 @@ export interface NavigationMenuOwnerContext {
   /** The element the item's panel is positioned against. */
   anchor(item: HTMLElement): HTMLElement | null;
   distance(): number;
+  /** Whether floating panels are forced into the browser top layer. */
+  topLayer(): boolean;
   /** The item's base button was activated (click, or the native Enter/Space click). */
   activate(item: HTMLElement): void;
   /** Called before an accepted open commits. Closes the open sibling and returns the morph origin. */

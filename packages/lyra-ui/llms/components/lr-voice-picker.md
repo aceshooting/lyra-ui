@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 31 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -198,6 +198,11 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
 - `--lr-overlay-shadow-anchored` — Elevation of the anchored listbox. Default: `var(--lr-shadow-m)`.
   None of the four is declared on `:host`, so one declaration on `:root` — or on any ancestor, to
   scope it — retints this listbox together with every other floating surface in the library.
+- `--lr-positioning-strategy` — The listbox reads the same cascading `absolute`/`fixed` override
+  documented on `<lr-popover>` each time it is positioned, falling back to its existing `fixed`
+  default when no recognized value is set. `<lr-voice-picker>` has no per-instance
+  `positioning-strategy` property; set the token on `:root`, a theme, or an ancestor to retune its
+  listbox along with the other floating surfaces.
 - `--lr-voice-picker-preview-active-border` — Active preview border. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-preview-active-color` — Active preview icon. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-trigger-border-color` — Resting trigger/combobox border color, independent of

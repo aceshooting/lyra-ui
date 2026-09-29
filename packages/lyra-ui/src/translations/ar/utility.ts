@@ -53,6 +53,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: 'جارٍ التحديث الآن.',
   randomContentPause: 'إيقاف التدوير مؤقتًا',
   randomContentResume: 'استئناف التدوير',
+  randomContentNext: 'عرض آخر',
   exportButtonLabel: 'تصدير',
   knownDateDay: 'اليوم',
   knownDateMonth: 'الشهر',

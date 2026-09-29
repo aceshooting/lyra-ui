@@ -41,6 +41,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: 'اکنون تازه‌سازی می‌شود.',
   randomContentPause: 'مکث در چرخش',
   randomContentResume: 'ازسرگیری چرخش',
+  randomContentNext: 'نمایش مورد دیگر',
   exportButtonLabel: 'برون‌بری',
   knownDateDay: 'روز',
   knownDateMonth: 'ماه',

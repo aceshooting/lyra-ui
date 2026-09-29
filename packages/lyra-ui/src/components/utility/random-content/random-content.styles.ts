@@ -29,7 +29,8 @@ export const styles = css`
     align-items: var(--lr-random-content-item-alignment, flex-start);
     gap: var(--lr-random-content-item-gap, var(--lr-space-s));
   }
-  [part='pause-button'] {
+  [part='pause-button'],
+  [part='next-button'] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -47,16 +48,19 @@ export const styles = css`
        lr-button/lr-icon-button ease. */
     transition: background-color var(--lr-transition-fast), border-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
-  [part='pause-button']:hover {
+  [part='pause-button']:hover,
+  [part='next-button']:hover {
     border-color: var(--lr-color-brand);
     color: var(--lr-color-brand);
   }
-  [part='pause-button']:active {
+  [part='pause-button']:active,
+  [part='next-button']:active {
     border-color: var(--lr-color-brand);
     color: var(--lr-color-brand);
     background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
-  [part='pause-button']:focus-visible {
+  [part='pause-button']:focus-visible,
+  [part='next-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }

@@ -10,7 +10,11 @@ import {
 } from '../../../internal/lyra-element.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 installFormControlLabelSupport();
-import { loadAnchoredOverlayRuntime } from '../../../internal/anchored-overlay-runtime.js';
+import {
+  loadAnchoredOverlayRuntime,
+  syncTopLayerRelease,
+  topLayerPlacement,
+} from '../../../internal/anchored-overlay-runtime.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { chevronIcon, closeIcon } from '../../../internal/icons.js';
 import {
@@ -906,6 +910,24 @@ export class LyraCombobox<
     this._positioningStrategy = normalized;
     if (normalized !== old) this.requestUpdate('positioningStrategy', old);
   }
+  /**
+   * Shows the open listbox in the browser top layer wherever the native Popover API exists, so it
+   * paints above every page layer whatever the stacking contexts around it. Use it inside a fixed
+   * or sticky header, toolbar or rail with its own `z-index` that a sibling surface stacked higher
+   * would otherwise cover: such an ancestor is only a stacking context, not a containing block, so
+   * the automatic top-layer escape never applies, and no `z-index` on the listbox can lift it out
+   * of that ancestor's context. While set, the listbox is placed with the `fixed` strategy
+   * whatever `positioning-strategy` resolves to; no DOM node moves, so anchoring, RTL placement,
+   * focus, Escape and the show/hide transition are unchanged. It stays promoted through its hide
+   * transition and leaves the top layer once it settles closed. Stacking contexts are deliberately
+   * not detected automatically. Without native Popover API support the listbox keeps its ordinary
+   * `z-index` stacking. Same contract as `<lr-popover>`'s `top-layer`. Changes apply live while
+   * open.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'top-layer', reflect: true }) topLayer = false;
+  /** Whether the last placement forced the top layer, so turning `topLayer` off demotes. */
+  private placedTopLayer?: boolean;
   /** Visual size — the library-wide `2xs`–`xl` ladder shared with `lr-input`/`lr-select`. The
    *  Web Awesome / Shoelace spellings `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a
    *  migration is a tag rename with no attribute rewrite. */
@@ -2695,6 +2717,10 @@ export class LyraCombobox<
       restoreFocusTo: this.inputEl ?? null,
     });
     this.bindDocumentPointer();
+    this.beginListboxPositioning();
+  }
+
+  private beginListboxPositioning(): void {
     const anchor = this.renderRoot.querySelector(
       '[part="combobox"]'
     ) as HTMLElement | null;
@@ -2730,7 +2756,8 @@ export class LyraCombobox<
     listbox: HTMLElement,
   ): Promise<void> {
     try {
-      const { place } = await loadAnchoredOverlayRuntime();
+      const runtime = await loadAnchoredOverlayRuntime();
+      const { place } = runtime;
       if (
         generation !== this.positioningGeneration ||
         !this.open ||
@@ -2740,9 +2767,15 @@ export class LyraCombobox<
       ) {
         return;
       }
+      this.placedTopLayer = syncTopLayerRelease(
+        listbox, this.placedTopLayer, this.topLayer, runtime,
+      );
       const cleanup = place(anchor, listbox, {
         placement: `${this.placement}-start`,
-        strategy: resolveEffectivePositioningStrategy(this, this._positioningStrategy, 'fixed'),
+        ...topLayerPlacement(
+          this.topLayer,
+          resolveEffectivePositioningStrategy(this, this._positioningStrategy, 'fixed'),
+        ),
         sync: this.sync,
         onPlaced: () => {
           if (generation !== this.positioningGeneration) return;
@@ -2896,6 +2929,10 @@ export class LyraCombobox<
       }
     } else if (changed.has('open') && this.openVetoed) {
       this.restoreFocusOnClose = true;
+    }
+    if (changed.has('topLayer') && !changed.has('open') && this.open && this.isConnected) {
+      this.invalidateListboxPositioning();
+      this.beginListboxPositioning();
     }
     if (changed.has('name')) this.syncFormValue();
     if (changed.has('validators')) {

@@ -41,6 +41,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: 'Päivitetään nyt.',
   randomContentPause: 'Keskeytä kierto',
   randomContentResume: 'Jatka kiertoa',
+  randomContentNext: 'Näytä toinen',
   exportButtonLabel: 'Vie',
   knownDateDay: 'Päivä',
   knownDateMonth: 'Kuukausi',

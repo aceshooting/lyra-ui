@@ -43,7 +43,8 @@ slide itself; they do not change the active slide or move focus away from it.
 - `autoplay: boolean = false` (attribute `autoplay`, reflected) and
   `autoplayInterval: number = 3000` (attribute `autoplay-interval`) — optional timed advance.
   Autoplay pauses while the page is hidden or the user is hovering, focusing, or dragging the
-  carousel, and remains off under `prefers-reduced-motion: reduce`.
+  carousel or while a dropdown, popover or context menu inside a slide is open, and remains off
+  under `prefers-reduced-motion: reduce`.
 - `navigation: boolean = false` (attribute `navigation`, reflected) — renders previous and next
   buttons
 - `pagination: boolean = false` (attribute `pagination`, reflected) — renders page indicators.

@@ -21,6 +21,10 @@ stable embedded `<lr-pan-zoom>`. It renders its own dialog panel (not a nested `
 but shares the same overlay infrastructure as `<lr-dialog>`/`<lr-command-palette>` — stacking, focus
 trap, Escape/backdrop dismissal, scroll lock, and focus return.
 
+Closing returns focus to the element that held it when the lightbox opened, including an opener the host re-shows only after the close.
+
+A lightbox opened outside an existing native `dialog.showModal()` stays interactive through an internal native modal surface. The host keeps its authored parent, and close vetoes, Escape, and focus return retain their normal behavior.
+
 **Properties:**
 
 - `open: boolean = false` (reflected) — post-render writes run the same cancelable lifecycle as

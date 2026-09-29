@@ -4408,3 +4408,48 @@ describe("deprecated show-value alias", () => {
     expect(readout(aliasLast!) !== null).to.equal(true);
   });
 });
+
+/** True when the text node's first `head` characters paint left of the rest (left-to-right reading order). */
+function paintsHeadFirst(host: Element, text: string, head: number): boolean {
+  const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT);
+  let node = walker.nextNode();
+  while (node && node.textContent !== text) node = walker.nextNode();
+  if (!node) return false;
+  const a = document.createRange();
+  a.setStart(node, 0);
+  a.setEnd(node, head);
+  const b = document.createRange();
+  b.setStart(node, head);
+  b.setEnd(node, text.length);
+  return a.getBoundingClientRect().left < b.getBoundingClientRect().left;
+}
+
+it('keeps number-first formatted readout, tooltip and range ends in reading order under dir="rtl"', async () => {
+  const el = (await fixture(html`
+    <div dir="rtl">
+      <lr-slider
+        with-value
+        with-tooltip="always"
+        value-display="formatted"
+        min="-10"
+        max="10"
+        value="2"
+        .valueFormatter=${(v: number) => `${v} MiB/s`}
+      ></lr-slider>
+    </div>
+  `)) as HTMLElement;
+  const slider = el.querySelector('lr-slider') as LyraSlider;
+  await slider.updateComplete;
+  const value = slider.shadowRoot!.querySelector('[part="value"]')!;
+  expect(paintsHeadFirst(value, '2 MiB/s', 1)).to.equal(true);
+  const tip = slider.shadowRoot!.querySelector('[part="tooltip__content"]');
+  expect(tip).to.not.equal(null);
+  expect(paintsHeadFirst(tip!, '2 MiB/s', 1)).to.equal(true);
+  slider.range = true;
+  slider.minValue = -3;
+  slider.maxValue = 4;
+  slider.valueFormatter = (v: number) => String(v);
+  await slider.updateComplete;
+  const range = slider.shadowRoot!.querySelector('[part="value"]')!;
+  expect(paintsHeadFirst(range, '-3', 1)).to.equal(true);
+});

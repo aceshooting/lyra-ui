@@ -3,8 +3,8 @@
   "schemaVersion": 2,
   "source": {
     "path": "src/internal/localization.ts#DEFAULT_STRINGS",
-    "keyCount": 1385,
-    "sha256": "sha256:09d7ebd99cfe8b1b1ba87d80b6e8776b2dcc9107247c61b252cc3649c759eb65"
+    "keyCount": 1387,
+    "sha256": "sha256:f53dcf1e850d1c261643443bee8054cb6cdb7097de1be272addcec6fce402e49"
   },
   "upstreamLocaleBreadth": {
     "webAwesome": {

@@ -16,6 +16,10 @@
 
 ## `lr-tool-result-dialog`
 
+Opening above an existing native `dialog.showModal()` keeps this dialog interactive, including
+pointer input, keyboard focus, and Escape dismissal. Its host and slotted children remain in their
+authored DOM locations, and closing leaves the underlying native modal open.
+
 A full tool-call detail overlay: a status/duration header plus a `body` slot where a consumer
 typically places a `<lr-tab-group>` with Input/Preview/JSON/Raw panels. First-party invention (no Web
 Awesome equivalent). This component knows nothing about what's inside that slot — it only supplies
@@ -24,9 +28,10 @@ so slot-forwarding does not put a forwarding `<slot>` where a slotted `<lr-tab-g
 child scan expects real projected content, while its modal behavior participates in the shared
 overlay stack.
 
-Assigning `accessibleLabel` directly names the inner dialog when no host `aria-label` is present. A
-host `aria-label` retains its separate host ownership, and an empty direct value uses the tool
-title.
+Closing returns focus to the element that held it when the dialog opened, including an opener the host re-shows only after the close.
+
+A non-empty host `aria-label` names the dialog before a direct `accessibleLabel` value; without
+either, the visible tool title names it. This precedence applies in ordinary and native modal contexts.
 
 **Properties:**
 
@@ -34,9 +39,9 @@ title.
   lifecycle methods below
 - `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to backdrop-click
   dismissal; Escape and the built-in close button remain available without it
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — a host attribute names the
-  host itself, while the dialog panel remains labelled by its visible tool-name title instead of
-  cloning that name. A direct property assignment made without the attribute can name the panel
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — a non-empty host attribute names
+  the semantic dialog owner, taking precedence over a direct property value. Without either, its
+  visible heading supplies the accessible name.
 - `toolName: string = ''` (attribute `tool-name`) — the tool's name, rendered prominently in the
   header
 - `status: 'pending'|'running'|'success'|'error'|'denied'|'incomplete' = 'pending'` (reflected) —
@@ -106,8 +111,9 @@ tokens `--lr-color-surface/-border/-text-quiet/-brand/-brand-quiet/-success/-suc
 </script>
 ```
 
-While open, `[part="panel"]` takes `role="dialog"` + `aria-modal="true"` with `aria-labelledby`
-pointing at the tool-name element, document scroll is locked, and Tab/Shift+Tab are bounded to the
+While open, the panel (or its native carrier) owns `role="dialog"` + `aria-modal="true"`, with the
+explicit accessible name or its tool-name heading as the fallback. Document scroll is locked, and
+Tab/Shift+Tab are bounded to the
 panel's own focusable content in header-buttons → `body` slot → `footer` slot order (resolved
 shadow-piercingly, so a slotted custom element's real focusable target inside its own shadow root is
 found too). On open, focus moves to the first focusable element (falling back to the panel itself);

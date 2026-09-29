@@ -214,14 +214,21 @@ findable `hidden="until-found"` closed-state gate.
 The Details icon wrapper also carries Shoelace's `summary-icon` alias, so either part name styles
 the same node. `header-actions` is the wrapper around the `header-actions` slot.
 
-Open panel content now fills and scrolls inside a bounded host: place `<lr-details>` (or an
-ancestor of it) in a container with a resolved block size and, once open, `[part="content"]`
-fills the remaining space below the summary row and scrolls its own overflow internally instead
-of the panel growing past the host. This has no effect on an ordinary unsized disclosure — the
-chain resolves to `auto` and the panel stays exactly as content-sized as before. It has no effect
-on the closed state either: the private closed-state findability gate (`hidden="until-found"`)
-is untouched, and the open/close lifecycle (`show()`/`hide()`, `lr-show`/`lr-toggle`/
-`lr-after-show`/`lr-hide`/`lr-after-hide`) is unaffected.
+An unsized disclosure follows its content, including inside an auto grid row and when nested.
+A definite block size on the containing block (usually the parent) caps the panel: long content
+scrolls inside `content`, while short
+content stays natural instead of automatically filling an ordinary block parent. To fill that
+parent, size the host explicitly, for example `<lr-details style="block-size: 100%" open>` inside
+a container with a definite block size. A pixel-sized host or a host stretched into a grid/flex
+allocation also fills its allocation, with the content scrollport below the summary.
+
+This corrects the previous automatic percentage-height behavior, which could inflate unsized
+panels by their siblings' height. Applications relying on short disclosures filling an ordinary
+bounded parent should add the explicit host size. The private closed-state findability gate
+(`hidden="until-found"`) and the open/close lifecycle (`show()`/`hide()`,
+`lr-show`/`lr-toggle`/`lr-after-show`/`lr-hide`/`lr-after-hide`) are unaffected. When the
+`header-actions` slot is empty, its wrapper is hidden from layout and the summary spans the full
+header width; populated actions retain their independent responsive layout.
 
 For rich independent actions, reserve a useful basis on `header-actions` so the complete action
 group wraps onto another row before its checkbox label becomes too narrow. The header already

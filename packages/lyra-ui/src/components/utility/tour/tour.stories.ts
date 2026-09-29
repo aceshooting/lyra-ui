@@ -189,3 +189,19 @@ export const NarrowLongContent: Story = {
     `;
   },
 };
+
+export const AboveNativeModal: Story = {
+  render: () => html`
+    <div>
+      <button @click=${(event: Event) => (event.currentTarget as HTMLElement).parentElement!.querySelector('dialog')!.showModal()}>Open native dialog</button>
+      <dialog>
+        <button @click=${(event: Event) => {
+          const overlay = (event.currentTarget as HTMLElement).closest('dialog')!.parentElement!.querySelector('lr-tour') as LyraTour;
+          overlay.start();
+        }}>Open tour</button>
+        <button @click=${(event: Event) => (event.currentTarget as HTMLElement).closest('dialog')!.close()}>Close native dialog</button>
+      </dialog>
+      <lr-tour .steps=${[{ stepId: 'intro', target: '#native-tour-missing', heading: 'Welcome', content: 'This modal step remains interactive above the native dialog.' }]}></lr-tour>
+    </div>
+  `,
+};

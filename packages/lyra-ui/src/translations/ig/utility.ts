@@ -41,6 +41,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: 'A na-emelite ugbu a.',
   randomContentPause: 'Kwụsị ntụgharị',
   randomContentResume: 'Gaa n’ihu na ntụgharị',
+  randomContentNext: 'Gosi nke ọzọ',
   exportButtonLabel: 'Bupụ',
   knownDateDay: 'Ụbọchị',
   knownDateMonth: 'Ọnwa',

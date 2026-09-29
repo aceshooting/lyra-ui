@@ -1,3 +1,5 @@
+import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
+import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
 import {
   html,
   svg,
@@ -10,6 +12,7 @@ import {
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraToolStatus } from '../../../internal/shared-unions.js';
+import { DeferredFocusReturn, captureFocusReturnOpener } from '../../../internal/deferred-focus-return.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { nextId } from '../../../internal/a11y.js';
 import { closeIcon, expandIcon } from '../../../internal/icons.js';
@@ -121,6 +124,10 @@ const statusConverter: ComplexAttributeConverter<ToolResultStatus> = {
  * labels wrap within their badge while the maximize and close actions move to
  * a reachable row instead of forcing the panel wider.
  *
+ * When opened above a native modal, the dialog remains interactive without moving its host or slots.
+ * Closing returns focus to the element that held it when the dialog opened, including an opener
+ * the host re-shows only after the close.
+ *
  * @customElement lr-tool-result-dialog
  * @slot body - The dialog's main content — typically a `<lr-tab-group>` with
  * Input/Preview/JSON/Raw panels, entirely consumer-assembled.
@@ -137,7 +144,7 @@ const statusConverter: ComplexAttributeConverter<ToolResultStatus> = {
  * unchanged -- e.g. a host persisting a per-user "prefers maximized" layout preference can hold the
  * transition until a save round-trip completes.
  * @csspart backdrop - The full-viewport scrim behind the panel.
- * @csspart panel - The dialog panel itself (`role="dialog"` while open).
+ * @csspart panel - The dialog panel itself.
  * @csspart header - The row containing the tool name, status, duration, and toggle/close buttons.
  * @csspart title - The wrapper around the tool name, status, and duration.
  * @csspart tool-name - The `tool-name` text.
@@ -194,7 +201,7 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, nativeModalCarrierStyles, styles];
 
   /**
    * Whether the dialog is open. Set this directly or use `show()`/`hide()`/`close()`. Each path
@@ -208,9 +215,8 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
    *  `<lr-dialog>`, `<lr-drawer>`, and `<lr-lightbox>`. */
   @property({ type: Boolean, attribute: 'light-dismiss' }) lightDismiss = false;
 
-  /** Accessible name for the component. When assigned directly as a property without a host
-   *  attribute it names the internal dialog; a host `aria-label` remains on the host and the
-   *  internal dialog stays labelled by its visible tool name to avoid cloning the same owner. */
+  /** Accessible name for the dialog. A non-empty host `aria-label` takes precedence over a
+   *  direct property value; without either, the visible heading names the dialog. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   /** The tool's name, rendered prominently in the header. */
@@ -233,7 +239,20 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
 
   @state() private hasFooterSlot = false;
 
+  private readonly nativeModal = new NativeModalCarrier(this, {
+    onCancel: () => {
+      if (!this.open || !this.overlay?.isTopmost()) return;
+      this.close('escape');
+    },
+    onUnexpectedClose: () => {
+      if (!this.open) return;
+      this.nativeModal.hide();
+      this.close('api');
+    },
+  });
   private overlay?: OverlayHandle;
+  private focusReturnOpener: HTMLElement | null = null;
+  private readonly deferredFocusReturn = new DeferredFocusReturn();
   private readonly titleId = nextId('tool-result-dialog-title');
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -243,9 +262,25 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
     }
     if (changed.has('open')) {
       if (this.open) {
+        this.deferredFocusReturn.cancel();
+        this.focusReturnOpener = captureFocusReturnOpener(this);
+        this.nativeModal.prepare();
         this.activateOverlay();
       } else {
+        const hadOverlay = this.overlay !== undefined;
+        this.nativeModal.hide();
         this.deactivateOverlay();
+        // The synchronous return keeps the established timing whenever the opener can already
+        // take focus; this covers an opener the host only re-shows afterward.
+        const opener = this.focusReturnOpener;
+        this.focusReturnOpener = null;
+        if (hadOverlay && opener && this.isConnected) {
+          this.deferredFocusReturn.schedule({
+            host: this,
+            candidates: () => [opener],
+            isCurrent: () => !this.open,
+          });
+        }
       }
     }
   }
@@ -254,6 +289,7 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
   // focus targets, including controls projected through either slot.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (this.open) this.nativeModal.show();
     if (changed.has('open') && this.open) {
       this.overlay?.focusInitial();
     }
@@ -266,18 +302,26 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
     // synchronously with no update in between, so willUpdate never reruns to
     // notice `open` is still true -- restore the scroll lock/trap it dropped.
     if (this.hasUpdated && this.open) {
+      this.nativeModal.prepare();
+      this.requestUpdate();
       if (this.overlay?.isActive()) {
         this.overlay.resume();
       } else {
         this.activateOverlay();
       }
-      queueMicrotask(() => this.overlay?.focusInitial());
+      void this.updateComplete.then(() => {
+        if (!this.open || !this.isConnected) return;
+        this.nativeModal.show();
+        this.overlay?.focusInitial();
+      });
     }
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.nativeModal.hide();
     this.overlay?.suspend();
+    this.deferredFocusReturn.cancel();
   }
 
   // Reads the light-DOM `slot` attribute directly rather than the live `assignedElements()`
@@ -375,15 +419,20 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
 
   override render(): TemplateResult {
     const durationMs = this.safeDurationMs;
-    const panelLabel = !this.hasAttribute('aria-label') && this.accessibleLabel ? this.accessibleLabel : null;
-    return html`
+    const hostLabel = this.getAttribute('aria-label');
+    const panelLabel = hostLabel?.trim()
+      ? hostLabel
+      : typeof this.accessibleLabel === 'string' && this.accessibleLabel.trim()
+        ? this.accessibleLabel
+        : null;
+    return this.nativeModal.render(html`
       <div part="backdrop" @click=${this.onBackdropClick}></div>
       <div
         part="panel"
-        role=${this.open ? 'dialog' : nothing}
-        aria-modal=${this.open ? 'true' : nothing}
-        aria-label=${panelLabel ?? nothing}
-        aria-labelledby=${panelLabel === null ? this.titleId : nothing}
+        role=${this.open && !this.nativeModal.requested ? 'dialog' : nothing}
+        aria-modal=${this.open && !this.nativeModal.requested ? 'true' : nothing}
+        aria-label=${!this.nativeModal.requested ? panelLabel ?? nothing : nothing}
+        aria-labelledby=${!this.nativeModal.requested && panelLabel === null ? this.titleId : nothing}
         tabindex="-1"
       >
         <div part="header">
@@ -421,8 +470,9 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
         <div part="footer" ?hidden=${!this.hasFooterSlot}>
           <slot name="footer" @slotchange=${this.onFooterSlotChange}></slot>
         </div>
+        ${this.nativeModal.renderHelperSlot()}
       </div>
-    `;
+    `, { label: panelLabel, labelledBy: panelLabel === null ? this.titleId : null });
   }
 }
 

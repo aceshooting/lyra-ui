@@ -155,8 +155,11 @@ export const styles = css`
   [part~='icon'][hidden] {
     display: none;
   }
+  /* The label absorbs a row's deficit before the short trailing hints do: flex shares shrink in
+     proportion to shrink factor x basis, so a large factor keeps a shortcut whole while the label
+     ellipsizes, and details/suffix still shrink once the label has nothing left to give. */
   [part='label'] {
-    flex: 1 1 auto;
+    flex: 1 1000 auto;
     min-inline-size: 0;
     overflow: hidden;
     text-overflow: ellipsis;

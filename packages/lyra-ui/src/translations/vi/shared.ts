@@ -56,6 +56,7 @@ const strings: LyraLocaleStrings = {
   statusSuccess: 'Thành công',
   statusError: 'Lỗi',
   statusDenied: 'Bị từ chối',
+  statusIncomplete: 'Chưa hoàn tất',
   restore: 'Khôi phục',
   navigation: 'Điều hướng',
   attachmentUntitledFile: 'Tệp chưa có tiêu đề',

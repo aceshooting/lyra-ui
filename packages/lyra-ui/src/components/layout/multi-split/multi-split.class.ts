@@ -1,3 +1,6 @@
+import { resolveIdReferencesIn } from '../../../internal/aria-reflection.js';
+import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
+import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult, type PropertyDeclaration, type PropertyValues } from 'lit';
@@ -333,7 +336,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['sizes', 'defaultSizes', 'panelConstraints']);
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, nativeModalCarrierStyles, styles];
   // A proposal listener can restore a value before it returns. Count writes rather than comparing
   // only final snapshots so a synchronous reentrant state change still aborts the proposal.
   private toggleProposalDepth = 0;
@@ -560,6 +563,55 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   private overlayActive = false;
   private justOpened = false;
   private overlayHandle?: OverlayHandle;
+  private readonly nativeModal = new NativeModalCarrier(this, {
+    onCancel: () => { if (this.overlayHandle?.isTopmost()) this.setOpen(false); },
+    onUnexpectedClose: () => {
+      if (this.overlayHandle?.isTopmost()) this.setOpen(false);
+      if (this.overlayActive) this.nativeModal.show();
+    },
+  });
+
+  private nativeModalView?: Window & typeof globalThis;
+  private nativeModalResizeObserver?: ResizeObserver;
+
+  private stopNativeModalGeometry(): void {
+    this.nativeModalView?.removeEventListener('scroll', this.syncNativeModalGeometry, true);
+    this.nativeModalView?.removeEventListener('resize', this.syncNativeModalGeometry);
+    this.nativeModalView = undefined;
+    this.nativeModalResizeObserver?.disconnect();
+    this.nativeModalResizeObserver = undefined;
+  }
+
+  private nativeModalLabel(): string | null {
+    const panel = this.floatingPanelEl;
+    if (!panel) return this.getAttribute('aria-label');
+    if (panel.hasAttribute('aria-label')) return panel.getAttribute('aria-label');
+    const referenced = resolveIdReferencesIn(panel.getRootNode(), panel.getAttribute('aria-labelledby'));
+    return referenced.map(element => element.textContent?.trim()).filter(Boolean).join(' ') || this.getAttribute('aria-label');
+  }
+
+  private readonly syncNativeModalGeometry = (): void => {
+    if (!this.nativeModal.requested || !this.isConnected) return;
+    if (!this.nativeModalView) {
+      this.nativeModalView = this.ownerDocument.defaultView ?? undefined;
+      this.nativeModalView?.addEventListener('scroll', this.syncNativeModalGeometry, true);
+      this.nativeModalView?.addEventListener('resize', this.syncNativeModalGeometry);
+      const Observer = this.nativeModalView?.ResizeObserver;
+      if (Observer) {
+        const observer = new Observer(this.syncNativeModalGeometry);
+        this.nativeModalResizeObserver = observer;
+        observer.observe(this);
+      }
+    }
+    const frame = this.shadowRoot?.querySelector<HTMLDialogElement>('[data-native-modal-carrier]');
+    if (!frame) return;
+    const rect = this.getBoundingClientRect();
+    Object.assign(frame.style, {
+      top: `${rect.top}px`, left: `${rect.left}px`, right: 'auto', bottom: 'auto',
+      width: `${rect.width}px`, height: `${rect.height}px`, padding: '0',
+    });
+  };
+
   private triggerAria?: AriaOwnershipLease;
   private triggerPanel?: HTMLElement;
   private generatedTriggerPanelId?: string;
@@ -653,12 +705,18 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       } else {
         this.activateFloatingOverlay();
       }
-      queueMicrotask(() => this.overlayHandle?.focusInitial());
+      queueMicrotask(() => {
+        this.syncNativeModalGeometry();
+        this.nativeModal.show();
+        this.overlayHandle?.focusInitial();
+      });
     }
     if (this.hasUpdated) this.syncExternalTriggerA11y();
   }
 
   override disconnectedCallback(): void {
+    this.stopNativeModalGeometry();
+    this.nativeModal.hide();
     super.disconnectedCallback();
     // Clean up any remaining event listeners from an in-flight drag.
     this.endDragGestures();
@@ -1601,7 +1659,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   }
 
   private syncPanelMembership(reconcileSizes = true): void {
-    const next = [...this.children] as HTMLElement[];
+    const next = [...this.children].filter(child => child !== this.nativeModal.helperMount) as HTMLElement[];
     if (this.samePanelSequence(next)) return;
 
     const previousPanels = this.ownedPanels;
@@ -2179,6 +2237,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   }
 
   private activateFloatingOverlay(): void {
+    this.nativeModal.prepare();
     this.deferredFocusReturn.cancel();
     const opener = deepActiveElement(this.ownerDocument);
     this.overlayOpener = isHtmlElement(opener) ? opener : null;
@@ -2195,13 +2254,19 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       this.floatingDialogPanel = panel;
       this.floatingDialogPreviousRole = panel.getAttribute('role');
       this.floatingDialogPreviousAriaModal = panel.getAttribute('aria-modal');
-      panel.setAttribute('role', 'dialog');
-      panel.setAttribute('aria-modal', 'true');
+      if (!this.nativeModal.requested) {
+        panel.setAttribute('role', 'dialog');
+        panel.setAttribute('aria-modal', 'true');
+      }
     }
     this.overlayHandle = activateOverlay({
       host: this,
       panel: () => this.floatingPanelEl,
       modalRoot: () => this.floatingPanelEl,
+      auxiliaryRoots: () => {
+        const root = this.nativeModal.helperMount;
+        return root ? [root] : [];
+      },
       restoreFocusTo: trigger ?? undefined,
       onEscape: () => this.setOpen(false),
       onBackdrop: () => this.setOpen(false),
@@ -2211,6 +2276,9 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   }
 
   private deactivateFloatingOverlay(): void {
+    this.stopNativeModalGeometry();
+    this.nativeModal.hide();
+    this.nativeModal.prepare(false);
     const trigger = this.resolveExternalTrigger();
     // Captured before its dialog semantics are restored below: the deferred pass counts only focus
     // still inside this closed panel as stranded. The split's other panes are light-DOM children of
@@ -2417,6 +2485,10 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (this.overlayActive) {
+      this.syncNativeModalGeometry();
+      this.nativeModal.show();
+    }
     if (
       changed.has('collapse') ||
       changed.has('orientationBreakpoint') ||
@@ -2770,13 +2842,14 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       ></div>`);
     }
     const showBackdrop = this.collapseState === 'floating' && this.open;
-    return html`<div part="base" @click=${this.onModalLayerClick}>
+    return this.nativeModal.render(html`<div part="base" @click=${this.onModalLayerClick}>
       <slot @slotchange=${this.onSlotChange}></slot>
+      ${this.nativeModal.renderHelperSlot()}
       ${dividers}
       ${showBackdrop
         ? html`<div part="backdrop" @click=${this.onBackdropClick}></div>`
         : nothing}
-    </div>`;
+    </div>`, { label: this.nativeModalLabel() });
   }
 }
 

@@ -6,7 +6,8 @@ import {
 export const styles = css`
   :host {
     display: block;
-    block-size: 100%;
+    /* No default block-size: an unsized host stays content-sized, and an explicit host block-size
+       (see the fill-height story) drives the form-control/editor fill chain below. */
     --_lr-code-editor-min-block-size: var(--lr-size-8rem);
     --_lr-code-editor-padding: var(--lr-space-s);
     --_lr-code-editor-font-size: var(--lr-font-size-m);

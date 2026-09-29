@@ -66,6 +66,7 @@ const strings: LyraLocaleStrings = {
   statusSuccess: 'نجاح',
   statusError: 'خطأ',
   statusDenied: 'مرفوض',
+  statusIncomplete: 'غير مكتمل',
   restore: 'استعادة',
   navigation: 'التنقل',
   attachmentUntitledFile: 'ملف بلا عنوان',

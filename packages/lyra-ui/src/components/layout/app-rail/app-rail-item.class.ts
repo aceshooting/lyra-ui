@@ -17,7 +17,11 @@ import { renderInertPresentation } from '../../../internal/inert-presentation.js
 import { tag } from '../../../internal/prefix.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { safeLinkHref } from '../../../internal/safe-url.js';
-import { deferredPlace as place } from '../../../internal/anchored-overlay-runtime.js';
+import {
+  deferredPlace as place,
+  syncTopLayerRelease,
+  topLayerPlacement,
+} from '../../../internal/anchored-overlay-runtime.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
@@ -229,6 +233,39 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
    *  `false` (the default) reproduces today's exact output. */
   @property({ type: Boolean, reflect: true }) tooltip = false;
 
+  /**
+   * Shows the open label tooltip in the browser top layer wherever the native Popover API exists,
+   * so it paints above every page layer whatever the stacking contexts around it. Use it inside a
+   * fixed or sticky header, toolbar or rail with its own `z-index` that a sibling surface stacked
+   * higher would otherwise cover: such an ancestor is only a stacking context, not a containing
+   * block, so the automatic top-layer escape never applies, and no `z-index` on the tooltip can
+   * lift it out of that ancestor's context. While set, the tooltip is placed with the `fixed`
+   * strategy whatever `--lr-positioning-strategy` resolves to; no DOM node moves, so anchoring,
+   * RTL placement, focus, Escape and the show/hide transition are unchanged. It stays promoted
+   * through its hide transition and leaves the top layer once it settles closed. Stacking contexts
+   * are deliberately not detected automatically. Without native Popover API support the tooltip
+   * keeps its ordinary `z-index` stacking. Same contract as `<lr-popover>`'s `top-layer`. Changes
+   * apply live while open. Also applied when the owning `<lr-app-rail>` sets `top-layer`.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'top-layer', reflect: true }) topLayer = false;
+  /** Whether the last placement forced the top layer, so turning `topLayer` off demotes. */
+  private placedTopLayer?: boolean;
+  /** Whether the owning `<lr-app-rail>` has `top-layer` set; pushed by the rail so one attribute
+   *  on the rail covers every item without writing to (and clobbering) an item's own value. */
+  @state() private railTopLayer = false;
+
+  /** Re-reads the owning rail's `top-layer`. Called by the rail when it changes and on connect.
+   *  @internal */
+  syncRailTopLayer(): void {
+    const rail = this.closest(tag('app-rail')) as { topLayer?: boolean } | null;
+    this.railTopLayer = rail?.topLayer === true;
+  }
+
+  private get effectiveTopLayer(): boolean {
+    return this.topLayer || this.railTopLayer;
+  }
+
   /** Whether this item's `children` are shown. `false` by default -- a nested list expanding
    *  itself on first paint would be a surprising default, and it reproduces exactly what an item
    *  with no `expanded` property rendered before this feature existed. Mirrors
@@ -279,6 +316,7 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.syncRailTopLayer();
     this.armLabelObserver();
     this.armChildrenObserver();
     this.syncOwnedChildren();
@@ -495,7 +533,12 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
       this.stopPositioning = undefined;
       return;
     }
-    if (changed.has('showTooltip') || !this.stopPositioning) {
+    if (
+      changed.has('showTooltip') ||
+      changed.has('topLayer') ||
+      changed.has('railTopLayer') ||
+      !this.stopPositioning
+    ) {
       this.stopPositioning?.();
       const anchor = this.renderRoot.querySelector(
         '[part="base"]'
@@ -504,9 +547,14 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
       // shared RTL helper (mirrors lr-menu's identical resolution) so the
       // flyout still anchors to the rail item's trailing edge (away from the
       // rail) rather than staying pinned to the physical right under RTL.
+      const topLayer = this.effectiveTopLayer;
+      this.placedTopLayer = syncTopLayerRelease(popup, this.placedTopLayer, topLayer);
       this.stopPositioning = place(anchor, popup, {
         placement: rtlAwarePlacement('right', this),
-        strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
+        ...topLayerPlacement(
+          topLayer,
+          resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
+        ),
       });
     }
   }

@@ -12,6 +12,8 @@ import { installFormControlLabelSupport } from '../../../internal/form-control-l
 installFormControlLabelSupport();
 import {
   deferredPlaceReady as place,
+  syncTopLayerRelease,
+  topLayerPlacement,
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
 import type { PlaceStrategy, PlaceSync } from '../../../internal/positioner.js';
@@ -634,6 +636,24 @@ export class LyraSelect<
   set hoist(next: boolean) {
     this.positioningStrategy = next ? 'fixed' : 'absolute';
   }
+  /**
+   * Shows the open listbox in the browser top layer wherever the native Popover API exists, so it
+   * paints above every page layer whatever the stacking contexts around it. Use it inside a fixed
+   * or sticky header, toolbar or rail with its own `z-index` that a sibling surface stacked higher
+   * would otherwise cover: such an ancestor is only a stacking context, not a containing block, so
+   * the automatic top-layer escape never applies, and no `z-index` on the listbox can lift it out
+   * of that ancestor's context. While set, the listbox is placed with the `fixed` strategy
+   * whatever `positioning-strategy` resolves to; no DOM node moves, so anchoring, RTL placement,
+   * focus, Escape and the show/hide transition are unchanged. It stays promoted through its hide
+   * transition and leaves the top layer once it settles closed. Stacking contexts are deliberately
+   * not detected automatically. Without native Popover API support the listbox keeps its ordinary
+   * `z-index` stacking. Same contract as `<lr-popover>`'s `top-layer`. Changes apply live while
+   * open.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'top-layer', reflect: true }) topLayer = false;
+  /** Whether the last placement forced the top layer, so turning `topLayer` off demotes. */
+  private placedTopLayer?: boolean;
   /** Shoelace boolean alias for the filled appearance. */
   @property({ type: Boolean, reflect: true }) filled = false;
   /** Show a button that empties the selection while there is anything selected. */
@@ -2062,9 +2082,13 @@ export class LyraSelect<
       '[part="listbox"]'
     ) as HTMLElement | null;
     if (!anchor || !listbox) return;
+    this.placedTopLayer = syncTopLayerRelease(listbox, this.placedTopLayer, this.topLayer);
     this.cleanup = place(anchor, listbox, {
       placement: rtlAwarePlacement(this.placement, this),
-      strategy: resolveEffectivePositioningStrategy(this, this._positioningStrategy, 'absolute'),
+      ...topLayerPlacement(
+        this.topLayer,
+        resolveEffectivePositioningStrategy(this, this._positioningStrategy, 'absolute'),
+      ),
       sync: this.sync,
     });
     const operation = this.cleanup;
@@ -2159,6 +2183,7 @@ export class LyraSelect<
       this.isConnected &&
       (changed.has('placement') ||
         changed.has('positioningStrategy') ||
+        changed.has('topLayer') ||
         // `sync` is the one placement option that writes inline sizing onto the listbox, so
         // dropping it has to re-run place() -- the positioner releases the width it owns on the
         // next setup, and nothing else would ever clear it.

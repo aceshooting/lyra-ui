@@ -18,6 +18,24 @@ export const Json: Story = {
     ></lr-code-editor>`,
 };
 
+/**
+ * An unsized host stays content-sized (see `Json`); a host with an explicit block size, here
+ * `block-size: 100%` inside a definite-height container, makes the form-control, editor, and
+ * textarea chain fill the allocation and scroll internally.
+ */
+export const FillHeightContainer: Story = {
+  name: 'Fills a definite-height container',
+  render: () =>
+    html`<div style="block-size: 16rem; max-inline-size: 28rem">
+      <lr-code-editor
+        label="Configuration"
+        language="json"
+        style="block-size: 100%"
+        .value=${'{\n  "enabled": true\n}'}
+      ></lr-code-editor>
+    </div>`,
+};
+
 /** The opt-in theme-level scrollbar hooks retheme the editor scrollport, plus every other internal
  *  scroll container in the library, from one declaration on an ancestor. */
 export const ThemedScrollbar: Story = {

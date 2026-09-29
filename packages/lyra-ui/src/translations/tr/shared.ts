@@ -58,6 +58,7 @@ const strings: LyraLocaleStrings = {
   statusSuccess: 'Başarılı',
   statusError: 'Hata',
   statusDenied: 'Reddedildi',
+  statusIncomplete: 'Tamamlanmadı',
   restore: 'Geri yükle',
   navigation: 'Gezinme',
   attachmentUntitledFile: 'Adsız dosya',

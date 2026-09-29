@@ -543,6 +543,32 @@ describe('lr-trace-tree', () => {
     expect(live.shadowRoot!.querySelector('[part="region"]')!.textContent).to.include('Pending');
   });
 
+  it('shows and announces an incomplete span as Incomplete, not Pending', async () => {
+    const running: LyraSpan[] = [{ id: 't', name: 'search', kind: 'tool', startMs: 0, endMs: 40, status: 'running' }];
+    const el = (await fixture(html`<lr-trace-tree .spans=${running}></lr-trace-tree>`)) as LyraTraceTree;
+    const live = el.shadowRoot!.querySelector('lr-live-region')!;
+    live.throttleMs = 0;
+    await live.updateComplete;
+    el.spans = [{ ...running[0]!, status: 'incomplete' }];
+    await el.updateComplete;
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    const row = el.shadowRoot!.querySelector('[data-id="t"]') as HTMLElement;
+    const text = row.querySelector('[part="status-text"]') as HTMLElement;
+    expect(text.getAttribute('data-status')).to.equal('incomplete');
+    expect(text.textContent).to.equal('Incomplete');
+    expect(row.getAttribute('aria-label')).to.include('Incomplete');
+    expect(live.shadowRoot!.querySelector('[part="region"]')!.textContent).to.include('Incomplete');
+    const bar = row.querySelector('[part="bar"]') as HTMLElement;
+    expect(bar.getAttribute('data-status')).to.equal('incomplete');
+    expect(getComputedStyle(bar).backgroundColor).to.equal(
+      getComputedStyle(text).color,
+    );
+    el.strings = { statusIncomplete: 'Inachevé' };
+    await el.updateComplete;
+    expect(text.textContent).to.equal('Inachevé');
+    expect(row.getAttribute('aria-label')).to.include('Inachevé');
+  });
+
   it('reveals and scrolls a controlled active row when data arrives under a collapsed ancestor', async () => {
     const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
     (el.shadowRoot!.querySelector('[data-id="root"] [part="toggle"]') as HTMLButtonElement).click();

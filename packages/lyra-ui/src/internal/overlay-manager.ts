@@ -1,3 +1,4 @@
+import { getActiveNativeModal } from './native-modal-context.js';
 import { activateNonmodalOverlay } from './nonmodal-overlay-manager.js';
 import { RenderedStateController } from './rendered-state.js';
 import { lockScroll } from './scroll-lock.js';
@@ -22,6 +23,8 @@ export interface OverlayActivationOptions {
    * Use this when the stack-owning host also contains application siblings outside the panel.
    */
   modalRoot?: () => HTMLElement | null;
+  /** Additional component-owned helper roots that share the panel's inert and focus scope. */
+  auxiliaryRoots?: () => readonly HTMLElement[];
   /** Dismisses the overlay with its component-specific Escape reason/event. */
   onEscape: () => void;
   /** Dismisses the overlay with its component-specific backdrop reason/event. */
@@ -155,6 +158,10 @@ function handleMutations(state: ModalDocumentState, records: MutationRecord[]): 
       needsInertUpdate = true;
       continue;
     }
+    if (record.attributeName === 'open') {
+      needsInertUpdate = true;
+      continue;
+    }
     const element = record.target as HTMLElement;
     let nextRecord: MutationRecord | undefined;
     for (let nextIndex = index + 1; nextIndex < records.length; nextIndex++) {
@@ -188,7 +195,7 @@ function handleMutations(state: ModalDocumentState, records: MutationRecord[]): 
 }
 
 const mutationObserverOptions: MutationObserverInit = {
-  attributeFilter: ['inert'],
+  attributeFilter: ['inert', 'open'],
   attributeOldValue: true,
   attributes: true,
   childList: true,
@@ -266,6 +273,9 @@ function setInertByManager(state: ModalDocumentState, element: HTMLElement, valu
 
 function inertElement(state: ModalDocumentState, element: Element, desired: Set<HTMLElement>): void {
   if (!('inert' in element)) return;
+  // A modal escapes ancestor inertness, but never its own inert attribute. Let the platform own
+  // native modal isolation and restore any previous library write on the dialog itself below.
+  if (element.localName === 'dialog' && element.matches(':modal')) return;
   const htmlElement = element as HTMLElement;
   desired.add(htmlElement);
   if (!state.inerted.has(htmlElement)) state.inerted.set(htmlElement, htmlElement.inert);
@@ -336,8 +346,16 @@ function applyTopmostInert(state: ModalDocumentState): void {
   } else if (modalIndex !== -1) {
     const allowed = new Map<ParentNode, Set<Element>>();
     for (const entry of state.snapshot.entries.slice(modalIndex)) {
-      if (entry.host.isConnected) addAllowedPath(allowed, modalAllowedRoot(entry, state.document), state.document);
+      if (!entry.host.isConnected) continue;
+      addAllowedPath(allowed, modalAllowedRoot(entry, state.document), state.document);
+      for (const root of entry.auxiliaryRoots?.() ?? []) {
+        if (root.isConnected && root.ownerDocument === state.document) addAllowedPath(allowed, root, state.document);
+      }
     }
+    // Native modal dialogs can open above this stack. Its own explicit inert attribute must not
+    // remain library-owned, even though the browser also enforces native modal inertness.
+    const nativeModal = getActiveNativeModal(state.document);
+    if (nativeModal) addAllowedPath(allowed, nativeModal, state.document);
     inertOutsideAllowedPaths(state, allowed, desired);
   }
   for (const [element, intended] of state.inerted) {

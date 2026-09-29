@@ -47,6 +47,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: 'Оновлення розпочато.',
   randomContentPause: 'Призупинити обертання',
   randomContentResume: 'Відновити обертання',
+  randomContentNext: 'Показати інший',
   exportButtonLabel: 'Експортувати',
   knownDateDay: 'День',
   knownDateMonth: 'Місяць',

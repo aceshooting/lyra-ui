@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
   statusSuccess: 'Uspješno',
   statusError: 'Pogreška',
   statusDenied: 'Odbijeno',
+  statusIncomplete: 'Nedovršeno',
   restore: 'Vrati',
   navigation: 'Navigacija',
   attachmentUntitledFile: 'Datoteka bez naziva',

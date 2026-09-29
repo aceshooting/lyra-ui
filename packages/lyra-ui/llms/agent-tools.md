@@ -391,6 +391,10 @@ registerToolRenderer("web_search", {
 
 ## `lr-tool-result-dialog`
 
+Opening above an existing native `dialog.showModal()` keeps this dialog interactive, including
+pointer input, keyboard focus, and Escape dismissal. Its host and slotted children remain in their
+authored DOM locations, and closing leaves the underlying native modal open.
+
 A full tool-call detail overlay: a status/duration header plus a `body` slot where a consumer
 typically places a `<lr-tab-group>` with Input/Preview/JSON/Raw panels. First-party invention (no Web
 Awesome equivalent). This component knows nothing about what's inside that slot — it only supplies
@@ -399,9 +403,10 @@ so slot-forwarding does not put a forwarding `<slot>` where a slotted `<lr-tab-g
 child scan expects real projected content, while its modal behavior participates in the shared
 overlay stack.
 
-Assigning `accessibleLabel` directly names the inner dialog when no host `aria-label` is present. A
-host `aria-label` retains its separate host ownership, and an empty direct value uses the tool
-title.
+Closing returns focus to the element that held it when the dialog opened, including an opener the host re-shows only after the close.
+
+A non-empty host `aria-label` names the dialog before a direct `accessibleLabel` value; without
+either, the visible tool title names it. This precedence applies in ordinary and native modal contexts.
 
 **Properties:**
 
@@ -409,9 +414,9 @@ title.
   lifecycle methods below
 - `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to backdrop-click
   dismissal; Escape and the built-in close button remain available without it
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — a host attribute names the
-  host itself, while the dialog panel remains labelled by its visible tool-name title instead of
-  cloning that name. A direct property assignment made without the attribute can name the panel
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — a non-empty host attribute names
+  the semantic dialog owner, taking precedence over a direct property value. Without either, its
+  visible heading supplies the accessible name.
 - `toolName: string = ''` (attribute `tool-name`) — the tool's name, rendered prominently in the
   header
 - `status: 'pending'|'running'|'success'|'error'|'denied'|'incomplete' = 'pending'` (reflected) —
@@ -481,8 +486,9 @@ tokens `--lr-color-surface/-border/-text-quiet/-brand/-brand-quiet/-success/-suc
 </script>
 ```
 
-While open, `[part="panel"]` takes `role="dialog"` + `aria-modal="true"` with `aria-labelledby`
-pointing at the tool-name element, document scroll is locked, and Tab/Shift+Tab are bounded to the
+While open, the panel (or its native carrier) owns `role="dialog"` + `aria-modal="true"`, with the
+explicit accessible name or its tool-name heading as the fallback. Document scroll is locked, and
+Tab/Shift+Tab are bounded to the
 panel's own focusable content in header-buttons → `body` slot → `footer` slot order (resolved
 shadow-piercingly, so a slotted custom element's real focusable target inside its own shadow root is
 found too). On open, focus moves to the first focusable element (falling back to the panel itself);
@@ -527,10 +533,16 @@ Backdrop clicks leave the dialog open by default; add `light-dismiss` to opt in,
 
 ## `lr-tool-select-dialog`
 
+Opening above an existing native `dialog.showModal()` keeps this dialog interactive, including
+pointer input, keyboard focus, and Escape dismissal. Its host and slotted children remain in their
+authored DOM locations, and closing leaves the underlying native modal open.
+
 A category-grouped, filterable, searchable tool-enablement dialog for picking which agent tools are
 available in a conversation. It keeps its own panel template rather than nesting `<lr-dialog>`, so
 it has no dependency on the general-purpose dialog, while its modal behavior participates in the
 shared overlay stack. First-party invention (no Web Awesome equivalent).
+
+Closing returns focus to the element that held it when the dialog opened, including an opener the host re-shows only after the close.
 
 Programmatic `selectedToolIds` and `useDefaults` replacements synchronize the live checkbox and
 switch state after user edits without emitting change events. Removing `search-placeholder` restores
@@ -574,9 +586,9 @@ string; disabled?: boolean; disabledReason?: string }` — one selectable agent 
   using the default tool set (`true`) or a custom selection (`false`).
 - `label?: string` — the dialog's visible heading and accessible name. Omission uses localized
   `selectTools`; every supplied string, including `"Select tools"` and `""`, remains literal.
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — a host attribute names the
-  host; the panel remains labelled by its visible heading instead of cloning that name. A direct
-  property assignment made without the attribute can name the panel.
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — a non-empty host attribute names
+  the semantic dialog owner, taking precedence over a direct property value. Without either, its
+  visible heading supplies the accessible name.
 - `searchPlaceholder?: string` (attribute `search-placeholder`) — omission uses localized
   `searchToolsPlaceholder`; every supplied string, including `"Search tools…"` and `""`, remains
   literal as placeholder copy. Empty/whitespace-only copy leaves the field visually empty while
@@ -972,11 +984,17 @@ Pass custom classifiers as `{ internalPatterns: ['node_modules/', /vendor\//] }`
 
 ## `lr-tool-approval-dialog`
 
+Opening above an existing native `dialog.showModal()` keeps this dialog interactive, including
+pointer input, keyboard focus, and Escape dismissal. Its host and slotted children remain in their
+authored DOM locations, and closing leaves the underlying native modal open.
+
 A human-in-the-loop gate: presents one proposed tool/function call (`toolName` + `args`) and blocks an
 agent from executing it until a person explicitly approves or denies it, with an optional inline
 "edit the arguments before approving" step. First-party invention (no Web Awesome equivalent). It
 keeps its own panel template rather than nesting `<lr-dialog>`, so it has no dependency on the
 general-purpose dialog component, while its modal behavior participates in the shared overlay stack.
+
+Closing returns focus to the element that held it when the dialog opened, including an opener the host re-shows only after the decision.
 
 Approve/Deny/Edit are built-in chrome, not a `footer` slot a consumer must assemble — there is exactly
 one correct action set for "approve this call". The `footer` slot is offered only for _supplementary_
@@ -999,9 +1017,9 @@ renders at the start of the action row, before Deny/Edit/Approve.
 - `open: boolean = false` (reflected) — set it directly or use the lifecycle methods below
 - `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to backdrop-click
   dismissal; Escape and the built-in decision buttons remain available without it
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — a host attribute names the
-  host; the panel remains labelled by its visible heading rather than cloning the same name. A
-  direct property assignment made without the attribute can name the panel
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — a non-empty host attribute names
+  the semantic dialog owner, taking precedence over a direct property value. Without either, its
+  visible heading supplies the accessible name.
 - `proposalKey: string = ''` (attribute `proposal-key`) — immutable identity/generation for the
   open proposal. Change it whenever a source reuses the same visible tool name/arguments for a new
   proposal; draft, editing, validation-announcement, and pending-decision state reset immediately
@@ -1601,7 +1619,7 @@ surrounding whitespace. The first valid admitted duplicate continues to win.
 
 **Properties:** `spans: LyraSpan[] = []` (attribute: false) — `LyraSpan { id: string; parentId?:
 string; name: string; kind: 'agent' | 'llm' | 'tool' | 'retriever' | 'embedding' | 'other';
-startMs: number; endMs?: number; status: 'pending' | 'running' | 'success' | 'error' | 'denied';
+startMs: number; endMs?: number; status: 'pending' | 'running' | 'success' | 'error' | 'denied' | 'incomplete';
 tokensIn?: number; tokensOut?: number; costText?: string; detail?: string }`, exported from
 `trace-tree/span.ts`. `startMs`/`endMs` are milliseconds **relative to the trace start**, not
 wall-clock timestamps; `endMs` is absent while the span is still running. `costText` is preformatted
@@ -1636,7 +1654,8 @@ when `spans` is empty), `limit` (the 500-span projection notice), and `live-regi
 The interactive `bar` keeps a 24px minimum target in both axes even when its duration-derived
 paint width would otherwise be only a few pixels.
 
-The terminal axis tick is end-aligned so its label remains inside the allocated chart width. Roving
+The terminal axis tick is end-aligned so its label remains inside the allocated chart width, and an
+interior tick label that would overprint a neighbour is hidden (the terminal label is kept). Roving
 keyboard focus is computed from the currently rendered/filtered span ids, so a hidden active span
 cannot leave the component with no `tabindex="0"` stop.
 
@@ -1675,7 +1694,9 @@ confirmed moves are announced through an internal `<lr-live-region>`.
 
 **Properties:** `items: readonly TaskItem[] = []` (attribute: false) — `TaskItem { id: string; label: string;
 status: TaskStatus; detail?: string; children?: readonly TaskItem[] }` with `TaskStatus = 'pending' |
-'running' | 'success' | 'error'` (both exported here). `detail` is an optional secondary plain-text
+'running' | 'success' | 'error' | 'incomplete'` (both exported here). `incomplete` is a step that stopped
+without finishing (a cancelled run): a neutral level-dash glyph, the localized `statusIncomplete` text,
+a polite announcement, and it is not counted as completed. `detail` is an optional secondary plain-text
 line; `children` is exactly **one** level of sub-steps — a child's own `children` is ignored with a
 `console.warn`. Runtime non-record rows and rows without a nonempty string `id` are omitted before
 rendering, summaries, announcements, and reorder validation. While `reorderable`, every retained
@@ -1736,8 +1757,9 @@ rows at that size; `--lr-task-list-compact-body-padding` (default `var(--lr-spac
 var(--lr-space-s) var(--lr-space-s)`) — `[part="body"]` padding at that size;
 `--lr-task-list-pending-color` (default `var(--lr-color-text-quiet)`),
 `--lr-task-list-running-color` (default `var(--lr-color-brand)`),
-`--lr-task-list-success-color` (default `var(--lr-color-success)`), and
-`--lr-task-list-error-color` (default `var(--lr-color-danger)`) independently retint the matching
+`--lr-task-list-success-color` (default `var(--lr-color-success)`),
+`--lr-task-list-error-color` (default `var(--lr-color-danger)`), and
+`--lr-task-list-incomplete-color` (default `var(--lr-color-text-quiet)`) independently retint the matching
 status icons without changing shared status tokens. `--lr-task-list-bg` (default
 `var(--lr-color-surface)`), `--lr-task-list-border-color` (default `var(--lr-color-border)`) and
 `--lr-task-list-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome without a
@@ -1985,7 +2007,7 @@ against the new tint as well.
 - `--lr-trace-tree-error-color` — Error status text and bar. Default: `var(--lr-color-danger)`.
 - `--lr-trace-tree-denied-color` — Denied status text and bar. Default: `var(--lr-color-warning)`.
 - `--lr-trace-tree-running-color` — Running status text and stripe. Default: `var(--lr-color-brand)`.
-- `--lr-trace-tree-pending-color` — Pending status text and bar. Default: `var(--lr-color-text-quiet)`.
+- `--lr-trace-tree-pending-color` — Pending and incomplete status text and bar. Default: `var(--lr-color-text-quiet)`.
 - `--lr-trace-tree-bar-track-bg` — Duration bar track. Default: `var(--lr-color-surface-raised)`.
 - `--lr-trace-tree-running-stripe-bg` — Running stripe contrast. Default: `var(--lr-color-brand-quiet)`.
 
@@ -2620,6 +2642,11 @@ The nine built-in status kinds are `idle`, `queued`, `collecting`, `running`, `w
 also accepted. Live elapsed time and Cancel are available for `running`, `collecting`,
 `waiting-input`, and `waiting-approval`. `queued` is pending rather than actively ticking or
 cancelable. Retry is available for `error` and `cancelled`.
+
+The default `tasks` slot maps each step's `done` to task status `success`, `error` to `error`, and
+`cancelled` to `incomplete`. A cancelled step uses a neutral glyph and the localized Incomplete
+label, and its transition is announced politely. It does not count as completed. The run's own
+status badge still reads Cancelled.
 
 **Properties:**
 

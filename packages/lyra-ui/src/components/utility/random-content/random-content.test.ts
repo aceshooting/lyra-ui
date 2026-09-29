@@ -1,4 +1,5 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { focusAfterPointer } from '../../../../test/wtr-focus.js';
 import './random-content.js';
 import type { LyraRandomContent } from './random-content.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
@@ -1530,4 +1531,109 @@ it('keeps a rotated-out candidate hidden against an author display rule', async 
   } finally {
     authorRule.remove();
   }
+});
+
+it('renders no next button by default and a localized icon action with with-next', async () => {
+  const plain = (await fixture(html`<lr-random-content><div>One</div><div>Two</div></lr-random-content>`)) as LyraRandomContent;
+  expect(plain.shadowRoot!.querySelector('[part="next-button"]')).to.equal(null);
+
+  const el = (await fixture(html`
+    <lr-random-content with-next .strings=${{ randomContentNext: 'Another one' }}>
+      <div>One</div>
+      <div>Two</div>
+    </lr-random-content>
+  `)) as LyraRandomContent;
+  const button = el.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement;
+  expect(button.getAttribute('aria-label')).to.equal('Another one');
+  expect(button.querySelector('lr-icon')?.getAttribute('name')).to.equal('refresh');
+  expect(el.shadowRoot!.querySelector('[part="pause-button"]')).to.equal(null);
+  expect(button.getBoundingClientRect().height).to.be.greaterThan(0);
+});
+
+it('the next button falls back to the English default label', async () => {
+  const el = (await fixture(html`<lr-random-content with-next><div>One</div><div>Two</div></lr-random-content>`)) as LyraRandomContent;
+  expect(el.shadowRoot!.querySelector('[part="next-button"]')!.getAttribute('aria-label')).to.equal('Show another');
+});
+
+it('the next button selects another item, emits lr-content-change and re-arms the autoplay timer', async () => {
+  const el = (await fixture(html`
+    <lr-random-content with-next autoplay mode="sequence">
+      <div>One</div>
+      <div>Two</div>
+      <div>Three</div>
+    </lr-random-content>
+  `)) as LyraRandomContent;
+  const shown = () =>
+    [...el.children].filter((c) => !(c as HTMLElement).hidden).map((c) => c.textContent);
+  expect(shown()).to.deep.equal(['One']);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const before = (el as any).timer;
+  expect(before).to.not.be.undefined;
+  const button = el.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement;
+  const changed = oneEvent(el, 'lr-content-change');
+  button.click();
+  await changed;
+  expect(shown()).to.deep.equal(['Two']);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  expect((el as any).timer).to.not.equal(before);
+});
+
+it('restart() re-arms the autoplay timer', async () => {
+  const el = (await fixture(html`
+    <lr-random-content autoplay><div>One</div><div>Two</div></lr-random-content>
+  `)) as LyraRandomContent;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const before = (el as any).timer;
+  el.restart();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  expect((el as any).timer).to.not.equal(before);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  expect((el as any).timer).to.not.be.undefined;
+});
+
+it('the next button keeps autoplay armed after a real focus-and-click, and restart() honors its no-op guards', async () => {
+  const el = (await fixture(html`
+    <lr-random-content with-next autoplay mode="sequence">
+      <div>One</div>
+      <div>Two</div>
+      <div>Three</div>
+    </lr-random-content>
+  `)) as LyraRandomContent;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const timer = () => (el as any).timer;
+  const button = el.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement;
+  await focusAfterPointer(button);
+  expect(timer()).to.not.equal(undefined);
+  const before = timer();
+  const changed = oneEvent(el, 'lr-content-change');
+  button.click();
+  await changed;
+  expect(timer()).to.not.equal(undefined);
+  expect(timer()).to.not.equal(before);
+
+  el.paused = true;
+  await el.updateComplete;
+  el.restart();
+  expect(timer()).to.equal(undefined);
+  el.paused = false;
+  await el.updateComplete;
+
+  el.autoplay = false;
+  await el.updateComplete;
+  el.restart();
+  expect(timer()).to.equal(undefined);
+});
+
+it('restart() does nothing with fewer than two candidates', async () => {
+  const el = (await fixture(html`<lr-random-content autoplay><div>One</div></lr-random-content>`)) as LyraRandomContent;
+  el.restart();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  expect((el as any).timer).to.equal(undefined);
+});
+
+it('the next button is axe-clean', async () => {
+  const el = (await fixture(html`
+    <lr-random-content with-next autoplay><div>One</div><div>Two</div></lr-random-content>
+  `)) as LyraRandomContent;
+  await expect(el).to.be.accessible();
 });

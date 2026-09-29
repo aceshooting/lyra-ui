@@ -58,6 +58,7 @@ const strings: LyraLocaleStrings = {
   statusSuccess: 'Milkaa\'e',
   statusError: 'Dogoggora',
   statusDenied: 'Dhoorkame',
+  statusIncomplete: 'Hin xumuramne',
   restore: 'Deebisi',
   navigation: 'Sochii',
   attachmentUntitledFile: 'Faayila maqaa hin qabne',

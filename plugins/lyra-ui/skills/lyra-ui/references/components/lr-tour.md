@@ -22,6 +22,8 @@ full-viewport backdrop with a cutout/ring around the current target, with Next/P
 controls and a step-progress indicator. Controlled component — `steps` is never mutated; only
 `activeIndex` and `open` are self-managed.
 
+When the tour ends, focus returns to the element that held it when the tour started, including one the host re-shows only after the tour ends.
+
 **Properties:**
 
 - `open: boolean = false` (reflected) — no separate `show()`/`hide()`; set this or call
@@ -114,6 +116,12 @@ override documented on `<lr-popover>` when a step is (re)positioned, falling bac
 default when nothing is set. There is no per-instance `positioning-strategy` property on `<lr-tour>`;
 set the custom property on `:root`, a theme, or one clipping ancestor to change every unset tour
 beneath it.
+
+When an ancestor of `<lr-tour>` contains fixed descendants (a `transform`, `filter`, `contain: paint`
+and so on), the tour promotes itself to the browser top layer while open, so the scrim, spotlight
+ring and click-through keyhole stay in viewport coordinates.
+
+Default modal steps opened outside an existing native `dialog.showModal()` use an internal native modal surface, keeping their controls interactive without moving the tour host. `interactiveTarget` steps remain nonmodal and release that native surface when selected. Mount any tour with interactive-target steps inside the active native dialog, with its targets in that same modal subtree. A tour host outside that dialog becomes platform-inert during an interactive-target step: the target can be used, but the tour’s Next/Skip controls cannot. Top-layer painting does not remove this native nonmodal restriction.
 
 **Known gotchas:**
 

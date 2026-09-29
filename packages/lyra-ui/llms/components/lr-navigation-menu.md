@@ -67,6 +67,14 @@ shared region below the bar. It never uses `menu`/`menubar` roles — applicatio
 - `hideDelay: number = 150` (attribute `hide-delay`) — delay before a hover-opened panel closes once
   the pointer leaves the item.
 - `skipDelay: number = 300` (attribute `skip-delay`) — the hover grace window; `0` disables it.
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-popover>`:
+  always shows the open floating panel (a menu-level property that applies to every item panel) in
+  the browser top layer, placed `fixed` whatever the positioning strategy resolves to, so it paints
+  above a sibling surface stacked higher than a `z-index`ed fixed or sticky header, toolbar or rail
+  it sits in (see **Anchored overlays and the top layer** in `llms/overlays.md`). Anchoring, RTL
+  placement, focus, Escape and the transitions are unchanged and no DOM node moves; it leaves the
+  top layer once it settles closed. Unset, promotion happens only when a trapping ancestor forces
+  it.
 - `distance: number = 6` — gap in px between the anchor and a floating panel.
 - `collapsed` (read-only boolean getter) — whether the collapsed layout is active; `false` on the
   server and until the first measurement. Mirrored to the `collapsed` custom state.

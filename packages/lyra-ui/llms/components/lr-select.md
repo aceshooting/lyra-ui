@@ -121,6 +121,13 @@ exactly like the multi-option case, until the trigger is actually activated.
 - `hoist: boolean = false` (reflected) — switches Floating UI from its mapped absolute strategy to
   fixed positioning, escaping clipping containers. It also switches live while open; an effective
   direction change refreshes logical left/right placement by the same path
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-popover>`:
+  always shows the open listbox in the browser top layer, placed `fixed` whatever the positioning
+  strategy resolves to, so it paints above a sibling surface stacked higher than a `z-index`ed fixed
+  or sticky header, toolbar or rail it sits in (see **Anchored overlays and the top layer** in
+  `llms/overlays.md`). Anchoring, RTL placement, focus, Escape and the transitions are unchanged and
+  no DOM node moves; it leaves the top layer once it settles closed. Unset, promotion happens only
+  when a trapping ancestor forces it.
 - `positioningStrategy: PlaceStrategy = 'absolute'` (attribute `positioning-strategy`, reflected) —
   see `<lr-popover>` (`llms/components/lr-popover.md`). `hoist: boolean = false` is its retained
   exact alias; writing either spelling updates the other. This property always reports the

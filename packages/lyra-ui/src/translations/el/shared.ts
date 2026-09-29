@@ -58,6 +58,7 @@ const strings: LyraLocaleStrings = {
   statusSuccess: 'Επιτυχία',
   statusError: 'Σφάλμα',
   statusDenied: 'Απορρίφθηκε',
+  statusIncomplete: 'Ελλιπές',
   restore: 'Επαναφορά',
   navigation: 'Πλοήγηση',
   attachmentUntitledFile: 'Αρχείο χωρίς τίτλο',

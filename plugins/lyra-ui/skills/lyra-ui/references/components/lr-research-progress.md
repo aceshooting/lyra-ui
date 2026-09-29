@@ -18,7 +18,9 @@
 
 `lr-research-progress` presents a read-only ordered list of host-owned research steps and an
 aggregate completion progressbar. Each step has a stable `id`, visible `label`, optional
-`description`, a `status` of `pending`, `running`, `completed`, or `failed`, and an optional
+`description`, a `status` of `pending`, `running`, `completed`, `failed`, or `incomplete` (a step that stopped
+without finishing, such as a cancelled run; it shows the localized `statusIncomplete` text and is not
+counted as completed; an unrecognized status renders as `pending` rather than dropping the step), and an optional
 nonnegative finite `sources` count. Statuses and source counts are displayed as supplied; the
 component does not search or infer state. Assign a new `.steps` array after host updates. The
 component snapshots collection data, omits blank or duplicate identities after the first valid

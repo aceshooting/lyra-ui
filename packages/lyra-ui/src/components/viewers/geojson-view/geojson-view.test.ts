@@ -6,6 +6,7 @@ import './geojson-viewer.js';
 import '../../../translations/ar/viewers.js';
 import '../../../translations/ar/media.js';
 import '../../../translations/ar/shared.js';
+import { LyraMap } from '../../media/map/map.class.js';
 import { LyraGeoJsonViewer } from './geojson-viewer.class.js';
 import { LyraGeojsonView } from './geojson-view.class.js';
 import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js';
@@ -1518,6 +1519,163 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
     };
     expect(Math.abs(Math.abs(map.center[0]) - 180)).to.be.lessThan(0.001);
     expect(map.zoom).to.be.greaterThan(5);
+  });
+});
+
+describe('framing through the map', () => {
+  type FitCall = { bounds: number[][]; options: { padding?: unknown; animate?: boolean; maxZoom?: number } };
+  async function loadWithFitSpy(data: unknown): Promise<FitCall[]> {
+    const calls: FitCall[] = [];
+    const original = LyraMap.prototype.fitBounds;
+    LyraMap.prototype.fitBounds = function (bounds, options = {}) {
+      calls.push({ bounds: bounds.map((corner) => [...corner]), options });
+      return true;
+    };
+    try {
+      stubFetch(data);
+      const el = (await fixture(
+        html`<lr-geojson-viewer src=${GEOJSON_URL}></lr-geojson-viewer>`
+      )) as LyraGeoJsonViewer;
+      await waitUntil(() => calls.length > 0, 'map was never asked to fit', { timeout: 3000 });
+      await el.updateComplete;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    } finally {
+      LyraMap.prototype.fitBounds = original;
+    }
+    return calls;
+  }
+
+  it('asks the map to fit the data bounds once, without animation', async () => {
+    const calls = await loadWithFitSpy({
+      type: 'Polygon',
+      coordinates: [
+        [
+          [-73, 59],
+          [-12, 59],
+          [-12, 83.6],
+          [-73, 83.6],
+          [-73, 59],
+        ],
+      ],
+    });
+    expect(calls.length).to.equal(1);
+    expect(calls[0]!.bounds).to.deep.equal([
+      [-73, 59],
+      [-12, 83.6],
+    ]);
+    expect(calls[0]!.options.animate).to.equal(false);
+    expect(calls[0]!.options.padding).to.be.greaterThan(0);
+  });
+
+  it('hands the map a valid box for a small western-hemisphere extent (float noise is not a crossing)', async () => {
+    const calls = await loadWithFitSpy({
+      type: 'Polygon',
+      coordinates: [
+        [
+          [-122.5, 37.77],
+          [-122.42, 37.77],
+          [-122.42, 37.8],
+          [-122.5, 37.8],
+          [-122.5, 37.77],
+        ],
+      ],
+    });
+    expect(calls[0]!.bounds).to.deep.equal([
+      [-122.5, 37.77],
+      [-122.42, 37.8],
+    ]);
+  });
+
+  it('passes the short way across the antimeridian', async () => {
+    const calls = await loadWithFitSpy({
+      type: 'MultiPoint',
+      coordinates: [
+        [179, 10],
+        [-179, 12],
+      ],
+    });
+    expect(calls[0]!.bounds).to.deep.equal([
+      [179, 10],
+      [181, 12],
+    ]);
+  });
+});
+
+describe('framing timing and placeholder', () => {
+  it('does not fit before the load has reached the loaded state, and keeps the request pending', async () => {
+    const original = LyraMap.prototype.fitBounds;
+    const calls: number[] = [];
+    LyraMap.prototype.fitBounds = function () {
+      calls.push(1);
+      return true;
+    };
+    try {
+      (globalThis as { fetch: unknown }).fetch = () => new Promise(() => {});
+      const el = (await fixture(
+        html`<lr-geojson-viewer src=${GEOJSON_URL}></lr-geojson-viewer>`
+      )) as LyraGeoJsonViewer;
+      const internals = el as unknown as {
+        pendingFitBounds: unknown;
+        registeredMap: unknown;
+        fitLoadedData(): void;
+      };
+      internals.pendingFitBounds = {
+        minLng: 0,
+        maxLng: 1,
+        minLat: 0,
+        maxLat: 1,
+        minShiftedLng: 0,
+        maxShiftedLng: 1,
+      };
+      internals.registeredMap = document.createElement('lr-map');
+      internals.fitLoadedData();
+      expect(calls.length).to.equal(0);
+      expect(internals.pendingFitBounds).to.not.equal(null);
+    } finally {
+      LyraMap.prototype.fitBounds = original;
+    }
+  });
+
+  it('supersedes the placeholder camera: the exact fit is requested on a map already carrying it', async () => {
+    const original = LyraMap.prototype.fitBounds;
+    const seen: { center: unknown; zoom: unknown; bounds: number[][] }[] = [];
+    LyraMap.prototype.fitBounds = function (bounds, options) {
+      seen.push({
+        center: [...(this as unknown as { center: number[] }).center],
+        zoom: (this as unknown as { zoom: number }).zoom,
+        bounds: bounds.map((corner) => [...corner]),
+      });
+      return original.call(this, bounds, options);
+    };
+    try {
+      stubFetch({
+        type: 'Polygon',
+        coordinates: [
+          [
+            [-73, 59],
+            [-12, 59],
+            [-12, 83.6],
+            [-73, 83.6],
+            [-73, 59],
+          ],
+        ],
+      });
+      await fixture(
+        html`<lr-geojson-viewer src=${GEOJSON_URL}></lr-geojson-viewer>`
+      );
+      await waitUntil(() => seen.length > 0, 'map was never asked to fit', {
+        timeout: 3000,
+      });
+      expect(seen.length).to.equal(1);
+      expect(seen[0]!.center).to.deep.equal([-42.5, 71.3]);
+      expect(seen[0]!.zoom).to.equal(2);
+      expect(seen[0]!.bounds).to.deep.equal([
+        [-73, 59],
+        [-12, 83.6],
+      ]);
+    } finally {
+      LyraMap.prototype.fitBounds = original;
+    }
   });
 });
 

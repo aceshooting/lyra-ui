@@ -5,6 +5,8 @@ import { activeElementIn } from '../../../internal/active-element.js';
 import {
   deferredPlaceReady,
   loadAnchoredOverlayRuntime,
+  syncTopLayerRelease,
+  topLayerPlacement,
   waitForDeferredPlacement,
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
@@ -207,6 +209,8 @@ export class LyraNavigationMenuItem extends LyraElement<LyraNavigationMenuItemEv
   private liveOpen = false;
   private placement?: DeferredOperationHandle;
   private placementKey = '';
+  /** Whether the last placement forced the top layer, so turning it off demotes. */
+  private placedTopLayer?: boolean;
   private overlayHandle?: OverlayHandle;
   private pendingShow = false;
   private pendingMorph?: NavigationMenuMorph;
@@ -499,6 +503,7 @@ export class LyraNavigationMenuItem extends LyraElement<LyraNavigationMenuItemEv
     const key = [
       anchor === this.baseElement ? 'item' : 'menu',
       context.distance(),
+      context.topLayer(),
       this.effectiveDirection,
     ].join('|');
     if (!this.placement || key !== this.placementKey) this.startPlacement(anchor, panel, key);
@@ -528,9 +533,11 @@ export class LyraNavigationMenuItem extends LyraElement<LyraNavigationMenuItemEv
     const context = this.ownerContext!;
     const bridge = this.renderRoot.querySelector<HTMLElement>('.hover-bridge');
     this.placementKey = key;
+    const topLayer = context.topLayer();
+    this.placedTopLayer = syncTopLayerRelease(panel, this.placedTopLayer, topLayer);
     this.placement = deferredPlaceReady(anchor, panel, {
       placement: rtlAwarePlacement('bottom-start', this),
-      strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
+      ...topLayerPlacement(topLayer, resolveEffectivePositioningStrategy(this, undefined, 'fixed')),
       offset: context.distance(),
       hoverBridge: bridge ?? undefined,
     });

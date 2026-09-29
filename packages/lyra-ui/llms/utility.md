@@ -1869,11 +1869,17 @@ children; nothing is moved or cloned.
 - `paused: boolean = false` (reflected) — suppresses autoplay. The built-in pause/resume action
   toggles this state; a programmatic assignment remains silent.
 - `autoplayInterval: number = 3000` (attribute `autoplay-interval`) — clamped to a 1000 ms floor
+- `withNext: boolean = false` (attribute `with-next`, reflected) — show a built-in refresh-glyph action
+  (localized via `randomContentNext`, "Show another") that calls `randomize()` and re-arms the autoplay timer, so a
+  manual pick is not replaced by a tick already in flight. It renders independently of `autoplay`
+  and, unlike the pause button, does not suspend autoplay while focused, so a click always re-arms the timer.
 
-**Methods:** `randomize(): readonly Element[]` — re-selects using the current `mode`, applies
+**Methods:** `restart(): void` — re-arms the autoplay timer for a full `autoplayInterval`; a no-op
+while autoplay is off, paused, focus-suspended, reduced-motion, or the pool has fewer than two
+candidates. `randomize(): readonly Element[]` — re-selects using the current `mode`, applies
 `hidden`/`aria-hidden`, emits `lr-content-change`, appends the exposed selection text to the shared
 polite announcement sink (even when `autoplay` is enabled), and returns the elements now shown.
-Does **not** reset or restart the autoplay timer.
+Does **not** reset or restart the autoplay timer; call `restart()` afterwards or use `with-next`.
 
 **Events:** `lr-content-change` (`detail: { readonly items: readonly Element[] }` — a frozen
 snapshot of the exact elements now shown, in display order). Fires on first render, on
@@ -1902,7 +1908,8 @@ stay silent too. A nested forwarding slot contributes flattened assigned content
 fallback; later assignment and assigned-node text/style/visibility changes announce only when they
 change the currently exposed selection, while initial distribution remains silent. `pause-button`
 — the localized autoplay pause/resume action, rendered
-only while `autoplay` is enabled and exposed as a toggle with `aria-pressed`.
+only while `autoplay` is enabled and exposed as a toggle with `aria-pressed`. `next-button` — the
+opt-in localized action rendered while `with-next` is set, sharing the pause button's styling.
 
 **Themeable custom properties:** Web Awesome aliases `--animation-duration` (default `300ms`),
 `--animation-easing` (default `ease`), and `--animation-translate` (default
@@ -1958,6 +1965,8 @@ target element elsewhere in the page via the shared Floating UI positioner, over
 full-viewport backdrop with a cutout/ring around the current target, with Next/Previous/Skip
 controls and a step-progress indicator. Controlled component — `steps` is never mutated; only
 `activeIndex` and `open` are self-managed.
+
+When the tour ends, focus returns to the element that held it when the tour started, including one the host re-shows only after the tour ends.
 
 **Properties:**
 
@@ -2051,6 +2060,12 @@ override documented on `<lr-popover>` when a step is (re)positioned, falling bac
 default when nothing is set. There is no per-instance `positioning-strategy` property on `<lr-tour>`;
 set the custom property on `:root`, a theme, or one clipping ancestor to change every unset tour
 beneath it.
+
+When an ancestor of `<lr-tour>` contains fixed descendants (a `transform`, `filter`, `contain: paint`
+and so on), the tour promotes itself to the browser top layer while open, so the scrim, spotlight
+ring and click-through keyhole stay in viewport coordinates.
+
+Default modal steps opened outside an existing native `dialog.showModal()` use an internal native modal surface, keeping their controls interactive without moving the tour host. `interactiveTarget` steps remain nonmodal and release that native surface when selected. Mount any tour with interactive-target steps inside the active native dialog, with its targets in that same modal subtree. A tour host outside that dialog becomes platform-inert during an interactive-target step: the target can be used, but the tour’s Next/Skip controls cannot. Top-layer painting does not remove this native nonmodal restriction.
 
 **Known gotchas:**
 

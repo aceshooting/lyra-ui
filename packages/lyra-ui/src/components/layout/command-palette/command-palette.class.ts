@@ -1,3 +1,6 @@
+import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
+import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
+import { DeferredFocusReturn, captureFocusReturnOpener } from '../../../internal/deferred-focus-return.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -232,6 +235,12 @@ export interface LyraCommandPaletteEventMap {
  * is retained for its imperative `onSelect` contract. Create and reassign a new command array after
  * sequence or row changes; mutating the assigned array does not update the view.
  *
+ * When opened outside an existing native modal dialog, the modal surface uses an internal
+ * native dialog so pointer, keyboard, and focus interaction remain available without moving
+ * the host. Escape and close requests retain their normal cancelable lifecycle.
+ * Closing returns focus to the element that held it when the palette opened, including an opener
+ * the host re-shows only after the close.
+ *
  * @customElement lr-command-palette
  * @event lr-select - A command was chosen; detail is `{ command }`.
  * @event lr-show - Emitted before the palette opens. Cancelable: `preventDefault()` keeps it
@@ -307,7 +316,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   protected static override readonly identityEventDetailProperties =
     Object.freeze({ 'lr-select': Object.freeze(['command']) });
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, nativeModalCarrierStyles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-select',
   ]);
@@ -345,6 +354,15 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   @state() private groupPitch = GROUP_ROW_HEIGHT;
   private listId = nextId('command-list');
   private overlay?: OverlayHandle;
+  private readonly nativeModal = new NativeModalCarrier(this, {
+    onCancel: () => { if (this.overlay?.isTopmost()) this.close('escape'); },
+    onUnexpectedClose: () => {
+      this.close('escape');
+      if (this.open) this.nativeModal.show();
+    },
+  });
+  private focusReturnOpener: HTMLElement | null = null;
+  private readonly deferredFocusReturn = new DeferredFocusReturn();
   private activeCommandId?: string;
   private listResizeObserver?: ResizeObserver;
   private observedList?: HTMLElement;
@@ -411,10 +429,26 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     super.willUpdate(changed);
     if (changed.has('open')) {
       if (this.open) {
+        this.deferredFocusReturn.cancel();
+        this.focusReturnOpener = captureFocusReturnOpener(this);
+        this.nativeModal.prepare();
         this.activateOverlay();
       } else {
+        const hadOverlay = this.overlay !== undefined;
+        this.nativeModal.hide();
         this.overlay?.deactivate();
         this.overlay = undefined;
+        // The synchronous return keeps the established timing whenever the opener can already
+        // take focus; this covers an opener the host only re-shows afterward.
+        const opener = this.focusReturnOpener;
+        this.focusReturnOpener = null;
+        if (hadOverlay && opener && this.isConnected) {
+          this.deferredFocusReturn.schedule({
+            host: this,
+            candidates: () => [opener],
+            isCurrent: () => !this.open,
+          });
+        }
       }
     }
     const rows = this.filtered;
@@ -441,6 +475,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('open') && this.open) {
+      this.nativeModal.show();
       this.overlay?.focusInitial();
     }
     // The list is a fixed-height, scrollable box -- without this, arrowing past its visible rows
@@ -578,7 +613,11 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     }
     if (this.hasUpdated && this.open) {
       this.activateOverlay();
-      queueMicrotask(() => this.overlay?.focusInitial());
+      queueMicrotask(() => {
+        if (!this.isConnected || !this.open) return;
+        this.nativeModal.show();
+        this.overlay?.focusInitial();
+      });
     }
   }
 
@@ -589,7 +628,9 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
       unregisterHotkeyOwner(view, this);
       view.removeEventListener('keydown', this.onGlobalKeyDown);
     }
+    this.nativeModal.hide();
     this.overlay?.suspend();
+    this.deferredFocusReturn.cancel();
     this.listResizeObserver?.disconnect();
     this.listResizeObserver = undefined;
     this.observedList = undefined;
@@ -924,7 +965,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     const visibleGroups = this.visibleGroups(model);
     const activeId =
       this.activeIndex >= 0 ? this.optionId(this.activeIndex) : nothing;
-    return html`<div
+    return this.nativeModal.render(html`<div
       part="backdrop"
       @click=${(event: Event) => {
         if (event.target === event.currentTarget)
@@ -933,9 +974,9 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     >
       <section
         part="dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-label=${this.accessibleLabel == null
+        role=${this.nativeModal.requested ? nothing : 'dialog'}
+        aria-modal=${this.nativeModal.requested ? nothing : 'true'}
+        aria-label=${this.nativeModal.requested ? nothing : this.accessibleLabel == null
           ? this.localize('commandPaletteLabel')
           : this.accessibleLabel}
         tabindex="-1"
@@ -1006,8 +1047,9 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
                 ${this.localize('commandPaletteEmpty')}
               </div>`}
         </div>
+        ${this.nativeModal.renderHelperSlot()}
       </section>
-    </div>`;
+    </div>`, { label: this.accessibleLabel ?? this.localize('commandPaletteLabel') });
   }
 }
 declare global {

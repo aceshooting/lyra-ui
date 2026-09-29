@@ -41,6 +41,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: 'Amma haaromsamaa jira.',
   randomContentPause: 'Naanna\'uu dhaabi',
   randomContentResume: 'Naanna\'uu itti fufi',
+  randomContentNext: 'Kan biraa agarsiisi',
   exportButtonLabel: 'Ala baasi',
   knownDateDay: 'Guyyaa',
   knownDateMonth: 'Ji\'a',

@@ -58,6 +58,7 @@ const strings: LyraLocaleStrings = {
   statusSuccess: 'Gennemført',
   statusError: 'Fejl',
   statusDenied: 'Afvist',
+  statusIncomplete: 'Ufuldført',
   restore: 'Gendan',
   navigation: 'Navigation',
   attachmentUntitledFile: 'Unavngiven fil',

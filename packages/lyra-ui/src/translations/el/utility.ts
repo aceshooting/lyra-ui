@@ -41,6 +41,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: 'Γίνεται ανανέωση τώρα.',
   randomContentPause: 'Παύση εναλλαγής',
   randomContentResume: 'Συνέχιση εναλλαγής',
+  randomContentNext: 'Εμφάνιση άλλου',
   exportButtonLabel: 'Εξαγωγή',
   knownDateDay: 'Ημέρα',
   knownDateMonth: 'Μήνας',

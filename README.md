@@ -141,6 +141,10 @@ Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS
   groups; app-rail sidebar controls, shortcuts and persistence; multi-split external launchers.
 - **Conversation UI:** progressive Markdown, code headers with copy controls, scrollable GFM tables,
   styled task lists, and expandable tool-call blocks.
+- **Overlay placement:** opt-in browser top-layer popups for tooltips, selectors, navigation menus
+  and app-rail labels inside fixed headers and other stacking contexts.
+- **Progress and refresh:** incomplete task and trace states, optional polling refresh and
+  random-content next actions, and public graph framing controls.
 - **Localization and styling:** 66 optional complete translation catalogs plus built-in English, typography
   utilities, and separate decorative and control-border tokens.
 
@@ -148,6 +152,8 @@ See the [feature guide](./packages/lyra-ui/README.md#highlights) for APIs and ex
 The [roadmap](./docs/roadmap.md) describes the remaining release commitments.
 For version-by-version changes and older upgrades, use the
 [package changelog](./packages/lyra-ui/CHANGELOG.md).
+Upgrading to v23? Review the [compatibility and sizing changes](./packages/lyra-ui/README.md#upgrading-to-v23)
+before updating existing layouts.
 
 ## Principles & Guidelines
 

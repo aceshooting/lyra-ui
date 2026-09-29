@@ -4,6 +4,7 @@ import {
   bindAccessibleTextObserver,
   composedAccessibilityText,
 } from '../../../internal/accessibility-visibility.js';
+import { CustomElementUpgradeObserver } from '../../../internal/custom-element-upgrade-observer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './spinner.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -56,6 +57,9 @@ export class LyraSpinner extends LyraElement {
   // browser can sample it, before a client-only first paint or just after the hydration render.
   private cachedVisibleLabelText = '';
   private labelObserver?: MutationObserver;
+  private readonly labelUpgrades = new CustomElementUpgradeObserver(() => {
+    if (this.isConnected && this.labelPlacement === 'after') this.recomputeVisibleLabelText();
+  });
   private readonly onLabelSlotChange = (event: Event): void => {
     if (this.labelPlacement !== 'after') return;
     const target = event.target as Element | null;
@@ -80,7 +84,10 @@ export class LyraSpinner extends LyraElement {
   private syncLabelObservation(): void {
     this.labelObserver?.disconnect();
     this.labelObserver = undefined;
-    if (!this.isConnected || this.labelPlacement !== 'after') return;
+    if (!this.isConnected || this.labelPlacement !== 'after') {
+      this.labelUpgrades.disconnect();
+      return;
+    }
     const MutationObserverCtor = (this.ownerDocument as Document | undefined)?.defaultView
       ?.MutationObserver;
     this.labelObserver = MutationObserverCtor
@@ -93,13 +100,14 @@ export class LyraSpinner extends LyraElement {
   }
 
   private bindLabelObserverTargets(): void {
-    bindAccessibleTextObserver(this.labelObserver, this);
+    bindAccessibleTextObserver(this.labelObserver, this, [], this.labelUpgrades);
   }
 
   override disconnectedCallback(): void {
     this.removeEventListener('slotchange', this.onLabelSlotChange);
     this.labelObserver?.disconnect();
     this.labelObserver = undefined;
+    this.labelUpgrades.disconnect();
     super.disconnectedCallback();
   }
 
@@ -129,6 +137,7 @@ export class LyraSpinner extends LyraElement {
 
   private recomputeVisibleLabelText(request = true, preferLightDom = false): void {
     const next = this.computeVisibleLabelText(preferLightDom);
+    this.bindLabelObserverTargets();
     if (next === this.cachedVisibleLabelText) return;
     this.cachedVisibleLabelText = next;
     if (request) this.requestUpdate();

@@ -2,24 +2,24 @@
   "locale": "vi",
   "direction": "ltr",
   "source": {
-    "keyCount": 1385,
-    "sha256": "sha256:09d7ebd99cfe8b1b1ba87d80b6e8776b2dcc9107247c61b252cc3649c759eb65"
+    "keyCount": 1387,
+    "sha256": "sha256:f53dcf1e850d1c261643443bee8054cb6cdb7097de1be272addcec6fce402e49"
   },
   "catalog": {
-    "keyCount": 1385,
-    "sha256": "sha256:de2f24fc9a226d7a22dd6841cd5b01b968c6c2232dcc5048e6fdcba3c2baaa03"
+    "keyCount": 1387,
+    "sha256": "sha256:f1d401b930ddf5a55ef2ae5d8d09861af400dca87961754ab72a10a736daab12"
   },
   "translator": {
     "status": "complete-original",
     "role": "project localization contributor",
     "completedAt": "2026-09-28",
-    "evidence": "Complete original Vietnamese catalog authored from DEFAULT_STRINGS in the project localization workflow; all 1315 messages are represented with locale-specific wording, placeholders, and plural forms. No upstream translated text was copied. Translation was AI-assisted; no human or native-speaker translator identity is claimed. Updated 2026-09-28 with 69 original messages for change review, agent questions, permission rules, connectors, background runs, research progress and budgets. Placeholders and locale-specific plural forms are preserved; no upstream translated text was copied.\n\n2026-09-29 incremental pollRefresh review: added one original action label to this locale catalog, using existing refresh/update wording as context. The contribution remains AI-assisted and makes no human or native-speaker translator claim."
+    "evidence": "Complete original Vietnamese catalog authored from DEFAULT_STRINGS in the project localization workflow; all 1315 messages are represented with locale-specific wording, placeholders, and plural forms. No upstream translated text was copied. Translation was AI-assisted; no human or native-speaker translator identity is claimed. Updated 2026-09-28 with 69 original messages for change review, agent questions, permission rules, connectors, background runs, research progress and budgets. Placeholders and locale-specific plural forms are preserved; no upstream translated text was copied.\n\n2026-09-29 incremental pollRefresh review: added one original action label to this locale catalog, using existing refresh/update wording as context. The contribution remains AI-assisted and makes no human or native-speaker translator claim.\n\n2026-09-29 incremental randomContentNext review: added one original action label (\"Show another\") to this locale catalog, using existing next/refresh wording as context. The contribution remains AI-assisted and makes no human or native-speaker translator claim.\n\n2026-09-29 incremental taskListStepIncompleteAnnounce entry: added a formatting-only announcement template that interpolates the caller-supplied label and already-localized status, with the catalog punctuation convention. This is AI-assisted project localization; no human or native-speaker translator claim is made."
   },
   "reviewer": {
     "status": "approved",
     "role": "independent localization reviewer",
     "reviewedAt": "2026-09-29",
-    "evidence": "Independent AI-assisted review, separate from the contributor that drafted this catalog, covered all 12 slices for meaning, UI register, terminology, and English leftovers. A source-parser pass confirmed all 1315 keys in DEFAULT_STRINGS order, placeholder names, and plural-category shape; the 71 exact English matches were individually classified with message-specific rationales as formatting templates, standard technical labels, keyboard names, units, or the Jupyter prompt convention. Corrections were applied before approval. AI-assisted; no human or native-speaker certification is claimed. Updated 2026-09-28: an independent AI-assisted review checked all 69 added messages for meaning, UI register, terminology and placeholders, and corrected the catalog before this snapshot. The research-source count was checked against the pinned CLDR categories, including locale-specific decimal and non-singular forms. The complete 1,384-key snapshot was checked for key coverage, value kinds, placeholders and exact-English message paths; only individually justified new cognates, loanwords and technical names were retained. This increment does not claim a new linguistic review of all older messages, human review or native-speaker certification.\n\n2026-09-29 incremental pollRefresh review: an AI-assisted bounded review checked this new action label for meaning, UI action wording and absence of placeholders or exact-English copy. This review covers only this addition, not prior catalog entries; no human or native-speaker certification is claimed."
+    "evidence": "Independent AI-assisted review, separate from the contributor that drafted this catalog, covered all 12 slices for meaning, UI register, terminology, and English leftovers. A source-parser pass confirmed all 1315 keys in DEFAULT_STRINGS order, placeholder names, and plural-category shape; the 71 exact English matches were individually classified with message-specific rationales as formatting templates, standard technical labels, keyboard names, units, or the Jupyter prompt convention. Corrections were applied before approval. AI-assisted; no human or native-speaker certification is claimed. Updated 2026-09-28: an independent AI-assisted review checked all 69 added messages for meaning, UI register, terminology and placeholders, and corrected the catalog before this snapshot. The research-source count was checked against the pinned CLDR categories, including locale-specific decimal and non-singular forms. The complete 1,384-key snapshot was checked for key coverage, value kinds, placeholders and exact-English message paths; only individually justified new cognates, loanwords and technical names were retained. This increment does not claim a new linguistic review of all older messages, human review or native-speaker certification.\n\n2026-09-29 incremental pollRefresh review: an AI-assisted bounded review checked this new action label for meaning, UI action wording and absence of placeholders or exact-English copy. This review covers only this addition, not prior catalog entries; no human or native-speaker certification is claimed.\n\n2026-09-29 incremental randomContentNext review: an AI-assisted bounded review checked this new action label for meaning, UI action wording and absence of placeholders or exact-English copy. This review covers only this addition, not prior catalog entries; no human or native-speaker certification is claimed.\n\n2026-09-29 incremental taskListStepIncompleteAnnounce review: an independent AI-assisted bounded review checked the announcement template in all 66 supported locale records for the supplied {label}/{status} placeholders, locale punctuation, and absence of untranslated English prose. The six locale-specific separator forms were checked; de-CH inherits its German template. This covers only this addition, not prior catalog entries, and claims no human or native-speaker certification."
   },
   "englishIdenticalAllowlist": [
     {
@@ -289,6 +289,10 @@
     {
       "messagePath": "statTrendAnnouncement",
       "rationale": "The statTrendAnnouncement is a data-format template: placeholders carry dynamic or caller-provided values, and the remaining punctuation/separators do not form English prose."
+    },
+    {
+      "messagePath": "taskListStepIncompleteAnnounce",
+      "rationale": "Formatting template only: {label} and {status} are supplied values, with a punctuation separator and no natural-language words; the identical text preserves the status announcement format."
     },
     {
       "messagePath": "traceTreeMetricLabel",

@@ -49,6 +49,13 @@ readonly LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; cou
   the catalog while the listbox is open keeps keyboard navigation valid: an active row beyond the
   new end is rehomed to the last remaining row. Arrow/Home/End/typeahead changes scroll the active
   owned option into nearest view after render; replacement and disconnect cancel stale scrolls.
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-popover>`:
+  always shows the open listbox in the browser top layer, placed `fixed` whatever the positioning
+  strategy resolves to, so it paints above a sibling surface stacked higher than a `z-index`ed fixed
+  or sticky header, toolbar or rail it sits in (see **Anchored overlays and the top layer** in
+  `llms/overlays.md`). Anchoring, RTL placement, focus, Escape and the transitions are unchanged and
+  no DOM node moves; it leaves the top layer once it settles closed. Unset, promotion happens only
+  when a trapping ancestor forces it.
 - `withoutFlags: boolean = false` (attribute `without-flags`) — omits each row's leading
   `<lr-flag language={tag} variant="compact">` (or `<lr-flag country={country} variant="compact">`
   when the entry sets `country`) and the trigger flag entirely (not just visually).

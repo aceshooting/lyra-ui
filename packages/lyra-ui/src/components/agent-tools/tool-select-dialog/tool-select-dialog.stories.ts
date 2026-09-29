@@ -296,3 +296,28 @@ export const LargeCatalogContinuation: Story = {
     ></lr-tool-select-dialog>
   `,
 };
+
+
+/** The tool dialog is a sibling of the native modal and retains its authored slot ownership. */
+export const AboveNativeModal: Story = {
+  render: () => html`
+    <div>
+      <button @click=${(event: Event) => {
+        (event.currentTarget as HTMLElement).parentElement!.querySelector('dialog')!.showModal();
+      }}>Open native dialog</button>
+      <dialog>
+        <p>A native modal can open this tool dialog while remaining underneath it.</p>
+        <button @click=${(event: Event) => {
+          const native = (event.currentTarget as HTMLElement).closest('dialog')!;
+          (native.parentElement!.querySelector('lr-tool-select-dialog') as LyraToolSelectDialog).show();
+        }}>Open tool dialog</button>
+        <button @click=${(event: Event) => (event.currentTarget as HTMLElement).closest('dialog')!.close()}>Close native dialog</button>
+      </dialog>
+      <lr-tool-select-dialog label="Available tools">
+        <button slot="footer" @click=${(event: Event) => {
+          ((event.currentTarget as HTMLElement).parentElement as LyraToolSelectDialog).close();
+        }}>Done</button>
+      </lr-tool-select-dialog>
+    </div>
+  `,
+};

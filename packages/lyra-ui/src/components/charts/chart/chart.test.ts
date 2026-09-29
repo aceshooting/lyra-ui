@@ -2556,6 +2556,40 @@ it('renders the reset-zoom-button part and emits `lr-zoom` once `onZoomComplete`
   expect((el.shadowRoot!.querySelector('[part="reset-zoom-button"]')) == null).to.be.true;
 });
 
+it('keeps the user-set zoom range across data and locale updates while zoomed', async () => {
+  const el = (await fixture(html`<lr-chart zoomable></lr-chart>`)) as LyraChart;
+  el.type = 'line';
+  el.labels = ['A', 'B', 'C', 'D', 'E', 'F'];
+  el.datasets = [{ label: 'x', data: [1, 2, 3, 4, 5, 6] }];
+  await el.updateComplete;
+  await waitUntil(
+    () => typeof (el as any).chart?.zoomScale === 'function',
+    'zoom plugin never attached',
+    { timeout: 4000 }
+  );
+  const chart = (el as any).chart;
+  chart.zoomScale('x', { min: 1, max: 3 }, 'none');
+  (el as any).buildConfig().options.plugins.zoom.zoom.onZoomComplete();
+  await el.updateComplete;
+
+  el.datasets = [{ label: 'x', data: [6, 5, 4, 3, 2, 1] }];
+  await el.updateComplete;
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  const scale = (el as any).chart.scales.x;
+  expect([scale.min, scale.max]).to.deep.equal([1, 3]);
+  expect(el.shadowRoot!.querySelector('[part="reset-zoom-button"]')).to.exist;
+
+  el.setAttribute('locale', 'en-US');
+  await el.updateComplete;
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  const localizedScale = (el as any).chart.scales.x;
+  expect([localizedScale.min, localizedScale.max]).to.deep.equal([1, 3]);
+  el.resetZoom();
+  await el.updateComplete;
+  expect([(el as any).chart.scales.x.min, (el as any).chart.scales.x.max]).to.deep.equal([0, 5]);
+});
+
 it('resets the zoomed flag (and hides the reset-zoom-button) when a type change rebuilds the Chart.js instance while zoomed', async () => {
   const el = (await fixture(html`<lr-chart zoomable></lr-chart>`)) as LyraChart;
   el.type = 'line';

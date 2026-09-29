@@ -386,3 +386,32 @@ it('uses break-word, not anywhere, on an after-placement label', async () => {
   const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
   expect(getComputedStyle(label).overflowWrap).to.equal('break-word');
 });
+
+
+it('refreshes its visible label when a slotted child renders into its shadow root', async () => {
+  const el = (await fixture(html`<lr-spinner label-placement="after"></lr-spinner>`)) as LyraSpinner;
+  const child = document.createElement('span');
+  const root = child.attachShadow({ mode: 'open' });
+  root.innerHTML = '<span>Waiting for details</span>';
+  el.append(child);
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+  await waitUntil(() => base.getAttribute('aria-label') === 'Waiting for details');
+  root.innerHTML = '<span>Loading records</span>';
+  await waitUntil(() => base.getAttribute('aria-label') === 'Loading records');
+});
+
+it('refreshes its visible label when a custom child is defined later', async () => {
+  const el = (await fixture(html`<lr-spinner label-placement="after"></lr-spinner>`)) as LyraSpinner;
+  const name = `test-spinner-lazy-label-${crypto.randomUUID()}`;
+  el.append(document.createElement(name));
+  await el.updateComplete;
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  customElements.define(name, class extends HTMLElement {
+    constructor() {
+      super();
+      this.attachShadow({ mode: 'open' }).innerHTML = '<span>Loading records</span>';
+    }
+  });
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+  await waitUntil(() => base.getAttribute('aria-label') === 'Loading records');
+});

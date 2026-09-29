@@ -39,9 +39,14 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     white-space: nowrap;
   }
-  [part="tick"][data-edge="end"] [part="tick-label"] {
+  [part="tick"][data-edge="end"] [part="tick-label"],
+  [part="tick"][data-fit="end"] [part="tick-label"] {
     inset-inline-start: auto;
     inset-inline-end: var(--lr-space-xs);
+  }
+
+  [part="tick-label"][data-collapsed] {
+    visibility: hidden;
   }
 
   [part="row"] {

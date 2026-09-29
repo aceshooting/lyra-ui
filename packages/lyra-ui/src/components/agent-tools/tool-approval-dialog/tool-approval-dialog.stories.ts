@@ -240,3 +240,28 @@ export const RetintedInvalidEditorBorder: Story = {
     `;
   },
 };
+
+
+/** The tool dialog is a sibling of the native modal and retains its authored slot ownership. */
+export const AboveNativeModal: Story = {
+  render: () => html`
+    <div>
+      <button @click=${(event: Event) => {
+        (event.currentTarget as HTMLElement).parentElement!.querySelector('dialog')!.showModal();
+      }}>Open native dialog</button>
+      <dialog>
+        <p>A native modal can open this tool dialog while remaining underneath it.</p>
+        <button @click=${(event: Event) => {
+          const native = (event.currentTarget as HTMLElement).closest('dialog')!;
+          (native.parentElement!.querySelector('lr-tool-approval-dialog') as LyraToolApprovalDialog).show();
+        }}>Open tool dialog</button>
+        <button @click=${(event: Event) => (event.currentTarget as HTMLElement).closest('dialog')!.close()}>Close native dialog</button>
+      </dialog>
+      <lr-tool-approval-dialog tool-name="read_document">
+        <button slot="footer" @click=${(event: Event) => {
+          ((event.currentTarget as HTMLElement).parentElement as LyraToolApprovalDialog).close();
+        }}>Done</button>
+      </lr-tool-approval-dialog>
+    </div>
+  `,
+};

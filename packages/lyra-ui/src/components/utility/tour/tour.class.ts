@@ -1,9 +1,12 @@
+import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
+import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
 import { html, nothing, type ComplexAttributeConverter, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import type { Placement } from '@floating-ui/dom';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { DeferredFocusReturn } from '../../../internal/deferred-focus-return.js';
 import {
   activateOverlay,
   collectFocusableElements,
@@ -22,6 +25,7 @@ import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteInteger, finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { isHtmlElement } from '../../../internal/dom-guards.js';
+import { needsTopLayerEscape, promoteToTopLayer, releaseTopLayer } from '../../../internal/top-layer-escape.js';
 import { styles } from './tour.styles.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -307,6 +311,11 @@ function snapshotTourSteps(value: unknown): readonly Readonly<LyraTourStep>[] {
  * the live target underneath. The panel also becomes nonmodal and an explicit Tab route connects
  * its controls with the live target.
  *
+ * For default modal steps opened outside an existing native dialog, the modal surface uses an internal
+ * native dialog so pointer, keyboard, and focus interaction remain available without moving
+ * the host. Escape and close requests retain their normal cancelable lifecycle.
+ * Interactive-target steps remain nonmodal; place those tours and their targets inside the active
+ * native dialog. An outside tour host remains platform-inert in these steps, including Next/Skip.
  * **Focus management.** Default steps exclusively own interaction: the shared overlay manager
  * marks outside content inert, traps Tab, and the panel reports `aria-modal="true"`.
  * `interactiveTarget` steps instead use a nonmodal overlay, report `aria-modal="false"`, and
@@ -323,6 +332,9 @@ function snapshotTourSteps(value: unknown): readonly Readonly<LyraTourStep>[] {
  * earlier step's side effect (opening a menu, navigating a route) has run, so free jumping is
  * unsafe by default. `goToStep()` remains available for a host that knows what it's doing (e.g.
  * a "restart tour" affordance elsewhere).
+ *
+ * When the tour ends, focus returns to the element that held it when the tour started, including
+ * one the host re-shows only after the tour ends.
  *
  * @customElement lr-tour
  * @slot - Rich content overriding the currently active step's plain-text `content` for that step
@@ -391,7 +403,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, nativeModalCarrierStyles, styles];
   static override properties = {
     steps: { attribute: false, noAccessor: true },
   };
@@ -461,6 +473,13 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   private spotlightPositioned = false;
 
   private overlay?: OverlayHandle;
+  private readonly nativeModal = new NativeModalCarrier(this, {
+    onCancel: () => { if (this.overlay?.isTopmost()) this.end('escape'); },
+    onUnexpectedClose: () => {
+      this.end('escape');
+      if (this.open) this.nativeModal.show();
+    },
+  });
   private placeCleanup?: DeferredOperationHandle;
   private spotlightCleanup?: () => void;
   private interactiveKeyboardTarget?: HTMLElement;
@@ -468,6 +487,11 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   private overlayInteractive?: boolean;
   private activeTargetSnapshot: HTMLElement | null = null;
   private focusReturnTarget: HTMLElement | null = null;
+  private readonly deferredFocusReturn = new DeferredFocusReturn();
+  private escapedInset?: {
+    previous: { property: string; value: string; priority: string }[];
+    written: string;
+  };
 
   private readonly maskId = nextId('tour-mask');
   private readonly headingId = nextId('tour-heading');
@@ -489,12 +513,18 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     if (!this.hasUpdated) {
       this.hasSlotContent = hasRealContent(this.childNodes);
     }
+    if (this.open && (changed.has('open') || changed.has('activeIndex') || changed.has('steps'))) {
+      const interactive = !!this.steps[this.activeIndex]?.interactiveTarget;
+      if (interactive) this.nativeModal.hide();
+      this.nativeModal.prepare(!interactive);
+    }
     const cannotOpen = this.open && this.steps.length === 0;
     if (cannotOpen) {
       this.open = false;
       this.deactivateOverlayInternal();
     } else if (changed.has('open')) {
       if (this.open) {
+        this.deferredFocusReturn.cancel();
         const active = deepActiveElement(this.ownerDocument);
         this.focusReturnTarget = isHtmlElement(active) ? active : null;
         this.activateOverlayInternal();
@@ -533,6 +563,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     if (this.open && (activationChanged || geometryChanged)) {
       const preserveInteractiveTargetFocus = changed.has('steps') && this.canPreserveInteractiveTargetFocus();
       const overlayChanged = this.activateOverlayInternal();
+      this.nativeModal.show();
       const shouldFocus =
         changed.has('open') ||
         changed.has('activeIndex') ||
@@ -568,6 +599,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
         this.unanchored = step ? !this.activeTargetSnapshot : false;
         await this.updateComplete;
         if (!this.isConnected || !this.open) return;
+        this.nativeModal.show();
         const placement = this.activateStep({ scroll: true, announceMissing: true });
         this.focusAfterPlacement(placement);
       });
@@ -577,7 +609,9 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.disposePositioning();
+    this.nativeModal.hide();
     this.overlay?.suspend();
+    this.deferredFocusReturn.cancel();
     if (this.open) {
       // Deferred a microtask so a synchronous reparent (disconnect immediately followed by
       // reconnect) isn't mistaken for a real removal -- mirrors lr-dialog's identical case.
@@ -697,6 +731,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     this.disposePositioning();
     const step = this.steps[this.activeIndex];
     if (!step) return undefined;
+    this.escapeContainingBlock();
     const target = this.activeTargetSnapshot;
 
     if (!target?.isConnected) {
@@ -828,6 +863,35 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     backdrop?.style.removeProperty('clip-path');
   }
 
+  /** The scrim, ring and keyhole are viewport-space `fixed` surfaces: under an ancestor that
+   *  contains fixed descendants the host is promoted to the top layer, before the step popover so
+   *  it stays above the scrim, and released again when the tour ends. */
+  private escapeContainingBlock(): void {
+    if (!needsTopLayerEscape(this) || !promoteToTopLayer(this)) return;
+    if (!this.escapedInset) {
+      const previous = ['top', 'right', 'bottom', 'left'].map((property) => ({
+        property,
+        value: this.style.getPropertyValue(property),
+        priority: this.style.getPropertyPriority(property),
+      }));
+      this.style.setProperty('inset', '0');
+      this.escapedInset = { previous, written: this.style.getPropertyValue('top') };
+    }
+  }
+
+  private releaseContainingBlockEscape(): void {
+    releaseTopLayer(this);
+    const inset = this.escapedInset;
+    this.escapedInset = undefined;
+    if (!inset) return;
+    for (const { property, value, priority } of inset.previous) {
+      if (this.style.getPropertyValue(property) !== inset.written ||
+        this.style.getPropertyPriority(property) !== '') continue;
+      this.style.removeProperty(property);
+      if (value) this.style.setProperty(property, value, priority);
+    }
+  }
+
   private disposePositioning(): void {
     this.placeCleanup?.();
     this.placeCleanup = undefined;
@@ -871,11 +935,24 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
 
   private deactivateOverlayInternal(): void {
     this.disposePositioning();
+    this.releaseContainingBlockEscape();
     this.activeTargetSnapshot = null;
+    const hadOverlay = this.overlay !== undefined;
+    this.nativeModal.hide();
     this.overlay?.deactivate();
     this.overlay = undefined;
     this.overlayInteractive = undefined;
+    // The synchronous return above keeps the established timing whenever the trigger can already
+    // take focus; this covers a trigger the host only re-shows afterward.
+    const trigger = this.focusReturnTarget;
     this.focusReturnTarget = null;
+    if (hadOverlay && trigger && this.isConnected) {
+      this.deferredFocusReturn.schedule({
+        host: this,
+        candidates: () => [trigger.isConnected && trigger.ownerDocument === this.ownerDocument ? trigger : null],
+        isCurrent: () => !this.open,
+      });
+    }
   }
 
   private onBackdropClick = (): void => {
@@ -994,7 +1071,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
       .filter((id) => id.length > 0)
       .join(' ');
 
-    return html`
+    return this.nativeModal.render(html`
       <svg part="backdrop" aria-hidden="true" @click=${this.onBackdropClick}>
         ${this.unanchored
           ? html`<rect class="scrim" x="0" y="0" width="100%" height="100%"></rect>`
@@ -1018,12 +1095,12 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
         html`
           <div
             part="popover"
-            role="dialog"
-            aria-modal=${step.interactiveTarget ? 'false' : 'true'}
+            role=${this.nativeModal.requested ? nothing : 'dialog'}
+            aria-modal=${this.nativeModal.requested ? nothing : step.interactiveTarget ? 'false' : 'true'}
             tabindex="-1"
-            aria-label=${useHeading ? nothing : panelName}
-            aria-labelledby=${useHeading ? this.headingId : nothing}
-            aria-describedby=${describedBy || nothing}
+            aria-label=${this.nativeModal.requested || useHeading ? nothing : panelName}
+            aria-labelledby=${!this.nativeModal.requested && useHeading ? this.headingId : nothing}
+            aria-describedby=${this.nativeModal.requested ? nothing : describedBy || nothing}
             ?data-unanchored=${this.unanchored}
             @keydown=${this.onPopoverKeyDown}
           >
@@ -1071,10 +1148,11 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
                 ${this.localize(isLastStep ? 'tourDone' : 'next')}
               </button>
             </div>
+            ${this.nativeModal.renderHelperSlot()}
           </div>
         `,
       )}
-    `;
+    `, { label: useHeading ? null : panelName, labelledBy: useHeading ? this.headingId : null, describedBy });
   }
 }
 

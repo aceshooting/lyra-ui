@@ -18,9 +18,40 @@
 
   The Swiss German catalog now reuses German messages where their resolved content is identical and retains Swiss-specific wording overrides. Locale loading and resolution behavior are unchanged.
 
+  Unsized details panels now follow their content without expanding to include siblings in auto-sized grid rows. Long content still scrolls within a definite containing block. Short content no longer automatically fills an ordinary bounded block parent; set `block-size: 100%` on the component when that fill is wanted, or give it a grid or flex allocation.
+
+  Unsized `lr-textarea`, `lr-code-block`, `lr-code-block-core`, and `lr-code-editor` now follow their content instead of filling a definite-height ancestor automatically. Set `block-size: 100%` on the component where full-height filling is intended. Auto-growing textareas keep overflowing content scrollable when an explicit allocation is smaller than their content or shrinks later.
+
+  Cancelled agent-run steps now appear as neutral incomplete steps in the default task list, with a polite incomplete announcement instead of an error indication and a failed-step announcement.
+
+### Minor Changes
+
+- Poll status adds an optional `with-refresh` action and a built-in `refresh` icon. Manual refresh emits `lr-poll-due` with `{ manual: true }` and restarts the configured delay; paused polling stays paused. Automatic polling keeps its existing event payload.
+- Tooltip, select, combobox, locale-picker, navigation-menu and app-rail-item add an opt-in `top-layer` mode for popups that must appear above sibling stacking contexts. App-rail forwards this choice to its item tooltips, and navigation-menu forwards it to its item panels.
+- Random-content adds an optional `with-next` action, the `next-button` part, and a public `restart()` method. The localized “Show another” action advances the content and restarts active autoplay without bypassing pause, focus, or reduced-motion preferences.
+- Trace spans, task-list steps and research-progress steps support an `incomplete` status for work stopped without success or failure. Research-progress preserves steps with unknown statuses as pending.
+- Knowledge-graph-explorer exposes `fit()`, `resetView()` and `focusNode()` so consumers can frame its graph without reaching into its shadow root.
+
 ### Patch Changes
 
+- Modal dialogs and related modal surfaces remain interactive when opened above a native `dialog.showModal()`, preserving close vetoes, Escape handling and focus return. Toast helpers and announcements follow the active modal context, including components without a default slot.
+- Tool approval, result and selection dialogs apply the host's `aria-label` to the element that owns the dialog role, ahead of their generated heading labels.
 - Virtual lists remeasure rendered rows after their key callback or indexed source changes, and group markers after their labels change, even when their DOM boxes keep the same size. This prevents estimated heights from replacing measured heights and overlapping rows or group headers.
 - Navigation-menu indicators stay aligned with the open trigger when a sibling item resizes, in both left-to-right and right-to-left layouts.
+- Popup positioning resolves containing blocks across shadow roots and ignores ineffective transform and containment declarations on inline ancestors. Dropdowns and checkbox filter menus inside dialogs stay anchored to their triggers without introducing horizontal dialog scrolling, including right-to-left layouts.
+- Model and voice picker listboxes honor the inherited `--lr-positioning-strategy` override, while retaining fixed positioning when no recognized override is set.
+- Migration diagnostics recognize browser-supported HTML comment endings, keeping following markup and migration review acknowledgements visible to the scanner.
+- Map legends reserve a stable scrollbar gutter to prevent transparent compositor artifacts over the canvas. Icon legend entries omit the color-swatch border in normal and forced-colors modes while retaining their glyph cue.
+- Details headers hide empty action wrappers from layout, allowing the summary to span the full header. Populated actions keep their responsive layout.
+- Agent-workspace headers omit empty action wrappers so narrow layouts do not reserve a blank row.
+- Tours align the scrim, spotlight and interactive target opening under transformed or contained ancestors, and preserve caller-owned inline positioning when the tour closes.
+- Tours, command palettes, lightboxes and tool approval, result and selection dialogs return focus when an opener becomes visible after close. Chat-message preserves focus when a failure action clears its state inside a consumer shadow root.
+- Callout, empty-state and toast announcements observe text rendered later inside slotted custom elements, including elements defined after insertion. Spinner, chip, tag, card, widget and progress labels also follow changes inside slotted shadow roots.
+- Carousel autoplay stays paused while a slide's dropdown or other tracked overlay is open, including when focus moves into its top-layer popup.
+- Charts preserve a user's zoom across data and locale updates. GeoJSON viewers frame data through the map's size-aware, padded, antimeridian-safe `fitBounds()` API.
+- Calendar heatmap month labels and span-waterfall axis labels avoid overlap and clipping, including right-to-left layouts.
+- Menu-item details and suffix hints, and command-palette shortcuts, retain their space beside overflowing labels or descriptions.
+- Icon-only toggles preserve glyph glows when accompanying text is visually hidden, including when visibility changes after mounting. Buttons and toggles share icon-only content detection.
+- Slider readouts, thumb tooltips and range endpoints, and stat values and breakdown values, preserve formatted numeric reading order in right-to-left layouts.
 
 Older major versions: [release history archive](https://github.com/aceshooting/lyra-ui/tree/main/docs/changelog).

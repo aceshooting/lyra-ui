@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: '更新しています。',
   randomContentPause: '切り替えを一時停止',
   randomContentResume: '切り替えを再開',
+  randomContentNext: '別の項目を表示',
   exportButtonLabel: 'エクスポート',
   knownDateDay: '日',
   knownDateMonth: '月',

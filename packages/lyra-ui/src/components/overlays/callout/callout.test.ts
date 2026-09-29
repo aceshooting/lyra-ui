@@ -1,3 +1,4 @@
+import { LitElement } from 'lit';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
@@ -1392,3 +1393,88 @@ describe('renamed callout members', () => {
 });
 
 expectDeprecatedUsage('lr-callout', 'property', 'accessibleLabel');
+
+describe('late-rendering child announcements', () => {
+  it('announces a newly appended custom element once its shadow content renders', async () => {
+    const tagName = 'lr-callout-late-render-test';
+    if (!customElements.get(tagName)) {
+      customElements.define(
+        tagName,
+        class extends HTMLElement {
+          private readonly root = this.attachShadow({ mode: 'open' });
+          connectedCallback(): void {
+            setTimeout(() => {
+              this.root.innerHTML = '<span>Late rendered detail</span>';
+            }, 20);
+          }
+        },
+      );
+    }
+    const el = document.createElement('lr-callout') as LyraCallout;
+    el.append('Saved');
+    document.body.append(el);
+    await settleLiveRegion(el);
+    const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)!;
+
+    el.replaceChildren('Saved ', document.createElement(tagName));
+    await waitUntil(() => sink.lastElementChild?.textContent === 'Saved Late rendered detail');
+    el.remove();
+  });
+
+  it('announces an initially slotted custom element whose shadow content renders after arming', async () => {
+    const tagName = 'lr-callout-initial-late-test';
+    if (!customElements.get(tagName)) {
+      customElements.define(
+        tagName,
+        class extends HTMLElement {
+          private readonly root = this.attachShadow({ mode: 'open' });
+          connectedCallback(): void {
+            setTimeout(() => {
+              this.root.innerHTML = '<span>Late rendered detail</span>';
+            }, 300);
+          }
+        },
+      );
+    }
+    const el = document.createElement('lr-callout') as LyraCallout;
+    el.append('Saved ', document.createElement(tagName));
+    document.body.append(el);
+    await settleLiveRegion(el);
+    const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)!;
+    await waitUntil(() => sink.lastElementChild?.textContent === 'Saved Late rendered detail');
+    el.remove();
+  });
+});
+
+
+describe('lazy custom-element announcement content', () => {
+  it('observes a Lit child defined after arming and its subsequent delayed render', async () => {
+    const tagName = `test-callout-lazy-lit-child-${crypto.randomUUID()}`;
+    let release!: () => void;
+    const renderReady = new Promise<void>((resolve) => { release = resolve; });
+    const el = document.createElement('lr-callout') as LyraCallout;
+    const child = document.createElement(tagName);
+    el.append('Saved ');
+    el.append(child);
+    document.body.append(el);
+    try {
+      await settleLiveRegion(el);
+      customElements.define(tagName, class extends LitElement {
+        protected override async scheduleUpdate(): Promise<void> {
+          await renderReady;
+          await super.scheduleUpdate();
+        }
+        protected override render() { return html`<span>Lazy rendered detail</span>`; }
+      });
+      await customElements.whenDefined(tagName);
+      release();
+      const sink = document.querySelector<HTMLElement>(
+        `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+      )!;
+      await waitUntil(() => sink.lastElementChild?.textContent === 'Saved Lazy rendered detail');
+    } finally {
+      release();
+      el.remove();
+    }
+  });
+});

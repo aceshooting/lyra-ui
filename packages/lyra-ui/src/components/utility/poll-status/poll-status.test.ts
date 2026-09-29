@@ -29,7 +29,7 @@ describe('lr-poll-status', () => {
     const wrapper = await fixture(html`<div><lr-poll-status next-in-ms="100"></lr-poll-status></div>`);
     const el = wrapper.querySelector('lr-poll-status') as LyraPollStatus;
     expect(el.withRefresh).to.be.false;
-    expect(el.shadowRoot!.querySelector('[part="refresh-button"]')).to.equal(null);
+    expect(el.shadowRoot!.querySelector('[part="refresh-button"]') === null).to.be.true;
     expect(el.shadowRoot!.querySelectorAll('button')).to.have.length(1);
 
     const due = await oneEvent(wrapper, 'lr-poll-due');

@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from "@open-wc/testing";
+import { fixture, expect, html, oneEvent, waitUntil, nextFrame } from "@open-wc/testing";
 import type { PropertyValues } from "lit";
 import "./textarea.js";
 import type { LyraTextarea } from "./textarea.js";
@@ -2166,7 +2166,7 @@ it("mirrors the lowercase IDL aliases of the native input hints", async () => {
 it("fills a bounded parent through the form-control, textarea-wrapper, and textarea chain", async () => {
   const wrapper = await fixture<HTMLDivElement>(html`
     <div style="block-size: 320px; inline-size: 320px">
-      <lr-textarea label="Notes" hint="Keep it brief"></lr-textarea>
+      <lr-textarea style="block-size: 100%" label="Notes" hint="Keep it brief"></lr-textarea>
     </div>
   `);
   const el = wrapper.querySelector("lr-textarea") as LyraTextarea;
@@ -2204,9 +2204,7 @@ it("fills a bounded parent through the form-control, textarea-wrapper, and texta
 });
 
 it("leaves an ordinary auto-height host content-sized, so the fill chain is a no-op by default", async () => {
-  // Explicit no-regression guard for the unconditional block-size: 100% chain: a percentage
-  // block size against an auto-height ancestor must resolve to auto, leaving the default
-  // rows-sized field exactly as it was.
+  // The internal percentage chain must leave an unsized host at its natural rows-sized height.
   const el = await fixture<LyraTextarea>(html`<lr-textarea></lr-textarea>`);
   await el.updateComplete;
   const textarea = el.shadowRoot!.querySelector<HTMLTextAreaElement>(
@@ -2229,7 +2227,7 @@ it('keeps resize="auto" growing and capping correctly inside a definite-height h
       <lr-textarea
         resize="auto"
         rows="1"
-        style="--lr-textarea-max-block-size: 8rem"
+        style="block-size: 100%; --lr-textarea-max-block-size: 8rem"
       ></lr-textarea>
     </div>
   `);
@@ -2257,4 +2255,177 @@ it('keeps resize="auto" growing and capping correctly inside a definite-height h
     "still respects --lr-textarea-max-block-size, not the host's own 400px"
   ).to.be.at.most(max + 0.5);
   expect(getComputedStyle(ta).overflowY).to.equal("auto");
+});
+
+describe('unsized host in a stretched grid row', () => {
+  for (const width of [320, 400]) {
+    it(`stays content-sized beside siblings at ${width}px while an explicit host size fills`, async () => {
+      const wrapper = await fixture<HTMLElement>(html`
+        <div style=${`inline-size: ${width}px`}>
+          <div style="display: grid">
+            <div class="row">
+              <div style="block-size: 40px"></div>
+              <lr-textarea class="subject" label="Notes"></lr-textarea>
+              <div style="block-size: 40px"></div>
+            </div>
+          </div>
+          <lr-textarea class="reference" label="Notes"></lr-textarea>
+          <div class="bounded" style="block-size: 480px">
+            <lr-textarea class="filled" style="block-size: 100%" label="Notes"></lr-textarea>
+          </div>
+        </div>
+      `);
+      const subject = wrapper.querySelector<LyraTextarea>('.subject')!;
+      const reference = wrapper.querySelector<LyraTextarea>('.reference')!;
+      const filled = wrapper.querySelector<LyraTextarea>('.filled')!;
+      await Promise.all([subject, reference, filled].map((el) => el.updateComplete));
+      expect(subject.getBoundingClientRect().width, 'same-width reference').to.be.closeTo(
+        reference.getBoundingClientRect().width, 1,
+      );
+      expect(subject.getBoundingClientRect().height, 'unsized host ignores sibling height').to.be.closeTo(
+        reference.getBoundingClientRect().height, 1,
+      );
+      expect(filled.getBoundingClientRect().height, 'explicitly sized host fills').to.be.closeTo(480, 1);
+    });
+  }
+});
+
+describe('resize="auto" under a constraining parent', () => {
+  const tenLines = Array.from({ length: 10 }, (_, index) => `line ${index}`).join('\n');
+  const expectReachable = (el: LyraTextarea) => {
+    const ta = el.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="textarea"]')!;
+    const hostRect = el.getBoundingClientRect();
+    const fieldRect = ta.getBoundingClientRect();
+    expect(hostRect.height, 'host obeys the parent').to.be.at.most(121);
+    expect(fieldRect.top, 'field starts inside host').to.be.at.least(hostRect.top);
+    expect(fieldRect.bottom, 'field ends inside host').to.be.at.most(hostRect.bottom + 1);
+    expect(ta.clientHeight, 'field has a usable viewport').to.be.greaterThan(0);
+    expect(ta.scrollHeight, 'content overflows the shrunk field').to.be.greaterThan(ta.clientHeight);
+    expect(getComputedStyle(ta).overflowY, 'user can scroll').to.equal('auto');
+    ta.scrollTop = ta.scrollHeight;
+    expect(ta.scrollTop, 'scrolls').to.be.greaterThan(0);
+    expect(ta.scrollTop + ta.clientHeight, 'last line is reachable').to.be.closeTo(ta.scrollHeight, 1);
+  };
+
+  for (const cap of ['none', '500px']) {
+    it(`stays user-scrollable in an initially small parent with cap ${cap}`, async () => {
+      const wrapper = await fixture<HTMLDivElement>(html`
+        <div style="block-size: 120px; inline-size: 320px">
+          <lr-textarea
+            resize="auto"
+            label="Notes"
+            hint="More text below"
+            style=${`block-size: 100%; --lr-textarea-max-block-size: ${cap}`}
+            .value=${tenLines}
+          ></lr-textarea>
+        </div>
+      `);
+      const el = wrapper.querySelector('lr-textarea') as LyraTextarea;
+      await el.updateComplete;
+      expectReachable(el);
+    });
+
+    it(`stays user-scrollable after its parent shrinks with cap ${cap}`, async () => {
+      const wrapper = await fixture<HTMLDivElement>(html`
+        <div style="block-size: 600px; inline-size: 320px">
+          <lr-textarea
+            resize="auto"
+            label="Notes"
+            hint="More text below"
+            style=${`block-size: 100%; --lr-textarea-max-block-size: ${cap}`}
+            .value=${tenLines}
+          ></lr-textarea>
+        </div>
+      `);
+      const el = wrapper.querySelector('lr-textarea') as LyraTextarea;
+      await el.updateComplete;
+      const ta = el.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="textarea"]')!;
+      const grownHeight = ta.getBoundingClientRect().height;
+      expect(grownHeight, 'starts grown beyond the later allocation').to.be.greaterThan(120);
+      wrapper.style.blockSize = '120px';
+      await waitUntil(() => el.getBoundingClientRect().height <= 121, 'host shrinks with parent');
+      expectReachable(el);
+      wrapper.style.blockSize = '600px';
+      await waitUntil(
+        () => Math.abs(ta.getBoundingClientRect().height - grownHeight) <= 1,
+        'field recovers its content height when the parent grows again',
+      );
+    });
+  }
+});
+
+it('preserves native manual resizing of an unsized textarea inside its flex wrapper', async function () {
+  // Some browser ports expose resize: both but provide no draggable native grip. Probe a plain
+  // native control before gating only the gesture; inline-resize geometry is covered separately.
+  const native = await fixture<HTMLTextAreaElement>(html`
+    <textarea style="width: 240px; height: 120px; resize: both; overflow: auto"></textarea>
+  `);
+  const nativeBefore = native.getBoundingClientRect();
+  let supportsNativeGrip = false;
+  try {
+    await sendMouse({ type: 'move', position: [nativeBefore.right - 3, nativeBefore.bottom - 3] });
+    await sendMouse({ type: 'down' });
+    await sendMouse({ type: 'move', position: [nativeBefore.right + 37, nativeBefore.bottom + 57] });
+    await sendMouse({ type: 'up' });
+    await nextFrame();
+    await nextFrame();
+    supportsNativeGrip = native.getBoundingClientRect().height > nativeBefore.height + 30;
+  } finally {
+    await resetMouse();
+    native.remove();
+  }
+  if (!supportsNativeGrip) this.skip();
+
+  const el = await fixture<LyraTextarea>(html`
+    <lr-textarea label="Notes" hint="Resizable" resize="both" style="inline-size: 240px"></lr-textarea>
+  `);
+  const ta = el.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="textarea"]')!;
+  el.scrollIntoView({ block: 'center' });
+  const before = ta.getBoundingClientRect();
+  const hint = el.shadowRoot!.querySelector<HTMLElement>('[part~="hint"]')!;
+  const hintTop = hint.getBoundingClientRect().top;
+  try {
+    await sendMouse({ type: 'move', position: [before.right - 3, before.bottom - 3] });
+    await sendMouse({ type: 'down' });
+    await sendMouse({ type: 'move', position: [before.right + 37, before.bottom + 57] });
+    await sendMouse({ type: 'up' });
+    await waitUntil(
+      () => ta.getBoundingClientRect().height > before.height + 30,
+      'native grip grows height',
+    );
+    expect(ta.getBoundingClientRect().width, 'native grip grows width').to.be.greaterThan(before.width + 20);
+    expect(hint.getBoundingClientRect().top, 'chrome follows resized field').to.be.greaterThan(hintTop + 30);
+    const grown = ta.getBoundingClientRect();
+    await sendMouse({ type: 'move', position: [grown.right - 3, grown.bottom - 3] });
+    await sendMouse({ type: 'down' });
+    await sendMouse({ type: 'move', position: [grown.right - 3, grown.bottom - 43] });
+    await sendMouse({ type: 'up' });
+    await waitUntil(
+      () => ta.getBoundingClientRect().height < grown.height - 20,
+      'native grip shrinks height',
+    );
+  } finally {
+    await resetMouse();
+  }
+});
+
+it('lets native inline resize dimensions drive an unsized field and its chrome', async () => {
+  const el = await fixture<LyraTextarea>(html`
+    <lr-textarea label="Notes" hint="Resizable" resize="both" style="inline-size: 240px"></lr-textarea>
+  `);
+  const ta = el.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="textarea"]')!;
+  const hint = el.shadowRoot!.querySelector<HTMLElement>('[part~="hint"]')!;
+  const before = ta.getBoundingClientRect();
+  const hintTop = hint.getBoundingClientRect().top;
+  expect(getComputedStyle(ta).resize, 'native resize remains enabled').to.equal('both');
+  // Native grips write physical inline dimensions; the internal percentage/flex rules must
+  // continue to honor those dimensions in ports where the grip itself cannot be automated.
+  ta.style.height = `${before.height + 60}px`;
+  ta.style.width = `${before.width + 40}px`;
+  expect(ta.getBoundingClientRect().height, 'resized height').to.be.closeTo(before.height + 60, 1);
+  expect(ta.getBoundingClientRect().width, 'resized width').to.be.closeTo(before.width + 40, 1);
+  expect(hint.getBoundingClientRect().top, 'chrome follows growth').to.be.closeTo(hintTop + 60, 1);
+  ta.style.height = `${before.height + 20}px`;
+  expect(ta.getBoundingClientRect().height, 'resized height shrinks').to.be.closeTo(before.height + 20, 1);
+  expect(hint.getBoundingClientRect().top, 'chrome follows shrink').to.be.closeTo(hintTop + 20, 1);
 });

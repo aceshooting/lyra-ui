@@ -2118,3 +2118,25 @@ it('draws the panel edge in the subtle border tier while the neutral accent keep
   expect(getComputedStyle(surface).borderTopColor).to.equal('rgb(1, 2, 3)');
   expect(getComputedStyle(accent).backgroundColor).to.equal('rgb(7, 8, 9)');
 });
+
+
+it('announces text added by a custom child defined after the toast is shown', async () => {
+  const name = `test-toast-lazy-message-${crypto.randomUUID()}`;
+  const el = document.createElement('lr-toast-item') as LyraToastItem;
+  el.duration = 0;
+  el.append('Saved ', document.createElement(name));
+  const shown = oneEvent(el, 'lr-show');
+  document.body.append(el);
+  try {
+    await shown;
+    customElements.define(name, class extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' }).innerHTML = '<span>your changes</span>';
+      }
+    });
+    await waitUntil(() => announcementTexts('polite').at(-1) === 'Saved your changes');
+  } finally {
+    el.remove();
+  }
+});

@@ -241,3 +241,29 @@ export const LazyCatalogs: Story = {
   render: () => html`<lr-locale-picker label="Language" value="en" without-flags
     .locales=${['en', 'fr', 'de']} .localeLoader=${loadLyraLocale}></lr-locale-picker>`,
 };
+
+export const TopLayer: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A header with its own `z-index` is a stacking context: an overlay inside it paints beneath a sibling surface stacked higher, whatever `z-index` the overlay itself sets. `top-layer` opts the listbox into the browser top layer, above that sibling, without moving any DOM node. Open the unset control on the left to compare with the one on the right.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="block-size: 16rem">
+      <div
+        style="position: relative; z-index: 1000; display: flex; gap: var(--lr-space-l); padding: var(--lr-space-s) var(--lr-space-m); background: var(--lr-color-surface-raised)"
+      >
+        <lr-locale-picker without-flags .locales=${['en', 'fr']}></lr-locale-picker>
+        <lr-locale-picker without-flags top-layer .locales=${['en', 'fr']}></lr-locale-picker>
+      </div>
+      <div
+        style="position: relative; z-index: 1100; block-size: 12rem; padding: var(--lr-space-m); background: var(--lr-color-surface)"
+      >
+        Sibling surface (z-index: 1100)
+      </div>
+    </div>
+  `,
+};

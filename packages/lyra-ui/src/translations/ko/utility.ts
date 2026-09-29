@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: '지금 새로 고침 중입니다.',
   randomContentPause: '회전 일시 중지',
   randomContentResume: '로테이션 재개',
+  randomContentNext: '다른 항목 보기',
   exportButtonLabel: '내보내기',
   knownDateDay: '일',
   knownDateMonth: '월',

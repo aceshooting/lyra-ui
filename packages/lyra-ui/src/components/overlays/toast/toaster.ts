@@ -33,7 +33,8 @@ function registerToastElements(): Promise<void> {
 
 /**
  * Show a toast. Ergonomic convenience over `<lr-toast>.create()` that mounts
- * and reuses a page-level region per placement — the drop-in for `react-hot-toast`.
+ * and reuses a region per placement and active native-modal context — the drop-in for
+ * `react-hot-toast`. Native-modal notifications are discarded when their modal closes.
  *
  * @example toast('Saved');
  * @example toast({ message: 'Deleted', variant: 'danger', action: { label: 'Undo', onClick: undo } });

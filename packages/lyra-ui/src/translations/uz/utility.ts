@@ -41,6 +41,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: 'Hozir yangilanmoqda.',
   randomContentPause: 'Aylanishni toʻxtatish',
   randomContentResume: 'Aylanishni davom ettirish',
+  randomContentNext: 'Boshqasini koʻrsatish',
   exportButtonLabel: 'Eksport qilish',
   knownDateDay: 'Kun',
   knownDateMonth: 'Oy',

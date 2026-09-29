@@ -41,6 +41,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: 'ఇప్పుడు తాజా చేస్తోంది.',
   randomContentPause: 'భ్రమణాన్ని ఆపండి',
   randomContentResume: 'భ్రమణాన్ని మళ్లీ ప్రారంభించండి',
+  randomContentNext: 'మరొకటి చూపించు',
   exportButtonLabel: 'ఎగుమతి చేయండి',
   knownDateDay: 'రోజు',
   knownDateMonth: 'నెల',

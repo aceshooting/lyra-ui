@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: 'Đang làm mới.',
   randomContentPause: 'Tạm dừng luân phiên',
   randomContentResume: 'Tiếp tục luân phiên',
+  randomContentNext: 'Hiện mục khác',
   exportButtonLabel: 'Xuất',
   knownDateDay: 'Ngày',
   knownDateMonth: 'Tháng',

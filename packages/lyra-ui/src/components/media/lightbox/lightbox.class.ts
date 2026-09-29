@@ -1,8 +1,11 @@
+import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
+import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { DeferredFocusReturn, captureFocusReturnOpener } from '../../../internal/deferred-focus-return.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { isAccessibilityVisible, nextId, srOnly } from '../../../internal/a11y.js';
 import { closeIcon, chevronIcon } from '../../../internal/icons.js';
@@ -174,6 +177,12 @@ function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction)
  * click-on-image-to-navigate (the image is already meaningfully interactive -- it focuses the
  * zoomable frame's viewport and drives its native scroll-to-pan); no touch-swipe-to-navigate.
  *
+ * When opened outside an existing native modal dialog, the modal surface uses an internal
+ * native dialog so pointer, keyboard, and focus interaction remain available without moving
+ * the host. Escape and close requests retain their normal cancelable lifecycle.
+ * Closing returns focus to the element that held it when the lightbox opened, including an opener
+ * the host re-shows only after the close.
+ *
  * @customElement lr-lightbox
  * @slot actions - Optional extra toolbar buttons (e.g. download/share/delete), rendered in
  *   `part="toolbar"` between the counter and the close button.
@@ -246,7 +255,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, srOnly, styles];
+  static override styles = [LyraElement.styles, nativeModalCarrierStyles, srOnly, styles];
 
   private _open = false;
 
@@ -340,6 +349,14 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   @query('lr-pan-zoom') private frameEl?: LyraPanZoom;
 
   private overlay?: OverlayHandle;
+  private readonly nativeModal = new NativeModalCarrier(this, {
+    onCancel: () => { if (this.overlay?.isTopmost()) void this.closeFrom('escape', this.renderRoot.querySelector('[part="panel"]') ?? this); },
+    onUnexpectedClose: () => {
+      void this.hide().then(() => { if (this.open) this.nativeModal.show(); });
+    },
+  });
+  private focusReturnOpener: HTMLElement | null = null;
+  private readonly deferredFocusReturn = new DeferredFocusReturn();
   private announcementSink?: AnnouncementSink;
   private announcementBaseline?: {
     index: number;
@@ -524,9 +541,24 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     }
     if (changed.has('open')) {
       if (this.open) {
+        this.deferredFocusReturn.cancel();
+        this.focusReturnOpener = captureFocusReturnOpener(this);
+        this.nativeModal.prepare();
         this.activateOverlay();
       } else {
+        const hadOverlay = this.overlay !== undefined;
         this.deactivateOverlay();
+        // The synchronous return keeps the established timing whenever the opener can already
+        // take focus; this covers an opener the host only re-shows afterward.
+        const opener = this.focusReturnOpener;
+        this.focusReturnOpener = null;
+        if (hadOverlay && opener && this.isConnected) {
+          this.deferredFocusReturn.schedule({
+            host: this,
+            candidates: () => [opener],
+            isCurrent: () => !this.open,
+          });
+        }
       }
     }
   }
@@ -552,6 +584,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     }
     if (this.isConnected) this.captureAnnouncementBaseline();
     if (changed.has('open') && this.open) {
+      this.nativeModal.show();
       this.overlay?.focusInitial();
     }
     // Imperative, not a binding -- see the class doc for why this is required for the reset to
@@ -599,6 +632,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
           this.isConnected &&
           this.open
         ) {
+          this.nativeModal.show();
           this.overlay?.focusInitial();
         }
       });
@@ -612,7 +646,9 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     this.announcementSink = undefined;
     this.announcementBaseline = undefined;
     super.disconnectedCallback();
+    this.nativeModal.hide();
     this.overlay?.suspend();
+    this.deferredFocusReturn.cancel();
     if (this.open) {
       // Deferred one microtask so a synchronous reparent (disconnect immediately followed by
       // reconnect) isn't mistaken for a real removal -- mirrors <lr-dialog>'s identical
@@ -659,6 +695,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   }
 
   private deactivateOverlay(): void {
+    this.nativeModal.hide();
     this.overlay?.deactivate();
     this.overlay = undefined;
   }
@@ -715,14 +752,14 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
         })
         : '';
 
-    return html`
+    return this.nativeModal.render(html`
       <div part="backdrop" @click=${this.onBackdropClick}></div>
       <div
         part="panel"
-        role=${this.open ? 'dialog' : nothing}
-        aria-modal=${this.open ? 'true' : nothing}
-        aria-label=${label}
-        aria-describedby=${hasCaption ? this.captionId : nothing}
+        role=${this.open && !this.nativeModal.requested ? 'dialog' : nothing}
+        aria-modal=${this.open && !this.nativeModal.requested ? 'true' : nothing}
+        aria-label=${this.nativeModal.requested ? nothing : label}
+        aria-describedby=${hasCaption && !this.nativeModal.requested ? this.captionId : nothing}
         tabindex="-1"
         @keydown=${this.onPanelKeyDown}
       >
@@ -780,8 +817,9 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
         <span part="live-region" class="sr-only" aria-hidden="true"
           >${this.liveText}</span
         >
+        ${this.nativeModal.renderHelperSlot()}
       </div>
-    `;
+    `, { label, describedBy: hasCaption ? this.captionId : null });
   }
 }
 

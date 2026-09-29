@@ -64,9 +64,10 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  * any other key, or focus leaving the editor, re-arms Tab indentation.
  * In narrow allocations label/hint/error chrome wraps at the host boundary, while unbroken source
  * remains reachable through the editor's one internal scroll surface instead of widening the page.
- * When a containing block gives the host a definite block size, the host, form-control, editor,
- * and textarea chain fills that allocation; without one, the editor remains content-sized above
- * its active `--lr-code-editor-min-block-size` floor.
+ * When the host is given an explicit block size (for example `block-size: 100%` inside a
+ * definite-height container), the form-control, editor, and textarea chain fills it; an unsized
+ * host stays content-sized above its active `--lr-code-editor-min-block-size` floor, even inside
+ * a stretched grid or flex item.
  * The native textarea receives `required` and explicit stateful `aria-invalid`: visible error
  * chrome wins immediately, while intrinsic/custom invalidity is exposed only after interaction.
  * Form reset restores the default and pristine interaction feedback while required and custom

@@ -6,7 +6,11 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 installFormControlLabelSupport();
-import { deferredPlace as place } from '../../../internal/anchored-overlay-runtime.js';
+import {
+  deferredPlace as place,
+  syncTopLayerRelease,
+  topLayerPlacement,
+} from '../../../internal/anchored-overlay-runtime.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
@@ -349,6 +353,22 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
    *  rows. The composition recipe this component supersedes (`lr-popover` + `lr-flag`) already
    *  pairs a locale switcher with flags by convention, so flags render unless this is set. */
   @property({ type: Boolean, attribute: 'without-flags' }) withoutFlags = false;
+  /**
+   * Shows the open listbox in the browser top layer wherever the native Popover API exists, so it
+   * paints above every page layer whatever the stacking contexts around it. Use it inside a fixed
+   * or sticky header, toolbar or rail with its own `z-index` that a sibling surface stacked higher
+   * would otherwise cover: such an ancestor is only a stacking context, not a containing block, so
+   * the automatic top-layer escape never applies, and no `z-index` on the listbox can lift it out
+   * of that ancestor's context. While set, the listbox is placed with the `fixed` strategy
+   * whatever `--lr-positioning-strategy` resolves to; no DOM node moves, so anchoring, RTL
+   * placement, focus, Escape and the show/hide transition are unchanged. It stays promoted through
+   * its hide transition and leaves the top layer once it settles closed. Stacking contexts are
+   * deliberately not detected automatically. Without native Popover API support the listbox keeps
+   * its ordinary `z-index` stacking. Same contract as `<lr-popover>`'s `top-layer`. Changes apply
+   * live while open.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'top-layer', reflect: true }) topLayer = false;
 
   /** Trigger content. The default flag-label preserves the label, optional flag and chevron.
    * Flag mode centers the flag in a square based on the trigger height, with a 24px minimum,
@@ -410,6 +430,8 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   private listId = nextId('locale-picker-list');
   private controlId = nextId('locale-picker-control');
   private cleanup?: () => void;
+  /** Whether the last placement forced the top layer, so turning `topLayer` off demotes. */
+  private placedTopLayer?: boolean;
   /** Removes the settled-closed option listbox from layout (`[hidden]{display:none}`) so its
    *  stale last-placed box stops contributing to an ancestor's scrollable overflow. Cleared
    *  synchronously in `willUpdate()` before `syncPopup()`/`place()` measures the listbox, so the
@@ -974,10 +996,17 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     this.bindDocumentPointer();
     const anchor = this.renderRoot.querySelector('[part="trigger"]') as HTMLElement | null;
     const listbox = this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null;
-    if (anchor && listbox)
-      this.cleanup = place(anchor, listbox, {
-        strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
-      });
+    if (anchor && listbox) {
+      this.placedTopLayer = syncTopLayerRelease(listbox, this.placedTopLayer, this.topLayer);
+      this.cleanup = place(
+        anchor,
+        listbox,
+        topLayerPlacement(
+          this.topLayer,
+          resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
+        ),
+      );
+    }
   }
 
   /** Waits for the listbox's closing opacity/transform/visibility transition (see
@@ -1003,7 +1032,11 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     this.syncExternalDescription();
     const reposition =
       changed.has('open') ||
-      (this.open && (changed.has('locales') || changed.has('registryTick') || changed.has('locale')));
+      (this.open &&
+        (changed.has('locales') ||
+          changed.has('registryTick') ||
+          changed.has('locale') ||
+          changed.has('topLayer')));
     if (reposition) {
       this.syncPopup();
     }

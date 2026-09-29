@@ -1,3 +1,4 @@
+import { getActiveNativeModal, getNativeModalMountTarget, isInNativeModalContext } from './native-modal-context.js';
 import { tag } from './prefix.js';
 import { finiteDuration } from './numbers.js';
 import { isAccessibilityVisible } from './accessibility-visibility.js';
@@ -165,7 +166,7 @@ export interface AnnouncementSinkOptions {
   messageTtlMs?: number;
 }
 
-/** A ref-counted handle on the shared per-document, per-politeness live region. */
+/** A ref-counted handle on the shared per-interaction-context, per-politeness live region. */
 export interface AnnouncementSink {
   /** The shared light-DOM element carrying `role`/`aria-live`. */
   readonly element: HTMLElement;
@@ -189,7 +190,7 @@ export interface AnnouncementSink {
  * Attribute that identifies a shared announcement sink, valued with its politeness
  * (`data-lr-live-region="polite"`). Stable and documented so a consumer's own DOM diffing,
  * snapshot testing, or `MutationObserver` can recognize (and ignore) library-owned nodes that
- * appear at the end of `<body>`.
+ * appear at the end of `<body>` or within an active native modal.
  */
 export const ANNOUNCEMENT_SINK_ATTRIBUTE = `data-${tag('live-region')}`;
 
@@ -213,6 +214,7 @@ interface PendingAnnouncement {
 }
 
 interface SinkRecord {
+  parent: HTMLElement;
   element: HTMLElement;
   refs: number;
   timerHost: AnnouncerTimerHost;
@@ -221,9 +223,9 @@ interface SinkRecord {
   sweepDeadline?: number;
 }
 
-// Per-document so an element adopted into an iframe announces in the document the user is actually
-// looking at; weakly keyed so a torn-down document is never retained by this module.
-const sinksByDocument = new WeakMap<Document, Map<AnnouncementPoliteness, SinkRecord>>();
+// Per interaction context so a native modal never leaves its live region in the inert background.
+// Weak keys let a removed document or modal be collected after its handles release.
+const sinksByParent = new WeakMap<HTMLElement, Map<AnnouncementPoliteness, SinkRecord>>();
 
 function removePendingAnnouncement(record: SinkRecord, pending: PendingAnnouncement): void {
   record.pending.delete(pending.element);
@@ -269,22 +271,21 @@ function scheduleSinkSweep(record: SinkRecord): void {
   }, Math.max(0, earliest - Date.now()));
 }
 
-function mountSink(doc: Document, record: SinkRecord): void {
-  const parent = doc.body ?? doc.documentElement;
-  if (record.element.parentNode !== parent) parent.appendChild(record.element);
+function mountSink(record: SinkRecord): void {
+  if (record.element.parentNode !== record.parent) record.parent.appendChild(record.element);
 }
 
-function sinkRecord(doc: Document, politeness: AnnouncementPoliteness): SinkRecord {
-  let byPoliteness = sinksByDocument.get(doc);
+function sinkRecord(doc: Document, politeness: AnnouncementPoliteness, parent: HTMLElement): SinkRecord {
+  let byPoliteness = sinksByParent.get(parent);
   if (!byPoliteness) {
     byPoliteness = new Map();
-    sinksByDocument.set(doc, byPoliteness);
+    sinksByParent.set(parent, byPoliteness);
   }
   const existing = byPoliteness.get(politeness);
   if (existing) {
     // Consumer DOM reconciliation can replace `<body>` or remove library-owned marker nodes.
     // Keep the existing object (all held handles reference it) and remount it before reuse.
-    mountSink(doc, existing);
+    mountSink(existing);
     return existing;
   }
 
@@ -307,12 +308,13 @@ function sinkRecord(doc: Document, politeness: AnnouncementPoliteness): SinkReco
       }
     : ambientTimerHost;
   const record: SinkRecord = {
+    parent,
     element,
     refs: 0,
     timerHost,
     pending: new Map(),
   };
-  mountSink(doc, record);
+  mountSink(record);
   byPoliteness.set(politeness, record);
   return record;
 }
@@ -331,8 +333,11 @@ const inertSink = (politeness: AnnouncementPoliteness): AnnouncementSink => ({
  *
  * A live region rendered inside a shadow root is not reliably announced — JAWS with Firefox
  * ignores one entirely — so every announcement this library makes has to land in the host
- * document instead. One region per politeness is shared by every consumer: creating a region and
- * filling it in the same task is also unreliable (assistive tech has to have been observing the
+ * document's light DOM instead. Native modal carriers use their host's slotted light DOM; foreign
+ * native dialogs receive the region within their own content. Each interaction context shares
+ * one region per politeness, and a source outside the active native modal is suppressed.
+ * Creating a region and filling it in the same task is also unreliable (assistive tech has to
+ * have been observing the
  * region before the text arrives), so the region is mounted at acquire time, ahead of any text.
  */
 export function acquireAnnouncementSink(
@@ -343,13 +348,39 @@ export function acquireAnnouncementSink(
   // No document at all (SSR): hand back an inert handle so callers need no environment check.
   if (!doc) return inertSink(politeness);
 
-  const record = sinkRecord(doc, politeness);
+  const mountParent = (): HTMLElement => {
+    const modal = getActiveNativeModal(doc);
+    return modal ? getNativeModalMountTarget(modal) : doc.body ?? doc.documentElement;
+  };
+  let record = sinkRecord(doc, politeness, mountParent());
   record.refs += 1;
   const ownMessages = new Set<HTMLElement>();
   let released = false;
+  let deferredTimer: number | undefined;
+  let deferredMessages: string[] = [];
+
+  const releaseRecord = (): void => {
+    for (const message of [...ownMessages]) {
+      const pending = record.pending.get(message);
+      if (pending) removePendingAnnouncement(record, pending);
+      else ownMessages.delete(message);
+    }
+    scheduleSinkSweep(record);
+    record.refs -= 1;
+    if (record.refs > 0) return;
+    if (record.sweepTimer !== undefined) {
+      record.timerHost.clearTimeout(record.sweepTimer);
+      record.sweepTimer = undefined;
+      record.sweepDeadline = undefined;
+    }
+    record.pending.clear();
+    record.element.remove();
+    const byPoliteness = sinksByParent.get(record.parent);
+    if (byPoliteness?.get(politeness) === record) byPoliteness.delete(politeness);
+  };
 
   const sink: AnnouncementSink = {
-    element: record.element,
+    get element() { return record.element; },
     politeness,
     messageTtlMs: finiteDuration(options.messageTtlMs ?? DEFAULT_MESSAGE_TTL_MS, DEFAULT_MESSAGE_TTL_MS),
     announce(text: string): void {
@@ -360,9 +391,32 @@ export function acquireAnnouncementSink(
       ) {
         return;
       }
+      const modal = getActiveNativeModal(doc);
+      if (modal && options.source && !isInNativeModalContext(options.source, modal)) return;
+      const parent = modal ? getNativeModalMountTarget(modal) : doc.body ?? doc.documentElement;
+      if (record.parent !== parent) {
+        releaseRecord();
+        record = sinkRecord(doc, politeness, parent);
+        record.refs += 1;
+        // Mount the new region before adding text in a later task, so assistive technology can
+        // observe it. Keep this transition queue bounded like ordinary pending additions.
+        deferredMessages = [];
+        if (deferredTimer !== undefined) record.timerHost.clearTimeout(deferredTimer);
+        deferredTimer = record.timerHost.setTimeout(() => {
+          deferredTimer = undefined;
+          const messages = deferredMessages;
+          deferredMessages = [];
+          for (const message of messages) sink.announce(message);
+        }, 0);
+      }
+      if (deferredTimer !== undefined) {
+        deferredMessages.push(text);
+        if (deferredMessages.length > MAX_PENDING_MESSAGES_PER_HANDLE) deferredMessages.shift();
+        return;
+      }
       // A still-held handle must recover if application-level body reconciliation detached the
       // shared marker since acquisition; otherwise every later message would land off-document.
-      mountSink(doc, record);
+      mountSink(record);
       const message = doc.createElement('div');
       message.textContent = text;
       record.element.appendChild(message);
@@ -396,25 +450,10 @@ export function acquireAnnouncementSink(
     release(): void {
       if (released) return;
       released = true;
-      for (const message of [...ownMessages]) {
-        const pending = record.pending.get(message);
-        if (pending) removePendingAnnouncement(record, pending);
-        else ownMessages.delete(message);
-      }
-      scheduleSinkSweep(record);
-      record.refs -= 1;
-      if (record.refs > 0) return;
-      if (record.sweepTimer !== undefined) {
-        record.timerHost.clearTimeout(record.sweepTimer);
-        record.sweepTimer = undefined;
-        record.sweepDeadline = undefined;
-      }
-      record.pending.clear();
-      record.element.remove();
-      const byPoliteness = sinksByDocument.get(doc);
-      // Only retract the entry this handle actually held: a record replaced in the meantime
-      // belongs to a later generation of holders.
-      if (byPoliteness?.get(politeness) === record) byPoliteness.delete(politeness);
+      if (deferredTimer !== undefined) record.timerHost.clearTimeout(deferredTimer);
+      deferredTimer = undefined;
+      deferredMessages = [];
+      releaseRecord();
     },
   };
   return sink;

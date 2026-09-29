@@ -237,6 +237,8 @@ structured points retain their y-value formatting.
   their line; a series's own `fill` overrides it, rendered with a translucent version of its color
 - `zoomable: boolean = false` — wheel/drag/pinch zoom on the `x` axis only (pan disabled, and the
   zoom range is limited to the original data extent); shows the `reset-zoom-button` while zoomed.
+  A data update while zoomed keeps the zoomed range. `resetZoom()` and changes that rebuild the
+  chart instance, such as a chart-type or plugin change, reset it.
 - `height: string = '280px'` — a valid CSS length used only as the component's private fallback.
   A consumer-set `--lr-chart-height` always takes precedence; invalid values remove that fallback
   and likewise leave the public token/default in control.

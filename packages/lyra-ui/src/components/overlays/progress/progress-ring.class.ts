@@ -1,3 +1,4 @@
+import { CustomElementUpgradeObserver } from '../../../internal/custom-element-upgrade-observer.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { bindAccessibleTextObserver } from '../../../internal/accessibility-visibility.js';
@@ -126,6 +127,11 @@ export class LyraProgressRing extends LyraElement {
   // browser can sample it, before a client-only first paint or just after the hydration render.
   private cachedVisibleLabelText = '';
   private labelObserver?: MutationObserver;
+  private readonly labelUpgrades = new CustomElementUpgradeObserver(() => {
+    if (!this.isConnected || !this.labelObserver) return;
+    this.bindLabelObserverTargets();
+    this.recomputeVisibleLabelText();
+  });
   private readonly onLabelSlotChange = (event: Event): void => {
     const target = event.target as Element | null;
     if (target?.nodeType !== 1 || target.localName !== 'slot') return;
@@ -159,6 +165,7 @@ export class LyraProgressRing extends LyraElement {
    *  rebinds every current target. Called on connect and on adoption -- see `adoptedCallback()`. */
   private rebuildLabelObserver(): void {
     this.labelObserver?.disconnect();
+    this.labelUpgrades.disconnect();
     const MutationObserverCtor = (this.ownerDocument as Document | undefined)?.defaultView
       ?.MutationObserver;
     this.labelObserver = MutationObserverCtor
@@ -171,12 +178,13 @@ export class LyraProgressRing extends LyraElement {
   }
 
   private bindLabelObserverTargets(): void {
-    bindAccessibleTextObserver(this.labelObserver, this);
+    bindAccessibleTextObserver(this.labelObserver, this, [], this.labelUpgrades);
   }
 
   override disconnectedCallback(): void {
     this.removeEventListener('slotchange', this.onLabelSlotChange);
     this.labelObserver?.disconnect();
+    this.labelUpgrades.disconnect();
     this.labelObserver = undefined;
     super.disconnectedCallback();
   }

@@ -3,6 +3,7 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './tour.js';
+import { expectFocusReturnsToReshownOpener } from '../../../../test/hidden-opener.js';
 import type { LyraTour, LyraTourStep } from './tour.js';
 import '../../overlays/dialog/dialog.js';
 import type { LyraDialog } from '../../overlays/dialog/dialog.js';
@@ -1898,6 +1899,28 @@ describe('lr-tour', () => {
     expect(document.activeElement === trigger).to.equal(true);
 
     trigger.remove();
+  });
+
+  it('returns focus to a start trigger the host re-shows only after lr-tour-end', async () => {
+    const el = (await fixture(
+      html`<div>
+        <lr-tour .steps=${makeSteps(2)}></lr-tour>
+        ${targetButtons(2)}
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lr-tour') as LyraTour;
+    await expectFocusReturnsToReshownOpener({
+      host: tour,
+      closeEvent: 'lr-tour-end',
+      open: async () => {
+        tour.start();
+        await tour.updateComplete;
+      },
+      close: async () => {
+        tour.end('api');
+        await tour.updateComplete;
+      },
+    });
   });
 
   it('preserves the original focus-return target across modal/interactive step transitions', async () => {

@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: 'Actualizando ahora.',
   randomContentPause: 'Pausar la rotación',
   randomContentResume: 'Reanudar la rotación',
+  randomContentNext: 'Mostrar otro',
   exportButtonLabel: 'Exportar',
   knownDateDay: 'Día',
   knownDateMonth: 'Mes',

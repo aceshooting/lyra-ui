@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: '正在重新整理。',
   randomContentPause: '暫停輪換',
   randomContentResume: '繼續輪換',
+  randomContentNext: '顯示其他項目',
   exportButtonLabel: '匯出',
   knownDateDay: '日',
   knownDateMonth: '月',

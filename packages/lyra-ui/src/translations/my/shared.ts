@@ -56,6 +56,7 @@ const strings: LyraLocaleStrings = {
   statusSuccess: 'အောင်မြင်သည်',
   statusError: 'အမှား',
   statusDenied: 'ငြင်းပယ်ခံရသည်',
+  statusIncomplete: 'မပြီးဆုံးပါ',
   restore: 'ပြန်လည်ရယူရန်',
   navigation: 'လမ်းညွှန်မှု',
   attachmentUntitledFile: 'ခေါင်းစဉ်မရှိသော ဖိုင်',

@@ -28,6 +28,11 @@ also accepted. Live elapsed time and Cancel are available for `running`, `collec
 `waiting-input`, and `waiting-approval`. `queued` is pending rather than actively ticking or
 cancelable. Retry is available for `error` and `cancelled`.
 
+The default `tasks` slot maps each step's `done` to task status `success`, `error` to `error`, and
+`cancelled` to `incomplete`. A cancelled step uses a neutral glyph and the localized Incomplete
+label, and its transition is announced politely. It does not count as completed. The run's own
+status badge still reads Cancelled.
+
 **Properties:**
 
 - `run: AgentRun | null = null` (attribute: false) — **`AgentRun`, imported from

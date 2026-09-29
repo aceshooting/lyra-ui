@@ -58,6 +58,7 @@ const strings: LyraLocaleStrings = {
   statusSuccess: 'Matagumpay',
   statusError: 'Error',
   statusDenied: 'Tinanggihan',
+  statusIncomplete: 'Hindi kumpleto',
   restore: 'Ibalik',
   navigation: 'Pag-navigate',
   attachmentUntitledFile: 'File na walang pamagat',

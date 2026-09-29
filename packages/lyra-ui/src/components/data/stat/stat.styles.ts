@@ -125,6 +125,12 @@ export const styles = css`
     align-items: baseline;
     gap: var(--lr-space-xs);
   }
+  /* The preformatted strings are first-strong bidi runs, so 2.4 MiB/s and -3.2% keep their
+     order under an RTL base direction. */
+  [part='value'],
+  [part='row-value'] {
+    unicode-bidi: plaintext;
+  }
   [part='value'] {
     min-inline-size: 0;
     max-inline-size: 100%;

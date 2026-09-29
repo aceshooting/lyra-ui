@@ -20,6 +20,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteDuration, finiteInteger } from '../../../internal/numbers.js';
 import { DebounceController } from '../../../internal/debounce-controller.js';
 import { composedContains } from '../../../internal/overlay-manager.js';
+import { SlottedOverlayController } from '../../../internal/slotted-overlay-controller.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { tag } from '../../../internal/prefix.js';
@@ -291,6 +292,11 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   private loopClonesDirty = true;
   private pointerInteracting = false;
   private focusInteracting = false;
+  /** Whether a menu or popover opened from slide content is open -- it keeps autoplay paused. */
+  private readonly slideOverlay = new SlottedOverlayController(this, () =>
+    this.renderRoot?.querySelector<HTMLSlotElement>('slot:not([name])')
+  );
+  private slideOverlayWasOpen = false;
   private dragPointerId?: number;
   private dragStartCoordinate = 0;
   private dragStartScroll = 0;
@@ -501,6 +507,10 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     const shouldAnnounceActivePage =
       this.announcementsArmed &&
       (this.manualPending || changed.has('slidesPerPage'));
+    if (this.slideOverlay.open !== this.slideOverlayWasOpen) {
+      this.slideOverlayWasOpen = this.slideOverlay.open;
+      this.restartAutoplay();
+    }
     this.syncSlides();
     if (
       this.loopClonesDirty ||
@@ -1015,6 +1025,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       this.reduceMotion ||
       this.pointerInteracting ||
       this.focusInteracting ||
+      this.slideOverlay.open ||
       this.dragPointerId !== undefined ||
       doc.visibilityState !== 'visible' ||
       count <= this.pageSize(count)

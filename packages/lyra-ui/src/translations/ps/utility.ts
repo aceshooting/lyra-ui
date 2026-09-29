@@ -41,6 +41,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: 'اوس تازه کېږي.',
   randomContentPause: 'تاوول ځنډول',
   randomContentResume: 'تاوول بیا پیلول',
+  randomContentNext: 'بل وښايه',
   exportButtonLabel: 'صادرول',
   knownDateDay: 'ورځ',
   knownDateMonth: 'میاشت',

@@ -1,3 +1,4 @@
+import type { CustomElementUpgradeObserver } from './custom-element-upgrade-observer.js';
 import { composedParentElement } from './active-element.js';
 import { asciiWhitespaceTokens } from './ascii-whitespace.js';
 import { imageMapImageFor } from './dom-guards.js';
@@ -136,7 +137,7 @@ function observeAccessibleTextNode(
     observer.observe(node, { characterData: true });
     return;
   }
-  if (node.nodeType !== 1) return;
+  if (node.nodeType !== 1 && node.nodeType !== 11) return;
   observer.observe(node, {
     attributes: true,
     attributeFilter: [...new Set([...CONTENT_NODE_ATTRIBUTES, ...extraAttributes])],
@@ -161,6 +162,7 @@ export function bindAccessibleTextObserver(
   observer: MutationObserver | undefined,
   host: Element,
   extraAttributes: readonly string[] = [],
+  upgrades?: CustomElementUpgradeObserver,
 ): void {
   if (!observer) return;
   observer.disconnect();
@@ -174,6 +176,18 @@ export function bindAccessibleTextObserver(
     for (const assigned of slot.assignedNodes({ flatten: true })) {
       observeAccessibleTextNode(observer, assigned, extraAttributes);
     }
+  }
+  // Walk only consumer content. Entering the owner's own shadow root would observe its rendered
+  // labels and feed their updates back into the callback that produced them.
+  const result = composedAccessibilityTextResult(host.childNodes, {
+    requireRendered: false,
+    shouldPrune: (element) => {
+      upgrades?.observeElement(element);
+      return false;
+    },
+  });
+  for (const root of result.traversedShadowRoots) {
+    if (root !== host.shadowRoot) observeAccessibleTextNode(observer, root, extraAttributes);
   }
 }
 

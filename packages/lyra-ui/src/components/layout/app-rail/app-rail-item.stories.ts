@@ -232,3 +232,29 @@ export const IconOnlyWithChildren: StoryObj = {
   parameters: { docs: { description: { story: 'Collapse the rail to hide nested disclosure controls and lists. Returning to full restores the previous expanded state.' } } },
   render: () => html`<lr-app-rail label="Workspace" collapsible icon-only-breakpoint="0px"><lr-app-rail-item expanded><span slot="icon">○</span>Account<lr-app-rail-item slot="children">Profile</lr-app-rail-item><lr-app-rail-item slot="children">Security</lr-app-rail-item></lr-app-rail-item></lr-app-rail>`,
 };
+
+export const TopLayer: StoryObj = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A header with its own `z-index` is a stacking context: an overlay inside it paints beneath a sibling surface stacked higher, whatever `z-index` the overlay itself sets. `top-layer` opts the label flyout into the browser top layer, above that sibling, without moving any DOM node. Open the unset control on the left to compare with the one on the right.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="block-size: 16rem">
+      <div
+        style="position: relative; z-index: 1000; display: flex; gap: var(--lr-space-l); padding: var(--lr-space-s) var(--lr-space-m); background: var(--lr-color-surface-raised)"
+      >
+        <lr-app-rail-item icon-only tooltip>Unset</lr-app-rail-item>
+        <lr-app-rail-item icon-only tooltip top-layer>top-layer</lr-app-rail-item>
+      </div>
+      <div
+        style="position: relative; z-index: 1100; block-size: 12rem; padding: var(--lr-space-m); background: var(--lr-color-surface)"
+      >
+        Sibling surface (z-index: 1100)
+      </div>
+    </div>
+  `,
+};

@@ -298,3 +298,17 @@ export const DecorativeTitleAndViewIcons: Story = {
     </lr-widget>
   `,
 };
+
+
+export const FromNativeModal: Story = {
+  parameters: { docs: { description: { story: 'Open the native dialog, then open the layout surface. Its action remains usable, and Escape returns focus to the native opener.' } } },
+  render: () => html`<section>
+    <button @click=${(event: Event) => (event.currentTarget as HTMLElement).parentElement!.querySelector('dialog')!.showModal()}>Open native dialog</button>
+    <dialog><button @click=${(event: Event) => {
+      const panel = (event.currentTarget as HTMLElement).closest('section')!.querySelector('lr-widget')!;
+
+      panel.fullscreen = true;
+    }}>Open tools</button></dialog>
+    <lr-widget expandable label="Tools"><button>Apply</button></lr-widget>
+  </section>`,
+};

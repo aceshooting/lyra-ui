@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: 'กำลังรีเฟรช',
   randomContentPause: 'หยุดการหมุนชั่วคราว',
   randomContentResume: 'ทำการหมุนต่อ',
+  randomContentNext: 'แสดงรายการอื่น',
   exportButtonLabel: 'ส่งออก',
   knownDateDay: 'วัน',
   knownDateMonth: 'เดือน',

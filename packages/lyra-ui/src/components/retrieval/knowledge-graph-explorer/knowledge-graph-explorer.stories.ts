@@ -197,6 +197,34 @@ export const ContainerFit: Story = {
   },
 };
 
+/** `fit()`, `resetView()` and `focusNode()` drive the composed graph camera without touching selection. */
+export const CameraControls: Story = {
+  name: 'Camera methods (fit, resetView, focusNode)',
+  render: () => {
+    const explorer = (event: Event) =>
+      (event.currentTarget as HTMLElement).parentElement!.nextElementSibling as HTMLElement & {
+        fit(): void;
+        resetView(): void;
+        focusNode(id: string): Promise<boolean>;
+      };
+    return html`
+      <div style="display: flex; gap: 0.5rem; margin-block-end: 0.5rem;">
+        <button type="button" @click=${(e: Event) => explorer(e).fit()}>Fit</button>
+        <button type="button" @click=${(e: Event) => explorer(e).resetView()}>Reset view</button>
+        <button type="button" @click=${(e: Event) => void explorer(e).focusNode('polonium')}>
+          Center Polonium
+        </button>
+      </div>
+      <lr-knowledge-graph-explorer
+        .nodes=${nodes}
+        .edges=${links}
+        .nodeTypes=${nodeTypes}
+        style="height: 28rem;"
+      ></lr-knowledge-graph-explorer>
+    `;
+  },
+};
+
 export const NamedByAccessibleLabel: Story = {
   name: 'Machine ids named by accessibleLabel',
   render: () => html`

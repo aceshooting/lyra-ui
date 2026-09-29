@@ -2,6 +2,7 @@ import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import './lightbox.js';
+import { expectFocusReturnsToReshownOpener } from '../../../../test/hidden-opener.js';
 import type { LyraLightbox, LyraLightboxImage } from './lightbox.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -1200,4 +1201,18 @@ it('warns when the legacy close alias vetoes and keeps the canonical veto quiet'
     expect(el.open).to.equal(true);
   });
   expect(canonicalWarnings).to.have.length(0);
+});
+
+it('returns focus to an opener the host re-shows only after lr-close', async () => {
+  const el = (await fixture(html`<lr-lightbox .images=${[image]}></lr-lightbox>`)) as LyraLightbox;
+  await expectFocusReturnsToReshownOpener({
+    host: el,
+    closeEvent: 'lr-close',
+    open: async () => {
+      await el.show();
+    },
+    close: async () => {
+      await el.close('api');
+    },
+  });
 });

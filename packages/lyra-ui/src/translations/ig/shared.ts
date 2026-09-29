@@ -58,6 +58,7 @@ const strings: LyraLocaleStrings = {
   statusSuccess: 'Ihe ịga nke ọma',
   statusError: 'Njehie',
   statusDenied: 'Ajụla',
+  statusIncomplete: 'Emechaghị',
   restore: 'Weghachite',
   navigation: 'Nnyagharị',
   attachmentUntitledFile: 'Faịlụ enweghị aha',

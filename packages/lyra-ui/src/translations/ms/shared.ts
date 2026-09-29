@@ -56,6 +56,7 @@ const strings: LyraLocaleStrings = {
   statusSuccess: 'Berjaya',
   statusError: 'Ralat',
   statusDenied: 'Ditolak',
+  statusIncomplete: 'Tidak lengkap',
   restore: 'Pulihkan',
   navigation: 'Navigasi',
   attachmentUntitledFile: 'Fail tanpa tajuk',

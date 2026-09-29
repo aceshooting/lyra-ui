@@ -1,7 +1,10 @@
-import { fixture, expect, oneEvent, html } from '@open-wc/testing';
+import { sendMouse, resetMouse } from '../../../../test/wtr-mouse.js';
+import { sendKeys } from '@web/test-runner-commands';
+import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
 import './tool-result-dialog.js';
 import type { LyraToolResultDialog } from './tool-result-dialog.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+import { expectFocusReturnsToReshownOpener } from '../../../../test/hidden-opener.js';
 
 // Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
 expectLocaleFallback('de-DE', [
@@ -60,7 +63,7 @@ it('reflects open as an attribute and sets dialog semantics once open', async ()
   expect(panel.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('[part="tool-name"]')!.id);
 });
 
-it('keeps a host aria-label on the host while the dialog panel remains title-labelled', async () => {
+it('forwards a host aria-label to the dialog panel', async () => {
   const el = (await fixture(
     html`<lr-tool-result-dialog
       open
@@ -71,8 +74,8 @@ it('keeps a host aria-label on the host while the dialog panel remains title-lab
   const panel = el.shadowRoot!.querySelector('[part="panel"]')!;
 
   expect(el.getAttribute('aria-label')).to.equal('Python execution details');
-  expect(panel.hasAttribute('aria-label')).to.equal(false);
-  expect(panel.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('[part="tool-name"]')!.id);
+  expect(panel.getAttribute('aria-label')).to.equal('Python execution details');
+  expect(panel.hasAttribute('aria-labelledby')).to.equal(false);
 
   el.setAttribute('aria-label', '');
   await el.updateComplete;
@@ -796,3 +799,109 @@ describe('lr-tool-result-dialog retired lr-maximize-change event', () => {
     expect(el.maximized).to.equal(true);
   });
 });
+
+it('returns focus to an opener the host re-shows only after lr-close', async () => {
+  const el = (await fixture(
+    html`<lr-tool-result-dialog tool-name="run_python"></lr-tool-result-dialog>`,
+  )) as LyraToolResultDialog;
+  await expectFocusReturnsToReshownOpener({
+    host: el,
+    closeEvent: 'lr-close',
+    open: async () => {
+      el.open = true;
+      await el.updateComplete;
+    },
+    close: async () => {
+      el.close('api');
+      await el.updateComplete;
+    },
+  });
+});
+
+
+describe('native modal interoperability', () => {
+  it('keeps the ordinary modal path when no native modal is open', async () => {
+    const el = await fixture<LyraToolResultDialog>(html`<lr-tool-result-dialog open></lr-tool-result-dialog>`);
+    expect(el.shadowRoot!.querySelector('dialog') === null).to.equal(true);
+    expect(el.shadowRoot!.querySelector('[part="panel"]')!.getAttribute('role')).to.equal('dialog');
+  });
+
+  it('accepts pointer input and focus above an existing native modal and Escape leaves its owner open', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`<div>
+      <dialog><button>Open tool dialog</button></dialog>
+      <lr-tool-result-dialog></lr-tool-result-dialog>
+    </div>`);
+    const native = wrapper.querySelector('dialog')!;
+    const el = wrapper.querySelector('lr-tool-result-dialog') as LyraToolResultDialog;
+    try {
+      native.showModal();
+      el.show();
+      await el.updateComplete;
+      expect(document.activeElement === el, 'initial focus enters the body-mounted tool dialog').to.equal(true);
+      expect(el.parentElement === wrapper).to.equal(true);
+      expect(el.shadowRoot!.querySelectorAll('[role="dialog"]').length).to.equal(1);
+      expect(el.shadowRoot!.querySelector('[role="dialog"]')!.hasAttribute('aria-labelledby')).to.equal(true);
+      const target = el.shadowRoot!.querySelector<HTMLElement>('[part="maximize-button"]')!;
+      const rect = target.getBoundingClientRect();
+      await sendMouse({ type: 'click', position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)] });
+      await el.updateComplete;
+      expect(el.maximized).to.equal(true);
+      let closeCount = 0;
+      let reason = '';
+      el.addEventListener('lr-close', event => { closeCount++; reason = event.detail.reason; });
+      await sendKeys({ press: 'Escape' });
+      await waitUntil(() => !el.open);
+      expect(closeCount).to.equal(1);
+      expect(reason).to.equal('escape');
+      expect(native.open).to.equal(true);
+      await waitUntil(() => document.activeElement === native.querySelector('button'));
+      native.close();
+      el.show();
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('dialog') === null, 'a later ordinary open drops the native carrier').to.equal(true);
+    } finally {
+      el.close();
+      await el.updateComplete;
+      native.close();
+      await resetMouse();
+    }
+  });
+});
+
+
+for (const nativeContext of [false, true]) {
+  it(`names the rendered dialog owner with host, property, and heading precedence (${nativeContext ? 'native' : 'ordinary'})`, async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`<div>
+      <dialog><button>Open</button></dialog>
+      <lr-tool-result-dialog aria-label="Authored dialog name"></lr-tool-result-dialog>
+    </div>`);
+    const native = wrapper.querySelector('dialog')!;
+    const el = wrapper.querySelector('lr-tool-result-dialog') as LyraToolResultDialog;
+    try {
+      if (nativeContext) native.showModal();
+      el.accessibleLabel = 'Programmatic dialog name';
+      el.show();
+      await el.updateComplete;
+      const owner = el.shadowRoot!.querySelector('[role="dialog"]')!;
+      expect(owner.getAttribute('aria-label')).to.equal('Authored dialog name');
+      expect(owner.hasAttribute('aria-labelledby')).to.equal(false);
+      el.setAttribute('aria-label', 'Updated host name');
+      await el.updateComplete;
+      expect(owner.getAttribute('aria-label')).to.equal('Updated host name');
+      el.removeAttribute('aria-label');
+      el.accessibleLabel = 'Programmatic dialog name';
+      await el.updateComplete;
+      expect(owner.getAttribute('aria-label')).to.equal('Programmatic dialog name');
+      el.accessibleLabel = '';
+      await el.updateComplete;
+      expect(owner.hasAttribute('aria-label')).to.equal(false);
+      const headingId = owner.getAttribute('aria-labelledby');
+      expect(typeof headingId).to.equal('string');
+      expect(el.shadowRoot!.getElementById(headingId!)!.textContent!.trim().length).to.be.greaterThan(0);
+    } finally {
+      el.close();
+      await el.updateComplete;
+      native.close();
+    }
+  });
+}

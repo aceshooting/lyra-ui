@@ -1,3 +1,4 @@
+import { CustomElementUpgradeObserver } from '../../../internal/custom-element-upgrade-observer.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { bindAccessibleTextObserver } from '../../../internal/accessibility-visibility.js';
@@ -109,6 +110,11 @@ export class LyraProgressBar extends LyraElement {
   @property({ attribute: 'aria-label' }) private hostAriaLabel: string | null = null;
   private cachedVisibleLabelText = '';
   private labelObserver?: MutationObserver;
+  private readonly labelUpgrades = new CustomElementUpgradeObserver(() => {
+    if (!this.isConnected || !this.labelObserver) return;
+    this.bindLabelObserverTargets();
+    this.recomputeVisibleLabelText();
+  });
   private pendingLabelRefresh?: {
     ownerWindow: Window;
     kind: 'frame' | 'timeout';
@@ -149,6 +155,7 @@ export class LyraProgressBar extends LyraElement {
    *  rebinds every current target. Called on connect and on adoption -- see `adoptedCallback()`. */
   private rebuildLabelObserver(): void {
     this.labelObserver?.disconnect();
+    this.labelUpgrades.disconnect();
     const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
     this.labelObserver = MutationObserverCtor
       ? new MutationObserverCtor(() => {
@@ -211,12 +218,13 @@ export class LyraProgressBar extends LyraElement {
   }
 
   private bindLabelObserverTargets(): void {
-    bindAccessibleTextObserver(this.labelObserver, this);
+    bindAccessibleTextObserver(this.labelObserver, this, [], this.labelUpgrades);
   }
 
   override disconnectedCallback(): void {
     this.removeEventListener('slotchange', this.onLabelSlotChange);
     this.labelObserver?.disconnect();
+    this.labelUpgrades.disconnect();
     this.labelObserver = undefined;
     this.cancelCascadeLabelRefresh();
     super.disconnectedCallback();

@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: 'Saiki lagi dimuat maneh.',
   randomContentPause: 'Ngaso rotasi',
   randomContentResume: 'Terusake rotasi',
+  randomContentNext: 'Tampilake liyane',
   exportButtonLabel: 'Ekspor',
   knownDateDay: 'Dina',
   knownDateMonth: 'Sasi',

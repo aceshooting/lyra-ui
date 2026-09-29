@@ -6255,6 +6255,13 @@ An async `source` row can carry the same two fields (`start`, `end`) alongside i
   on-brand color rather than the quiet-text tokens). An unsupported value, including a raw
   attribute/property write outside this type, clamps to the `'outlined'` default
 - `placement: 'top' | 'bottom' = 'bottom'` (reflected; flip/shift can still keep the listbox in view)
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-popover>`:
+  always shows the open listbox in the browser top layer, placed `fixed` whatever the positioning
+  strategy resolves to, so it paints above a sibling surface stacked higher than a `z-index`ed fixed
+  or sticky header, toolbar or rail it sits in (see **Anchored overlays and the top layer** in
+  `llms/overlays.md`). Anchoring, RTL placement, focus, Escape and the transitions are unchanged and
+  no DOM node moves; it leaves the top layer once it settles closed. Unset, promotion happens only
+  when a trapping ancestor forces it.
 - `positioningStrategy: PlaceStrategy = 'fixed'` (attribute `positioning-strategy`, reflected) —
   the CSS positioning scheme the listbox is laid out with, spelled the same as on `lr-select`,
   `lr-popover`, `lr-dropdown`, `lr-tooltip` and `lr-color-picker`. `fixed` is this control's
@@ -6917,6 +6924,13 @@ exactly like the multi-option case, until the trigger is actually activated.
 - `hoist: boolean = false` (reflected) — switches Floating UI from its mapped absolute strategy to
   fixed positioning, escaping clipping containers. It also switches live while open; an effective
   direction change refreshes logical left/right placement by the same path
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-popover>`:
+  always shows the open listbox in the browser top layer, placed `fixed` whatever the positioning
+  strategy resolves to, so it paints above a sibling surface stacked higher than a `z-index`ed fixed
+  or sticky header, toolbar or rail it sits in (see **Anchored overlays and the top layer** in
+  `llms/overlays.md`). Anchoring, RTL placement, focus, Escape and the transitions are unchanged and
+  no DOM node moves; it leaves the top layer once it settles closed. Unset, promotion happens only
+  when a trapping ancestor forces it.
 - `positioningStrategy: PlaceStrategy = 'absolute'` (attribute `positioning-strategy`, reflected) —
   see `<lr-popover>` (`llms/components/lr-popover.md`). `hoist: boolean = false` is its retained
   exact alias; writing either spelling updates the other. This property always reports the
@@ -7970,12 +7984,13 @@ With no label text the part is hidden and no glyph is painted.
   so a halo is configured once instead of per component; additive, so the `:focus-visible` outline
   is untouched.
 
-`<lr-textarea>` now fills a definite-height host: place it inside a container with a resolved
-block size (a flex/grid item stretched to a track, or an ancestor with an explicit height) and
-the field's `form-control` → `textarea-wrapper` → the native `<textarea>` chain fills it instead
-of staying at its `rows`-derived intrinsic height. This has no effect and needs no opt-in for the
-ordinary case (an unsized host) — `resize="auto"`'s own growth and its
-`--lr-textarea-max-block-size` cap are unaffected either way.
+`<lr-textarea>` fills an explicitly sized host: give the host a block size (`block-size: 100%`
+inside a container with a resolved block size, a pixel size, or a flex/grid allocation) and the
+field's `form-control` → `textarea-wrapper` → the native `<textarea>` chain fills it instead of
+staying at its `rows`-derived intrinsic height. An unsized host stays content-sized, including
+inside a grid/flex item stretched to a taller row. With `resize="auto"`, content grows up to the
+`--lr-textarea-max-block-size` cap or a smaller explicit host allocation. Overflow stays scrollable,
+including when that allocation shrinks after the content renders.
 
 **Additional API surface:**
 
@@ -12582,6 +12597,13 @@ readonly LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; cou
   the catalog while the listbox is open keeps keyboard navigation valid: an active row beyond the
   new end is rehomed to the last remaining row. Arrow/Home/End/typeahead changes scroll the active
   owned option into nearest view after render; replacement and disconnect cancel stale scrolls.
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-popover>`:
+  always shows the open listbox in the browser top layer, placed `fixed` whatever the positioning
+  strategy resolves to, so it paints above a sibling surface stacked higher than a `z-index`ed fixed
+  or sticky header, toolbar or rail it sits in (see **Anchored overlays and the top layer** in
+  `llms/overlays.md`). Anchoring, RTL placement, focus, Escape and the transitions are unchanged and
+  no DOM node moves; it leaves the top layer once it settles closed. Unset, promotion happens only
+  when a trapping ancestor forces it.
 - `withoutFlags: boolean = false` (attribute `without-flags`) — omits each row's leading
   `<lr-flag language={tag} variant="compact">` (or `<lr-flag country={country} variant="compact">`
   when the entry sets `country`) and the trigger flag entirely (not just visually).
@@ -15625,6 +15647,9 @@ weekday * (cellSize + CAL_GAP)`), consulted consistently by drawing, hit-testing
   locale-derived output. Lets month labels track the same locale signal (e.g. an app's own i18n
   store) as `weekdayLabelText` and the component's other localizable strings, instead of always
   following the browser/OS-language default.
+  Month labels are measured before painting: overlapping labels yield to the month occupying
+  more week columns, boundary labels shift inside the canvas, and labels wider than the entire
+  calendar are ellipsized. The calendar keeps its physical left-to-right axes under RTL.
 - `colorSteps?: readonly string[]` (attribute: false) — a clone-owned, bounded, frozen discrete array (≥2 entries) of CSS colors used as
   exact ramp steps instead of linearly interpolating between `--lr-heatmap-scale-lo`/`-hi`;
   governs both `mode`s and both `scale` values, discretizing whichever scale would otherwise
@@ -18360,6 +18385,8 @@ also accepted.
 
 ## `lr-multi-split`
 
+The floating pane remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
+
 Resizable panels for dashboard layouts. Direct **light-DOM children are the panels**; a divider is
 auto-inserted between each adjacent pair. Panels participating in persistence carry a unique,
 nonempty, whitespace-stable `panel-id`; this business identity stays independent from the platform
@@ -18840,6 +18867,8 @@ hit region expands independently; use `--divider-width` for the painted line and
 
 ## `lr-widget`
 
+The fullscreen presentation remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
+
 A titled panel shell with an optional collapse toggle and an optional fullscreen-expand toggle.
 First-party invention (no `wa-*`/`sl-*` counterpart). Fullscreen promotes the same host element in
 place (a CSS state, not a clone/portal), so slotted content (a chart, a running simulation, scroll
@@ -19061,7 +19090,8 @@ slide itself; they do not change the active slide or move focus away from it.
 - `autoplay: boolean = false` (attribute `autoplay`, reflected) and
   `autoplayInterval: number = 3000` (attribute `autoplay-interval`) — optional timed advance.
   Autoplay pauses while the page is hidden or the user is hovering, focusing, or dragging the
-  carousel, and remains off under `prefers-reduced-motion: reduce`.
+  carousel or while a dropdown, popover or context menu inside a slide is open, and remains off
+  under `prefers-reduced-motion: reduce`.
 - `navigation: boolean = false` (attribute `navigation`, reflected) — renders previous and next
   buttons
 - `pagination: boolean = false` (attribute `pagination`, reflected) — renders page indicators.
@@ -20635,6 +20665,8 @@ attributes marking library-owned light-DOM nodes are exported as `VIRTUAL_LIST_R
 
 ## `lr-app-rail`
 
+The mobile navigation remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
+
 A responsive navigation rail, and the library's application sidebar, that adapts across three presentations as the _viewport_ narrows (not
 this element's own inline size): `'full'` (nav items show icon + label, inline), `'icon-only'` (a
 narrower inline rail, icons only), and `'mobile'` (hidden behind a toggle button; opening it shows a
@@ -20714,6 +20746,10 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   to a genuinely too-narrow-for-any-inline-rail viewport. Only consulted while `forceMode` is
   `'auto'` or unset (see above); an explicit `forceMode` value takes full priority.
   Unset (the default, `null`) reproduces the original breakpoint-only behavior exactly.
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — forwards `top-layer` to every
+  descendant `<lr-app-rail-item>` (its icon-only label flyout; see **Anchored overlays and the top
+  layer** in `llms/overlays.md`) so one attribute covers the rail. An item's own `top-layer` is
+  never overwritten; either one promotes.
 - `collapsible: boolean = false` (reflected) — opts in a desktop collapse control rendered inside
   `[part="header"]`. It flips the rail between its `'full'` and `'icon-only'` presentations by
   writing `preferredMode`, so the `mobile-breakpoint` keeps being tracked automatically and a
@@ -21156,6 +21192,14 @@ out of default-width compact rails, or use a rail that never collapses.
   has no built-in routing, so the consumer sets this per item (e.g. by comparing `href` against the
   current location). `active`, a deprecated alias in both property and attribute form, was removed
   in 16.0.0 (available since 11.2.0; eligible for removal from 13.0.0) — use `current`.
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-popover>`:
+  always shows the open icon-only label flyout in the browser top layer, placed `fixed` whatever the
+  positioning strategy resolves to, so it paints above a sibling surface stacked higher than a
+  `z-index`ed fixed or sticky header, toolbar or rail it sits in (see **Anchored overlays and the
+  top layer** in `llms/overlays.md`). Anchoring, RTL placement, focus, Escape and the transitions
+  are unchanged and no DOM node moves; it leaves the top layer once it settles closed. Unset,
+  promotion happens only when a trapping ancestor forces it. `<lr-app-rail top-layer>` applies it to
+  every descendant item without overwriting an item's own value.
 - `tooltip: boolean = false` (reflected) — opt-in hover or keyboard-focus flyout (the focused control matches `:focus-visible` and no pointer press preceded it)
   (`[part='tooltip']`) showing
   this item's label text while the rail's `icon-only` mode (set externally by the parent
@@ -21378,6 +21422,8 @@ instead of stretching across the header row (mirroring `<lr-app-rail-item>`'s ow
 ---
 
 ## `lr-responsive-panel`
+
+The overlay presentation remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
 
 The same slotted content either docked inline in its containing layout or presented as a
 full-screen/bottom-sheet/side-anchored overlay, depending on the panel's allocated inline size.
@@ -22316,9 +22362,13 @@ card given only a resting shadow keeps that exact shadow on hover.
 
 ## `lr-command-palette`
 
+A command palette opened outside an existing native `dialog.showModal()` stays interactive through an internal native modal surface. Its host keeps its authored parent; Escape, close vetoes, and focus return retain their normal behavior.
+
 Searchable application command menu. Renders nothing at all while closed. Uses the same shared
 overlay infrastructure as `lr-dialog` (focus-trapping Tab, Escape dismissal, backdrop-click
 dismissal, ref-counted document scroll lock).
+
+Closing returns focus to the element that held it when the palette opened, including an opener the host re-shows only after the close.
 
 Hotkeys share last-connected eligible ownership with `lr-app-rail` in the same window. Removing the
 `hotkey` attribute disables the chord, and key-less browser autofill events are ignored. Non-ASCII
@@ -22619,14 +22669,21 @@ findable `hidden="until-found"` closed-state gate.
 The Details icon wrapper also carries Shoelace's `summary-icon` alias, so either part name styles
 the same node. `header-actions` is the wrapper around the `header-actions` slot.
 
-Open panel content now fills and scrolls inside a bounded host: place `<lr-details>` (or an
-ancestor of it) in a container with a resolved block size and, once open, `[part="content"]`
-fills the remaining space below the summary row and scrolls its own overflow internally instead
-of the panel growing past the host. This has no effect on an ordinary unsized disclosure — the
-chain resolves to `auto` and the panel stays exactly as content-sized as before. It has no effect
-on the closed state either: the private closed-state findability gate (`hidden="until-found"`)
-is untouched, and the open/close lifecycle (`show()`/`hide()`, `lr-show`/`lr-toggle`/
-`lr-after-show`/`lr-hide`/`lr-after-hide`) is unaffected.
+An unsized disclosure follows its content, including inside an auto grid row and when nested.
+A definite block size on the containing block (usually the parent) caps the panel: long content
+scrolls inside `content`, while short
+content stays natural instead of automatically filling an ordinary block parent. To fill that
+parent, size the host explicitly, for example `<lr-details style="block-size: 100%" open>` inside
+a container with a definite block size. A pixel-sized host or a host stretched into a grid/flex
+allocation also fills its allocation, with the content scrollport below the summary.
+
+This corrects the previous automatic percentage-height behavior, which could inflate unsized
+panels by their siblings' height. Applications relying on short disclosures filling an ordinary
+bounded parent should add the explicit host size. The private closed-state findability gate
+(`hidden="until-found"`) and the open/close lifecycle (`show()`/`hide()`,
+`lr-show`/`lr-toggle`/`lr-after-show`/`lr-hide`/`lr-after-hide`) are unaffected. When the
+`header-actions` slot is empty, its wrapper is hidden from layout and the summary spans the full
+header width; populated actions retain their independent responsive layout.
 
 For rich independent actions, reserve a useful basis on `header-actions` so the complete action
 group wraps onto another row before its checkbox label becomes too narrow. The header already
@@ -23525,6 +23582,8 @@ per-event aliases so a handler can name one event's type without restating the d
 
 ## `lr-page`
 
+The mobile navigation drawer remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
+
 Semantic application/page shell with page-wide banner/header/subheader/footer regions, a compact
 menu, primary navigation, main header/content/footer, and an aside. It derives mobile versus
 desktop presentation from **its own allocated inline size**, not the viewport: a Page inside a
@@ -24309,6 +24368,14 @@ shared region below the bar. It never uses `menu`/`menubar` roles — applicatio
 - `hideDelay: number = 150` (attribute `hide-delay`) — delay before a hover-opened panel closes once
   the pointer leaves the item.
 - `skipDelay: number = 300` (attribute `skip-delay`) — the hover grace window; `0` disables it.
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-popover>`:
+  always shows the open floating panel (a menu-level property that applies to every item panel) in
+  the browser top layer, placed `fixed` whatever the positioning strategy resolves to, so it paints
+  above a sibling surface stacked higher than a `z-index`ed fixed or sticky header, toolbar or rail
+  it sits in (see **Anchored overlays and the top layer** in `llms/overlays.md`). Anchoring, RTL
+  placement, focus, Escape and the transitions are unchanged and no DOM node moves; it leaves the
+  top layer once it settles closed. Unset, promotion happens only when a trapping ancestor forces
+  it.
 - `distance: number = 6` — gap in px between the anchor and a floating panel.
 - `collapsed` (read-only boolean getter) — whether the collapsed layout is active; `false` on the
   server and until the first measurement. Mirrored to the `collapsed` custom state.
@@ -24596,16 +24663,22 @@ Close events bubble from descendants. Check `event.target === event.currentTarge
 only the owning dialog. The upstream-mirrored `lr-tab` close event retains its null detail.
 
 **The top layer.** An open `lr-dialog` or modal `lr-drawer` is promoted into the browser **top layer**
-(through `popover="manual"`) rather than stacked with `z-index`. It therefore escapes every ancestor
-stacking context and every ancestor `overflow` clip: a `transform`ed parent, an `isolation: isolate`
+(normally through `popover="manual"`) rather than stacked with `z-index`. It therefore escapes every
+ancestor stacking context and every ancestor `overflow` clip: a `transform`ed parent, an `isolation: isolate`
 wrapper or a `z-index: 2147483647` sticky header can no longer paint over it or crop it, which no
 `z-index` value alone can guarantee. If you raised `--lr-layer-modal` to win one of those fights,
 that override no longer decides anything for their modal instances and can be dropped — the token
 still resolves the `z-index` in their stylesheet, but only as the fallback for a user agent without
 popover support. A `contained` drawer is deliberately nonmodal and is not promoted. The token keeps
 doing real work everywhere else it is used: `lr-popover`, `lr-dropdown` and `lr-tooltip` are not
-promoted unless trapped (below) or, for `lr-popover` and `lr-dropdown`, opted in with `top-layer`,
-and otherwise go on stacking at `--lr-overlay-stack-index`, falling back to `--lr-layer-popover`.
+promoted unless trapped (below) or opted in with `top-layer`, and otherwise go on stacking at
+`--lr-overlay-stack-index`, falling back to `--lr-layer-popover`.
+
+A native `<dialog>` opened with `showModal()` also makes outside content inert; popover promotion
+alone cannot escape that restriction. When a Lyra dialog or modal drawer is opened outside the
+active native modal, it uses an internal native modal carrier to remain interactive. The authored
+host stays in place, preserving slots, inherited styles and reactive ancestry. Escape and dismissal
+still follow Lyra's cancellable lifecycle, and closing it leaves the original native modal open.
 
 **Anchored overlays and the top layer.** An anchored overlay that resolves the `fixed` strategy
 (dropdowns, popovers, tooltips, selects, comboboxes, date/time inputs, colour pickers, submenus,
@@ -24632,15 +24705,17 @@ at UI scale with either strategy. The full-viewport modal surfaces that are not 
 An ancestor that is only a **stacking context** does not trap an overlay, so it is not promoted: a
 popover inside a `position: fixed` (or `sticky`) header with `z-index: 1000` still paints beneath a
 sibling surface at `z-index: 1100`, and no `z-index` on the popup can lift it out of the header's
-context. For that case `lr-popover` and `lr-dropdown` take an explicit opt-in, `top-layer`: the open
-popup is always shown in the browser top layer, placed `fixed`, with anchoring, the arrow, RTL
-placement, focus, Escape, light dismiss and the transitions unchanged, and no DOM node moved.
-Stacking contexts are deliberately not detected automatically: every `fixed` or `sticky` ancestor
-creates one, and so does almost every `z-index`ed, translucent (`opacity`) or `isolation: isolate`d
-one; most of them never cover the overlay, and promoting through each would lift overlays above
-layers that pages order on purpose (including their own toasts and sticky chrome). Whether a
-stacking context actually hides an overlay depends on sibling layering elsewhere on the page, which
-only the page knows, so the page opts in per instance.
+context. For that case `lr-popover`, `lr-dropdown`, `lr-tooltip`, `lr-select`, `lr-combobox`,
+`lr-locale-picker`, `lr-navigation-menu` (every item panel) and `lr-app-rail-item` (its icon-only
+label flyout) take an explicit opt-in, `top-layer`: the open popup is always shown in the browser
+top layer, placed `fixed`, with anchoring, the arrow, RTL placement, focus, Escape, light dismiss
+and the transitions unchanged, and no DOM node moved. Stacking contexts are deliberately not
+detected automatically: every `fixed` or `sticky` ancestor creates one, and so does almost every
+`z-index`ed, translucent (`opacity`) or `isolation: isolate`d one; most of them never cover the
+overlay, and promoting through each would lift overlays above layers that pages order on purpose
+(including their own toasts and sticky chrome). Whether a stacking context actually hides an overlay
+depends on sibling layering elsewhere on the page, which only the page knows, so the page opts in
+per instance.
 
 ```html
 <header style="position: fixed; inset-block-start: 0; inset-inline: 0; z-index: 1000">
@@ -24861,10 +24936,16 @@ toast({
 `ToastHandle = { item: Promise<LyraToastItem>; dismiss: () => void }`. The canonical options are
 shared byte-for-byte with the region's object-form `create()`, including `ownerDocument`, safe icon
 payloads/factories, actions, and the long `small`/`medium`/`large` size aliases. It lazily mounts
-(and re-mounts if removed) **one singleton `<lr-toast>` region per distinct `ownerDocument` and
-`placement`** on that document's body — a call targeting one placement/document never relocates
-toasts already showing in another. A foreign document must have the toast elements registered in
-its own custom-element registry; otherwise the returned `item` promise rejects explicitly.
+(and re-mounts if removed) **one singleton `<lr-toast>` region per owner document, active native-modal
+context and placement**. With no native modal it mounts on the document body. While a native
+`<dialog>` is open through `showModal()`, new notifications mount inside the topmost modal and enter
+the top layer so their actions remain reachable and the modal cannot clip them. For a Lyra native
+modal carrier, they use the host's slotted light DOM. Announcements use the same active context;
+background sources made inert by a native modal stay silent. Closing a native modal discards its
+notifications, including persistent ones; later calls use the remaining modal or the document body.
+Calls in one context never relocate notifications already showing in another. A foreign document
+must have the toast elements registered in its own custom-element registry; otherwise the returned
+`item` promise rejects explicitly.
 
 ```html
 <script type="module">
@@ -25320,15 +25401,16 @@ matching after-event before the method promise resolves. Because dialogs now ani
 `lr-hide`, `lr-close` (`{ reason: 'unmount' }`) and `lr-after-hide` in that
 order, none of them cancelable, since the element is already gone.
 
-**Stacking and the top layer:** an open dialog is promoted into the browser **top layer** (via
-`popover="manual"`), new in 8.0.0. That means it escapes every ancestor stacking context and every
-ancestor `overflow` clip: a `transform`ed parent, an `isolation: isolate` wrapper or a
+**Stacking and the top layer:** an open dialog is promoted into the browser **top layer**, normally
+via `popover="manual"`. When an already-open native modal would make it inert, an internal native
+`<dialog>` uses `showModal()` instead, preserving the authored host and slots in place. Both paths
+escape ancestor stacking contexts and `overflow` clips: a `transform`ed parent, an `isolation: isolate` wrapper or a
 `z-index: 2147483647` sticky header can no longer render on top of it or crop it, which no `z-index`
 value alone can guarantee. The `z-index` in the stylesheet remains only as the fallback for a user
 agent without popover support, and `popover="manual"` is deliberate — light dismiss and Escape stay
 this component's own contract rather than the user agent's, where an `auto` popover would close on
-the user agent's terms instead. What a consumer sees: the host gains a `popover="manual"` attribute
-while open (component-owned bookkeeping — don't set or remove it), any `z-index` you were fighting
+the user agent's terms instead. In the ordinary popover path, the host gains a `popover="manual"`
+attribute (component-owned bookkeeping — don't set or remove it), any `z-index` you were fighting
 with becomes irrelevant, and the panel is no longer clipped by an ancestor's `overflow: hidden`.
 Beyond that, the dialog participates in the shared per-document overlay stack: only the topmost
 overlay receives Escape, Tab trapping, or backdrop dismissal, while overlays beneath stay open until
@@ -25511,7 +25593,7 @@ should provide a direct heading or a host `aria-label`.
 - `lr-initial-focus` is the veto point for Lyra's automatic focus move. It fires once per logical
   open, only when the rendered panel is ready to receive focus; canceling it does not disable the
   trap or later focus return.
-- The host gains a `popover="manual"` attribute the first time it opens and keeps it from then on —
+- In the ordinary popover path, the host gains a `popover="manual"` attribute and keeps it —
   only top-layer membership (`:popover-open`) tracks `open`, not the attribute — and carries
   `data-closing` for exactly as long as the exit animation runs (pointer events are dead for that
   window, so a dismissing dialog can't swallow a click meant for the page underneath). Both are
@@ -25554,7 +25636,8 @@ button all resolve `false`. It sets `lightDismiss = true` on its transient dialo
 backdrop-click branch survives 8.0.0's flip of that property's own default to `false`. Mounts a
 transient `<lr-dialog>` on `document.body` for the duration
 of the call and removes it once settled, rather than reusing a persistent page-level region
-(contrast `lr-toast`'s `toaster.ts`). Concurrent calls are distinct dialogs in the shared overlay
+(contrast `lr-toast`'s `toaster.ts`). It remains interactive above an already-open native modal through
+`lr-dialog`'s native modal carrier; accepting or dismissing the confirmation leaves that modal open. Concurrent calls are distinct dialogs in the shared overlay
 stack, each tied to its own returned promise. `title` becomes a direct light-DOM `<h2>`, which per `<lr-dialog>`'s
 own heading-detection also drives the dialog's accessible name; `description`, if provided, becomes
 a direct light-DOM `<p>`. `variant: 'danger'` fills the confirm button with `--lr-color-danger`
@@ -26405,6 +26488,13 @@ later text renders normally.
 - `disabled: boolean = false` (reflected) — prevents both interaction and programmatic opening;
   setting it while open closes the tooltip
 - `hoist: boolean = false` (reflected) — switches the mapped absolute positioning default to fixed
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-popover>`:
+  always shows the open bubble in the browser top layer, placed `fixed` whatever the positioning
+  strategy resolves to, so it paints above a sibling surface stacked higher than a `z-index`ed fixed
+  or sticky header, toolbar or rail it sits in (see **Anchored overlays and the top layer** above).
+  Anchoring, the arrow, RTL placement and the transitions are unchanged and no DOM node moves; it
+  leaves the top layer once it settles closed. Unset, promotion happens only when a trapping
+  ancestor forces it.
 - `positioningStrategy: PlaceStrategy = 'absolute'` (attribute `positioning-strategy`, reflected) —
   see `<lr-popover>`. `hoist: boolean = false` is its retained exact alias
   (`hoist` ⇔ `positioning-strategy="fixed"`); writing either spelling updates the other, so the two
@@ -28677,15 +28767,16 @@ A parent Lit component would instead hold the reference via `@query('lr-live-reg
 
 ## `lr-poll-status`
 
-A "next scheduled refresh" countdown with a built-in pause control: a ticking `M:SS` display counting
-down to the next scheduled action, a "Refreshing…" state at zero, and a pause/resume toggle.
+A "next scheduled refresh" countdown with built-in pause and optional manual refresh controls: a ticking
+`M:SS` display counting down to the next scheduled action, a "Refreshing…" state at zero, and a
+pause/resume toggle.
 First-party invention (no Web Awesome equivalent); the closest existing component,
 `<lr-stream-status>`, is scoped to transport/connection-health phases, a different concern from a
 scheduled-interval countdown — this mirrors its internal `<lr-live-region>` composition for
 accessible phase-transition announcements.
 
 Long localized status labels, including unbroken words, wrap within the component’s allocated inline
-size in LTR and RTL. The indicator and pause/resume action retain their size; the 320px example
+size in LTR and RTL. The indicator and both actions retain their size; the 320px example
 shows both inactive and refreshing states.
 
 **Properties:**
@@ -28695,19 +28786,33 @@ shows both inactive and refreshing states.
   shows no countdown.
 - `active: boolean = true` (reflected) — whether the poll cycle is running at all.
 - `paused: boolean = false` (reflected) — user-toggled pause; while `true`, the countdown display
-  freezes and `lr-poll-due` never fires.
+  freezes and automatic `lr-poll-due` events are suppressed.
+- `withRefresh: boolean = false` (attribute `with-refresh`, reflected) — show a built-in manual
+  refresh action beside the pause control. It stays available while paused and is disabled while
+  inactive.
 
-**Events:** `lr-poll-due` (no detail — fired once when the countdown reaches zero, not fired while
-`paused`), `lr-pause-change` (`detail: { paused: boolean }` — fired when `paused` changes via the
-built-in button).
+**Events:** `lr-poll-due` (automatic countdowns fire once at zero with `detail: null` and are
+suppressed while `paused`; activating the opt-in manual refresh button fires immediately with
+`detail: { manual: true }` after restarting the countdown; TypeScript handlers see the detail as
+`null | { readonly manual: true }`), `lr-pause-change`
+
+With `next-in-ms="0"`, manual activation emits `{ manual: true }` synchronously, then the
+restarted zero-delay timer emits one automatic event with `detail: null` on its next task.
+(`detail: { paused: boolean }` — fired when `paused` changes via the built-in button).
 
 **Methods:** `restart(): void` — restarts the currently configured `nextInMs` delay from now,
 including after its previous deadline fired. With `nextInMs` unset it simply clears the due state.
 
+The manual refresh control calls `restart()` before emitting `lr-poll-due`, so a listener can
+replace the next delay or explicitly restart it during event handling. While paused it emits the
+manual event and resets the frozen delay without resuming or starting a timer; with `nextInMs`
+unset it still emits the manual event but no countdown is armed.
+
 **Slots:** none.
 
 **CSS parts:** `base`, `indicator` (the pulsing status dot), `countdown` (the `M:SS`, or
-"Refreshing…", text), `pause-button` (the built-in pause/resume toggle).
+"Refreshing…", text), `pause-button` (the built-in pause/resume toggle), `refresh-button` (the
+optional built-in manual refresh action).
 
 **Themeable custom properties:** `--lr-poll-status-due-bg` (default `var(--lr-color-success)`) —
 background of `indicator` while `data-due` is set. Component-scoped indirection over the shared
@@ -28716,7 +28821,8 @@ repainting every other component that reuses the same shared success token. `--l
 `var(--lr-color-brand-quiet)`/`var(--lr-color-brand)`) and
 `--lr-poll-status-pause-active-bg`/`--lr-poll-status-pause-active-color` (defaults the former
 brand-quiet active `color-mix()`/`var(--lr-color-brand)`) retheme the built-in `pause-button`'s
-hover/pressed paint independently of those same shared brand tokens. Plus shared tokens —
+hover/pressed paint independently of those same shared brand tokens; these pause-specific
+overrides do not affect the refresh button, which uses shared brand tokens. Plus shared tokens —
 `--lr-space-xs`, `--lr-font-size-sm`,
 `--lr-color-text-quiet`, `--lr-color-brand`, `--lr-color-success`, `--lr-radius`/`-pill`,
 `--lr-focus-ring-*`.
@@ -28724,10 +28830,13 @@ hover/pressed paint independently of those same shared brand tokens. Plus shared
 **Optional peer deps:** none.
 
 ```html
-<lr-poll-status next-in-ms="30000"></lr-poll-status>
+<lr-poll-status with-refresh next-in-ms="30000"></lr-poll-status>
 <script type="module">
   const status = document.querySelector("lr-poll-status");
-  status.addEventListener("lr-poll-due", () => refreshData());
+  status.addEventListener("lr-poll-due", (event) => {
+    const { manual } = event.detail ?? {};
+    refreshData({ manual: manual === true });
+  });
   status.addEventListener("lr-pause-change", (e) =>
     console.log("paused:", e.detail.paused)
   );
@@ -29733,11 +29842,17 @@ children; nothing is moved or cloned.
 - `paused: boolean = false` (reflected) — suppresses autoplay. The built-in pause/resume action
   toggles this state; a programmatic assignment remains silent.
 - `autoplayInterval: number = 3000` (attribute `autoplay-interval`) — clamped to a 1000 ms floor
+- `withNext: boolean = false` (attribute `with-next`, reflected) — show a built-in refresh-glyph action
+  (localized via `randomContentNext`, "Show another") that calls `randomize()` and re-arms the autoplay timer, so a
+  manual pick is not replaced by a tick already in flight. It renders independently of `autoplay`
+  and, unlike the pause button, does not suspend autoplay while focused, so a click always re-arms the timer.
 
-**Methods:** `randomize(): readonly Element[]` — re-selects using the current `mode`, applies
+**Methods:** `restart(): void` — re-arms the autoplay timer for a full `autoplayInterval`; a no-op
+while autoplay is off, paused, focus-suspended, reduced-motion, or the pool has fewer than two
+candidates. `randomize(): readonly Element[]` — re-selects using the current `mode`, applies
 `hidden`/`aria-hidden`, emits `lr-content-change`, appends the exposed selection text to the shared
 polite announcement sink (even when `autoplay` is enabled), and returns the elements now shown.
-Does **not** reset or restart the autoplay timer.
+Does **not** reset or restart the autoplay timer; call `restart()` afterwards or use `with-next`.
 
 **Events:** `lr-content-change` (`detail: { readonly items: readonly Element[] }` — a frozen
 snapshot of the exact elements now shown, in display order). Fires on first render, on
@@ -29766,7 +29881,8 @@ stay silent too. A nested forwarding slot contributes flattened assigned content
 fallback; later assignment and assigned-node text/style/visibility changes announce only when they
 change the currently exposed selection, while initial distribution remains silent. `pause-button`
 — the localized autoplay pause/resume action, rendered
-only while `autoplay` is enabled and exposed as a toggle with `aria-pressed`.
+only while `autoplay` is enabled and exposed as a toggle with `aria-pressed`. `next-button` — the
+opt-in localized action rendered while `with-next` is set, sharing the pause button's styling.
 
 **Themeable custom properties:** Web Awesome aliases `--animation-duration` (default `300ms`),
 `--animation-easing` (default `ease`), and `--animation-translate` (default
@@ -29822,6 +29938,8 @@ target element elsewhere in the page via the shared Floating UI positioner, over
 full-viewport backdrop with a cutout/ring around the current target, with Next/Previous/Skip
 controls and a step-progress indicator. Controlled component — `steps` is never mutated; only
 `activeIndex` and `open` are self-managed.
+
+When the tour ends, focus returns to the element that held it when the tour started, including one the host re-shows only after the tour ends.
 
 **Properties:**
 
@@ -29915,6 +30033,12 @@ override documented on `<lr-popover>` when a step is (re)positioned, falling bac
 default when nothing is set. There is no per-instance `positioning-strategy` property on `<lr-tour>`;
 set the custom property on `:root`, a theme, or one clipping ancestor to change every unset tour
 beneath it.
+
+When an ancestor of `<lr-tour>` contains fixed descendants (a `transform`, `filter`, `contain: paint`
+and so on), the tour promotes itself to the browser top layer while open, so the scrim, spotlight
+ring and click-through keyhole stay in viewport coordinates.
+
+Default modal steps opened outside an existing native `dialog.showModal()` use an internal native modal surface, keeping their controls interactive without moving the tour host. `interactiveTarget` steps remain nonmodal and release that native surface when selected. Mount any tour with interactive-target steps inside the active native dialog, with its targets in that same modal subtree. A tour host outside that dialog becomes platform-inert during an interactive-target step: the target can be used, but the tour’s Next/Skip controls cannot. Top-layer painting does not remove this native nonmodal restriction.
 
 **Known gotchas:**
 
@@ -30513,7 +30637,8 @@ modes use the same expression semantics at initial render and after a theme chan
 - `legend: readonly LyraMapLegendEntry[] = []` (attribute: false) — immutable defensive snapshots
   of `LyraMapLegendEntry { readonly color: string; readonly label: string; readonly pattern:
 LyraMapLegendPattern }`, where `LyraMapLegendPattern` is `'solid' | 'diagonal' | 'dots' |
-'crosshatch'`. Pattern is required so color is never the sole category cue. At most 100 valid
+'crosshatch'`. Pattern supplies the non-color cue for rows without an icon; an icon row uses its
+glyph shape as that cue. At most 100 valid
   rows, 256 characters per label, and 8,192 aggregate label characters are retained; colors are
   bounded before validation. The overlay scrolls within the map allocation.
   A row may also carry its own `value`: the category key that row stands for — the same string a
@@ -31036,8 +31161,7 @@ Keep that target at least 24px in both axes. This leaves navigation controls at 
 and the overlay is bounded to the map allocation with scrolling and long-label wrapping.
 A swatch rendering an entry's `icon` carries `data-icon="true"`, paints the glyph in that entry's
 own colour through `currentColor`, and drops the colour block, its border and the `pattern`
-overlay — all three would sit on top of the shape they identify, and the shape is itself the
-non-colour cue the pattern supplies for a colour-only row. The glyph stays decorative: the row's
+overlay — all three would sit on top of the shape they identify. The glyph stays decorative: the row's
 visible label carries its meaning. That association is advertised only while it is true — while
 the optional `maplibre-gl` peer is still loading, and after any failure, there is no map
 container in the tree, so `legend` withholds `aria-controls` rather than leaving a dangling
@@ -32846,6 +32970,10 @@ stable embedded `<lr-pan-zoom>`. It renders its own dialog panel (not a nested `
 but shares the same overlay infrastructure as `<lr-dialog>`/`<lr-command-palette>` — stacking, focus
 trap, Escape/backdrop dismissal, scroll lock, and focus return.
 
+Closing returns focus to the element that held it when the lightbox opened, including an opener the host re-shows only after the close.
+
+A lightbox opened outside an existing native `dialog.showModal()` stays interactive through an internal native modal surface. The host keeps its authored parent, and close vetoes, Escape, and focus return retain their normal behavior.
+
 **Properties:**
 
 - `open: boolean = false` (reflected) — post-render writes run the same cancelable lifecycle as
@@ -34284,6 +34412,8 @@ structured points retain their y-value formatting.
   their line; a series's own `fill` overrides it, rendered with a translucent version of its color
 - `zoomable: boolean = false` — wheel/drag/pinch zoom on the `x` axis only (pan disabled, and the
   zoom range is limited to the original data extent); shows the `reset-zoom-button` while zoomed.
+  A data update while zoomed keeps the zoomed range. `resetZoom()` and changes that rebuild the
+  chart instance, such as a chart-type or plugin change, reset it.
 - `height: string = '280px'` — a valid CSS length used only as the component's private fallback.
   A consumer-set `--lr-chart-height` always takes precedence; invalid values remove that fallback
   and likewise leave the public token/default in control.
@@ -37975,8 +38105,9 @@ rendering; anything else renders the localized `geojsonViewInvalid` error. On su
 value and object key first, rejecting more than 50,000 graph units, nesting beyond 64 levels, more
 than 2 Mi UTF-16 units of aggregate keys/string values, or more than 4 Mi UTF-16 units of formatted
 metadata before serialization or peer handoff. It then walks every coordinate under a separate
-10,000-position ceiling to compute a bounding box and fits a `center`/`zoom` to it (a Web-Mercator-fit
-approximation weighting latitude span ~2x, with 40% padding), then hands the parsed value to
+10,000-position ceiling to compute a bounding box, seeds `center`/`zoom` from it as a placeholder, and
+frames the data with `<lr-map>.fitBounds()` (size-aware, padded, antimeridian-safe, no animation) once
+the map exists, then hands the parsed value to
 `<lr-map>` as a single `dataLayers` entry (`sourceId: 'lr-geojson'`). When the optional
 `maplibre-gl` peer isn't installed, it falls back to a status line plus a `<lr-json-viewer
 expand-depth="2">` of the raw value instead of the map.
@@ -40182,6 +40313,12 @@ surface together with every other floating surface in the library. `--lr-overlay
 decorative `var(--lr-color-border-subtle)` floating panels default to: this listbox belongs to the
 form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
+`--lr-positioning-strategy` — the listbox reads the same cascading `absolute`/`fixed`
+override documented on `<lr-popover>` each time it is positioned, falling back to its existing
+`fixed` default when no recognized value is set. `<lr-model-select>` has no per-instance
+`positioning-strategy` property; set the token on `:root`, a theme, or an ancestor to retune its
+listbox along with the other floating surfaces.
+
 **Optional peer deps:** none.
 
 ```html
@@ -40753,10 +40890,10 @@ matching its previous unconditional `scrollbar-width: auto`) — set either on `
 ancestor for one declaration to retheme every internal scroll container in the library, including
 `lr-table`, `lr-virtual-list`, `lr-scroller`, `lr-carousel`, and `lr-code-editor`.
 
-`base` is a flex column and `body` grows to fill whatever block space a definite-height host
-gives it, still capped by `--lr-code-block-max-height` and still independently scrollable. An
-unsized host is unaffected — this is a fill capability, not a change to the default
-content-sized rendering.
+`base` is a flex column and `body` grows to fill whatever block space an explicitly sized host
+(`block-size: 100%` in a bounded parent, a pixel size, or a flex/grid allocation) gives it, still
+capped by `--lr-code-block-max-height` and still independently scrollable. An unsized host stays
+content-sized, including inside a grid/flex item stretched to a taller row.
 
 `--lr-code-block-tab-size` carries the same default as `--lr-code-editor-tab-size`, so the editable
 and read-only code surfaces agree on what a literal tab looks like. It is declared as a `var()`
@@ -40939,7 +41076,7 @@ container. The last five are inline `var()` fallbacks at the point of use rather
 declarations, so a page-, container-, or theme-level value reaches them; see `<lr-code-block>` above
 for the full rationale, including why `<lr-markdown>`/`<lr-markdown-core>` must declare the tab-size
 fallback separately. `base` is a flex column and `body` grows to fill whatever block space a
-definite-height host gives it too, identically to `<lr-code-block>` above.
+explicitly sized host gives it too, identically to `<lr-code-block>` above.
 
 **Optional peer deps:** `shiki` (specifically its `shiki/core`, `shiki/engine/oniguruma`, the binary
 `shiki/onig.wasm` asset (the default; select `shiki/engine/javascript` instead via
@@ -42442,6 +42579,11 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
 - `--lr-overlay-shadow-anchored` — Elevation of the anchored listbox. Default: `var(--lr-shadow-m)`.
   None of the four is declared on `:host`, so one declaration on `:root` — or on any ancestor, to
   scope it — retints this listbox together with every other floating surface in the library.
+- `--lr-positioning-strategy` — The listbox reads the same cascading `absolute`/`fixed` override
+  documented on `<lr-popover>` each time it is positioned, falling back to its existing `fixed`
+  default when no recognized value is set. `<lr-voice-picker>` has no per-instance
+  `positioning-strategy` property; set the token on `:root`, a theme, or an ancestor to retune its
+  listbox along with the other floating surfaces.
 - `--lr-voice-picker-preview-active-border` — Active preview border. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-preview-active-color` — Active preview icon. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-trigger-border-color` — Resting trigger/combobox border color, independent of
@@ -43892,6 +44034,10 @@ registerToolRenderer("web_search", {
 
 ## `lr-tool-result-dialog`
 
+Opening above an existing native `dialog.showModal()` keeps this dialog interactive, including
+pointer input, keyboard focus, and Escape dismissal. Its host and slotted children remain in their
+authored DOM locations, and closing leaves the underlying native modal open.
+
 A full tool-call detail overlay: a status/duration header plus a `body` slot where a consumer
 typically places a `<lr-tab-group>` with Input/Preview/JSON/Raw panels. First-party invention (no Web
 Awesome equivalent). This component knows nothing about what's inside that slot — it only supplies
@@ -43900,9 +44046,10 @@ so slot-forwarding does not put a forwarding `<slot>` where a slotted `<lr-tab-g
 child scan expects real projected content, while its modal behavior participates in the shared
 overlay stack.
 
-Assigning `accessibleLabel` directly names the inner dialog when no host `aria-label` is present. A
-host `aria-label` retains its separate host ownership, and an empty direct value uses the tool
-title.
+Closing returns focus to the element that held it when the dialog opened, including an opener the host re-shows only after the close.
+
+A non-empty host `aria-label` names the dialog before a direct `accessibleLabel` value; without
+either, the visible tool title names it. This precedence applies in ordinary and native modal contexts.
 
 **Properties:**
 
@@ -43910,9 +44057,9 @@ title.
   lifecycle methods below
 - `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to backdrop-click
   dismissal; Escape and the built-in close button remain available without it
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — a host attribute names the
-  host itself, while the dialog panel remains labelled by its visible tool-name title instead of
-  cloning that name. A direct property assignment made without the attribute can name the panel
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — a non-empty host attribute names
+  the semantic dialog owner, taking precedence over a direct property value. Without either, its
+  visible heading supplies the accessible name.
 - `toolName: string = ''` (attribute `tool-name`) — the tool's name, rendered prominently in the
   header
 - `status: 'pending'|'running'|'success'|'error'|'denied'|'incomplete' = 'pending'` (reflected) —
@@ -43982,8 +44129,9 @@ tokens `--lr-color-surface/-border/-text-quiet/-brand/-brand-quiet/-success/-suc
 </script>
 ```
 
-While open, `[part="panel"]` takes `role="dialog"` + `aria-modal="true"` with `aria-labelledby`
-pointing at the tool-name element, document scroll is locked, and Tab/Shift+Tab are bounded to the
+While open, the panel (or its native carrier) owns `role="dialog"` + `aria-modal="true"`, with the
+explicit accessible name or its tool-name heading as the fallback. Document scroll is locked, and
+Tab/Shift+Tab are bounded to the
 panel's own focusable content in header-buttons → `body` slot → `footer` slot order (resolved
 shadow-piercingly, so a slotted custom element's real focusable target inside its own shadow root is
 found too). On open, focus moves to the first focusable element (falling back to the panel itself);
@@ -44028,10 +44176,16 @@ Backdrop clicks leave the dialog open by default; add `light-dismiss` to opt in,
 
 ## `lr-tool-select-dialog`
 
+Opening above an existing native `dialog.showModal()` keeps this dialog interactive, including
+pointer input, keyboard focus, and Escape dismissal. Its host and slotted children remain in their
+authored DOM locations, and closing leaves the underlying native modal open.
+
 A category-grouped, filterable, searchable tool-enablement dialog for picking which agent tools are
 available in a conversation. It keeps its own panel template rather than nesting `<lr-dialog>`, so
 it has no dependency on the general-purpose dialog, while its modal behavior participates in the
 shared overlay stack. First-party invention (no Web Awesome equivalent).
+
+Closing returns focus to the element that held it when the dialog opened, including an opener the host re-shows only after the close.
 
 Programmatic `selectedToolIds` and `useDefaults` replacements synchronize the live checkbox and
 switch state after user edits without emitting change events. Removing `search-placeholder` restores
@@ -44075,9 +44229,9 @@ string; disabled?: boolean; disabledReason?: string }` — one selectable agent 
   using the default tool set (`true`) or a custom selection (`false`).
 - `label?: string` — the dialog's visible heading and accessible name. Omission uses localized
   `selectTools`; every supplied string, including `"Select tools"` and `""`, remains literal.
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — a host attribute names the
-  host; the panel remains labelled by its visible heading instead of cloning that name. A direct
-  property assignment made without the attribute can name the panel.
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — a non-empty host attribute names
+  the semantic dialog owner, taking precedence over a direct property value. Without either, its
+  visible heading supplies the accessible name.
 - `searchPlaceholder?: string` (attribute `search-placeholder`) — omission uses localized
   `searchToolsPlaceholder`; every supplied string, including `"Search tools…"` and `""`, remains
   literal as placeholder copy. Empty/whitespace-only copy leaves the field visually empty while
@@ -44473,11 +44627,17 @@ Pass custom classifiers as `{ internalPatterns: ['node_modules/', /vendor\//] }`
 
 ## `lr-tool-approval-dialog`
 
+Opening above an existing native `dialog.showModal()` keeps this dialog interactive, including
+pointer input, keyboard focus, and Escape dismissal. Its host and slotted children remain in their
+authored DOM locations, and closing leaves the underlying native modal open.
+
 A human-in-the-loop gate: presents one proposed tool/function call (`toolName` + `args`) and blocks an
 agent from executing it until a person explicitly approves or denies it, with an optional inline
 "edit the arguments before approving" step. First-party invention (no Web Awesome equivalent). It
 keeps its own panel template rather than nesting `<lr-dialog>`, so it has no dependency on the
 general-purpose dialog component, while its modal behavior participates in the shared overlay stack.
+
+Closing returns focus to the element that held it when the dialog opened, including an opener the host re-shows only after the decision.
 
 Approve/Deny/Edit are built-in chrome, not a `footer` slot a consumer must assemble — there is exactly
 one correct action set for "approve this call". The `footer` slot is offered only for _supplementary_
@@ -44500,9 +44660,9 @@ renders at the start of the action row, before Deny/Edit/Approve.
 - `open: boolean = false` (reflected) — set it directly or use the lifecycle methods below
 - `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to backdrop-click
   dismissal; Escape and the built-in decision buttons remain available without it
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — a host attribute names the
-  host; the panel remains labelled by its visible heading rather than cloning the same name. A
-  direct property assignment made without the attribute can name the panel
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — a non-empty host attribute names
+  the semantic dialog owner, taking precedence over a direct property value. Without either, its
+  visible heading supplies the accessible name.
 - `proposalKey: string = ''` (attribute `proposal-key`) — immutable identity/generation for the
   open proposal. Change it whenever a source reuses the same visible tool name/arguments for a new
   proposal; draft, editing, validation-announcement, and pending-decision state reset immediately
@@ -45100,7 +45260,7 @@ surrounding whitespace. The first valid admitted duplicate continues to win.
 
 **Properties:** `spans: LyraSpan[] = []` (attribute: false) — `LyraSpan { id: string; parentId?:
 string; name: string; kind: 'agent' | 'llm' | 'tool' | 'retriever' | 'embedding' | 'other';
-startMs: number; endMs?: number; status: 'pending' | 'running' | 'success' | 'error' | 'denied';
+startMs: number; endMs?: number; status: 'pending' | 'running' | 'success' | 'error' | 'denied' | 'incomplete';
 tokensIn?: number; tokensOut?: number; costText?: string; detail?: string }`, exported from
 `trace-tree/span.ts`. `startMs`/`endMs` are milliseconds **relative to the trace start**, not
 wall-clock timestamps; `endMs` is absent while the span is still running. `costText` is preformatted
@@ -45135,7 +45295,8 @@ when `spans` is empty), `limit` (the 500-span projection notice), and `live-regi
 The interactive `bar` keeps a 24px minimum target in both axes even when its duration-derived
 paint width would otherwise be only a few pixels.
 
-The terminal axis tick is end-aligned so its label remains inside the allocated chart width. Roving
+The terminal axis tick is end-aligned so its label remains inside the allocated chart width, and an
+interior tick label that would overprint a neighbour is hidden (the terminal label is kept). Roving
 keyboard focus is computed from the currently rendered/filtered span ids, so a hidden active span
 cannot leave the component with no `tabindex="0"` stop.
 
@@ -45174,7 +45335,9 @@ confirmed moves are announced through an internal `<lr-live-region>`.
 
 **Properties:** `items: readonly TaskItem[] = []` (attribute: false) — `TaskItem { id: string; label: string;
 status: TaskStatus; detail?: string; children?: readonly TaskItem[] }` with `TaskStatus = 'pending' |
-'running' | 'success' | 'error'` (both exported here). `detail` is an optional secondary plain-text
+'running' | 'success' | 'error' | 'incomplete'` (both exported here). `incomplete` is a step that stopped
+without finishing (a cancelled run): a neutral level-dash glyph, the localized `statusIncomplete` text,
+a polite announcement, and it is not counted as completed. `detail` is an optional secondary plain-text
 line; `children` is exactly **one** level of sub-steps — a child's own `children` is ignored with a
 `console.warn`. Runtime non-record rows and rows without a nonempty string `id` are omitted before
 rendering, summaries, announcements, and reorder validation. While `reorderable`, every retained
@@ -45235,8 +45398,9 @@ rows at that size; `--lr-task-list-compact-body-padding` (default `var(--lr-spac
 var(--lr-space-s) var(--lr-space-s)`) — `[part="body"]` padding at that size;
 `--lr-task-list-pending-color` (default `var(--lr-color-text-quiet)`),
 `--lr-task-list-running-color` (default `var(--lr-color-brand)`),
-`--lr-task-list-success-color` (default `var(--lr-color-success)`), and
-`--lr-task-list-error-color` (default `var(--lr-color-danger)`) independently retint the matching
+`--lr-task-list-success-color` (default `var(--lr-color-success)`),
+`--lr-task-list-error-color` (default `var(--lr-color-danger)`), and
+`--lr-task-list-incomplete-color` (default `var(--lr-color-text-quiet)`) independently retint the matching
 status icons without changing shared status tokens. `--lr-task-list-bg` (default
 `var(--lr-color-surface)`), `--lr-task-list-border-color` (default `var(--lr-color-border)`) and
 `--lr-task-list-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome without a
@@ -45483,7 +45647,7 @@ against the new tint as well.
 - `--lr-trace-tree-error-color` — Error status text and bar. Default: `var(--lr-color-danger)`.
 - `--lr-trace-tree-denied-color` — Denied status text and bar. Default: `var(--lr-color-warning)`.
 - `--lr-trace-tree-running-color` — Running status text and stripe. Default: `var(--lr-color-brand)`.
-- `--lr-trace-tree-pending-color` — Pending status text and bar. Default: `var(--lr-color-text-quiet)`.
+- `--lr-trace-tree-pending-color` — Pending and incomplete status text and bar. Default: `var(--lr-color-text-quiet)`.
 - `--lr-trace-tree-bar-track-bg` — Duration bar track. Default: `var(--lr-color-surface-raised)`.
 - `--lr-trace-tree-running-stripe-bg` — Running stripe contrast. Default: `var(--lr-color-brand-quiet)`.
 
@@ -46117,6 +46281,11 @@ The nine built-in status kinds are `idle`, `queued`, `collecting`, `running`, `w
 also accepted. Live elapsed time and Cancel are available for `running`, `collecting`,
 `waiting-input`, and `waiting-approval`. `queued` is pending rather than actively ticking or
 cancelable. Retry is available for `error` and `cancelled`.
+
+The default `tasks` slot maps each step's `done` to task status `success`, `error` to `error`, and
+`cancelled` to `incomplete`. A cancelled step uses a neutral glyph and the localized Incomplete
+label, and its transition is announced politely. It does not count as completed. The run's own
+status badge still reads Cancelled.
 
 **Properties:**
 
@@ -49997,6 +50166,12 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   `graphExplorerLabel`. A non-empty host `aria-label` makes the host the sole overall owner; an
   explicitly empty host label stays empty on the group
 
+**Methods:** `fit(options?: { padding?: number })` frames every visible node in the composed
+graph (forwards to `lr-graph.fit()`); `resetView()` is `fit()` with the default padding, for a
+reset-view action; `focusNode(id, options?: { zoom? }): Promise<boolean>` centers a visible node
+without selecting it or opening the details popover (resolves `false` for an unknown or
+filtered-out id). None change `selectedNodeId` or filters.
+
 **Events:**
 
 - `lr-selection-change` (`detail: { selectedNodeId: string | null }`) — emitted after the explorer
@@ -50772,7 +50947,9 @@ document-viewer-compatible `anchor` in `lr-chunk-open`.
 
 `lr-research-progress` presents a read-only ordered list of host-owned research steps and an
 aggregate completion progressbar. Each step has a stable `id`, visible `label`, optional
-`description`, a `status` of `pending`, `running`, `completed`, or `failed`, and an optional
+`description`, a `status` of `pending`, `running`, `completed`, `failed`, or `incomplete` (a step that stopped
+without finishing, such as a cancelled run; it shows the localized `statusIncomplete` text and is not
+counted as completed; an unrecognized status renders as `pending` rather than dropping the step), and an optional
 nonnegative finite `sources` count. Statuses and source counts are displayed as supplied; the
 component does not search or infer state. Assign a new `.steps` array after host updates. The
 component snapshots collection data, omits blank or duplicate identities after the first valid

@@ -58,6 +58,7 @@ const strings: LyraLocaleStrings = {
   statusSuccess: 'Сәтті',
   statusError: 'Қате',
   statusDenied: 'Қабылданбады',
+  statusIncomplete: 'Аяқталмады',
   restore: 'Қалпына келтіру',
   navigation: 'Навигация',
   attachmentUntitledFile: 'Атаусыз файл',

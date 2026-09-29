@@ -107,17 +107,33 @@ describe('lr-button: unset regression -- the new ResizeObserver changes nothing 
 
   it('disconnects its ResizeObserver on teardown instead of leaking one per mount/unmount cycle', async () => {
     const el = await fixture<LyraButton>(html`<lr-button>Save changes</lr-button>`);
-    const internals = el as unknown as { resizeObserver?: { disconnect(): void } };
-    const observer = internals.resizeObserver;
-    expect(observer, 'a connected button arms its resize observer').to.not.equal(undefined);
-    let disconnected = false;
-    const originalDisconnect = observer!.disconnect.bind(observer);
-    observer!.disconnect = () => {
-      disconnected = true;
-      originalDisconnect();
+    const proto = ResizeObserver.prototype;
+    const originalDisconnect = proto.disconnect;
+    let disconnects = 0;
+    proto.disconnect = function (this: ResizeObserver): void {
+      disconnects += 1;
+      originalDisconnect.call(this);
     };
-    el.remove();
-    expect(disconnected, 'disconnectedCallback must disconnect the resize observer').to.equal(true);
-    expect(internals.resizeObserver, 'the reference is cleared, not just disconnected').to.equal(undefined);
+    try {
+      el.remove();
+    } finally {
+      proto.disconnect = originalDisconnect;
+    }
+    expect(disconnects, 'disconnectedCallback must disconnect the resize observer').to.be.greaterThan(0);
+    // A reconnect re-arms a fresh observer (the reference was cleared, not just disconnected).
+    let observes = 0;
+    const originalObserve = proto.observe;
+    proto.observe = function (this: ResizeObserver, target: Element, options?: ResizeObserverOptions): void {
+      observes += 1;
+      originalObserve.call(this, target, options);
+    };
+    try {
+      document.body.append(el);
+      await el.updateComplete;
+    } finally {
+      proto.observe = originalObserve;
+      el.remove();
+    }
+    expect(observes, 'a reconnect arms a fresh observer').to.be.greaterThan(0);
   });
 });

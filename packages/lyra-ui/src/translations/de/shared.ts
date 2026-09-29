@@ -58,6 +58,7 @@ const strings: LyraLocaleStrings = {
   statusSuccess: 'Erfolgreich',
   statusError: 'Fehler',
   statusDenied: 'Abgelehnt',
+  statusIncomplete: 'Unvollständig',
   restore: 'Wiederherstellen',
   navigation: 'Navigation',
   attachmentUntitledFile: 'Unbenannte Datei',

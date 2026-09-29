@@ -2178,8 +2178,9 @@ rendering; anything else renders the localized `geojsonViewInvalid` error. On su
 value and object key first, rejecting more than 50,000 graph units, nesting beyond 64 levels, more
 than 2 Mi UTF-16 units of aggregate keys/string values, or more than 4 Mi UTF-16 units of formatted
 metadata before serialization or peer handoff. It then walks every coordinate under a separate
-10,000-position ceiling to compute a bounding box and fits a `center`/`zoom` to it (a Web-Mercator-fit
-approximation weighting latitude span ~2x, with 40% padding), then hands the parsed value to
+10,000-position ceiling to compute a bounding box, seeds `center`/`zoom` from it as a placeholder, and
+frames the data with `<lr-map>.fitBounds()` (size-aware, padded, antimeridian-safe, no animation) once
+the map exists, then hands the parsed value to
 `<lr-map>` as a single `dataLayers` entry (`sourceId: 'lr-geojson'`). When the optional
 `maplibre-gl` peer isn't installed, it falls back to a status line plus a `<lr-json-viewer
 expand-depth="2">` of the raw value instead of the map.

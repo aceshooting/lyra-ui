@@ -92,6 +92,6 @@ against the new tint as well.
 - `--lr-trace-tree-error-color` — Error status text and bar. Default: `var(--lr-color-danger)`.
 - `--lr-trace-tree-denied-color` — Denied status text and bar. Default: `var(--lr-color-warning)`.
 - `--lr-trace-tree-running-color` — Running status text and stripe. Default: `var(--lr-color-brand)`.
-- `--lr-trace-tree-pending-color` — Pending status text and bar. Default: `var(--lr-color-text-quiet)`.
+- `--lr-trace-tree-pending-color` — Pending and incomplete status text and bar. Default: `var(--lr-color-text-quiet)`.
 - `--lr-trace-tree-bar-track-bg` — Duration bar track. Default: `var(--lr-color-surface-raised)`.
 - `--lr-trace-tree-running-stripe-bg` — Running stripe contrast. Default: `var(--lr-color-brand-quiet)`.

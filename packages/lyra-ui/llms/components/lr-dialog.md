@@ -139,15 +139,16 @@ matching after-event before the method promise resolves. Because dialogs now ani
 `lr-hide`, `lr-close` (`{ reason: 'unmount' }`) and `lr-after-hide` in that
 order, none of them cancelable, since the element is already gone.
 
-**Stacking and the top layer:** an open dialog is promoted into the browser **top layer** (via
-`popover="manual"`), new in 8.0.0. That means it escapes every ancestor stacking context and every
-ancestor `overflow` clip: a `transform`ed parent, an `isolation: isolate` wrapper or a
+**Stacking and the top layer:** an open dialog is promoted into the browser **top layer**, normally
+via `popover="manual"`. When an already-open native modal would make it inert, an internal native
+`<dialog>` uses `showModal()` instead, preserving the authored host and slots in place. Both paths
+escape ancestor stacking contexts and `overflow` clips: a `transform`ed parent, an `isolation: isolate` wrapper or a
 `z-index: 2147483647` sticky header can no longer render on top of it or crop it, which no `z-index`
 value alone can guarantee. The `z-index` in the stylesheet remains only as the fallback for a user
 agent without popover support, and `popover="manual"` is deliberate — light dismiss and Escape stay
 this component's own contract rather than the user agent's, where an `auto` popover would close on
-the user agent's terms instead. What a consumer sees: the host gains a `popover="manual"` attribute
-while open (component-owned bookkeeping — don't set or remove it), any `z-index` you were fighting
+the user agent's terms instead. In the ordinary popover path, the host gains a `popover="manual"`
+attribute (component-owned bookkeeping — don't set or remove it), any `z-index` you were fighting
 with becomes irrelevant, and the panel is no longer clipped by an ancestor's `overflow: hidden`.
 Beyond that, the dialog participates in the shared per-document overlay stack: only the topmost
 overlay receives Escape, Tab trapping, or backdrop dismissal, while overlays beneath stay open until
@@ -330,7 +331,7 @@ should provide a direct heading or a host `aria-label`.
 - `lr-initial-focus` is the veto point for Lyra's automatic focus move. It fires once per logical
   open, only when the rendered panel is ready to receive focus; canceling it does not disable the
   trap or later focus return.
-- The host gains a `popover="manual"` attribute the first time it opens and keeps it from then on —
+- In the ordinary popover path, the host gains a `popover="manual"` attribute and keeps it —
   only top-layer membership (`:popover-open`) tracks `open`, not the attribute — and carries
   `data-closing` for exactly as long as the exit animation runs (pointer events are dead for that
   window, so a dismissing dialog can't swallow a click meant for the page underneath). Both are
@@ -373,7 +374,8 @@ button all resolve `false`. It sets `lightDismiss = true` on its transient dialo
 backdrop-click branch survives 8.0.0's flip of that property's own default to `false`. Mounts a
 transient `<lr-dialog>` on `document.body` for the duration
 of the call and removes it once settled, rather than reusing a persistent page-level region
-(contrast `lr-toast`'s `toaster.ts`). Concurrent calls are distinct dialogs in the shared overlay
+(contrast `lr-toast`'s `toaster.ts`). It remains interactive above an already-open native modal through
+`lr-dialog`'s native modal carrier; accepting or dismissing the confirmation leaves that modal open. Concurrent calls are distinct dialogs in the shared overlay
 stack, each tied to its own returned promise. `title` becomes a direct light-DOM `<h2>`, which per `<lr-dialog>`'s
 own heading-detection also drives the dialog's accessible name; `description`, if provided, becomes
 a direct light-DOM `<p>`. `variant: 'danger'` fills the confirm button with `--lr-color-danger`

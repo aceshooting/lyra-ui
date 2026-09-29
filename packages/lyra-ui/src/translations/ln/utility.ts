@@ -41,6 +41,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: 'Ezali ko rafraîchir sikoyo.',
   randomContentPause: 'Telemisa rotation',
   randomContentResume: 'Bandela rotation lisusu',
+  randomContentNext: 'Emonisa mosusu',
   exportButtonLabel: 'Exporter',
   knownDateDay: 'Mokolo',
   knownDateMonth: 'Sanza',

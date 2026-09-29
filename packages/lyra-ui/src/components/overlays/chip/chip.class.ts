@@ -1,3 +1,4 @@
+import { CustomElementUpgradeObserver } from '../../../internal/custom-element-upgrade-observer.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import {
@@ -326,6 +327,11 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   // then seed from light DOM before a browser-only first paint (or immediately after hydration).
   private cachedLabelText = '';
   private labelObserver?: MutationObserver;
+  private readonly labelUpgrades = new CustomElementUpgradeObserver(() => {
+    if (!this.isConnected || !this.labelObserver) return;
+    this.bindLabelObserverTargets();
+    this.recomputeLabelText();
+  });
   private managedActionGroupRole = false;
   private pendingControlFocusRepair?: ComposedFocusRepairSnapshot;
   private readonly onLabelSlotChange = (event: Event): void => {
@@ -360,6 +366,7 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
 
   private syncLabelObservation(): void {
     this.labelObserver?.disconnect();
+    this.labelUpgrades.disconnect();
     this.labelObserver = undefined;
     if (!this.isConnected || !this.tracksActionLabel) return;
     const MutationObserverCtor = (this.ownerDocument as Document | undefined)
@@ -378,12 +385,13 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   // chip's actions, so a light-DOM child moving to or from the decorative `start`/`end` slots
   // changes the name.
   private bindLabelObserverTargets(): void {
-    bindAccessibleTextObserver(this.labelObserver, this, ['slot', 'role']);
+    bindAccessibleTextObserver(this.labelObserver, this, ['slot', 'role'], this.labelUpgrades);
   }
 
   override disconnectedCallback(): void {
     this.removeEventListener('slotchange', this.onLabelSlotChange);
     this.labelObserver?.disconnect();
+    this.labelUpgrades.disconnect();
     this.labelObserver = undefined;
     this.releaseHostActionRole();
     this.pendingControlFocusRepair = undefined;

@@ -41,6 +41,7 @@ const strings: LyraLocaleStrings = {
   pollRefreshingAnnounce: 'አሁን እየታደሰ ነው።',
   randomContentPause: 'ማዞሩን አቁም',
   randomContentResume: 'ማዞሩን ቀጥል',
+  randomContentNext: 'ሌላ አሳይ',
   exportButtonLabel: 'ላክ',
   knownDateDay: 'ቀን',
   knownDateMonth: 'ወር',

@@ -78,7 +78,8 @@ modes use the same expression semantics at initial render and after a theme chan
 - `legend: readonly LyraMapLegendEntry[] = []` (attribute: false) — immutable defensive snapshots
   of `LyraMapLegendEntry { readonly color: string; readonly label: string; readonly pattern:
 LyraMapLegendPattern }`, where `LyraMapLegendPattern` is `'solid' | 'diagonal' | 'dots' |
-'crosshatch'`. Pattern is required so color is never the sole category cue. At most 100 valid
+'crosshatch'`. Pattern supplies the non-color cue for rows without an icon; an icon row uses its
+glyph shape as that cue. At most 100 valid
   rows, 256 characters per label, and 8,192 aggregate label characters are retained; colors are
   bounded before validation. The overlay scrolls within the map allocation.
   A row may also carry its own `value`: the category key that row stands for — the same string a
@@ -601,8 +602,7 @@ Keep that target at least 24px in both axes. This leaves navigation controls at 
 and the overlay is bounded to the map allocation with scrolling and long-label wrapping.
 A swatch rendering an entry's `icon` carries `data-icon="true"`, paints the glyph in that entry's
 own colour through `currentColor`, and drops the colour block, its border and the `pattern`
-overlay — all three would sit on top of the shape they identify, and the shape is itself the
-non-colour cue the pattern supplies for a colour-only row. The glyph stays decorative: the row's
+overlay — all three would sit on top of the shape they identify. The glyph stays decorative: the row's
 visible label carries its meaning. That association is advertised only while it is true — while
 the optional `maplibre-gl` peer is still loading, and after any failure, there is no map
 container in the tree, so `legend` withholds `aria-controls` rather than leaving a dangling

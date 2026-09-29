@@ -101,16 +101,22 @@ Close events bubble from descendants. Check `event.target === event.currentTarge
 only the owning dialog. The upstream-mirrored `lr-tab` close event retains its null detail.
 
 **The top layer.** An open `lr-dialog` or modal `lr-drawer` is promoted into the browser **top layer**
-(through `popover="manual"`) rather than stacked with `z-index`. It therefore escapes every ancestor
-stacking context and every ancestor `overflow` clip: a `transform`ed parent, an `isolation: isolate`
+(normally through `popover="manual"`) rather than stacked with `z-index`. It therefore escapes every
+ancestor stacking context and every ancestor `overflow` clip: a `transform`ed parent, an `isolation: isolate`
 wrapper or a `z-index: 2147483647` sticky header can no longer paint over it or crop it, which no
 `z-index` value alone can guarantee. If you raised `--lr-layer-modal` to win one of those fights,
 that override no longer decides anything for their modal instances and can be dropped — the token
 still resolves the `z-index` in their stylesheet, but only as the fallback for a user agent without
 popover support. A `contained` drawer is deliberately nonmodal and is not promoted. The token keeps
 doing real work everywhere else it is used: `lr-popover`, `lr-dropdown` and `lr-tooltip` are not
-promoted unless trapped (below) or, for `lr-popover` and `lr-dropdown`, opted in with `top-layer`,
-and otherwise go on stacking at `--lr-overlay-stack-index`, falling back to `--lr-layer-popover`.
+promoted unless trapped (below) or opted in with `top-layer`, and otherwise go on stacking at
+`--lr-overlay-stack-index`, falling back to `--lr-layer-popover`.
+
+A native `<dialog>` opened with `showModal()` also makes outside content inert; popover promotion
+alone cannot escape that restriction. When a Lyra dialog or modal drawer is opened outside the
+active native modal, it uses an internal native modal carrier to remain interactive. The authored
+host stays in place, preserving slots, inherited styles and reactive ancestry. Escape and dismissal
+still follow Lyra's cancellable lifecycle, and closing it leaves the original native modal open.
 
 **Anchored overlays and the top layer.** An anchored overlay that resolves the `fixed` strategy
 (dropdowns, popovers, tooltips, selects, comboboxes, date/time inputs, colour pickers, submenus,
@@ -137,15 +143,17 @@ at UI scale with either strategy. The full-viewport modal surfaces that are not 
 An ancestor that is only a **stacking context** does not trap an overlay, so it is not promoted: a
 popover inside a `position: fixed` (or `sticky`) header with `z-index: 1000` still paints beneath a
 sibling surface at `z-index: 1100`, and no `z-index` on the popup can lift it out of the header's
-context. For that case `lr-popover` and `lr-dropdown` take an explicit opt-in, `top-layer`: the open
-popup is always shown in the browser top layer, placed `fixed`, with anchoring, the arrow, RTL
-placement, focus, Escape, light dismiss and the transitions unchanged, and no DOM node moved.
-Stacking contexts are deliberately not detected automatically: every `fixed` or `sticky` ancestor
-creates one, and so does almost every `z-index`ed, translucent (`opacity`) or `isolation: isolate`d
-one; most of them never cover the overlay, and promoting through each would lift overlays above
-layers that pages order on purpose (including their own toasts and sticky chrome). Whether a
-stacking context actually hides an overlay depends on sibling layering elsewhere on the page, which
-only the page knows, so the page opts in per instance.
+context. For that case `lr-popover`, `lr-dropdown`, `lr-tooltip`, `lr-select`, `lr-combobox`,
+`lr-locale-picker`, `lr-navigation-menu` (every item panel) and `lr-app-rail-item` (its icon-only
+label flyout) take an explicit opt-in, `top-layer`: the open popup is always shown in the browser
+top layer, placed `fixed`, with anchoring, the arrow, RTL placement, focus, Escape, light dismiss
+and the transitions unchanged, and no DOM node moved. Stacking contexts are deliberately not
+detected automatically: every `fixed` or `sticky` ancestor creates one, and so does almost every
+`z-index`ed, translucent (`opacity`) or `isolation: isolate`d one; most of them never cover the
+overlay, and promoting through each would lift overlays above layers that pages order on purpose
+(including their own toasts and sticky chrome). Whether a stacking context actually hides an overlay
+depends on sibling layering elsewhere on the page, which only the page knows, so the page opts in
+per instance.
 
 ```html
 <header style="position: fixed; inset-block-start: 0; inset-inline: 0; z-index: 1000">
@@ -366,10 +374,16 @@ toast({
 `ToastHandle = { item: Promise<LyraToastItem>; dismiss: () => void }`. The canonical options are
 shared byte-for-byte with the region's object-form `create()`, including `ownerDocument`, safe icon
 payloads/factories, actions, and the long `small`/`medium`/`large` size aliases. It lazily mounts
-(and re-mounts if removed) **one singleton `<lr-toast>` region per distinct `ownerDocument` and
-`placement`** on that document's body — a call targeting one placement/document never relocates
-toasts already showing in another. A foreign document must have the toast elements registered in
-its own custom-element registry; otherwise the returned `item` promise rejects explicitly.
+(and re-mounts if removed) **one singleton `<lr-toast>` region per owner document, active native-modal
+context and placement**. With no native modal it mounts on the document body. While a native
+`<dialog>` is open through `showModal()`, new notifications mount inside the topmost modal and enter
+the top layer so their actions remain reachable and the modal cannot clip them. For a Lyra native
+modal carrier, they use the host's slotted light DOM. Announcements use the same active context;
+background sources made inert by a native modal stay silent. Closing a native modal discards its
+notifications, including persistent ones; later calls use the remaining modal or the document body.
+Calls in one context never relocate notifications already showing in another. A foreign document
+must have the toast elements registered in its own custom-element registry; otherwise the returned
+`item` promise rejects explicitly.
 
 ```html
 <script type="module">
@@ -825,15 +839,16 @@ matching after-event before the method promise resolves. Because dialogs now ani
 `lr-hide`, `lr-close` (`{ reason: 'unmount' }`) and `lr-after-hide` in that
 order, none of them cancelable, since the element is already gone.
 
-**Stacking and the top layer:** an open dialog is promoted into the browser **top layer** (via
-`popover="manual"`), new in 8.0.0. That means it escapes every ancestor stacking context and every
-ancestor `overflow` clip: a `transform`ed parent, an `isolation: isolate` wrapper or a
+**Stacking and the top layer:** an open dialog is promoted into the browser **top layer**, normally
+via `popover="manual"`. When an already-open native modal would make it inert, an internal native
+`<dialog>` uses `showModal()` instead, preserving the authored host and slots in place. Both paths
+escape ancestor stacking contexts and `overflow` clips: a `transform`ed parent, an `isolation: isolate` wrapper or a
 `z-index: 2147483647` sticky header can no longer render on top of it or crop it, which no `z-index`
 value alone can guarantee. The `z-index` in the stylesheet remains only as the fallback for a user
 agent without popover support, and `popover="manual"` is deliberate — light dismiss and Escape stay
 this component's own contract rather than the user agent's, where an `auto` popover would close on
-the user agent's terms instead. What a consumer sees: the host gains a `popover="manual"` attribute
-while open (component-owned bookkeeping — don't set or remove it), any `z-index` you were fighting
+the user agent's terms instead. In the ordinary popover path, the host gains a `popover="manual"`
+attribute (component-owned bookkeeping — don't set or remove it), any `z-index` you were fighting
 with becomes irrelevant, and the panel is no longer clipped by an ancestor's `overflow: hidden`.
 Beyond that, the dialog participates in the shared per-document overlay stack: only the topmost
 overlay receives Escape, Tab trapping, or backdrop dismissal, while overlays beneath stay open until
@@ -1016,7 +1031,7 @@ should provide a direct heading or a host `aria-label`.
 - `lr-initial-focus` is the veto point for Lyra's automatic focus move. It fires once per logical
   open, only when the rendered panel is ready to receive focus; canceling it does not disable the
   trap or later focus return.
-- The host gains a `popover="manual"` attribute the first time it opens and keeps it from then on —
+- In the ordinary popover path, the host gains a `popover="manual"` attribute and keeps it —
   only top-layer membership (`:popover-open`) tracks `open`, not the attribute — and carries
   `data-closing` for exactly as long as the exit animation runs (pointer events are dead for that
   window, so a dismissing dialog can't swallow a click meant for the page underneath). Both are
@@ -1059,7 +1074,8 @@ button all resolve `false`. It sets `lightDismiss = true` on its transient dialo
 backdrop-click branch survives 8.0.0's flip of that property's own default to `false`. Mounts a
 transient `<lr-dialog>` on `document.body` for the duration
 of the call and removes it once settled, rather than reusing a persistent page-level region
-(contrast `lr-toast`'s `toaster.ts`). Concurrent calls are distinct dialogs in the shared overlay
+(contrast `lr-toast`'s `toaster.ts`). It remains interactive above an already-open native modal through
+`lr-dialog`'s native modal carrier; accepting or dismissing the confirmation leaves that modal open. Concurrent calls are distinct dialogs in the shared overlay
 stack, each tied to its own returned promise. `title` becomes a direct light-DOM `<h2>`, which per `<lr-dialog>`'s
 own heading-detection also drives the dialog's accessible name; `description`, if provided, becomes
 a direct light-DOM `<p>`. `variant: 'danger'` fills the confirm button with `--lr-color-danger`
@@ -1910,6 +1926,13 @@ later text renders normally.
 - `disabled: boolean = false` (reflected) — prevents both interaction and programmatic opening;
   setting it while open closes the tooltip
 - `hoist: boolean = false` (reflected) — switches the mapped absolute positioning default to fixed
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-popover>`:
+  always shows the open bubble in the browser top layer, placed `fixed` whatever the positioning
+  strategy resolves to, so it paints above a sibling surface stacked higher than a `z-index`ed fixed
+  or sticky header, toolbar or rail it sits in (see **Anchored overlays and the top layer** above).
+  Anchoring, the arrow, RTL placement and the transitions are unchanged and no DOM node moves; it
+  leaves the top layer once it settles closed. Unset, promotion happens only when a trapping
+  ancestor forces it.
 - `positioningStrategy: PlaceStrategy = 'absolute'` (attribute `positioning-strategy`, reflected) —
   see `<lr-popover>`. `hoist: boolean = false` is its retained exact alias
   (`hoist` ⇔ `positioning-strategy="fixed"`); writing either spelling updates the other, so the two

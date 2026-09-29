@@ -903,6 +903,26 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     void this.activateEntity(event.detail.entityId);
   };
 
+  /** Frames every visible node in the composed graph's viewport, forwarding to `lr-graph.fit()`.
+   *  No-op before the graph has rendered or with no visible nodes. Selection is unaffected. */
+  fit(options?: { padding?: number }): void {
+    this.graphEl?.fit(options);
+  }
+
+  /** Alias of `fit()` with its default padding, named for a "reset view" toolbar action: returns the
+   *  camera to the framed-to-fit view of every visible node. Selection and filters are unaffected. */
+  resetView(): void {
+    this.graphEl?.fit();
+  }
+
+  /** Centers the camera on node `id` through the composed graph's `focusNode()`, without selecting
+   *  it or opening its details popover. Resolves `false` for an unknown or filtered-out node, or
+   *  before the graph has rendered. */
+  async focusNode(id: string, options?: { zoom?: number }): Promise<boolean> {
+    if (!this.isVisibleNode(id)) return false;
+    return (await this.graphEl?.focusNode(id, options)) ?? false;
+  }
+
   /** Selects `id` and opens its details popover without a click event to read a rect from --
    *  centers the node via the public `lr-graph.focusNode()`, then anchors at the graph element's
    *  own viewport rect center once that settles. Shared by search results, neighbor rows,

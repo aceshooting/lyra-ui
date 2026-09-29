@@ -1875,6 +1875,7 @@ describe("fill chain (block-size)", () => {
     const wrapper = await fixture<HTMLDivElement>(html`
       <div style="block-size: 240px; inline-size: 320px">
         <lr-code-block-core
+          style="block-size: 100%"
           without-copy-button
           .code=${"const answer = 42;"}
         ></lr-code-block-core>
@@ -1913,6 +1914,7 @@ describe("fill chain (block-size)", () => {
     const wrapper = await fixture<HTMLDivElement>(html`
       <div style="block-size: 240px; inline-size: 320px">
         <lr-code-block-core
+          style="block-size: 100%"
           filename="answer.ts"
           .code=${"const answer = 42;"}
         ></lr-code-block-core>
@@ -1956,6 +1958,7 @@ describe("fill chain (block-size)", () => {
         <lr-code-block-core
           without-copy-button
           max-height="3rem"
+          style="block-size: 100%"
           .code=${Array.from({ length: 20 }, (_, index) => `line ${index}`).join(
             "\n"
           )}
@@ -2224,5 +2227,41 @@ describe("lr-code-block-core under a right-to-left document", () => {
     expect(getComputedStyle(ltr.shadowRoot!.querySelector('[part="header"]')!).direction).to.equal("ltr");
     const rtl = await mount("rtl");
     await expect(rtl).to.be.accessible();
+  });
+});
+
+describe('unsized host in a stretched grid row', () => {
+  it('stays content-sized beside siblings, while an explicit host size still fills', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="inline-size: 400px">
+        <div style="display: grid">
+          <div class="row">
+            <div style="block-size: 40px"></div>
+            <lr-code-block-core class="subject" without-copy-button></lr-code-block-core>
+            <div style="block-size: 40px"></div>
+          </div>
+        </div>
+        <lr-code-block-core class="reference" without-copy-button></lr-code-block-core>
+        <div class="bounded" style="block-size: 480px">
+          <lr-code-block-core
+            class="filled"
+            style="block-size: 100%"
+            without-copy-button
+          ></lr-code-block-core>
+        </div>
+      </div>
+    `);
+    const subject = wrapper.querySelector<HTMLElement>('.subject')!;
+    const reference = wrapper.querySelector<HTMLElement>('.reference')!;
+    const filled = wrapper.querySelector<HTMLElement>('.filled')!;
+    await Promise.all([subject, reference, filled].map((el) => el2Ready(el as LyraCodeBlockCore)));
+    expect(
+      subject.getBoundingClientRect().height,
+      'unsized host ignores sibling height',
+    ).to.be.closeTo(reference.getBoundingClientRect().height, 1);
+    expect(filled.getBoundingClientRect().height, 'explicitly sized host fills').to.be.closeTo(
+      480,
+      1,
+    );
   });
 });

@@ -76,7 +76,7 @@ export interface LyraToastEventMap {
 
 /**
  * `<lr-toast>` — one placement-specific stacking toast region. The `toast()` helper maintains one
- * region per owner document and placement. Each keeps at most three items active and twenty more
+ * region per owner document, active native-modal context and placement. Each keeps at most three items active and twenty more
  * in a hidden, inert FIFO queue. Further admissions discard the
  * oldest queued work and report the coalesced loss through an event and polite announcement.
  * Membership is reconciled before every admission and reasserted after reconnect/reparent; a

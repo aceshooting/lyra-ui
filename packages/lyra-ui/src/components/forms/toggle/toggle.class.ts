@@ -1,5 +1,5 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property, query } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { variants } from '../../../internal/variants.styles.js';
@@ -17,6 +17,10 @@ import {
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
+import {
+  hasIconOnlyDefaultContent,
+  IconOnlyLabelObserver,
+} from '../../../internal/icon-only-content.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import type { AdjacentRunPosition } from '../../../internal/adjacent-runs.js';
 import type { LyraToolbarAction } from '../../conversation/message-actions/toolbar-actions.js';
@@ -180,6 +184,10 @@ export class LyraToggle extends LyraElement<LyraToggleEventMap> {
   private descriptionLease?: NativeControlDescriptionLease;
   private labelLease?: ResolvedAriaRelationshipLease;
   private readonly slots = new SlotPresenceController(this);
+
+  /** Whether the default slot holds a single visible element and no text. Only this state
+   *  releases the label's paint clip, so a glow drawn around a glyph is not cut to its box. */
+  @state() private isIconOnly = false;
   private readonly toolbarAction = this.createToolbarAction();
   @query('[part~="button"]') private button?: HTMLButtonElement | null;
 
@@ -321,12 +329,16 @@ export class LyraToggle extends LyraElement<LyraToggleEventMap> {
     // itself; the group only ever observes its own subtree.
     const link = this.groupLink;
     if (link && this.isConnected && !link.owns(this)) this.releaseGroup();
-    if (this.hasUpdated) this.syncRelationships();
+    if (this.hasUpdated) {
+      this.syncRelationships();
+      this.iconOnlyObserver.arm();
+    }
   }
 
   override disconnectedCallback(): void {
     this.toolbarAction.releaseTabIndex?.();
     this.releaseRelationships();
+    this.iconOnlyObserver.disarm();
     super.disconnectedCallback();
   }
 
@@ -340,7 +352,19 @@ export class LyraToggle extends LyraElement<LyraToggleEventMap> {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.syncRelationships();
+    this.iconOnlyObserver.arm();
   }
+
+  /** Re-checks the icon-only state when CSS alone hides or shows the label, which fires no
+   *  slotchange (see `IconOnlyLabelObserver`). */
+  private readonly iconOnlyObserver = new IconOnlyLabelObserver(
+    this,
+    () => this.renderRoot.querySelector('[part="label"]'),
+    () => this.isIconOnly,
+    (next) => {
+      this.isIconOnly = next;
+    }
+  );
 
   private syncRelationships(): void {
     const target = this.isConnected ? this.button : null;
@@ -441,6 +465,17 @@ export class LyraToggle extends LyraElement<LyraToggleEventMap> {
     };
   }
 
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    this.seedFirstRenderState(() => {
+      this.isIconOnly = hasIconOnlyDefaultContent(this);
+    });
+  }
+
+  private onDefaultSlotChange = (): void => {
+    this.isIconOnly = hasIconOnlyDefaultContent(this);
+  };
+
   override render(): TemplateResult {
     const grouped = this.groupLink !== null;
     return html`<button
@@ -456,7 +491,7 @@ export class LyraToggle extends LyraElement<LyraToggleEventMap> {
       @focus=${this.onFocus}
       @blur=${this.onBlur}
     ><span part="start" ?hidden=${!this.slots.has('start')}><slot name="start"></slot></span
-    ><span part="label"><slot></slot></span
+    ><span part="label" ?data-icon-only=${this.isIconOnly}><slot @slotchange=${this.onDefaultSlotChange}></slot></span
     ><span part="end" ?hidden=${!this.slots.has('end')}><slot name="end"></slot></span></button>`;
   }
 }
