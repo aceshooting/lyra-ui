@@ -34,7 +34,7 @@ import type { LyraToolResultViewEventMap } from '../../agent-tools/tool-result-v
 import type { LyraAttachmentChipEventMap } from '../../media/attachment-chip/attachment-chip.class.js';
 import type { LyraCitationBadgeEventMap } from '../../retrieval/citation-badge/citation-badge.class.js';
 import type { LyraJsonViewerEventMap } from '../../utility/json-viewer/json-viewer.class.js';
-import { literalSetConverter, trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { literalSetConverter } from '../../../internal/converters.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
@@ -42,7 +42,6 @@ import { acquireAnnouncementSink, type AnnouncementSink } from '../../../interna
 import type { LyraMarkdownEventMap } from '../markdown/markdown.class.js';
 import type { LyraWidgetRendererEventMap } from '../widget-renderer/widget-renderer.class.js';
 import { isNonBlankIdentity, isRecord } from '../../retrieval/retrieval-identity.js';
-import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { styles } from './message-parts.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -234,8 +233,6 @@ export interface LyraMessagePartsEventMap
  * @cssprop [--lr-message-parts-audio-transcript-color=var(--lr-color-text-quiet)] - Text color of an audio transcript.
  * @cssprop [--lr-message-parts-error-border-color=var(--lr-color-danger)] - Border color of an error part.
  * @cssprop [--lr-message-parts-error-bg=var(--lr-color-danger-quiet)] - Background color of an error part.
- * @cssprop [--lr-message-parts-error-background=var(--lr-color-danger-quiet)] - Deprecated alias of `--lr-message-parts-error-bg`;
- *   removal not before 23.0.0.
  * @cssprop [--lr-message-parts-error-color=var(--lr-color-danger)] - Text color of an error part.
  * @status stable
  * @since 7.0.0
@@ -260,10 +257,6 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   protected static override readonly ownedCollectionProperties = Object.freeze(['parts']);
 
   static override styles = [LyraElement.styles, styles];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    showReasoning: ['withoutReasoning', invertAlias, invertAlias],
-    codeBlockChrome: 'codeBlockHeader',
-  };
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-citation-select',
     'lr-part-retry',
@@ -323,21 +316,6 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   /** Omits reasoning parts. */
   @property({ type: Boolean, attribute: 'without-reasoning', reflect: true }) withoutReasoning = false;
 
-  /**
-   * Deprecated inverted alias of `without-reasoning` (`withoutReasoning`): `show-reasoning="false"`
-   * equals `without-reasoning`, and removing it restores the default. Setting it logs a one-time
-   * development warning.
-   *
-   * @deprecated Use `without-reasoning`; removal not before 23.0.0.
-   */
-  @property({
-    type: Boolean,
-    attribute: 'show-reasoning',
-    reflect: true,
-    converter: trueDefaultBooleanConverter,
-  })
-  showReasoning = true;
-
   /** Optional host renderer; see `MessagePartRenderer` for the full contract. Returning `undefined`
    *  delegates to the built-in renderer -- any other return fully replaces it, including that
    *  part's own interactive wiring (retry/citation/tool-call/widget events). */
@@ -347,11 +325,6 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   @property({ attribute: 'streaming-render' }) streamingRender: MarkdownStreamingRender = 'plain';
   /** Adds source-copy headers to built-in text and reasoning Markdown parts. Custom renderers replace this surface. */
   @property({ type: Boolean, attribute: 'code-block-header' }) codeBlockHeader = false;
-  /** Deprecated alias of `code-block-header` (`codeBlockHeader`), kept in step with it -- the last
-   * write to either wins. Setting it logs a one-time development warning.
-   * @deprecated Use `code-block-header` (`codeBlockHeader`); removal not before 23.0.0. */
-  @property({ type: Boolean, attribute: 'code-block-chrome' }) codeBlockChrome = false;
-
 
   /** `0` (the default) renders every part -- unbounded, matching every prior release. A positive
    *  value windows rendering to the newest N parts (host `parts` data is untouched); citation

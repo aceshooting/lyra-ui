@@ -7,8 +7,7 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.2.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
-- **Deprecated property** `showComposer` / `show-composer` since `21.1.0`; use property `without-composer`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
-- **Deprecated property** `showDetails` / `show-details` since `21.1.0`; use property `without-details`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 16 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -73,17 +72,13 @@ warnings? }`
 Citation; truncated?: boolean; omittedTokens?: number; redactions?: ContextInspectorRedaction[] }`
 - `contextTotal: number = 0` (attribute `context-total`) — the overall context-window token budget
 - `withoutDetails: boolean = false` (attribute `without-details`, reflected) — turns off the
-  built-in details pane even when data is present. Deprecated alias: `show-details`/`showDetails`
-  (use `without-details`; removed in 23.0.0) — inverted, so `show-details="false"` equals
-  `without-details`
+  built-in details pane even when data is present.
 
 **Properties (composer / chrome):**
 
 - `withoutComposer: boolean = false` (attribute `without-composer`, reflected) — turns off the
   built-in plain-frame composer that renders when no `composer` slot is supplied. Its workspace-owned
-  dock supplies the border and padding; a supplied `composer` slot keeps its own frame. Deprecated
-  alias: `show-composer`/`showComposer` (use `without-composer`; removed in 23.0.0) — inverted, so
-  `show-composer="false"` equals `without-composer`.
+  dock supplies the border and padding; a supplied `composer` slot keeps its own frame.
 - `composerValue: string = ''` (attribute `composer-value`) — controlled composer value
 - `composerStatus: ChatComposerStatus = 'idle'` (attribute `composer-status`) — `'idle' | 'sending' |
 'streaming'`, `lr-chat-composer`'s own union; invalid values read as `idle` without rewriting the

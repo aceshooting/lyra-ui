@@ -651,9 +651,8 @@ release(): void }`, and `AnnouncerTimerHost { setTimeout(handler: () => void, ti
 number; clearTimeout(handle: number): void }`.
 - **`localization` → `subscribeLyraLocale(listener): () => void` and
   `bridgeLyraLocale(options?): () => void`** — the _active-locale_ half of the locale runtime.
-  **This `utilities/localization.js` entry point is deprecated**, with removal not before 23.0.0:
-  import every name below from the side-effect-free `@aceshooting/lyra-ui/localization.js` entry,
-  which exports the identical bindings and types. The extensionless `@aceshooting/lyra-ui/utilities`
+  Import these helpers from the side-effect-free `@aceshooting/lyra-ui/localization.js` entry.
+  The former `utilities/localization.js` route was removed in 23.0.0. The extensionless `@aceshooting/lyra-ui/utilities`
   barrel keeps exporting them. `subscribeLyraLocale()` is distinct from
   `subscribeLyraLocaleRegistry()`, which answers a different question — see "Localization".
   `subscribeLyraLocale()` fires whenever the active selection changes, and when a newly registered

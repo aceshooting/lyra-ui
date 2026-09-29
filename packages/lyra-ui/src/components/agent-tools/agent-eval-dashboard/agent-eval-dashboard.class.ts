@@ -2,11 +2,9 @@ import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
-import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { AGENT_STATUS_VARIANTS } from '../../../internal/agent-status-variants.js';
 import { styles } from './agent-eval-dashboard.styles.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import {
   agentStatusKind,
@@ -22,7 +20,6 @@ import { firstByIdentity } from '../collection-identity.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_evaluationDashboardLabel, LYRA_DEFAULT_evaluationDashboardNoRuns, LYRA_DEFAULT_evaluationDashboardRunsLabel, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 export type EvaluationMetricFormat = 'number' | 'percent' | 'milliseconds' | 'currency';
 export interface AgentEvaluationMetric { readonly id: string; readonly label: string; readonly value: number; readonly format?: EvaluationMetricFormat; }
@@ -55,7 +52,6 @@ export interface LyraAgentEvalDashboardEventMap { 'lr-metric-change': CustomEven
  * @cssprop [--lr-agent-eval-dashboard-active-border=var(--lr-color-brand)] - Active metric border.
  * @cssprop [--lr-agent-eval-dashboard-active-bg=var(--lr-color-brand-quiet)] - Active metric background,
  *   and the base its hover/press mixes from.
- * @cssprop [--lr-agent-eval-dashboard-active-background=var(--lr-color-brand-quiet)] - Deprecated alias of `--lr-agent-eval-dashboard-active-bg`; removal not before 23.0.0.
  * @status stable
  * @since 6.2.0
  */
@@ -93,9 +89,6 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
 
   static override styles = [LyraElement.styles, styles];
 
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    showChart: ['withoutChart', invertAlias, invertAlias],
-  };
   /** Metric cards and selector choices. Empty ids are omitted; duplicates normalize first-wins. */
   @property({ attribute: false }) metrics: readonly AgentEvaluationMetric[] = [];
   /** Run history used by both the chart and list. Empty ids are omitted; duplicates normalize
@@ -111,9 +104,6 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
   @property() label?: string;
   /** Suppresses the metric trend chart. */
   @property({ type: Boolean, attribute: 'without-chart', reflect: true }) withoutChart = false;
-  /** Whether the metric trend chart renders.
-   *  @deprecated Use `without-chart`; removal not before 23.0.0. */
-  @property({ type: Boolean, attribute: 'show-chart', reflect: true, converter: trueDefaultBooleanConverter }) showChart = true;
   @property({ attribute: 'chart-height' }) chartHeight = '220px';
   /** Maximum history entries rendered into both the run list and trend chart. Clamped to 1–500. */
   @property({ type: Number, attribute: 'max-rendered-runs' }) maxRenderedRuns = 100;

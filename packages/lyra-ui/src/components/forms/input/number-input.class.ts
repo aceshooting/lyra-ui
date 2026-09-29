@@ -5,10 +5,9 @@ import { sizes } from '../../../internal/sizes.styles.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import {
   presenceTrueDefaultBooleanConverter,
-  trueDefaultBooleanConverter,
 } from '../../../internal/converters.js';
-import { LyraInput, type LyraInputEventMap } from './input.class.js';
-import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { LyraInput } from './input.class.js';
+import type { LyraInputEventMap } from './input-shared.js';
 import { dispatchNativeEvent, dispatchNativeInputEvent } from '../../../internal/native-event-relay.js';
 import { styles as inputStyles } from './input.styles.js';
 import { styles as numberInputStyles } from './number-input.styles.js';
@@ -18,7 +17,6 @@ import type { LyraFormValidator } from '../form-validator.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_numberInputDecrease, LYRA_DEFAULT_numberInputIncrease } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 /** Number-input events, including the native cancelable edit veto exposed by its mapped API. */
 export interface LyraNumberInputEventMap extends LyraInputEventMap {
@@ -86,9 +84,6 @@ export class LyraNumberInput extends LyraInput {
     return super.validators;
   }
   static override styles = [LyraElement.styles, sizes, inputStyles, numberInputStyles];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    steppers: ['withoutSteppers', invertAlias, invertAlias],
-  };
 
   protected override get inputWrapperParts(): string {
     return `${super.inputWrapperParts} number-input`;
@@ -96,10 +91,6 @@ export class LyraNumberInput extends LyraInput {
 
   /** Hides the increment/decrement pair for a bare numeric field. */
   @property({ type: Boolean, attribute: 'without-steppers' }) withoutSteppers = false;
-  /** Renders the increment/decrement pair inside the control row. Set `steppers="false"` for a
-   *  bare numeric field.
-   *  @deprecated Use `without-steppers` (inverted); removal not before 23.0.0. */
-  @property({ converter: trueDefaultBooleanConverter, reflect: true }) steppers = true;
 
   /** Numeric inputs use the outlined field treatment by default. */
   @property({ reflect: true }) override appearance: LyraAppearance = 'outlined';

@@ -7,9 +7,7 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `16.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
-- **Deprecated property** `codeBlockChrome` / `code-block-chrome` since `21.1.0`; use property `code-block-header`; removal not before `23.0.0` — code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block headers of the composed Markdown element, which now always receives code-block-header. One name per concept removes a choice with no difference. It keeps enabling the headers through the 22.x line, and setting it logs a one-time development warning.
-- **Deprecated property** `gfm` / `gfm` since `21.1.0`; use property `without-gfm`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
-- **Deprecated property** `highlightCode` / `highlight-code` since `21.1.0`; use property `without-syntax-highlighting`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 25 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -45,21 +43,16 @@ element's own `languages` to `{}` when unset, unlike the full variant's `undefin
 `<lr-markdown-core>`'s configuration surface forwards verbatim too, sharing the same properties,
 attribute names, and defaults described under `<lr-streaming-text>`'s own **Properties** above:
 `tabSize: number = 4` (attribute `tab-size`); `htmlMode: 'sanitize' | 'escape' | 'trusted' =
-'sanitize'` (attribute `html-mode`); `withoutGfm: boolean = false` (attribute `without-gfm`;
-deprecated alias: `gfm`, use `without-gfm`, removed in 23.0.0); `linkTarget: string | null = '_blank'`
+'sanitize'` (attribute `html-mode`); `withoutGfm: boolean = false` (attribute `without-gfm`); `linkTarget: string | null = '_blank'`
 (attribute `link-target`, still guarded by the composed element's own
 `rel="noopener noreferrer"` whenever a `target` is emitted); `internalLinkPrefix: string = ''`
 (attribute `internal-link-prefix`); `headingOffset: number = 0` (attribute `heading-offset`);
 `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected);
-`codeBlockHeader: boolean = false` (attribute `code-block-header`) and its deprecated
-compatibility alias `codeBlockChrome: boolean = false` (attribute `code-block-chrome`; removal not
-before 23.0.0); `withoutSyntaxHighlighting: boolean = false` (attribute
-`without-syntax-highlighting`; deprecated alias: `highlight-code`/`highlightCode`, use
-`without-syntax-highlighting`, removed in 23.0.0); `headingAnchors: boolean = false` (attribute `heading-anchors`);
+`codeBlockHeader: boolean = false` (attribute `code-block-header`); `withoutSyntaxHighlighting: boolean = false` (attribute
+`without-syntax-highlighting`); `headingAnchors: boolean = false` (attribute `heading-anchors`);
 `math: boolean = false`; `maxHeight: string = ''` (attribute `max-height`). All are forwarded to
 the composed `<lr-markdown-core>`, with matching behavior and defaults. `streamingRender` controls
-progressive output, and `codeBlockHeader` (or its deprecated `codeBlockChrome` alias, which reaches
-the composed element as `codeBlockHeader`) enables the localized
+progressive output, and `codeBlockHeader` enables the localized
 code label and source-copy action.
 
 **Exported helper:** `looksLikeMarkdown(text: string): boolean` — the same standalone heuristic
@@ -109,7 +102,6 @@ shared behavior.
 The Markdown part set also includes `task-list`, `task-item`, `task-item-checked`,
 `task-checkbox`, `table-wrapper`, `code-block-frame`, `code-block-copy-success`,
 `code-block-copy-error` and `streaming-tail`. `codeBlockHeader: boolean = false`
-(attribute `code-block-header`) enables the code-block header; `codeBlockChrome` (attribute
-`code-block-chrome`) is its deprecated compatibility alias (removal not before 23.0.0). Successful and
+(attribute `code-block-header`) enables the code-block header. Successful and
 failed writes pass through as `lr-copy` and `lr-copy-error`, carrying the immutable clipboard
 outcome, bubbling and composed.

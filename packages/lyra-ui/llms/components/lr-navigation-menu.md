@@ -192,7 +192,7 @@ hover opening.
 **Methods:** `focus(options?)` and `click()` forward to the link or button.
 
 **Events:** `lr-toggle` — `detail: LyraNavigationMenuToggleDetail` (`{ expanded, open, source }`,
-where `expanded` is the new state, the deprecated `open` key (removed in 23.0.0) carries the same
+where `expanded` is the new state, the deprecated `open` key remains emitted and carries the same
 value, and `source` is `'user' | 'programmatic' | 'peer'`, the same vocabulary as `lr-details`), not
 cancelable,
 fired after an accepted change renders and never for initial markup. `user` covers click, Enter,
@@ -244,7 +244,6 @@ The item does not take the `size` ladder.
 </lr-navigation-menu-item>
 <lr-navigation-menu-item href="https://example.com/" target="_blank" rel="external">Example</lr-navigation-menu-item>
 ```
-
 
 - **`components-layout-menubar-contracts`** — Typed pass-through menu selection.
   Import: `@aceshooting/lyra-ui/components/layout/menubar/menubar.class.js`.

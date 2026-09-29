@@ -7,7 +7,7 @@
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [overlays](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/overlays.md)
-- **Deprecated property** `arrow` / `arrow` since `21.1.0`; use property `without-arrow`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 9 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -125,8 +125,7 @@ If the import fails, leave the native disclosure visible and usable.
   over `for` and the interaction owner but never receiving click listeners or generated ARIA; a
   `showAt()` virtual anchor still wins
 - `withoutArrow: boolean = false` (attribute `without-arrow`, reflected) — suppresses the arrow
-  that otherwise points at the anchor. Deprecated alias: `arrow` (use `without-arrow`, which
-  `arrow="false"` equals; removing `arrow` restores the default; removed in 23.0.0)
+  that otherwise points at the anchor.
 - `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'` (attribute `arrow-placement`) —
   `anchor` tracks the anchor's centre; `start`/`end` pin the arrow `arrow-padding` from one logical
   end of the edge (the two ends are the inline ones on a top/bottom placement, so they swap under

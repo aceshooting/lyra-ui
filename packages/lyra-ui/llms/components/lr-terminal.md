@@ -8,9 +8,6 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecated event** `lr-download` since `22.0.0`; use event `addEventListener('lr-download-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
-- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
-- **Deprecated property** `copyable` / `copyable` since `21.1.0`; use property `without-copy-button`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
-- **Deprecated property** `wrap` / `wrap` since `21.1.0`; use property `without-wrap`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 16 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -43,14 +40,11 @@ false), and `activeHighlightId: string | null = null` (attribute: false). Empty/
 and later duplicates are omitted before painting, focus ownership, active lookup, and activation
 events. A non-empty host `aria-label` is forwarded to the nested `role="log"`; an absent or explicit
 empty value uses the localized terminal-purpose fallback, so the actionable log remains named.
-Deprecated aliases: `wrap` (use `without-wrap`; removed in 23.0.0) and `copyable` (use
-`without-copy-button`; removed in 23.0.0) — both inverted, so `wrap="false"` equals `without-wrap`
-and `copyable="false"` equals `without-copy-button`.
 `size: LyraSize = 'm'` (reflected) — density on the shared size scale: `s` (and the smaller
 `xs`/`2xs`) tightens `[part="toolbar"]`'s padding and gap and each rendered line's inline padding
 for a terminal embedded in an already-padded transcript row, the same convention `<lr-task-list>`
 and `<lr-thinking-panel>` use; purely a density knob, the card border and background stay.
-Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0). `frame: LyraFrame = 'card'` (reflected) — container treatment in the library-wide
+`frame: LyraFrame = 'card'` (reflected) — container treatment in the library-wide
 `frame` vocabulary (`'card' | 'plain'`); `'plain'` removes `[part="base"]`'s border, corner radius,
 and raised surface so a terminal nested inside a container that already draws a border (an agent-run
 panel, a message bubble) doesn't double it, while keeping the toolbar/log divider and whichever

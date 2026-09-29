@@ -2,7 +2,7 @@ import { expect } from '@open-wc/testing';
 import { render } from 'lit';
 import './pdf-viewer-register.js';
 import { PDF_VIEWER_TAG } from './pdf-viewer-register.js';
-import { findDocumentRenderer, loadDocumentRenderer, type DocumentFile } from '../document-viewer/registry.js';
+import { findDocumentRenderer, loadDocumentRenderer, type LyraDocumentFile } from '../document-viewer/registry.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
 
 /** True once the browser has actually fetched a module whose URL ends with `suffix` -- the
@@ -12,7 +12,7 @@ function fetchedModuleEnding(suffix: string): boolean {
   return performance.getEntriesByType('resource').some((entry) => entry.name.endsWith(suffix));
 }
 
-const pdf: DocumentFile = { name: 'report.pdf', mimeType: 'application/pdf', src: 'https://example.test/report.pdf' };
+const pdf: LyraDocumentFile = { name: 'report.pdf', mimeType: 'application/pdf', src: 'https://example.test/report.pdf' };
 
 describe('pdf-viewer-register laziness', () => {
   it('never fetches the pdf-viewer class module merely by importing the register-only entry', () => {

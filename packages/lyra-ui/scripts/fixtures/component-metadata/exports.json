@@ -6126,18 +6126,6 @@
     },
     {
       "kind": "entry-point",
-      "name": "./components/lr-geojson-view.js",
-      "since": "21.1.0",
-      "replacement": {
-        "kind": "entry-point",
-        "name": "./components/lr-geojson-viewer.js",
-        "usage": "import '@aceshooting/lyra-ui/components/lr-geojson-viewer.js';"
-      },
-      "removalNotBefore": "23.0.0",
-      "rationale": "This tag-shaped route registers the deprecated lr-geojson-view alias (and, through it, lr-geojson-viewer). Import the lr-geojson-viewer route instead; this one keeps working unchanged through the 22.x line."
-    },
-    {
-      "kind": "entry-point",
       "name": "./components/media/animated-image/animated-image.js",
       "since": "22.0.0",
       "replacement": {
@@ -7398,30 +7386,6 @@
     },
     {
       "kind": "entry-point",
-      "name": "./components/viewers/geojson-view/geojson-view.class.js",
-      "since": "21.1.0",
-      "replacement": {
-        "kind": "entry-point",
-        "name": "./components/viewers/geojson-view/geojson-viewer.class.js",
-        "usage": "import { LyraGeoJsonViewer } from '@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-viewer.class.js';"
-      },
-      "removalNotBefore": "23.0.0",
-      "rationale": "This route exists for the deprecated LyraGeojsonView alias class and its event map; its re-exports of LyraGeoJsonViewer and its types duplicate the canonical geojson-viewer class route. Import from that route instead; this one keeps working unchanged through the 22.x line."
-    },
-    {
-      "kind": "entry-point",
-      "name": "./components/viewers/geojson-view/geojson-view.js",
-      "since": "21.1.0",
-      "replacement": {
-        "kind": "entry-point",
-        "name": "./components/lr-geojson-viewer.js",
-        "usage": "import '@aceshooting/lyra-ui/components/lr-geojson-viewer.js';"
-      },
-      "removalNotBefore": "23.0.0",
-      "rationale": "This route registers the deprecated lr-geojson-view alias and, as a side effect, lr-geojson-viewer. Import the geojson-viewer route to register the canonical tag alone; this one keeps working unchanged through the 22.x line."
-    },
-    {
-      "kind": "entry-point",
       "name": "./components/viewers/geojson-view/geojson-viewer.js",
       "since": "22.0.0",
       "replacement": {
@@ -7589,18 +7553,6 @@
       "rationale": "Independent style choices replace the combined preset facade. A token definition becomes a LyraLook; mode, accent and surface choices remain separate. Review the event detail and saved preference semantics rather than copying the old preset shape."
     },
     {
-      "kind": "entry-point",
-      "name": "./utilities/localization.js",
-      "since": "21.1.0",
-      "replacement": {
-        "kind": "entry-point",
-        "name": "./localization.js",
-        "usage": "import { bridgeLyraLocale, resolveLyraScopedString, subscribeLyraLocale } from '@aceshooting/lyra-ui/localization.js';"
-      },
-      "removalNotBefore": "23.0.0",
-      "rationale": "The side-effect-free localization.js entry now re-exports every binding of this route (bridgeLyraLocale, resolveLyraScopedString, subscribeLyraLocale and the LyraLocaleBridgeOptions/LyraLocaleBridgeCleanup types), identical at runtime and in type, so one entry point carries the whole application-facing locale runtime. Changing the import specifier is the entire migration; this route keeps working unchanged through the 22.x line."
-    },
-    {
       "kind": "function",
       "module": "./theme.js",
       "name": "getLyraTheme",
@@ -7681,59 +7633,6 @@
       },
       "removalNotBefore": "24.0.0",
       "rationale": "The fixed stylesheet selects one look globally. The scoped look stylesheet supports composition; changing only the import without setting data-lr-look would leave the default Lyra look selected."
-    },
-    {
-      "kind": "type",
-      "module": "./components/retrieval/graph/graph.class.js",
-      "name": "LyraGraphLink",
-      "since": "21.1.0",
-      "replacement": {
-        "kind": "type",
-        "name": "LyraGraphEdge",
-        "usage": "import type { LyraGraphEdge } from '@aceshooting/lyra-ui/components/retrieval/graph/graph.class.js';"
-      },
-      "removalNotBefore": "23.0.0",
-      "rationale": "Graph connections are called edges across the graph components. LyraGraphEdge is the structurally identical interface, and each is assignable to the other."
-    },
-    {
-      "kind": "type",
-      "module": "./components/viewers/document-viewer/registry.js",
-      "name": "DocumentFile",
-      "since": "21.1.0",
-      "replacement": {
-        "kind": "type",
-        "name": "LyraDocumentFile",
-        "usage": "import type { LyraDocumentFile } from '@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js';"
-      },
-      "removalNotBefore": "23.0.0",
-      "rationale": "LyraDocumentFile is the structurally identical interface under the library's prefixed type naming, and each is assignable to the other. Exported signatures keep the unprefixed name until the removal, so no existing signature changes in a minor release."
-    },
-    {
-      "kind": "type",
-      "module": "./components/viewers/document-viewer/registry.js",
-      "name": "DocumentRendererDefinition",
-      "since": "21.1.0",
-      "replacement": {
-        "kind": "type",
-        "name": "LyraDocumentRendererDefinition",
-        "usage": "import type { LyraDocumentRendererDefinition } from '@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js';"
-      },
-      "removalNotBefore": "23.0.0",
-      "rationale": "LyraDocumentRendererDefinition is the same union under the library's prefixed type naming. Exported signatures keep the unprefixed name until the removal, so no existing signature changes in a minor release."
-    },
-    {
-      "kind": "type",
-      "module": "./components/viewers/geojson-view/geojson-view.class.js",
-      "name": "LyraGeojsonViewEventMap",
-      "since": "21.1.0",
-      "replacement": {
-        "kind": "type",
-        "module": "./components/viewers/geojson-view/geojson-viewer.class.js",
-        "name": "LyraGeoJsonViewerEventMap",
-        "usage": "import type { LyraGeoJsonViewerEventMap } from '@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-viewer.class.js';"
-      },
-      "removalNotBefore": "23.0.0",
-      "rationale": "The event contract of the deprecated lr-geojson-view alias is exactly LyraGeoJsonViewerEventMap under a second name. The alias type keeps resolving to it, from this route and the package root, through the 22.x line."
     },
     {
       "kind": "type",

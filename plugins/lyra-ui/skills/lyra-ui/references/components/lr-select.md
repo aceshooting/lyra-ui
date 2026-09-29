@@ -7,7 +7,7 @@
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
-- **Deprecated property** `showUnknownOption` / `show-unknown-option` since `21.1.0`; use property `with-unknown-option`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 34 parts, 36 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -141,8 +141,7 @@ exactly like the multi-option case, until the trigger is actually activated.
   unsetting it releases the inline width the positioner wrote
 - `withUnknownOption: boolean = false` (attribute `with-unknown-option`, reflected) — appends every
   committed value that no `<lr-option>` claims to the end of the listbox as a synthetic, badged,
-  keyboard-reachable, re-selectable row. Off by default. Deprecated alias: `show-unknown-option`/`showUnknownOption`
-  (use `with-unknown-option`; kept in step with it, last write wins; removed in 23.0.0)
+  keyboard-reachable, re-selectable row. Off by default.
 - `getUnknownLabel?: (value: string) => string` (attribute: false) — renders the label for a
   committed value that matches no option, everywhere it appears (trigger, `multiple` tag, synthetic
   row). `getTag` cannot serve this case: it is handed a matched option and there is none. A blank

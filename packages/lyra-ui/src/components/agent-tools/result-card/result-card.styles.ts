@@ -13,7 +13,7 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid
       var(--lr-result-card-border-color, var(--lr-color-border-subtle));
     border-radius: var(--lr-result-card-radius, var(--lr-radius-container));
-    background: var(--lr-result-card-bg, var(--lr-result-card-background, var(--lr-color-surface)));
+    background: var(--lr-result-card-bg, var(--lr-color-surface));
     overflow: hidden;
     font-size: var(--lr-font-size-sm);
   }

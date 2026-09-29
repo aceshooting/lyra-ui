@@ -330,36 +330,16 @@ class LyraDocxViewerBase extends LyraElement<LyraDocxViewerEventMap> {}
  * @cssprop [--lr-docx-viewer-max-height=none] - Maximum block size of the scrollable document body before it scrolls internally. Also settable via the `max-height` property.
  * @cssprop [--lr-docx-viewer-table-header-bg=var(--lr-color-brand-quiet)] - Background of a
  *   rendered document table's header row (`th`), independent of the highlight backgrounds below.
- * @cssprop [--lr-docx-viewer-table-header-background=var(--lr-color-brand-quiet)] -
- *   Deprecated alias of `--lr-docx-viewer-table-header-bg`; removal not before 23.0.0.
  * @cssprop --lr-docx-viewer-highlight-accent-bg - Accent highlight background.
- * @cssprop --lr-docx-viewer-highlight-accent-background - Deprecated alias of
- *   `--lr-docx-viewer-highlight-accent-bg`; removal not before 23.0.0.
  * @cssprop --lr-docx-viewer-highlight-success-bg - Success highlight background.
- * @cssprop --lr-docx-viewer-highlight-success-background - Deprecated alias of
- *   `--lr-docx-viewer-highlight-success-bg`; removal not before 23.0.0.
  * @cssprop --lr-docx-viewer-highlight-warning-bg - Warning highlight background.
- * @cssprop --lr-docx-viewer-highlight-warning-background - Deprecated alias of
- *   `--lr-docx-viewer-highlight-warning-bg`; removal not before 23.0.0.
  * @cssprop --lr-docx-viewer-highlight-danger-bg - Danger highlight background.
- * @cssprop --lr-docx-viewer-highlight-danger-background - Deprecated alias of
- *   `--lr-docx-viewer-highlight-danger-bg`; removal not before 23.0.0.
  * @cssprop --lr-docx-viewer-highlight-neutral-bg - Neutral highlight background.
- * @cssprop --lr-docx-viewer-highlight-neutral-background - Deprecated alias of
- *   `--lr-docx-viewer-highlight-neutral-bg`; removal not before 23.0.0.
  * @cssprop --lr-docx-viewer-highlight-active-bg - Active highlight background.
- * @cssprop --lr-docx-viewer-highlight-active-background - Deprecated alias of
- *   `--lr-docx-viewer-highlight-active-bg`; removal not before 23.0.0.
  * @cssprop --lr-docx-viewer-highlight-active-outline - Active fallback-highlight outline.
  * @cssprop --lr-docx-viewer-search-match-bg - Search-match background.
- * @cssprop --lr-docx-viewer-search-match-background - Deprecated alias of
- *   `--lr-docx-viewer-search-match-bg`; removal not before 23.0.0.
  * @cssprop --lr-docx-viewer-search-match-active-bg - Active search-match background.
- * @cssprop --lr-docx-viewer-search-match-active-background - Deprecated alias of
- *   `--lr-docx-viewer-search-match-active-bg`; removal not before 23.0.0.
  * @cssprop --lr-docx-viewer-search-match-active-color - Active search-match foreground.
- * @cssprop --lr-docx-viewer-search-match-active-foreground - Deprecated alias of
- *   `--lr-docx-viewer-search-match-active-color`; removal not before 23.0.0.
  * @status stable
  * @since 4.0.0
  */

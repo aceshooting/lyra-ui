@@ -29,8 +29,6 @@ import {
   type PapaParseApi,
 } from '../../../internal/papaparse-loader.js';
 import { styles } from './csv-viewer.styles.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
-import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import {
   delimitedCellText as cell,
   delimitedColumnCount as columns,
@@ -179,10 +177,6 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     viewerLoadingStyles,
   ];
 
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    hasHeaderRow: ['withoutHeaderRow', invertAlias, invertAlias],
-  };
-
   /** URL to fetch and parse. */
   @property() src = '';
   /** Source filename or display name used on the shadow viewer owner when host `aria-label` is
@@ -191,13 +185,6 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   @property() name = '';
   /** Renders the first parsed row as an ordinary data row instead of the persistent header. */
   @property({ type: Boolean, attribute: 'without-header-row' }) withoutHeaderRow = false;
-  /** Whether the first parsed row is rendered as a sticky header.
-   *  @deprecated Use `without-header-row`; removal not before 23.0.0. */
-  @property({
-    attribute: 'has-header-row',
-    converter: trueDefaultBooleanConverter,
-  })
-  hasHeaderRow = true;
   /** CSS length that caps the scrollable body. */
   /** A CSS `max-height`; invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';

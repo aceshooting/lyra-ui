@@ -997,86 +997,17 @@ describe('withoutValue', () => {
   });
 });
 
-describe('deprecated show-value alias', () => {
+describe('canonical value visibility', () => {
   const SHOW_VALUE: readonly DeprecatedUsage[] = [{ tag: 'lr-gauge', kind: 'property', name: 'showValue' }];
-  const captions = (el: LyraGauge): number => el.shadowRoot!.querySelectorAll('[part="value"]').length;
-
-  it('treats show-value="false" exactly like without-value and warns once, naming without-value', async () => {
-    const canonical = await fixture<LyraGauge>(
-      html`<lr-gauge value="42" max="100" label="CPU" without-value></lr-gauge>`,
-    );
-    let aliased!: LyraGauge;
-    const warnings = await captureDeprecationWarnings(SHOW_VALUE, async () => {
-      aliased = await fixture<LyraGauge>(
-        html`<lr-gauge value="42" max="100" label="CPU" show-value="false"></lr-gauge>`,
-      );
-      const second = await fixture<LyraGauge>(html`<lr-gauge show-value="false"></lr-gauge>`);
-      await second.updateComplete;
-    });
-    expect(captions(aliased)).to.equal(0);
-    expect(captions(aliased)).to.equal(captions(canonical));
-    expect(aliased.withoutValue).to.be.true;
-    expect(aliased.showValue).to.be.false;
-    expect(aliased.getAttribute('aria-valuetext')).to.equal(canonical.getAttribute('aria-valuetext'));
-    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-gauge:property:showValue']);
-    expect(warnings[0]!.message).to.contain('without-value');
-  });
-
   it('never warns for without-value or an untouched default', async () => {
     const warnings = await captureDeprecationWarnings(SHOW_VALUE, async () => {
       const el = await fixture<LyraGauge>(html`<lr-gauge value="1" max="2"></lr-gauge>`);
-      expect(el.showValue).to.be.true;
       el.withoutValue = true;
       await el.updateComplete;
     });
     expect(warnings).to.deep.equal([]);
   });
 
-  it('forwards alias writes, restores the caption when the alias attribute is removed, and yields to without-value', async () => {
-    await captureDeprecationWarnings(SHOW_VALUE, async () => {
-      const el = await fixture<LyraGauge>(html`<lr-gauge value="42" max="100"></lr-gauge>`);
-      el.showValue = false;
-      await el.updateComplete;
-      expect(captions(el)).to.equal(0);
-      el.showValue = true;
-      await el.updateComplete;
-      expect(captions(el)).to.equal(1);
-
-      const attr = await fixture<LyraGauge>(html`<lr-gauge value="42" max="100" show-value="false"></lr-gauge>`);
-      attr.removeAttribute('show-value');
-      await attr.updateComplete;
-      expect(captions(attr)).to.equal(1);
-
-      const both = await fixture<LyraGauge>(
-        html`<lr-gauge value="42" max="100" show-value without-value></lr-gauge>`,
-      );
-      expect(captions(both)).to.equal(0);
-    });
-  });
-
-  it('syncs the alias back from without-value and lets the last write win in both directions', async () => {
-    await captureDeprecationWarnings(SHOW_VALUE, async () => {
-      const canonicalLast = await fixture<LyraGauge>(
-        html`<lr-gauge value="42" max="100" show-value="false" without-value></lr-gauge>`,
-      );
-      canonicalLast.removeAttribute('without-value');
-      await canonicalLast.updateComplete;
-      expect(canonicalLast.showValue).to.be.true;
-      expect(captions(canonicalLast)).to.equal(1);
-
-      const aliasLast = await fixture<LyraGauge>(
-        html`<lr-gauge value="42" max="100" without-value show-value="false"></lr-gauge>`,
-      );
-      aliasLast.showValue = true;
-      await aliasLast.updateComplete;
-      expect(aliasLast.withoutValue).to.be.false;
-      expect(captions(aliasLast)).to.equal(1);
-      aliasLast.withoutValue = true;
-      await aliasLast.updateComplete;
-      expect(aliasLast.showValue).to.be.false;
-      expect(captions(aliasLast)).to.equal(0);
-    });
-  });
 });
 
 describe('bidi isolation of formatted captions', () => {

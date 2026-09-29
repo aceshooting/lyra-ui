@@ -3,12 +3,12 @@ import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './table.js';
 import '../../forms/select/select.js';
 import type { LyraTable, TableColumn } from './table.js';
-import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
+import { captureDeprecationWarnings, } from '../../../../test/expected-deprecations.js';
 // Registers the real shipped `ar` catalog's `data` slice so the `lang="ar-EG"` resize-value
 // test below (which only overrides `resizeValuePixels`) can render without tripping the
 // dev-mode locale-fallback warning that strict-console platform lanes treat as fatal.
 import '../../../translations/ar/data.js';
-import { installTableTestHooks, TableOpaqueControlElement, type Row, columns, rows, forcedWidthHeaderCell, priorityColumns, hostileIterable } from '../../../../test/table.js';
+import { installTableTestHooks, TableOpaqueControlElement, type Row, columns, rows, forcedWidthHeaderCell, hostileIterable } from '../../../../test/table.js';
 installTableTestHooks();
 
 
@@ -796,20 +796,13 @@ describe('a column missing its cell renderer', () => {
 });
 
 describe('deprecated lr-table aliases', () => {
-  const EMPTY_COMPACT: DeprecatedUsage = { tag: 'lr-table', kind: 'property', name: 'emptyCompact' };
-  const HIDE_COLUMNS_LABEL: DeprecatedUsage = { tag: 'lr-table', kind: 'property', name: 'hideColumnsLabel' };
-  const NO_COLUMNS_HEADING: DeprecatedUsage = { tag: 'lr-table', kind: 'property', name: 'noColumnsHeading' };
-  const NO_COLUMNS_DESCRIPTION: DeprecatedUsage = { tag: 'lr-table', kind: 'property', name: 'noColumnsDescription' };
   const populated = async (el: LyraTable<Row>): Promise<LyraTable<Row>> => {
     el.columns = columns;
     el.rows = rows;
     await el.updateComplete;
     return el;
   };
-  const emptyCompact = (el: LyraTable<Row>): boolean =>
-    el.shadowRoot!.querySelector('[part~="empty"]')!.getAttribute('size') === 's';
-
-  it('fires lr-row-click right after lr-row-activate from the same activation, with its own equal detail', async () => {
+  it('emits only lr-row-activate with the activated row detail', async () => {
     const el = await populated((await fixture(html`<lr-table aria-label="Scores"></lr-table>`)) as LyraTable<Row>);
     const events: [string, CustomEvent][] = [];
     for (const type of ['lr-row-activate', 'lr-row-click']) {
@@ -818,183 +811,12 @@ describe('deprecated lr-table aliases', () => {
     const warnings = await captureDeprecationWarnings([], async () => {
       (el.shadowRoot!.querySelector('[part="row"]') as HTMLElement).click();
     });
-    expect(events.map(([type]) => type)).to.deep.equal(['lr-row-activate', 'lr-row-click']);
-    expect(events[1]![1].detail).to.deep.equal(events[0]![1].detail);
-    expect(events[1]![1].detail === events[0]![1].detail).to.equal(false);
+    expect(events.map(([type]) => type)).to.deep.equal(['lr-row-activate']);
     expect(events[0]![1].detail.row).to.deep.equal(rows[0]);
     expect(events.map(([, event]) => [event.bubbles, event.composed, event.cancelable])).to.deep.equal([
-      [true, true, false],
       [true, true, false],
     ]);
     expect(warnings).to.deep.equal([]);
   });
 
-  it('maps empty-compact onto empty-size, keeps its tri-state, and warns once, naming empty-size', async () => {
-    let present!: LyraTable<Row>;
-    let spacious!: LyraTable<Row>;
-    const warnings = await captureDeprecationWarnings([EMPTY_COMPACT], async () => {
-      present = (await fixture(html`<lr-table aria-label="Scores" empty-compact></lr-table>`)) as LyraTable<Row>;
-      spacious = (await fixture(
-        html`<lr-table aria-label="Scores" filterable empty-compact="false"></lr-table>`,
-      )) as LyraTable<Row>;
-      const late = (await fixture(html`<lr-table aria-label="Scores"></lr-table>`)) as LyraTable<Row>;
-      late.emptyCompact = true;
-      await late.updateComplete;
-      expect(late.emptySize).to.equal('s');
-    });
-    present.columns = columns;
-    present.rows = [];
-    await present.updateComplete;
-    expect(present.emptySize).to.equal('s');
-    expect(present.emptyCompact).to.be.true;
-    expect(emptyCompact(present)).to.be.true;
-
-    spacious.columns = columns;
-    spacious.rows = rows;
-    spacious.rowKey = (r) => r.id;
-    spacious.filterText = 'nonexistent-xyz';
-    await spacious.updateComplete;
-    expect(spacious.emptySize).to.equal('m');
-    expect(spacious.emptyCompact).to.be.false;
-    expect(emptyCompact(spacious)).to.be.false;
-    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-table:property:emptyCompact']);
-    expect(warnings[0]!.message).to.contain('empty-size');
-
-    await captureDeprecationWarnings([EMPTY_COMPACT], async () => {
-      spacious.removeAttribute('empty-compact');
-      await spacious.updateComplete;
-      expect(spacious.emptySize).to.be.undefined;
-      expect(spacious.emptyCompact).to.be.undefined;
-      expect(emptyCompact(spacious)).to.be.true;
-
-      const canonicalLast = (await fixture(
-        html`<lr-table aria-label="Scores" empty-compact empty-size="m"></lr-table>`,
-      )) as LyraTable<Row>;
-      canonicalLast.columns = columns;
-      canonicalLast.rows = [];
-      await canonicalLast.updateComplete;
-      expect(canonicalLast.emptySize).to.equal('m');
-      expect(canonicalLast.emptyCompact).to.be.false;
-      expect(emptyCompact(canonicalLast)).to.be.false;
-
-      const aliasLast = (await fixture(
-        html`<lr-table aria-label="Scores" empty-size="m" empty-compact></lr-table>`,
-      )) as LyraTable<Row>;
-      expect(aliasLast.emptySize).to.equal('s');
-      aliasLast.emptySize = 'xs';
-      await aliasLast.updateComplete;
-      expect(aliasLast.emptyCompact, 'syncs back from a compact empty-size').to.be.true;
-    });
-  });
-
-  it('renders the no-columns state from no-columns-heading/-description exactly like the empty-columns names, warning once each', async () => {
-    const canonical = (await fixture(
-      html`<lr-table aria-label="Scores" empty-columns-heading="Pick columns" empty-columns-description="None chosen yet"></lr-table>`,
-    )) as LyraTable<Row>;
-    let aliased!: LyraTable<Row>;
-    const warnings = await captureDeprecationWarnings([NO_COLUMNS_HEADING, NO_COLUMNS_DESCRIPTION], async () => {
-      aliased = (await fixture(
-        html`<lr-table aria-label="Scores" no-columns-heading="Pick columns" no-columns-description="None chosen yet"></lr-table>`,
-      )) as LyraTable<Row>;
-      const both = (await fixture(
-        html`<lr-table aria-label="Scores" no-columns-heading="Alias" empty-columns-heading="Canonical"></lr-table>`,
-      )) as LyraTable<Row>;
-      expect(both.shadowRoot!.querySelector('lr-empty')!.getAttribute('heading')).to.equal('Canonical');
-      const aliasLast = (await fixture(
-        html`<lr-table aria-label="Scores" empty-columns-heading="Canonical" no-columns-heading="Alias"></lr-table>`,
-      )) as LyraTable<Row>;
-      expect(aliasLast.shadowRoot!.querySelector('lr-empty')!.getAttribute('heading')).to.equal('Alias');
-      aliasLast.noColumnsHeading = 'Written';
-      await aliasLast.updateComplete;
-      expect(aliasLast.emptyColumnsHeading).to.equal('Written');
-    });
-    const state = (el: LyraTable<Row>): [string | null, string | null] => {
-      const empty = el.shadowRoot!.querySelector('lr-empty')!;
-      return [empty.getAttribute('heading'), empty.getAttribute('description')];
-    };
-    expect(state(aliased)).to.deep.equal(state(canonical));
-    expect(state(aliased)).to.deep.equal(['Pick columns', 'None chosen yet']);
-    expect([aliased.emptyColumnsHeading, aliased.noColumnsHeading]).to.deep.equal(['Pick columns', 'Pick columns']);
-    expect(warnings.map(({ key }) => key).sort()).to.deep.equal([
-      'lyra-deprecated:lr-table:property:noColumnsDescription',
-      'lyra-deprecated:lr-table:property:noColumnsHeading',
-    ]);
-  });
-
-  it('syncs every alias back from its canonical property, so the last write wins', async () => {
-    await captureDeprecationWarnings(
-      [EMPTY_COMPACT, HIDE_COLUMNS_LABEL, NO_COLUMNS_HEADING, NO_COLUMNS_DESCRIPTION],
-      async () => {
-        const el = (await fixture(html`<lr-table
-          aria-label="Scores"
-          empty-compact
-          empty-size="m"
-          no-columns-heading="Alias heading"
-          empty-columns-heading="Canonical heading"
-          no-columns-description="Alias description"
-          empty-columns-description="Canonical description"
-          hide-columns-label="Alias fewer"
-          columns-hide-label="Canonical fewer"
-        ></lr-table>`)) as LyraTable<Row>;
-        expect([el.emptySize, el.emptyColumnsHeading, el.emptyColumnsDescription, el.columnsHideLabel]).to.deep.equal(
-          ['m', 'Canonical heading', 'Canonical description', 'Canonical fewer'],
-        );
-        expect([el.emptyCompact, el.noColumnsHeading, el.noColumnsDescription, el.hideColumnsLabel]).to.deep.equal(
-          [false, 'Canonical heading', 'Canonical description', 'Canonical fewer'],
-        );
-        for (const name of ['empty-size', 'empty-columns-heading', 'empty-columns-description', 'columns-hide-label']) {
-          el.removeAttribute(name);
-        }
-        await el.updateComplete;
-        expect([el.emptyCompact, el.noColumnsHeading, el.noColumnsDescription, el.hideColumnsLabel]).to.deep.equal(
-          // A removed string attribute reads back as null through Lit's default converter.
-          [undefined, null, null, null],
-        );
-        expect(el.shadowRoot!.querySelector('lr-empty')!.getAttribute('heading')).to.equal('No columns configured');
-
-        el.noColumnsHeading = 'Written';
-        el.emptyCompact = true;
-        await el.updateComplete;
-        expect([el.emptyColumnsHeading, el.emptySize]).to.deep.equal(['Written', 's']);
-        expect(emptyCompact(el)).to.be.true;
-        el.emptySize = 'l';
-        await el.updateComplete;
-        expect(el.emptyCompact).to.be.false;
-        expect(emptyCompact(el)).to.be.false;
-      },
-    );
-  });
-
-  it('labels the revealed priority-columns button from hide-columns-label exactly like columns-hide-label, warning once', async () => {
-    const hideLabel = async (el: LyraTable<Row>): Promise<string> => {
-      el.columns = priorityColumns;
-      el.rows = rows;
-      await el.updateComplete;
-      await waitUntil(() => el.hasHiddenPriorityColumns === true);
-      const reveal = el.shadowRoot!.querySelector('[part="reveal-columns-button"]') as HTMLElement;
-      reveal.click();
-      await el.updateComplete;
-      return reveal.textContent!.trim();
-    };
-    const canonical = (await fixture(
-      html`<lr-table aria-label="Scores" style="display: block; width: 300px;" columns-hide-label="Fewer"></lr-table>`,
-    )) as LyraTable<Row>;
-    let aliased!: LyraTable<Row>;
-    const warnings = await captureDeprecationWarnings([HIDE_COLUMNS_LABEL], async () => {
-      aliased = (await fixture(
-        html`<lr-table aria-label="Scores" style="display: block; width: 300px;" hide-columns-label="Fewer"></lr-table>`,
-      )) as LyraTable<Row>;
-      const late = (await fixture(html`<lr-table aria-label="Scores"></lr-table>`)) as LyraTable<Row>;
-      late.hideColumnsLabel = 'Later';
-      await late.updateComplete;
-      expect(late.columnsHideLabel).to.equal('Later');
-    });
-    const aliasedText = await hideLabel(aliased);
-    const canonicalText = await hideLabel(canonical);
-    expect(aliasedText).to.equal(canonicalText);
-    expect(canonicalText).to.equal('Fewer');
-    expect(aliased.columnsHideLabel).to.equal('Fewer');
-    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-table:property:hideColumnsLabel']);
-    expect(warnings[0]!.message).to.contain('columns-hide-label');
-  });
 });

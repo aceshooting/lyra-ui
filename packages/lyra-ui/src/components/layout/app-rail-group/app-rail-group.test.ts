@@ -557,59 +557,8 @@ describe('lr-app-rail-group: collapsed and the deprecated inverted open alias', 
   ];
   const contentHidden = (el: LyraAppRailGroup): boolean =>
     (el.shadowRoot!.querySelector('[part="content"]') as HTMLElement).hasAttribute('hidden');
-  const toggleExpanded = (el: LyraAppRailGroup): string | null =>
-    (el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement).getAttribute('aria-expanded');
 
-  it('renders open="false" exactly like collapsed, and warns once naming collapsed', async () => {
-    const canonical = await fixture<LyraAppRailGroup>(
-      html`<lr-app-rail-group collapsible heading="A" collapsed></lr-app-rail-group>`
-    );
-    await canonical.updateComplete;
-    const aliased: LyraAppRailGroup[] = [];
-    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
-      for (let index = 0; index < 2; index += 1) {
-        const el = await fixture<LyraAppRailGroup>(
-          html`<lr-app-rail-group collapsible heading="A" open="false"></lr-app-rail-group>`
-        );
-        await el.updateComplete;
-        aliased.push(el);
-      }
-    });
-    for (const el of aliased) {
-      expect(el.collapsed).to.equal(true);
-      expect(el.open).to.equal(false);
-      expect(contentHidden(el)).to.equal(contentHidden(canonical));
-      expect(toggleExpanded(el)).to.equal(toggleExpanded(canonical));
-    }
-    expect(warnings.map(({ key }) => key)).to.deep.equal([
-      'lyra-deprecated:lr-app-rail-group:property:open',
-    ]);
-    expect(warnings[0]!.message).to.contain('collapsed');
-  });
-
-  it('keeps the open property working as the inverse of collapsed', async () => {
-    const el = await fixture<LyraAppRailGroup>(
-      html`<lr-app-rail-group collapsible heading="A"></lr-app-rail-group>`
-    );
-    let warnings = await captureDeprecationWarnings(aliasUsage, () => undefined);
-    expect(el.open, 'reading the alias never warns').to.equal(true);
-    expect(warnings).to.have.length(0);
-    warnings = await captureDeprecationWarnings(aliasUsage, async () => {
-      el.open = false;
-      await el.updateComplete;
-    });
-    expect(warnings).to.have.length(1);
-    expect(el.collapsed).to.equal(true);
-    expect(contentHidden(el)).to.equal(true);
-    expect(el.getAttribute('open'), 'the alias keeps reflecting').to.equal('false');
-    el.collapsed = false;
-    await el.updateComplete;
-    expect(el.open).to.equal(true);
-    expect(el.hasAttribute('open')).to.equal(false);
-    expect(contentHidden(el)).to.equal(false);
-  });
-
-  it('lets the last authored attribute win between collapsed and the open alias', async () => {
+  it('uses the canonical state regardless of attribute order between collapsed and the open alias', async () => {
     const results: boolean[] = [];
     await captureDeprecationWarnings(aliasUsage, async () => {
       for (const markup of [
@@ -621,38 +570,16 @@ describe('lr-app-rail-group: collapsed and the deprecated inverted open alias', 
         results.push(el.collapsed);
       }
     });
-    expect(results).to.deep.equal([true, false]);
+    expect(results).to.deep.equal([true, true]);
   });
 
-  it('lets the last write win in both directions after the first render', async () => {
-    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
-      const el = await fixture<LyraAppRailGroup>(
-        html`<lr-app-rail-group collapsible heading="A" collapsed></lr-app-rail-group>`
-      );
-      await el.updateComplete;
-      el.setAttribute('open', '');
-      await el.updateComplete;
-      expect(el.collapsed).to.equal(false);
-      expect(el.hasAttribute('collapsed')).to.equal(false);
-      expect(contentHidden(el)).to.equal(false);
-      el.collapsed = true;
-      await el.updateComplete;
-      expect(el.open).to.equal(false);
-      expect(el.getAttribute('open')).to.equal('false');
-      expect(contentHidden(el)).to.equal(true);
-    });
-    expect(warnings.map(({ key }) => key)).to.deep.equal([
-      'lyra-deprecated:lr-app-rail-group:property:open',
-    ]);
-  });
-
-  it('keeps a lone open attribute driving collapsed after the first render', async () => {
+  it('ignores open attribute changes after the first render', async () => {
     await captureDeprecationWarnings(aliasUsage, async () => {
       const el = await fixture<LyraAppRailGroup>(
         html`<lr-app-rail-group collapsible heading="A" open="false"></lr-app-rail-group>`
       );
       await el.updateComplete;
-      expect(el.hasAttribute('collapsed'), 'reflected from the alias').to.equal(true);
+      expect(el.hasAttribute('collapsed')).to.equal(false);
       el.setAttribute('open', 'true');
       await el.updateComplete;
       expect(el.collapsed).to.equal(false);
@@ -660,26 +587,8 @@ describe('lr-app-rail-group: collapsed and the deprecated inverted open alias', 
       expect(contentHidden(el)).to.equal(false);
       el.setAttribute('open', 'false');
       await el.updateComplete;
-      expect(el.collapsed).to.equal(true);
+      expect(el.collapsed).to.equal(false);
     });
-  });
-
-  it('lets a request listener resolve the toggle through the open alias', async () => {
-    const el = await fixture<LyraAppRailGroup>(
-      html`<lr-app-rail-group collapsible heading="A"></lr-app-rail-group>`
-    );
-    await el.updateComplete;
-    let settled = 0;
-    el.addEventListener('lr-toggle', () => (settled += 1));
-    el.addEventListener('lr-toggle-request', () => {
-      el.open = true;
-    });
-    await captureDeprecationWarnings(aliasUsage, async () => {
-      (el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement).click();
-      await el.updateComplete;
-    });
-    expect(el.collapsed).to.equal(false);
-    expect(settled).to.equal(0);
   });
 
   it('reports the proposed and settled state as expanded beside the deprecated open key', async () => {

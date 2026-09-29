@@ -7,11 +7,9 @@
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
-- **Deprecated css-property** `--lr-combobox-text-color` since `21.1.0`; use css-property `--lr-combobox-color`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated event** `lr-retry` since `22.0.0`; use event `addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
-- **Deprecated property** `showUnknownOption` / `show-unknown-option` since `21.1.0`; use property `with-unknown-option`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
-- **Themeable via** 34 parts, 37 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 34 parts, 36 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-option` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -149,8 +147,7 @@ An async `source` row can carry the same two fields (`start`, `end`) alongside i
   the active query exactly like the `allow-create` row is, so a query it does not match neither
   shows it nor suppresses the "no matches" copy; re-picking it re-commits the same value and
   deliberately does **not** reclassify it as known — the badge and the row both survive, and the row
-  never appears in `selectedRows`. Deprecated alias: `show-unknown-option`/`showUnknownOption` (use
-  `with-unknown-option`; kept in step with it, last write wins; removed in 23.0.0)
+  never appears in `selectedRows`.
 - `getUnknownLabel?: (value: string) => string` (attribute: false) — renders the label for a
   committed value that matches no option or async row, everywhere it appears (trigger, `multiple`
   tag, synthetic row). `getTag` cannot serve this case: it is handed a matched option and there is
@@ -539,8 +536,7 @@ an Escape dismissal, say. It is named for symmetry with `lr-select`'s
 `--lr-select-open-border-color`, which really is gated on `open`. `--lr-combobox-color`
 (default `inherit`) recolors the trigger's own text the same way; `appearance="accent"` defaults it
 instead to `var(--lr-color-on-brand)`, keeping placeholder, adornments and tag text readable on the
-loud brand fill. Deprecated alias: `--lr-combobox-text-color` (use `--lr-combobox-color`; removed in
-23.0.0).
+loud brand fill.
 
 The shared field halo `--lr-form-control-focus-shadow` (default `none`) paints a `box-shadow`
 while this control is focused — one name for every field-shaped control in the library, so a

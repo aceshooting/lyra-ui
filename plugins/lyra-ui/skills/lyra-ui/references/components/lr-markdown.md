@@ -8,9 +8,6 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecated event** `lr-link-click` since `22.0.0`; use event `lr-link-activate`; removal not before `24.0.0` — Activation includes pointer and keyboard gestures. The old event remains available after the canonical event with equal detail throughout the compatibility window.
-- **Deprecated property** `codeBlockChrome` / `code-block-chrome` since `21.1.0`; use property `code-block-header`; removal not before `23.0.0` — code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block header. One name per concept across the Markdown elements and the components that compose them removes a choice with no difference. It keeps enabling the header through the 22.x line, and setting it logs a one-time development warning.
-- **Deprecated property** `gfm` / `gfm` since `21.1.0`; use property `without-gfm`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
-- **Deprecated property** `highlightCode` / `highlight-code` since `21.1.0`; use property `without-syntax-highlighting`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 24 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -83,8 +80,7 @@ uses for its own `[part="body"]`.
   content. In escape mode, a consumer `renderer.text` or `renderer.html` override replaces the
   escaping and is the consumer's responsibility.
 - `withoutGfm: boolean = false` (attribute `without-gfm`) — disables GitHub-flavored Markdown
-  (tables, strikethrough, autolinks, task lists), which is on by default. Deprecated alias: `gfm`
-  (use `without-gfm`; removed in 23.0.0) — inverted, so `gfm="false"` equals `without-gfm`.
+  (tables, strikethrough, autolinks, task lists), which is on by default.
   GFM task-list checkboxes stay disabled. Unordered tasks replace their bullets and align their
   text with ordinary sibling items; ordered tasks keep their numerals. The hooks are `task-list`,
   `task-item`, `task-item-checked` and `task-checkbox`. A task-only unordered list carries
@@ -134,11 +130,8 @@ uses for its own `[part="body"]`.
   an icon-only native copy button to the first 200 non-empty built-in code blocks, fenced or
   indented. It copies source text without the renderer's terminal newline, preserving leading tabs
   whenever they match the displayed code after expansion. Custom code renderers and pre-escaped
-  code bypass it. `codeBlockChrome: boolean = false` (attribute `code-block-chrome`) is a
-  deprecated compatibility spelling (removal not before 23.0.0; setting it logs a one-time
-  development warning): the two stay in step and the last write wins, so use `code-block-header`. Plain
-  streaming defers headers until
-  settle; progressive streaming adds them to committed blocks. The button has a localized accessible
+  code bypass it. Plain streaming defers headers until settle; progressive streaming adds them
+  to committed blocks. The button has a localized accessible
   name and native pointer title, with no custom tooltip on keyboard focus. In sanitize mode enabling
   the header also removes authored style elements and their CSS text to prevent visual copy
   deception. Trusted mode provides no such guarantee.
@@ -146,9 +139,7 @@ uses for its own `[part="body"]`.
   fenced-code syntax highlighting. Unset (the default), every fenced block is upgraded via the
   optional `shiki` peer once it is available; set it to keep plain output even when `shiki` is
   installed. In progressive mode, a block can be highlighted after it settles; the mutable tail
-  remains unhighlighted. Deprecated alias: `highlight-code`/`highlightCode` (use
-  `without-syntax-highlighting`; removed in 23.0.0) — inverted, so `highlight-code="false"` equals
-  `without-syntax-highlighting`.
+  remains unhighlighted.
 - `languages?: Record<string, ShikiLanguageInput>` (attribute: false) — same shape and purpose as
   `<lr-code-block>`'s own `languages`: a fine-grained, explicit language-grammar bundle scoping
   shiki's build output to just those grammars instead of its full ~200-language bundle. Forwarded

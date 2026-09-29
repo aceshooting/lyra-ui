@@ -17,7 +17,7 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid
       var(--lr-commit-card-border-color, var(--lr-color-border-subtle));
     border-radius: var(--lr-commit-card-radius, var(--lr-radius-container));
-    background: var(--lr-commit-card-bg, var(--lr-commit-card-background, transparent));
+    background: var(--lr-commit-card-bg, transparent);
     padding: var(--lr-space-m);
   }
   /* Density escape -- same convention as lr-agent-run's dense size tier. The tuned value sits behind an

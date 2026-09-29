@@ -10,9 +10,6 @@ import {
   type LyraResolvedElementAnimation,
 } from '../../../utilities/animation-registry.js';
 import { styles } from './animation.styles.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
-import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
-import { invertAlias } from '../../../internal/deprecated-aliases.js';
 import {
   resolveCatalogAnimation,
   resolveNamedEasing,
@@ -327,9 +324,6 @@ function resolveTimingToken(
  */
 export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   static override styles = [LyraElement.styles, styles];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    respectReducedMotion: ['ignoreReducedMotion', invertAlias, invertAlias],
-  };
 
   /** Built-in preset or consumer-registered `animation.<name>` key. */
   @property() name: string = 'none';
@@ -350,14 +344,6 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
    *  Reserve it for genuine user-triggered feedback; see the class doc. */
   @property({ type: Boolean, attribute: 'ignore-reduced-motion', reflect: true })
   ignoreReducedMotion = false;
-  /** @deprecated Use `ignore-reduced-motion` (inverted); removal not before 23.0.0. */
-  @property({
-    type: Boolean,
-    attribute: 'respect-reduced-motion',
-    reflect: true,
-    converter: trueDefaultBooleanConverter,
-  })
-  respectReducedMotion = true;
   @property({ type: Boolean, attribute: 'play-on-visible', reflect: true })
   playOnVisible = false;
   @property({

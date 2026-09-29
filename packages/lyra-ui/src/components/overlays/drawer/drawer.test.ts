@@ -913,65 +913,14 @@ describe('lr-drawer renamed members', () => {
       await bare.close('api');
       const without = await mount('<lr-drawer open label="Title" without-close-button>Body</lr-drawer>');
       expect(closeButtons(without)).to.equal(0);
-      expect(without.closable).to.be.false;
+      expect('closable' in without).to.equal(false);
       await expect(without).to.be.accessible();
       await without.close('api');
     });
     expect(warnings).to.have.length(0);
   });
 
-  it('treats closable="false" exactly like without-close-button and warns once, naming without-close-button', async () => {
-    let aliased!: LyraDrawer;
-    const warnings = await captureDeprecationWarnings(CLOSABLE, async () => {
-      aliased = await mount('<lr-drawer open label="Title" closable="false">Body</lr-drawer>');
-      const second = await mount('<lr-drawer open label="Title" closable="false">Body</lr-drawer>');
-      second.close('api');
-    });
-    expect(aliased.withoutCloseButton).to.be.true;
-    expect(aliased.closable).to.be.false;
-    expect(closeButtons(aliased)).to.equal(0);
-    expect(aliased.shadowRoot!.querySelector('[part="header"]')).to.exist;
-    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-drawer:property:closable']);
-    expect(warnings[0]!.message).to.contain('without-close-button');
-    aliased.close('api');
-  });
-
-  it('restores the default when the alias is removed or set true, syncs back, and lets the last write win', async () => {
-    await captureDeprecationWarnings(CLOSABLE, async () => {
-      const el = await mount('<lr-drawer open label="Title" closable="false">Body</lr-drawer>');
-      el.removeAttribute('closable');
-      await el.updateComplete;
-      expect(el.withoutCloseButton).to.be.false;
-      expect(closeButtons(el)).to.equal(1);
-      el.closable = false;
-      await el.updateComplete;
-      expect(closeButtons(el)).to.equal(0);
-      el.closable = true;
-      await el.updateComplete;
-      expect(closeButtons(el)).to.equal(1);
-      el.close('api');
-      el.withoutCloseButton = true;
-      await el.updateComplete;
-      expect(el.closable).to.be.false;
-      expect(el.getAttribute('closable')).to.equal('false');
-      el.withoutCloseButton = false;
-      await el.updateComplete;
-      expect(el.closable).to.be.true;
-      expect(el.hasAttribute('closable')).to.be.false;
-      el.close('api');
-      const canonicalLast = await mount('<lr-drawer open label="Title" closable without-close-button>Body</lr-drawer>');
-      expect(canonicalLast.withoutCloseButton).to.be.true;
-      expect(canonicalLast.closable).to.be.false;
-      expect(closeButtons(canonicalLast)).to.equal(0);
-      canonicalLast.close('api');
-      const aliasLast = await mount('<lr-drawer open label="Title" without-close-button closable>Body</lr-drawer>');
-      expect(aliasLast.withoutCloseButton).to.be.false;
-      expect(closeButtons(aliasLast)).to.equal(1);
-      aliasLast.close('api');
-    });
-  });
-
-  it('names the panel through the host aria-label, and the deprecated accessible-label still names it', async () => {
+  it('names the panel through host aria-label while ignoring accessible-label', async () => {
     const canonical = await mount('<lr-drawer open aria-label="Announced">Body</lr-drawer>');
     expect(panelName(canonical)).to.equal('Announced');
     await expect(canonical).to.be.accessible();
@@ -980,12 +929,11 @@ describe('lr-drawer renamed members', () => {
     const warnings = await captureDeprecationWarnings(ACCESSIBLE_LABEL, async () => {
       aliased = await mount('<lr-drawer open accessible-label="Announced">Body</lr-drawer>');
       const second = await mount('<lr-drawer accessible-label="Other">Body</lr-drawer>');
-      expect(second.accessibleLabel).to.equal('Other');
+      expect(second.accessibleLabel).to.equal('');
     });
-    expect(panelName(aliased)).to.equal('Announced');
-    expect(aliased.accessibleLabel).to.equal('Announced');
-    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-drawer:attribute:accessible-label']);
-    expect(warnings[0]!.message).to.contain('aria-label');
+    expect(panelName(aliased)).to.equal(null);
+    expect(aliased.accessibleLabel).to.equal('');
+    expect(warnings).to.have.length(0);
     aliased.close('api');
   });
 
@@ -995,12 +943,12 @@ describe('lr-drawer renamed members', () => {
       expect(panelName(el)).to.equal('Host');
       el.removeAttribute('aria-label');
       await el.updateComplete;
-      expect(panelName(el)).to.equal('Alias');
+      expect(panelName(el)).to.equal(null);
       el.close('api');
     });
   });
 
-  it('forwards the close control under close-button-control and its deprecated close-button__control alias', async () => {
+  it('forwards the close control under close-button-control without its removed close-button__control alias', async () => {
     const wrapper = await fixture(html`
       <div>
         <style>
@@ -1021,7 +969,7 @@ describe('lr-drawer renamed members', () => {
     await canonical!.close('api');
     alias!.open = true;
     await alias!.updateComplete;
-    expect(getComputedStyle(control(alias!)).backgroundColor).to.equal('rgb(4, 5, 6)');
+    expect(getComputedStyle(control(alias!)).backgroundColor).to.not.equal('rgb(4, 5, 6)');
     await alias!.close('api');
   });
 });

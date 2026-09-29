@@ -7,7 +7,7 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
-- **Deprecated property** `locked` / `locked` since `21.1.0`; use property `readonly`; removal not before `23.0.0` — One name per concept across the library.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 29 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -85,8 +85,7 @@ import type {
 - `readonly: boolean = false` (reflected) — freezes pan/zoom/drag/connect without touching the other
   gesture flags. Enabling it during a pan, node drag, pointer/keyboard connection, or palette drop
   cancels the active preview, rolls pan/node geometry back, clears transient state, and retires the
-  window pointer listeners so a later release cannot commit. Deprecated alias: `locked` (use
-  `readonly`; removed in 23.0.0)
+  window pointer listeners so a later release cannot commit.
 - `selectedNodeIds: readonly string[] = []`, `selectedEdgeIds: readonly string[] = []` (attribute:
   false) — seed or replace selection. Each assignment snapshots at most the first 10,000 ids,
   omits blank/later duplicates first-wins, and prunes identities absent from the current canonical

@@ -78,8 +78,20 @@ describe('LYRA_SSR_STATIC_SAFETY', () => {
     const staticSafeCount = values.filter((value) => value === 'static-safe').length;
     const hydrationRequiredCount = values.filter((value) => value === 'hydration-required').length;
     expect(staticSafeCount).to.equal(235);
-    expect(hydrationRequiredCount).to.equal(51);
+    expect(hydrationRequiredCount).to.equal(50);
     expect(staticSafeCount + hydrationRequiredCount).to.equal(LYRA_SSR_RENDER_AND_HYDRATE_TAGS.length);
+  });
+
+  it('retains the canonical GeoJSON remote-content contract without the retired tag', () => {
+    expect('lr-geojson-view' in LYRA_SSR_TAG_CAPABILITIES).to.equal(false);
+    expect(new Set<string>(LYRA_SSR_RENDER_AND_HYDRATE_TAGS).has('lr-geojson-view')).to.equal(false);
+    expect(getLyraSsrMode('lr-geojson-view')).to.equal(undefined);
+    expect(getLyraSsrStaticSafety('lr-geojson-view')).to.equal(undefined);
+    expect(LYRA_SSR_TAG_CAPABILITIES['lr-geojson-viewer']).to.deep.equal({
+      remoteContent: 'client-only',
+    });
+    expect(getLyraSsrMode('lr-geojson-viewer')).to.equal('render-and-hydrate');
+    expect(getLyraSsrStaticSafety('lr-geojson-viewer')).to.equal('hydration-required');
   });
 
   it('classifies host-owned agent state with complete server-rendered content as static-safe', () => {

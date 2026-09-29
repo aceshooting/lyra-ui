@@ -1,11 +1,10 @@
 import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { tag } from '../../../internal/prefix.js';
-import { normalizeSize, type LyraFrame, type LyraSize } from '../../../internal/variants.js';
+import { type LyraFrame, type LyraSize } from '../../../internal/variants.js';
 import { styles } from './source-list.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -18,12 +17,6 @@ export interface SourceListToggleDetail {
 
 export interface LyraSourceListEventMap {
   'lr-toggle': CustomEvent<SourceListToggleDetail>;
-}
-
-/** Whether a `size` sits on the dense tier the deprecated `compact` boolean spelled. */
-function isDenseSize(size: LyraSize): boolean {
-  const step = normalizeSize(size);
-  return step === 's' || step === 'xs' || step === '2xs';
 }
 
 /**
@@ -82,9 +75,6 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    compact: ['size', (value) => (value ? 's' : 'm'), (value) => isDenseSize(value as LyraSize)],
-  };
 
   /** Whether the card list is currently shown. Starts collapsed by default
    *  so a message's sources don't eat vertical space until asked for. */
@@ -108,13 +98,6 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
    * use `frame="plain"` to remove card chrome.
    */
   @property({ reflect: true }) size: LyraSize = 'm';
-  /** Tighter header and list padding/gap, for a panel rendered repeatedly down a message
-   *  transcript — same convention as this component's slotted `<lr-source-card>` children's own
-   *  `compact`. Defaults to `false`, preserving the regular-density treatment. This changes
-   *  density only; the outer border and surface remain, so use `frame="plain"` to remove card
-   *  chrome.
-   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
-  @property({ type: Boolean, reflect: true }) compact = false;
 
   /** Visual chrome, in the library's shared container-frame vocabulary. `'card'` (the default)
    *  keeps the bordered, filled outer container. `'plain'` removes that outer border, background,

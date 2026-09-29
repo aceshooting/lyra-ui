@@ -8,7 +8,6 @@ import {
 } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 import type {
   LyraSelectionDirection,
@@ -197,8 +196,6 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  * @cssprop [--lr-chat-composer-busy-bg=var(--lr-color-text-quiet)] - `action-button` background while `status` is `"sending"` or `"streaming"`. Scoped separately from the shared `--lr-color-text-quiet` token, which the `textarea` part's placeholder also reads -- overriding this recolors only the busy button, not the placeholder text too.
  * @cssprop [--lr-chat-composer-bg=var(--lr-color-surface)] - Fill of the card
  *   (`[part="base"]`) while `frame="card"`. `frame="plain"` still removes the fill entirely.
- * @cssprop [--lr-chat-composer-background=var(--lr-color-surface)] - Deprecated alias of
- *   `--lr-chat-composer-bg`; removal not before 23.0.0.
  * @cssprop [--lr-chat-composer-border-color=var(--lr-color-border)] - Resting colour of the card's
  *   border. The `:focus-within` border stays on the brand token -- it is state paint, not chrome.
  * @cssprop [--lr-chat-composer-radius=var(--lr-radius)] - Corner radius of the card.
@@ -231,10 +228,6 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    submitOnEnter: ['withoutEnterSubmit', invertAlias, invertAlias],
-    stoppable: ['withoutStop', invertAlias, invertAlias],
-  };
 
   @property() placeholder = '';
   @property({ type: Number, attribute: 'min-rows' }) minRows = 1;
@@ -307,19 +300,6 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   @property({ type: Boolean, reflect: true, attribute: 'without-enter-submit' })
   withoutEnterSubmit = false;
 
-  /**
-   * Deprecated inverted alias of `without-enter-submit`: `submit-on-enter="false"` equals
-   * `without-enter-submit`. Setting it logs a one-time development warning.
-   *
-   * @deprecated Use `without-enter-submit`; removal not before 23.0.0.
-   */
-  @property({
-    type: Boolean,
-    reflect: true,
-    attribute: 'submit-on-enter',
-    converter: trueDefaultBooleanConverter,
-  })
-  submitOnEnter = true;
   /** Consumer-controlled validation gate for submission. While idle, disables the built-in Send
    * button and suppresses Enter/click submission without disabling the textarea. Busy Stop behavior
    * remains governed by `status` and `without-stop`. */
@@ -330,18 +310,6 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
    *  fires `lr-stop`. */
   @property({ type: Boolean, reflect: true, attribute: 'without-stop' }) withoutStop = false;
 
-  /**
-   * Deprecated inverted alias of `without-stop`: `stoppable="false"` equals `without-stop`.
-   * Setting it logs a one-time development warning.
-   *
-   * @deprecated Use `without-stop`; removal not before 23.0.0.
-   */
-  @property({
-    type: Boolean,
-    reflect: true,
-    converter: trueDefaultBooleanConverter,
-  })
-  stoppable = true;
   /** Native read-only state. The textarea remains focusable/submittable but cannot be user-edited,
    * and intrinsic constraints are barred just like a native read-only textarea. */
   @property({ type: Boolean, reflect: true, attribute: 'readonly' }) readOnly =

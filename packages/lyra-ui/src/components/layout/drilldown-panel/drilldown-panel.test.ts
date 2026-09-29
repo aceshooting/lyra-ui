@@ -994,7 +994,7 @@ describe("lr-drilldown-panel: without-focus-button and the deprecated inverted s
     return el.shadowRoot!.querySelector("lr-entity-card") as LyraEntityCard;
   }
 
-  it('renders show-focus-button="false" exactly like without-focus-button, and warns once', async () => {
+  it('ignores show-focus-button="false" while canonical without-focus-button hides the action', async () => {
     const canonical = await entitiesCard(
       (await fixture(html`<lr-drilldown-panel without-focus-button></lr-drilldown-panel>`)) as LyraDrilldownPanel
     );
@@ -1004,30 +1004,15 @@ describe("lr-drilldown-panel: without-focus-button and the deprecated inverted s
         const el = (await fixture(
           html`<lr-drilldown-panel show-focus-button="false"></lr-drilldown-panel>`
         )) as LyraDrilldownPanel;
-        expect(el.withoutFocusButton).to.be.true;
+        expect(el.withoutFocusButton).to.be.false;
         cards.push(await entitiesCard(el));
       }
     });
-    for (const card of cards) expect(card.withoutFocusButton).to.equal(canonical.withoutFocusButton);
-    expect(warnings.map(({ key }) => key)).to.deep.equal([
-      "lyra-deprecated:lr-drilldown-panel:property:showFocusButton",
-    ]);
-    expect(warnings[0]!.message).to.contain("without-focus-button");
+    for (const card of cards) expect(card.withoutFocusButton).to.not.equal(canonical.withoutFocusButton);
+    expect(warnings).to.have.length(0);
   });
 
-  it("keeps the showFocusButton property working as the inverse, without reflecting", async () => {
-    const el = (await fixture(html`<lr-drilldown-panel></lr-drilldown-panel>`)) as LyraDrilldownPanel;
-    expect(el.showFocusButton).to.be.true;
-    await captureDeprecationWarnings(aliasUsage, async () => {
-      el.showFocusButton = false;
-      await el.updateComplete;
-    });
-    expect(el.withoutFocusButton).to.be.true;
-    expect(el.hasAttribute("show-focus-button")).to.be.false;
-    expect((await entitiesCard(el)).withoutFocusButton).to.be.true;
-  });
-
-  it("lets the last authored attribute win between without-focus-button and show-focus-button", async () => {
+  it("uses the canonical state regardless of attribute order between without-focus-button and show-focus-button", async () => {
     const results: boolean[] = [];
     await captureDeprecationWarnings(aliasUsage, async () => {
       for (const markup of [
@@ -1038,32 +1023,15 @@ describe("lr-drilldown-panel: without-focus-button and the deprecated inverted s
         results.push(el.withoutFocusButton);
       }
     });
-    expect(results).to.deep.equal([true, false]);
+    expect(results).to.deep.equal([true, true]);
   });
 
-  it("lets the last write win in both directions after the first render", async () => {
-    await captureDeprecationWarnings(aliasUsage, async () => {
-      const el = (await fixture(
-        html`<lr-drilldown-panel without-focus-button></lr-drilldown-panel>`
-      )) as LyraDrilldownPanel;
-      expect(el.showFocusButton).to.be.false;
-      el.setAttribute("show-focus-button", "true");
-      await el.updateComplete;
-      expect(el.withoutFocusButton).to.be.false;
-      expect((await entitiesCard(el)).withoutFocusButton).to.be.false;
-      el.withoutFocusButton = true;
-      await el.updateComplete;
-      expect(el.showFocusButton).to.be.false;
-      expect((await entitiesCard(el)).withoutFocusButton).to.be.true;
-    });
-  });
-
-  it("keeps a lone show-focus-button attribute driving the focus action after the first render", async () => {
+  it("ignores show-focus-button changes after the first render", async () => {
     await captureDeprecationWarnings(aliasUsage, async () => {
       const el = (await fixture(
         html`<lr-drilldown-panel show-focus-button="false"></lr-drilldown-panel>`
       )) as LyraDrilldownPanel;
-      expect(el.withoutFocusButton).to.be.true;
+      expect(el.withoutFocusButton).to.be.false;
       el.removeAttribute("show-focus-button");
       await el.updateComplete;
       expect(el.withoutFocusButton).to.be.false;

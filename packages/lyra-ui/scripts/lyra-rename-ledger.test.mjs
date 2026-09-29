@@ -13,6 +13,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { readCurrentCompatibilityContextSync } from './check-published-compatibility.mjs';
 import { copyMigrationRuntimeModules } from './copy-migration-runtime.mjs';
 
 import { analyzeRenameLedger, analyzeRetiredEventHistory } from './check-migration-coverage.mjs';
@@ -59,6 +60,7 @@ const ledger = syntheticLedger();
 const contract = buildMigrationContract(inventory, { renameLedger: ledger });
 const expectedReports = readJson(path.join(fixtureDir, 'expected-reports.json'));
 const checkedInventory = readJson(path.join(scriptDir, 'fixtures', 'component-inventory.json'));
+const checkedCompatibilityContext = readCurrentCompatibilityContextSync(packageDir, checkedInventory);
 const sharedTokens = new Set(Object.keys(readJson(path.join(packageDir, 'tokens', 'canonical-tokens.json')).tokens));
 
 const describeChanges = (entries) => entries.map((entry) =>
@@ -86,13 +88,14 @@ function moduleMigrationFixture() {
 test('module reviews derive canonical guidance, cover both cohorts, and retain the whole v23 compatibility window', () => {
   const records = readExportDeprecations();
   const checked = readRenameLedger();
-  assert.equal(checked.profiles[0].moduleReviews.length, records.filter((record) => record.removalNotBefore === '23.0.0').length);
+  const publishedRecords = Object.values(checkedCompatibilityContext.records).filter(entry => entry.key.scope === 'export').map(entry => entry.policy);
+  assert.equal(checked.profiles[0].moduleReviews.length, publishedRecords.filter((record) => record.removalNotBefore === '23.0.0').length);
   assert.equal(checked.profiles[1].moduleReviews.length, records.filter((record) => record.removalNotBefore === '24.0.0').length);
-  assert.deepEqual(validateRenameLedger(checked, { inventory: checkedInventory, exportDeprecations: records, requireCoverage: true, sharedTokens }), []);
-  const projection = projectRenameLedger(checked, checkedInventory, { exportDeprecations: records });
+  assert.deepEqual(validateRenameLedger(checked, { inventory: checkedInventory, exportDeprecations: records, compatibilityContext: checkedCompatibilityContext, requireCoverage: true, sharedTokens }), []);
+  const projection = projectRenameLedger(checked, checkedInventory, { exportDeprecations: records, compatibilityContext: checkedCompatibilityContext });
   for (const profile of projection.profiles) {
     for (const entry of profile.moduleReviews) {
-      const record = records.find((candidate) => candidate.kind === entry.kind && candidate.module === entry.module && candidate.name === entry.name);
+      const record = publishedRecords.find((candidate) => candidate.kind === entry.kind && candidate.module === entry.module && candidate.name === entry.name);
       assert.equal(entry.replacement, record.replacement.usage);
       assert.equal(entry.since, record.since);
       assert.equal(entry.removalNotBefore, `${profile.aliasRemovalMajor}.0.0`);
@@ -254,7 +257,7 @@ function assertFinding(findings, pattern) {
 test('the checked-in ledger is valid and complete against the checked-in inventory', () => {
   const checkedLedger = readRenameLedger();
   assert.deepEqual(
-    validateRenameLedger(checkedLedger, { inventory: checkedInventory, exportDeprecations: readExportDeprecations(), requireCoverage: true, sharedTokens }),
+    validateRenameLedger(checkedLedger, { inventory: checkedInventory, exportDeprecations: readExportDeprecations(), compatibilityContext: checkedCompatibilityContext, requireCoverage: true, sharedTokens }),
     [],
   );
   assert.deepEqual(checkedLedger.profiles.map((profile) => profile.origin), [...LYRA_RENAME_ORIGINS]);
@@ -1236,7 +1239,7 @@ test('the packaged CLI previews with --diff, gates with --check, applies, and cl
 });
 
 test('the checked-in lyra-v21 entries rewrite exact aliases and report every other retired name', () => {
-  const checkedContract = buildMigrationContract(checkedInventory, { renameLedger: readRenameLedger(), exportDeprecations: readExportDeprecations() });
+  const checkedContract = buildMigrationContract(checkedInventory, { renameLedger: readRenameLedger(), compatibilityContext: checkedCompatibilityContext, exportDeprecations: readExportDeprecations() });
   const input = fixture('lyra-v21.input.html');
   const result = run(input, 'lyra-v21.html', checkedContract);
   assert.equal(result.content, fixture('lyra-v21.expected.html'));
@@ -1289,14 +1292,14 @@ test('the checked-in lyra-v21 entries rewrite exact aliases and report every oth
   );
 
   // Before the release that ships these records, a known 21.0.0 install withholds every entry.
-  const released = buildMigrationContract(checkedInventory, { renameLedger: readRenameLedger(), exportDeprecations: readExportDeprecations(), lyraVersion: '21.0.0' });
+  const released = buildMigrationContract(checkedInventory, { renameLedger: readRenameLedger(), compatibilityContext: checkedCompatibilityContext, exportDeprecations: readExportDeprecations(), lyraVersion: '21.0.0' });
   const early = run(input, 'lyra-v21.html', released);
   assert.equal(early.content, input);
   assert.deepEqual(early.warnings, []);
 });
 
 test('a listener is reported, not renamed, where its receiver already listens to the new name with the same handler', () => {
-  const checkedContract = buildMigrationContract(checkedInventory, { renameLedger: readRenameLedger(), exportDeprecations: readExportDeprecations() });
+  const checkedContract = buildMigrationContract(checkedInventory, { renameLedger: readRenameLedger(), compatibilityContext: checkedCompatibilityContext, exportDeprecations: readExportDeprecations() });
   const source = [
     "card.addEventListener('lr-media-download-request', onDownload);",
     "card.addEventListener('lr-before-media-download', onDownload);",
@@ -1540,7 +1543,7 @@ test('all nine published retired aliases have policy-backed reports and replacem
   const wrong = structuredClone(current);
   wrong.profiles[0].retiredEvents[0].replacement = 'lr-unrelated';
   assertFinding(analyzeRetiredEventHistory(wrong, history), /replacement differs from published policy/);
-  const contract = buildMigrationContract(checkedInventory, { renameLedger: current, exportDeprecations: readExportDeprecations() });
+  const contract = buildMigrationContract(checkedInventory, { renameLedger: current, exportDeprecations: readExportDeprecations(), compatibilityContext: checkedCompatibilityContext });
   for (const entry of current.profiles[0].retiredEvents) {
     const input = `<${entry.tag} @${entry.event}=\${handler}></${entry.tag}>`;
     const result = run(input, 'retired.html', contract);
@@ -1554,7 +1557,7 @@ test('all nine published retired aliases have policy-backed reports and replacem
   const global = run("window.addEventListener('lr-open', handler);", 'global.ts', contract);
   assert.equal(global.content, "window.addEventListener('lr-open', handler);");
   assert.match(global.warnings.find((entry) => entry.warningCode === 'RETIRED_EVENT_REVIEW').message, /document-library and source-card/);
-  const docs = buildLyraRenameReference(current, checkedInventory, { exportDeprecations: readExportDeprecations() }).join('\n');
+  const docs = buildLyraRenameReference(current, checkedInventory, { exportDeprecations: readExportDeprecations(), compatibilityContext: checkedCompatibilityContext }).join('\n');
   for (const entry of current.profiles[0].retiredEvents) assert.ok(docs.includes(entry.event) && docs.includes(entry.replacement));
 });
 

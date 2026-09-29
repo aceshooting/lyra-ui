@@ -1,9 +1,9 @@
 import { expect } from '@open-wc/testing';
 import { render } from 'lit';
 import './ebook-viewer-register.js';
-import { findDocumentRenderer, loadDocumentRenderer, type DocumentFile } from '../document-viewer/registry.js';
+import { findDocumentRenderer, loadDocumentRenderer, type LyraDocumentFile } from '../document-viewer/registry.js';
 
-const file: DocumentFile = { name: 'book.epub', mimeType: 'application/epub+zip', src: 'https://example.test/book.epub' };
+const file: LyraDocumentFile = { name: 'book.epub', mimeType: 'application/epub+zip', src: 'https://example.test/book.epub' };
 
 it('registers EPUB MIME and filename fallback renderers', async () => {
   expect(findDocumentRenderer(file)).to.exist;

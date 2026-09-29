@@ -9,7 +9,6 @@ import {
   type LyraEventDetailSnapshot,
 } from '../../../internal/lyra-element.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
-import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 installFormControlLabelSupport();
 import {
   deferredPlaceReady as place,
@@ -494,7 +493,6 @@ export class LyraSelect<
   // sheet so every `--lr-select-*` geometry knob points at the active tier's value -- and so both
   // spellings of every tier (`s` and `small`, ...) work with no per-component rule.
   static override styles = [LyraElement.styles, sizes, styles, srOnly];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = { showUnknownOption: 'withUnknownOption' };
 
   static override properties = {
     customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
@@ -660,21 +658,6 @@ export class LyraSelect<
    */
   @property({ type: Boolean, attribute: 'with-unknown-option', reflect: true })
   withUnknownOption = false;
-  /**
-   * Appends every committed value that no `<lr-option>` claims to the end of the listbox as a
-   * synthetic, re-selectable row badged with the localized `notInCatalog` text -- the policy
-   * `<lr-model-select>` already ships.
-   *
-   * Off by default, because it adds a row to a listbox that has always rendered only real options.
-   * Turn it on wherever a stored value can outlive its catalog entry: without it, the out-of-list
-   * value is visible on the trigger but absent from the listbox, so a user who opens the listbox
-   * has no way back to the value they arrived with. No synthetic row appears for a value `loading`
-   * is currently suppressing -- see that property -- since it is not yet known to be unmatched.
-   * @default false
-   * @deprecated Use `with-unknown-option`; removal not before 23.0.0.
-   */
-  @property({ type: Boolean, attribute: 'show-unknown-option', reflect: true })
-  showUnknownOption = false;
   /**
    * Renders the label for a committed value that matches no option.
    *

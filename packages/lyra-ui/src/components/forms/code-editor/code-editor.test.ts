@@ -925,44 +925,6 @@ describe('deprecated line-numbers alias', () => {
   ];
   const gutters = (el: LyraCodeEditor) => el.shadowRoot!.querySelectorAll('[part="gutter"]').length;
 
-  it('omits the gutter for line-numbers="false" exactly like without-line-numbers, and warns once', async () => {
-    const canonical = (await fixture(
-      html`<lr-code-editor value="one" without-line-numbers></lr-code-editor>`,
-    )) as LyraCodeEditor;
-    const aliased: LyraCodeEditor[] = [];
-    const warnings = await captureDeprecationWarnings(usage, async () => {
-      for (let round = 0; round < 2; round += 1) {
-        aliased.push(
-          (await fixture(
-            html`<lr-code-editor value="one" line-numbers="false"></lr-code-editor>`,
-          )) as LyraCodeEditor,
-        );
-      }
-    });
-    for (const el of aliased) {
-      expect(el.lineNumbers).to.equal(false);
-      expect(el.withoutLineNumbers).to.equal(true);
-      expect(gutters(el)).to.equal(gutters(canonical));
-      expect(el.hasAttribute('without-line-numbers'), 'the canonical attribute reflects').to.equal(true);
-    }
-    expect(gutters(canonical)).to.equal(0);
-    expect(warnings.map(({ key }) => key)).to.deep.equal([
-      'lyra-deprecated:lr-code-editor:property:lineNumbers',
-    ]);
-    expect(warnings[0]!.message).to.contain('without-line-numbers');
-  });
-
-  it('keeps the gutter for a bare line-numbers attribute', async () => {
-    const warnings = await captureDeprecationWarnings(usage, async () => {
-      const el = (await fixture(
-        html`<lr-code-editor value="one" line-numbers></lr-code-editor>`,
-      )) as LyraCodeEditor;
-      expect(el.lineNumbers).to.equal(true);
-      expect(gutters(el)).to.equal(1);
-    });
-    expect(warnings, 'an alias write that leaves the default unchanged is not a change').to.have.length(0);
-  });
-
   it('does not warn for the canonical without-line-numbers or an unset alias', async () => {
     const warnings = await captureDeprecationWarnings(usage, async () => {
       await fixture(html`<lr-code-editor value="one" without-line-numbers></lr-code-editor>`);
@@ -977,62 +939,7 @@ describe('deprecated line-numbers alias', () => {
     expect(warnings).to.have.length(0);
   });
 
-  it('forwards property writes inverted', async () => {
-    const el = (await fixture(html`<lr-code-editor value="one"></lr-code-editor>`)) as LyraCodeEditor;
-    await captureDeprecationWarnings(usage, async () => {
-      el.lineNumbers = false;
-      await el.updateComplete;
-    });
-    expect(el.withoutLineNumbers).to.equal(true);
-    expect(gutters(el)).to.equal(0);
-    el.lineNumbers = true;
-    await el.updateComplete;
-    expect(el.withoutLineNumbers).to.equal(false);
-    expect(gutters(el)).to.equal(1);
-  });
-
-  it('lets the last-written spelling win when both are present', async () => {
-    let el!: LyraCodeEditor;
-    await captureDeprecationWarnings(usage, async () => {
-      el = (await fixture(
-        html`<lr-code-editor value="one" without-line-numbers line-numbers></lr-code-editor>`,
-      )) as LyraCodeEditor;
-    });
-    expect(el.withoutLineNumbers, 'line-numbers is parsed last').to.equal(false);
-    expect(el.lineNumbers).to.equal(true);
-    expect(gutters(el)).to.equal(1);
-    el.setAttribute('without-line-numbers', '');
-    await el.updateComplete;
-    expect(el.lineNumbers, 'a later canonical write syncs back to the alias').to.equal(false);
-    expect(el.hasAttribute('line-numbers'), 'the alias reflects the canonical state').to.equal(false);
-    expect(gutters(el)).to.equal(0);
-  });
-
-  for (const settle of [true, false]) {
-    it(`lets the latest attribute write win in either direction (${settle ? 'settled' : 'batched'})`, async () => {
-      const el = (await fixture(html`<lr-code-editor value="one"></lr-code-editor>`)) as LyraCodeEditor;
-      await captureDeprecationWarnings(usage, async () => {
-        el.setAttribute('line-numbers', 'false');
-        if (settle) await el.updateComplete;
-        el.removeAttribute('line-numbers');
-        if (settle) await el.updateComplete;
-        el.setAttribute('without-line-numbers', '');
-        await el.updateComplete;
-      });
-      expect(el.withoutLineNumbers).to.equal(true);
-      expect(el.lineNumbers).to.equal(false);
-      expect(gutters(el)).to.equal(0);
-      await captureDeprecationWarnings(usage, async () => {
-        el.setAttribute('line-numbers', '');
-        await el.updateComplete;
-      });
-      expect(el.withoutLineNumbers).to.equal(false);
-      expect(el.hasAttribute('without-line-numbers')).to.equal(false);
-      expect(gutters(el)).to.equal(1);
-    });
-  }
-
-  it('lets the alias drive the gutter again once the authored canonical attribute is removed', async () => {
+  it('ignores the removed spelling after the authored canonical attribute is removed', async () => {
     const el = (await fixture(
       html`<lr-code-editor value="one" without-line-numbers></lr-code-editor>`,
     )) as LyraCodeEditor;
@@ -1042,8 +949,8 @@ describe('deprecated line-numbers alias', () => {
       el.setAttribute('line-numbers', 'false');
       await el.updateComplete;
     });
-    expect(el.withoutLineNumbers).to.equal(true);
-    expect(gutters(el)).to.equal(0);
+    expect(el.withoutLineNumbers).to.equal(false);
+    expect(gutters(el)).to.equal(1);
     el.removeAttribute('line-numbers');
     await el.updateComplete;
     expect(el.withoutLineNumbers).to.equal(false);
@@ -1051,28 +958,14 @@ describe('deprecated line-numbers alias', () => {
     expect(gutters(el)).to.equal(1);
   });
 
-  it('lets an alias property write follow a canonical property write', async () => {
-    const el = (await fixture(html`<lr-code-editor value="one"></lr-code-editor>`)) as LyraCodeEditor;
-    el.withoutLineNumbers = true;
-    await el.updateComplete;
-    expect(el.hasAttribute('without-line-numbers'), 'the canonical property reflects').to.equal(true);
-    await captureDeprecationWarnings(usage, async () => {
-      el.lineNumbers = true;
-      await el.updateComplete;
-    });
-    expect(el.withoutLineNumbers).to.equal(false);
-    expect(el.hasAttribute('without-line-numbers')).to.equal(false);
-    expect(gutters(el)).to.equal(1);
-  });
-
-  it('restores the gutter when a line-numbers="false" attribute is set back to true', async () => {
+  it('keeps the gutter when a line-numbers="false" attribute is set back to true', async () => {
     let el: LyraCodeEditor | undefined;
     await captureDeprecationWarnings(usage, async () => {
       el = (await fixture(
         html`<lr-code-editor value="one" line-numbers="false"></lr-code-editor>`,
       )) as LyraCodeEditor;
-      // The alias reflects its own false state as an absent attribute, as it always has.
-      expect(el.hasAttribute('line-numbers')).to.equal(false);
+      // An unknown attribute stays author-owned and does not reflect into component state.
+      expect(el.hasAttribute('line-numbers')).to.equal(true);
       el.setAttribute('line-numbers', '');
       await el.updateComplete;
     });

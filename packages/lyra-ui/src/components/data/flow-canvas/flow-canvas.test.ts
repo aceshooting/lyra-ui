@@ -4393,8 +4393,6 @@ it('floors a consumer-authored node card to the WCAG 2.5.8 tap-target minimum', 
   expect(box.height, 'node block hit area').to.be.at.least(24);
 });
 
-
-
 // Same cascade shape as lr-dashboard-grid's [part="cell"][data-collision], and settled the same
 // way: [part='viewport'][data-drop-active] and [part='viewport']:focus-visible are both (0,2,0)
 // and both declare `outline`, with drop-active written later. The drop target outline keeping the
@@ -4579,86 +4577,13 @@ describe('node overlays escape the canvas', () => {
 
 describe('deprecated locked alias', () => {
   const LOCKED: readonly DeprecatedUsage[] = [{ tag: 'lr-flow-canvas', kind: 'property', name: 'locked' }];
-  const lockedNodes: FlowNode[] = [{ id: 'a', position: { x: 0, y: 0 } }];
-  const wheelZoom = async (el: LyraFlowCanvas): Promise<number> => {
-    el.nodes = lockedNodes;
-    await el.updateComplete;
-    const viewportEl = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
-    viewportEl.dispatchEvent(
-      new WheelEvent('wheel', { deltaY: -100, clientX: 50, clientY: 50, bubbles: true, cancelable: true }),
-    );
-    return el.viewport.zoom;
-  };
-
-  it('freezes the viewport exactly like readonly and warns once, naming readonly', async () => {
-    const canonical = await fixture<LyraFlowCanvas>(
-      html`<lr-flow-canvas readonly style="width:400px;height:300px"></lr-flow-canvas>`,
-    );
-    let aliased!: LyraFlowCanvas;
-    const warnings = await captureDeprecationWarnings(LOCKED, async () => {
-      aliased = await fixture<LyraFlowCanvas>(
-        html`<lr-flow-canvas locked style="width:400px;height:300px"></lr-flow-canvas>`,
-      );
-      const second = await fixture<LyraFlowCanvas>(html`<lr-flow-canvas locked></lr-flow-canvas>`);
-      await second.updateComplete;
-    });
-    expect(await wheelZoom(aliased)).to.equal(1);
-    expect(await wheelZoom(canonical)).to.equal(1);
-    expect(aliased.readonly).to.be.true;
-    expect(aliased.locked).to.be.true;
-    expect(aliased.hasAttribute('readonly')).to.be.true;
-    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-flow-canvas:property:locked']);
-    expect(warnings[0]!.message).to.contain('readonly');
-  });
-
   it('never warns for readonly or an untouched default', async () => {
     const warnings = await captureDeprecationWarnings(LOCKED, async () => {
       const el = await fixture<LyraFlowCanvas>(html`<lr-flow-canvas></lr-flow-canvas>`);
-      expect(el.locked).to.be.false;
       el.readonly = true;
       await el.updateComplete;
     });
     expect(warnings).to.deep.equal([]);
   });
 
-  it('forwards alias writes, clears the state when removed, and lets the last write win', async () => {
-    await captureDeprecationWarnings(LOCKED, async () => {
-      const el = await fixture<LyraFlowCanvas>(
-        html`<lr-flow-canvas style="width:400px;height:300px"></lr-flow-canvas>`,
-      );
-      el.locked = true;
-      await el.updateComplete;
-      expect(el.readonly).to.be.true;
-      el.locked = false;
-      await el.updateComplete;
-      expect(el.readonly).to.be.false;
-      expect(await wheelZoom(el)).to.be.greaterThan(1);
-
-      const attr = await fixture<LyraFlowCanvas>(html`<lr-flow-canvas locked></lr-flow-canvas>`);
-      attr.removeAttribute('locked');
-      await attr.updateComplete;
-      expect(attr.readonly).to.be.false;
-      expect(attr.hasAttribute('readonly')).to.be.false;
-
-      const aliasLast = await fixture<LyraFlowCanvas>(html`<lr-flow-canvas readonly locked></lr-flow-canvas>`);
-      aliasLast.removeAttribute('locked');
-      await aliasLast.updateComplete;
-      expect(aliasLast.readonly).to.be.false;
-      expect(aliasLast.hasAttribute('readonly')).to.be.false;
-    });
-  });
-
-  it('syncs the alias back from readonly, reflecting both', async () => {
-    await captureDeprecationWarnings(LOCKED, async () => {
-      const canonicalLast = await fixture<LyraFlowCanvas>(html`<lr-flow-canvas locked readonly></lr-flow-canvas>`);
-      canonicalLast.removeAttribute('readonly');
-      await canonicalLast.updateComplete;
-      expect(canonicalLast.locked).to.be.false;
-      expect(canonicalLast.hasAttribute('locked')).to.be.false;
-      canonicalLast.readonly = true;
-      await canonicalLast.updateComplete;
-      expect(canonicalLast.locked).to.be.true;
-      expect(canonicalLast.hasAttribute('locked')).to.be.true;
-    });
-  });
 });

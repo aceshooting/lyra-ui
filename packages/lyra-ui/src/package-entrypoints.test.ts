@@ -35,7 +35,7 @@ type PackageEntrypointImports = {
   importRoot: EntrypointImport;
   importAll: EntrypointImport;
   importLocalization: EntrypointImport;
-  importUtilitiesLocalization: EntrypointImport;
+  importViewers: EntrypointImport;
   importPersianLocale: EntrypointImport;
   importHebrewLocale: EntrypointImport;
   importEmpty: EntrypointImport;
@@ -145,17 +145,41 @@ it('registers nothing from the root, exactly one tag from a granular entry, and 
     expect(typeof localization['resolveLyraLocale']).to.equal('function');
     expect(typeof localization['resolveLyraDirection']).to.equal('function');
     expect(typeof localization['LYRA_DEFAULT_STRINGS']).to.equal('object');
-    // `./localization.js` is a superset of the deprecated `./utilities/localization.js` entry: the
-    // active-locale subscription, the bridge and the scoped resolver are the very same bindings on
-    // both routes, so migrating an import changes nothing at runtime. Compare the references by
-    // strict equality -- never a chai deep-equal of the values.
-    const utilitiesLocalization = await entrypoints.importUtilitiesLocalization();
+    // Retained facades share the implementation and its per-target bridge ownership.
     for (const name of ['bridgeLyraLocale', 'resolveLyraScopedString', 'subscribeLyraLocale']) {
       expect(typeof localization[name], `localization.js ${name}`).to.equal('function');
-      expect(
-        localization[name] === utilitiesLocalization[name],
-        `localization.js ${name} is the utilities/localization.js binding`,
-      ).to.equal(true);
+      expect(localization[name] === utilities[name], `${name} utility binding`).to.equal(true);
+      if (name !== 'resolveLyraScopedString') {
+        expect(localization[name] === root[name], `${name} root binding`).to.equal(true);
+      }
+    }
+    const setLocale = localization['setLyraLocale'];
+    const getLocale = localization['getLyraLocale'];
+    const bridge = localization['bridgeLyraLocale'];
+    const utilityBridge = utilities['bridgeLyraLocale'];
+    if (typeof setLocale !== 'function' || typeof getLocale !== 'function'
+      || typeof bridge !== 'function' || typeof utilityBridge !== 'function') {
+      throw new Error('Missing localization bridge exports');
+    }
+    const target = frame.contentDocument!.createElement('div');
+    target.setAttribute('lang', 'fr');
+    target.setAttribute('dir', 'rtl');
+    const previousLocale = getLocale();
+    setLocale('en');
+    const first = bridge({ target });
+    const second = utilityBridge({ target });
+    try {
+      first();
+      setLocale('de');
+      expect(target.getAttribute('lang')).to.equal('de');
+      expect(target.getAttribute('dir')).to.equal('ltr');
+      second();
+      expect(target.getAttribute('lang')).to.equal('fr');
+      expect(target.getAttribute('dir')).to.equal('rtl');
+    } finally {
+      first();
+      second();
+      setLocale(previousLocale);
     }
     expect('LyraElement' in localization, 'localization.js stays free of the component graph').to.equal(
       false,
@@ -258,4 +282,26 @@ it('does not publish src/internal as a deep-import subpath', async () => {
   expect(internalKeys.join(', ')).to.equal('');
   // ...and the curated replacements really are declared, so the boundary has a documented door.
   expect(Object.keys(manifest.exports)).to.include('./utilities/*');
+});
+
+
+it('retains the same distinct GeoJSON constructor in the root and family without registering its retired tag', async function () {
+  this.timeout(240_000);
+  const { frame, registry, importModule } = await createEntrypointRealm();
+  try {
+    const entrypoints = (await importModule(
+      new URL('../test/package-entrypoints-realm.js', import.meta.url).href,
+    )) as unknown as PackageEntrypointImports;
+    const root = await entrypoints.importRoot();
+    expect(registry.get('lr-geojson-viewer') === undefined).to.equal(true);
+    expect(registry.get('lr-geojson-view') === undefined).to.equal(true);
+    const viewers = await entrypoints.importViewers();
+    expect(root['LyraGeojsonView'] === viewers['LyraGeojsonView']).to.equal(true);
+    expect(root['LyraGeojsonView'] === root['LyraGeoJsonViewer']).to.equal(false);
+    expect(Object.getPrototypeOf(root['LyraGeojsonView']) === root['LyraGeoJsonViewer']).to.equal(true);
+    expect(registry.get('lr-geojson-viewer') === root['LyraGeoJsonViewer']).to.equal(true);
+    expect(registry.get('lr-geojson-view') === undefined).to.equal(true);
+  } finally {
+    frame.remove();
+  }
 });

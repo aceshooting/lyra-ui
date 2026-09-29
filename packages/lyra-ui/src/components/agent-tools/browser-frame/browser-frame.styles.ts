@@ -41,7 +41,7 @@ export const styles = css`
     border-radius: var(--lr-radius-pill);
     background: var(
       --lr-browser-frame-controller-bg,
-      var(--lr-browser-frame-controller-background, var(--lr-color-brand-quiet))
+      var(--lr-color-brand-quiet)
     );
     color: var(--lr-browser-frame-controller-color, var(--lr-color-brand));
     min-inline-size: 0;

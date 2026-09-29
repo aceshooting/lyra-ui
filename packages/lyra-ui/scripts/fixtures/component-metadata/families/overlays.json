@@ -37,45 +37,6 @@
   "deprecations": [
     {
       "tag": "lr-callout",
-      "kind": "attribute",
-      "name": "accessible-label",
-      "since": "21.1.0",
-      "replacement": {
-        "kind": "attribute",
-        "name": "aria-label",
-        "usage": "aria-label"
-      },
-      "removalNotBefore": "23.0.0",
-      "rationale": "The host `aria-label` names the component, as on every other Lyra component."
-    },
-    {
-      "tag": "lr-callout",
-      "kind": "css-property",
-      "name": "--lr-callout-background",
-      "since": "21.1.0",
-      "replacement": {
-        "kind": "css-property",
-        "name": "--lr-callout-bg",
-        "usage": "--lr-callout-bg"
-      },
-      "removalNotBefore": "23.0.0",
-      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
-    },
-    {
-      "tag": "lr-callout",
-      "kind": "part",
-      "name": "close-button__control",
-      "since": "21.1.0",
-      "replacement": {
-        "kind": "part",
-        "name": "close-button-control",
-        "usage": "::part(close-button-control)"
-      },
-      "removalNotBefore": "23.0.0",
-      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
-    },
-    {
-      "tag": "lr-callout",
       "kind": "property",
       "name": "accessibleLabel",
       "since": "22.0.0",
@@ -86,45 +47,6 @@
       },
       "removalNotBefore": "24.0.0",
       "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
-    },
-    {
-      "tag": "lr-chip",
-      "kind": "event",
-      "name": "lr-chip-select",
-      "since": "21.1.0",
-      "replacement": {
-        "kind": "event",
-        "name": "lr-chip-toggle-request",
-        "usage": "addEventListener('lr-chip-toggle-request', ...)"
-      },
-      "removalNotBefore": "23.0.0",
-      "rationale": "Cancelable events that propose a state change are named `lr-<noun>-request` across the library."
-    },
-    {
-      "tag": "lr-dialog",
-      "kind": "attribute",
-      "name": "accessible-label",
-      "since": "21.1.0",
-      "replacement": {
-        "kind": "attribute",
-        "name": "aria-label",
-        "usage": "aria-label"
-      },
-      "removalNotBefore": "23.0.0",
-      "rationale": "The host `aria-label` names the component, as on every other Lyra component."
-    },
-    {
-      "tag": "lr-dialog",
-      "kind": "part",
-      "name": "close-button__control",
-      "since": "21.1.0",
-      "replacement": {
-        "kind": "part",
-        "name": "close-button-control",
-        "usage": "::part(close-button-control)"
-      },
-      "removalNotBefore": "23.0.0",
-      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
     },
     {
       "tag": "lr-dialog",
@@ -140,46 +62,6 @@
       "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
     },
     {
-      "tag": "lr-dialog",
-      "kind": "property",
-      "name": "closable",
-      "attribute": "closable",
-      "since": "21.1.0",
-      "replacement": {
-        "kind": "property",
-        "name": "withoutCloseButton",
-        "usage": "without-close-button"
-      },
-      "removalNotBefore": "23.0.0",
-      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
-    },
-    {
-      "tag": "lr-drawer",
-      "kind": "attribute",
-      "name": "accessible-label",
-      "since": "21.1.0",
-      "replacement": {
-        "kind": "attribute",
-        "name": "aria-label",
-        "usage": "aria-label"
-      },
-      "removalNotBefore": "23.0.0",
-      "rationale": "The host `aria-label` names the component, as on every other Lyra component."
-    },
-    {
-      "tag": "lr-drawer",
-      "kind": "part",
-      "name": "close-button__control",
-      "since": "21.1.0",
-      "replacement": {
-        "kind": "part",
-        "name": "close-button-control",
-        "usage": "::part(close-button-control)"
-      },
-      "removalNotBefore": "23.0.0",
-      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
-    },
-    {
       "tag": "lr-drawer",
       "kind": "property",
       "name": "accessibleLabel",
@@ -191,46 +73,6 @@
       },
       "removalNotBefore": "24.0.0",
       "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
-    },
-    {
-      "tag": "lr-drawer",
-      "kind": "property",
-      "name": "closable",
-      "attribute": "closable",
-      "since": "21.1.0",
-      "replacement": {
-        "kind": "property",
-        "name": "withoutCloseButton",
-        "usage": "without-close-button"
-      },
-      "removalNotBefore": "23.0.0",
-      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
-    },
-    {
-      "tag": "lr-dropdown",
-      "kind": "part",
-      "name": "popup__arrow",
-      "since": "21.1.0",
-      "replacement": {
-        "kind": "part",
-        "name": "popup-arrow",
-        "usage": "::part(popup-arrow)"
-      },
-      "removalNotBefore": "23.0.0",
-      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
-    },
-    {
-      "tag": "lr-dropdown",
-      "kind": "part",
-      "name": "popup__popup",
-      "since": "21.1.0",
-      "replacement": {
-        "kind": "part",
-        "name": "popup-popup",
-        "usage": "::part(popup-popup)"
-      },
-      "removalNotBefore": "23.0.0",
-      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
     },
     {
       "tag": "lr-dropdown",
@@ -247,47 +89,6 @@
       "rationale": "The shared negative arrow switch resolves conflicting arrow inputs and defaults to false. The retained positive alias has the inverse value and remains functional throughout the compatibility window."
     },
     {
-      "tag": "lr-empty",
-      "kind": "property",
-      "name": "compact",
-      "attribute": "compact",
-      "since": "21.1.0",
-      "replacement": {
-        "kind": "property",
-        "name": "size",
-        "usage": "size=\"s\""
-      },
-      "removalNotBefore": "23.0.0",
-      "rationale": "Sizes use the shared `size` scale."
-    },
-    {
-      "tag": "lr-popover",
-      "kind": "property",
-      "name": "arrow",
-      "attribute": "arrow",
-      "since": "21.1.0",
-      "replacement": {
-        "kind": "property",
-        "name": "withoutArrow",
-        "usage": "without-arrow"
-      },
-      "removalNotBefore": "23.0.0",
-      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
-    },
-    {
-      "tag": "lr-progress-bar",
-      "kind": "attribute",
-      "name": "accessible-label",
-      "since": "21.1.0",
-      "replacement": {
-        "kind": "attribute",
-        "name": "aria-label",
-        "usage": "aria-label"
-      },
-      "removalNotBefore": "23.0.0",
-      "rationale": "The host `aria-label` names the component, as on every other Lyra component."
-    },
-    {
       "tag": "lr-progress-bar",
       "kind": "property",
       "name": "accessibleLabel",
@@ -301,33 +102,6 @@
       "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
     },
     {
-      "tag": "lr-progress-bar",
-      "kind": "property",
-      "name": "showValue",
-      "attribute": "show-value",
-      "since": "21.1.0",
-      "replacement": {
-        "kind": "property",
-        "name": "withValue",
-        "usage": "with-value"
-      },
-      "removalNotBefore": "23.0.0",
-      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
-    },
-    {
-      "tag": "lr-progress-ring",
-      "kind": "attribute",
-      "name": "accessible-label",
-      "since": "21.1.0",
-      "replacement": {
-        "kind": "attribute",
-        "name": "aria-label",
-        "usage": "aria-label"
-      },
-      "removalNotBefore": "23.0.0",
-      "rationale": "The host `aria-label` names the component, as on every other Lyra component."
-    },
-    {
       "tag": "lr-progress-ring",
       "kind": "property",
       "name": "accessibleLabel",
@@ -339,60 +113,6 @@
       },
       "removalNotBefore": "24.0.0",
       "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
-    },
-    {
-      "tag": "lr-progress-ring",
-      "kind": "property",
-      "name": "showValue",
-      "attribute": "show-value",
-      "since": "21.1.0",
-      "replacement": {
-        "kind": "property",
-        "name": "withValue",
-        "usage": "with-value"
-      },
-      "removalNotBefore": "23.0.0",
-      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
-    },
-    {
-      "tag": "lr-tag",
-      "kind": "css-property",
-      "name": "--lr-tag-remove-hover-background",
-      "since": "21.1.0",
-      "replacement": {
-        "kind": "css-property",
-        "name": "--lr-tag-remove-hover-bg",
-        "usage": "--lr-tag-remove-hover-bg"
-      },
-      "removalNotBefore": "23.0.0",
-      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
-    },
-    {
-      "tag": "lr-tooltip",
-      "kind": "css-property",
-      "name": "--lr-tooltip-background",
-      "since": "21.1.0",
-      "replacement": {
-        "kind": "css-property",
-        "name": "--lr-tooltip-bg",
-        "usage": "--lr-tooltip-bg"
-      },
-      "removalNotBefore": "23.0.0",
-      "rationale": "Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix."
-    },
-    {
-      "tag": "lr-tooltip",
-      "kind": "property",
-      "name": "arrow",
-      "attribute": "arrow",
-      "since": "21.1.0",
-      "replacement": {
-        "kind": "property",
-        "name": "withoutArrow",
-        "usage": "without-arrow"
-      },
-      "removalNotBefore": "23.0.0",
-      "rationale": "Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute."
     }
   ]
 }

@@ -7,11 +7,9 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
-- **Deprecated css-property** `--lr-commit-card-background` since `21.1.0`; use css-property `--lr-commit-card-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
-- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
-- **Deprecated property** `copyable` / `copyable` since `21.1.0`; use property `without-copy-button`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -35,14 +33,11 @@ empty/blank paths and later duplicates are omitted before both diffstat arithmet
 boolean = false` (attribute `files-expanded`, reflected — renamed from `filesCollapsed` in 9.0.0,
 default inverted so the rendered starting state is unchanged: `el.filesCollapsed = true` becomes
 `el.filesExpanded = false`), and `withoutCopyButton: boolean = false` (attribute
-`without-copy-button`, reflected) — hides the hash copy button. Deprecated alias: `copyable` (use
-`without-copy-button`; removed in 23.0.0) — inverted, so `copyable="false"` equals
-`without-copy-button`.
+`without-copy-button`, reflected) — hides the hash copy button.
 `size: LyraSize = 'm'` (reflected) — density on the shared size scale: `s` (and the smaller
 `xs`/`2xs`) tightens `[part="base"]` padding for a commit rendered as a row in a list or PR
 timeline, same convention as `<lr-agent-run>`'s own `size`; the border stays, so pair it with
-`frame="plain"` to drop the chrome entirely. Deprecated alias: `compact` (use `size="s"`; removed in
-23.0.0). `frame: LyraFrame = 'card'` (reflected)
+`frame="plain"` to drop the chrome entirely. `frame: LyraFrame = 'card'` (reflected)
 — container treatment, in the library-wide `frame` vocabulary (`'card' | 'plain'`), the same
 property `<lr-agent-run>`/`<lr-card>` carry: `'card'` keeps the bordered, padded box, `'plain'`
 removes the border, padding, and corner radius so a commit nested in a host list that already draws
@@ -74,5 +69,4 @@ badge in both components at once.
 `var(--lr-color-border-subtle)`) and `--lr-commit-card-radius` (default `var(--lr-radius)`) retune the
 card's border and corner radius, and `--lr-commit-card-bg` (default `transparent`) gives it
 a fill of its own — this card has never painted one, so it still takes the surface it sits on unless
-you opt in. `frame="plain"` still removes the border and radius. Deprecated alias:
-`--lr-commit-card-background` (use `--lr-commit-card-bg`; removed in 23.0.0).
+you opt in. `frame="plain"` still removes the border and radius.

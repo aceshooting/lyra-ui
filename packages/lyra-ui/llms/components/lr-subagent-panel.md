@@ -7,11 +7,9 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
-- **Deprecated css-property** `--lr-subagent-panel-background` since `21.1.0`; use css-property `--lr-subagent-panel-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
-- **Deprecated css-property** `--lr-subagent-panel-hover-background` since `21.1.0`; use css-property `--lr-subagent-panel-hover-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
-- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -30,7 +28,7 @@ localizes the default while any supplied string, including `''`, renders verbati
 run-row padding/gaps and shrinks the task/model text, the same density convention
 `lr-task-list`/`lr-stack-trace`/`lr-thinking-panel`/`lr-terminal` already pair with `frame`; purely a
 density knob, since each run's own border stays, so reach for `frame="plain"` to drop the chrome
-entirely (deprecated alias: `compact`, use `size="s"`; removed in 23.0.0); `frame: LyraFrame = 'card'` (reflected) — container treatment for each run
+entirely. `frame: LyraFrame = 'card'` (reflected) — container treatment for each run
 row, in the library-wide `frame` vocabulary (`'card' | 'plain'`). `'card'` keeps each run's own
 border/radius; `'plain'` drops it, for a transcript or message-bubble context that already draws its
 own border around a nested `<lr-subagent-panel>` and would otherwise double it.
@@ -79,13 +77,11 @@ import "@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-pane
   size. Default: `var(--lr-space-2xs)`.
 - `--lr-subagent-panel-bg` — Resting fill of each run row's trigger and action buttons.
   Hover and press follow `--lr-subagent-panel-hover-bg`, so retune both together.
-  Default: `var(--lr-color-surface)`. Deprecated alias: `--lr-subagent-panel-background` (use
-  `--lr-subagent-panel-bg`; removed in 23.0.0).
+  Default: `var(--lr-color-surface)`.
 - `--lr-subagent-panel-hover-bg` — Hovered fill of each run row's trigger and action
   buttons. The pressed fill is this value mixed a further `--lr-color-mix-active` toward
   `--lr-color-mix-partner`, so retuning hover carries the press with it.
-  Default: `var(--lr-color-surface-raised)`. Deprecated alias: `--lr-subagent-panel-hover-background`
-  (use `--lr-subagent-panel-hover-bg`; removed in 23.0.0).
+  Default: `var(--lr-color-surface-raised)`.
 - `--lr-subagent-panel-border-color` — Each run row's border and its action divider. A selected row
   still uses `--lr-subagent-panel-selected-border`. Default: `var(--lr-color-border)`.
 - `--lr-subagent-panel-radius` — Each run row's corner radius; `frame="plain"` still squares them.

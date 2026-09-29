@@ -1,9 +1,6 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
-import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
-import { invertAlias } from '../../../internal/deprecated-aliases.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
@@ -24,7 +21,6 @@ import { styles } from './video-playlist.styles.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_videoPlaylistLabel, LYRA_DEFAULT_videoPlaylistUntitled } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 export type LyraVideoPlaylistRepeat = 'none' | 'one' | 'all';
 
@@ -198,8 +194,6 @@ function trackSnapshot(
  * @csspart playlist-title - Title text within a playlist item.
  * @cssprop [--lr-video-playlist-item-current-bg=var(--lr-color-brand-fill-quiet)] - Current
  *   playlist-item background, kept under the pointer.
- * @cssprop [--lr-video-playlist-item-current-background=var(--lr-color-brand-fill-quiet)] - Deprecated alias of
- *   `--lr-video-playlist-item-current-bg`; removal not before 23.0.0.
  * @cssprop [--lr-video-playlist-item-current-border-color=var(--lr-color-brand)] - Current
  *   playlist-item border color, kept under the pointer.
  * @status experimental
@@ -221,9 +215,6 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
   ]);
 
   static override styles = [LyraElement.styles, styles];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    autoAdvance: ['withoutAutoAdvance', invertAlias, invertAlias],
-  };
 
   /** Controls preset forwarded to every direct child video. */
   @property({ reflect: true }) controls: LyraVideoControls = 'full';
@@ -234,15 +225,6 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
   /** Stops an ended current video from advancing automatically; `repeat` then has no effect.
    *  Errors never change selection either way. */
   @property({ type: Boolean, attribute: 'without-auto-advance' }) withoutAutoAdvance = false;
-
-  /** Whether an ended current video advances automatically. Errors never change selection.
-   *  @deprecated Use `without-auto-advance` (inverted); removal not before 23.0.0. */
-  @property({
-    type: Boolean,
-    attribute: 'auto-advance',
-    converter: trueDefaultBooleanConverter,
-  })
-  autoAdvance = true;
 
   /** Automatic completion behavior: stop, repeat one, or wrap the full playlist. Lyra extension. */
   @property() repeat: LyraVideoPlaylistRepeat = 'none';

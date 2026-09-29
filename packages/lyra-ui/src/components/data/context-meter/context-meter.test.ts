@@ -945,81 +945,17 @@ describe('non-actionable and empty segments', () => {
   });
 });
 
-describe('deprecated show-legend alias', () => {
+describe('canonical with-legend behavior', () => {
   const SHOW_LEGEND: readonly DeprecatedUsage[] = [
     { tag: 'lr-context-meter', kind: 'property', name: 'showLegend' },
   ];
-  const legendLabels = (el: LyraContextMeter): string[] =>
-    [...el.shadowRoot!.querySelectorAll('[part="legend-label"]')].map((n) => n.textContent!.trim());
-
-  it('renders the same legend as with-legend and warns once, naming with-legend', async () => {
-    const canonical = await fixture<LyraContextMeter>(
-      html`<lr-context-meter with-legend total="10000" .segments=${SEGMENTS}></lr-context-meter>`,
-    );
-    let aliased!: LyraContextMeter;
-    const warnings = await captureDeprecationWarnings(SHOW_LEGEND, async () => {
-      aliased = await fixture<LyraContextMeter>(
-        html`<lr-context-meter show-legend total="10000" .segments=${SEGMENTS}></lr-context-meter>`,
-      );
-      const second = await fixture<LyraContextMeter>(html`<lr-context-meter show-legend total="10"></lr-context-meter>`);
-      await second.updateComplete;
-    });
-    expect(legendLabels(aliased)).to.deep.equal(legendLabels(canonical));
-    expect(legendLabels(aliased)).to.have.length(3);
-    expect(aliased.withLegend).to.equal(true);
-    expect(aliased.showLegend).to.equal(true);
-    expect(aliased.hasAttribute('with-legend')).to.equal(true);
-    expect(warnings.map(({ key }) => key)).to.deep.equal([
-      'lyra-deprecated:lr-context-meter:property:showLegend',
-    ]);
-    expect(warnings[0]!.message).to.contain('with-legend');
-  });
-
   it('never warns for with-legend or an untouched default', async () => {
     const warnings = await captureDeprecationWarnings(SHOW_LEGEND, async () => {
       const el = await fixture<LyraContextMeter>(html`<lr-context-meter total="10"></lr-context-meter>`);
-      expect(el.showLegend).to.equal(false);
       el.withLegend = true;
       await el.updateComplete;
     });
     expect(warnings).to.deep.equal([]);
   });
 
-  it('follows the alias, syncs it back from with-legend, and clears the legend when the alias is removed', async () => {
-    await captureDeprecationWarnings(SHOW_LEGEND, async () => {
-      const el = await fixture<LyraContextMeter>(html`<lr-context-meter show-legend total="10000" .segments=${SEGMENTS}></lr-context-meter>`);
-      expect(el.withLegend).to.equal(true);
-      el.removeAttribute('show-legend');
-      await el.updateComplete;
-      expect(el.withLegend).to.equal(false);
-      expect(el.hasAttribute('with-legend')).to.equal(false);
-      expect(el.shadowRoot!.querySelector('[part="legend"]') == null).to.equal(true);
-      el.showLegend = true;
-      await el.updateComplete;
-      expect(el.withLegend).to.equal(true);
-      expect(legendLabels(el).length).to.be.greaterThan(0);
-      el.withLegend = false;
-      await el.updateComplete;
-      expect(el.showLegend).to.equal(false);
-      expect(el.hasAttribute('show-legend')).to.equal(false);
-      expect(el.shadowRoot!.querySelector('[part="legend"]') == null).to.equal(true);
-    });
-  });
-
-  it('lets the last write win in both directions', async () => {
-    await captureDeprecationWarnings(SHOW_LEGEND, async () => {
-      const aliasLast = await fixture<LyraContextMeter>(html`<lr-context-meter with-legend show-legend total="10000" .segments=${SEGMENTS}></lr-context-meter>`);
-      aliasLast.showLegend = false;
-      await aliasLast.updateComplete;
-      expect(aliasLast.withLegend).to.equal(false);
-      expect(aliasLast.shadowRoot!.querySelector('[part="legend"]') == null).to.equal(true);
-
-      const canonicalLast = await fixture<LyraContextMeter>(html`<lr-context-meter show-legend with-legend total="10000" .segments=${SEGMENTS}></lr-context-meter>`);
-      canonicalLast.removeAttribute('with-legend');
-      await canonicalLast.updateComplete;
-      expect(canonicalLast.showLegend).to.equal(false);
-      expect(canonicalLast.hasAttribute('show-legend')).to.equal(false);
-      expect(canonicalLast.shadowRoot!.querySelector('[part="legend"]') == null).to.equal(true);
-    });
-  });
 });

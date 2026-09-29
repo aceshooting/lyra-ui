@@ -4,7 +4,6 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { isNonBlankIdentity } from '../retrieval-identity.js';
 import { isRtl } from '../../../internal/rtl.js';
 import '../../media/file-icon/file-icon.class.js';
@@ -17,7 +16,6 @@ import {
   optionalSizeConverter,
   type LyraSize,
 } from '../../../internal/variants.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import {
@@ -159,10 +157,6 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   ]);
 
   static override styles = [LyraElement.styles, styles];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    showSelectAll: ['withoutSelectAll', invertAlias, invertAlias],
-    searchable: ['withoutSearch', invertAlias, invertAlias],
-  };
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-sources-change',
   ]);
@@ -179,19 +173,6 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
    *  visible tree entry available whenever rows remain. */
   @property({ type: Boolean, attribute: 'without-search' })
   withoutSearch = false;
-  /** Whether the header exposes one control for selecting or clearing every visible leaf source.
-   *  @deprecated Use `without-select-all`; removal not before 23.0.0. */
-  @property({
-    type: Boolean,
-    attribute: 'show-select-all',
-    converter: trueDefaultBooleanConverter,
-  })
-  showSelectAll = true;
-  /** Whether the built-in source filter is rendered. Toggling retains the query and selection,
-   *  while keeping a visible tree entry available whenever rows remain.
-   *  @deprecated Use `without-search`; removal not before 23.0.0. */
-  @property({ type: Boolean, converter: trueDefaultBooleanConverter })
-  searchable = true;
 
   private _size?: LyraSize;
 

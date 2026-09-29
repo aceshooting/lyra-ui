@@ -1,8 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { bridgeLyraLocale, resolveLyraScopedString, subscribeLyraLocale } from './localization.js';
-import * as supersetEntry from '../localization.js';
-import { getLyraLocale, registerLyraLocale, setLyraLocale } from '../internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired } from '../internal/default-strings.generated.js';
+import { getLyraLocale, registerLyraLocale, setLyraLocale } from './internal/localization.js';
+import { LYRA_DEFAULT_fieldRequired } from './internal/default-strings.generated.js';
 
 /** Restores the module-global active locale after each case; it is shared by the whole file. */
 function withActiveLocale(body: () => void): void {
@@ -17,15 +16,6 @@ function withActiveLocale(body: () => void): void {
 async function host(): Promise<HTMLElement> {
   return fixture<HTMLElement>(html`<div></div>`);
 }
-
-// These cases keep importing from this deprecated entry on purpose: they cover it for the whole
-// compatibility window. The kept `localization.js` entry must hand out the identical bindings.
-it('is superseded by localization.js, which exports the identical bindings', () => {
-  expect(supersetEntry.bridgeLyraLocale === bridgeLyraLocale, 'bridgeLyraLocale').to.equal(true);
-  expect(supersetEntry.resolveLyraScopedString === resolveLyraScopedString, 'resolveLyraScopedString')
-    .to.equal(true);
-  expect(supersetEntry.subscribeLyraLocale === subscribeLyraLocale, 'subscribeLyraLocale').to.equal(true);
-});
 
 it('exposes the active-locale subscription, which is not the registry subscription', () => {
   withActiveLocale(() => {

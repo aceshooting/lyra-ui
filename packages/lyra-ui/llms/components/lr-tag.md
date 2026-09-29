@@ -7,8 +7,8 @@
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [overlays](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/overlays.md)
-- **Deprecated css-property** `--lr-tag-remove-hover-background` since `21.1.0`; use css-property `--lr-tag-remove-hover-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 25 custom properties — see `lr-badge.md`
+- **Themeable via** 7 parts, 24 custom properties — see `lr-badge.md`
 - **Documented with** `lr-badge`: see [lr-badge.md](./lr-badge.md).
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

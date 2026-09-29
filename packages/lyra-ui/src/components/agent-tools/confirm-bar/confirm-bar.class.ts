@@ -2,7 +2,7 @@ import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warnin
 import { html, nothing, svg, type PropertyValues, type SVGTemplateResult, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { normalizeSize, type LyraFrame, type LyraVariant, type LyraSize } from '../../../internal/variants.js';
+import type { LyraFrame, LyraVariant, LyraSize } from '../../../internal/variants.js';
 import { hasRealContent, hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import {
@@ -12,7 +12,6 @@ import {
   repairComposedFocus,
 } from '../../../internal/focus-navigation.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
-import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { resolveLocalizedParts } from '../../../internal/localization-runtime.js';
 import '../../layout/details/details.class.js';
@@ -30,7 +29,6 @@ import {
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_approve, LYRA_DEFAULT_collapse, LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmApprovedAnnounce, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_confirmDeniedAnnounce, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_toolApprovalArgsLabel, LYRA_DEFAULT_toolApprovalGenericTool, LYRA_DEFAULT_toolApprovalHeading } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 export type ConfirmBarDecision = ApprovalDecision | null;
 
@@ -68,12 +66,6 @@ export interface LyraConfirmBarEventMap {
   'lr-approve-request': CustomEvent<{ args: unknown; waitUntil: ConfirmBarWaitUntil }>;
   'lr-deny-request': CustomEvent<{ waitUntil: ConfirmBarWaitUntil }>;
   'lr-decision-settled': CustomEvent<{ decision: ApprovalDecision }>;
-}
-
-/** Whether a `size` sits on the dense tier the deprecated `compact` boolean spelled. */
-function isDenseSize(size: LyraSize): boolean {
-  const step = normalizeSize(size);
-  return step === 's' || step === 'xs' || step === '2xs';
 }
 
 const ICON_VIEW_BOX = '0 0 24 24';
@@ -291,11 +283,6 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    pending: 'pendingAction',
-    compact: ['size', (value) => (value ? 's' : 'm'), (value) => isDenseSize(value as LyraSize)],
-  };
-
   /** Drives the default heading through the existing dialog keys. */
   @property({ attribute: 'tool-name' }) toolName = '';
 
@@ -317,11 +304,6 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   // touched nothing at all.
   private _decision: ConfirmBarDecision = null;
   private _pending: ApprovalAction | null = null;
-  /** Backing store of the deprecated `pending` alias, kept in step with `_pending` by
-   *  `deprecatedAliases`. Its setter marks the same write guard, so a listener still using the old
-   *  name is detected even when it writes back the value already there. */
-  private _pendingAlias: ApprovalAction | null = null;
-
   /** Marked on every write to `decision`/`pendingAction`, from any source. `decide()` opens it
    *  immediately before dispatching `lr-approve-request`/`lr-deny-request` and reads it back afterward: since the
    *  dispatch is synchronous, only a listener invoked during that same `emit()` call can have
@@ -352,19 +334,6 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
     this.requestUpdate('pendingAction', previous);
   }
 
-  /** Which action is awaiting host resolution, while an lr-approve-request/lr-deny-request listener has called
-   *  preventDefault(). Host-writable: set back to null to bounce back to the undecided state (e.g.
-   *  on failure, so the user can retry), or set `decision` to finalize.
-   *  @deprecated Use `pending-action`; removal not before 23.0.0. */
-  @property({ reflect: true })
-  get pending(): ApprovalAction | null { return this._pendingAlias; }
-  set pending(value: ApprovalAction | null) {
-    const previous = this._pendingAlias;
-    this._pendingAlias = value;
-    markVetoGuardWrite(this.dispatchWriteGuard);
-    this.requestUpdate('pending', previous);
-  }
-
   /** Disables both Deny and Approve and makes `decide()` a no-op, without discarding any
    *  in-flight `decision`/`pendingAction` state. Distinct from `pendingAction`, which marks one
    *  specific action as awaiting the host while the other stays interactive, while `disabled`
@@ -388,19 +357,6 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
    * is unchanged.
    */
   @property({ reflect: true }) size: LyraSize = 'm';
-
-  /** Collapses the bar from a stacked `display: block` card to a single tightly-padded inline row,
-   *  for a confirmation that has to live inside an existing container -- a table cell, a card's
-   *  action row, a toolbar. The host becomes `inline-flex`, and the narrow-allocation `@container`
-   *  treatment is switched off (a compact bar is *expected* to be narrow, so stretching the buttons
-   *  to fill would be exactly wrong). Purely a density/layout knob -- same convention as
-   *  `<lr-agent-run>`'s `compact`: the border, corner radius and background stay, so use
-   *  `frame="plain"` to drop the chrome. Retune the density through
-   *  `--lr-confirm-bar-compact-padding`/`-gap`. Everything else -- the event shapes, the
-   *  focus-to-`[part='status']`-before-unmount contract, `role="group"` and its heading label --
-   *  is unchanged.
-   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
-  @property({ type: Boolean, reflect: true }) compact = false;
 
   /** Visual chrome, in the library's shared container-frame vocabulary. `'card'` (the default)
    *  keeps the bordered, filled, padded box. `'plain'` removes the border, background, padding and

@@ -84,35 +84,6 @@ export interface LyraGraphEdge {
   readonly dash?: readonly number[];
 }
 
-/**
- * A link whose `target` id has no matching node renders as a short dashed stub off `source`'s
- * own position instead of being silently dropped -- e.g. for a wiki-style `[[link]]` reference to
- * a not-yet-created page. A link whose `source` id has no matching node is still dropped
- * entirely (there is no position to draw a stub from).
- * @deprecated Use the structurally identical `LyraGraphEdge`; removal not before 23.0.0.
- */
-export interface LyraGraphLink {
-  /** Optional stable id returned by `lr-link-click`. */
-  readonly id?: string;
-  readonly source: string;
-  readonly target: string;
-  /** Stroke/picking width. Negative values clamp to 0; non-finite or unset values use 1.5. */
-  readonly width?: number;
-  /** Optional spoken-name and SVG-tooltip fallback used before the generated source/target text.
-   * It is not rendered as a visible edge label. */
-  readonly label?: string;
-  /** Spoken label for the keyboard-operable link. */
-  readonly accessibleLabel?: string;
-  /** Preferred bounded tooltip/summary text in both renderers. */
-  readonly description?: string;
-  /** Draw an arrowhead at the target end. */
-  readonly directed?: boolean;
-  /** Per-link CSS stroke color; invalid values and `url()` paint servers are ignored. */
-  readonly color?: string;
-  /** SVG stroke-dash sequence. Invalid/negative entries are rejected as a whole. */
-  readonly dash?: readonly number[];
-}
-
 export interface NormalizedGraphModel {
   readonly nodes: readonly LyraGraphNode[];
   readonly links: readonly LyraGraphEdge[];

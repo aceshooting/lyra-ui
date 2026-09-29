@@ -703,7 +703,7 @@ describe('lr-compare-panel deprecated --lr-compare-panel-selected-background ali
       ></lr-compare-panel>`,
     );
     expect(fill(canonical)).to.equal('rgb(1, 2, 3)');
-    expect(fill(alias)).to.equal('rgb(1, 2, 3)');
+    expect(fill(alias)).to.not.equal('rgb(1, 2, 3)');
     expect(fill(both)).to.equal('rgb(4, 5, 6)');
   });
 });

@@ -7,13 +7,9 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
-- **Deprecated css-property** `--lr-task-list-background` since `21.1.0`; use css-property `--lr-task-list-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
-- **Deprecated property** `collapsible` / `collapsible` since `21.1.0`; use property `without-collapse`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
-- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
-- **Deprecated property** `expanded` / `expanded` since `21.1.0`; use property `collapsed`; removal not before `23.0.0` — Toggle notifications report the resulting state as `expanded` across the library.
-- **Deprecated property** `label` / `label` since `21.1.0`; use property `heading`; removal not before `23.0.0` — One name per concept across the library.
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -40,19 +36,17 @@ It emits a request only; the host must assign a new reordered `items` array befo
 moves or an announcement is made. `heading?: string` — the visible section title; omission
 localizes `taskListLabel` (`'Tasks'` in the built-in English catalog); any supplied value is an
 explicit verbatim override, including `'Tasks'` under a non-English `.strings` catalog and `''`.
-Deprecated alias: `label` (use `heading`; removed in 23.0.0). `headingLevel: LyraHeadingLevel = '3'`
+`headingLevel: LyraHeadingLevel = '3'`
 (attribute `heading-level`, reflected) — `1`–`6` expose the visible header as that semantic heading
 level around either its disclosure button or static content, invalid untyped values retain level 3,
 and `none` is the explicit visual-only opt-out. `collapsed: boolean = false` (reflected) — hides the
-body; the list starts shown. Deprecated alias: `expanded` (use `collapsed`; removed in 23.0.0) —
-inverted, so `expanded="false"` equals `collapsed`. `withoutCollapse: boolean = false` (attribute
+body; the list starts shown. `withoutCollapse: boolean = false` (attribute
 `without-collapse`) — renders the header as a static heading with no toggle; `collapsed` can still
-be set programmatically. Deprecated alias: `collapsible` (use `without-collapse`; removed in 23.0.0)
-— inverted, so `collapsible="false"` equals `without-collapse`. `size: LyraSize = 'm'` (reflected)
+be set programmatically. `size: LyraSize = 'm'` (reflected)
 — density on the shared size scale: `s` (and the smaller `xs`/`2xs`) tightens header/body padding
 and item gap for dense contexts (a plan tracker nested in an already-padded transcript row), same
 convention as `<lr-agent-run>`'s `size`; purely a density knob, the border and background stay.
-Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0). `frame: LyraFrame = 'card'` (reflected) — container treatment, in the
+`frame: LyraFrame = 'card'` (reflected) — container treatment, in the
 library-wide `frame` vocabulary (`'card' | 'plain'`); `'plain'` removes `[part="base"]`'s border,
 background, and corner radius so a list embedded in a container that already draws a border (an
 agent-run panel, a message bubble) doesn't double it. The exported alias `TaskListAppearance` is
@@ -98,5 +92,4 @@ status icons without changing shared status tokens. `--lr-task-list-bg` (default
 `var(--lr-color-surface)`), `--lr-task-list-border-color` (default `var(--lr-color-border)`) and
 `--lr-task-list-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome without a
 `::part(base)` override; the border-color hook also colors the header/body divider that
-`frame="plain"` keeps. Deprecated alias: `--lr-task-list-background` (use `--lr-task-list-bg`;
-removed in 23.0.0).
+`frame="plain"` keeps.

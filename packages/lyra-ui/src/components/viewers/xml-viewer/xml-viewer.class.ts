@@ -23,7 +23,6 @@ import {
 import { chevronIcon } from '../../../internal/icons.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteCount } from '../../../internal/numbers.js';
-import { type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { styles } from './xml-viewer.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
@@ -300,25 +299,15 @@ class LyraXmlViewerBase extends LyraElement<LyraXmlViewerEventMap> {}
  *   element's rendered tag name, independent of the active-attribute outline above.
  * @cssprop [--lr-xml-viewer-highlight-accent-bg=var(--lr-color-brand-quiet)] - Row
  *   background of an accent-tone (the default tone) `highlights` entry.
- * @cssprop [--lr-xml-viewer-highlight-accent-background=var(--lr-color-brand-quiet)] -
- *   Deprecated alias of `--lr-xml-viewer-highlight-accent-bg`; removal not before 23.0.0.
  * @cssprop [--lr-xml-viewer-highlight-success-bg=var(--lr-color-success-quiet)] - Row
  *   background of a success-tone `highlights` entry.
- * @cssprop [--lr-xml-viewer-highlight-success-background=var(--lr-color-success-quiet)] -
- *   Deprecated alias of `--lr-xml-viewer-highlight-success-bg`; removal not before 23.0.0.
  * @cssprop [--lr-xml-viewer-highlight-warning-bg=var(--lr-color-warning-quiet)] - Row
  *   background of a warning-tone `highlights` entry.
- * @cssprop [--lr-xml-viewer-highlight-warning-background=var(--lr-color-warning-quiet)] -
- *   Deprecated alias of `--lr-xml-viewer-highlight-warning-bg`; removal not before 23.0.0.
  * @cssprop [--lr-xml-viewer-highlight-danger-bg=var(--lr-color-danger-quiet)] - Row
  *   background of a danger-tone `highlights` entry.
- * @cssprop [--lr-xml-viewer-highlight-danger-background=var(--lr-color-danger-quiet)] -
- *   Deprecated alias of `--lr-xml-viewer-highlight-danger-bg`; removal not before 23.0.0.
  * @cssprop [--lr-xml-viewer-highlight-neutral-bg=var(--lr-color-surface-raised)] - Row
  *   background of a neutral-tone `highlights` entry. Deliberately not `--lr-color-surface`: the
  *   viewer's own ambient background would render a neutral highlight as unhighlighted.
- * @cssprop [--lr-xml-viewer-highlight-neutral-background=var(--lr-color-surface-raised)] -
- *   Deprecated alias of `--lr-xml-viewer-highlight-neutral-bg`; removal not before 23.0.0.
  * @cssprop [--lr-xml-viewer-highlight-active-outline=var(--lr-color-brand)] - Outline color of the
  *   `highlights` entry currently named by `activeHighlightId`.
  * @cssprop [--lr-xml-viewer-max-height=none] - Maximum block size of the scrollable body before
@@ -368,10 +357,6 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   static override styles = [LyraElement.styles, specialistTokens, styles, viewerLoadingStyles, srOnly];
 
 
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    collapsedDepth: 'expandDepth',
-  };
-
   /** URL to fetch and parse as XML. Ignored once `xml` is set. */
   @property() src = '';
 
@@ -406,12 +391,6 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   /** Elements at or beyond this nesting depth (root = 0) start collapsed, so only the levels above
    *  it start expanded. Omit/undefined: nothing auto-collapses. */
   @property({ type: Number, attribute: 'expand-depth' }) expandDepth?: number;
-  /** Elements at or beyond this nesting depth (root = 0) start collapsed. Omit/undefined:
-   *  nothing auto-collapses.
-   *  @deprecated Use `expand-depth`; removal not before 23.0.0. */
-  // numeric-guard-exempt: deprecated alias kept in step with expandDepth, which safeExpandDepth finiteCount()-normalizes
-  @property({ type: Number, attribute: 'collapsed-depth' }) collapsedDepth?: number;
-
   /** Shows copy-to-clipboard affordances: one for the whole document, plus one per element. */
   @property({ type: Boolean, reflect: true }) copyable = false;
 

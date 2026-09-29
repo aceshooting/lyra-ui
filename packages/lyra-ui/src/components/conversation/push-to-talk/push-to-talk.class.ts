@@ -1,13 +1,12 @@
 import { html, nothing, svg, type PropertyValues, type TemplateResult, type SVGTemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import '../../utility/live-region/live-region.class.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteDuration, MAX_TIMEOUT_MS } from '../../../internal/numbers.js';
 import { styles } from './push-to-talk.styles.js';
-import { literalSetConverter, trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { literalSetConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_pushToTalkCancelled, LYRA_DEFAULT_pushToTalkDenied, LYRA_DEFAULT_pushToTalkError, LYRA_DEFAULT_pushToTalkHold, LYRA_DEFAULT_pushToTalkRequesting, LYRA_DEFAULT_pushToTalkStart, LYRA_DEFAULT_pushToTalkStarted, LYRA_DEFAULT_pushToTalkStop, LYRA_DEFAULT_pushToTalkStopped, LYRA_DEFAULT_pushToTalkUnsupported } from '../../../internal/default-strings.generated.js';
@@ -194,9 +193,6 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    showTimer: ['withoutTimer', invertAlias, invertAlias],
-  };
 
   private _mode: PushToTalkMode = 'hold';
   @property({ reflect: true, converter: PUSH_TO_TALK_MODE })
@@ -233,19 +229,6 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
    *  recording. */
   @property({ type: Boolean, attribute: 'without-timer' }) withoutTimer = false;
 
-  /**
-   * Deprecated inverted alias of `without-timer` (`withoutTimer`): `show-timer="false"` equals
-   * `without-timer`, and removing it restores the default. Setting it logs a one-time development
-   * warning.
-   *
-   * @deprecated Use `without-timer`; removal not before 23.0.0.
-   */
-  @property({
-    type: Boolean,
-    attribute: 'show-timer',
-    converter: trueDefaultBooleanConverter,
-  })
-  showTimer = true;
   @property({ type: Boolean, reflect: true }) disabled = false;
 
   @state() private elapsedMs = 0;

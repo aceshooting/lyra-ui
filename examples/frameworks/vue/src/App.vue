@@ -53,7 +53,7 @@ function onChange(event: CustomEvent<{ value: string }>): void {
     </div>
 
     <lr-table
-      accessible-label="People matching the filter"
+      aria-label="People matching the filter"
       :row-key.prop="rowKey"
       :columns.prop="columns"
       :rows.prop="rows"

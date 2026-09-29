@@ -28,15 +28,11 @@ export interface LyraAvatarGroupOverflowDetail {
 
 const OVERFLOW_IDENTITY_DETAIL_PROPERTIES = Object.freeze({
   'lr-overflow-activate': Object.freeze(['hiddenAvatars']),
-  'lr-overflow-click': Object.freeze(['hiddenAvatars']),
 });
 
 export interface LyraAvatarGroupEventMap {
   /** The overflow badge was activated by pointer or Enter/Space. */
   'lr-overflow-activate': CustomEvent<LyraAvatarGroupOverflowDetail>;
-  /** @deprecated Use `lr-overflow-activate`; removal not before 23.0.0. Fired unchanged right
-   *  after it from the same activation, with an equal detail. */
-  'lr-overflow-click': CustomEvent<LyraAvatarGroupOverflowDetail>;
 }
 
 /**
@@ -76,9 +72,6 @@ export interface LyraAvatarGroupEventMap {
  * focused — native `<button>` behavior). `detail: { hiddenCount, hiddenAvatars }` where
  * `hiddenAvatars` is a fresh readonly snapshot of eligible avatars hidden past `max`.
  * Non-cancelable — informational hook, no default action to veto.
- * @event lr-overflow-click - Deprecated alias of `lr-overflow-activate`, fired unchanged right
- * after it from the same activation with an equal `detail`. Non-cancelable. Removal not before
- * 23.0.0.
  * @csspart base - The outer inline-flex container (holds the slot and the overflow badge).
  * @csspart overflow-badge - The "+N" button. Only rendered while `max` is actively causing an
  * overflow.
@@ -122,12 +115,10 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-overflow-activate',
-    'lr-overflow-click',
   ]);
   // Typed as the baseline single-key shape; the enrolled `lr-overflow-activate` key is additive at
   // runtime, where the base class reads the table as a string-keyed record.
   protected static override readonly identityEventDetailProperties: Readonly<{
-    'lr-overflow-click': readonly string[];
   }> = OVERFLOW_IDENTITY_DETAIL_PROPERTIES;
 
   static override styles = [LyraElement.styles, styles];
@@ -530,15 +521,6 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
     const hiddenAvatars = Object.freeze([...this.overflowHiddenAvatars]);
     this.emit(
       'lr-overflow-activate',
-      Object.freeze({
-        hiddenCount: hiddenAvatars.length,
-        hiddenAvatars,
-      })
-    );
-    // Deprecated alias, fired right after with its own equal detail so a listener still bound to
-    // the old name keeps hearing every activation.
-    this.emit(
-      'lr-overflow-click',
       Object.freeze({
         hiddenCount: hiddenAvatars.length,
         hiddenAvatars,

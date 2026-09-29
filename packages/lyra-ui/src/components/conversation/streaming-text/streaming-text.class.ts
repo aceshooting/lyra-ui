@@ -149,12 +149,6 @@ export class LyraStreamingText extends StreamingTextRuntimeBase {
   /** Enables source-copy headers in the composed `<lr-markdown>`. */
   @property({ type: Boolean, attribute: 'code-block-header' }) override codeBlockHeader = false;
 
-  /** Deprecated alias of `code-block-header` (`codeBlockHeader`), kept in step with it -- the last
-   * write to either wins.
-   * Setting it logs a one-time development warning.
-   * @deprecated Use `code-block-header` (`codeBlockHeader`); removal not before 23.0.0. */
-  @property({ type: Boolean, attribute: 'code-block-chrome' }) override codeBlockChrome = false;
-
   protected override renderMarkdown(): TemplateResult {
     // lr-markdown's own lr-content-settled is deliberately left unstopped here -- see
     // updated()'s comment in the shared base -- so it bubbles straight out through this element.

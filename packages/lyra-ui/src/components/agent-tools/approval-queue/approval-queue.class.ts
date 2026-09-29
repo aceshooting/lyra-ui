@@ -4,12 +4,10 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import type { ToolApprovalEventDetail } from '../../../ai/types.js';
 import type { ToolApprovalDialogCloseReason } from '../tool-approval-dialog/tool-approval-dialog.class.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './approval-queue.styles.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { overallSemanticLabel } from '../semantic-owner.js';
 import type { ApprovalDecision } from '../approval-state.js';
 import { firstByIdentity } from '../collection-identity.js';
@@ -17,7 +15,6 @@ import { firstByIdentity } from '../collection-identity.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_approvalQueueEmpty, LYRA_DEFAULT_approvalQueueLabel, LYRA_DEFAULT_approvalQueueLimit, LYRA_DEFAULT_approvalQueueOpen, LYRA_DEFAULT_approvalQueuePending, LYRA_DEFAULT_approvalQueuePendingCount, LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmDenied } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 export type ApprovalRequestStatus = 'pending' | ApprovalDecision;
 
@@ -110,10 +107,6 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    editable: ['readonly', invertAlias, invertAlias],
-  };
-
   /** Requests in display order. Controlled and never mutated by this component. Empty ids are
    *  omitted and duplicate ids normalize first-wins before counts, selection, dialog lookup, and
    *  events. */
@@ -125,9 +118,6 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
   @property({ type: Boolean, reflect: true }) open = false;
   /** Withholds argument editing in the nested approval dialog. */
   @property({ type: Boolean }) readonly = false;
-  /** Allows argument editing in the nested approval dialog.
-   *  @deprecated Use `readonly`; removal not before 23.0.0. */
-  @property({ type: Boolean, converter: trueDefaultBooleanConverter }) editable = true;
   /** Accessible name and visible heading. Optional. Omitting it localizes the default
    *  `approvalQueueLabel` message; an explicit empty string renders no visible/accessible label. */
   @property() label?: string;

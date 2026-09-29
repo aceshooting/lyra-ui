@@ -5,7 +5,6 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
-import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 installFormControlLabelSupport();
 import { deferredPlace as place } from '../../../internal/anchored-overlay-runtime.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
@@ -29,9 +28,7 @@ import { localeNativeName } from '../../media/flag/language-map.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './locale-picker.styles.js';
-import {
-  declaredDefaultConverter,
-  trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { declaredDefaultConverter } from '../../../internal/converters.js';
 import {
   attachInternalsSafely,
   getFormOwner,
@@ -50,7 +47,6 @@ import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_localePickerLabel, LYRA_DEFAULT_localePickerRequired, LYRA_DEFAULT_retry, LYRA_DEFAULT_statusError } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 /** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
  *  can never be set back to `false` from a plain-HTML attribute once a property's own default is
@@ -305,9 +301,6 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
 
   static formAssociated = true;
   static override styles = [LyraElement.styles, sizes, srOnly, styles];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    showFlags: ['withoutFlags', invertAlias, invertAlias],
-  };
 
   static override properties = {
     customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
@@ -356,11 +349,6 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
    *  rows. The composition recipe this component supersedes (`lr-popover` + `lr-flag`) already
    *  pairs a locale switcher with flags by convention, so flags render unless this is set. */
   @property({ type: Boolean, attribute: 'without-flags' }) withoutFlags = false;
-  /** Each row's leading `<lr-flag>`. The composition recipe this component supersedes
-   *  (`lr-popover` + `lr-flag`) already pairs a locale switcher with flags by convention --
-   *  defaulting to `true` keeps that continuity; set `false` for text-only rows.
-   *  @deprecated Use `without-flags` (inverted); removal not before 23.0.0. */
-  @property({ attribute: 'show-flags', type: Boolean, converter: trueDefaultBooleanConverter }) showFlags = true;
 
   /** Trigger content. The default flag-label preserves the label, optional flag and chevron.
    * Flag mode centers the flag in a square based on the trigger height, with a 24px minimum,

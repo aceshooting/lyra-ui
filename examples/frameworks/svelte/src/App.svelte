@@ -50,7 +50,7 @@
   </div>
 
   <lr-table
-    accessible-label="People matching the filter"
+    aria-label="People matching the filter"
     {rowKey}
     {columns}
     {rows}

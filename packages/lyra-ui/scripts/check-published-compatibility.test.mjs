@@ -5,7 +5,7 @@ import { mkdtemp, cp, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { checkPublishedCompatibility } from './check-published-compatibility.mjs';
+import { checkPublishedCompatibility, readCurrentCompatibilityContext } from './check-published-compatibility.mjs';
 import { decodeEvidence, encodeEvidence, sha256, jsonBytes, validatePublishedCapture } from './published-compatibility-io.mjs';
 
 const directory = join(dirname(fileURLToPath(import.meta.url)), 'fixtures/compatibility-history');
@@ -56,16 +56,46 @@ test('reviewed descriptor/archive pins fail closed before accepting changed evid
   } finally { await rm(temp, { recursive: true, force: true }); }
 });
 
-test('current source retains every published policy while actual package version remains 22', async () => {
-  const { assembleCompatibilityContext } = await import('./published-compatibility.mjs');
-  const { assembleComponentMetadata, readComponentMetadataSources } = await import('./component-metadata-source.mjs');
-  const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
-  const metadata = assembleComponentMetadata(readComponentMetadataSources(packageRoot));
-  const inventory = JSON.parse(await readFile(join(packageRoot, 'scripts/fixtures/component-inventory.json'), 'utf8'));
-  const packageJson = JSON.parse(await readFile(join(packageRoot, 'package.json'), 'utf8'));
+test('actual source retirement partition agrees with verified history and preserves protected policies', async () => {
+  const { compatibilityKey } = await import('./published-compatibility.mjs');
   const verified = await checkPublishedCompatibility(directory);
-  const context = assembleCompatibilityContext({ packageVersion: packageJson.version, currentInventory: inventory,
-    currentExportDeprecations: metadata.exportDeprecations, captures: verified.captures.map(entry => entry.facts), retirementIndex: verified.retirements });
+  const retired = new Set(verified.retirements.map(entry => compatibilityKey(entry.key)));
+  const initialRetirements = [
+    ['member', 'lr-geojson-view', 'component', 'lr-geojson-view'],
+    ['export', 'entry-point', null, './components/lr-geojson-view.js'],
+    ['export', 'entry-point', null, './components/viewers/geojson-view/geojson-view.class.js'],
+    ['export', 'entry-point', null, './components/viewers/geojson-view/geojson-view.js'],
+    ['export', 'entry-point', null, './utilities/localization.js'],
+    ['export', 'type', './components/retrieval/graph/graph.class.js', 'LyraGraphLink'],
+    ['export', 'type', './components/viewers/document-viewer/registry.js', 'DocumentFile'],
+    ['export', 'type', './components/viewers/document-viewer/registry.js', 'DocumentRendererDefinition'],
+    ['export', 'type', './components/viewers/geojson-view/geojson-view.class.js', 'LyraGeojsonViewEventMap'],
+  ];
+  for (const key of initialRetirements) assert.ok(retired.has(JSON.stringify(key)), `retired ${JSON.stringify(key)}`);
+  const facts = verified.captures[0].facts;
+  const completedCohort = facts.records
+    .filter(entry => entry.policy.removalNotBefore === '23.0.0')
+    .map(entry => compatibilityKey(entry.key));
+  assert.deepEqual([...retired].sort(), completedCohort.sort(),
+    'The complete published removal cohort must retire together');
+  const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
+  const context = await readCurrentCompatibilityContext(packageRoot);
+  assert.deepEqual(Object.keys(context.records).sort(), facts.records.map(entry => compatibilityKey(entry.key)).sort());
+  for (const published of facts.records) {
+    const key = compatibilityKey(published.key);
+    assert.equal(context.records[key].state, retired.has(key) ? 'retired' : 'current', key);
+    assert.deepEqual(context.records[key].policy, published.policy, key);
+    if (published.policy.removalNotBefore !== '23.0.0') assert.equal(context.records[key].state, 'current', key);
+  }
+});
+
+test('immutable 22 source retains every published policy independently of current retirements', async () => {
+  const { assembleCompatibilityContext } = await import('./published-compatibility.mjs');
+  const { capture, facts } = (await checkPublishedCompatibility(directory)).captures[0];
+  const archive = decodeEvidence(await readFile(join(directory, '22.0.0/evidence.json.gz')));
+  const input = role => JSON.parse(Buffer.from(archive.payloads[capture.inputs.find(entry => entry.origin === 'source' && entry.role === role).sha256], 'base64'));
+  const context = assembleCompatibilityContext({ packageVersion: capture.sourceVersion, currentInventory: input('inventory'),
+    currentExportDeprecations: input('metadata').exportDeprecations, captures: [facts], retirementIndex: [] });
   assert.ok(Object.values(context.records).every(record => record.state === 'current'));
 });
 

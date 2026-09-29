@@ -10,21 +10,18 @@
 - **Deprecations** none
 - **Optional peers** `maplibre-gl` — see `llms/peers.md`
 - **Themeable via** 7 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
-- **Documented with** `lr-geojson-view` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
-## `lr-geojson-viewer` / `lr-geojson-view`
+## `lr-geojson-viewer`
 
 Document-registry bridge that fetches, validates, and renders a GeoJSON file through `<lr-map>`'s
-`dataLayers`. The canonical class is `LyraGeoJsonViewer`. The pre-v9 `lr-geojson-view` tag, its
-`LyraGeojsonView` class and `LyraGeojsonViewEventMap` type are deprecated compatibility aliases
-(removal not before 23.0.0; this replaces the earlier promise to keep them permanently): they keep
-working unchanged until then, and connecting `lr-geojson-view` logs a one-time development warning.
-Rename them to `lr-geojson-viewer`, `LyraGeoJsonViewer` and `LyraGeoJsonViewerEventMap`. The
-document registry renders the canonical tag and matches `application/geo+json` and `.geojson`
-filenames.
+`dataLayers`. The canonical class is `LyraGeoJsonViewer`, with `LyraGeoJsonViewerEventMap`.
+The old `lr-geojson-view` tag and `LyraGeojsonViewEventMap` type were removed in 23.0.0.
+The root and viewers family barrels still expose the same distinct `LyraGeojsonView` subclass
+for compatibility; importing it does not register the removed tag. Prefer the canonical class.
+The document registry renders `lr-geojson-viewer` for `application/geo+json` and `.geojson` filenames.
 
 Validates the parsed JSON is a `Feature`/`FeatureCollection`/bare geometry (one of `Point`,
 `LineString`, `Polygon`, `MultiPoint`, `MultiLineString`, `MultiPolygon`, `GeometryCollection`) before
@@ -96,11 +93,9 @@ size of `[part="base"]`, matching every other viewer in this family. It is also 
 `maxHeight` property, which writes this token inline on `[part="base"]`.
 
 The canonical tag is registered by importing `components/lr-geojson-viewer.js` (deep route
-`components/viewers/geojson-view/geojson-viewer.js`). The deprecated `components/lr-geojson-view.js`,
-`components/viewers/geojson-view/geojson-view.js` and `geojson-view.class.js` routes register or
-export the alias (the registration routes also register `lr-geojson-viewer`) and keep working until
-their removal, no earlier than 23.0.0; an application importing one of them only to register the
-canonical tag switches to `components/lr-geojson-viewer.js`.
+`components/viewers/geojson-view/geojson-viewer.js`). The former `components/lr-geojson-view.js`,
+`components/viewers/geojson-view/geojson-view.js` and `geojson-view.class.js` routes were removed
+in 23.0.0. Applications using them to register the viewer must use the canonical tag-shaped route.
 Remote
 resources are capped at 25 MB; exceeding it surfaces the localized `documentPreviewResourceTooLarge`
 message instead of the map. Lyra supports MapLibre v5 and v6; consumers must import its CSS.

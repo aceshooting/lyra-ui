@@ -1,8 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
-import { normalizeSize, type LyraFrame, type LyraSize } from '../../../internal/variants.js';
+import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import type { LyraTranscriptMode } from '../../../internal/shared-unions.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
@@ -15,7 +14,6 @@ import { styles } from './thinking-panel.styles.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_thinking, LYRA_DEFAULT_thinkingPanelLabel, LYRA_DEFAULT_thoughtFor } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 /** Whether the panel is streaming a run live or replaying a finished one -- the library's shared
  *  transcript-mode vocabulary, identical to `<lr-activity-feed>`'s `ActivityFeedMode`. */
@@ -44,12 +42,6 @@ export interface LyraThinkingPanelEventMap {
  *  who has barely nudged the scrollbar while reading the latest line isn't
  *  mistaken for having deliberately scrolled away to read earlier content. */
 const NEAR_BOTTOM_PX = 48;
-
-/** Whether a `size` sits on the dense tier the deprecated `compact` boolean spelled. */
-function isDenseSize(size: LyraSize): boolean {
-  const step = normalizeSize(size);
-  return step === 's' || step === 'xs' || step === '2xs';
-}
 
 /**
  * `<lr-thinking-panel>` — a collapsible panel for an AI agent's
@@ -155,7 +147,6 @@ function isDenseSize(size: LyraSize): boolean {
  *   `[part="body"]` while `size` is `s` or smaller.
  * @cssprop [--lr-thinking-panel-bg=var(--lr-color-surface)] - Fill of the outer card
  *   (`[part="base"]`) while `frame="card"`. `frame="plain"` still removes the fill entirely.
- * @cssprop [--lr-thinking-panel-background=var(--lr-color-surface)] - Deprecated alias of `--lr-thinking-panel-bg`; removal not before 23.0.0.
  * @cssprop [--lr-thinking-panel-border-color=var(--lr-color-border)] - Colour of the outer card's
  *   border and of the header/body divider, which `frame="plain"` keeps.
  * @cssprop [--lr-thinking-panel-radius=var(--lr-radius)] - Corner radius of the outer card.
@@ -195,10 +186,6 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    compact: ['size', (value) => (value ? 's' : 'm'), (value) => isDenseSize(value as LyraSize)],
-  };
-
   /** Optional header-text override. Omission localizes `thinkingPanelLabel`; any supplied string,
    *  including `'Thinking'` or `''`, is rendered verbatim. */
   @property() label?: string;
@@ -210,13 +197,6 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
    * remain, so use `frame="plain"` to remove card chrome.
    */
   @property({ reflect: true }) size: LyraSize = 'm';
-
-  /** Tighter header/body padding, header gap, and header/body font size for dense transcript
-   *  contexts. Defaults to `false`, preserving the regular-density treatment. This changes
-   *  density only; the outer border and surface remain, so use `frame="plain"` to remove card
-   *  chrome.
-   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
-  @property({ type: Boolean, reflect: true }) compact = false;
 
   /** Visual chrome, in the library's shared container-frame vocabulary. `'card'` (the default)
    *  keeps the bordered, filled outer container. `'plain'` removes that outer border, background,
@@ -494,7 +474,6 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
     `;
   }
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

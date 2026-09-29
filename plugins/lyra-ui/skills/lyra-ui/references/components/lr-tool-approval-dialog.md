@@ -9,8 +9,6 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecated event** `lr-approve` since `22.0.0`; use event `addEventListener('lr-approve-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
 - **Deprecated event** `lr-deny` since `22.0.0`; use event `addEventListener('lr-deny-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
-- **Deprecated property** `editable` / `editable` since `21.1.0`; use property `readonly`; removal not before `23.0.0` — One name per concept across the library.
-- **Deprecated property** `pending` / `pending` since `21.1.0`; use property `pending-action`; removal not before `23.0.0` — One name per concept across the library.
 - **Optional peers** none
 - **Themeable via** 22 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -57,8 +55,7 @@ renders at the start of the action row, before Deny/Edit/Approve.
 - `args: unknown = {}` (attribute: false) — the proposed call's arguments, rendered via
   `<lr-json-viewer>` read-only, or stringified into a `<textarea>` while editing
 - `readonly: boolean = false` (reflected) — withholds the "Edit" affordance: `args` is always shown
-  read-only and can never be changed before approval. Deprecated alias: `editable` (use `readonly`;
-  removed in 23.0.0) — inverted, so `editable="false"` equals `readonly`.
+  read-only and can never be changed before approval.
 - `spellcheck: boolean = false`, `autocapitalize: string = 'off'`,
   `autoCorrect: string = 'off'` (attribute `autocorrect`), `autocomplete: string = 'off'`,
   `wrap: 'hard'|'soft'|'off' = 'soft'`, `inputMode: string = ''` (attribute `inputmode`),
@@ -74,8 +71,7 @@ renders at the start of the action row, before Deny/Edit/Approve.
   time the dialog re-opens. If that same listener resolves the decision itself synchronously
   (calling `close('approve'|'deny')` or setting `.pendingAction` directly before returning), that
   wins outright: the component's own built-in `pendingAction` bookkeeping only applies when the
-  listener left both `.pendingAction` and `.open` untouched. Deprecated alias: `pending` (use
-  `pending-action`; removed in 23.0.0).
+  listener left both `.pendingAction` and `.open` untouched.
 
 **Methods:** `show(): void` opens the dialog; `hide(reason: ToolApprovalDialogCloseReason = 'api'):
 void` and `close(reason = 'api'): void` close through the same reasoned lifecycle, emit `lr-close`,

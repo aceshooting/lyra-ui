@@ -452,12 +452,12 @@ This applies to `lr-table`'s grid and `lr-sequence-strip`'s list as well.
 
 On `lr-attachment-trigger`, `lr-callout`, `lr-carousel`, `lr-dialog`, `lr-drawer`, `lr-file-input`,
 `lr-lite-chart`, `lr-progress-bar`, `lr-progress-ring` and `lr-reorder-item`, the older
-`accessible-label` attribute is deprecated with removal no earlier than 23.0.0. Their
-`accessibleLabel` properties have a separate deprecation window, with removal no earlier than
-24.0.0. On `lr-table` and `lr-sequence-strip`, both `accessible-label` and `accessibleLabel` are
-deprecated with removal no earlier than 24.0.0. These compatibility names remain functional during
-their respective windows and can issue one-time development notices; use the native host name for
-new code. The migration reference lists each attribute and property independently.
+`accessible-label` attribute was removed in 23.0.0 and no longer supplies an accessible name.
+Their `accessibleLabel` properties remain supported as deprecated fallbacks, with removal no
+earlier than 24.0.0. On `lr-table` and `lr-sequence-strip`, both `accessible-label` and
+`accessibleLabel` remain supported with removal no earlier than 24.0.0. These retained
+compatibility inputs can issue one-time development notices; use the native host name for new
+code. The migration reference lists each attribute and property independently.
 
 `lr-message-parts` retains a deprecated nullable `accessibleLabel` property, with removal no earlier
 than 24.0.0. It maps to the current `aria-label` attribute: authoring that attribute updates the

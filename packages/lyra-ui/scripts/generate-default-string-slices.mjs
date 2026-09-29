@@ -487,12 +487,24 @@ export function catalogEntries(source, file = 'localization.ts', name = 'DEFAULT
   return entries;
 }
 
+function isSharedClassSource(file, program) {
+  return file.endsWith('-shared.ts') && program.body.some((node) =>
+    node.type === 'ExportNamedDeclaration' &&
+    node.declaration?.type === 'ClassDeclaration' &&
+    /^Lyra[A-Z]/.test(node.declaration.id?.name ?? ''),
+  );
+}
+
 async function sourceFiles(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
   const nested = await Promise.all(entries.map(async (entry) => {
     const fullPath = path.join(directory, entry.name);
     if (entry.isDirectory()) return sourceFiles(fullPath);
     if (entry.isFile() && entry.name.endsWith('.class.ts')) return [fullPath];
+    if (entry.isFile() && entry.name.endsWith('-shared.ts')) {
+      const program = parseProgram(fullPath, await readFile(fullPath, 'utf8'));
+      if (isSharedClassSource(fullPath, program)) return [fullPath];
+    }
     return [];
   }));
   return nested.flat();
@@ -615,7 +627,7 @@ export async function reachableCatalogKeys(rootFile, catalogKeys, sourceRoot, so
   // runtime key map (attachment-chip.class.ts does this for file-size units), but its own message
   // literals belong to its own generated slice, never to this one.
   for (const { file, program } of programs) {
-    if (file !== rootFile && file.endsWith('.class.ts')) continue;
+    if (file !== rootFile && (file.endsWith('.class.ts') || isSharedClassSource(file, program))) continue;
     if (graphHasDynamicKey) {
       // The broad walk covers the ROOT class file too, not just helpers: a key map feeding a
       // dynamic call frequently lives in the class file itself (lr-citation-badge's

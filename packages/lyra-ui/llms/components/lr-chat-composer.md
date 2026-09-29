@@ -7,11 +7,9 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
-- **Deprecated css-property** `--lr-chat-composer-background` since `21.1.0`; use css-property `--lr-chat-composer-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
-- **Deprecated property** `stoppable` / `stoppable` since `21.1.0`; use property `without-stop`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
-- **Deprecated property** `submitOnEnter` / `submit-on-enter` since `21.1.0`; use property `without-enter-submit`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 10 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -58,15 +56,12 @@ reveals the invalid state, and `form.reset()` clears the touched presentation.
   only; slot content, empty-slot hiding and the built-in button are unchanged. Invalid direct or
   attribute values normalize and reflect as `'inline'`.
 - `withoutEnterSubmit: boolean = false` (reflected, attribute `without-enter-submit`) — when set,
-  Enter always inserts a newline instead of submitting. Deprecated alias: `submit-on-enter`/
-  `submitOnEnter` (use `without-enter-submit`; removed in 23.0.0) — inverted, so
-  `submit-on-enter="false"` equals `without-enter-submit`
+  Enter always inserts a newline instead of submitting.
 - `submitDisabled: boolean = false` (reflected, attribute `submit-disabled`) — consumer-controlled
   validation gate; while idle, disables the built-in Send button and suppresses Enter/click
   submission without disabling the textarea or a busy-state Stop action
 - `withoutStop: boolean = false` (reflected, attribute `without-stop`) — when set, busy states keep
-  a disabled Send button instead of exposing a Stop action. Deprecated alias: `stoppable` (use
-  `without-stop`; removed in 23.0.0) — inverted, so `stoppable="false"` equals `without-stop`
+  a disabled Send button instead of exposing a Stop action.
 - `readOnly: boolean = false` (attribute `readonly`, reflected) — native read-only editing state;
   intrinsic required/length constraints are barred while set
 - `minLength?: number` (attribute `minlength`) and `maxLength?: number` (attribute `maxlength`) —
@@ -120,8 +115,7 @@ treatment). Scoped separately from the shared `--lr-color-text-quiet` token, whi
 `[part="textarea"]`'s placeholder color also reads — overriding this cssprop recolors only the busy
 button, not the placeholder too (the same shared-token-collision fix `<lr-chat-message>`'s own
 user-bubble background pair documents). `--lr-chat-composer-bg` (default
-`var(--lr-color-surface)`; deprecated alias: `--lr-chat-composer-background`, use
-`--lr-chat-composer-bg`, removed in 23.0.0), `--lr-chat-composer-border-color` (default `var(--lr-color-border)`) and
+`var(--lr-color-surface)`), `--lr-chat-composer-border-color` (default `var(--lr-color-border)`) and
 `--lr-chat-composer-radius` (default `var(--lr-radius)`) retune `[part="base"]`'s card chrome so a
 composer docked into a themed panel can match it, with no `::part(base)` override. `--lr-chat-composer-padding`
 (default `var(--lr-space-s)`) and `--lr-chat-composer-gap` (default `var(--lr-space-xs)`) retune

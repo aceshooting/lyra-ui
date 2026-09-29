@@ -10,7 +10,6 @@ import type { LyraConfirmBar } from './confirm-bar.js';
 expectDevWarning('lyra-confirm-bar-wait-until-after-dispatch');
 import type { LyraButton } from '../../forms/button/button.class.js';
 import { nextHostUpdateOpportunity } from '../../../internal/focus-navigation.js';
-import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 it('defaults to decision null, pendingAction null, variant neutral, and shows Deny before Approve', async () => {
   const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
@@ -1716,77 +1715,6 @@ describe('returnFocusTo against a real conditionally re-rendering Lit host', () 
   });
 });
 
-describe('lr-confirm-bar size and its deprecated compact alias', () => {
-  const COMPACT: readonly DeprecatedUsage[] = [{ tag: 'lr-confirm-bar', kind: 'property', name: 'compact' }];
-  const density = (el: LyraConfirmBar): string => JSON.stringify({ display: getComputedStyle(el).display, padding: getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).padding, direction: getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).flexDirection });
-
-  it('defaults size to m, reflects it, and leaves the regular density unchanged', async () => {
-    const el = await fixture<LyraConfirmBar>(html`<lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>`);
-    expect(el.size).to.equal('m');
-    expect(el.getAttribute('size')).to.equal('m');
-    expect(el.hasAttribute('compact')).to.equal(false);
-    expect(el.compact).to.equal(false);
-  });
-
-  it('tightens through the canonical size="s" without a deprecation warning', async () => {
-    let regular = '';
-    let dense = '';
-    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
-      regular = density(await fixture<LyraConfirmBar>(html`<lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>`));
-      dense = density(await fixture<LyraConfirmBar>(html`<lr-confirm-bar size="s" tool-name="run_shell"></lr-confirm-bar>`));
-    });
-    expect(dense).to.not.equal(regular);
-    expect(warnings).to.have.length(0);
-  });
-
-  it('keeps compact working as size="s", warning once', async () => {
-    let canonical = '';
-    let alias = '';
-    let property = '';
-    let reads: unknown[] = [];
-    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
-      canonical = density(await fixture<LyraConfirmBar>(html`<lr-confirm-bar size="s" tool-name="run_shell"></lr-confirm-bar>`));
-      const aliased = await fixture<LyraConfirmBar>(html`<lr-confirm-bar compact tool-name="run_shell"></lr-confirm-bar>`);
-      alias = density(aliased);
-      const el = await fixture<LyraConfirmBar>(html`<lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>`);
-      el.compact = true;
-      await el.updateComplete;
-      property = density(el);
-      el.compact = false;
-      await el.updateComplete;
-      reads = [aliased.size, aliased.compact, el.size, el.compact];
-    });
-    expect(alias).to.equal(canonical);
-    expect(property).to.equal(canonical);
-    expect(reads).to.deep.equal(['s', true, 'm', false]);
-    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-confirm-bar:property:compact']);
-  });
-
-  it('applies the last write when compact and size are both authored', async () => {
-    let reads: unknown[] = [];
-    await captureDeprecationWarnings(COMPACT, async () => {
-      const sizeLast = await fixture<LyraConfirmBar>(html`<lr-confirm-bar compact size="l" tool-name="run_shell"></lr-confirm-bar>`);
-      const compactLast = await fixture<LyraConfirmBar>(html`<lr-confirm-bar size="l" compact tool-name="run_shell"></lr-confirm-bar>`);
-      reads = [sizeLast.size, sizeLast.compact, compactLast.size, compactLast.compact];
-    });
-    expect(reads).to.deep.equal(['l', false, 's', true]);
-  });
-
-  it('syncs and reflects compact back from the canonical size without warning', async () => {
-    const reads: unknown[] = [];
-    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
-      const el = await fixture<LyraConfirmBar>(html`<lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>`);
-      el.size = 'xs';
-      await el.updateComplete;
-      reads.push(el.compact, el.hasAttribute('compact'));
-      el.size = 'l';
-      await el.updateComplete;
-      reads.push(el.compact, el.hasAttribute('compact'));
-    });
-    expect(reads).to.deep.equal([true, true, false, false]);
-    expect(warnings).to.have.length(0);
-  });
-});
 
 describe('lr-confirm-bar heading-level', () => {
   const heading = (el: LyraConfirmBar): HTMLElement => el.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
@@ -1813,61 +1741,6 @@ describe('lr-confirm-bar heading-level', () => {
   });
 });
 
-describe('lr-confirm-bar deprecated pending alias', () => {
-  const PENDING: readonly DeprecatedUsage[] = [{ tag: 'lr-confirm-bar', kind: 'property', name: 'pending' }];
-  const button = (el: LyraConfirmBar, name: string): LyraButton => el.shadowRoot!.querySelector(`[part="${name}"]`) as LyraButton;
-
-  it('reads and writes the pending-action state through pending, warning once', async () => {
-    let reads: unknown[] = [];
-    const warnings = await captureDeprecationWarnings(PENDING, async () => {
-      const el = await fixture<LyraConfirmBar>(html`<lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>`);
-      el.pending = 'approve';
-      await el.updateComplete;
-      reads = [el.pendingAction, el.pending, el.getAttribute('pending-action'), button(el, 'approve-button').loading, button(el, 'deny-button').disabled];
-      el.pending = null;
-      await el.updateComplete;
-      reads.push(el.pendingAction, el.hasAttribute('pending-action'));
-      const attr = await fixture<LyraConfirmBar>(html`<lr-confirm-bar pending="deny"></lr-confirm-bar>`);
-      reads.push(attr.pendingAction);
-      const both = await fixture<LyraConfirmBar>(html`<lr-confirm-bar pending="deny" pending-action="approve"></lr-confirm-bar>`);
-      reads.push(both.pendingAction);
-      const aliasLast = await fixture<LyraConfirmBar>(html`<lr-confirm-bar pending-action="approve" pending="deny"></lr-confirm-bar>`);
-      reads.push(aliasLast.pendingAction);
-    });
-    expect(reads).to.deep.equal(['approve', 'approve', 'approve', true, true, null, false, 'deny', 'approve', 'deny']);
-    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-confirm-bar:property:pending']);
-  });
-
-  it('lets a vetoing listener that clears the deprecated pending alias win over the built-in fallback', async () => {
-    let state: unknown[] = [];
-    await captureDeprecationWarnings(PENDING, async () => {
-      const el = await fixture<LyraConfirmBar>(html`<lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>`);
-      el.addEventListener('lr-approve-request', (e) => {
-        e.preventDefault();
-        el.pending = null;
-      });
-      button(el, 'approve-button').click();
-      await el.updateComplete;
-      state = [el.pendingAction, el.decision, button(el, 'approve-button').loading];
-    });
-    expect(state).to.deep.equal([null, null, false]);
-  });
-
-  it('syncs and reflects pending back from pendingAction without warning', async () => {
-    const reads: unknown[] = [];
-    const warnings = await captureDeprecationWarnings(PENDING, async () => {
-      const el = await fixture<LyraConfirmBar>(html`<lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>`);
-      el.pendingAction = 'deny';
-      await el.updateComplete;
-      reads.push(el.pending, el.getAttribute('pending'));
-      el.pendingAction = null;
-      await el.updateComplete;
-      reads.push(el.pending, el.hasAttribute('pending'));
-    });
-    expect(reads).to.deep.equal(['deny', 'deny', null, false]);
-    expect(warnings).to.have.length(0);
-  });
-});
 
 expectDeprecatedUsage('lr-confirm-bar', 'event', 'lr-approve');
 

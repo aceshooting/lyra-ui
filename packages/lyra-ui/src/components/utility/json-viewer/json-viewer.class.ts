@@ -9,7 +9,6 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteCount } from '../../../internal/numbers.js';
-import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
@@ -465,25 +464,12 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, srOnly];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    collapsedDepth: 'expandDepth',
-    search: 'query',
-  };
-
   /** The value to render. Any JSON-serializable value, plus `undefined`. */
   @property({ attribute: false }) data: unknown;
   /** Nodes at or beyond this nesting depth (root = 0) start collapsed, so only the levels above it
    *  start expanded. Omit/undefined: nothing auto-collapses. */
   @property({ type: Number, attribute: 'expand-depth' })
   expandDepth?: number;
-  /**
-   * Nodes at or beyond this nesting depth (root = 0) start collapsed. Omit/undefined: nothing auto-collapses.
-   *
-   * @deprecated Use `expand-depth`; removal not before 23.0.0.
-   */
-  // numeric-guard-exempt: deprecated alias kept in step with expandDepth, which safeExpandDepth finiteCount()-normalizes
-  @property({ type: Number, attribute: 'collapsed-depth' })
-  collapsedDepth?: number;
   /** A CSS length (e.g. `"20rem"`); once set, the viewer scrolls internally past this height
    * instead of growing the page. Invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
@@ -491,13 +477,6 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   @property({ type: Boolean, reflect: true }) copyable = false;
   /** Removing the attribute clears search without changing its null readback. Case-insensitive substring match against keys/values; matches are highlighted and their ancestors auto-expanded. See also `runSearch()`/`searchNext()`/`searchPrevious()`/`clearSearch()` for imperative, cursor-navigable search built on top of this property. */
   @property() query = '';
-  /**
-   * Removing the attribute clears search without changing its null readback. Case-insensitive substring match against keys/values; matches are highlighted and their ancestors auto-expanded. See also `runSearch()`/`searchNext()`/`searchPrevious()`/`clearSearch()` for imperative, cursor-navigable search built on top of this property.
-   *
-   * @deprecated Use `query`; removal not before 23.0.0.
-   */
-  @property() search = '';
-
   /**
    * Per-path (`JSON.stringify(path)`) explicit expand/collapse, overriding
    * the `expandDepth`/search defaults once a node's toggle has been used.
@@ -1005,12 +984,8 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
    * Sets the declarative `query` property and awaits the recompute -- the resolved count is the
    * number of matches (also `searchState.orderedMatches.length` / rendered `[data-match]` spans).
    *
-   * Named `runSearch()` rather than `search()` -- unlike every sibling viewer's imperative search
-   * quartet (pdf/docx/csv/notebook/spreadsheet/ebook-viewer, av-player, terminal), `search` here is
-   * *already* a public reactive property (the deprecated alias of `query`, predating this quartet)
-   * -- a method can't share a class member name with a property (Lit's reactive-property machinery
-   * throws at definition time: "declared as a reactive property but it's actually declared as a
-   * value on the prototype"), so the convenience method has to be named something else.
+   * The method form awaits the render update and returns the resulting match count; `query` also
+   * supports declarative bindings that do not need a return value.
    */
   async runSearch(query: string): Promise<number> {
     this.query = query;

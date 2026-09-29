@@ -2,7 +2,6 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { fixture, expect, html, oneEvent, aTimeout } from "@open-wc/testing";
 import "./generation-metrics.js";
 import type { LyraGenerationMetrics } from "./generation-metrics.js";
-import { captureDeprecationWarnings } from "../../../../test/expected-deprecations.js";
 
 // The browser runner has no compatible fake-timer harness, so timer-driven behavior here uses
 // real `setInterval` ticks with generous margins. Most assertions below sidestep
@@ -140,81 +139,6 @@ it("hides the stop button entirely while without-stop is set", async () => {
   )) as LyraGenerationMetrics;
   expect(el.shadowRoot!.querySelector('[part="stop-button"]') == null).to.be
     .true;
-});
-
-describe("deprecated show-stop alias", () => {
-  const usage = { tag: "lr-generation-metrics", kind: "property", name: "showStop" } as const;
-
-  it('show-stop="false" equals without-stop and warns once', async () => {
-    let el!: LyraGenerationMetrics;
-    let both!: LyraGenerationMetrics;
-    const warnings = await captureDeprecationWarnings([usage], async () => {
-      el = (await fixture(
-        html`<lr-generation-metrics
-          status="running"
-          show-stop="false"
-        ></lr-generation-metrics>`
-      )) as LyraGenerationMetrics;
-      both = (await fixture(
-        html`<lr-generation-metrics
-          status="running"
-          without-stop
-          show-stop
-        ></lr-generation-metrics>`
-      )) as LyraGenerationMetrics;
-    });
-    expect(warnings.map((warning) => warning.key)).to.deep.equal([
-      "lyra-deprecated:lr-generation-metrics:property:showStop",
-    ]);
-    expect(el.withoutStop).to.be.true;
-    expect(el.showStop).to.be.false;
-    expect(el.shadowRoot!.querySelector('[part="stop-button"]') == null).to.be
-      .true;
-    expect(both.withoutStop, "the later show-stop attribute wins").to.be.false;
-    expect(both.showStop).to.be.true;
-  });
-
-  it("syncs showStop back from without-stop", async () => {
-    const el = (await fixture(
-      html`<lr-generation-metrics status="running"></lr-generation-metrics>`
-    )) as LyraGenerationMetrics;
-    el.withoutStop = true;
-    await el.updateComplete;
-    expect(el.showStop).to.be.false;
-    expect(el.shadowRoot!.querySelector('[part="stop-button"]') == null).to.be.true;
-    el.withoutStop = false;
-    await el.updateComplete;
-    expect(el.showStop).to.be.true;
-  });
-
-  it("keeps the stop button for any other show-stop spelling, and when the attribute is removed", async () => {
-    let bare!: LyraGenerationMetrics;
-    let explicitTrue!: LyraGenerationMetrics;
-    await captureDeprecationWarnings([usage], async () => {
-      bare = (await fixture(
-        html`<lr-generation-metrics
-          status="running"
-          show-stop
-        ></lr-generation-metrics>`
-      )) as LyraGenerationMetrics;
-      explicitTrue = (await fixture(
-        html`<lr-generation-metrics
-          status="running"
-          show-stop="true"
-        ></lr-generation-metrics>`
-      )) as LyraGenerationMetrics;
-      explicitTrue.setAttribute("show-stop", "false");
-      await explicitTrue.updateComplete;
-      expect(explicitTrue.withoutStop).to.be.true;
-      explicitTrue.removeAttribute("show-stop");
-      await explicitTrue.updateComplete;
-    });
-    expect(bare.withoutStop).to.be.false;
-    expect(bare.shadowRoot!.querySelector('[part="stop-button"]')).to.exist;
-    expect(explicitTrue.withoutStop).to.be.false;
-    expect(explicitTrue.shadowRoot!.querySelector('[part="stop-button"]')).to
-      .exist;
-  });
 });
 
 it("defaults to showing the stop button while running when without-stop is absent", async () => {

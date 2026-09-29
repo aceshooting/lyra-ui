@@ -51,9 +51,9 @@ rename on a Lyra component. The inventory records these exclusions explicitly.
 ## Migrating from Lyra 21 to Lyra 22 (`--origin=lyra-v21`)
 
 Lyra 21 minor releases and Lyra 22 rename some Lyra-only attributes, properties, events, CSS parts,
-custom properties and slots. Each previous name keeps working as a deprecated alias until
-Lyra 23 removes it. Names mirrored from Web Awesome or Shoelace, and their defaults, never
-change. Run the CLI of the installed package after upgrading, within Lyra 21 or to Lyra 22. It
+custom properties and slots. Published names retired in this installed release remain migration inputs.
+Removed aliases no longer work at runtime. Names mirrored from Web Awesome or Shoelace, and their defaults, never
+change. Run the CLI of the installed package after upgrading; historical profiles remain available. It
 applies only the entries the installed release ships, so running it again after a later upgrade
 picks up the rest:
 
@@ -70,7 +70,7 @@ selectors that name the component; and calls rooted at `querySelector('lr-…')`
 other component already dispatches the new name, and an unowned listener or any custom-property
 use only when, in addition, every component with the old name renamed it the same way and the
 scanned code never dispatches the old name itself. Everything else is reported with a location;
-the old name keeps working meanwhile.
+review removed names before running the migrated application.
 
 | Code | Reported when |
 |---|---|
@@ -774,14 +774,14 @@ need manual inspection. Review event detail, saved preferences and selector scop
 
 | Kind | Deprecated module or name | Replacement (manual) | Removal no earlier than |
 |---|---|---|---|
-| entry-point | `./components/lr-geojson-view.js` | import '@aceshooting/lyra-ui/components/lr-geojson-viewer.js'; | 23.0.0 |
-| entry-point | `./components/viewers/geojson-view/geojson-view.class.js` | import { LyraGeoJsonViewer } from '@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-viewer.class.js'; | 23.0.0 |
-| entry-point | `./components/viewers/geojson-view/geojson-view.js` | import '@aceshooting/lyra-ui/components/lr-geojson-viewer.js'; | 23.0.0 |
-| entry-point | `./utilities/localization.js` | import { bridgeLyraLocale, resolveLyraScopedString, subscribeLyraLocale } from '@aceshooting/lyra-ui/localization.js'; | 23.0.0 |
-| type | `./components/retrieval/graph/graph.class.js#LyraGraphLink` | import type { LyraGraphEdge } from '@aceshooting/lyra-ui/components/retrieval/graph/graph.class.js'; | 23.0.0 |
-| type | `./components/viewers/document-viewer/registry.js#DocumentFile` | import type { LyraDocumentFile } from '@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js'; | 23.0.0 |
-| type | `./components/viewers/document-viewer/registry.js#DocumentRendererDefinition` | import type { LyraDocumentRendererDefinition } from '@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js'; | 23.0.0 |
-| type | `./components/viewers/geojson-view/geojson-view.class.js#LyraGeojsonViewEventMap` | import type { LyraGeoJsonViewerEventMap } from '@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-viewer.class.js'; | 23.0.0 |
+| entry-point | `./components/lr-geojson-view.js` | import '@aceshooting/lyra-ui/components/lr-geojson-viewer.js'; | Removed in 23.0.0 |
+| entry-point | `./components/viewers/geojson-view/geojson-view.class.js` | import { LyraGeoJsonViewer } from '@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-viewer.class.js'; | Removed in 23.0.0 |
+| entry-point | `./components/viewers/geojson-view/geojson-view.js` | import '@aceshooting/lyra-ui/components/lr-geojson-viewer.js'; | Removed in 23.0.0 |
+| entry-point | `./utilities/localization.js` | import { bridgeLyraLocale, resolveLyraScopedString, subscribeLyraLocale } from '@aceshooting/lyra-ui/localization.js'; | Removed in 23.0.0 |
+| type | `./components/retrieval/graph/graph.class.js#LyraGraphLink` | import type { LyraGraphEdge } from '@aceshooting/lyra-ui/components/retrieval/graph/graph.class.js'; | Removed in 23.0.0 |
+| type | `./components/viewers/document-viewer/registry.js#DocumentFile` | import type { LyraDocumentFile } from '@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js'; | Removed in 23.0.0 |
+| type | `./components/viewers/document-viewer/registry.js#DocumentRendererDefinition` | import type { LyraDocumentRendererDefinition } from '@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js'; | Removed in 23.0.0 |
+| type | `./components/viewers/geojson-view/geojson-view.class.js#LyraGeojsonViewEventMap` | import type { LyraGeoJsonViewerEventMap } from '@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-viewer.class.js'; | Removed in 23.0.0 |
 
 ## Migrating from Lyra 22 to Lyra 23 (`--origin=lyra-v22`)
 

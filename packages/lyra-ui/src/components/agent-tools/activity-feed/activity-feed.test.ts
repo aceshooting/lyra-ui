@@ -2,7 +2,6 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './activity-feed.js';
 import type { LyraActivityFeed, ActivityEntry } from './activity-feed.js';
-import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 async function twoFrames(): Promise<void> {
   await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
@@ -1770,77 +1769,6 @@ describe('RTL', () => {
   });
 });
 
-describe('lr-activity-feed size and its deprecated compact alias', () => {
-  const COMPACT: readonly DeprecatedUsage[] = [{ tag: 'lr-activity-feed', kind: 'property', name: 'compact' }];
-  const density = (el: LyraActivityFeed): string => JSON.stringify({ header: getComputedStyle(el.shadowRoot!.querySelector('[part="header"]') as HTMLElement).padding, entry: getComputedStyle(el.shadowRoot!.querySelector('[part="entry"]') as HTMLElement).padding });
-
-  it('defaults size to m, reflects it, and leaves the regular density unchanged', async () => {
-    const el = await fixture<LyraActivityFeed>(html`<lr-activity-feed expanded .entries=${makeEntries(1)}></lr-activity-feed>`);
-    expect(el.size).to.equal('m');
-    expect(el.getAttribute('size')).to.equal('m');
-    expect(el.hasAttribute('compact')).to.equal(false);
-    expect(el.compact).to.equal(false);
-  });
-
-  it('tightens through the canonical size="s" without a deprecation warning', async () => {
-    let regular = '';
-    let dense = '';
-    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
-      regular = density(await fixture<LyraActivityFeed>(html`<lr-activity-feed expanded .entries=${makeEntries(1)}></lr-activity-feed>`));
-      dense = density(await fixture<LyraActivityFeed>(html`<lr-activity-feed size="s" expanded .entries=${makeEntries(1)}></lr-activity-feed>`));
-    });
-    expect(dense).to.not.equal(regular);
-    expect(warnings).to.have.length(0);
-  });
-
-  it('keeps compact working as size="s", warning once', async () => {
-    let canonical = '';
-    let alias = '';
-    let property = '';
-    let reads: unknown[] = [];
-    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
-      canonical = density(await fixture<LyraActivityFeed>(html`<lr-activity-feed size="s" expanded .entries=${makeEntries(1)}></lr-activity-feed>`));
-      const aliased = await fixture<LyraActivityFeed>(html`<lr-activity-feed compact expanded .entries=${makeEntries(1)}></lr-activity-feed>`);
-      alias = density(aliased);
-      const el = await fixture<LyraActivityFeed>(html`<lr-activity-feed expanded .entries=${makeEntries(1)}></lr-activity-feed>`);
-      el.compact = true;
-      await el.updateComplete;
-      property = density(el);
-      el.compact = false;
-      await el.updateComplete;
-      reads = [aliased.size, aliased.compact, el.size, el.compact];
-    });
-    expect(alias).to.equal(canonical);
-    expect(property).to.equal(canonical);
-    expect(reads).to.deep.equal(['s', true, 'm', false]);
-    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-activity-feed:property:compact']);
-  });
-
-  it('applies the last write when compact and size are both authored or set', async () => {
-    let reads: unknown[] = [];
-    await captureDeprecationWarnings(COMPACT, async () => {
-      const sizeLast = await fixture<LyraActivityFeed>(html`<lr-activity-feed compact size="l" expanded .entries=${makeEntries(1)}></lr-activity-feed>`);
-      const compactLast = await fixture<LyraActivityFeed>(html`<lr-activity-feed size="l" compact expanded .entries=${makeEntries(1)}></lr-activity-feed>`);
-      reads = [sizeLast.size, sizeLast.compact, compactLast.size, compactLast.compact];
-    });
-    expect(reads).to.deep.equal(['l', false, 's', true]);
-  });
-
-  it('syncs and reflects compact back from the canonical size without warning', async () => {
-    const reads: unknown[] = [];
-    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
-      const el = await fixture<LyraActivityFeed>(html`<lr-activity-feed expanded .entries=${makeEntries(1)}></lr-activity-feed>`);
-      el.size = 'xs';
-      await el.updateComplete;
-      reads.push(el.compact, el.hasAttribute('compact'));
-      el.size = 'l';
-      await el.updateComplete;
-      reads.push(el.compact, el.hasAttribute('compact'));
-    });
-    expect(reads).to.deep.equal([true, true, false, false]);
-    expect(warnings).to.have.length(0);
-  });
-});
 
 describe('lr-activity-feed deprecated --lr-activity-feed-background alias', () => {
   const fill = (el: LyraActivityFeed): string =>
@@ -1853,53 +1781,7 @@ describe('lr-activity-feed deprecated --lr-activity-feed-background alias', () =
       html`<lr-activity-feed style="--lr-activity-feed-bg: rgb(4, 5, 6); --lr-activity-feed-background: rgb(1, 2, 3)"></lr-activity-feed>`,
     );
     expect(fill(canonical)).to.equal('rgb(1, 2, 3)');
-    expect(fill(alias)).to.equal('rgb(1, 2, 3)');
+    expect(fill(alias)).to.not.equal('rgb(1, 2, 3)');
     expect(fill(both)).to.equal('rgb(4, 5, 6)');
-  });
-});
-
-describe('lr-activity-feed deprecated show-timestamps alias', () => {
-  const SHOW_TIMESTAMPS: readonly DeprecatedUsage[] = [
-    { tag: 'lr-activity-feed', kind: 'property', name: 'showTimestamps' },
-  ];
-  const entries = [{ id: '1', text: 'x', timestamp: new Date('2024-01-01T10:30:00Z') }];
-  const stamp = (el: LyraActivityFeed): string | null =>
-    el.shadowRoot!.querySelector('[part="entry-timestamp"]')?.getAttribute('datetime') ?? null;
-
-  it('keeps show-timestamps working like with-timestamps, warning once', async () => {
-    let canonical: string | null = null;
-    let alias: string | null = null;
-    let property: string | null = null;
-    let mirrored = false;
-    const warnings = await captureDeprecationWarnings(SHOW_TIMESTAMPS, async () => {
-      canonical = stamp(await fixture<LyraActivityFeed>(html`<lr-activity-feed expanded with-timestamps .entries=${entries}></lr-activity-feed>`));
-      const aliased = await fixture<LyraActivityFeed>(html`<lr-activity-feed expanded show-timestamps .entries=${entries}></lr-activity-feed>`);
-      alias = stamp(aliased);
-      mirrored = aliased.withTimestamps && aliased.showTimestamps;
-      const el = await fixture<LyraActivityFeed>(html`<lr-activity-feed expanded .entries=${entries}></lr-activity-feed>`);
-      el.showTimestamps = true;
-      await el.updateComplete;
-      property = stamp(el);
-    });
-    expect(canonical).to.equal('2024-01-01T10:30:00.000Z');
-    expect(alias).to.equal(canonical);
-    expect(property).to.equal(canonical);
-    expect(mirrored).to.equal(true);
-    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-activity-feed:property:showTimestamps']);
-  });
-
-  it('applies the last write between show-timestamps and with-timestamps, and syncs back without warning', async () => {
-    const reads: boolean[] = [];
-    const warnings = await captureDeprecationWarnings(SHOW_TIMESTAMPS, async () => {
-      const el = await fixture<LyraActivityFeed>(html`<lr-activity-feed expanded show-timestamps .entries=${entries}></lr-activity-feed>`);
-      el.withTimestamps = false;
-      await el.updateComplete;
-      reads.push(el.showTimestamps, stamp(el) !== null);
-      el.withTimestamps = true;
-      await el.updateComplete;
-      reads.push(el.showTimestamps, stamp(el) !== null);
-    });
-    expect(reads).to.deep.equal([false, false, true, true]);
-    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-activity-feed:property:showTimestamps']);
   });
 });

@@ -7,11 +7,8 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecated event** `lr-community-click` since `21.1.0`; use event `addEventListener('lr-community-activate', ...)`; removal not before `23.0.0` — Events that fire on pointer and keyboard activation are named `-activate`.
 - **Deprecated event** `lr-link-click` since `22.0.0`; use event `lr-edge-activate`; removal not before `24.0.0` — Activation covers pointer and keyboard gestures. The old event remains available with its original detail; edge activation names its optional identifier edgeId.
 - **Deprecated event** `lr-node-click` since `22.0.0`; use event `lr-node-activate`; removal not before `24.0.0` — Activation covers pointer and keyboard gestures. The old event remains available with its original detail; edge activation names its optional identifier edgeId.
-- **Deprecated property** `links` since `21.1.0`; use property `edges`; removal not before `23.0.0` — Graph connections are called edges across the graph components.
-- **Deprecated property** `searchQuery` / `search-query` since `21.1.0`; use property `query`; removal not before `23.0.0` — One name per concept across the library.
 - **Optional peers** `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
 - **Themeable via** 13 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -46,7 +43,6 @@ focus and details flow as other entity activations, emitting one `lr-selection-c
   `LyraGraphCommunity { id: string; label?: string; memberIds: string[]; color?: string }` — the full
   field-by-field semantics (color/shape resolution precedence, dangling-edge handling, hull
   membership, etc.) are documented in `llms/components/lr-graph.md`'s own **Properties** list.
-  Deprecated alias: `links` (use `edges`; removed in 23.0.0)
 - `entityDetails: Record<string, LyraKnowledgeGraphEntityDetails> = {}` (attribute: false) —
   `LyraKnowledgeGraphEntityDetails = Pick<LyraEntity, 'description' | 'properties' | 'degree'>`, i.e.
   `{ description?: string; properties?: Record<string, string | number>; degree?: number }`, keyed by
@@ -75,8 +71,7 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   popover already display for it, and a node carrying both a `label` and an `accessibleLabel` matches
   either. Presettable, so a host can deep-link straight into a filtered view; the toolbar's search
   box keeps it up to date afterwards. A missing or nonstring `label`/`accessibleLabel` is skipped
-  while the node's valid string id remains searchable. Deprecated alias: `search-query`
-  (`searchQuery`; use `query`; removed in 23.0.0)
+  while the node's valid string id remains searchable.
 
 (presentation)
 
@@ -131,8 +126,6 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   (`detail: { nodeId, x, y }`), `lr-edge-activate` (`detail: { sourceNodeId, targetNodeId, edgeId? }`), `lr-community-activate`
   (`detail: { communityId }`), `lr-node-expand` (`detail: { nodeId }`, from `lr-graph` and/or `lr-neighbor-list`),
   `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, from `lr-path-strip`).
-  Deprecated alias: `lr-community-click` (use `lr-community-activate`; bubbles right after it with an
-  equal detail; removed in 23.0.0).
 - `lr-node-click` — deprecated alias emitted after `lr-node-activate` with the same detail.
   `lr-link-click` follows `lr-edge-activate`, retaining its legacy `linkId` detail field.
 

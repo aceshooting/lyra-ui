@@ -2,7 +2,6 @@ import { fixture, expect, html } from '@open-wc/testing';
 import './result-card.js';
 import type { LyraResultCard } from './result-card.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
-import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-result-card', 'appearance');
@@ -355,70 +354,6 @@ describe('card chrome theming hooks', () => {
   });
 });
 
-describe('lr-result-card size and its deprecated compact alias', () => {
-  const COMPACT: readonly DeprecatedUsage[] = [{ tag: 'lr-result-card', kind: 'property', name: 'compact' }];
-  const density = (el: LyraResultCard): string => {
-    const header = getComputedStyle(el.shadowRoot!.querySelector('[part="header"]') as HTMLElement);
-    const body = getComputedStyle(el.shadowRoot!.querySelector('[part="body"]') as HTMLElement);
-    return JSON.stringify([header.padding, header.gap, body.padding, body.gap]);
-  };
-
-  it('does not warn for the canonical size or the default', async () => {
-    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
-      await fixture(html`<lr-result-card heading="x">body</lr-result-card>`);
-      await fixture(html`<lr-result-card size="s" heading="x">body</lr-result-card>`);
-    });
-    expect(warnings).to.have.length(0);
-  });
-
-  it('keeps compact working as size="s", warning once', async () => {
-    let canonical = '';
-    let alias = '';
-    let property = '';
-    let reads: unknown[] = [];
-    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
-      canonical = density(await fixture<LyraResultCard>(html`<lr-result-card size="s" heading="x">body</lr-result-card>`));
-      const aliased = await fixture<LyraResultCard>(html`<lr-result-card compact heading="x">body</lr-result-card>`);
-      alias = density(aliased);
-      const el = await fixture<LyraResultCard>(html`<lr-result-card heading="x">body</lr-result-card>`);
-      el.compact = true;
-      await el.updateComplete;
-      property = density(el);
-      el.compact = false;
-      await el.updateComplete;
-      reads = [aliased.size, aliased.compact, el.size, el.compact];
-    });
-    expect(alias).to.equal(canonical);
-    expect(property).to.equal(canonical);
-    expect(reads).to.deep.equal(['s', true, 'm', false]);
-    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-result-card:property:compact']);
-  });
-
-  it('applies the last write when compact and size are both authored', async () => {
-    let reads: unknown[] = [];
-    await captureDeprecationWarnings(COMPACT, async () => {
-      const sizeLast = await fixture<LyraResultCard>(html`<lr-result-card compact size="l" heading="x">body</lr-result-card>`);
-      const compactLast = await fixture<LyraResultCard>(html`<lr-result-card size="l" compact heading="x">body</lr-result-card>`);
-      reads = [sizeLast.size, sizeLast.compact, compactLast.size, compactLast.compact];
-    });
-    expect(reads).to.deep.equal(['l', false, 's', true]);
-  });
-
-  it('syncs and reflects compact back from the canonical size without warning', async () => {
-    const reads: unknown[] = [];
-    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
-      const el = await fixture<LyraResultCard>(html`<lr-result-card heading="x">body</lr-result-card>`);
-      el.size = 'xs';
-      await el.updateComplete;
-      reads.push(el.compact, el.hasAttribute('compact'));
-      el.size = 'l';
-      await el.updateComplete;
-      reads.push(el.compact, el.hasAttribute('compact'));
-    });
-    expect(reads).to.deep.equal([true, true, false, false]);
-    expect(warnings).to.have.length(0);
-  });
-});
 
 describe('lr-result-card deprecated --lr-result-card-background alias', () => {
   const fill = (el: LyraResultCard): string =>
@@ -431,7 +366,7 @@ describe('lr-result-card deprecated --lr-result-card-background alias', () => {
       html`<lr-result-card style="--lr-result-card-bg: rgb(4, 5, 6); --lr-result-card-background: rgb(1, 2, 3)">x</lr-result-card>`,
     );
     expect(fill(canonical)).to.equal('rgb(1, 2, 3)');
-    expect(fill(alias)).to.equal('rgb(1, 2, 3)');
+    expect(fill(alias)).to.not.equal('rgb(1, 2, 3)');
     expect(fill(both)).to.equal('rgb(4, 5, 6)');
   });
 });

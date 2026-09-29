@@ -101,7 +101,7 @@ export const styles = css`
     padding: var(--lr-space-s);
     border: var(--lr-border-width-thin) solid var(--lr-message-parts-error-border-color, var(--lr-color-danger));
     border-radius: var(--lr-radius);
-    background: var(--lr-message-parts-error-bg, var(--lr-message-parts-error-background, var(--lr-color-danger-quiet)));
+    background: var(--lr-message-parts-error-bg, var(--lr-color-danger-quiet));
     color: var(--lr-message-parts-error-color, var(--lr-color-danger));
   }
 

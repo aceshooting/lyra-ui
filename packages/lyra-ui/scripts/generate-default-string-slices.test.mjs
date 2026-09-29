@@ -6,6 +6,7 @@ import path from 'node:path';
 import { DEFAULT_STRING_SLICE_EXCLUSIONS } from './default-string-slice-exclusions.mjs';
 import {
   catalogEntries,
+  computeFamilyKeyIndex,
   generateDefaultStringSlices,
   generationFailures,
   rewriteClassSource,
@@ -842,6 +843,58 @@ export class LyraKbd extends LyraElement {
     '--write fixes staleness by definition, so only the orphan survives',
   );
   assert.equal(generationFailures({ ...clean, generatedChanged: true }).length, 1);
+}
+
+const sharedClassFixture = await mkdtemp(path.join(tmpdir(), 'lyra-shared-class-slices-'));
+try {
+  const internal = path.join(sharedClassFixture, 'src', 'internal');
+  const forms = path.join(sharedClassFixture, 'src', 'components', 'forms', 'input');
+  const retrieval = path.join(sharedClassFixture, 'src', 'components', 'retrieval', 'search');
+  await Promise.all([internal, forms, retrieval].map(directory => mkdir(directory, { recursive: true })));
+  await writeFile(path.join(internal, 'localization.ts'), `
+    const DEFAULT_STRINGS = { inputLabel: 'Text', showPassword: 'Show', hidePassword: 'Hide', matchMismatch: 'Mismatch', helperLabel: 'Helper' };
+  `);
+  await writeFile(path.join(forms, 'input-shared.ts'), `
+    export class LyraInputShared extends LyraElement {
+      render() { return this.localize('inputLabel') + this.localize('showPassword') + this.localize('hidePassword') + this.localize('matchMismatch'); }
+    }
+  `);
+  await writeFile(path.join(forms, 'input.class.ts'), `
+    import { LyraInputShared } from './input-shared.js';
+    import { helperLabel } from './label-shared.js';
+    export class LyraInput extends LyraInputShared { renderHelper() { return helperLabel(this.localize); } }
+  `);
+  await writeFile(path.join(forms, 'native-input.class.ts'), `
+    import { LyraInputShared } from './input-shared.js';
+    export class LyraNativeInput extends LyraInputShared {}
+  `);
+  await writeFile(path.join(forms, 'label-shared.ts'), `
+    export function helperLabel(localize) { return localize('helperLabel'); }
+  `);
+  await writeFile(path.join(retrieval, 'search.class.ts'), `
+    import '../../forms/input/input.class.js';
+    import { helperLabel } from '../../forms/input/label-shared.js';
+    export class LyraSearch extends LyraElement { render() { return helperLabel(this.localize); } }
+  `);
+  const index = await computeFamilyKeyIndex({ packageDir: sharedClassFixture, exclusions: {} });
+  for (const key of ['inputLabel', 'showPassword', 'hidePassword', 'matchMismatch']) {
+    assert.deepEqual([...index.keyToFamilies.get(key)].sort(), ['forms'], `${key} belongs to the shared input class, not its cross-family composers`);
+  }
+  assert.deepEqual([...index.keyToFamilies.get('helperLabel')].sort(), ['forms', 'retrieval'], 'ordinary shared helper functions retain cross-family reachability');
+  await generateDefaultStringSlices({ packageDir: sharedClassFixture, write: true, exclusions: {} });
+  const shared = await readFile(path.join(forms, 'input-shared.ts'), 'utf8');
+  for (const key of ['inputLabel', 'showPassword', 'hidePassword', 'matchMismatch']) {
+    assert.ok(shared.includes(`${key}: LYRA_DEFAULT_${key}`), `the shared class owns its generated ${key} fallback`);
+  }
+  assert.doesNotMatch(await readFile(path.join(retrieval, 'search.class.ts'), 'utf8'), /LYRA_DEFAULT_(?:inputLabel|showPassword|hidePassword|matchMismatch)/);
+  assert.equal((await generateDefaultStringSlices({ packageDir: sharedClassFixture, exclusions: {} })).rewrittenFileCount, 0, 'shared class generation is idempotent');
+} finally {
+  await rm(sharedClassFixture, { recursive: true, force: true });
+}
+
+const inputFamilyIndex = await computeFamilyKeyIndex();
+for (const key of ['inputLabel', 'showPassword', 'hidePassword', 'matchMismatch']) {
+  assert.deepEqual([...inputFamilyIndex.keyToFamilies.get(key)].sort(), ['forms'], `the actual ${key} catalog entry remains forms-only`);
 }
 
 console.log('per-component default-string slice generator tests passed.');

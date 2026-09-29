@@ -12,11 +12,7 @@ import type {
 import type { LyraDocumentPreview } from '../document-preview/document-preview.class.js';
 import type { ShikiLanguageInput } from '../../conversation/code-block/code-loader.js';
 import type { LyraDiffViewLayout } from '../../utility/diff-view/diff-view.class.js';
-import {
-  literalSetConverter,
-  trueDefaultBooleanConverter,
-} from '../../../internal/converters.js';
-import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { literalSetConverter } from '../../../internal/converters.js';
 import type {
   LyraClipboardWriteFailure,
   LyraClipboardWriteSuccess,
@@ -240,10 +236,6 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
   static override styles = [LyraElement.styles, styles];
 
 
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    syncScroll: ['withoutSyncScroll', invertAlias, invertAlias],
-  };
-
   /** `'diff'` (the default) renders one inline `<lr-diff-view>`; `'side-by-side'` renders two
    *  independently-scrollable `<lr-document-preview>` panes -- see the class doc's "Synchronized
    *  anchors" section for how the two panes are kept in sync. Unsupported values normalize to
@@ -330,11 +322,6 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
   /** Stops scrolling one `view="side-by-side"` pane from proportionally scrolling the other. See
    *  the class doc's "Synchronized anchors" section. */
   @property({ type: Boolean, attribute: 'without-sync-scroll' }) withoutSyncScroll = false;
-  /** Whether scrolling one `view="side-by-side"` pane proportionally scrolls the other. See the
-   *  class doc's "Synchronized anchors" section.
-   *  @deprecated Use `without-sync-scroll`; removal not before 23.0.0. */
-  @property({ attribute: 'sync-scroll', converter: trueDefaultBooleanConverter }) syncScroll = true;
-
   /** A CSS length (e.g. `"30rem"`); once set, overrides `--lr-document-compare-pane-max-height` --
    *  the max block size of each `view="side-by-side"` pane -- declaratively, the same `max-height`
    *  attribute every other content-viewer sibling exposes, rather than requiring a consumer to set

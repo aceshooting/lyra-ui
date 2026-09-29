@@ -23,7 +23,6 @@ scrim remains opaque. This option never changes browser-owned native media contr
 contrast and reduced-transparency preferences make the treatment opaque; forced colours use
 system colours. The `LyraAvControlsSurface` type is `'regular' | 'clear'`.
 
-
 An audio/video player built on a native `<audio>`/`<video>` element, plus a cue transcript synced to
 `currentTime`, `time-range` anchor/highlight support, an optional dependency-free waveform (peaks
 in, no in-component decoding), and playback-rate control. Owns recorded-media transcript sync —

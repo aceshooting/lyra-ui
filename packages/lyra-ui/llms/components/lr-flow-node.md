@@ -7,7 +7,7 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
-- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 12 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -45,10 +45,7 @@ owns none of that.
   compact density: tighter card padding, row gap, and header icon-to-heading gap for dense canvases
   and palette previews; the border, background, shadow and the `selected`/`status="running"`
   treatments all stay. `m` and above keep the full padding, and leaving it unset renders exactly as
-  before. An unsupported value normalizes to unset and removes the attribute. Deprecated alias:
-  `compact` (use `size="s"`; removed in 23.0.0) — it still renders, and reflects, exactly like
-  `size="s"`; the two stay in step, the last write wins, and `compact` reads `true` whenever
-  `size` is `s` or smaller
+  before. An unsupported value normalizes to unset and removes the attribute.
 - `inputs: readonly FlowHandle[] = [{ id: 'in' }]`, `outputs: readonly FlowHandle[] = [{ id: 'out'
 }]` (attribute: false) — detached, frozen snapshots of at most the first 10,000 readonly
   `{ id, label? }` handles; blank ids and later duplicates are omitted first-valid/first-wins

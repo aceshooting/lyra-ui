@@ -2,14 +2,14 @@ import { expect } from '@open-wc/testing';
 import { render } from 'lit';
 import './docx-viewer-register.js';
 import { DOCX_VIEWER_TAG } from './docx-viewer-register.js';
-import { findDocumentRenderer, loadDocumentRenderer, type DocumentFile } from '../document-viewer/registry.js';
+import { findDocumentRenderer, loadDocumentRenderer, type LyraDocumentFile } from '../document-viewer/registry.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
 
 function fetchedModuleEnding(suffix: string): boolean {
   return performance.getEntriesByType('resource').some((entry) => entry.name.endsWith(suffix));
 }
 
-const docx: DocumentFile = {
+const docx: LyraDocumentFile = {
   name: 'memo.docx',
   mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   src: 'https://example.test/memo.docx',

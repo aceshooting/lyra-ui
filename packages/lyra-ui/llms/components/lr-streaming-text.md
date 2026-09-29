@@ -7,9 +7,7 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
-- **Deprecated property** `codeBlockChrome` / `code-block-chrome` since `21.1.0`; use property `code-block-header`; removal not before `23.0.0` — code-block-chrome is a second spelling of code-block-header with identical behavior: either one enables the code-block headers of the composed Markdown element, which now always receives code-block-header. One name per concept removes a choice with no difference. It keeps enabling the headers through the 22.x line, and setting it logs a one-time development warning.
-- **Deprecated property** `gfm` / `gfm` since `21.1.0`; use property `without-gfm`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
-- **Deprecated property** `highlightCode` / `highlight-code` since `21.1.0`; use property `without-syntax-highlighting`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 25 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -54,8 +52,7 @@ properties existed:
 - `htmlMode: 'sanitize' | 'escape' | 'trusted' = 'sanitize'` (attribute `html-mode`) — forwarded to
   the composed `<lr-markdown>`'s own `htmlMode`.
 - `withoutGfm: boolean = false` (attribute `without-gfm`) — forwarded to the composed
-  `<lr-markdown>`'s own `withoutGfm`. Deprecated alias: `gfm` (use `without-gfm`; removed in
-  23.0.0) — inverted, so `gfm="false"` equals `without-gfm`.
+  `<lr-markdown>`'s own `withoutGfm`.
 - `linkTarget: string | null = '_blank'` (attribute `link-target`) — forwarded to the composed
   `<lr-markdown>`'s own `linkTarget`; the composed element always applies its own
   `rel="noopener noreferrer"` guard whenever a `target` is emitted, including a forwarded
@@ -65,20 +62,15 @@ properties existed:
 - `headingOffset: number = 0` (attribute `heading-offset`) — forwarded to the composed
   `<lr-markdown>`'s own `headingOffset`.
 - `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected)
-  and `codeBlockHeader: boolean = false` (attribute `code-block-header`), with its deprecated
-  compatibility alias `codeBlockChrome: boolean = false` (attribute `code-block-chrome`; removal not
-  before 23.0.0; setting it logs a one-time development warning) — forwarded to the composed
-  Markdown element as its own `codeBlockHeader` (the alias stays in step with it; the last write
-  wins). Their
+  and `codeBlockHeader: boolean = false` (attribute `code-block-header`) — forwarded to the composed
+  Markdown element as its own `codeBlockHeader`. Their
   settled-block streaming behavior, code-copy behavior, and defaults match
   `<lr-markdown>`; see its **Properties** section above.
   Use `streaming-render="progressive"` with `content-mode="markdown"`: in `auto` mode the element
   switches from plain text to Markdown when detection first succeeds, which replaces the displayed
   reply once, mid-stream.
 - `withoutSyntaxHighlighting: boolean = false` (attribute `without-syntax-highlighting`) —
-  forwarded to the composed `<lr-markdown>`'s own `withoutSyntaxHighlighting`. Deprecated alias:
-  `highlight-code`/`highlightCode` (use `without-syntax-highlighting`; removed in 23.0.0) —
-  inverted, so `highlight-code="false"` equals `without-syntax-highlighting`.
+  forwarded to the composed `<lr-markdown>`'s own `withoutSyntaxHighlighting`.
 - `headingAnchors: boolean = false` (attribute `heading-anchors`) — forwarded to the composed
   `<lr-markdown>`'s own `headingAnchors`.
 - `math: boolean = false` — forwarded to the composed `<lr-markdown>`'s own `math`; the transitive
@@ -168,8 +160,7 @@ showing the previous stream's stale final content for the length of the window.
 
 Rendering itself is never reimplemented here: Markdown mode composes `<lr-markdown>` directly,
 forwarding this component's own `streaming` through as that component's `streaming` hint prop,
-  `streamingRender`, `codeBlockHeader` (its deprecated `codeBlockChrome` alias stays in step with
-  it), `languages` verbatim, and the rest of `<lr-markdown>`'s
+  `streamingRender`, `codeBlockHeader`, `languages` verbatim, and the rest of `<lr-markdown>`'s
   configuration surface verbatim too (`tabSize`, `htmlMode`, `withoutGfm`, `linkTarget`,
   `internalLinkPrefix`, `headingOffset`, `withoutSyntaxHighlighting`, `headingAnchors`, `math`, `maxHeight` —
   see **Properties** above); plain-text mode
@@ -199,7 +190,6 @@ happens to end with.
 The Markdown part set also includes `task-list`, `task-item`, `task-item-checked`,
 `task-checkbox`, `table-wrapper`, `code-block-frame`, `code-block-copy-success`,
 `code-block-copy-error` and `streaming-tail`. `codeBlockHeader: boolean = false`
-(attribute `code-block-header`) enables the code-block header; `codeBlockChrome` (attribute
-`code-block-chrome`) is its deprecated compatibility alias (removal not before 23.0.0). Successful and
+(attribute `code-block-header`) enables the code-block header. Successful and
 failed writes pass through as `lr-copy` and `lr-copy-error`, carrying the immutable clipboard
 outcome, bubbling and composed.

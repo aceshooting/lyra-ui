@@ -2,7 +2,6 @@ import { fixture, expect, oneEvent, html } from '@open-wc/testing';
 import './tool-result-dialog.js';
 import type { LyraToolResultDialog } from './tool-result-dialog.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
-import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 // Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
 expectLocaleFallback('de-DE', [
@@ -771,51 +770,29 @@ it('uses the quiet foreground and transparent background defaults for pending st
   expect(getComputedStyle(status).backgroundColor).to.equal(transparentBackground);
 });
 
-describe('lr-tool-result-dialog deprecated lr-maximize-change alias', () => {
-  const MAXIMIZE: readonly DeprecatedUsage[] = [
-    { tag: 'lr-tool-result-dialog', kind: 'event', name: 'lr-maximize-change' },
-  ];
+describe('lr-tool-result-dialog retired lr-maximize-change event', () => {
   const clickMaximize = (el: LyraToolResultDialog): void =>
     (el.shadowRoot!.querySelector('[part="maximize-button"]') as HTMLElement).click();
 
-  it('still fires the alias right after the canonical request, with an equal cancelable detail, without warning', async () => {
+  it('ignores the old event while the canonical request still commits or vetoes maximization', async () => {
     const el = await fixture<LyraToolResultDialog>(html`<lr-tool-result-dialog tool-name="t" open></lr-tool-result-dialog>`);
-    const seen: CustomEvent<{ readonly maximized: boolean }>[] = [];
-    el.addEventListener('lr-maximize-change-request', (event) => seen.push(event));
-    el.addEventListener('lr-maximize-change', (event) => seen.push(event));
-    const warnings = await captureDeprecationWarnings(MAXIMIZE, async () => {
-      clickMaximize(el);
-      await el.updateComplete;
+    const requests: boolean[] = [];
+    let retiredCount = 0;
+    el.addEventListener('lr-maximize-change-request', (event) => requests.push(event.detail.maximized));
+    (el as HTMLElement).addEventListener('lr-maximize-change', (event) => {
+      retiredCount++;
+      event.preventDefault();
     });
-    expect(seen.map((event) => event.type)).to.deep.equal(['lr-maximize-change-request', 'lr-maximize-change']);
-    expect(seen.map((event) => event.cancelable)).to.deep.equal([true, true]);
-    expect(seen[1]!.detail).to.deep.equal(seen[0]!.detail);
-    expect(seen[1]!.detail === seen[0]!.detail).to.be.false;
-    expect(el.maximized).to.be.true;
-    expect(warnings).to.have.length(0);
-  });
+    clickMaximize(el);
+    await el.updateComplete;
+    expect(requests).to.deep.equal([true]);
+    expect(retiredCount).to.equal(0);
+    expect(el.maximized).to.equal(true);
 
-  it('lets a listener bound only to the alias veto the toggle, warning once', async () => {
-    const el = await fixture<LyraToolResultDialog>(html`<lr-tool-result-dialog tool-name="t" open></lr-tool-result-dialog>`);
-    el.addEventListener('lr-maximize-change', (event) => event.preventDefault());
-    const warnings = await captureDeprecationWarnings(MAXIMIZE, async () => {
-      clickMaximize(el);
-      await el.updateComplete;
-      clickMaximize(el);
-      await el.updateComplete;
-    });
-    expect(el.maximized).to.be.false;
-    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-tool-result-dialog:event:lr-maximize-change']);
-  });
-
-  it('does not warn when the canonical request is the one that vetoes', async () => {
-    const el = await fixture<LyraToolResultDialog>(html`<lr-tool-result-dialog tool-name="t" open></lr-tool-result-dialog>`);
     el.addEventListener('lr-maximize-change-request', (event) => event.preventDefault());
-    const warnings = await captureDeprecationWarnings(MAXIMIZE, async () => {
-      clickMaximize(el);
-      await el.updateComplete;
-    });
-    expect(el.maximized).to.be.false;
-    expect(warnings).to.have.length(0);
+    clickMaximize(el);
+    await el.updateComplete;
+    expect(requests).to.deep.equal([true, false]);
+    expect(el.maximized).to.equal(true);
   });
 });

@@ -1,12 +1,11 @@
+import type { LyraFormValidator } from '../form-validator.js';
 import { property } from 'lit/decorators.js';
-import { LyraInput } from './input.class.js';
-import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
+import { LyraInputShared, createInputValidators } from './input-shared.js';
 import type { LyraAppearance } from '../../../internal/variants.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 const timeBoundConverter = {
   fromAttribute: (value: string | null): string | undefined => value ?? undefined,
@@ -21,6 +20,10 @@ const timeBoundConverter = {
  * Inherited stepUp/stepDown use pending value, step, min, and max properties synchronously
  * and remain event-silent. Removed label/hint/help-text/error-text content is safely omitted.
  *
+ * Shares the input implementation without extending the public `LyraInput` class.
+ * It does not expose the `noSpinButtons` mirror; use `withoutSpinButtons`.
+ * Instances do not satisfy `instanceof LyraInput`.
+ *
  * @customElement lr-native-time-input
  * @csspart base - Compatibility name for the control row; use `time-input`.
  * @csspart time-input - The native time control row. It is the same node as `base` and the
@@ -28,7 +31,7 @@ const timeBoundConverter = {
  * @status stable
  * @since 8.0.0
  */
-export class LyraNativeTimeInput extends LyraInput {
+export class LyraNativeTimeInput extends LyraInputShared {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -37,6 +40,10 @@ export class LyraNativeTimeInput extends LyraInput {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  /** Intrinsic validator catalog for the native time control. */
+  static get validators(): LyraFormValidator<LyraNativeTimeInput>[] {
+    return createInputValidators<LyraNativeTimeInput>();
+  }
   /** Lyra 7 visual default retained intentionally while the mapped `lr-input` default moves to
    * outlined in v8. */
   @property({ reflect: true }) override appearance: LyraAppearance = 'filled-outlined';
@@ -49,14 +56,6 @@ export class LyraNativeTimeInput extends LyraInput {
   @property({ converter: timeBoundConverter }) override min?: string | number;
   /** Latest selectable native time. */
   @property({ converter: timeBoundConverter }) override max?: string | number;
-  protected static override deprecatedAliases: LyraDeprecatedAliases = { noSpinButtons: 'withoutSpinButtons' };
-  /**
-   * Second spelling of `without-spin-buttons` on this element, with identical behavior: the two
-   * stay in step and the last write wins. Setting it logs a one-time development warning.
-   *
-   * @deprecated Use `without-spin-buttons`; removal not before 23.0.0.
-   */
-  @property({ type: Boolean, attribute: 'no-spin-buttons' }) override noSpinButtons = false;
 
   constructor() {
     super();

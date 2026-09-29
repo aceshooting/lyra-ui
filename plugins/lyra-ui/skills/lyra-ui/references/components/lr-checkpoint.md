@@ -7,8 +7,7 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
-- **Deprecated property** `confirmRestore` / `confirm-restore` since `21.1.0`; use property `without-restore-confirmation`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
-- **Deprecated property** `restorable` / `restorable` since `21.1.0`; use property `without-restore`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 10 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -30,12 +29,9 @@ false) — optional creation
 time, rendered as `<time datetime>`, default `hour:minute` in `effectiveLocale`; invalid strings are
 treated as unset. `formatTimestamp?: (date: Date) => string` (attribute: false) — overrides the
 default rendering. `withoutRestore: boolean = false` (attribute `without-restore`) — renders a
-plain marker with no button (deprecated alias: `restorable`, use `without-restore`, removed in
-23.0.0; inverted, so `restorable="false"` equals `without-restore`).
+plain marker with no button.
 `withoutRestoreConfirmation: boolean = false` (attribute `without-restore-confirmation`) — skips
-the inline confirm step so Restore fires the event immediately (deprecated alias:
-`confirm-restore`/`confirmRestore`, use `without-restore-confirmation`, removed in 23.0.0;
-inverted, so `confirm-restore="false"` equals `without-restore-confirmation`).
+the inline confirm step so Restore fires the event immediately.
 `restoring: boolean = false` (reflected) — host-set busy state: the Restore button becomes
 `aria-disabled="true"` with a spinner beside the localized "Restoring…" text.
 

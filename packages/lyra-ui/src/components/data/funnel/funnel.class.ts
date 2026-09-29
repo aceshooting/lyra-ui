@@ -5,15 +5,12 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteInteger, finiteNumber } from '../../../internal/numbers.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
-import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { styles } from './funnel.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chart, LYRA_DEFAULT_comparePanel, LYRA_DEFAULT_contextMeterLabeledSummary, LYRA_DEFAULT_funnelStagesLimit, LYRA_DEFAULT_noData, LYRA_DEFAULT_statTrendDecreased, LYRA_DEFAULT_statTrendIncreased, LYRA_DEFAULT_trendUnchanged } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 /** One ordered step of a conversion funnel. */
 export interface LyraFunnelStage {
@@ -117,9 +114,6 @@ export class LyraFunnel extends LyraElement {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    dropoff: ['withoutDropoff', invertAlias, invertAlias],
-  };
 
   /** The ordered stages, first to last. Every share is measured against the first entry. */
   @property({ attribute: false }) stages: readonly LyraFunnelStage[] = [];
@@ -139,15 +133,6 @@ export class LyraFunnel extends LyraElement {
 
   /** Omits the change from the previous stage that is otherwise rendered above each later stage. */
   @property({ type: Boolean, reflect: true, attribute: 'without-dropoff' }) withoutDropoff = false;
-
-  /**
-   * Whether the change from the previous stage is rendered above each later stage. Deprecated
-   * inverted alias of `without-dropoff`: `dropoff="false"` equals `without-dropoff`.
-   *
-   * @deprecated Use `without-dropoff`; removal not before 23.0.0.
-   */
-  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter })
-  dropoff = true;
 
   /** Fraction digits used for every share and drop-off percentage. */
   @property({ type: Number, attribute: 'share-precision' }) sharePrecision = 0;
@@ -311,7 +296,6 @@ export class LyraFunnel extends LyraElement {
     </div>`;
   }
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

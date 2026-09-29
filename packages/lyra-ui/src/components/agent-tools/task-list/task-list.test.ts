@@ -5,7 +5,6 @@ import type { LyraTaskList, TaskItem } from './task-list.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { contrastRatio, effectiveBackground, resolvedColorToken } from '../../../../test/color-contrast.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
-import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-task-list', 'appearance');
@@ -835,77 +834,6 @@ describe('header text contrast at rest, hover and press', () => {
   }
 });
 
-describe('lr-task-list size and its deprecated compact alias', () => {
-  const COMPACT: readonly DeprecatedUsage[] = [{ tag: 'lr-task-list', kind: 'property', name: 'compact' }];
-  const density = (el: LyraTaskList): string => JSON.stringify({ header: getComputedStyle(el.shadowRoot!.querySelector('[part="header"]') as HTMLElement).padding, body: getComputedStyle(el.shadowRoot!.querySelector('[part="body"]') as HTMLElement).padding });
-
-  it('defaults size to m, reflects it, and leaves the regular density unchanged', async () => {
-    const el = await fixture<LyraTaskList>(html`<lr-task-list .items=${items}></lr-task-list>`);
-    expect(el.size).to.equal('m');
-    expect(el.getAttribute('size')).to.equal('m');
-    expect(el.hasAttribute('compact')).to.equal(false);
-    expect(el.compact).to.equal(false);
-  });
-
-  it('tightens through the canonical size="s" without a deprecation warning', async () => {
-    let regular = '';
-    let dense = '';
-    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
-      regular = density(await fixture<LyraTaskList>(html`<lr-task-list .items=${items}></lr-task-list>`));
-      dense = density(await fixture<LyraTaskList>(html`<lr-task-list size="s" .items=${items}></lr-task-list>`));
-    });
-    expect(dense).to.not.equal(regular);
-    expect(warnings).to.have.length(0);
-  });
-
-  it('keeps compact working as size="s", warning once', async () => {
-    let canonical = '';
-    let alias = '';
-    let property = '';
-    let reads: unknown[] = [];
-    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
-      canonical = density(await fixture<LyraTaskList>(html`<lr-task-list size="s" .items=${items}></lr-task-list>`));
-      const aliased = await fixture<LyraTaskList>(html`<lr-task-list compact .items=${items}></lr-task-list>`);
-      alias = density(aliased);
-      const el = await fixture<LyraTaskList>(html`<lr-task-list .items=${items}></lr-task-list>`);
-      el.compact = true;
-      await el.updateComplete;
-      property = density(el);
-      el.compact = false;
-      await el.updateComplete;
-      reads = [aliased.size, aliased.compact, el.size, el.compact];
-    });
-    expect(alias).to.equal(canonical);
-    expect(property).to.equal(canonical);
-    expect(reads).to.deep.equal(['s', true, 'm', false]);
-    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-task-list:property:compact']);
-  });
-
-  it('applies the last write when compact and size are both authored or set', async () => {
-    let reads: unknown[] = [];
-    await captureDeprecationWarnings(COMPACT, async () => {
-      const sizeLast = await fixture<LyraTaskList>(html`<lr-task-list compact size="l" .items=${items}></lr-task-list>`);
-      const compactLast = await fixture<LyraTaskList>(html`<lr-task-list size="l" compact .items=${items}></lr-task-list>`);
-      reads = [sizeLast.size, sizeLast.compact, compactLast.size, compactLast.compact];
-    });
-    expect(reads).to.deep.equal(['l', false, 's', true]);
-  });
-
-  it('syncs and reflects compact back from the canonical size without warning', async () => {
-    const reads: unknown[] = [];
-    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
-      const el = await fixture<LyraTaskList>(html`<lr-task-list .items=${items}></lr-task-list>`);
-      el.size = 'xs';
-      await el.updateComplete;
-      reads.push(el.compact, el.hasAttribute('compact'));
-      el.size = 'l';
-      await el.updateComplete;
-      reads.push(el.compact, el.hasAttribute('compact'));
-    });
-    expect(reads).to.deep.equal([true, true, false, false]);
-    expect(warnings).to.have.length(0);
-  });
-});
 
 describe('lr-task-list deprecated --lr-task-list-background alias', () => {
   const fill = (el: LyraTaskList): string =>
@@ -918,106 +846,7 @@ describe('lr-task-list deprecated --lr-task-list-background alias', () => {
       html`<lr-task-list .items=${items} style="--lr-task-list-bg: rgb(4, 5, 6); --lr-task-list-background: rgb(1, 2, 3)"></lr-task-list>`,
     );
     expect(fill(canonical)).to.equal('rgb(1, 2, 3)');
-    expect(fill(alias)).to.equal('rgb(1, 2, 3)');
+    expect(fill(alias)).to.not.equal('rgb(1, 2, 3)');
     expect(fill(both)).to.equal('rgb(4, 5, 6)');
-  });
-});
-
-describe('lr-task-list deprecated expanded, collapsible and label aliases', () => {
-  const ALIASES: readonly DeprecatedUsage[] = [
-    { tag: 'lr-task-list', kind: 'property', name: 'expanded' },
-    { tag: 'lr-task-list', kind: 'property', name: 'collapsible' },
-    { tag: 'lr-task-list', kind: 'property', name: 'label' },
-  ];
-  const view = (el: LyraTaskList): string => {
-    const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
-    return JSON.stringify({
-      hidden: (el.shadowRoot!.querySelector('[part="body"]') as HTMLElement).hidden,
-      button: header.tagName === 'BUTTON',
-      label: el.shadowRoot!.querySelector('[part="label"]')!.textContent!.trim(),
-      rotated: getComputedStyle(el.shadowRoot!.querySelector('[part="toggle"]') ?? header).transform,
-    });
-  };
-
-  it('treats expanded="false"/collapsible="false"/label exactly like collapsed/without-collapse/heading, warning once each', async () => {
-    let canonical = '';
-    let alias = '';
-    let property = '';
-    let reads: unknown[] = [];
-    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
-      canonical = view(await fixture<LyraTaskList>(html`<lr-task-list .items=${items} collapsed without-collapse heading="Plan"></lr-task-list>`));
-      const aliased = await fixture<LyraTaskList>(
-        html`<lr-task-list .items=${items} expanded="false" collapsible="false" label="Plan"></lr-task-list>`,
-      );
-      alias = view(aliased);
-      reads = [aliased.expanded, aliased.collapsible, aliased.label, aliased.collapsed, aliased.withoutCollapse, aliased.heading];
-      const el = await fixture<LyraTaskList>(html`<lr-task-list .items=${items}></lr-task-list>`);
-      el.expanded = false;
-      el.collapsible = false;
-      el.label = 'Plan';
-      await el.updateComplete;
-      property = view(el);
-    });
-    expect(alias).to.equal(canonical);
-    expect(property).to.equal(canonical);
-    expect(reads).to.deep.equal([false, false, 'Plan', true, true, 'Plan']);
-    expect(warnings.map(({ key }) => key)).to.deep.equal([
-      'lyra-deprecated:lr-task-list:property:expanded',
-      'lyra-deprecated:lr-task-list:property:collapsible',
-      'lyra-deprecated:lr-task-list:property:label',
-    ]);
-  });
-
-  it('keeps a bare expanded/collapsible meaning the defaults, rotates the toggle the same way, and applies the last authored spelling', async () => {
-    let plain = '';
-    let bare = '';
-    let canonicalLast = '';
-    let canonical = '';
-    let aliasLast = '';
-    let aliasOnly = '';
-    await captureDeprecationWarnings(ALIASES, async () => {
-      plain = view(await fixture<LyraTaskList>(html`<lr-task-list .items=${items}></lr-task-list>`));
-      bare = view(await fixture<LyraTaskList>(html`<lr-task-list .items=${items} expanded collapsible></lr-task-list>`));
-      canonical = view(await fixture<LyraTaskList>(html`<lr-task-list .items=${items} collapsed heading="B"></lr-task-list>`));
-      canonicalLast = view(await fixture<LyraTaskList>(html`<lr-task-list .items=${items} expanded collapsed label="A" heading="B"></lr-task-list>`));
-      aliasOnly = view(await fixture<LyraTaskList>(html`<lr-task-list .items=${items} label="A"></lr-task-list>`));
-      aliasLast = view(await fixture<LyraTaskList>(html`<lr-task-list .items=${items} collapsed expanded heading="B" label="A"></lr-task-list>`));
-    });
-    expect(bare).to.equal(plain);
-    expect(canonicalLast).to.equal(canonical);
-    expect(aliasLast).to.equal(aliasOnly);
-  });
-
-  it('syncs and reflects expanded, collapsible and label back from the canonical properties without warning', async () => {
-    const reads: unknown[] = [];
-    const warnings = await captureDeprecationWarnings(ALIASES, async () => {
-      const el = await fixture<LyraTaskList>(html`<lr-task-list .items=${items}></lr-task-list>`);
-      reads.push(el.expanded, el.hasAttribute('expanded'), el.collapsible, el.label);
-      el.collapsed = true;
-      el.withoutCollapse = true;
-      el.heading = 'Plan';
-      await el.updateComplete;
-      reads.push(el.expanded, el.hasAttribute('expanded'), el.collapsible, el.label);
-      el.collapsed = false;
-      await el.updateComplete;
-      reads.push(el.expanded, el.hasAttribute('expanded'));
-    });
-    expect(reads).to.deep.equal([true, true, true, undefined, false, false, false, 'Plan', true, true]);
-    expect(warnings).to.have.length(0);
-  });
-
-  it('toggles through the header while authored with the deprecated expanded="false", emitting the resulting state', async () => {
-    let detail: unknown = null;
-    let state: boolean[] = [];
-    await captureDeprecationWarnings(ALIASES, async () => {
-      const el = await fixture<LyraTaskList>(html`<lr-task-list .items=${items} expanded="false"></lr-task-list>`);
-      const firing = oneEvent(el, 'lr-toggle');
-      (el.shadowRoot!.querySelector('[part="header"]') as HTMLButtonElement).click();
-      detail = (await firing).detail;
-      await el.updateComplete;
-      state = [el.collapsed, el.expanded];
-    });
-    expect(detail).to.deep.equal({ expanded: true });
-    expect(state).to.deep.equal([false, true]);
   });
 });

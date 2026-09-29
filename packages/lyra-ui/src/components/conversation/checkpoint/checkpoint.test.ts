@@ -3,7 +3,6 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './checkpoint.js';
 import type { LyraCheckpoint } from './checkpoint.js';
-import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 
 // These locale-formatting fixtures intentionally retain English messages.
 expectLocaleFallback('de-DE', [
@@ -72,76 +71,6 @@ it('renders no restore button while without-restore is set, as a plain marker', 
   expect(el.withoutRestore).to.be.true;
   expect((el.shadowRoot!.querySelector('[part="restore-button"]')) == null).to.be.true;
   expect((el.shadowRoot!.querySelector('[part="confirm-group"]')) == null).to.be.true;
-});
-
-describe('deprecated restorable / confirm-restore aliases', () => {
-  it('restorable="false" equals without-restore and warns once', async () => {
-    let el!: LyraCheckpoint;
-    let both!: LyraCheckpoint;
-    const warnings = await captureDeprecationWarnings(
-      [{ tag: 'lr-checkpoint', kind: 'property', name: 'restorable' }],
-      async () => {
-        el = (await fixture(html`<lr-checkpoint restorable="false"></lr-checkpoint>`)) as LyraCheckpoint;
-        both = (await fixture(html`<lr-checkpoint without-restore restorable="true"></lr-checkpoint>`)) as LyraCheckpoint;
-      },
-    );
-    expect(warnings.map((warning) => warning.key)).to.deep.equal([
-      'lyra-deprecated:lr-checkpoint:property:restorable',
-    ]);
-    expect(el.withoutRestore).to.be.true;
-    expect(el.restorable).to.be.false;
-    expect(el.shadowRoot!.querySelector('[part="restore-button"]') == null).to.be.true;
-    expect(both.withoutRestore, 'the later restorable attribute wins').to.be.false;
-    expect(both.restorable).to.be.true;
-  });
-
-  it('restorable syncs back from without-restore, and the last write wins', async () => {
-    let el!: LyraCheckpoint;
-    await captureDeprecationWarnings([{ tag: 'lr-checkpoint', kind: 'property', name: 'restorable' }], async () => {
-      el = (await fixture(html`<lr-checkpoint></lr-checkpoint>`)) as LyraCheckpoint;
-      el.restorable = false;
-      await el.updateComplete;
-    });
-    expect(el.withoutRestore).to.be.true;
-    expect(el.hasAttribute('without-restore')).to.be.false;
-    el.withoutRestore = false;
-    await el.updateComplete;
-    expect(el.restorable).to.be.true;
-    expect(el.shadowRoot!.querySelector('[part="restore-button"]') == null).to.be.false;
-  });
-
-  it('confirm-restore="false" equals without-restore-confirmation and warns once', async () => {
-    let el!: LyraCheckpoint;
-    const warnings = await captureDeprecationWarnings(
-      [{ tag: 'lr-checkpoint', kind: 'property', name: 'confirmRestore' }],
-      async () => {
-        el = (await fixture(
-          html`<lr-checkpoint checkpoint-id="ck_2" label="Snapshot" confirm-restore="false"></lr-checkpoint>`,
-        )) as LyraCheckpoint;
-      },
-    );
-    expect(warnings).to.have.lengthOf(1);
-    expect(el.withoutRestoreConfirmation).to.be.true;
-    expect(el.confirmRestore).to.be.false;
-    const firing = oneEvent(el, 'lr-restore');
-    (el.shadowRoot!.querySelector('[part="restore-button"]') as HTMLButtonElement).click();
-    const event = await firing;
-    expect((event as CustomEvent).detail).to.deep.equal({ checkpointId: 'ck_2', label: 'Snapshot' });
-  });
-
-  it('confirmRestore syncs back from without-restore-confirmation, and the last write wins', async () => {
-    let el!: LyraCheckpoint;
-    await captureDeprecationWarnings([{ tag: 'lr-checkpoint', kind: 'property', name: 'confirmRestore' }], async () => {
-      el = (await fixture(html`<lr-checkpoint without-restore-confirmation></lr-checkpoint>`)) as LyraCheckpoint;
-      expect(el.confirmRestore).to.be.false;
-      el.confirmRestore = true;
-      await el.updateComplete;
-    });
-    expect(el.withoutRestoreConfirmation, 'the later alias write wins').to.be.false;
-    el.withoutRestoreConfirmation = true;
-    await el.updateComplete;
-    expect(el.confirmRestore).to.be.false;
-  });
 });
 
 it('has an accessible name with context distinct from its visible text', async () => {

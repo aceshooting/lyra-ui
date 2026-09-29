@@ -7,8 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
-- **Deprecated property** `showFocusButton` / `show-focus-button` since `21.1.0`; use property `without-focus-button`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 12 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -36,14 +35,12 @@ number; communityId?: string }`; field names deliberately mirror `lr-graph`'s `L
   `lr-graph-legend.types` entry shape, resolving `entity.type` to a label/color for the badge
 - `communityLabel: string = ''` (attribute `community-label`) — override text for the community chip
 - `withoutFocusButton: boolean = false` (attribute `without-focus-button`) — hides the built-in
-  focus action, for pages with no graph. Deprecated alias: `show-focus-button`/`showFocusButton` (use
-  `without-focus-button`; `show-focus-button="false"` equals `without-focus-button`; removed in
-  23.0.0)
+  focus action, for pages with no graph.
 - `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller
   `xs`/`2xs`) tightens the root padding and row gap for dense contexts (a dossier rendered in a
   sidebar, a result list) — the same convention as this component's sibling `lr-community-card`.
   Purely a density knob: the border and background stay. `m` (the default) and larger keep the full
-  card padding. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0)
+  card padding.
 - `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
   vocabulary (`'card' | 'plain'`). `'card'` (the default) keeps the bordered, filled, padded box;
   `'plain'` removes the border, background, padding and corner radius, so a card nested inside a

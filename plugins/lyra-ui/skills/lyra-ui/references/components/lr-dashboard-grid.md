@@ -7,7 +7,7 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
-- **Deprecated property** `locked` / `locked` since `21.1.0`; use property `readonly`; removal not before `23.0.0` — One name per concept across the library.
+- **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 5 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -34,8 +34,7 @@ grid-wide), `accessibleLabel: string | null = null` (attribute `aria-label`, fal
 localized grid name). `rowHeight` and `gap` take a number of pixels or a CSS length (`px`, `rem`,
 `em`, `vw`, `vh`), resolved to pixels when the grid renders — `rem` against the document root, `em`
 against the grid; a numeric attribute value parses to a number, and an unresolvable value falls back
-to the default. Deprecated alias: `locked` (use `readonly`; removed in 23.0.0). Both reflect and stay in step;
-the last write wins.
+to the default.
 
 **Events:** `lr-cell-move` (`detail: { cellId, position, previous }`), `lr-cell-resize`
 (`detail: { cellId, size, previous }`), `lr-collision`

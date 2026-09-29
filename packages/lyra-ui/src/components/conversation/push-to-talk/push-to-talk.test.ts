@@ -12,7 +12,6 @@ import "../../utility/live-region/live-region.js";
 import type { LyraPushToTalk } from "./push-to-talk.js";
 import { MAX_TIMEOUT_MS } from "../../../internal/numbers.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
-import { captureDeprecationWarnings } from "../../../../test/expected-deprecations.js";
 
 // -- Fakes for getUserMedia / MediaRecorder / AudioContext -----------------
 // No `sinon` in this repo -- plain manual monkey-patching (save the real
@@ -239,51 +238,6 @@ it("defaults to mode=hold, state=idle, and every capture prop at its documented 
   expect(el.withoutTimer).to.be.false;
   expect(el.disabled).to.be.false;
   expect(el.stream).to.be.null;
-});
-
-it('keeps the deprecated show-timer="false" alias equal to without-timer, warning once', async () => {
-  let el!: LyraPushToTalk;
-  let both!: LyraPushToTalk;
-  const warnings = await captureDeprecationWarnings(
-    [{ tag: "lr-push-to-talk", kind: "property", name: "showTimer" }],
-    async () => {
-      el = (await fixture(
-        html`<lr-push-to-talk show-timer="false"></lr-push-to-talk>`
-      )) as LyraPushToTalk;
-      both = (await fixture(
-        html`<lr-push-to-talk show-timer without-timer></lr-push-to-talk>`
-      )) as LyraPushToTalk;
-    }
-  );
-  expect(warnings.map((warning) => warning.key)).to.deep.equal([
-    "lyra-deprecated:lr-push-to-talk:property:showTimer",
-  ]);
-  expect(el.withoutTimer).to.be.true;
-  expect(el.showTimer).to.be.false;
-  expect(both.withoutTimer, "the later without-timer attribute wins").to.be.true;
-  expect(both.showTimer).to.be.false;
-});
-
-it("forwards a show-timer property write, syncs back from without-timer, and lets the last write win", async () => {
-  let el!: LyraPushToTalk;
-  let both!: LyraPushToTalk;
-  await captureDeprecationWarnings(
-    [{ tag: "lr-push-to-talk", kind: "property", name: "showTimer" }],
-    async () => {
-      el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
-      el.showTimer = false;
-      await el.updateComplete;
-      both = (await fixture(
-        html`<lr-push-to-talk without-timer show-timer></lr-push-to-talk>`
-      )) as LyraPushToTalk;
-    }
-  );
-  expect(el.withoutTimer).to.be.true;
-  el.withoutTimer = false;
-  await el.updateComplete;
-  expect(el.showTimer).to.be.true;
-  expect(both.withoutTimer, "the later show-timer attribute wins").to.be.false;
-  expect(both.showTimer).to.be.true;
 });
 
 it("leaving without-timer unset keeps the timer on by default", async () => {

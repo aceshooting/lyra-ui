@@ -25,7 +25,7 @@ describe('lr-attachment-trigger: composed lr-icon-button', () => {
     await single.updateComplete;
     expect(part(single, 'trigger').localName).to.equal('lr-icon-button');
     expect(part(single, 'trigger').getAttribute('exportparts')).to.equal(
-      'button:trigger-control, button:trigger__control'
+      'button:trigger-control'
     );
 
     const multi = (await fixture(
@@ -34,11 +34,11 @@ describe('lr-attachment-trigger: composed lr-icon-button', () => {
     await multi.updateComplete;
     expect(part(multi, 'menu-trigger').localName).to.equal('lr-icon-button');
     expect(part(multi, 'menu-trigger').getAttribute('exportparts')).to.equal(
-      'button:menu-trigger-control, button:menu-trigger__control'
+      'button:menu-trigger-control'
     );
   });
 
-  it('styles the forwarded native controls through both the hyphenated parts and their deprecated aliases', async () => {
+  it('styles canonical forwarded controls while retired part selectors stay inert', async () => {
     const style = document.createElement('style');
     style.textContent = `
       .canonical lr-attachment-trigger::part(trigger-control),
@@ -58,8 +58,8 @@ describe('lr-attachment-trigger: composed lr-icon-button', () => {
         await multi!.updateComplete;
         await (part(single!, 'trigger') as LyraIconButton).updateComplete;
         await (part(multi!, 'menu-trigger') as LyraIconButton).updateComplete;
-        expect(getComputedStyle(nativeControl(single!, 'trigger')).outlineColor, scope).to.equal(color);
-        expect(getComputedStyle(nativeControl(multi!, 'menu-trigger')).outlineColor, scope).to.equal(color);
+        expect(getComputedStyle(nativeControl(single!, 'trigger')).outlineColor === color, scope).to.equal(scope === 'canonical');
+        expect(getComputedStyle(nativeControl(multi!, 'menu-trigger')).outlineColor === color, scope).to.equal(scope === 'canonical');
       }
     } finally {
       style.remove();

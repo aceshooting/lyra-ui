@@ -1,3 +1,17 @@
+## Breaking changes in 23.0.0
+
+Retrieval components now use only their canonical density and visibility properties: use `size="s"`
+instead of `compact`, and the documented `without-*` properties instead of the former positive or
+`hide-*` aliases. Graph data and selection use `edges`, `selectedEdgeIds`, and `dimmedEdgeIds`;
+use `edge-distance`, `with-edge-labels`, and explorer `query`. Source-card headings use `heading`;
+native `title` remains an independent browser tooltip.
+
+Listen for `lr-edge-enter`/`lr-edge-leave` with `edgeId`, `lr-community-activate`,
+`lr-chunk-toggle`, or memory-panel `lr-memory-toggle`; their older retrieval alias events are no
+longer emitted. Graph and explorer `lr-node-click`/`lr-link-click` remain supported through their
+separate compatibility window. Source-card's own `lr-expand` event remains unchanged. Style graph
+nodes and edges with `--lr-graph-node-fill` and `--lr-graph-edge-color`; the old token fallbacks are removed.
+
 ## Breaking changes in 10.0.0
 
 `lr-entity-card`, `lr-entity-chip` and `lr-neighbor-list` no longer emit `lr-entity-activate`. The
@@ -116,9 +130,8 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
   as a short, dashed, non-interactive stub off `source`'s own position
   (`[part='link'][data-dangling]`, `aria-hidden="true"`) rather than being silently dropped — e.g. for
   a wiki-style `[[link]]` reference to a not-yet-created node. A dangling stub is excluded from
-  `d3-force`'s own simulation input and from click/keyboard interaction. Deprecated alias: `links`
-  (use `edges`; removed in 23.0.0). The exported `LyraGraphLink` interface is likewise deprecated
-  in favor of the structurally identical `LyraGraphEdge`
+  `d3-force`'s own simulation input and from click/keyboard interaction. The graph data type is `LyraGraphEdge`; the old
+  `LyraGraphLink` type was removed in 23.0.0
 - `fitTo: 'none' | 'container' = 'none'` (attribute `fit-to`) — where the drawing space comes from.
   `'none'` uses the requested `width`/`height` below, unchanged. `'container'` measures the host's own
   content box and feeds that to the SVG `viewBox`, the layout's centring force,
@@ -143,8 +156,7 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
   `block-size` overrides it. Only the drawing space is ignored while `fitTo` is `'container'`; the
   host sizing above still applies
 - `chargeStrength: number = -300` (attribute `charge-strength` — live-reactive, see gotchas)
-- `edgeDistance: number = 100` (attribute `edge-distance` — live-reactive, see gotchas). Deprecated
-  alias: `link-distance`/`linkDistance` (use `edge-distance`; removed in 23.0.0)
+- `edgeDistance: number = 100` (attribute `edge-distance` — live-reactive, see gotchas).
 - `minZoom: number = 0.1` (attribute `min-zoom`)
 - `maxZoom: number = 8` (attribute `max-zoom`)
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — setting the JS property while
@@ -159,7 +171,7 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
 - `withEdgeLabels: boolean = false` (attribute `with-edge-labels`) — draws each resolved
   (non-dangling) edge's `label` as visible SVG text (`[part="link-label"]`) at the segment midpoint.
   Off by default: `LyraGraphEdge.label` stays spoken/tooltip-only, matching pre-existing behavior, unless
-  this is set. Deprecated alias: `show-edge-labels`/`showEdgeLabels` (use `with-edge-labels`; removed in 23.0.0)
+  this is set.
 - `edgeLabelMinZoom: number = 0.6` (attribute `edge-label-min-zoom`) — below this zoom scale, every
   drawn edge label is hidden (toggled via a `data-edge-labels-hidden` attribute on the zoomed `<g>`,
   not a Lit re-render, so it tracks pan/zoom smoothly). Ignored entirely when `withEdgeLabels` is
@@ -211,9 +223,7 @@ Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable
 (`detail: { k, x, y }`, a frame-coalesced camera/layout signal). Deprecated aliases, each fired
 right after its canonical event: `lr-node-click` (use `lr-node-activate`, equal detail),
 `lr-link-click` (use `lr-edge-activate`, renaming detail.linkId to detail.edgeId); these aliases
-remain through v23. Older aliases: `lr-link-enter`/`lr-link-leave` (use
-`lr-edge-enter`/`lr-edge-leave` and replace detail.linkId with detail.edgeId; removable from 23.0.0) and `lr-community-click` (use
-`lr-community-activate`; removed in 23.0.0)
+remain through v23.
 
 **Slots:** none.
 
@@ -237,9 +247,7 @@ host too (through a private, not-directly-settable custom property) — setting
 `--lr-canvas-reserved-height` always overrides `height`, and an explicit outer `block-size` still
 wins over both. `--lr-graph-node-fill` (set inline per-node from `LyraGraphNode.color`,
 falls back to `--lr-color-brand`) and `--lr-graph-edge-color` (set inline per-edge from
-`LyraGraphEdge.color`, falling back to `--lr-color-border`). Deprecated aliases, read as their
-fallbacks: `--lr-node-fill` (use `--lr-graph-node-fill`; removed in 23.0.0) and `--lr-link-color`
-(use `--lr-graph-edge-color`; removed in 23.0.0). Also uses `--lr-color-text` +
+`LyraGraphEdge.color`, falling back to `--lr-color-border`). Also uses `--lr-color-text` +
 `--lr-font` (label text), `--lr-focus-ring-*` (node/link `:focus-visible` outline).
 The ordered categorical fallback palette for a typed node with no `LyraNodeTypeStyle.color` is
 `--lr-graph-cat-1` (default `var(--lr-theme-graph-cat-1,#8250df)`),
@@ -375,8 +383,7 @@ of the box with no host styling required); a host typically computes the set fro
 `lr-node-enter`/`lr-edge-enter` hover (the complement of the hovered id's neighbor set) and assigns
 it back — `lr-knowledge-graph-explorer`'s own `highlight` property is exactly this composition,
 built-in. Empty (the default) renders every node/edge at full opacity, unchanged from today.
-Deprecated aliases: `selectedLinkIds` (use `selectedEdgeIds`; removed in 23.0.0) and
-`dimmedLinkIds` (use `dimmedEdgeIds`; removed in 23.0.0).
+
 `nodes`, `edges`, `nodeTypes`, and `communities` use nonblank first-wins identities before lookup,
 layout, rendering, selection, or events. An edge uses its explicit `id`, or `source->target` when
 `id` is omitted; a blank explicit `id` is invalid, while distinct explicit ids deliberately allow
@@ -508,9 +515,7 @@ string; shape?: 'circle' | 'square' | 'diamond' }`, the shared `lr-graph.nodeTyp
 - `hiddenTypes: string[] = []` (attribute: false) — controlled; the host assigns this back from
   `lr-visibility-change`
 - `withoutInteraction: boolean = false` (attribute `without-interaction`, reflected) — renders plain,
-  non-interactive rows instead of the default toggle `<button>` rows. Deprecated alias:
-  `interactive` (use `without-interaction`; `interactive="false"` equals `without-interaction`;
-  removed in 23.0.0)
+  non-interactive rows instead of the default toggle `<button>` rows.
 - `label: string = ''` — fallback accessible name for the `role="group"` wrapper. A non-empty host
   `aria-label` makes the host the sole overall owner (the wrapper omits its duplicate role/name);
   an explicitly empty host label stays empty on the wrapper
@@ -582,14 +587,12 @@ number; communityId?: string }`; field names deliberately mirror `lr-graph`'s `L
   `lr-graph-legend.types` entry shape, resolving `entity.type` to a label/color for the badge
 - `communityLabel: string = ''` (attribute `community-label`) — override text for the community chip
 - `withoutFocusButton: boolean = false` (attribute `without-focus-button`) — hides the built-in
-  focus action, for pages with no graph. Deprecated alias: `show-focus-button`/`showFocusButton` (use
-  `without-focus-button`; `show-focus-button="false"` equals `without-focus-button`; removed in
-  23.0.0)
+  focus action, for pages with no graph.
 - `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller
   `xs`/`2xs`) tightens the root padding and row gap for dense contexts (a dossier rendered in a
   sidebar, a result list) — the same convention as this component's sibling `lr-community-card`.
   Purely a density knob: the border and background stay. `m` (the default) and larger keep the full
-  card padding. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0)
+  card padding.
 - `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
   vocabulary (`'card' | 'plain'`). `'card'` (the default) keeps the bordered, filled, padded box;
   `'plain'` removes the border, background, padding and corner radius, so a card nested inside a
@@ -855,8 +858,7 @@ string; summary?: string; memberCount?: number }`; `memberCount` is a non-negati
   overflow chip
 - `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller
   `xs`/`2xs`) omits the summary excerpt and member chips, and tightens `[part='base']`'s
-  padding/gap — same convention as the sibling `lr-entity-card`'s `size`. Deprecated alias:
-  `compact` (use `size="s"`; removed in 23.0.0)
+  padding/gap — same convention as the sibling `lr-entity-card`'s `size`.
 - `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
   vocabulary (`'card' | 'plain'`), the same property this component's sibling `lr-entity-card`
   carries. `'card'` (the default) keeps the bordered, filled, padded box; `'plain'` removes the
@@ -932,15 +934,14 @@ number; sourceId: string; title?: string; page?: string | number; anchor?: LyraC
 - `virtualizeAt: number = 50` (attribute `virtualize-at`)
 - `size: LyraSize = 'm'` (reflected) — row density on the shared size scale. `s` (and the smaller
   `xs`/`2xs`) hides the text preview/toggle, rendering the title/score row only; `m` (the default)
-  and larger render the full rows. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0)
+  and larger render the full rows.
 - `label: string = ''` — fallback name for the populated result group. A non-empty host
   `aria-label` makes the host the sole overall owner; an explicitly empty host label stays empty
 
 **Events:** `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`, a chunk's title/open button was
 activated — the event a host routes into `lr-document-viewer`, setting `src` from `sourceId` and
 `anchor` from the chunk's own), `lr-chunk-toggle` (`detail: { chunkId, expanded }`, a chunk's text
-toggle was activated, expanding or collapsing it). Deprecated alias: `lr-expand` (use
-`lr-chunk-toggle`; fired right after it with an equal detail; removed in 23.0.0).
+toggle was activated, expanding or collapsing it).
 
 **Slots:** none.
 
@@ -1058,12 +1059,8 @@ string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat 
   that are not leaves in the current `sources` tree are pruned, and the host assigns updates back from
   `lr-sources-change`
 - `withoutSelectAll: boolean = false` (attribute `without-select-all`) — omits the header control
-  that otherwise selects or clears every visible leaf source. Deprecated alias: `show-select-all`/`showSelectAll`
-  (use `without-select-all`; `show-select-all="false"` equals `without-select-all`; removed in
-  23.0.0)
+  that otherwise selects or clears every visible leaf source.
 - `withoutSearch: boolean = false` (attribute `without-search`) — omits the built-in source filter.
-  Deprecated alias: `searchable` (use `without-search`; `searchable="false"` equals
-  `without-search`; removed in 23.0.0)
 - `label?: string` — fallback name for the source tree; omission uses the localized picker label,
   while an explicit empty string stays empty
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — as a JS-only property while
@@ -1181,8 +1178,7 @@ path-strip node — the only name either one emits, and the only one carrying `o
 Space), `lr-drill` (`detail: { communityId }`, a community card's title, drill button, or overflow chip), and
 `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, a relationship path-strip
 edge), plus `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) and `lr-chunk-toggle`
-(`detail: { chunkId, expanded }`) from the chunk inspector. Deprecated alias: `lr-expand` (use
-`lr-chunk-toggle`; surfaced right after it with an equal detail; removed in 23.0.0).
+(`detail: { chunkId, expanded }`) from the chunk inspector.
 
 **Slots:** none.
 
@@ -1435,8 +1431,7 @@ direct light-DOM children of the list (plain composition — no `.items` array p
   `xs`/`2xs`) tightens the header and list padding/gap, for a panel rendered repeatedly down a
   message transcript — same convention as this list's own slotted `lr-source-card` children's
   `size`. Purely a density knob: the outer border and surface stay, so pair it with
-  `frame="plain"` to remove card chrome. Deprecated alias: `compact` (use `size="s"`; removed in
-  23.0.0)
+  `frame="plain"` to remove card chrome.
 - `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
   vocabulary (`'card' | 'plain'`). `'card'` (the default) keeps the bordered, filled outer
   container. `'plain'` removes that outer border, background, and corner radius so a list nested
@@ -1481,16 +1476,14 @@ tokens — `--lr-color-border`, `--lr-color-border-subtle`, `--lr-color-surface`
 - `sourceId: string = ''` (attribute `source-id`) — stable identifier matching a
   `<lr-citation-badge>` elsewhere on the page.
 - `heading: string = ''` — the source's display title, e.g. a filename, rendered as the `title`
-  button's text. Falls back to `"Untitled source"` when empty. Deprecated alias: `title` (use
-  `heading`; removed in 23.0.0)
+  button's text. Falls back to `"Untitled source"` when empty.
 - `page?: string | number` — optional page reference, e.g. `12` or `"iv"`, rendered as-is (never
   parsed/validated as a number), appended to the title as `" — p. {page}"`.
 - `href?: string` — optional URL, echoed back (unopened) in `lr-open`'s detail.
 - `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller
   `xs`/`2xs`) tightens the root padding and row gap, for the dense citation lists these cards
   usually render in. Purely a density knob: the border and background stay. `m` (the default) and
-  larger keep the full card padding. Deprecated alias: `compact` (use `size="s"`; removed in
-  23.0.0)
+  larger keep the full card padding.
 - `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
   vocabulary (`'card' | 'plain'`). `'card'` (the default) keeps the bordered, filled, padded box;
   `'plain'` removes the border, background, padding and corner radius, so a card inside a
@@ -1594,10 +1587,8 @@ time.
   independent of the parent list's `expanded`/`lr-toggle` — collapsing the list doesn't reset an
   individual card's `fullExpanded` state, and there is no cross-talk between the two components at
   all beyond DOM nesting.
-- `lr-source-card`'s deprecated `title` alias is also the browser's global tooltip attribute, so the
-  card strips a host-level `title` attribute right after reading it into `heading` — otherwise the
-  whole card would grow an unsolicited native tooltip repeating the title text on hover. Use
-  `heading` for the rendered title.
+- `lr-source-card` uses `heading` for the rendered title. The native host `title` attribute remains
+  an independent browser tooltip and does not update the heading.
 
 ---
 
@@ -1635,8 +1626,7 @@ shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape
 - `groupByRelation: boolean = false` (attribute `group-by-relation`) — forwarded to `lr-neighbor-list`
 - `expandable: boolean = false` — forwarded to `lr-neighbor-list`
 - `withoutFocusButton: boolean = false` (attribute `without-focus-button`) — forwarded to
-  `lr-entity-card`. Deprecated alias: `show-focus-button`/`showFocusButton` (use `without-focus-button`;
-  `show-focus-button="false"` equals `without-focus-button`; removed in 23.0.0)
+  `lr-entity-card`.
 - `communityLabel: string = ''` (attribute `community-label`) — forwarded to `lr-entity-card`
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — as a JS-only property while
   the host attribute is absent, names the internal `lr-tab-group` strip. Authored host
@@ -1648,8 +1638,7 @@ card or neighbor list), `lr-entity-activate` (`detail: { entityId, occurrenceInd
 from the embedded provenance panel's own community card or relationship path strip, the only
 source carrying `occurrenceIndex`), `lr-node-expand` (`detail: { nodeId }`),
 `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`), `lr-chunk-toggle` (`detail: { chunkId,
-expanded }`, followed by its deprecated alias `lr-expand` with an equal detail — use
-`lr-chunk-toggle`; removed in 23.0.0), `lr-toggle` (`detail: { section, expanded }`), and `lr-tab-show`
+expanded }`), `lr-toggle` (`detail: { section, expanded }`), and `lr-tab-show`
 (`detail: { tabId: LyraEntityDossierTab }`, where `LyraEntityDossierTab = 'relationships' | 'chunks'
 | 'provenance'` — also the `lr-tab-group` slot/tab ids). The Provenance tab's own controls reach the
 host the same way and are typed here too: `lr-entity-open` (`detail: { entityId }`, an entity chip
@@ -1706,8 +1695,7 @@ label?: string }`. Independent of `assessment`; empty omits the whole evidence s
   owner (the group omits its duplicate role/name); an explicitly empty host label stays empty
 - `withoutClaims: boolean = false` (attribute `without-claims`, reflected) — omits the
   `assessment.claims` detail that otherwise renders through `lr-claim-evidence`, keeping the
-  aggregate scorecard only. Deprecated alias: `show-claims`/`showClaims` (use `without-claims`;
-  `show-claims="false"` equals `without-claims`; removed in 23.0.0)
+  aggregate scorecard only.
 - `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`) — shared semantic heading
   level used by both warnings and evidence sections; `'none'` keeps the visual text without
   exposing a heading role, and invalid untyped values fall back to level 3
@@ -1868,11 +1856,9 @@ errorMessage?: string }` (all four types exported here), where
   knowledge-base label. An explicit empty string keeps the visible heading empty while the nested
   table still takes the localized default as its accessible name
 - `withoutSummary: boolean = false` (attribute `without-summary`, reflected) — hides the aggregate
-  total/synced/syncing/needs-attention row. Deprecated alias: `hide-summary`/`hideSummary` (use `without-summary`;
-  removed in 23.0.0)
+  total/synced/syncing/needs-attention row.
 - `withoutCreate: boolean = false` (attribute `without-create`, reflected) — hides the "Add source"
-  affordance, e.g. for a read-only or permission-gated view. Deprecated alias: `hide-create`/`hideCreate` (use
-  `without-create`; removed in 23.0.0)
+  affordance, e.g. for a read-only or permission-gated view.
 - `error: boolean = false` (reflected) — reports a failed source-list load. Forwarded to the nested
   `lr-table`, whose own built-in failed-load state (with retry button) replaces the source rows
   while it's set; `error` beats the empty state, matching `lr-table`'s own precedence
@@ -1964,7 +1950,6 @@ focus and details flow as other entity activations, emitting one `lr-selection-c
   `LyraGraphCommunity { id: string; label?: string; memberIds: string[]; color?: string }` — the full
   field-by-field semantics (color/shape resolution precedence, dangling-edge handling, hull
   membership, etc.) are documented in `llms/components/lr-graph.md`'s own **Properties** list.
-  Deprecated alias: `links` (use `edges`; removed in 23.0.0)
 - `entityDetails: Record<string, LyraKnowledgeGraphEntityDetails> = {}` (attribute: false) —
   `LyraKnowledgeGraphEntityDetails = Pick<LyraEntity, 'description' | 'properties' | 'degree'>`, i.e.
   `{ description?: string; properties?: Record<string, string | number>; degree?: number }`, keyed by
@@ -1993,8 +1978,7 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   popover already display for it, and a node carrying both a `label` and an `accessibleLabel` matches
   either. Presettable, so a host can deep-link straight into a filtered view; the toolbar's search
   box keeps it up to date afterwards. A missing or nonstring `label`/`accessibleLabel` is skipped
-  while the node's valid string id remains searchable. Deprecated alias: `search-query`
-  (`searchQuery`; use `query`; removed in 23.0.0)
+  while the node's valid string id remains searchable.
 
 (presentation)
 
@@ -2049,8 +2033,6 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   (`detail: { nodeId, x, y }`), `lr-edge-activate` (`detail: { sourceNodeId, targetNodeId, edgeId? }`), `lr-community-activate`
   (`detail: { communityId }`), `lr-node-expand` (`detail: { nodeId }`, from `lr-graph` and/or `lr-neighbor-list`),
   `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, from `lr-path-strip`).
-  Deprecated alias: `lr-community-click` (use `lr-community-activate`; bubbles right after it with an
-  equal detail; removed in 23.0.0).
 - `lr-node-click` — deprecated alias emitted after `lr-node-activate` with the same detail.
   `lr-link-click` follows `lr-edge-activate`, retaining its legacy `linkId` detail field.
 
@@ -2151,8 +2133,7 @@ localized `limit` notice after that section's list rather than mounting an unbou
   approved. Only rendered while `longTerm` is non-empty.
 - `lr-memory-toggle` (`detail: LyraMemoryExpandDetail` = `{ memoryId: string; scope: 'short-term' |
 'long-term'; expanded: boolean }`) — an item's provenance disclosure was toggled, expanding or
-collapsing it. Deprecated alias: `lr-expand` (use `lr-memory-toggle`; fired right after it with an
-equal detail; removed in 23.0.0).
+collapsing it.
 
 **Slots:** none.
 
@@ -2217,12 +2198,10 @@ queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreak
   ids, duplicates, and ids absent from the canonical chunk model are pruned. The component updates
   its own copy on toggle _then_ emits `lr-select`; reassign to control
 - `withoutSelection: boolean = false` (attribute `without-selection`, reflected) — omits the per-row
-  `lr-checkbox`. Deprecated alias: `selectable` (use `without-selection`; `selectable="false"`
-  equals `without-selection`; removed in 23.0.0)
+  `lr-checkbox`.
 - `withoutDedupe: boolean = false` (attribute `without-dedupe`, reflected) — retained for
   compatibility and has no effect; malformed, blank, and later duplicate chunk ids are always omitted
-  first-wins so identity never becomes ambiguous. Deprecated alias: `dedupe` (use `without-dedupe`;
-  `dedupe="false"` equals `without-dedupe`; removed in 23.0.0)
+  first-wins so identity never becomes ambiguous.
 - `sort: 'score' | 'none' = 'score'` — `'score'` sorts descending; `'none'` preserves given order
 - `grouping: 'source' | 'custom' | 'none' = 'none'` — `'source'` buckets rows under a header per
   `source.id` (the header text is that source's `name`, or a localized "untitled source" when it has
@@ -2540,9 +2519,7 @@ either way. An answer with no error announces nothing. Remove any host
 the initial error is announced twice, through the native role and again through the shared sink;
 `withoutSources: boolean = false` (attribute `without-sources`, reflected — omits the source section);
 `withoutClaims: boolean = false` (attribute `without-claims`, reflected — stops claim-level details
-from reaching the grounding summary). Deprecated aliases: `show-sources`/`showSources` (use `without-sources`;
-`show-sources="false"` equals `without-sources`; removed in 23.0.0) and `show-claims`/`showClaims` (use
-`without-claims`; `show-claims="false"` equals `without-claims`; removed in 23.0.0); `label?: string` (omission uses the localized answer label; an explicit
+from reaching the grounding summary); `label?: string` (omission uses the localized answer label; an explicit
 empty string stays empty); `accessibleLabel: string | null = null` (attribute
 `aria-label`). The same `<article>` remains the semantic shell in `idle`, `loading`, `answer`, and
 `error` states. With no non-empty host `aria-label` it owns the article role/name; a non-empty host
@@ -2621,8 +2598,7 @@ IngestionQueueItem[] = []` (attribute: false); `activeTab: 'sources' | 'ingestio
 `label?: string` (the visible heading and the tablist's distinct accessible name; omission uses the
 localized admin label, while an explicit empty string stays empty; authored host
 `aria-label` independently names the admin component and is not cloned onto either);
-`withoutIngestion: boolean = false` (attribute `without-ingestion`; deprecated alias:
-`hide-ingestion`/`hideIngestion`, use `without-ingestion`; removed in 23.0.0). If ingestion is active when it
+`withoutIngestion: boolean = false` (attribute `without-ingestion`). If ingestion is active when it
 becomes hidden, `activeTab`
 normalizes to `'sources'`, emits `lr-tab-change`, and moves focus to the Sources tab when needed.
 An invalid runtime or authored `activeTab` value follows the same fallback instead of leaving every
@@ -2684,7 +2660,7 @@ At most 500 claims render as `claim` rows; a `claims` array past that length ren
   `xs`/`2xs`) tightens the `claim-trigger` padding and column gap, for dense evidence lists — the
   same convention as `lr-source-card`'s/`lr-entity-card`'s `size`. Purely a density knob: each
   claim's border and background stay. `m` (the default) and larger keep the full claim-trigger
-  padding. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0)
+  padding.
 - `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
   vocabulary (`'card' | 'plain'`). `'card'` (the default) keeps each claim's bordered, filled box;
   `'plain'` removes the border, background, and corner radius from every `claim` row, so claims
@@ -2761,8 +2737,7 @@ display when unset/unmatched); `slice: string = ''`; `label?: string` (visible h
 fallback overall-region name; a non-empty host `aria-label` makes the host the sole overall owner,
 while an explicitly empty host label stays empty on the region);
 `withoutChart: boolean = false` (attribute `without-chart`, reflected — omits the trend chart);
-`chartHeight: string = '220px'` (attribute `chart-height`). Deprecated alias: `show-chart`/`showChart` (use
-`without-chart`; `show-chart="false"` equals `without-chart`; removed in 23.0.0).
+`chartHeight: string = '220px'` (attribute `chart-height`).
 
 `LyraRagEvaluationMetric = { id, label, category, format? }`, where category is
 `'retrieval' | 'generation' | 'system' | custom-string` and format is `'number' | 'percent'`.
@@ -3050,21 +3025,6 @@ These named interfaces and helper signatures are available to typed integrations
     readonly color?: string;
     readonly dash?: readonly number[];
   }`
-  Import: `@aceshooting/lyra-ui/components/retrieval/graph/graph.class.js`.
-  `LyraGraphLink {
-    readonly id?: string;
-    readonly source: string;
-    readonly target: string;
-    readonly width?: number;
-    readonly label?: string;
-    readonly accessibleLabel?: string;
-    readonly description?: string;
-    readonly directed?: boolean;
-    readonly color?: string;
-    readonly dash?: readonly number[];
-  }`
-  Deprecated (use the structurally identical `LyraGraphEdge`; each is assignable to the other;
-  removed in 23.0.0).
   Import: `@aceshooting/lyra-ui/components/retrieval/graph/graph.class.js`.
   `LyraGraphNode {
     readonly id: string;

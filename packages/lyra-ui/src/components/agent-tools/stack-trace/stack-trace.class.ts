@@ -1,11 +1,9 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
-import { normalizeSize, type LyraFrame, type LyraSize } from '../../../internal/variants.js';
+import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import { styles } from './stack-trace.styles.js';
 import { parseStackTrace, DEFAULT_INTERNAL_PATTERNS, type StackFrame, type StackGroup } from './stack-trace-parse.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
@@ -20,7 +18,6 @@ import {
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_stackTraceHideFrames, LYRA_DEFAULT_stackTraceLabel, LYRA_DEFAULT_stackTraceLimit, LYRA_DEFAULT_stackTraceShowFrames } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 /** How long the "Copied!" confirmation state lasts before reverting -- matches
  *  `lr-copy-button`'s own confirmation duration. */
@@ -72,12 +69,6 @@ function isSelectableFrame(frame: StackFrame): frame is StackFrame & { file: str
     && Number.isSafeInteger(frame.line)
     && (frame.column === undefined || Number.isSafeInteger(frame.column))
   );
-}
-
-/** Whether a `size` sits on the dense tier the deprecated `compact` boolean spelled. */
-function isDenseSize(size: LyraSize): boolean {
-  const step = normalizeSize(size);
-  return step === 's' || step === 'xs' || step === '2xs';
 }
 
 /** Visual chrome for `<lr-stack-trace>`'s root — the library's shared container-frame vocabulary. */
@@ -134,7 +125,6 @@ export interface LyraStackTraceEventMap {
  *   between `[part="group"]`s while `size` is `s` or smaller.
  * @cssprop [--lr-stack-trace-bg=var(--lr-color-surface)] - Fill of the outer card
  *   (`[part="base"]`) while `frame="card"`. `frame="plain"` still removes the fill entirely.
- * @cssprop [--lr-stack-trace-background=var(--lr-color-surface)] - Deprecated alias of `--lr-stack-trace-bg`; removal not before 23.0.0.
  * @cssprop [--lr-stack-trace-border-color=var(--lr-color-border-subtle)] - Colour of the outer card's
  *   border.
  * @cssprop [--lr-stack-trace-radius=var(--lr-radius)] - Corner radius of the outer card.
@@ -159,23 +149,12 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    collapseInternal: ['expandInternal', invertAlias, invertAlias],
-    copyable: ['withoutCopyButton', invertAlias, invertAlias],
-    compact: ['size', (value) => (value ? 's' : 'm'), (value) => isDenseSize(value as LyraSize)],
-  };
-
   /** The raw stack trace text to parse and render. Removing the attribute clears its displayed text. */
   @property() trace = '';
 
   /** Shows runs of internal frames (matching `internalPatterns`) inline instead of folding them
    *  behind a count-labeled toggle. */
   @property({ type: Boolean, attribute: 'expand-internal', reflect: true }) expandInternal = false;
-
-  /** Folds runs of internal frames (matching `internalPatterns`) behind a toggle.
-   *  @deprecated Use `expand-internal`; removal not before 23.0.0. */
-  @property({ type: Boolean, attribute: 'collapse-internal', reflect: true, converter: trueDefaultBooleanConverter })
-  collapseInternal = true;
 
   /** Clone-owned file-path substrings/`RegExp`s that mark a frame as internal. Defaults to
    *  `DEFAULT_INTERNAL_PATTERNS` (common Node/browser/Python framework locations). Assignment
@@ -195,10 +174,6 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
   /** Hides the copy-to-clipboard button for the raw trace text. */
   @property({ type: Boolean, attribute: 'without-copy-button', reflect: true }) withoutCopyButton = false;
 
-  /** Shows a copy-to-clipboard button for the raw trace text.
-   *  @deprecated Use `without-copy-button`; removal not before 23.0.0. */
-  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) copyable = true;
-
   /** Visual chrome, in the library's shared container-frame vocabulary. `'card'` (the default)
    *  keeps the bordered, filled, padded box. `'plain'` removes the border, background, padding and
    *  corner radius so a trace nested inside an `lr-result-card`/`lr-agent-run` (which already draws
@@ -214,14 +189,6 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
    * and background stay, so use `frame="plain"` to drop the chrome entirely.
    */
   @property({ reflect: true }) size: LyraSize = 'm';
-
-  /** Tighter root padding and between-group spacing for dense contexts (a trace rendered as a row
-   *  in an error list, a side panel) -- same convention as `<lr-agent-run>`'s and
-   *  `<lr-thinking-panel>`'s `compact`, and the counterpart `frame` already had. Defaults to
-   *  `false`, i.e. the full card padding. Purely a density knob: the border, corner radius and
-   *  background stay, so use `frame="plain"` to drop the chrome entirely.
-   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
-  @property({ type: Boolean, reflect: true }) compact = false;
 
   /** Caps the rendered block size and enables an internal scrollbar once content exceeds it
    *  (any valid CSS length, e.g. `'20rem'`). Empty string (the default) grows with content. */

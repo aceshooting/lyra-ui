@@ -1259,9 +1259,9 @@ it('uses the separate row, control, sortable-header, and page-size interaction t
   );
 });
 
-it('still honors the deprecated -background interaction tokens, with the -bg names winning when both are set', async () => {
+it('ignores all retired -background interaction tokens', async () => {
   await expectInteractionTokens(
-    '--transition-duration: 0s; --row-hover-background: rgb(1, 2, 3); --lr-data-grid-row-active-bg: rgb(4, 5, 6); --lr-data-grid-row-active-background: rgb(99, 98, 97); --lr-data-grid-control-hover-background: rgb(7, 8, 9); --lr-data-grid-control-active-background: rgb(10, 11, 12); --lr-data-grid-sortable-header-hover-background: rgb(13, 14, 15); --lr-data-grid-sortable-header-active-background: rgb(16, 17, 18); --lr-data-grid-page-size-active-background: rgb(19, 20, 21)'
+    '--transition-duration: 0s; --row-hover-background: rgb(1, 2, 3); --lr-data-grid-row-active-background: rgb(4, 5, 6); --lr-data-grid-control-hover-background: rgb(7, 8, 9); --lr-data-grid-control-active-background: rgb(10, 11, 12); --lr-data-grid-sortable-header-hover-background: rgb(13, 14, 15); --lr-data-grid-sortable-header-active-background: rgb(16, 17, 18); --lr-data-grid-page-size-active-background: rgb(19, 20, 21)', true
   );
 });
 

@@ -481,12 +481,12 @@ it('routes forced-color badge paint back through the system-owned semantic token
   }
 });
 
-describe('lr-entity-card deprecated show-focus-button alias', () => {
+describe('lr-entity-card retired show-focus-button alias', () => {
   const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-entity-card', kind: 'property', name: 'showFocusButton' }];
   const observe = (el: LyraEntityCard): string => String(el.shadowRoot!.querySelectorAll('[part="focus-button"]').length);
   const mount = (markup: ReturnType<typeof html>) => fixture<LyraEntityCard>(markup);
 
-  it('applies without-focus-button without a deprecation warning', async () => {
+  it('applies without-focus-button with canonical defaults and no deprecation warning', async () => {
     let canonical = '';
     let plain = '';
     const warnings = await captureDeprecationWarnings(ALIAS, async () => {
@@ -496,70 +496,9 @@ describe('lr-entity-card deprecated show-focus-button alias', () => {
     expect(canonical).to.not.equal(plain);
     expect(warnings).to.have.length(0);
   });
-
-  it('keeps show-focus-button="false" equal to without-focus-button, warning once', async () => {
-    let canonical = '';
-    let alias = '';
-    let property = '';
-    let readback: unknown[] = [];
-    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
-      canonical = observe(await mount(html`<lr-entity-card .entity=${entity} without-focus-button></lr-entity-card>`));
-      alias = observe(await mount(html`<lr-entity-card .entity=${entity} show-focus-button="false"></lr-entity-card>`));
-      const el = await mount(html`<lr-entity-card .entity=${entity}></lr-entity-card>`);
-      el.showFocusButton = false;
-      await el.updateComplete;
-      property = observe(el);
-      readback = [el.withoutFocusButton, el.showFocusButton, el.hasAttribute('show-focus-button')];
-      // The canonical property syncs back into the alias.
-      el.withoutFocusButton = false;
-      await el.updateComplete;
-      readback.push(el.showFocusButton, el.hasAttribute('show-focus-button'));
-    });
-    expect(alias).to.equal(canonical);
-    expect(property).to.equal(canonical);
-    expect(readback).to.deep.equal([true, false, false, true, false]);
-    expect(warnings.map(({ key }) => key)).to.deep.equal([
-      'lyra-deprecated:lr-entity-card:property:showFocusButton',
-    ]);
-    expect(warnings[0]!.message).to.contain('without-focus-button');
-  });
-
-  it('restores the default when show-focus-button is true or removed', async () => {
-    let plain = '';
-    let restored = '';
-    let removed = '';
-    await captureDeprecationWarnings(ALIAS, async () => {
-      plain = observe(await mount(html`<lr-entity-card .entity=${entity}></lr-entity-card>`));
-      const el = await mount(html`<lr-entity-card .entity=${entity} show-focus-button="false"></lr-entity-card>`);
-      el.showFocusButton = true;
-      await el.updateComplete;
-      restored = observe(el);
-      el.showFocusButton = false;
-      await el.updateComplete;
-      el.removeAttribute('show-focus-button');
-      await el.updateComplete;
-      removed = observe(el);
-    });
-    expect(restored).to.equal(plain);
-    expect(removed).to.equal(plain);
-  });
-
-  it('lets the later attribute win when markup carries both spellings', async () => {
-    let canonical = '';
-    let both = '';
-    await captureDeprecationWarnings(ALIAS, async () => {
-      canonical = observe(await mount(html`<lr-entity-card .entity=${entity} without-focus-button></lr-entity-card>`));
-      const el = await mount(html`<lr-entity-card .entity=${entity} show-focus-button without-focus-button></lr-entity-card>`);
-      expect(el.withoutFocusButton).to.equal(true);
-      both = observe(el);
-      const reversed = await mount(html`<lr-entity-card .entity=${entity} without-focus-button show-focus-button></lr-entity-card>`);
-      expect(reversed.withoutFocusButton, 'the later alias attribute wins').to.equal(false);
-    });
-    expect(both).to.equal(canonical);
-  });
 });
 
-describe('lr-entity-card size and the deprecated compact alias', () => {
+describe('lr-entity-card size and the retired compact alias', () => {
   const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-entity-card', kind: 'property', name: 'compact' }];
   const observe = (el: LyraEntityCard): string => {
     const chrome = baseChrome(el);
@@ -567,7 +506,7 @@ describe('lr-entity-card size and the deprecated compact alias', () => {
   };
   const mount = (markup: ReturnType<typeof html>) => fixture<LyraEntityCard>(markup);
 
-  it('applies size="s" without a deprecation warning', async () => {
+  it('applies size="s" with canonical defaults and no deprecation warning', async () => {
     let dense = '';
     let regular = '';
     const warnings = await captureDeprecationWarnings(ALIAS, async () => {
@@ -577,47 +516,5 @@ describe('lr-entity-card size and the deprecated compact alias', () => {
     expect(dense).to.equal('8px|4px');
     expect(regular).to.equal('12px|8px');
     expect(warnings).to.have.length(0);
-  });
-
-  it('keeps compact equal to size="s", warning once', async () => {
-    let canonical = '';
-    let alias = '';
-    let property = '';
-    let readback: unknown[] = [];
-    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
-      canonical = observe(await mount(html`<lr-entity-card size="s" .entity=${entity}></lr-entity-card>`));
-      alias = observe(await mount(html`<lr-entity-card compact .entity=${entity}></lr-entity-card>`));
-      const el = await mount(html`<lr-entity-card .entity=${entity}></lr-entity-card>`);
-      el.compact = true;
-      await el.updateComplete;
-      property = observe(el);
-      readback = [el.size, el.compact, el.hasAttribute('compact')];
-      // The canonical property syncs back into the alias, which reflects as it always did.
-      el.size = 'm';
-      await el.updateComplete;
-      readback.push(el.compact, el.hasAttribute('compact'));
-    });
-    expect(alias).to.equal(canonical);
-    expect(property).to.equal(canonical);
-    expect(readback).to.deep.equal(['s', true, true, false, false]);
-    expect(warnings.map(({ key }) => key)).to.deep.equal([
-      'lyra-deprecated:lr-entity-card:property:compact',
-    ]);
-  });
-
-  it('restores size="m" when compact is cleared, and lets a later size attribute win over compact', async () => {
-    let regular = '';
-    let cleared = '';
-    let both = '';
-    await captureDeprecationWarnings(ALIAS, async () => {
-      regular = observe(await mount(html`<lr-entity-card .entity=${entity}></lr-entity-card>`));
-      const el = await mount(html`<lr-entity-card compact .entity=${entity}></lr-entity-card>`);
-      el.compact = false;
-      await el.updateComplete;
-      cleared = observe(el);
-      both = observe(await mount(html`<lr-entity-card compact size="m" .entity=${entity}></lr-entity-card>`));
-    });
-    expect(cleared).to.equal(regular);
-    expect(both).to.equal(regular);
   });
 });

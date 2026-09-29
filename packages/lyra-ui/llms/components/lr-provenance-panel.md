@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecated event** `lr-expand` since `21.1.0`; use event `addEventListener('lr-chunk-toggle', ...)`; removal not before `23.0.0` — Toggle notifications report the resulting state as `expanded` across the library.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 7 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -49,8 +49,7 @@ path-strip node — the only name either one emits, and the only one carrying `o
 Space), `lr-drill` (`detail: { communityId }`, a community card's title, drill button, or overflow chip), and
 `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, a relationship path-strip
 edge), plus `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) and `lr-chunk-toggle`
-(`detail: { chunkId, expanded }`) from the chunk inspector. Deprecated alias: `lr-expand` (use
-`lr-chunk-toggle`; surfaced right after it with an equal detail; removed in 23.0.0).
+(`detail: { chunkId, expanded }`) from the chunk inspector.
 
 **Slots:** none.
 

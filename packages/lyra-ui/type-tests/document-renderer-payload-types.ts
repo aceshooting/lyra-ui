@@ -2,8 +2,6 @@ import {
   adaptDocumentRenderer,
   createDocumentRendererAdapter,
   snapshotLyraDocumentRendererPayload,
-  type DocumentFile,
-  type DocumentRendererDefinition,
   type LyraAvDocumentRendererPayload,
   type LyraAdaptedDocumentRenderer,
   type LyraAdaptedDocumentRendererDefinition,
@@ -18,14 +16,14 @@ import {
   type LyraResolvedDocumentRendererDefinition,
 } from '../src/components/viewers/document-viewer/registry.js';
 
-const file: DocumentFile = {
+const file: LyraDocumentFile = {
   name: 'episode.mp3',
   mimeType: 'audio/mpeg',
   src: 'https://example.test/episode.mp3',
 };
 
-const legacyDefinition: DocumentRendererDefinition = {
-  render: (legacyFile: DocumentFile) => legacyFile.name,
+const legacyDefinition: LyraDocumentRendererDefinition = {
+  render: (legacyFile: LyraDocumentFile) => legacyFile.name,
 };
 
 const avAdapter = createDocumentRendererAdapter({
@@ -62,18 +60,12 @@ declare const canonicalTypes: [
   LyraAdaptedDocumentRenderer,
 ];
 
-// `DocumentFile` and `DocumentRendererDefinition` are deprecated in favour of their prefixed names.
-// Until their removal the two spellings must stay interchangeable in both directions, so code
-// annotated with either name keeps compiling against every exported signature. Exported so
-// `noUnusedLocals` treats these compile-time assertions as used; evaluating the alias IS the test.
-type Assert<T extends true> = T;
-type MutuallyAssignable<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
-export type _DeprecatedFileNameIsInterchangeable = Assert<
-  MutuallyAssignable<DocumentFile, LyraDocumentFile>
->;
-export type _DeprecatedDefinitionNameIsInterchangeable = Assert<
-  MutuallyAssignable<DocumentRendererDefinition, LyraDocumentRendererDefinition>
->;
+// @ts-expect-error DocumentFile was retired in favor of LyraDocumentFile.
+import type { DocumentFile as RemovedDocumentFile } from '../src/components/viewers/document-viewer/registry.js';
+// @ts-expect-error DocumentRendererDefinition was retired in favor of LyraDocumentRendererDefinition.
+import type { DocumentRendererDefinition as RemovedDocumentRendererDefinition } from '../src/components/viewers/document-viewer/registry.js';
+declare const retiredRendererNames: [RemovedDocumentFile, RemovedDocumentRendererDefinition];
+void retiredRendererNames;
 
 void canonicalTypes;
 void legacyInvocation;

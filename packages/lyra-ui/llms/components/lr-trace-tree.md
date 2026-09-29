@@ -7,9 +7,7 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
-- **Deprecated property** `hideBars` / `hide-bars` since `21.1.0`; use property `without-bars`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
-- **Deprecated property** `showCost` / `show-cost` since `21.1.0`; use property `with-cost`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
-- **Deprecated property** `showTokens` / `show-tokens` since `21.1.0`; use property `with-tokens`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 17 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -34,9 +32,7 @@ tracks. `activeSpanId: string | null = null`
 (attribute `active-span-id`), `label?: string`, `withTokens: boolean = false` (attribute
 `with-tokens`, reflected) — surfaces `tokensIn`/`tokensOut`, `withCost: boolean = false` (attribute
 `with-cost`, reflected) — surfaces `costText`, and `withoutBars: boolean = false` (attribute
-`without-bars`, reflected) — suppresses the inline duration bar. Deprecated aliases:
-`show-tokens`/`showTokens` (use `with-tokens`), `show-cost`/`showCost` (use `with-cost`) and
-`hide-bars`/`hideBars` (use `without-bars`); each is removed in 23.0.0.
+`without-bars`, reflected) — suppresses the inline duration bar.
 `label` is an optional accessible-name override for the `role="tree"` element: omission localizes
 the default, and any supplied string — including `''` — is rendered verbatim.
 Token counts render only when finite and non-negative; invalid metrics are omitted rather than

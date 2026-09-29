@@ -7,12 +7,9 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
-- **Deprecated css-property** `--lr-agent-run-background` since `21.1.0`; use css-property `--lr-agent-run-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
-- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
-- **Deprecated property** `showCancel` / `show-cancel` since `21.1.0`; use property `without-cancel`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
-- **Deprecated property** `showRetry` / `show-retry` since `21.1.0`; use property `without-retry`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 25 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 25 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -61,15 +58,12 @@ assigned array or record has no effect; create and reassign a new value after ch
 
 - `withoutCancel: boolean = false` (attribute `without-cancel`) / `withoutRetry: boolean = false`
   (attribute `without-retry`) — suppress the built-in buttons, which otherwise render while the
-  run's own status allows them (a read-only viewer sets both). Deprecated aliases:
-  `show-cancel`/`showCancel` (use `without-cancel`) and `show-retry`/`showRetry` (use
-  `without-retry`), both removed in 23.0.0 — inverted, so `show-cancel="false"` equals
-  `without-cancel`
+  run's own status allows them (a read-only viewer sets both).
 - `size: LyraSize = 'm'` (reflected) — density on the shared size scale: `s` (and the smaller
   `xs`/`2xs`) tightens the root padding and header/body gap for dense contexts (a run rendered as a
   row in a list, or in a side panel); `m` and larger keep the full padding. Purely a density knob:
   the border and background stay, so reach for `frame="plain"` instead when the goal is to drop the
-  chrome entirely. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0)
+  chrome entirely.
 - `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
   vocabulary (`'card' | 'plain'`), the same property `<lr-card>` and every other card-shaped
   component carries. `'card'` keeps the bordered, filled, padded box; `'plain'` removes the
@@ -104,8 +98,7 @@ _or on any ancestor_ — one rule on a run list retunes every dense run inside i
 `--lr-agent-run-bg` (default `var(--lr-color-surface)`), `--lr-agent-run-border-color`
 (default `var(--lr-color-border-subtle)`) and `--lr-agent-run-radius` (default `var(--lr-radius)`) retune
 `[part="base"]`'s card chrome without a `::part(base)` override; `frame="plain"` still removes all
-three outright. Deprecated alias: `--lr-agent-run-background` (use `--lr-agent-run-bg`; removed in
-23.0.0).
+three outright.
 
 **Additional API surface:**
 

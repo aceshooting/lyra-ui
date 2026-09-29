@@ -1152,12 +1152,14 @@ describe('lr-archive-viewer part reachability through the embedded virtual list'
   });
 });
 
-describe('lr-archive-viewer -bg custom properties and their deprecated -background aliases', () => {
+describe('lr-archive-viewer canonical -bg custom properties after alias retirement', () => {
   const tones = ['accent', 'success', 'warning', 'danger', 'neutral'] as const;
   const names = ['alpha.txt', 'beta.txt', 'gamma.txt', 'delta.txt', 'omega.txt'];
   const colorFor = (index: number): string => `rgb(${index + 1}, ${index + 2}, ${index + 3})`;
-  const declarations = (suffix: 'bg' | 'background', offset: number): string =>
-    tones.map((tone, index) => `--lr-archive-viewer-highlight-${tone}-${suffix}: ${colorFor(index + offset)};`).join(' ');
+  const declarations = (suffix: 'bg' | 'background', offset: number): string => [
+    ...tones.map((tone, index) => `--lr-archive-viewer-highlight-${tone}-${suffix}: ${colorFor(index + offset)};`),
+    `--lr-archive-viewer-highlight-active-${suffix}: ${colorFor(offset + 5)};`,
+  ].join(' ');
 
   const paints = async (style: string): Promise<string[]> => {
     const originalHighlight = (globalThis as { Highlight?: unknown }).Highlight;
@@ -1186,12 +1188,44 @@ describe('lr-archive-viewer -bg custom properties and their deprecated -backgrou
 
   const expected = (offset: number): string[] => tones.map((_, index) => colorFor(index + offset));
 
+  // Active backgrounds use the native Highlight API; fallback active marks use an outline.
+  const activePaint = async (style: string): Promise<string> => {
+    const { el, list, restore } = await listingWithEntries(['active.txt']);
+    try {
+      el.setAttribute('style', style);
+      el.highlights = [{ id: 'active', anchor: { kind: 'text-quote', quote: 'active' } }];
+      el.activeHighlightId = 'active';
+      await el.updateComplete;
+      const registry = (CSS as unknown as { highlights: Map<string, Set<Range>> }).highlights;
+      const activeRange = (): Range | undefined => [...(registry.get('lr-highlight-active') ?? [])]
+        .find((range) => list.shadowRoot!.contains(range.startContainer) && range.toString() === 'active');
+      await waitUntil(() => activeRange() !== undefined, 'the archive entry owns a painted native active range');
+      const target = activeRange()!.startContainer.parentElement!;
+      return getComputedStyle(target, '::highlight(lr-highlight-active)').backgroundColor;
+    } finally {
+      restore();
+    }
+  };
+
+  it('paints the native active range from its canonical background token', async () => {
+    expect(await activePaint(declarations('bg', 0))).to.equal(colorFor(5));
+  });
+
+  it('ignores the retired active background token', async () => {
+    expect(await activePaint(declarations('background', 50))).to.equal(await activePaint(''));
+  });
+
+  it('prefers the canonical active background when both spellings are set', async () => {
+    expect(await activePaint(`${declarations('background', 50)} ${declarations('bg', 0)}`)).to.equal(colorFor(5));
+  });
+
   it('paints every tone from the canonical -bg properties', async () => {
     expect(await paints(declarations('bg', 0))).to.deep.equal(expected(0));
   });
 
-  it('still honors the deprecated -background spellings with the same result', async () => {
-    expect(await paints(declarations('background', 0))).to.deep.equal(expected(0));
+  it('ignores the retired -background spellings while retaining the canonical paint baseline', async () => {
+    expect(await paints(declarations('background', 50))).to.deep.equal(await paints(''));
+    expect(await paints(declarations('bg', 0))).to.deep.equal(expected(0));
   });
 
   it('lets the canonical -bg property win when both spellings are set', async () => {

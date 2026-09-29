@@ -277,3 +277,14 @@ export const ProgressiveStreaming: Story = {
       .content=${'# Settled heading\n\nA **rendered paragraph**.\n\n```js\nconst answer = 42;\n```\n\nCurrent tail'}></lr-markdown>
   </div>`,
 };
+
+export const CanonicalFormattingControls: Story = {
+  parameters: {
+    docs: { description: { story: 'code-block-header adds the language and source-copy header. without-syntax-highlighting keeps plain code; without-gfm disables table and task-list extensions. These controls also apply to Markdown Core and Markdown rendered by Streaming Text.' } },
+  },
+  render: () => html`
+    <lr-markdown code-block-header without-syntax-highlighting
+      .content=${'| Feature | Enabled |\n| --- | --- |\n| GFM | Yes |\n\n~~~text\nCopy the source\n~~~'}
+    ></lr-markdown>
+  `,
+};

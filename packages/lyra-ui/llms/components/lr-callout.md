@@ -7,12 +7,9 @@
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [overlays](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/overlays.md)
-- **Deprecated attribute** `accessible-label` since `21.1.0`; use attribute `aria-label`; removal not before `23.0.0` — The host `aria-label` names the component, as on every other Lyra component.
-- **Deprecated css-property** `--lr-callout-background` since `21.1.0`; use css-property `--lr-callout-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
-- **Deprecated part** `close-button__control` since `21.1.0`; use part `::part(close-button-control)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated property** `accessibleLabel` since `22.0.0`; use attribute `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.`; removal not before `24.0.0` — The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window.
 - **Optional peers** none
-- **Themeable via** 9 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -46,8 +43,6 @@ carries when it first mounts; see the announcement paragraph that closes this se
 semantic content and hides the host surface), and `accessibleLabel: string = ''` (property only;
 used only when the host has no `aria-label` attribute). In markup, name the callout with the host
 `aria-label`, which has highest precedence by presence, including an explicitly empty value.
-Deprecated alias: `accessible-label` (use `aria-label`; removed in 23.0.0) — it still sets
-`accessibleLabel`, so a host `aria-label` wins over it.
 
 Every reflected closed set normalizes identically from markup and untyped JavaScript writes:
 unsupported `variant`, `size`, and `heading-level` values become reflected `brand`, `m`, and `3`,
@@ -69,8 +64,7 @@ configured semantic heading wrapper), `icon`.
 `message` (wrapper around the default slot), `close-button` (the close control, always
 at least `--lr-icon-button-size` in both the panel and `inline` treatments), `close-button-control`,
 `close-icon` (the visible "×" glyph inside it — this is what shrinks under `inline`, so the hit
-target never does). Deprecated alias: `close-button__control` (use `close-button-control`; removed
-in 23.0.0), on the same node.
+target never does).
 
 As of 16.0.0 the close control is a composed `<lr-icon-button>`: `close-button` names that host —
 it still owns the grid placement, the accessible name and the click/focus API — while
@@ -107,8 +101,7 @@ as one set directly on the callout. `--lr-callout-close-hover-bg`
 decoupled from `--lr-callout-bg` (which every explicit `variant`, including `neutral`,
 retargets for the panel itself) so a consumer can retint the hover fill — e.g. to keep it visibly distinct from a
 `variant="brand"` panel, which shares the same default token — without a collateral effect on the
-panel background, and vice versa. Deprecated alias: `--lr-callout-background` (use `--lr-callout-bg`;
-removed in 23.0.0), read only as its fallback.
+panel background, and vice versa.
 
 Three more, all new in 8.0.0: `--lr-callout-font-size` (private default
 `var(--lr-form-control-font-size, var(--lr-font-size-m))` — the callout's text size; each explicit

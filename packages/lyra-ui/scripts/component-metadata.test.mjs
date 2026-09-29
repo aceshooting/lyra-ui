@@ -112,7 +112,7 @@ function fixture() {
 test('checked-in metadata covers the current manifest and inventory', () => {
   const state = fixture();
   assert.deepEqual(validateComponentMetadata(state.metadata, state), []);
-  assert.equal(state.metadata.assignments['published-stable'].length, 259);
+  assert.equal(state.metadata.assignments['published-stable'].length, 258);
   assert.equal(state.metadata.assignments['published-experimental'].length, 2);
   assert.equal(state.metadata.assignments['mapped-experimental'].length, 1);
   assert.equal(
@@ -122,45 +122,56 @@ test('checked-in metadata covers the current manifest and inventory', () => {
   assert.equal(state.metadata.assignments['compatibility-stable'].length, 1);
   assert.equal(state.metadata.assignments['introduced-stable'].length, 19);
   // The eight older mirrored hooks stay while their upstream counterparts exist. The
-  // 391 published naming aliases retain their original removal floor; the new
-  // attribute, property and event notices must survive one whole subsequent major.
+  // eligible naming aliases have retired; the retained attribute, property and
+  // event notices must survive one whole subsequent major.
   const removalCohorts = {};
   for (const entry of state.metadata.deprecations) {
     removalCohorts[entry.removalNotBefore] = (removalCohorts[entry.removalNotBefore] ?? 0) + 1;
   }
   assert.deepEqual(removalCohorts, {
     '10.0.0': 8,
-    '23.0.0': 391,
     '24.0.0': 44,
   });
 });
 
 test('a subclass records an inherited alias against its full public surface', () => {
   const state = fixture();
-  const inherited = state.metadata.deprecations.find((entry) =>
-    entry.tag === 'lr-line-chart' && entry.kind === 'property' && entry.name === 'zoom');
-  assert.ok(inherited, 'lr-line-chart records the zoom alias it inherits from lr-chart');
-  const lineChart = state.manifest.modules
-    .flatMap((module) => module.declarations ?? [])
-    .find((entry) => entry.tagName === 'lr-line-chart');
+  const declarations = state.manifest.modules.flatMap((module) => module.declarations ?? []);
+  const base = declarations.find((entry) => entry.tagName === 'lr-chart');
+  const child = declarations.find((entry) => entry.tagName === 'lr-line-chart');
+  // Synthetic policy keeps the inheritance regression independent of any release's alias cohort.
+  const record = {
+    kind: 'property', name: 'fixtureLegacy', since: state.packageJson.version,
+    removalNotBefore: `${currentMajor(state) + 2}.0.0`,
+    replacement: { kind: 'property', name: 'fixtureCurrent', usage: '.fixtureCurrent' },
+    rationale: 'Use the canonical fixture property.',
+  };
+  base.members ??= [];
+  base.members.push(
+    { kind: 'field', name: 'fixtureLegacy', type: { text: 'boolean' }, deprecated: 'Use fixtureCurrent.' },
+    { kind: 'field', name: 'fixtureCurrent', type: { text: 'boolean' } },
+  );
+  for (const tag of ['lr-chart', 'lr-line-chart']) putDeprecation(state.metadata, { ...record, tag });
   assert.equal(
-    (lineChart.members ?? []).some((member) => member.name === 'zoom'),
+    (child.members ?? []).some((member) => member.name === 'fixtureLegacy'),
     false,
-    'the compact manifest keeps the inherited member on lr-chart only',
+    'the compact subclass has no own copy of its inherited member',
   );
   assert.deepEqual(validateEdited(state, state.metadata), []);
+  const projected = structuredClone(state.manifest);
+  applyComponentMetadataToManifest(state.metadata, projected, { packageVersion: state.packageJson.version });
   assert.deepEqual(
-    validateManifestMetadataProjection(state.metadata, state.manifest, {
+    validateManifestMetadataProjection(state.metadata, projected, {
       packageVersion: state.packageJson.version,
     }),
     [],
   );
 
   const metadata = structuredClone(state.metadata);
-  putDeprecation(metadata, { ...inherited, name: 'missingZoom', attribute: 'missing-zoom' });
+  putDeprecation(metadata, { ...record, tag: 'lr-line-chart', name: 'missingFixture' });
   assert.throws(
     () => validateEdited(state, metadata),
-    /lr-line-chart:property:missingZoom: deprecated public member does not exist/,
+    /lr-line-chart:property:missingFixture: deprecated public member does not exist/,
   );
 });
 
@@ -698,7 +709,7 @@ test('applying metadata changes only maturity records and remains deterministic'
   assert.equal(
     applied.components.find((entry) => entry.tag === 'lr-icon').maturity
       .deprecations.length,
-    3
+    1
   );
   assert.equal(applied.pins.lyraVersion, state.packageJson.version);
 });
@@ -737,8 +748,8 @@ test('CEM projection surfaces status, since, policy, and structured member depre
   const autoWidthAttribute = icon.attributes.find(
     (entry) => entry.name === 'auto-width'
   );
-  // autoWidth, fixedWidth and --lr-icon-fixed-width.
-  assert.equal(icon.deprecations.length, 3);
+  // The mirrored autoWidth notice remains; fixedWidth and its CSS alias have retired.
+  assert.equal(icon.deprecations.length, 1);
   assert.equal(autoWidth.deprecation.since, '8.0.0');
   assert.deepEqual(autoWidth.deprecation.replacement, {
     kind: 'property',
@@ -828,7 +839,7 @@ test('Storybook presentation exposes central maturity and structured deprecation
   );
   assert.deepEqual(
     presentation.deprecations.map((entry) => entry.subject),
-    ['css-property --lr-date-input-text-color']
+    []
   );
 
   const knownDatePresentation = componentMetadataPresentation(
@@ -1620,8 +1631,7 @@ test('export deprecations validate type records against the declaring source', (
 });
 
 /** Every exported name of one source module, with whether the export is type-only. */
-function sourceExportKinds(relativePath) {
-  const source = fs.readFileSync(path.join(packageDir, relativePath), 'utf8');
+function sourceExportKinds(relativePath, source = fs.readFileSync(path.join(packageDir, relativePath), 'utf8')) {
   const parsed = parseSync(relativePath, source);
   assert.deepEqual(parsed.errors, [], `${relativePath} parses`);
   const kinds = new Map();
@@ -1633,27 +1643,36 @@ function sourceExportKinds(relativePath) {
   return kinds;
 }
 
-test('the deprecated utilities/localization.js entry is superseded by localization.js', () => {
+test('the retired localization route preserves its published replacement bindings', async () => {
+  const { checkPublishedCompatibility } = await import('./check-published-compatibility.mjs');
+  const { decodeEvidence, sha256 } = await import('./published-compatibility-io.mjs');
+  const history = path.join(packageDir, 'scripts/fixtures/compatibility-history');
+  const verified = await checkPublishedCompatibility(history);
+  const { capture, facts } = verified.captures[0];
+  const record = facts.records.find(entry => entry.key.scope === 'export' && entry.key.kind === 'entry-point' && entry.key.name === './utilities/localization.js');
+  assert.equal(record.policy.replacement.kind, 'entry-point');
+  assert.equal(record.policy.replacement.name, './localization.js');
+  assert.match(record.policy.replacement.usage, /from '@aceshooting\/lyra-ui\/localization\.js'/);
+  assert.equal(record.policy.removalNotBefore, '23.0.0');
+  assert.ok(verified.retirements.some(entry => entry.key.scope === 'export' && entry.key.name === './utilities/localization.js' && entry.removedIn === '23.0.0'));
   const state = fixture();
-  const record = state.metadata.exportDeprecations.find(
-    (entry) => entry.kind === 'entry-point' && entry.name === './utilities/localization.js',
-  );
-  assert.ok(record, 'the ledger records the ./utilities/localization.js entry-point deprecation');
-  assert.equal(record.replacement.kind, 'entry-point');
-  assert.equal(record.replacement.name, './localization.js');
-  assert.match(record.replacement.usage, /from '@aceshooting\/lyra-ui\/localization\.js'/);
-  assert.equal(record.removalNotBefore, '23.0.0');
+  assert.ok(!state.metadata.exportDeprecations.some(entry => entry.kind === 'entry-point' && entry.name === './utilities/localization.js'));
+  assert.equal(fs.existsSync(path.join(packageDir, 'src/utilities/localization.ts')), false);
+  assert.equal(state.packageJson.exports['./utilities/localization.js'], undefined);
 
-  // The superset rule the migration depends on: every name the deprecated entry exports is
-  // exported by the replacement too, as a value or a type exactly as before, so moving an import
-  // is a specifier rename and nothing else. The identical-binding half is proven at runtime by
-  // check-localization-slices and the package-entrypoint browser test.
-  const deprecated = sourceExportKinds('src/utilities/localization.ts');
+  const evidence = fs.readFileSync(path.join(history, '22.0.0/evidence.json.gz'));
+  assert.equal(sha256(evidence), capture.evidenceArchiveSha256);
+  const archive = decodeEvidence(evidence);
+  const input = capture.inputs.find(entry => entry.origin === 'source-export' && entry.path === 'packages/lyra-ui/src/localization.ts');
+  const source = Buffer.from(archive.payloads[input.sha256], 'base64');
+  assert.equal(sha256(source), input.sha256);
+  // Preserve all published canonical bindings, including the former utility re-exports.
+  const published = sourceExportKinds('src/localization.ts', source.toString('utf8'));
   const replacement = sourceExportKinds('src/localization.ts');
-  assert.ok(deprecated.size > 0);
-  for (const [name, isType] of deprecated) {
-    assert.ok(replacement.has(name), `src/localization.ts must also export ${name}`);
-    assert.equal(replacement.get(name), isType, `${name} keeps its value/type kind on localization.js`);
+  assert.ok(published.size > 0);
+  for (const [name, isType] of published) {
+    assert.ok(replacement.has(name), `src/localization.ts must still export ${name}`);
+    assert.equal(replacement.get(name), isType, `${name} keeps its published value/type kind`);
   }
 });
 

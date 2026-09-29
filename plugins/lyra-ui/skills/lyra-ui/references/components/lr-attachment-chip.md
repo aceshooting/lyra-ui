@@ -7,9 +7,7 @@
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
-- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
-- **Deprecated property** `previewable` / `previewable` since `21.1.0`; use property `without-preview`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
-- **Deprecated property** `removable` / `removable` since `21.1.0`; use property `without-remove-button`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 12 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -51,28 +49,20 @@ coalesce into one update.
 - `previewSrc: string = ''` (attribute `preview-src`) — source URL used for preview and download when
   `file` is unset; a real `File` takes precedence and uses a temporary blob URL
 - `withoutPreview: boolean = false` (reflected, attribute `without-preview`) — hides the preview
-  action, which otherwise renders whenever a `file` or `preview-src` is available. Deprecated alias:
-  `previewable` (use `without-preview`, which `previewable="false"` equals; removing `previewable`
-  restores the default; removed in 23.0.0). The alias still reflects (`previewable="false"`); the two
-  stay in sync and the last write wins.
+  action, which otherwise renders whenever a `file` or `preview-src` is available.
 - `status: LyraAttachmentUploadStatus = 'pending'` (reflected) — `'pending' | 'uploading' |
 'error' | 'success'`; invalid values normalize to `pending`. Drives the accent tint and which of
   `progress`/`spinner`/`retry-button` renders.
 - `progress: number = 0` — upload completion, 0-100; only meaningful while `status="uploading"`, a
   value of `0` or `NaN` falls back to the indeterminate spinner
 - `withoutRemoveButton: boolean = false` (reflected, attribute `without-remove-button`) — hides the
-  remove (×) button, which otherwise renders. Deprecated alias: `removable` (use
-  `without-remove-button`, which `removable="false"` equals; removing `removable` restores the
-  default; removed in 23.0.0). The alias still reflects (`removable="false"`); the two stay in sync
-  and the last write wins.
+  remove (×) button, which otherwise renders.
 - `size?: LyraSize` (reflected, unset by default) — density on the library's one size ladder,
   `'2xs'|'xs'|'s'|'m'|'l'|'xl'` or `'small'|'medium'|'large'`. `s` and the steps below it select the
   compact density — a smaller, borderless pill instead of the default bordered chip, e.g. for a
   composer's pending-attachment tray; `m` and above keep the standard chip, and leaving it unset
   renders exactly as before. An unsupported value normalizes to unset and removes the attribute.
-  Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0) — it still renders exactly like
-  `size="s"` and keeps reflecting `compact`; the two stay in sync (a `size` of `s` or below reads
-  back as `compact`) and the last write wins.
+
 - `thumbnailOnly: boolean = false` (reflected, attribute `thumbnail-only`) — at the compact density,
   hides `[part='meta']` (the filename/size text) entirely for an image-mime attachment, leaving only
   the thumbnail. Has no effect for a non-image chip, or at the default density. `false` (the

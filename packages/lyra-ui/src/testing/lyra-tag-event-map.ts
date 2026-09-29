@@ -106,7 +106,7 @@ import type { LyraDateInputEventMap } from '../components/forms/date-picker/date
 import type { LyraDatePickerEventMap } from '../components/forms/date-picker/date-picker.class.js';
 import type { LyraEmojiPickerEventMap } from '../components/forms/emoji-picker/emoji-picker.class.js';
 import type { LyraIconButtonEventMap } from '../components/forms/icon-button/icon-button.class.js';
-import type { LyraInputEventMap } from '../components/forms/input/input.class.js';
+import type { LyraInputEventMap } from '../components/forms/input/input-shared.js';
 import type { LyraNumberInputEventMap } from '../components/forms/input/number-input.class.js';
 import type { LyraTimeInputEventMap } from '../components/forms/input/time-input.class.js';
 import type { LyraLocalePickerEventMap } from '../components/forms/locale-picker/locale-picker.class.js';
@@ -361,7 +361,6 @@ export interface LyraTagEventTypes {
   'lr-filter-bar': LyraFilterBarEventMap;
   'lr-flow-canvas': LyraFlowCanvasEventMap;
   'lr-generation-metrics': LyraGenerationMetricsEventMap;
-  'lr-geojson-view': LyraGeoJsonViewerEventMap;
   'lr-geojson-viewer': LyraGeoJsonViewerEventMap;
   'lr-graph': LyraGraphEventMap;
   'lr-graph-legend': LyraGraphLegendEventMap;
@@ -407,7 +406,6 @@ export interface LyraTagEventTypes {
   'lr-model-settings-panel': LyraModelSettingsPanelEventMap;
   'lr-multi-split': LyraMultiSplitEventMap;
   'lr-mutation-observer': LyraMutationObserverEventMap;
-  'lr-native-time-input': LyraInputEventMap;
   'lr-navigation-menu': LyraNavigationMenuEventMap;
   'lr-navigation-menu-item': LyraNavigationMenuItemEventMap;
   'lr-neighbor-list': LyraNeighborListEventMap;
@@ -544,7 +542,7 @@ export const LYRA_EVENT_CANCELABLE: {
   'lr-chat-message': { 'lr-toggle-request': true },
   'lr-checkbox': { 'lr-checkbox-toggle-request': true, 'lr-invalid': true },
   'lr-checkbox-group': { 'lr-checkbox-group-toggle-request': true, 'lr-invalid': true },
-  'lr-chip': { 'lr-chip-select': true, 'lr-chip-toggle-request': true },
+  'lr-chip': { 'lr-chip-toggle-request': true },
   'lr-code-block': { 'lr-toggle-request': true },
   'lr-code-block-core': { 'lr-toggle-request': true },
   'lr-code-editor': { 'lr-invalid': true },
@@ -565,7 +563,7 @@ export const LYRA_EVENT_CANCELABLE: {
   'lr-doughnut-chart': { 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
   'lr-drawer': { 'lr-close-request': true, 'lr-hide': true, 'lr-initial-focus': true, 'lr-request-close': true, 'lr-show': true },
   'lr-dropdown': { 'lr-hide': true, 'lr-select': true, 'lr-show': true },
-  'lr-dropdown-item': { 'lr-menu-item-change': true, 'lr-menu-item-change-request': true },
+  'lr-dropdown-item': { 'lr-menu-item-change-request': true },
   'lr-emoji-picker': { 'lr-invalid': true },
   'lr-eval-run': { 'lr-example-tool-approval-decide': true, 'lr-example-tool-approval-decide-request': true },
   'lr-export-button': { 'lr-export': true, 'lr-export-request': true, 'lr-hide': true, 'lr-show': true },
@@ -579,32 +577,31 @@ export const LYRA_EVENT_CANCELABLE: {
   'lr-lightbox': { 'lr-close-request': true, 'lr-hide': true, 'lr-lightbox-close': true, 'lr-show': true },
   'lr-line-chart': { 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
   'lr-locale-picker': { 'lr-change-request': true, 'lr-invalid': true },
-  'lr-map': { 'lr-map-legend-panel-toggle': true, 'lr-map-legend-panel-toggle-request': true, 'lr-map-legend-toggle': true, 'lr-map-legend-toggle-request': true },
-  'lr-media-card': { 'lr-before-media-download': true, 'lr-media-download-request': true },
+  'lr-map': { 'lr-map-legend-panel-toggle-request': true, 'lr-map-legend-toggle-request': true },
+  'lr-media-card': { 'lr-media-download-request': true },
   'lr-menu': { 'lr-select': true },
-  'lr-menu-item': { 'lr-menu-item-change': true, 'lr-menu-item-change-request': true },
+  'lr-menu-item': { 'lr-menu-item-change-request': true },
   'lr-menubar': { 'lr-select': true },
   'lr-message-actions': { 'lr-feedback-submit': true, 'lr-feedback-submit-request': true },
   'lr-message-feedback': { 'lr-feedback-submit': true, 'lr-feedback-submit-request': true },
   'lr-model-select': { 'lr-invalid': true },
   'lr-multi-split': { 'lr-resize-request': true, 'lr-toggle-request': true },
-  'lr-native-time-input': { 'lr-invalid': true },
   'lr-number-input': { 'lr-invalid': true },
   'lr-otp-input': { 'lr-complete': true, 'lr-invalid': true },
-  'lr-page': { 'lr-nav-toggle': true, 'lr-nav-toggle-request': true },
+  'lr-page': { 'lr-nav-toggle-request': true },
   'lr-pagination': { 'lr-before-page-change': true },
   'lr-phone-input': { 'lr-invalid': true },
   'lr-pie-chart': { 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
   'lr-polar-area-chart': { 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
   'lr-popover': { 'lr-hide': true, 'lr-show': true },
   'lr-prompt-input': { 'lr-attachment-preview-request': true },
-  'lr-prompt-studio': { 'lr-change-request': true, 'lr-message-reorder': true, 'lr-message-reorder-request': true },
+  'lr-prompt-studio': { 'lr-change-request': true, 'lr-message-reorder-request': true },
   'lr-radar-chart': { 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
   'lr-radio': { 'lr-invalid': true },
   'lr-radio-button': { 'lr-invalid': true },
   'lr-radio-group': { 'lr-invalid': true },
   'lr-rating': { 'lr-invalid': true },
-  'lr-reorder-list': { 'lr-reorder': true, 'lr-reorder-request': true },
+  'lr-reorder-list': { 'lr-reorder-request': true },
   'lr-responsive-panel': { 'lr-close-request': true },
   'lr-rubric-form': { 'lr-invalid': true },
   'lr-scatter-chart': { 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
@@ -622,14 +619,14 @@ export const LYRA_EVENT_CANCELABLE: {
   'lr-toast-item': { 'lr-hide': true, 'lr-show': true },
   'lr-toggle': { 'lr-toggle-toggle-request': true },
   'lr-toggle-group': { 'lr-toggle-group-toggle-request': true },
-  'lr-token-input': { 'lr-add': true, 'lr-invalid': true, 'lr-remove': true, 'lr-token-add-request': true, 'lr-token-edit': true, 'lr-token-edit-request': true, 'lr-token-remove-request': true },
+  'lr-token-input': { 'lr-invalid': true, 'lr-token-add-request': true, 'lr-token-edit-request': true, 'lr-token-remove-request': true },
   'lr-tool-approval-dialog': { 'lr-approve': true, 'lr-approve-request': true, 'lr-deny': true, 'lr-deny-request': true },
   'lr-tool-param-form': { 'lr-invalid': true },
-  'lr-tool-result-dialog': { 'lr-maximize-change': true, 'lr-maximize-change-request': true },
+  'lr-tool-result-dialog': { 'lr-maximize-change-request': true },
   'lr-tool-select-dialog': { 'lr-change-request': true },
   'lr-tool-timeline': { 'lr-tool-approval-decide': true, 'lr-tool-approval-decide-request': true },
   'lr-tooltip': { 'lr-hide': true, 'lr-show': true },
-  'lr-tour': { 'lr-tour-end-request': true, 'lr-tour-step-change': true, 'lr-tour-step-change-request': true },
+  'lr-tour': { 'lr-tour-end-request': true, 'lr-tour-step-change-request': true },
   'lr-voice-picker': { 'lr-invalid': true, 'lr-preview-request': true },
   'lr-widget': { 'lr-collapse-request': true, 'lr-fullscreen-request': true, 'lr-view-request': true },
 };

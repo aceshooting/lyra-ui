@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './document-viewer.js';
 import '../xml-viewer/xml-viewer.js';
-import { createDocumentRendererRegistry, type DocumentFile } from './registry.js';
+import { createDocumentRendererRegistry, type LyraDocumentFile } from './registry.js';
 import type { LyraDocumentViewer } from './document-viewer.js';
 import type { LyraXmlViewer } from '../xml-viewer/xml-viewer.js';
 
@@ -75,7 +75,7 @@ it('uses the original authoritative payload for a parameterized XML-suffix route
 
 for (const source of ['scalar', 'payload'] as const) {
   it(`preserves exact-key precedence and the original ${source} file before the XML suffix/extension fallback`, async () => {
-    const file: DocumentFile = {
+    const file: LyraDocumentFile = {
       name: 'document.XML',
       mimeType: ' APPLICATION/RSS+XML ; charset=UTF-8 ',
       src: 'https://example.test/exact',
@@ -83,7 +83,7 @@ for (const source of ['scalar', 'payload'] as const) {
       highlights: [{ id: 'exact', anchor: { kind: 'node-path', path: [0] } }],
       alt: 'Exact renderer description',
     };
-    let received: DocumentFile | undefined;
+    let received: LyraDocumentFile | undefined;
     const registry = new Map(createDocumentRendererRegistry());
     registry.set('application/rss+xml', {
       capabilities: { anchors: ['node-path'] },

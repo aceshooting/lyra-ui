@@ -430,8 +430,8 @@ describe('dedicated duration token', () => {
   });
 });
 
-describe('deprecated custom-property aliases', () => {
-  it('still honors the un-namespaced --lr-typing-* spellings', async () => {
+describe('retired custom-property aliases', () => {
+  it('ignores the retired --lr-typing-* spellings', async () => {
     const el = (await fixture(
       html`<lr-typing-indicator
         shape="dots"
@@ -440,11 +440,11 @@ describe('deprecated custom-property aliases', () => {
     )) as LyraTypingIndicator;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     const dots = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="dot"]');
-    expect(getComputedStyle(dots[0]!).animationDuration).to.equal('0.9s');
-    expect(getComputedStyle(dots[1]!).animationDelay).to.equal('0.3s');
-    expect(getComputedStyle(dots[2]!).animationDelay).to.equal('0.5s');
-    expect(getComputedStyle(dots[0]!).inlineSize).to.equal('13px');
-    expect(getComputedStyle(base).columnGap).to.equal('7px');
+    expect(getComputedStyle(dots[0]!).animationDuration).to.not.equal('0.9s');
+    expect(getComputedStyle(dots[1]!).animationDelay).to.not.equal('0.3s');
+    expect(getComputedStyle(dots[2]!).animationDelay).to.not.equal('0.5s');
+    expect(getComputedStyle(dots[0]!).inlineSize).to.not.equal('13px');
+    expect(getComputedStyle(base).columnGap).to.not.equal('7px');
   });
 
   it('lets the namespaced names win over their deprecated aliases', async () => {

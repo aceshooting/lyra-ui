@@ -7,8 +7,7 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
-- **Deprecated property** `edge` / `edge` since `21.1.0`; use property `placement`; removal not before `23.0.0` — One name per concept across the library.
-- **Deprecated property** `resizable` / `resizable` since `21.1.0`; use property `without-resize (the inverse: resizable="false" becomes without-resize)`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 4 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -32,8 +31,7 @@ docked case.
 
 - `placement: 'start' | 'end' | 'top' | 'bottom' = 'end'` (reflected) — which edge of the panel's own
   container it's docked to. `start`/`end` are logical-inline (mirror left/right depending on writing
-  direction); `top`/`bottom` are block-direction and unaffected by RTL. Deprecated alias: `edge`
-  (use `placement`; removed in 23.0.0). Both reflect; the last write wins.
+  direction); `top`/`bottom` are block-direction and unaffected by RTL.
 - `extent: string = '280px'` — the current docked size along the resize axis, as a CSS length.
 - `minExtent: string = '160px'` (attribute `min-extent`) — minimum resize bound, as a CSS length.
 - `maxExtent: string = ''` (attribute `max-extent`) — maximum resize bound. Empty means "no explicit
@@ -44,9 +42,7 @@ docked case.
 - `collapsible: boolean = false` (reflected)
 - `collapsed: boolean = false` (reflected)
 - `withoutResize: boolean = false` (reflected, attribute `without-resize`) — when set, no drag handle
-  renders at all and the panel is a fixed size. Deprecated alias: `resizable` (its inverse, so
-  `resizable="false"` equals `without-resize`; use `without-resize`; removed in 23.0.0). Both
-  reflect; the last write wins.
+  renders at all and the panel is a fixed size.
 
 **Renamed in 8.0.0: `size`/`min-size`/`max-size` are now `extent`/`min-extent`/`max-extent`**, and
 the then-current resize detail key moved with them (`{ size }` → `{ extent }`). Everywhere else in the library
@@ -58,7 +54,7 @@ renders at the `280px` default, and `event.detail.size` reads `undefined`.
 **Exported types:** `LyraDockPanelEdge = 'start' | 'end' | 'top' | 'bottom'`, readonly
 `LyraDockPanelResizeDetail = { extent: string }`, readonly
 `LyraDockPanelCollapseChangeDetail = { expanded: boolean, collapsed: boolean }` (the `collapsed`
-key is deprecated and removed in 23.0.0; `expanded` is its inverse), and `LyraDockPanelEventMap`.
+key remains emitted but is deprecated; use its inverse, `expanded`), and `LyraDockPanelEventMap`.
 The former dock-specific `parseLengthPx()` export is removed; dock length resolution is now a
 private adapter over the library's canonical CSS-length resolver, with container/viewport units
 resolved in the host's owner realm.

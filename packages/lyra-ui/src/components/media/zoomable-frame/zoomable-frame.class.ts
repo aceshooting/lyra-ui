@@ -13,7 +13,6 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_zoomControls, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut, LYRA_DEFAULT_zoomableFrameLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
 export type LyraZoomableFrameLoading = 'eager' | 'lazy';
 
 const DEFAULT_ZOOM_LEVELS = '25% 50% 75% 100% 125% 150% 175% 200%';
@@ -187,8 +186,6 @@ export interface LyraZoomableFrameEventMap {
  * @csspart zoom-out-button - The zoom-out button.
  * @cssprop [--lr-zoomable-frame-control-hover-bg=var(--lr-color-brand-quiet)] - Zoom control
  *   hover background; its active background derives from the same value.
- * @cssprop [--lr-zoomable-frame-control-hover-background=var(--lr-color-brand-quiet)] - Deprecated alias of
- *   `--lr-zoomable-frame-control-hover-bg`; removal not before 23.0.0.
  * @cssprop [--lr-zoomable-frame-zoom=1] - Read-only resolved iframe scale written from `zoom`.
  * @status stable
  * @since 4.0.0

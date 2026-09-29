@@ -2,18 +2,18 @@ import { expect } from '@open-wc/testing';
 import { render } from 'lit';
 import './spreadsheet-viewer-register.js';
 import { SPREADSHEET_VIEWER_TAG } from './spreadsheet-viewer-register.js';
-import { findDocumentRenderer, loadDocumentRenderer, type DocumentFile } from '../document-viewer/registry.js';
+import { findDocumentRenderer, loadDocumentRenderer, type LyraDocumentFile } from '../document-viewer/registry.js';
 
 function fetchedModuleEnding(suffix: string): boolean {
   return performance.getEntriesByType('resource').some((entry) => entry.name.endsWith(suffix));
 }
 
-const xlsx: DocumentFile = {
+const xlsx: LyraDocumentFile = {
   name: 'budget.xlsx',
   mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   src: 'https://example.test/budget.xlsx',
 };
-const xls: DocumentFile = { ...xlsx, name: 'legacy.xls', mimeType: 'application/vnd.ms-excel' };
+const xls: LyraDocumentFile = { ...xlsx, name: 'legacy.xls', mimeType: 'application/vnd.ms-excel' };
 
 describe('spreadsheet-viewer-register laziness', () => {
   it('never fetches the spreadsheet-viewer class module merely by importing the register-only entry', () => {

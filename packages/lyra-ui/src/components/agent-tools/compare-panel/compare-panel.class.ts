@@ -12,7 +12,6 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_comparePanel, LYRA_DEFAULT_compareResponseA, LYRA_DEFAULT_compareResponseB, LYRA_DEFAULT_compareVoteBetter, LYRA_DEFAULT_compareVoteBothBad, LYRA_DEFAULT_compareVoteLabel, LYRA_DEFAULT_compareVoteRecorded, LYRA_DEFAULT_compareVoteTie } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
 export type CompareVote = 'a' | 'b' | 'tie' | 'both-bad';
 
 export interface LyraComparePanelEventMap {
@@ -50,8 +49,6 @@ export interface LyraComparePanelEventMap {
  *   scroll region grows before it scrolls internally.
  * @cssprop [--lr-compare-panel-selected-bg=var(--lr-color-brand-quiet)] - Selected vote
  *   button background.
- * @cssprop [--lr-compare-panel-selected-background=var(--lr-color-brand-quiet)] - Deprecated alias of
- *   `--lr-compare-panel-selected-bg`; removal not before 23.0.0.
  * @cssprop [--lr-compare-panel-selected-border-color=var(--lr-color-brand)] - Selected vote
  *   button border color.
  * @cssprop [--lr-compare-panel-selected-color=var(--lr-color-brand)] - Selected vote button text

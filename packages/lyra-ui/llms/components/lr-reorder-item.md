@@ -7,11 +7,8 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `6.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
-- **Deprecated attribute** `accessible-label` since `21.1.0`; use attribute `aria-label`; removal not before `23.0.0` — The host `aria-label` names the component, as on every other Lyra component.
-- **Deprecated part** `move-down-button__control` since `21.1.0`; use part `::part(move-down-button-control)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
-- **Deprecated part** `move-up-button__control` since `21.1.0`; use part `::part(move-up-button-control)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated property** `accessibleLabel` since `22.0.0`; use attribute `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.`; removal not before `24.0.0` — The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window.
 - **Optional peers** none
-- **Themeable via** 8 parts, 5 custom properties — see `lr-reorder-list.md`
+- **Themeable via** 6 parts, 5 custom properties — see `lr-reorder-list.md`
 - **Documented with** `lr-reorder-list`: see [lr-reorder-list.md](./lr-reorder-list.md).
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

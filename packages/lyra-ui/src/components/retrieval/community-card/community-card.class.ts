@@ -2,7 +2,6 @@ import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { isNonBlankIdentity, firstByRetrievalIdentity } from '../retrieval-identity.js';
 import { normalizeSize, type LyraFrame, type LyraSize } from '../../../internal/variants.js';
 import { finiteCount } from '../../../internal/numbers.js';
@@ -37,7 +36,7 @@ export interface LyraCommunityCardEventMap {
   'lr-entity-activate': CustomEvent<{ entityId: string }>;
 }
 
-/** Whether a `size` sits on the dense tier the deprecated `compact` boolean spelled. */
+/** Whether a `size` sits on the dense tier uses for dense rendering. */
 function isDenseSize(size: LyraSize): boolean {
   const step = normalizeSize(size);
   return step === 's' || step === 'xs' || step === '2xs';
@@ -93,9 +92,6 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
   protected static override readonly ownedCollectionProperties = Object.freeze(['members']);
 
   static override styles = [LyraElement.styles, styles];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    compact: ['size', (value) => (value ? 's' : 'm'), (value) => isDenseSize(value as LyraSize)],
-  };
 
   /** `null` renders the `noData` empty state. */
   @property({ attribute: false }) community: LyraCommunity | null = null;
@@ -110,10 +106,6 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
    * larger render the full card.
    */
   @property({ reflect: true }) size: LyraSize = 'm';
-  /** Single-row layout (title + member count + drill button, no summary/chips), and tighter
-   *  `[part="base"]` padding/gap — same convention as the sibling `lr-entity-card`'s `compact`.
-   *  @deprecated Use `size="s"`; removal not before 23.0.0. */
-  @property({ type: Boolean, reflect: true }) compact = false;
 
   /** Whether `size` selects the dense tier (`s` or smaller). */
   private get dense(): boolean {

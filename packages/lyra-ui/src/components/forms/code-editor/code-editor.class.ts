@@ -2,7 +2,6 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import {
   FormAssociated,
   isBarredFromValidation,
@@ -15,7 +14,6 @@ import {
 import { finiteInteger, finiteNumber } from '../../../internal/numbers.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { styles } from './code-editor.styles.js';
-import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { sanitizeCssResize } from '../../../internal/safe-css.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import type { LyraTextWrap } from '../../../internal/shared-unions.js';
@@ -149,23 +147,11 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    lineNumbers: ['withoutLineNumbers', invertAlias, invertAlias],
-  };
   /** Language identifier exposed as a reflected host styling hook. */
   @property({ reflect: true, useDefault: true }) language = '';
   /** Omits the line-number gutter. */
   @property({ type: Boolean, reflect: true, attribute: 'without-line-numbers' })
   withoutLineNumbers = false;
-  /**
-   * @deprecated Use `without-line-numbers` (inverted); removal not before 23.0.0.
-   */
-  @property({
-    converter: trueDefaultBooleanConverter,
-    reflect: true,
-    attribute: 'line-numbers',
-  })
-  lineNumbers = true;
 
   private _tabSize = 2;
   private tabSizeAssigned = false;

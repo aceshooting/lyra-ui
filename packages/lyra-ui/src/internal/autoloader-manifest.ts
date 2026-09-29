@@ -505,10 +505,6 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     optionalPeers: [],
     load: () => import('../components/conversation/generation-metrics/generation-metrics.class.js').then((module) => module.LyraGenerationMetrics),
   },
-  'lr-geojson-view': {
-    optionalPeers: ['maplibre-gl'],
-    load: () => import('../components/viewers/geojson-view/geojson-view.class.js').then((module) => module.LyraGeojsonView),
-  },
   'lr-geojson-viewer': {
     optionalPeers: ['maplibre-gl'],
     load: () => import('../components/viewers/geojson-view/geojson-viewer.class.js').then((module) => module.LyraGeoJsonViewer),

@@ -9,8 +9,8 @@ component’s compatibility status. The machine-readable source is
 
 ## Current evidence
 
-- Public tags: **304**
-- Exact same-test/same-instance populated or open axe evidence: **303**
+- Public tags: **303**
+- Exact same-test/same-instance populated or open axe evidence: **302**
 - Narrow reviewed axe-state exemptions: **1**
 - Missing axe qualification: **0**
 - Visual-regression enrollment: **92** tags
@@ -177,7 +177,6 @@ complete enrolled set. Axe is not assistive-technology testing.
 | [`lr-funnel`](component-integration.md#lr-funnel) | experimental | automated | N/A | source signal | source signal | source signal | configured CI | render-and-hydrate | pending human | N/A | N/A | not enrolled | not verified |
 | [`lr-gauge`](component-integration.md#lr-gauge) | stable | automated | N/A | source signal | source signal | not recorded | configured CI | render-and-hydrate | pending human | N/A | N/A | not enrolled | not verified |
 | [`lr-generation-metrics`](component-integration.md#lr-generation-metrics) | stable | automated | not recorded | not recorded | not recorded | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |
-| [`lr-geojson-view`](component-integration.md#lr-geojson-view) | stable | automated | not recorded | source signal | N/A | source signal | configured CI | render-and-hydrate | not enrolled | source signal | source signal | not enrolled | not verified |
 | [`lr-geojson-viewer`](component-integration.md#lr-geojson-viewer) | stable | automated | not recorded | source signal | N/A | source signal | configured CI | render-and-hydrate | not enrolled | source signal | source signal | not enrolled | not verified |
 | [`lr-graph`](component-integration.md#lr-graph) | stable | automated | source signal | source signal | source signal | source signal | configured CI | render-and-hydrate | pending human | source signal | source signal | not enrolled | not verified |
 | [`lr-graph-legend`](component-integration.md#lr-graph-legend) | stable | automated | source signal | not recorded | not recorded | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |
@@ -196,7 +195,7 @@ complete enrolled set. Axe is not assistive-technology testing.
 | [`lr-ingestion-queue`](component-integration.md#lr-ingestion-queue) | stable | automated | not recorded | source signal | not recorded | not recorded | configured CI | render-and-hydrate | pending human | N/A | N/A | not enrolled | not verified |
 | [`lr-input`](component-integration.md#lr-input) | stable | automated | source signal | source signal | not recorded | source signal | configured CI | render-and-hydrate | pending human | N/A | N/A | not enrolled | not verified |
 | [`lr-intersection-observer`](component-integration.md#lr-intersection-observer) | stable | automated | N/A | not recorded | N/A | not recorded | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |
-| [`lr-json-schema-viewer`](component-integration.md#lr-json-schema-viewer) | stable | automated | not recorded | not recorded | not recorded | not recorded | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |
+| [`lr-json-schema-viewer`](component-integration.md#lr-json-schema-viewer) | stable | automated | not recorded | source signal | not recorded | not recorded | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |
 | [`lr-json-viewer`](component-integration.md#lr-json-viewer) | stable | automated | not recorded | source signal | source signal | source signal | configured CI | render-and-hydrate | pending human | N/A | N/A | not enrolled | not verified |
 | [`lr-kbd`](component-integration.md#lr-kbd) | stable | automated | N/A | not recorded | N/A | not recorded | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |
 | [`lr-knowledge-base`](component-integration.md#lr-knowledge-base) | stable | automated | source signal | source signal | not recorded | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |

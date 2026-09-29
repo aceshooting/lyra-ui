@@ -201,23 +201,24 @@ it("stretches [part=base] to fill the host, matching lr-word-cloud/lr-context-me
   expect(getComputedStyle(base).blockSize).to.equal('200px');
 });
 
-it('collapses the icon part when no default-slot content is provided', async () => {
+it('collapses the icon part when no start-slot content is provided', async () => {
   const el = (await fixture(html`<lr-stat label="x" value="1"></lr-stat>`)) as LyraStat;
   const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
   expect(icon.hasAttribute('hidden')).to.be.true;
 });
 
 it('does not collapse the icon part when icon content is slotted', async () => {
-  const el = (await fixture(html`<lr-stat label="x" value="1"><span>icon</span></lr-stat>`)) as LyraStat;
+  const el = (await fixture(html`<lr-stat label="x" value="1"><span slot="start">icon</span></lr-stat>`)) as LyraStat;
   const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
   expect(icon.hasAttribute('hidden')).to.be.false;
 });
 
-it('renders the canonical start slot ahead of the legacy default icon and falls back live', async () => {
+it('projects only the start icon and leaves retired default content hidden after removal', async () => {
   const el = (await fixture(html`
     <lr-stat label="x" value="1">
       <span id="legacy-icon">legacy</span>
       <span id="start-icon" slot="start">start</span>
+      <span id="caption-content" slot="caption">caption</span>
     </lr-stat>
   `)) as LyraStat;
   const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
@@ -227,9 +228,9 @@ it('renders the canonical start slot ahead of the legacy default icon and falls 
   const legacyIcon = el.querySelector('#legacy-icon') as HTMLElement;
 
   expect(startSlot?.localName).to.equal('slot');
-  expect(defaultSlot?.localName).to.equal('slot');
+  expect(defaultSlot === null).to.equal(true);
   expect(startSlot?.assignedElements().map((assigned) => assigned.id)).to.deep.equal(['start-icon']);
-  expect(defaultSlot?.assignedElements().map((assigned) => assigned.id)).to.deep.equal(['legacy-icon']);
+  expect(defaultSlot?.assignedElements().length ?? 0).to.equal(0);
   expect(icon.hasAttribute('hidden')).to.be.false;
   expect(startIcon.getClientRects().length > 0).to.be.true;
   expect(legacyIcon.getClientRects().length).to.equal(0);
@@ -238,8 +239,9 @@ it('renders the canonical start slot ahead of the legacy default icon and falls 
   startIcon.remove();
   await changed;
   await el.updateComplete;
-  expect(icon.hasAttribute('hidden')).to.be.false;
-  expect(legacyIcon.getClientRects().length > 0).to.be.true;
+  expect(icon.hasAttribute('hidden')).to.be.true;
+  expect(legacyIcon.getClientRects().length).to.equal(0);
+  expect((el.querySelector('#caption-content') as HTMLElement).getClientRects().length > 0).to.equal(true);
 });
 
 it('collapses the caption part when there is no caption attribute or slot', async () => {
@@ -427,11 +429,12 @@ it('reacts to icon and caption content added or removed after initial mount (slo
   expect(icon.hasAttribute('hidden')).to.be.true;
   expect(caption.hasAttribute('hidden')).to.be.true;
 
-  const iconSlot = el.shadowRoot!.querySelector('slot:not([name])') as HTMLSlotElement;
+  const iconSlot = el.shadowRoot!.querySelector('slot[name="start"]') as HTMLSlotElement;
   const captionSlot = el.shadowRoot!.querySelector('slot[name="caption"]') as HTMLSlotElement;
 
   let slotChanged = oneEvent(iconSlot, 'slotchange');
   const iconEl = document.createElement('span');
+  iconEl.slot = 'start';
   iconEl.textContent = 'icon';
   el.appendChild(iconEl);
   await slotChanged;
@@ -903,7 +906,6 @@ it('reflects size and leaves it unset by default', async () => {
   const bare = (await fixture(html`<lr-stat value="42"></lr-stat>`)) as LyraStat;
   expect(bare.size).to.be.undefined;
   expect(bare.hasAttribute('size')).to.be.false;
-  expect(bare.compact).to.be.false;
 });
 
 const baseChrome = (el: LyraStat) => {
@@ -1007,7 +1009,7 @@ it('drops border, background, padding and the block-size stretch under frame="pl
   expect(getComputedStyle(base).blockSize).to.not.equal('200px');
 });
 
-it('lets plain win over the compact density when both are set (equal specificity, source order decides)', async () => {
+it('lets plain win over the small size density when both are set (equal specificity, source order decides)', async () => {
   const el = (await fixture(html`<lr-stat size="s" frame="plain" label="Revenue" value="12.4"></lr-stat>`)) as LyraStat;
   const s = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
   expect(s.paddingTop).to.equal('0px');
@@ -1469,14 +1471,14 @@ it('rests a passive tile on the subtle tier and a linked tile on the control tie
 });
 
 
-describe('size density and the deprecated compact attribute', () => {
+describe('size density', () => {
   const COMPACT: readonly DeprecatedUsage[] = [{ tag: 'lr-stat', kind: 'property', name: 'compact' }];
   const chrome = (el: LyraStat): string[] => {
     const base = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
     return [base.paddingTop, base.paddingLeft, base.rowGap];
   };
 
-  it('treats the smaller size steps and the small alias as the compact density, and m and above as the default', async () => {
+  it('treats the smaller size steps and the small alias as the small size density, and m and above as the default', async () => {
     for (const size of ['2xs', 'xs', 's', 'small']) {
       const el = (await fixture(html`<lr-stat size=${size} value="1"></lr-stat>`)) as LyraStat;
       expect(chrome(el)[0], size).to.equal('8px');
@@ -1487,86 +1489,20 @@ describe('size density and the deprecated compact attribute', () => {
     }
   });
 
-  it('renders compact exactly like size="s", keeps reflecting it, and warns once, naming size', async () => {
-    const canonical = (await fixture(html`<lr-stat size="s" label="Revenue" value="12.4"></lr-stat>`)) as LyraStat;
-    let aliased!: LyraStat;
-    const warnings = await captureDeprecationWarnings(COMPACT, async () => {
-      aliased = await fixture<LyraStat>(html`<lr-stat compact label="Revenue" value="12.4"></lr-stat>`);
-      const linked = await fixture<LyraStat>(html`<lr-stat compact value="1" href="/x"></lr-stat>`);
-      await linked.updateComplete;
-    });
-    expect(chrome(aliased)).to.deep.equal(chrome(canonical));
-    expect(aliased.hasAttribute('compact')).to.be.true;
-    expect(aliased.size).to.equal('s');
-    expect(aliased.getAttribute('size')).to.equal('s');
-    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-stat:property:compact']);
-    expect(warnings[0]!.message).to.contain('size');
-  });
-
-  it('lets the last write win between size and compact', async () => {
-    const canonical = (await fixture(html`<lr-stat size="m" label="Revenue" value="12.4"></lr-stat>`)) as LyraStat;
-    const large = (await fixture(html`<lr-stat size="l" label="Revenue" value="12.4"></lr-stat>`)) as LyraStat;
-    let aliasLast!: LyraStat;
-    let el!: LyraStat;
-    await captureDeprecationWarnings(COMPACT, async () => {
-      aliasLast = await fixture<LyraStat>(html`<lr-stat size="m" compact label="Revenue" value="12.4"></lr-stat>`);
-      el = await fixture<LyraStat>(html`<lr-stat size="l" label="Revenue" value="12.4"></lr-stat>`);
-      el.compact = true;
-      await el.updateComplete;
-      expect(el.size).to.equal('s');
-      expect(el.getAttribute('size')).to.equal('s');
-      expect(chrome(el)[0]).to.equal('8px');
-    });
-    expect(aliasLast.size).to.equal('s');
-    expect(chrome(aliasLast)[0]).to.equal('8px');
-
-    el.size = 'm';
-    await el.updateComplete;
-    expect(el.compact).to.be.false;
-    expect(el.hasAttribute('compact')).to.be.false;
-    expect(chrome(el)).to.deep.equal(chrome(canonical));
-    expect(chrome(el)[0]).to.equal('12px');
-    el.size = 'l';
-    await el.updateComplete;
-    expect(chrome(el)).to.deep.equal(chrome(large));
-
-    const linkedPadding = (stat: LyraStat): string =>
-      getComputedStyle(stat.shadowRoot!.querySelector('.linked-content') as HTMLElement).paddingTop;
-    const linked = await fixture<LyraStat>(html`<lr-stat size="m" value="1" href="/x"></lr-stat>`);
-    expect(linkedPadding(linked)).to.equal('12px');
-    await captureDeprecationWarnings(COMPACT, async () => {
-      linked.compact = true;
-      await linked.updateComplete;
-    });
-    expect(linkedPadding(linked)).to.equal('8px');
-  });
-
-  it('leaves frame="plain" and the horizontal column gap winning over compact, as over size="s"', async () => {
+  it('preserves plain-frame padding and horizontal column gap at small size', async () => {
     const columnGap = (el: LyraStat): string =>
       getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).columnGap;
-    const plainCanonical = await fixture<LyraStat>(html`<lr-stat size="s" frame="plain" value="1"></lr-stat>`);
-    const rowCanonical = await fixture<LyraStat>(
-      html`<lr-stat size="s" orientation="horizontal" value="1"></lr-stat>`
-    );
-    let plain!: LyraStat;
-    let row!: LyraStat;
-    await captureDeprecationWarnings(COMPACT, async () => {
-      plain = await fixture<LyraStat>(html`<lr-stat compact frame="plain" value="1"></lr-stat>`);
-      row = await fixture<LyraStat>(html`<lr-stat compact orientation="horizontal" value="1"></lr-stat>`);
-    });
-    expect(chrome(plain)).to.deep.equal(chrome(plainCanonical));
+    const plain = await fixture<LyraStat>(html`<lr-stat size="s" frame="plain" value="1"></lr-stat>`);
+    const row = await fixture<LyraStat>(html`<lr-stat size="s" orientation="horizontal" value="1"></lr-stat>`);
     expect(chrome(plain)[0]).to.equal('0px');
-    expect(columnGap(row)).to.equal(columnGap(rowCanonical));
     expect(columnGap(row)).to.equal('8px');
   });
 
   it('never warns for size or an untouched default', async () => {
     const warnings = await captureDeprecationWarnings(COMPACT, async () => {
       const el = await fixture<LyraStat>(html`<lr-stat size="xs" value="1"></lr-stat>`);
-      expect(el.compact, 'compact syncs back from a compact size').to.be.true;
       el.size = 'l';
       await el.updateComplete;
-      expect(el.compact).to.be.false;
       expect(el.hasAttribute('compact')).to.be.false;
     });
     expect(warnings).to.deep.equal([]);

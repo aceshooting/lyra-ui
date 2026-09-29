@@ -286,8 +286,6 @@ export type LyraGaugeReactProps = LyraReactElementProps<'lr-gauge'>;
 
 export type LyraGenerationMetricsReactProps = LyraReactElementProps<'lr-generation-metrics'>;
 
-export type LyraGeojsonViewReactProps = LyraReactElementProps<'lr-geojson-view'>;
-
 export type LyraGeoJsonViewerReactProps = LyraReactElementProps<'lr-geojson-viewer'>;
 
 export type LyraGraphReactProps = LyraReactElementProps<'lr-graph'>;
@@ -771,7 +769,6 @@ export interface LyraReactIntrinsicElements {
   'lr-funnel': LyraFunnelReactProps;
   'lr-gauge': LyraGaugeReactProps;
   'lr-generation-metrics': LyraGenerationMetricsReactProps;
-  'lr-geojson-view': LyraGeojsonViewReactProps;
   'lr-geojson-viewer': LyraGeoJsonViewerReactProps;
   'lr-graph': LyraGraphReactProps;
   'lr-graph-legend': LyraGraphLegendReactProps;

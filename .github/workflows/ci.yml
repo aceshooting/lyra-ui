@@ -580,13 +580,22 @@ jobs:
       # import graph -- see bundleEntries.button in scripts/check-packed-consumer.mjs.
       # Runs every packed-consumer check except ATTW. The exhaustive ATTW matrix below checks the
       # same tarball surface in sixteen disjoint shards; the ordinary local command remains unsharded.
+      # Migrated consumers render in fresh Chromium, Firefox, and WebKit contexts against the
+      # installed tarball. Provision the engines before the contracts invoke those checks.
+      - run: pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps chromium firefox webkit
       - run: pnpm check:packed-consumer:contracts
+        env:
+          LYRA_PACKED_MIGRATION_ARTIFACTS: ${{ runner.temp }}/packed-migration-evidence
+      - name: Upload installed migration evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: packed-migration-evidence
+          path: ${{ runner.temp }}/packed-migration-evidence
+          if-no-files-found: ignore
       # Four floor/current compatibility profiles pack this exact built tree and install it through
       # strict pnpm and npm consumers. Keep the expensive consumer matrix in the primary Node 22
-      # path. The
-      # profile runner launches Chromium to exercise each packed consumer, so provision its matching
-      # browser explicitly in this otherwise non-container job.
-      - run: pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps chromium
+      # path. The profile runner reuses Chromium from the engine provisioning above.
       - run: node scripts/check-peer-compatibility.mjs
 
       # Hard tarball budgets (packed/unpacked bytes and file count). Runs here rather than in

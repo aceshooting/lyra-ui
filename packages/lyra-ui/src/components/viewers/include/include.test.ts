@@ -7,7 +7,6 @@ import {
   __clearIncludeResourceCacheForTesting,
   MAX_INCLUDE_BYTES,
 } from './include-resource.js';
-import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 
 interface MockResponseOptions {
   ok?: boolean;
@@ -749,8 +748,7 @@ describe('lr-include', () => {
     expect(el.hasAttribute('without-cache')).to.equal(false);
   });
 
-  describe('deprecated cache alias', () => {
-    const usage = { tag: 'lr-include', kind: 'property', name: 'cache' } as const;
+  describe('retired cache alias', () => {
 
     async function fetchCountFor(template: ReturnType<typeof html>): Promise<{ calls: number; el: LyraInclude }> {
       const original = window.fetch;
@@ -771,52 +769,19 @@ describe('lr-include', () => {
       }
     }
 
-    it('cache="false" equals without-cache: both skip the shared resource and fetch again', async () => {
-      const canonical = await fetchCountFor(html`<lr-include without-cache></lr-include>`);
+    it('ignores the retired attribute and property while without-cache still bypasses shared resources', async () => {
       __clearIncludeResourceCacheForTesting();
-      let alias!: { calls: number; el: LyraInclude };
-      await captureDeprecationWarnings([usage], async () => {
-        alias = await fetchCountFor(html`<lr-include cache="false"></lr-include>`);
-      });
+      const legacy = await fetchCountFor(html`<lr-include cache="false"></lr-include>`);
+      expect(legacy.calls).to.equal(1);
+      expect(legacy.el.withoutCache).to.equal(false);
+      Reflect.set(legacy.el, 'cache', false);
+      await legacy.el.updateComplete;
+      expect(legacy.el.withoutCache).to.equal(false);
+
+      __clearIncludeResourceCacheForTesting();
+      const canonical = await fetchCountFor(html`<lr-include without-cache></lr-include>`);
       expect(canonical.calls).to.equal(2);
-      expect(alias.calls).to.equal(canonical.calls);
-      expect(alias.el.withoutCache).to.equal(true);
-      expect(alias.el.cache).to.equal(false);
-      expect(alias.el.textContent).to.equal(canonical.el.textContent);
-    });
-
-    it('warns once when the alias is written, and never for the default or the canonical name', async () => {
-      const aliasWarnings = await captureDeprecationWarnings([usage], async () => {
-        const el = await fixture<LyraInclude>(html`<lr-include cache="false"></lr-include>`);
-        el.cache = true;
-        await el.updateComplete;
-        expect(el.withoutCache).to.equal(false);
-        el.cache = false;
-        await el.updateComplete;
-        expect(el.withoutCache).to.equal(true);
-      });
-      expect(aliasWarnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-include:property:cache']);
-
-      const canonicalWarnings = await captureDeprecationWarnings([usage], async () => {
-        const plain = await fixture<LyraInclude>(html`<lr-include></lr-include>`);
-        const canonical = await fixture<LyraInclude>(html`<lr-include without-cache></lr-include>`);
-        expect(plain.cache).to.equal(true);
-        expect(canonical.cache).to.equal(false);
-      });
-      expect(canonicalWarnings).to.have.length(0);
-    });
-
-    it('follows the last write when both spellings are authored or set', async () => {
-      let aliasLast!: LyraInclude;
-      let canonicalLast!: LyraInclude;
-      await captureDeprecationWarnings([usage], async () => {
-        aliasLast = await fixture<LyraInclude>(html`<lr-include without-cache cache></lr-include>`);
-        canonicalLast = await fixture<LyraInclude>(html`<lr-include cache without-cache></lr-include>`);
-      });
-      expect(aliasLast.withoutCache).to.equal(false);
-      expect(canonicalLast.withoutCache).to.equal(true);
-      canonicalLast.withoutCache = false;
-      expect(canonicalLast.cache, 'the alias syncs back from the canonical property').to.equal(true);
+      expect(canonical.el.withoutCache).to.equal(true);
     });
   });
 

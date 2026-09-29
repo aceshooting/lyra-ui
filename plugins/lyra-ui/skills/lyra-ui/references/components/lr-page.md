@@ -7,7 +7,7 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
-- **Deprecated event** `lr-nav-toggle` since `21.1.0`; use event `addEventListener('lr-nav-toggle-request', ...)`; removal not before `23.0.0` — Cancelable events that propose a state change are named `lr-<noun>-request` across the library.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 22 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -59,9 +59,7 @@ code migrating from `wa-page` should treat Lyra's always-finite `number` result 
 **Events:** `lr-nav-toggle-request` (cancelable; `detail: { open }` is the `navOpen` state proposed
 by `showNavigation()`/`hideNavigation()`/`toggleNavigation()` or a built-in dismissal — backdrop
 click, Escape, or the default/custom navigation-toggle control, all of which route through those
-same methods. Call `preventDefault()` to leave `navOpen` unchanged.) Deprecated alias:
-`lr-nav-toggle` (use `lr-nav-toggle-request`; removed in 23.0.0) — it still fires right after the
-request with an equal detail, and either event may veto.
+same methods. Call `preventDefault()` to leave `navOpen` unchanged.)
 
 The default mobile toggle is a native button with localized open/close names and explicit
 `aria-haspopup="dialog"`, `aria-expanded="true|false"`, plus `aria-controls` pointing to this

@@ -1565,7 +1565,7 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
     }
   });
 
-  describe('-bg/-color custom properties and their deprecated -background/-foreground aliases', () => {
+  describe('canonical -bg/-color custom properties after alias retirement', () => {
     const tones = ['accent', 'success', 'warning', 'danger', 'neutral'] as const;
     const colorFor = (index: number): string => `rgb(${index + 1}, ${index + 2}, ${index + 3})`;
     const declarations = (legacy: boolean, offset: number): [string, string][] => {
@@ -1576,6 +1576,7 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
           `--lr-docx-viewer-highlight-${tone}-${bg}`,
           colorFor(offset + 1 + index),
         ]),
+        [`--lr-docx-viewer-highlight-active-${bg}`, colorFor(offset + 9)],
         [`--lr-docx-viewer-search-match-${bg}`, colorFor(offset + 10)],
         [`--lr-docx-viewer-search-match-active-${bg}`, colorFor(offset + 11)],
         [`--lr-docx-viewer-search-match-active-${legacy ? 'foreground' : 'color'}`, colorFor(offset + 12)],
@@ -1627,12 +1628,44 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
       colorFor(offset + 12),
     ];
 
+    // Active backgrounds use the native Highlight API; fallback active marks use an outline.
+    const activePaint = async (...sets: [string, string][][]): Promise<string> => {
+      const { el, restore } = await loadWithMarkup('<p>Hello world</p>');
+      try {
+        for (const [name, value] of sets.flat()) el.style.setProperty(name, value);
+        el.highlights = [{ id: 'active', anchor: { kind: 'text-quote', quote: 'world' } }];
+        el.activeHighlightId = 'active';
+        await el.updateComplete;
+        const registry = (CSS as unknown as { highlights: Map<string, Set<Range>> }).highlights;
+        const activeRange = (): Range | undefined => [...(registry.get('lr-highlight-active') ?? [])]
+          .find((range) => el.shadowRoot!.contains(range.startContainer) && range.toString() === 'world');
+        await waitUntil(() => activeRange() !== undefined, 'the document owns a painted native active range');
+        const target = activeRange()!.startContainer.parentElement!;
+        return getComputedStyle(target, '::highlight(lr-highlight-active)').backgroundColor;
+      } finally {
+        restore();
+      }
+    };
+
+    it('paints the native active range from its canonical background token', async () => {
+      expect(await activePaint(declarations(false, 0))).to.equal(colorFor(9));
+    });
+
+    it('ignores the retired active background token', async () => {
+      expect(await activePaint(declarations(true, 50))).to.equal(await activePaint());
+    });
+
+    it('prefers the canonical active background when both spellings are set', async () => {
+      expect(await activePaint(declarations(true, 50), declarations(false, 0))).to.equal(colorFor(9));
+    });
+
     it('paints the table header, every tone and both search states from the canonical names', async () => {
       expect(await paints(declarations(false, 0))).to.deep.equal(expected(0));
     });
 
-    it('still honors the deprecated spellings with the same result', async () => {
-      expect(await paints(declarations(true, 0))).to.deep.equal(expected(0));
+    it('ignores the retired spellings while canonical names still paint all states', async () => {
+      expect(await paints(declarations(true, 50))).to.deep.equal(await paints());
+      expect(await paints(declarations(false, 0))).to.deep.equal(expected(0));
     });
 
     it('lets the canonical name win when both spellings are set', async () => {

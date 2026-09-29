@@ -12,8 +12,8 @@ import {
   findDocumentRenderer,
   loadDocumentRenderer,
   snapshotLyraDocumentRendererPayload,
-  type DocumentFile,
-  type DocumentRendererDefinition,
+  type LyraDocumentFile,
+  type LyraDocumentRendererDefinition,
   type DocumentRendererRegistry,
   type LyraDocumentRendererPayload,
   type LyraResolvedDocumentRendererDefinition,
@@ -207,7 +207,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   private generation = 0;
   private readonly builtInRegistry = createDocumentRendererRegistry();
   private resolvedLazy?: {
-    def: DocumentRendererDefinition;
+    def: LyraDocumentRendererDefinition;
     resolved: LyraResolvedDocumentRendererDefinition;
   };
   @query('lr-document-preview') private fallbackPreviewEl?: LyraDocumentPreview;
@@ -270,7 +270,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     );
   }
 
-  private currentFile(): DocumentFile {
+  private currentFile(): LyraDocumentFile {
     if (this.payload) {
       const file = this.payload.file;
       return {
@@ -297,7 +297,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     const generation = ++this.generation;
     const file = this.currentFile();
     const registry = this.registry ?? this.builtInRegistry;
-    let def: DocumentRendererDefinition | undefined;
+    let def: LyraDocumentRendererDefinition | undefined;
     try {
       def = findDocumentRenderer(file, registry);
     } catch {
@@ -356,7 +356,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
 
   /** Consumer registries are extension points, so a throwing matcher/renderer must fail like a
    * rejected lazy loader instead of escaping `resolve()` as an unhandled rejection. */
-  private failResolution(file: DocumentFile, generation: number): void {
+  private failResolution(file: LyraDocumentFile, generation: number): void {
     if (generation !== this.generation || !this.isConnected || !this.open) return;
     this.renderState = { kind: 'error' };
     if (file.anchor == null) return;
@@ -374,7 +374,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
    *  shell must not also emit in that case. */
   private finishAnchorResult(
     capabilities: AnchorTargetCapabilities | undefined,
-    file: DocumentFile,
+    file: LyraDocumentFile,
     generation: number,
     fallback = false,
   ): void {
@@ -409,7 +409,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
 
   private renderWith(
     definition: LyraResolvedDocumentRendererDefinition,
-    file: DocumentFile,
+    file: LyraDocumentFile,
   ): AnchorTargetCapabilities | undefined | false {
     try {
       const adapted = adaptDocumentRenderer(definition, file, this.payload);

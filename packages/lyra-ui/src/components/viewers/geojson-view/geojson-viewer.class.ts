@@ -460,9 +460,8 @@ class LyraGeoJsonViewerBase extends LyraElement<LyraGeoJsonViewerEventMap> {}
 
 /**
  * `<lr-geojson-viewer>` — document-registry bridge rendering a fetched GeoJSON file through
- * `<lr-map>`'s `dataLayers`. The separately exported, deprecated `<lr-geojson-view>` compatibility
- * class preserves the earlier tag without sharing a custom-elements constructor until its removal,
- * no earlier than 23.0.0.
+ * `<lr-map>`'s `dataLayers`. The retained `LyraGeojsonView` compatibility constructor is a
+ * distinct subclass; it does not register the former `lr-geojson-view` tag.
  * The inherited fragment path performs an exact DOM `id` lookup, but the generated metadata,
  * status, and map output define no fragment ids; such a jump reports `found: false`. Use a
  * text-quote anchor for the serialized metadata.

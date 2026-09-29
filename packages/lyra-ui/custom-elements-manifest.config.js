@@ -449,34 +449,6 @@ export const ACCESSOR_WRITE_TYPE_CONTRACTS = new Map([
   ],
 ]);
 
-// CEM's inheritance pass copies a base member's `deprecated` onto a subclass override even when the
-// override's own JSDoc carries none. These overrides are deliberately current on their tag while the
-// base member is a deprecated alias, so their own (and their attribute's) deprecation is removed
-// again. Each entry fails closed when the override or its base deprecation disappears.
-export const ACCESSIBLE_LABEL_SPELLING = {
-  'accessible-label': 'Use the host `aria-label`; removal not before 23.0.0.',
-};
-const DEPRECATED_ATTRIBUTE_SPELLINGS = new Map(
-  [
-    'attachment-trigger',
-    'callout',
-    'carousel',
-    'dialog',
-    'drawer',
-    'file-input',
-    'lite-chart',
-    'progress-bar',
-    'progress-ring',
-    'reorder-item',
-  ].map((name) => [`lr-${name}`, ACCESSIBLE_LABEL_SPELLING]),
-);
-
-const CURRENT_OVERRIDES_OF_DEPRECATED_MEMBERS = new Map([
-  // `<lr-dropdown>` keeps its own false-defaulting `arrow` opt-in; `<lr-popover>`'s true-defaulting
-  // `arrow` is the deprecated alias of `without-arrow`.
-  ['lr-dropdown', ['arrow']],
-]);
-
 // CEM's inheritance pass omits a small class-field edge case: a public readonly field initialized
 // on the base class is not copied to a subclass even though the runtime instance inherits the
 // field normally. Its compact form can likewise prune an event that a deprecated registration
@@ -488,13 +460,6 @@ export const INHERITED_PUBLIC_MEMBER_CONTRACTS = new Map([
     { sourceClass: 'LyraElement', members: ['locale', 'strings'] },
   ],
   ['lr-drawer', { sourceTag: 'lr-dialog', members: ['modal'] }],
-  [
-    'lr-geojson-view',
-    {
-      sourceTag: 'lr-geojson-viewer',
-      events: ['lr-anchor-result'],
-    },
-  ],
   [
     'lr-tag',
     {
@@ -559,7 +524,6 @@ export const DOCUMENT_ANCHOR_TARGET_TAGS = Object.freeze([
   'lr-docx-viewer',
   'lr-ebook-viewer',
   'lr-email-viewer',
-  'lr-geojson-view',
   'lr-geojson-viewer',
   'lr-html-viewer',
   'lr-image-viewer',
@@ -1456,25 +1420,6 @@ export default {
       },
     },
     {
-      // A deprecated attribute SPELLING whose property stays current: the host `aria-label` replaces
-      // the `accessible-label` attribute, while `accessibleLabel` remains the property behind it.
-      // Field JSDoc cannot deprecate only the attribute, so the manifest attribute is marked here.
-      name: 'lr-deprecated-attribute-spellings',
-      packageLinkPhase({ customElementsManifest }) {
-        for (const module of customElementsManifest.modules ?? []) {
-          for (const declaration of module.declarations ?? []) {
-            const spellings = DEPRECATED_ATTRIBUTE_SPELLINGS.get(declaration.tagName);
-            if (!spellings) continue;
-            for (const [name, message] of Object.entries(spellings)) {
-              const attribute = declaration.attributes?.find((entry) => entry.name === name);
-              if (!attribute) throw new Error(`${declaration.tagName}: no ${name} attribute to deprecate`);
-              attribute.deprecated = message;
-            }
-          }
-        }
-      },
-    },
-    {
       name: 'lr-current-native-attribute-of-deprecated-property',
       packageLinkPhase({ customElementsManifest }) {
         const declaration = customElementsManifest.modules.flatMap((module) => module.declarations ?? [])
@@ -1487,34 +1432,6 @@ export default {
         // The legacy property keeps native attribute hydration during its compatibility window.
         // Its JSDoc notice must not deprecate the surviving native attribute spelling.
         attribute.deprecated = false;
-      },
-    },
-    {
-      name: 'lr-current-overrides-of-deprecated-members',
-      packageLinkPhase({ customElementsManifest }) {
-        const declarations = new Map();
-        for (const module of customElementsManifest.modules ?? []) {
-          for (const declaration of module.declarations ?? []) {
-            if (declaration.tagName) declarations.set(declaration.tagName, declaration);
-          }
-        }
-        for (const [tag, names] of CURRENT_OVERRIDES_OF_DEPRECATED_MEMBERS) {
-          const declaration = declarations.get(tag);
-          if (!declaration) throw new Error(`${tag}: current-override projection requires the declaration`);
-          for (const name of names) {
-            // The analyzer merges the override with the base member it shadows, so the entry may
-            // still carry an inheritance marker when this plugin runs.
-            const member = declaration.members?.find((entry) => entry.name === name);
-            if (!member) throw new Error(`${tag}: current-override projection requires ${name}`);
-            if (!member.deprecated) {
-              throw new Error(`${tag}.${name}: no inherited deprecation to remove; drop this entry`);
-            }
-            delete member.deprecated;
-            if (!member.attribute) continue;
-            const attribute = declaration.attributes?.find((entry) => entry.name === member.attribute);
-            if (attribute) delete attribute.deprecated;
-          }
-        }
       },
     },
     {
@@ -2056,6 +1973,53 @@ export default {
         }
 
         sortManifest(customElementsManifest);
+      },
+    },
+    {
+      name: 'lr-rendered-subclass-css-parts',
+      packageLinkPhase({ customElementsManifest }) {
+        // These subclasses override their parent's rendered part tokens. Keep the parent API and
+        // other inherited categories intact while publishing each subclass's complete part list.
+        const contracts = [
+          {
+            tag: 'lr-dropdown', className: 'LyraDropdown', parentTag: 'lr-popover', parentClass: 'LyraPopover',
+            canonical: ['popup-popup', 'popup-arrow'], removed: ['popup__popup', 'popup__arrow'],
+          },
+          {
+            tag: 'lr-dropdown-item', className: 'LyraDropdownItem', parentTag: 'lr-menu-item', parentClass: 'LyraMenuItem',
+            canonical: ['spinner-base'], removed: ['spinner__base'],
+          },
+        ];
+        const declarations = customElementsManifest.modules.flatMap((module) => module.declarations ?? []);
+        const plans = contracts.map((contract) => {
+          const targets = declarations.filter((entry) => entry.tagName === contract.tag);
+          const parents = declarations.filter((entry) => entry.tagName === contract.parentTag);
+          const target = targets[0];
+          const parent = parents[0];
+          const invalid = (reason) => new Error(`${contract.tag}: rendered CSS parts require ${reason}`);
+          if (targets.length !== 1 || parents.length !== 1) throw invalid('exact target and parent declarations');
+          if (target.name !== contract.className || parent.name !== contract.parentClass || target.superclass?.name !== contract.parentClass) {
+            throw invalid(`the ${contract.parentClass} superclass`);
+          }
+          if (!Array.isArray(target.cssParts) || !Array.isArray(parent.cssParts)) {
+            throw invalid('target and parent part arrays');
+          }
+          for (const name of [...contract.canonical, ...contract.removed]) {
+            if (target.cssParts.filter((part) => part.name === name).length !== 1) {
+              throw invalid(`exact target part ${name}`);
+            }
+          }
+          for (const name of contract.removed) {
+            if (parent.cssParts.filter((part) => part.name === name).length !== 1) {
+              throw invalid(`the retained parent part ${name}`);
+            }
+          }
+          return { target, parts: target.cssParts.filter((part) => !contract.removed.includes(part.name)) };
+        });
+        for (const { target, parts } of plans) {
+          target.cssParts = parts;
+          target.lyraCssPartsComplete = true;
+        }
       },
     },
     {

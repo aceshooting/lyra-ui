@@ -7,8 +7,7 @@
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [utility](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/utility.md)
-- **Deprecated event** `lr-tour-step-change` since `21.1.0`; use event `addEventListener('lr-tour-step-change-request', ...)`; removal not before `23.0.0` — Cancelable events that propose a state change are named `lr-<noun>-request` across the library.
-- **Deprecated property** `showProgress` / `show-progress` since `21.1.0`; use property `without-progress`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 12 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -44,8 +43,7 @@ controls and a step-progress indicator. Controlled component — `steps` is neve
   `lr-dialog`'s `lightDismiss`: a backdrop click does **nothing** by default so a stray click
   can't discard onboarding progress. Set it to make a backdrop click `end('skip')`
 - `withoutProgress: boolean = false` (attribute `without-progress`) — omits the "Step X of Y" text +
-  dots. Deprecated alias: `show-progress` (`showProgress`; use `without-progress`;
-  `show-progress="false"` equals `without-progress`; removed in 23.0.0)
+  dots.
 - `aria-label` (a plain host attribute, not a public JS property) — names **every** step's popover,
   overriding each step's own `heading` as the `aria-labelledby` source
 
@@ -73,9 +71,7 @@ ends with `'completed'` instead), `back()` (no-op on the first step), `goToStep(
 **Events:** `lr-tour-start` (`detail: { index }`, not cancelable); `lr-tour-step-change-request`
 (`detail: { index, previousIndex, step, via: 'next'|'back'|'goto' }`, **cancelable** — fires before
 `activeIndex` changes, so `preventDefault()` gates advancement on a real action; a deliberate
-departure from `lr-carousel`'s non-cancelable `lr-slide-change`). Deprecated alias:
-`lr-tour-step-change` (use `lr-tour-step-change-request`; still fires right after it with an equal
-detail and can still veto; removal not before 23.0.0); `lr-tour-end-request`
+departure from `lr-carousel`'s non-cancelable `lr-slide-change`); `lr-tour-end-request`
 (`detail: { reason }`, cancelable before ordinary completion); `lr-tour-end`
 (`detail: { reason }`, non-cancelable after closing). Forced removal still notifies with reason
 `unmount`, without a request because removal cannot be vetoed. Migrate old raw-detail reads to

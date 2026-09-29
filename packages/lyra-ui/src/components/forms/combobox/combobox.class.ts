@@ -9,7 +9,6 @@ import {
   type LyraEventDetailSnapshot,
 } from '../../../internal/lyra-element.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
-import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 installFormControlLabelSupport();
 import { loadAnchoredOverlayRuntime } from '../../../internal/anchored-overlay-runtime.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
@@ -596,8 +595,6 @@ export type LyraComboboxSourceErrorEvent =
  * @cssprop --lr-combobox-trigger-padding - Padding inside the input container.
  * @cssprop [--lr-combobox-color=inherit] - Trigger text color. Defaults to the inherited text
  *   color, and to `--lr-color-on-brand` under `appearance="accent"`.
- * @cssprop [--lr-combobox-text-color=inherit] - Deprecated alias of `--lr-combobox-color`, read
- *   only as its fallback; removal not before 23.0.0.
  * @cssprop [--lr-combobox-trigger-min-height=var(--lr-form-control-height)] - Minimum
  *   input-container block size. Reads the shared form-control height ladder, so retuning
  *   `--lr-theme-form-control-height-*` moves this control and every sibling field together.
@@ -747,7 +744,6 @@ export class LyraCombobox<
 
   static formAssociated = true;
   static override styles = [LyraElement.styles, sizes, styles];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = { showUnknownOption: 'withUnknownOption' };
 
   static override properties = {
     customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
@@ -812,20 +808,6 @@ export class LyraCombobox<
    */
   @property({ type: Boolean, attribute: 'with-unknown-option', reflect: true })
   withUnknownOption = false;
-  /**
-   * Appends every committed value that no option or async row claims to the end of the listbox as
-   * a synthetic, re-selectable row badged with the localized `notInCatalog` text -- the policy
-   * `<lr-model-select>` already ships.
-   *
-   * Off by default, because it adds a row to a listbox that has always rendered only real options.
-   * Turn it on wherever a stored value can outlive its catalog entry: without it, the out-of-list
-   * value is visible on the trigger but absent from the listbox, so a user who opens the listbox
-   * has no way back to the value they arrived with.
-   * @default false
-   * @deprecated Use `with-unknown-option`; removal not before 23.0.0.
-   */
-  @property({ type: Boolean, attribute: 'show-unknown-option', reflect: true })
-  showUnknownOption = false;
   /**
    * Renders the label for a committed value that matches no option or row.
    *

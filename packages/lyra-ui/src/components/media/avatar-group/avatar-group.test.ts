@@ -3,9 +3,8 @@ import { aTimeout, fixture, expect, html, oneEvent } from '@open-wc/testing';
 import { LitElement, html as litHtml } from 'lit';
 import './avatar-group.js';
 import '../avatar/avatar.js';
-import type { LyraAvatarGroup, LyraAvatarGroupOverflowDetail } from './avatar-group.js';
+import type { LyraAvatarGroup } from './avatar-group.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
-import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-avatar-group', 'tone');
@@ -347,30 +346,14 @@ describe('overflow badge activation', () => {
     expect(ev.detail.hiddenAvatars.map((a: HTMLElement) => a.getAttribute('initials'))).to.deep.equal(['GH', 'IJ']);
   });
 
-  it('still fires the deprecated lr-overflow-click alias right after, with an equal detail', async () => {
+  it('emits only canonical overflow activation with immutable hidden-avatar detail', async () => {
     const el = (await fixture(fiveAvatars())) as LyraAvatarGroup;
-    const badge = el.shadowRoot!.querySelector('[part="overflow-badge"]') as HTMLButtonElement;
-    const seen: { name: string; cancelable: boolean; detail: LyraAvatarGroupOverflowDetail }[] = [];
+    const seen: string[] = [];
     for (const name of ['lr-overflow-activate', 'lr-overflow-click']) {
-      el.addEventListener(name, (event) => {
-        const { cancelable, detail } = event as CustomEvent<LyraAvatarGroupOverflowDetail>;
-        seen.push({ name, cancelable, detail });
-      });
+      el.addEventListener(name, () => seen.push(name));
     }
-    const warnings = await captureDeprecationWarnings(
-      [{ tag: 'lr-avatar-group', kind: 'event', name: 'lr-overflow-click' }],
-      () => badge.click(),
-    );
-
-    expect(seen.map(({ name }) => name)).to.deep.equal(['lr-overflow-activate', 'lr-overflow-click']);
-    expect(seen.map(({ cancelable }) => cancelable)).to.deep.equal([false, false]);
-    expect(seen[1]!.detail === seen[0]!.detail, 'each event carries its own detail').to.be.false;
-    expect(seen[1]!.detail.hiddenCount).to.equal(seen[0]!.detail.hiddenCount);
-    // Compare a cheap projection, never the element arrays themselves (see above).
-    const initials = (detail: LyraAvatarGroupOverflowDetail): (string | null)[] =>
-      detail.hiddenAvatars.map((avatar) => avatar.getAttribute('initials'));
-    expect(initials(seen[1]!.detail)).to.deep.equal(initials(seen[0]!.detail));
-    expect(warnings, 'a non-cancelable alias never warns').to.have.length(0);
+    (el.shadowRoot!.querySelector('[part="overflow-badge"]') as HTMLButtonElement).click();
+    expect(seen).to.deep.equal(['lr-overflow-activate']);
   });
 
   it('is a plain, natively-focusable <button type="button"> with no explicit tabindex -- Enter/Space activation needs no custom keydown handler', async () => {

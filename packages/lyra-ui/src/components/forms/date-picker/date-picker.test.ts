@@ -156,15 +156,15 @@ for (const [name, style] of [
   ["deprecated --lr-cell-size alias", "--lr-cell-size: 44px"],
   ["canonical property over the alias", "--lr-date-picker-cell-size: 44px; --lr-cell-size: 30px"],
 ] as const) {
-  it(`renders a consumer override of the ${name} geometry hook`, async () => {
+  it(`checks geometry reach for ${name}`, async () => {
     const el = (await fixture(html`
       <lr-date-picker value="2026-07-15" style=${style}></lr-date-picker>
     `)) as LyraDatePicker;
     const day = el.shadowRoot!.querySelector('[part~="day"]') as HTMLElement;
     const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
 
-    expect(getComputedStyle(day).inlineSize).to.equal("44px");
-    expect(getComputedStyle(day).blockSize).to.equal("44px");
+    expect(getComputedStyle(day).inlineSize === "44px").to.equal(!name.startsWith('deprecated'));
+    expect(getComputedStyle(day).blockSize === "44px").to.equal(!name.startsWith('deprecated'));
     expect(getComputedStyle(grid).gridTemplateColumns.split(" ").length).to.equal(
       7
     );
@@ -172,7 +172,7 @@ for (const [name, style] of [
       getComputedStyle(grid)
         .gridTemplateColumns.split(" ")
         .every((track) => track === "44px")
-    ).to.equal(true);
+    ).to.equal(!name.startsWith('deprecated'));
   });
 }
 

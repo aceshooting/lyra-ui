@@ -10,15 +10,6 @@ import {
 } from './icon-library.js';
 import { clearIconSanitizerCache, loadIconSanitizer } from './dompurify-loader.js';
 import { __clearIconResourceCacheForTesting } from './icon-resource.js';
-import { deprecationWarningKey } from '../../../internal/dev-mode-attribute-warning.js';
-import {
-  captureDeprecationWarnings,
-  expectDeprecatedUsage,
-} from '../../../../test/expected-deprecations.js';
-
-// `fixed-width` is deprecated but keeps working until its removal; the compatibility tests below
-// deliberately still set it, so its one-time development warning is expected on this page.
-expectDeprecatedUsage('lr-icon', 'property', 'fixedWidth');
 
 it('uses mapped defaults and reflects name changes', async () => {
   const el = (await fixture(html`<lr-icon></lr-icon>`)) as LyraIcon;
@@ -1317,118 +1308,28 @@ describe('lr-icon presentation knobs', () => {
     }
   });
 
-  it('widens the icon box under fixed-width while keeping the glyph size', async () => {
-    const plain = (await fixture(html`<lr-icon name="search"></lr-icon>`)) as LyraIcon;
-    const fixed = (await fixture(html`<lr-icon name="search" fixed-width></lr-icon>`)) as LyraIcon;
-    const plainBox = plain.getBoundingClientRect();
-    const fixedBox = fixed.getBoundingClientRect();
-    expect(fixedBox.width > plainBox.width).to.be.true;
-    expect(fixedBox.height).to.equal(plainBox.height);
-    expect(fixed.shadowRoot!.querySelector('svg')!.getBoundingClientRect().width).to.equal(
-      plain.shadowRoot!.querySelector('svg')!.getBoundingClientRect().width,
-    );
-  });
-});
-
-describe('lr-icon fixed-width deprecation', () => {
-  const FIXED_WIDTH = { tag: 'lr-icon', kind: 'property', name: 'fixedWidth' } as const;
-  // A 30x24 viewBox: 1.25 times wider than tall, so at the 1em icon height its intrinsic width is
-  // 1.25em -- wider than the 1em glyph box fixed-width pins every svg to.
-  const WIDE_SVG =
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 24"><rect x="0" y="0" width="30" height="24"></rect></svg>';
-
-  afterEach(() => {
-    __clearIconResourceCacheForTesting();
-  });
-
-  const svgWidth = (el: LyraIcon): number =>
-    el.shadowRoot!.querySelector('svg')!.getBoundingClientRect().width;
-
-  it('warns once in development mode, however many icons set fixed-width', async () => {
-    const warnings = await captureDeprecationWarnings([FIXED_WIDTH], async () => {
-      await fixture(html`<lr-icon name="search" fixed-width></lr-icon>`);
-      await fixture(html`<lr-icon name="calendar" fixed-width></lr-icon>`);
-      const byProperty = (await fixture(html`<lr-icon name="trash"></lr-icon>`)) as LyraIcon;
-      byProperty.fixedWidth = true;
-      await byProperty.updateComplete;
-    });
-
-    expect(warnings.map(({ key }) => key)).to.deep.equal([
-      deprecationWarningKey('lr-icon', 'property', 'fixedWidth'),
-    ]);
-    const { message } = warnings[0]!;
-    expect(message).to.contain('<lr-icon>');
-    expect(message).to.contain("'fixedWidth'");
-    expect(message).to.contain('inline-size');
-  });
-
-  it('does not warn for an icon that never sets fixed-width, or only clears it', async () => {
-    const warnings = await captureDeprecationWarnings([FIXED_WIDTH], async () => {
-      await fixture(html`<lr-icon name="search"></lr-icon>`);
-      await fixture(html`<lr-icon name="search" canvas="roomy"></lr-icon>`);
-      const cleared = (await fixture(html`<lr-icon name="search"></lr-icon>`)) as LyraIcon;
-      cleared.fixedWidth = false;
-      await cleared.updateComplete;
-    });
-
-    expect(warnings).to.have.lengthOf(0);
-  });
-
-  it('stays silent when Lit development diagnostics are unavailable', async () => {
-    const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
-    const originalIssuedWarnings = runtime.litIssuedWarnings;
-    const originalWarn = console.warn;
-    const warnings: unknown[][] = [];
-    console.warn = (...args: unknown[]) => warnings.push(args);
-    delete runtime.litIssuedWarnings;
+  it('ignores the retired fixed-width property and token while inline-size preserves wide glyph geometry', async () => {
+    const wideSvg =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 24"><rect x="0" y="0" width="30" height="24"></rect></svg>';
+    const svgWidth = (el: LyraIcon): number => el.shadowRoot!.querySelector('svg')!.getBoundingClientRect().width;
+    const restore = stubFetch(() => Promise.resolve(svgResponse(wideSvg)));
     try {
-      const el = (await fixture(html`<lr-icon name="search" fixed-width></lr-icon>`)) as LyraIcon;
-      await el.updateComplete;
-    } finally {
-      console.warn = originalWarn;
-      if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
-      else runtime.litIssuedWarnings = originalIssuedWarnings;
-    }
-
-    expect(warnings).to.have.lengthOf(0);
-  });
-
-  it('reproduces the fixed-width box for a square glyph with a host inline-size', async () => {
-    const fixed = (await fixture(html`<lr-icon name="search" fixed-width></lr-icon>`)) as LyraIcon;
-    const replaced = (await fixture(
-      html`<lr-icon name="search" style="inline-size: var(--lr-size-1-5em)"></lr-icon>`,
-    )) as LyraIcon;
-
-    const fixedBox = fixed.getBoundingClientRect();
-    const replacedBox = replaced.getBoundingClientRect();
-    expect(replacedBox.width).to.be.closeTo(fixedBox.width, 0.01);
-    expect(replacedBox.height).to.be.closeTo(fixedBox.height, 0.01);
-    expect(svgWidth(replaced)).to.be.closeTo(svgWidth(fixed), 0.01);
-  });
-
-  it('lets a glyph wider than 1em keep its intrinsic width under the host inline-size replacement', async () => {
-    const restore = stubFetch(() => Promise.resolve(svgResponse(WIDE_SVG)));
-    try {
-      const fixed = (await fixture(
-        html`<lr-icon src="https://icons.test/wide.svg" fixed-width style="font-size: 20px"></lr-icon>`,
+      const plain = (await fixture(
+        html`<lr-icon src="https://icons.test/wide.svg" style="font-size: 20px"></lr-icon>`,
       )) as LyraIcon;
-      const replaced = (await fixture(
-        html`<lr-icon
-          src="https://icons.test/wide.svg"
-          style="font-size: 20px; inline-size: var(--lr-size-1-5em)"
-        ></lr-icon>`,
+      const legacy = (await fixture(
+        html`<lr-icon src="https://icons.test/wide.svg" fixed-width style="font-size: 20px; --lr-icon-fixed-width: 32px"></lr-icon>`,
       )) as LyraIcon;
-      await waitUntil(() => partCount(fixed, '[part="svg"]') === 1 && partCount(replaced, '[part="svg"]') === 1);
+      Reflect.set(legacy, 'fixedWidth', true);
+      const sized = (await fixture(
+        html`<lr-icon src="https://icons.test/wide.svg" style="font-size: 20px; inline-size: 30px"></lr-icon>`,
+      )) as LyraIcon;
+      await waitUntil(() => [plain, legacy, sized].every((el) => partCount(el, '[part="svg"]') === 1));
 
-      // Both boxes are the same 1.5em (30px) wide ...
-      expect(replaced.getBoundingClientRect().width).to.be.closeTo(
-        fixed.getBoundingClientRect().width,
-        0.01,
-      );
-      // ... but fixed-width squeezes the glyph's svg to 1em, while the replacement leaves it at its
-      // intrinsic 1.25em. This is the documented geometry difference for glyphs wider than 1em.
-      expect(svgWidth(fixed)).to.be.closeTo(20, 0.5);
-      expect(svgWidth(replaced)).to.be.closeTo(25, 0.5);
+      expect(legacy.getBoundingClientRect().width).to.be.closeTo(plain.getBoundingClientRect().width, 0.01);
+      expect(svgWidth(legacy)).to.be.closeTo(svgWidth(plain), 0.01);
+      expect(sized.getBoundingClientRect().width).to.be.closeTo(30, 0.5);
+      expect(svgWidth(sized)).to.be.closeTo(25, 0.5);
     } finally {
       restore();
     }

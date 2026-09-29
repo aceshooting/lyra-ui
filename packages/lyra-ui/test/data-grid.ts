@@ -141,7 +141,7 @@ export async function valueGrid(
   return element;
 }
 
-export async function expectInteractionTokens(style: string): Promise<void> {
+export async function expectInteractionTokens(style: string, retired = false): Promise<void> {
   const element = await dataGrid(html`
     <lr-data-grid
       label="Interaction tokens"
@@ -167,25 +167,29 @@ export async function expectInteractionTokens(style: string): Promise<void> {
     await hoverUntilMatched(row, 'the data row never registered :hover');
     await waitUntil(() => getComputedStyle(row).backgroundColor === 'rgb(1, 2, 3)');
     await sendMouse({ type: 'down' });
-    await waitUntil(() => getComputedStyle(row).backgroundColor === 'rgb(4, 5, 6)');
+    await waitUntil(() => row.matches(':active'));
+    await waitUntil(() => (getComputedStyle(row).backgroundColor === 'rgb(4, 5, 6)') !== retired);
     await sendMouse({ type: 'up' });
 
     await hoverUntilMatched(handle, 'the resize control never registered :hover');
-    await waitUntil(() => getComputedStyle(handle).backgroundColor === 'rgb(7, 8, 9)');
+    await waitUntil(() => (getComputedStyle(handle).backgroundColor === 'rgb(7, 8, 9)') !== retired);
     await sendMouse({ type: 'down' });
-    await waitUntil(() => getComputedStyle(handle).backgroundColor === 'rgb(10, 11, 12)');
+    await waitUntil(() => handle.matches(':active'));
+    await waitUntil(() => (getComputedStyle(handle).backgroundColor === 'rgb(10, 11, 12)') !== retired);
     await sendMouse({ type: 'up' });
 
     await hoverUntilMatched(sortableHeader, 'the sortable header never registered :hover');
-    await waitUntil(() => getComputedStyle(sortableHeader).backgroundColor === 'rgb(13, 14, 15)');
+    await waitUntil(() => (getComputedStyle(sortableHeader).backgroundColor === 'rgb(13, 14, 15)') !== retired);
     await sendMouse({ type: 'down' });
-    await waitUntil(() => getComputedStyle(sortableHeader).backgroundColor === 'rgb(16, 17, 18)');
+    await waitUntil(() => sortableHeader.matches(':active'));
+    await waitUntil(() => (getComputedStyle(sortableHeader).backgroundColor === 'rgb(16, 17, 18)') !== retired);
     await sendMouse({ type: 'up' });
 
     await hoverUntilMatched(pageSize, 'the page-size control never registered :hover');
-    await waitUntil(() => getComputedStyle(pageSize).backgroundColor === 'rgb(7, 8, 9)');
+    await waitUntil(() => (getComputedStyle(pageSize).backgroundColor === 'rgb(7, 8, 9)') !== retired);
     await sendMouse({ type: 'down' });
-    await waitUntil(() => getComputedStyle(pageSize).backgroundColor === 'rgb(19, 20, 21)');
+    await waitUntil(() => pageSize.matches(':active'));
+    await waitUntil(() => (getComputedStyle(pageSize).backgroundColor === 'rgb(19, 20, 21)') !== retired);
   } finally {
     await sendMouse({ type: 'up' });
     await resetMouse();

@@ -8,7 +8,6 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
 - **Deprecated event** `lr-segment-activate` since `22.0.0`; use event `addEventListener('lr-segment-activate-request', event => { /* Call preventDefault() to veto the proposed selection toggle. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
-- **Deprecated property** `showLegend` / `show-legend` since `21.1.0`; use property `with-legend`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 17 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -49,8 +48,7 @@ boolean }[]`. `value` is an _absolute_
   `lr-sequence-strip`'s `withLegend` rather than the interactive `lr-graph-legend`. The whole
   subtree is `aria-hidden`, since `segment-list` already exposes the same names. Under
   `shape="ring"` the host stops being a fixed square so the key flows below the ring instead of
-  being clipped. Deprecated alias: `show-legend`/`showLegend` (use `with-legend`; removed in
-  23.0.0)
+  being clipped.
 - `legendDisplay: ContextMeterLegendDisplay = 'label'` (attribute `legend-display`) — what each
   legend row shows beside its swatch: `'label'` (the default, byte-identical to before this
   property existed), `'label-value'`, `'label-percent'` or `'label-value-percent'`, adding

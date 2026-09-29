@@ -194,16 +194,10 @@ class LyraDiffViewBase extends LyraElement<LyraDiffViewEventMap> {}
  *   view scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
  * @cssprop [--lr-diff-view-font=var(--lr-font-mono)] - Font family used for the diff lines.
  * @cssprop [--lr-diff-view-add-bg=var(--lr-color-success-quiet)] - Added-line background.
- * @cssprop [--lr-diff-view-add-background=var(--lr-color-success-quiet)] - Deprecated alias of
- *   `--lr-diff-view-add-bg`; removal not before 23.0.0.
  * @cssprop [--lr-diff-view-add-color=var(--lr-color-success)] - Added-line text color.
  * @cssprop [--lr-diff-view-remove-bg=var(--lr-color-danger-quiet)] - Removed-line background.
- * @cssprop [--lr-diff-view-remove-background=var(--lr-color-danger-quiet)] - Deprecated alias of
- *   `--lr-diff-view-remove-bg`; removal not before 23.0.0.
  * @cssprop [--lr-diff-view-remove-color=var(--lr-color-danger)] - Removed-line text color.
  * @cssprop [--lr-diff-view-fold-bg=var(--lr-color-surface-raised)] - Fold-marker background.
- * @cssprop [--lr-diff-view-fold-background=var(--lr-color-surface-raised)] - Deprecated alias of
- *   `--lr-diff-view-fold-bg`; removal not before 23.0.0.
  * @cssprop [--lr-diff-view-fold-color=var(--lr-color-text-quiet)] - Fold-marker text color.
  * @cssprop [--lr-diff-view-match-color=var(--lr-color-warning)] - Outline color of a line
  *   containing a non-active search match.
@@ -211,24 +205,14 @@ class LyraDiffViewBase extends LyraElement<LyraDiffViewEventMap> {}
  *   line containing the active search match.
  * @cssprop [--lr-diff-view-highlight-accent-bg=var(--lr-color-brand-quiet)] - Background of an
  *   `accent`-tone (the default) `highlights` line.
- * @cssprop [--lr-diff-view-highlight-accent-background=var(--lr-color-brand-quiet)] - Deprecated alias of
- *   `--lr-diff-view-highlight-accent-bg`; removal not before 23.0.0.
  * @cssprop [--lr-diff-view-highlight-success-bg=var(--lr-color-success-quiet)] - Background of a
  *   `success`-tone `highlights` line.
- * @cssprop [--lr-diff-view-highlight-success-background=var(--lr-color-success-quiet)] - Deprecated alias of
- *   `--lr-diff-view-highlight-success-bg`; removal not before 23.0.0.
  * @cssprop [--lr-diff-view-highlight-warning-bg=var(--lr-color-warning-quiet)] - Background of a
  *   `warning`-tone `highlights` line.
- * @cssprop [--lr-diff-view-highlight-warning-background=var(--lr-color-warning-quiet)] - Deprecated alias of
- *   `--lr-diff-view-highlight-warning-bg`; removal not before 23.0.0.
  * @cssprop [--lr-diff-view-highlight-danger-bg=var(--lr-color-danger-quiet)] - Background of a
  *   `danger`-tone `highlights` line.
- * @cssprop [--lr-diff-view-highlight-danger-background=var(--lr-color-danger-quiet)] - Deprecated alias of
- *   `--lr-diff-view-highlight-danger-bg`; removal not before 23.0.0.
  * @cssprop [--lr-diff-view-highlight-neutral-bg=var(--lr-color-surface-raised)] - Background of a
  *   `neutral`-tone `highlights` line.
- * @cssprop [--lr-diff-view-highlight-neutral-background=var(--lr-color-surface-raised)] - Deprecated alias of
- *   `--lr-diff-view-highlight-neutral-bg`; removal not before 23.0.0.
  * @cssprop [--lr-diff-view-highlight-active-outline=var(--lr-color-brand)] - Outline of the line
  *   whose covering highlight is `activeHighlightId`.
  * @status stable

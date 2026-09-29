@@ -1,6 +1,6 @@
 {
   "name": "@aceshooting/lyra-ui",
-  "version": "22.0.0",
+  "version": "23.0.0",
   "description": "Free, independent Lit web components: an open-source alternative to Shoelace and Web Awesome with accessible forms, dashboards, charts, and agent UI.",
   "keywords": [
     "web-components",
@@ -1011,10 +1011,6 @@
       "types": "./dist/components/conversation/generation-metrics/generation-metrics.d.ts",
       "default": "./dist/components/lr-generation-metrics.js"
     },
-    "./components/lr-geojson-view.js": {
-      "types": "./dist/components/viewers/geojson-view/geojson-view.d.ts",
-      "default": "./dist/components/lr-geojson-view.js"
-    },
     "./components/lr-geojson-viewer.js": {
       "types": "./dist/components/viewers/geojson-view/geojson-viewer.d.ts",
       "default": "./dist/components/lr-geojson-viewer.js"
@@ -1963,8 +1959,6 @@
     "./components/viewers/ebook-viewer/ebook-viewer.js": "./dist/components/viewers/ebook-viewer/ebook-viewer.js",
     "./components/viewers/email-viewer/email-viewer.class.js": "./dist/components/viewers/email-viewer/email-viewer.class.js",
     "./components/viewers/email-viewer/email-viewer.js": "./dist/components/viewers/email-viewer/email-viewer.js",
-    "./components/viewers/geojson-view/geojson-view.class.js": "./dist/components/viewers/geojson-view/geojson-view.class.js",
-    "./components/viewers/geojson-view/geojson-view.js": "./dist/components/viewers/geojson-view/geojson-view.js",
     "./components/viewers/geojson-view/geojson-viewer.class.js": "./dist/components/viewers/geojson-view/geojson-viewer.class.js",
     "./components/viewers/geojson-view/geojson-viewer.js": "./dist/components/viewers/geojson-view/geojson-viewer.js",
     "./components/viewers/highlight-layer/highlight-layer.class.js": "./dist/components/viewers/highlight-layer/highlight-layer.class.js",
@@ -2011,7 +2005,6 @@
     "./utilities/group-by-recency.js": "./dist/utilities/group-by-recency.js",
     "./utilities/icons.js": "./dist/utilities/icons.js",
     "./utilities/layered-layout.js": "./dist/utilities/layered-layout.js",
-    "./utilities/localization.js": "./dist/utilities/localization.js",
     "./utilities/lyra-element.js": "./dist/utilities/lyra-element.js",
     "./utilities/overlay-manager.js": "./dist/utilities/overlay-manager.js",
     "./utilities/positioner.js": "./dist/utilities/positioner.js",
@@ -9272,7 +9265,6 @@
     "./dist/components/lr-funnel.js",
     "./dist/components/lr-gauge.js",
     "./dist/components/lr-generation-metrics.js",
-    "./dist/components/lr-geojson-view.js",
     "./dist/components/lr-geojson-viewer.js",
     "./dist/components/lr-graph-legend.js",
     "./dist/components/lr-graph-query-builder.js",
@@ -9570,7 +9562,6 @@
     "./dist/components/viewers/ebook-viewer/ebook-viewer-register.js",
     "./dist/components/viewers/ebook-viewer/ebook-viewer.js",
     "./dist/components/viewers/email-viewer/email-viewer.js",
-    "./dist/components/viewers/geojson-view/geojson-view.js",
     "./dist/components/viewers/geojson-view/geojson-viewer.js",
     "./dist/components/viewers/highlight-layer/highlight-layer.js",
     "./dist/components/viewers/html-viewer/html-viewer.js",
@@ -10786,7 +10777,6 @@
     "./src/components/lr-funnel.ts",
     "./src/components/lr-gauge.ts",
     "./src/components/lr-generation-metrics.ts",
-    "./src/components/lr-geojson-view.ts",
     "./src/components/lr-geojson-viewer.ts",
     "./src/components/lr-graph-legend.ts",
     "./src/components/lr-graph-query-builder.ts",
@@ -11084,7 +11074,6 @@
     "./src/components/viewers/ebook-viewer/ebook-viewer-register.ts",
     "./src/components/viewers/ebook-viewer/ebook-viewer.ts",
     "./src/components/viewers/email-viewer/email-viewer.ts",
-    "./src/components/viewers/geojson-view/geojson-view.ts",
     "./src/components/viewers/geojson-view/geojson-viewer.ts",
     "./src/components/viewers/highlight-layer/highlight-layer.ts",
     "./src/components/viewers/html-viewer/html-viewer.ts",

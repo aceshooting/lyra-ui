@@ -974,32 +974,6 @@ describe('deprecated show-flags alias', () => {
     return el.shadowRoot!.querySelectorAll('lr-flag').length;
   };
 
-  it('parses show-flags="false" exactly like without-flags, and warns once', async () => {
-    const canonical = (await fixture(
-      html`<lr-locale-picker without-flags value="fr" .locales=${['fr']}></lr-locale-picker>`,
-    )) as LyraLocalePicker;
-    const aliased: LyraLocalePicker[] = [];
-    const warnings = await captureDeprecationWarnings(usage, async () => {
-      for (let round = 0; round < 2; round += 1) {
-        aliased.push(
-          (await fixture(
-            html`<lr-locale-picker show-flags="false" value="fr" .locales=${['fr']}></lr-locale-picker>`,
-          )) as LyraLocalePicker,
-        );
-      }
-    });
-    expect(await flagCount(canonical)).to.equal(0);
-    for (const el of aliased) {
-      expect(el.showFlags).to.equal(false);
-      expect(el.withoutFlags).to.equal(true);
-      expect(await flagCount(el)).to.equal(0);
-      expect(requiredItem(rows(el), 0, 'French locale').querySelectorAll('lr-flag').length).to.equal(0);
-      expect(el.hasAttribute('without-flags'), 'the canonical attribute is not reflected').to.equal(false);
-    }
-    expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-locale-picker:property:showFlags']);
-    expect(warnings[0]!.message).to.contain('without-flags');
-  });
-
   it('keeps the flags for a bare or true show-flags attribute', async () => {
     const warnings = await captureDeprecationWarnings(usage, async () => {
       for (const el of [
@@ -1021,34 +995,6 @@ describe('deprecated show-flags alias', () => {
     expect(warnings).to.have.length(0);
   });
 
-  it('forwards property writes inverted', async () => {
-    const el = (await fixture(html`<lr-locale-picker value="fr" .locales=${['fr']}></lr-locale-picker>`)) as LyraLocalePicker;
-    await captureDeprecationWarnings(usage, async () => {
-      el.showFlags = false;
-      await el.updateComplete;
-    });
-    expect(el.withoutFlags).to.equal(true);
-    expect(await flagCount(el)).to.equal(0);
-    el.showFlags = true;
-    await el.updateComplete;
-    expect(el.withoutFlags).to.equal(false);
-    expect(await flagCount(el)).to.equal(2);
-  });
-
-  it('lets the last-written spelling win when both are present', async () => {
-    let el!: LyraLocalePicker;
-    await captureDeprecationWarnings(usage, async () => {
-      el = (await fixture(
-        html`<lr-locale-picker without-flags show-flags value="fr" .locales=${['fr']}></lr-locale-picker>`,
-      )) as LyraLocalePicker;
-    });
-    expect(el.withoutFlags, 'show-flags is parsed last').to.equal(false);
-    expect(await flagCount(el)).to.equal(2);
-    el.withoutFlags = true;
-    await el.updateComplete;
-    expect(el.showFlags, 'a later canonical write syncs back to the alias').to.equal(false);
-    expect(await flagCount(el)).to.equal(0);
-  });
 });
 
 it('falls back to a no-op ElementInternals when attachInternals is unavailable', async () => {
@@ -1638,7 +1584,6 @@ it('reports validity through the native surface', async () => {
   await el.updateComplete;
   expect(el.reportValidity()).to.be.true;
 });
-
 
 // -- Degraded-DOM form-association fallback ---------------------------------
 

@@ -20,6 +20,18 @@ const INHERITABLE_ARRAYS = Object.freeze([
 // `expandManifestInheritance` and so never showed the gap).
 const NEVER_PRUNED_ARRAYS = Object.freeze(['cssParts']);
 
+// Rendered parts can differ from a superclass even when its JavaScript API is inherited.
+// This extension marks an explicitly complete per-tag list; unmarked historical manifests
+// retain their original sparse-list inheritance behavior.
+function hasCompleteCssParts(declaration) {
+  if (!Object.hasOwn(declaration, 'lyraCssPartsComplete')) return false;
+  if (declaration.lyraCssPartsComplete !== true ||
+      !Object.hasOwn(declaration, 'cssParts') || !Array.isArray(declaration.cssParts)) {
+    throw new Error(`${declaration.name}: lyraCssPartsComplete requires true and an own cssParts array`);
+  }
+  return true;
+}
+
 const normalizeModulePath = (path = '') => path.replace(/^\//, '').replace(/\.js$/, '.ts');
 
 function declarationIndex(manifest) {
@@ -109,6 +121,7 @@ export function expandManifestDeprecations(manifest) {
   const output = structuredClone(manifest);
   for (const module of output.modules ?? []) {
     for (const declaration of module.declarations ?? []) {
+      hasCompleteCssParts(declaration);
       const records = new Map((declaration.deprecations ?? []).map((entry) => [deprecationKey(entry), entry]));
       for (const key of DEPRECATION_ARRAYS) {
         for (const entry of declaration[key] ?? []) {
@@ -143,6 +156,7 @@ export function compactManifest(manifest) {
   for (const module of output.modules ?? []) {
     for (const declaration of module.declarations ?? []) {
       const superclass = resolveSuperclass(declaration, sourceIndex);
+      const completeCssParts = hasCompleteCssParts(declaration);
       for (const key of INHERITABLE_ARRAYS) {
         if (!Array.isArray(declaration[key])) continue;
         declaration[key] = declaration[key].filter((entry) => {
@@ -153,7 +167,7 @@ export function compactManifest(manifest) {
           }
           return true;
         });
-        if (declaration[key].length === 0) delete declaration[key];
+        if (declaration[key].length === 0 && !(key === 'cssParts' && completeCssParts)) delete declaration[key];
       }
       compactDeclarationDeprecations(declaration);
     }
@@ -172,12 +186,14 @@ export function expandManifestInheritance(manifest) {
 
   const visit = (declaration) => {
     if (expanded.has(declaration)) return;
+    const completeCssParts = hasCompleteCssParts(declaration);
     if (active.has(declaration)) throw new Error(`cyclic manifest superclass chain at ${declaration.name}`);
     active.add(declaration);
     const base = resolveSuperclass(declaration, index);
     if (base) {
       visit(base);
       for (const key of INHERITABLE_ARRAYS) {
+        if (key === 'cssParts' && completeCssParts) continue;
         const own = declaration[key] ?? [];
         const inherited = (base[key] ?? []).map((entry) => ({
           ...structuredClone(entry),

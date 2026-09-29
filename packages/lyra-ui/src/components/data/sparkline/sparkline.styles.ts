@@ -35,7 +35,7 @@ export const styles = css`
     stroke: var(--line-color, var(--_lr-sparkline-line-color));
     stroke-width: var(
       --line-width,
-      var(--lr-sparkline-stroke-width, var(--lr-border-width-medium))
+      var(--lr-border-width-medium)
     );
     stroke-linejoin: round;
     stroke-linecap: round;

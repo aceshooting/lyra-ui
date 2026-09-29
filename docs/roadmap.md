@@ -121,6 +121,10 @@ Fixes:
 
 ## v22 plan
 
+The v22 foundations below shipped in v22.0.0. The additional v23 looks, design editors and
+localization tooling are implemented in the v23 release candidate; final package integration and
+release qualification remain open. The acceptance criteria remain applicable to later changes.
+
 ### Rename and removal policy
 
 Renames of Lyra-only names ship additively in 21.x minor releases: the new canonical name plus a
@@ -148,20 +152,19 @@ change. See [RFC 0003](rfcs/0003-lyra-v21-migration-profile.md).
    colors and high contrast, a nesting guard and fixed-containing-block tests; a clear variant limited
    to media controls the component owns.
 5. Density presets (compact, comfortable, touch) that keep the 24px minimum hit area.
-6. A preset gallery in v22 and the full theme builder completed by v23; compatible parts may ship
-   earlier in 22.x.
-7. Further looks completed by v23: dense data (Carbon-inspired), terminal/monospace, and high-contrast; an
-   enterprise look informed by Fluent later, guided by demand.
-8. Validated categorical, sequential and diverging chart-palette foundations in v22; the palette
-   builder and visual diagnostics completed by v23.
+6. The preset gallery shipped in v22. The v23 candidate adds the optional documentation-site theme
+   builder, with advanced design controls, import/export, diagnostics and reset flows.
+7. The v23 candidate adds dense data (Carbon-inspired), terminal/monospace and high-contrast looks,
+   bringing the built-in set to six. An enterprise look informed by Fluent remains demand-led.
+8. Validated categorical, sequential and diverging chart-palette foundations shipped in v22. The
+   v23 candidate adds the palette builder and visual diagnostics.
 
 #### Six design-option foundations required before v22 publication
 
-All six foundations below are part of the initial v22 release. Their advanced editors remain in
-v23; the foundations are not deferred to a later 22.x release. Each ships usable public inputs or
-presets, scoped examples, required API documentation and generated package surfaces. Defaults
-preserve existing behavior. The [completion matrix](#design-completion-through-v24) assigns later
-builder work and final consolidation.
+All six foundations below shipped in the initial v22 release, with usable public inputs or presets,
+scoped examples, API documentation and generated package surfaces. Their advanced editors are
+implemented in the v23 candidate. Defaults preserve existing behavior. The
+[completion matrix](#design-completion-through-v24) assigns final consolidation and qualification.
 
 | Foundation | v22 deliverable and acceptance criteria |
 |---|---|
@@ -174,9 +177,11 @@ builder work and final consolidation.
 
 #### Implementation gaps and release assignment
 
-These gaps remain open until the implementation and its release evidence satisfy the acceptance
-criteria. Source changes alone do not close a row. Required library API documentation ships with
-the change; the broad documentation and application refresh remains after v24 publication.
+These acceptance criteria distinguish implementation from release qualification. The v22 rows
+describe the published foundation; the v23 editor implementation awaits final release gates, and
+v24 consolidation remains pending. Source changes alone do not close a release requirement.
+README and library documentation updates ship with v23. The website and application refresh
+follows v24 publication.
 
 | Gap | Release | Acceptance criteria |
 |---|---|---|
@@ -222,8 +227,8 @@ must pass the complete delivery gates before they are advertised as supported.
 
 ### Languages
 
-9. Implement 34 new catalogs, extending the population-prioritized selection toward 50 languages
-    after excluding separate Arabic and Chinese varieties, and including Greek:
+9. The 34 new catalogs shipped in v22, extending the population-prioritized selection toward
+    50 languages after excluding separate Arabic and Chinese varieties, and including Greek:
 
     | Group | Catalogs |
     |---|---|
@@ -249,16 +254,18 @@ must pass the complete delivery gates before they are advertised as supported.
 11. Later regional variants and additions: `es-419`, `en-GB`, `sk`, `bg`, `lt`, `lv`, `et`,
     `fr-CA`, `zh-HK`, `ca`, `ga`, `mt`, and Serbian Cyrillic/Latin. Regional catalogs require actual
     localized wording, not copies of the base catalog. Luxembourgish (`lb`) remains demand-led.
-12. Localization infrastructure: delta catalogs for regional variants, a lazy locale-loader API used by
+12. The v22 localization infrastructure includes delta catalogs for regional variants, a lazy locale-loader API used by
     `lr-locale-picker`, per-script typography tokens (Thai, Urdu, Indic, CJK line breaking), native-digit
     display and parsing coverage, pinned CLDR plural categories, reviewer tiers with a native-speaker
     review channel, a generated locale manifest with coverage, pseudo-locale visual lanes, and flag-map
-    fixes for numeric regions and missing languages.
+    fixes for numeric regions and missing languages. The v23 candidate completes regional-catalog
+    deduplication and review visibility. The public inventory contains 66 optional catalogs plus
+    built-in English; completeness and AI-assisted review do not establish native-speaker approval.
 
 Population prioritization uses dated estimates, not a sum of unique people reached: multilingual
 speakers appear in several totals. The [public 2026 Ethnologue-based ranking](https://en.wikipedia.org/wiki/List_of_languages_by_total_number_of_speakers#Ethnologue_(2026))
 places Bengali and Urdu among the ten largest languages; both are included in the authored
-catalogs awaiting v22 publication.
+catalogs published in v22.
 Speaker estimates guide sequencing; they do not establish translation quality or internet audience.
 The extended list is a planning selection from a
 [public reproduction of the 2025 ranking](https://www.jetpunk.com/user-quizzes/2026529/top-200-languages-ethnologue-2025),
@@ -270,7 +277,7 @@ inventory rather than being hidden in a single language count.
 
 Only after v24 is published, update `lyra-ui.com` to consume the released v24 library and expose
 every supported locale from its locale inventory. Add all website languages missing from that
-inventory comparison, including the 34 planned additions once released and reviewed. Apply the same
+inventory comparison, including the 34 additions published in v22. Apply the same
 locale coverage to `lyra-admin`. This is a separate post-v24 follow-up; no website/admin rollout is
 scheduled after v22 or v23, and unpublished catalogs must not be advertised as available.
 
@@ -291,13 +298,28 @@ the theme selector, builders, marketing material, SEO, agent-facing discovery an
 coverage. These application changes are not part of v22/v23 delivery or a prerequisite for publishing
 v24; execute and verify them as one coordinated post-v24 rollout.
 
+Describe Lyra as framework-agnostic, standards-based and free under the MIT license. Demonstrate
+the released theme features, granular imports, accessibility and localization through working
+examples. Distinguish supported capabilities from measured performance and linguistic-review
+claims; the marketing must reflect the released library.
+
+Include every maintained project that consumes Lyra UI in this rollout. Inventory direct
+dependencies and component usage, update dependency ranges and lockfiles together, migrate to
+supported v24 APIs, and run each project's own verification gates. Preserve unrelated work and
+application-specific behavior. Examples and integrations must use the released package rather
+than copied framework code or private source imports.
+
+Clean up frontend workarounds during migration. Replace them with supported APIs where possible,
+and report reusable library gaps through the established request channel rather than duplicating
+framework behavior in applications.
+
 The post-v24 rollout establishes an ongoing policy: both applications use the latest stable
 published Lyra release, with dependency ranges and lockfiles updated together, migration notes
 reviewed and application gates passed for each subsequent upgrade. If a newer stable version has
 shipped by the time the rollout starts, target that version rather than deliberately pinning an
 older v24 release. Do not run intermediate upgrade or cleanup projects for v22 or v23.
 
-Clean up both applications during that first rollout: replace deprecated Lyra usage with the
+Clean up every migrated application during that first rollout: replace deprecated Lyra usage with the
 canonical APIs, remove obsolete theme switches, duplicated framework styling/localization,
 unused dependencies and assets, stale examples and application workarounds superseded by the
 library. Preserve application-owned domain behavior and genuine brand customization. Repeat the
@@ -518,8 +540,10 @@ survey or ranking of Lyra users' requests. The delivery order above is a product
 
 ## Design completion through v24
 
-v24 is the completion milestone for the styling, localization and cleanup scope below. These are
-delivery commitments, not claims that the features are implemented or verified today.
+v24 is the completion milestone for the styling, localization and cleanup scope below. The v22
+foundation is published; v23 features are implemented and undergoing final integration and release
+qualification. The v24 requirements and post-release rollout remain pending. The table records
+acceptance criteria, not a claim that pending release gates have passed.
 
 | Capability | v22 foundation | v23 completion | v24 release requirement |
 |---|---|---|---|
@@ -531,7 +555,7 @@ delivery commitments, not claims that the features are implemented or verified t
 | Elevation | Shared surface roles and shadow levels across looks, with forced-colors fallbacks | Elevation editor and optional visual effects | Overlay stacking, fixed positioning and glass nesting verified in supported engines |
 | Chart palettes | Categorical, sequential and diverging presets with appropriate light/dark choices | Palette builder and visual diagnostics, with labels/patterns where color alone is insufficient | Canvas and SVG palettes match; contrast, legend meaning and non-color access verified |
 | Languages | Complete and independently review the 34 catalog additions; preserve granular imports | Finish localization tooling, reviewer visibility and regional-catalog deduplication | Accurate locale inventory and review claims; all supported languages exercised in the UI |
-| Website/admin follow-up | Record integration needs only | Keep the post-release scope aligned with library contracts | After v24 publication: upgrade both applications, add the theme selector and missing languages, refresh marketing, SEO and agent discovery, then qualify the rollout |
+| Website/admin and consumer follow-up | Record integration needs only | Keep the post-release scope aligned with library contracts | After v24 publication: upgrade the website, admin and all maintained consumers; add the theme selector and missing languages, refresh marketing, SEO and agent discovery, then qualify the rollout |
 | Library cleanup | Inventory replacements, deprecations, duplicate paths and packaging cost | Remove eligible older aliases; finish migrations and documentation | Remove eligible v22 aliases and dead code, consolidate implementations, publish measured size evidence |
 
 Typography, shape, elevation and chart choices compose through portable token presets. Contrast
@@ -599,9 +623,9 @@ catalog inventory and content-addressed review evidence live in `scripts/fixture
 inside the library package. Its AI-assisted reviews are not native-speaker approvals. Publish those
 states separately when adding a locale manifest, and never label English fallback as translated.
 
-Deliver Greek and Vietnamese, then prioritize Bengali, Urdu, Marathi and Telugu by speaker reach.
-All 34 additions require complete catalogs and explicit review evidence before being advertised
-as supported. The excluded Arabic and Chinese varieties are not part of this expansion. Luxembourgish (`lb`) is a useful optional addition for
+Greek, Vietnamese, Bengali, Urdu, Marathi and Telugu are among the 34 additions published in v22.
+All 34 have complete catalogs and explicit AI-assisted review evidence. The excluded Arabic and
+Chinese varieties are not part of this expansion. Luxembourgish (`lb`) is a useful optional addition for
 applications serving Luxembourg; promote it when there is a reviewer and application demand.
 Regional catalogs should contain genuine wording differences, with explicit parent relationships,
 rather than copies of an entire base catalog. Serbian Latin/Cyrillic and Chinese script variants

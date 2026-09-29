@@ -16,7 +16,7 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid
       var(--lr-chat-composer-border-color, var(--lr-color-border));
     border-radius: var(--lr-chat-composer-radius, var(--lr-radius));
-    background: var(--lr-chat-composer-bg, var(--lr-chat-composer-background, var(--lr-color-surface)));
+    background: var(--lr-chat-composer-bg, var(--lr-color-surface));
     padding: var(--lr-chat-composer-padding, var(--lr-space-s));
     transition: border-color var(--lr-transition-fast);
   }

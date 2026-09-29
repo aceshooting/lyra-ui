@@ -107,7 +107,7 @@ export const tooltipStyles = css`
   /* position: absolute from the start, matching the mapped non-hoisted default. Physical top/left
      here too, for the same RTL over-constraint reason as the popover above. */
   /* policy-allow(physical-css): same physical property positioner.ts's place() writes; see above. */
-  [part~='popup'] { position: absolute; top: 0; left: 0; z-index: var(--lr-overlay-stack-index, var(--lr-layer-popover)); min-inline-size: 0; max-inline-size: min(var(--max-width, var(--lr-tooltip-max-inline-size, var(--lr-size-20rem))), var(--lr-positioner-available-inline-size, 100vi)); max-block-size: var(--lr-positioner-available-block-size, 100vb); overflow-x: clip; overflow-y: auto; overflow-wrap: anywhere; padding: var(--lr-space-xs) var(--lr-space-s); border-radius: var(--lr-radius-xs); background: var(--lr-tooltip-bg, var(--lr-tooltip-background, var(--lr-color-neutral))); color: var(--lr-tooltip-color, var(--lr-color-on-neutral)); font-size: var(--lr-font-size-sm); line-height: var(--lr-line-height-compact); box-shadow: var(--lr-shadow-m); }
+  [part~='popup'] { position: absolute; top: 0; left: 0; z-index: var(--lr-overlay-stack-index, var(--lr-layer-popover)); min-inline-size: 0; max-inline-size: min(var(--max-width, var(--lr-tooltip-max-inline-size, var(--lr-size-20rem))), var(--lr-positioner-available-inline-size, 100vi)); max-block-size: var(--lr-positioner-available-block-size, 100vb); overflow-x: clip; overflow-y: auto; overflow-wrap: anywhere; padding: var(--lr-space-xs) var(--lr-space-s); border-radius: var(--lr-radius-xs); background: var(--lr-tooltip-bg, var(--lr-color-neutral)); color: var(--lr-tooltip-color, var(--lr-color-on-neutral)); font-size: var(--lr-font-size-sm); line-height: var(--lr-line-height-compact); box-shadow: var(--lr-shadow-m); }
   /* Settled closed (gated by JS clearing 'hidden' only once 'lr-after-hide' fires): out of layout
      entirely, so a stale placed box can no longer inflate this popup's CSS containing block. */
   [part~='popup'][hidden] { display: none; }
@@ -123,6 +123,6 @@ export const tooltipStyles = css`
     inline-size: calc(2 * var(--arrow-size, var(--lr-tooltip-arrow-size, var(--lr-size-0-375rem))));
     block-size: calc(2 * var(--arrow-size, var(--lr-tooltip-arrow-size, var(--lr-size-0-375rem))));
     rotate: 45deg;
-    background: var(--lr-tooltip-bg, var(--lr-tooltip-background, var(--lr-color-neutral)));
+    background: var(--lr-tooltip-bg, var(--lr-color-neutral));
   }
 `;

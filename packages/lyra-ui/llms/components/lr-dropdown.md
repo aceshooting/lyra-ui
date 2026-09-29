@@ -7,11 +7,9 @@
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [overlays](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/overlays.md)
-- **Deprecated part** `popup__arrow` since `21.1.0`; use part `::part(popup-arrow)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
-- **Deprecated part** `popup__popup` since `21.1.0`; use part `::part(popup-popup)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
 - **Deprecated property** `arrow` / `arrow` since `22.0.0`; use property `Set withoutArrow to the inverse of arrow; use without-arrow to preserve the former arrow-free default.`; removal not before `24.0.0` — The shared negative arrow switch resolves conflicting arrow inputs and defaults to false. The retained positive alias has the inverse value and remains functional throughout the compatibility window.
 - **Optional peers** none
-- **Themeable via** 15 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -143,8 +141,7 @@ popup, preserving the popover, Web Awesome and Shoelace wrapper names on the sam
 clips across the `distance` gap between trigger and popup, rendered only while a `hover`-triggered
 dropdown with `hover-bridge` set is open, so a pointer travelling from the trigger to the popup
 never leaves both at once and the surface does not close underneath it. It paints nothing by
-default; style it only to debug the travel region. Deprecated aliases: `popup__popup` and `popup__arrow` (use `popup-popup` and `popup-arrow`;
-removed in 23.0.0), on the same nodes.
+default; style it only to debug the travel region.
 
 **Themeable custom properties:** `--show-duration` and `--hide-duration` (both default
 `var(--lr-transition-fast)`), mapped `--max-width` and `--arrow-size`, plus retained

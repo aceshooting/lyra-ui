@@ -78,12 +78,10 @@ import type {
   DataGridJsonValue,
   DataGridStateFilter,
   DirectDocumentRendererDefinition,
-  DocumentFile,
   DocumentViewerCloseReason,
   DocumentLibrarySortCommitDetail,
   DocumentLibrarySortDetail,
   DocumentLibrarySortRequestDetail,
-  DocumentRendererDefinition,
   DocumentRendererRegistry,
   EffectiveKbdPlatform,
   EvalContent,
@@ -187,10 +185,9 @@ import type {
   LyraFormValidatorResult,
   LyraGeoJsonViewerEventMap,
   LyraGeojsonView,
-  LyraGeojsonViewEventMap,
   LyraGenerationMetrics,
   LyraGenerationMetricsEventMap,
-  LyraGraphLink,
+  LyraGraphEdge,
   LyraGraphNode,
   LyraGetAnimationOptions,
   LyraImageComparerOrientation,
@@ -386,6 +383,22 @@ import type {
   WordCloudScale,
 } from '../src/lyra.js';
 
+// @ts-expect-error DocumentFile was retired in favor of LyraDocumentFile.
+import type { DocumentFile as RemovedDocumentFile } from '../src/lyra.js';
+// @ts-expect-error DocumentRendererDefinition was retired in favor of LyraDocumentRendererDefinition.
+import type { DocumentRendererDefinition as RemovedDocumentRendererDefinition } from '../src/lyra.js';
+// @ts-expect-error LyraGraphLink was retired in favor of LyraGraphEdge.
+import type { LyraGraphLink as RemovedLyraGraphLink } from '../src/lyra.js';
+// @ts-expect-error The retired GeoJSON tag's map was replaced by LyraGeoJsonViewerEventMap.
+import type { LyraGeojsonViewEventMap as RemovedLyraGeojsonViewEventMap } from '../src/lyra.js';
+declare const retiredCompatibilityNames: [
+  RemovedDocumentFile,
+  RemovedDocumentRendererDefinition,
+  RemovedLyraGraphLink,
+  RemovedLyraGeojsonViewEventMap,
+];
+void retiredCompatibilityNames;
+
 // These pre-v9 compatibility names duplicated the canonical variant types even though their
 // properties have no corresponding `tone` alias. Their deliberate absence is part of the v9
 // public contract; an accidental re-export makes each `@ts-expect-error` fail.
@@ -411,7 +424,7 @@ import type { MenuSelectDetail as RemovedMenuSelectDetail } from '../src/lyra.js
 import type { BrowserFrameStatus as RemovedBrowserFrameStatus } from '../src/lyra.js';
 // @ts-expect-error BrowserFramePhase was replaced by the shared LyraStreamPhase.
 import type { BrowserFramePhase as RemovedBrowserFramePhase } from '../src/lyra.js';
-// @ts-expect-error GraphLink was removed in favor of LyraGraphLink.
+// @ts-expect-error GraphLink was removed in favor of LyraGraphEdge.
 import type { GraphLink as RemovedGraphLink } from '../src/lyra.js';
 // @ts-expect-error GraphNode was removed in favor of LyraGraphNode.
 import type { GraphNode as RemovedGraphNode } from '../src/lyra.js';
@@ -950,12 +963,10 @@ const rootPublicTypes:
       DataGridJsonValue,
       DataGridStateFilter,
       DirectDocumentRendererDefinition,
-      DocumentFile,
       DocumentViewerCloseReason,
       DocumentLibrarySortCommitDetail,
       DocumentLibrarySortDetail,
       DocumentLibrarySortRequestDetail,
-      DocumentRendererDefinition,
       DocumentRendererRegistry,
       EffectiveKbdPlatform,
       EvalContent,
@@ -1059,10 +1070,9 @@ const rootPublicTypes:
       LyraFormValidatorResult,
       LyraGeoJsonViewerEventMap,
       LyraGeojsonView,
-      LyraGeojsonViewEventMap,
       LyraGenerationMetrics,
       LyraGenerationMetricsEventMap,
-      LyraGraphLink,
+      LyraGraphEdge,
       LyraGraphNode,
       LyraGetAnimationOptions,
       LyraImageComparerOrientation,

@@ -8,7 +8,6 @@
 - **Status** `stable` since `6.2.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecated event** `lr-approval-decision` since `22.0.0`; use event `addEventListener('lr-approval-decision-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
-- **Deprecated property** `editable` / `editable` since `21.1.0`; use property `readonly`; removal not before `23.0.0` — One name per concept across the library.
 - **Optional peers** none
 - **Themeable via** 12 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -24,8 +23,7 @@ It never executes tools or persists decisions.
 `{ id, toolName, args, status?: 'pending' | 'approved' | 'denied' }`;
 `selectedInvocationId: string | null = null` (attribute `selected-invocation-id`);
 `open: boolean = false`; `readonly: boolean = false` withholds argument editing in the nested
-approval dialog (deprecated alias: `editable`, use `readonly`; removed in 23.0.0 — inverted, so
-`editable="false"` equals `readonly`); `label?: string` — omission localizes the
+approval dialog; `label?: string` — omission localizes the
 heading while an explicit empty string renders no heading/name. Later duplicate request
 ids and empty/blank ids are omitted before count, selection, dialog lookup, or decision events are
 derived.

@@ -176,15 +176,11 @@ function nearestExternalFocusTarget(owner: Element): HTMLElement | null {
  * @csspart close-button-control - The composed `<lr-icon-button>`'s own native control, forwarded
  *   because the painted surface (background, radius, hover/press fill, focus ring and hit-area
  *   floor) now sits one shadow boundary deeper than `close-button`.
- * @csspart close-button__control - Deprecated alias of `close-button-control` on the same node;
- *   removal not before 23.0.0.
  * @csspart close-icon - The close button's visible "×" glyph, independent of the control's hit
  *   target size -- shrinks in the `inline` variant while the hit target stays full-size.
  * @cssprop [--lr-callout-bg=var(--lr-color-fill-quiet,var(--lr-color-brand-fill-quiet))] -
  *   The host surface's background: an inherited semantic quiet fill, with brand as the standalone
  *   fallback.
- * @cssprop [--lr-callout-background=var(--lr-color-fill-quiet,var(--lr-color-brand-fill-quiet))] -
- *   Deprecated alias of `--lr-callout-bg`, read only as its fallback; removal not before 23.0.0.
  * @cssprop [--lr-callout-border=var(--lr-color-fill-loud,var(--lr-color-brand-fill-loud))] - The
  *   host surface's border color.
  * @cssprop [--lr-callout-color=var(--lr-color-fill-loud,var(--lr-color-brand-fill-loud))] - The
@@ -226,9 +222,6 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
 
   override attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
     super.attributeChangedCallback(name, oldValue, newValue);
-    if (name === 'accessible-label' && newValue !== null) {
-      warnDeprecatedUsage(this, 'attribute', 'accessible-label', 'aria-label');
-    }
   }
 
   /** Semantic palette. The property defaults to `brand` without forcing an attribute, allowing an
@@ -342,14 +335,12 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
 
   /** Compatibility fallback below the host aria-label, including an explicitly empty host value.
    * @deprecated Use the host aria-label attribute or the native ariaLabel property. */
-  @property({ attribute: 'accessible-label' })
+  @property({ attribute: false })
   get accessibleLabel(): string {
     return this.legacyAccessibleLabel;
   }
   set accessibleLabel(value: string) {
-    if (!this.hasAttribute('accessible-label')) {
-      warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
-    }
+    warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
     this.legacyAccessibleLabel = value;
   }
   /** The host `aria-label`: names the grouped panel and prefixes announced updates, winning by
@@ -654,7 +645,7 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
       </div>
       <lr-icon-button
         part="close-button"
-        exportparts="button:close-button-control, button:close-button__control"
+        exportparts="button:close-button-control"
         ?hidden=${!this.closable}
         aria-label=${this.localize('close')}
         @click=${this.close}

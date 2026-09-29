@@ -7,9 +7,9 @@
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
-- **Deprecated css-property** `--lr-zoomable-frame-control-hover-background` since `21.1.0`; use css-property `--lr-zoomable-frame-control-hover-bg`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -90,8 +90,7 @@ clear it. Moving between the iframe and a zoom control clears or restores the ma
 **CSS custom properties:** read-only `--lr-zoomable-frame-zoom`, resolved from the `zoom`
 property and applied to the internal iframe scale; and `--lr-zoomable-frame-control-hover-bg`
 (default `var(--lr-color-brand-quiet)`), which colors a zoom control on hover and supplies the base
-for its active color. Deprecated alias: `--lr-zoomable-frame-control-hover-background` (use
-`--lr-zoomable-frame-control-hover-bg`; removed in 23.0.0).
+for its active color.
 
 **RTL behavior:** the scaled iframe is a physical canvas and remains pinned to physical top-left in
 both directions. Its zoom controls remain logical interface chrome, so RTL places the control group at

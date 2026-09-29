@@ -8,7 +8,6 @@ import type {
 import "../../forms/button/button.js";
 import "./agent-workspace.js";
 import type { LyraAgentWorkspace } from "./agent-workspace.class.js";
-import { captureDeprecationWarnings } from "../../../../test/expected-deprecations.js";
 
 const run: AgentRun = {
   id: "run-1",
@@ -152,57 +151,6 @@ it("still defaults follow to true and without-details/without-composer to false 
   expect(el.follow).to.be.true;
   expect(el.withoutDetails).to.be.false;
   expect(el.withoutComposer).to.be.false;
-});
-
-it('keeps the deprecated show-details/show-composer="false" aliases equal to their without- names, warning once each', async () => {
-  let el!: LyraAgentWorkspace;
-  let both!: LyraAgentWorkspace;
-  const warnings = await captureDeprecationWarnings(
-    [
-      { tag: "lr-agent-workspace", kind: "property", name: "showDetails" },
-      { tag: "lr-agent-workspace", kind: "property", name: "showComposer" },
-    ],
-    async () => {
-      el = await fixture<LyraAgentWorkspace>(html`
-        <lr-agent-workspace show-details="false" show-composer="false" .run=${run}></lr-agent-workspace>
-      `);
-      both = await fixture<LyraAgentWorkspace>(html`
-        <lr-agent-workspace without-composer show-composer></lr-agent-workspace>
-      `);
-    }
-  );
-  expect(warnings.map((warning) => warning.key).sort()).to.deep.equal([
-    "lyra-deprecated:lr-agent-workspace:property:showComposer",
-    "lyra-deprecated:lr-agent-workspace:property:showDetails",
-  ]);
-  expect(el.withoutDetails).to.be.true;
-  expect(el.withoutComposer).to.be.true;
-  expect(el.showDetails).to.be.false;
-  expect(el.showComposer).to.be.false;
-  expect(
-    (el.shadowRoot!.querySelector('[part="details"]') as HTMLElement).hidden
-  ).to.be.true;
-  expect(el.shadowRoot!.querySelectorAll("lr-chat-composer").length).to.equal(0);
-  expect(both.withoutComposer, "the later show-composer attribute wins").to.be.false;
-  expect(both.showComposer).to.be.true;
-});
-
-it("syncs the deprecated show-details/show-composer aliases back from their without- names", async () => {
-  const el = await fixture<LyraAgentWorkspace>(html`<lr-agent-workspace .run=${run}></lr-agent-workspace>`);
-  el.withoutDetails = true;
-  el.withoutComposer = true;
-  await el.updateComplete;
-  expect(el.showDetails).to.be.false;
-  expect(el.showComposer).to.be.false;
-  expect(el.getAttribute("show-details")).to.equal("false");
-  expect(el.getAttribute("show-composer")).to.equal("false");
-  el.withoutDetails = false;
-  el.withoutComposer = false;
-  await el.updateComplete;
-  expect(el.showDetails).to.be.true;
-  expect(el.showComposer).to.be.true;
-  expect(el.hasAttribute("show-details")).to.be.false;
-  expect(el.hasAttribute("show-composer")).to.be.false;
 });
 
 it("uses localized workspace chrome", async () => {

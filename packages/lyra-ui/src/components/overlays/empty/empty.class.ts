@@ -10,16 +10,12 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { hasRealContent } from '../../../internal/a11y.js';
-import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import {
   normalizeReflectedOptionalSize,
   optionalSizeConverter,
   type LyraSize,
 } from '../../../internal/variants.js';
 import { styles } from './empty.styles.js';
-
-/** The size steps that select the compact density. */
-const COMPACT_SIZES: ReadonlySet<LyraSize> = new Set<LyraSize>(['2xs', 'xs', 's', 'small']);
 
 /**
  * `<lr-empty>` — a generic empty/no-data state. First-party invention (no
@@ -66,11 +62,6 @@ const COMPACT_SIZES: ReadonlySet<LyraSize> = new Set<LyraSize>(['2xs', 'xs', 's'
  */
 export class LyraEmpty extends LyraElement {
   static override styles = [LyraElement.styles, styles];
-  /** `compact` is the compact density: it writes `size="s"` (clearing `size` when turned off), and
-   *  reads back `true` for `s` and every step below it. */
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    compact: ['size', (v) => (v ? 's' : undefined), (v) => COMPACT_SIZES.has(v as LyraSize)],
-  };
 
   /** Short heading, e.g. "No results". */
   @property() heading = '';
@@ -96,9 +87,7 @@ export class LyraEmpty extends LyraElement {
     return this._size;
   }
   set size(next: LyraSize | undefined) {
-    // Only a foreign (unsupported) raw attribute is repaired in place; a supported one is left for
-    // reflection, so a write synced from the deprecated `compact` while the element upgrades never
-    // overwrites a `size` attribute that has not been processed yet.
+    // Repair unsupported raw attributes in place; leave supported values to Lit reflection.
     const raw = this.getAttribute('size');
     const normalized =
       raw !== null && optionalSizeConverter.normalize(raw) !== undefined
@@ -109,16 +98,6 @@ export class LyraEmpty extends LyraElement {
     this._size = normalized;
     this.requestUpdate('size', old);
   }
-
-  /**
-   * Compact rendering for use inside a constrained space (e.g. a widget body
-   * or table cell) rather than as a full-page state: left-aligned, tighter
-   * padding, and a lighter heading weight instead of the centered/spacious
-   * default.
-   *
-   * @deprecated Use `size="s"`; removal not before 23.0.0.
-   */
-  @property({ type: Boolean, reflect: true }) compact = false;
 
   /** Opts this empty state into announcing the heading/description it already carries when it
    *  first mounts, through the same shared light-DOM polite sink later changes use. Leave unset
@@ -353,7 +332,6 @@ export class LyraEmpty extends LyraElement {
     `;
   }
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

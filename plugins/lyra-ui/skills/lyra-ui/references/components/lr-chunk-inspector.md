@@ -7,8 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecated event** `lr-expand` since `21.1.0`; use event `addEventListener('lr-chunk-toggle', ...)`; removal not before `23.0.0` — Toggle notifications report the resulting state as `expanded` across the library.
-- **Deprecated property** `compact` / `compact` since `21.1.0`; use property `size="s"`; removal not before `23.0.0` — Sizes use the shared `size` scale.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 16 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -42,15 +41,14 @@ number; sourceId: string; title?: string; page?: string | number; anchor?: LyraC
 - `virtualizeAt: number = 50` (attribute `virtualize-at`)
 - `size: LyraSize = 'm'` (reflected) — row density on the shared size scale. `s` (and the smaller
   `xs`/`2xs`) hides the text preview/toggle, rendering the title/score row only; `m` (the default)
-  and larger render the full rows. Deprecated alias: `compact` (use `size="s"`; removed in 23.0.0)
+  and larger render the full rows.
 - `label: string = ''` — fallback name for the populated result group. A non-empty host
   `aria-label` makes the host the sole overall owner; an explicitly empty host label stays empty
 
 **Events:** `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`, a chunk's title/open button was
 activated — the event a host routes into `lr-document-viewer`, setting `src` from `sourceId` and
 `anchor` from the chunk's own), `lr-chunk-toggle` (`detail: { chunkId, expanded }`, a chunk's text
-toggle was activated, expanding or collapsing it). Deprecated alias: `lr-expand` (use
-`lr-chunk-toggle`; fired right after it with an equal detail; removed in 23.0.0).
+toggle was activated, expanding or collapsing it).
 
 **Slots:** none.
 

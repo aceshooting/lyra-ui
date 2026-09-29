@@ -7,9 +7,9 @@
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [utility](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/utility.md)
-- **Deprecated part** `base__control` since `21.1.0`; use part `::part(base-control)`; removal not before `23.0.0` — Forwarded parts are hyphenated, custom properties are namespaced by component, and backgrounds use the `-bg` suffix.
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -94,7 +94,6 @@ the built-in button. Exactly one named icon is rendered at a time.
   mixes, focus ring and hit-area floor come from `--lr-icon-button-*`.
 - `base-control` — the composed `<lr-icon-button>`'s own native `<button>`. A rule that set
   `background`/`border`/`padding` through `::part(base)` moves here, or onto the token.
-  Deprecated alias: `base__control` (use `base-control`; removed in 23.0.0).
 - `base-success` — added to the button's part list while the confirmation shows
   (`part="base button base-success"`).
 - `base-error` — the same while the failure state shows (`part="base button base-error"`).

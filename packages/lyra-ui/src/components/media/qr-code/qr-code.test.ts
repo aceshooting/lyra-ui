@@ -855,7 +855,7 @@ describe('lr-qr-code', () => {
     expect([...bgPixel.slice(0, 3)]).to.deep.equal([255, 255, 255]);
   });
 
-  it('still paints the deprecated --lr-qr-code-background alias, below the canonical --lr-qr-code-bg', async () => {
+  it('ignores the retired background token while canonical bg paints the canvas', async () => {
     const paintedBackground = async (style: string): Promise<number[]> => {
       const el = (await fixture(html`<lr-qr-code size="90" style=${style}></lr-qr-code>`)) as LyraQrCode;
       installFakeLoader(el, fakeApi(() => ({ modules: mixedModules() })));
@@ -865,7 +865,7 @@ describe('lr-qr-code', () => {
       const lightCenter = Math.round(canvas.width * 0.25);
       return [...canvas.getContext('2d')!.getImageData(lightCenter, lightCenter, 1, 1).data.slice(0, 3)];
     };
-    expect(await paintedBackground('--lr-qr-code-fill: #000; --lr-qr-code-background: rgb(0, 0, 255)')).to.deep.equal([0, 0, 255]);
+    expect(await paintedBackground('--lr-qr-code-fill: #000; --lr-qr-code-background: rgb(0, 0, 255)')).to.deep.equal(await paintedBackground('--lr-qr-code-fill: #000'));
     expect(
       await paintedBackground('--lr-qr-code-fill: #000; --lr-qr-code-background: rgb(0, 0, 255); --lr-qr-code-bg: rgb(0, 255, 0)'),
     ).to.deep.equal([0, 255, 0]);

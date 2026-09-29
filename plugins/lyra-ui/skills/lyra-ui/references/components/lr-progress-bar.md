@@ -7,9 +7,7 @@
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [overlays](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/overlays.md)
-- **Deprecated attribute** `accessible-label` since `21.1.0`; use attribute `aria-label`; removal not before `23.0.0` — The host `aria-label` names the component, as on every other Lyra component.
 - **Deprecated property** `accessibleLabel` since `22.0.0`; use attribute `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.`; removal not before `24.0.0` — The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window.
-- **Deprecated property** `showValue` / `show-value` since `21.1.0`; use property `with-value`; removal not before `23.0.0` — Boolean attributes default to false; an option that is on by default is turned off with a `without-` attribute.
 - **Optional peers** none
 - **Themeable via** 5 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -24,9 +22,7 @@ formatted percentage.
 **Properties:** `value` (reflected), `max`, `indeterminate`, `variant`, `withValue` (`with-value`),
 and `label` (mapped accessible-name property), plus `accessibleLabel` (property only) — Lyra's own
 explicit name, read after `label`. In markup, name the bar with the host `aria-label`, which has
-the highest precedence. Deprecated aliases: `show-value`/`showValue` (use `with-value`; removed in 23.0.0) and
-`accessible-label` (use `aria-label`; removed in 23.0.0) — the latter still sets
-`accessibleLabel`, so a host `aria-label` wins over it. Also
+the highest precedence. Also
 `size: LyraSize = 'm'` (reflected) — `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' |
 'large'`. Track/indicator thickness tier, on the shared six-step ladder: `0.25rem` (`2xs`),
 `0.375rem` (`xs`), `0.625rem` (`s`/`small`), `1rem` (`m`/`medium`, unchanged from before this

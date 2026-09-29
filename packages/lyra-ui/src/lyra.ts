@@ -312,14 +312,12 @@ export type {
 } from './utilities/animation-registry.js';
 export { invalidateLyraTheme } from './utilities/theme.js';
 export type { LyraThemeRoot } from './utilities/theme.js';
-export { bridgeLyraLocale } from './utilities/localization.js';
-// From the declaring runtime, not `./utilities/localization.js`: that module's specifier for this
-// name is deprecated with its entry point, and re-exporting through it would deprecate it here too.
+export { bridgeLyraLocale } from './localization.js';
 export { subscribeLyraLocale } from './internal/localization-runtime.js';
 export type {
   LyraLocaleBridgeCleanup,
   LyraLocaleBridgeOptions,
-} from './utilities/localization.js';
+} from './localization.js';
 /** @deprecated Import LyraAvatarGroup from @aceshooting/lyra-ui/components/media/avatar-group/avatar-group.class.js. */
 export { LyraAvatarGroup } from './components/media/avatar-group/avatar-group.class.js';
 export type {
@@ -720,7 +718,6 @@ export type {
   LyraGraphEdge,
   LyraGraphFit,
   LyraGraphLayout,
-  LyraGraphLink,
   LyraGraphNode,
   LyraGraphNodeLabelsMode,
   LyraGraphPickKind,
@@ -1247,8 +1244,6 @@ export type {
 } from './components/viewers/document-viewer/document-viewer.class.js';
 export type {
   DirectDocumentRendererDefinition,
-  DocumentFile,
-  DocumentRendererDefinition,
   DocumentRendererRegistry,
   LazyDocumentRendererDefinition,
   LyraAdaptedDocumentRenderer,
@@ -2342,7 +2337,6 @@ export type {
 } from './components/viewers/geojson-view/geojson-viewer.class.js';
 /** @deprecated Import LyraGeoJsonViewer from @aceshooting/lyra-ui/components/viewers/geojson-view/geojson-viewer.class.js. */
 export { LyraGeojsonView } from './components/viewers/geojson-view/geojson-view.class.js';
-export type { LyraGeojsonViewEventMap } from './components/viewers/geojson-view/geojson-view.class.js';
 export type { LyraMarkdownEventMap } from './components/conversation/markdown/markdown.class.js';
 export type { LyraMarkdownCoreEventMap } from './components/conversation/markdown/markdown-core.class.js';
 export type {

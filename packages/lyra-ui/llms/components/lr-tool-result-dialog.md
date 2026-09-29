@@ -7,7 +7,7 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
-- **Deprecated event** `lr-maximize-change` since `21.1.0`; use event `addEventListener('lr-maximize-change-request', ...)`; removal not before `23.0.0` — Cancelable events that propose a state change are named `lr-<noun>-request` across the library.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 12 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -64,8 +64,6 @@ reason string so every dismissal path funnels through the same event.
 target-filtering guard. `lr-maximize-change-request` (cancelable, `detail:
 { readonly maximized: boolean }`, the would-be new `maximized` state) fired when the header's
 maximize/restore toggle is clicked, before `maximized` changes; `preventDefault()` vetoes the toggle.
-Deprecated alias: `lr-maximize-change` (use `lr-maximize-change-request`; removed in 23.0.0) —
-still fired right after it with an equal detail, and either event may veto.
 
 **Slots:** `body` (the dialog's main content — typically a `<lr-tab-group>` with Input/Preview/JSON/Raw
 panels, entirely consumer-assembled), `footer` (optional action buttons, rendered in a bottom row —

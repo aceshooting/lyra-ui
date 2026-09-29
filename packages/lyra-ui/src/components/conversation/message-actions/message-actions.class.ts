@@ -18,7 +18,6 @@ import {
 } from '../../../internal/data-descriptors.js';
 import '../../utility/copy-button/copy-button.class.js';
 import '../message-feedback/message-feedback.class.js';
-
 import { styles } from './message-actions.styles.js';
 import {
   applyComposedFocusRepair,
@@ -302,12 +301,8 @@ function editIcon(): SVGTemplateResult {
  *   `--lr-icon-button-*`.
  * @csspart regenerate-button-control - The regenerate action's own native `<button>`, forwarded
  *   because the painted surface sits one shadow boundary deeper than `regenerate-button`.
- * @csspart regenerate-button__control - Deprecated alias of `regenerate-button-control`, on the
- *   same node; removal not before 23.0.0.
  * @csspart edit-button - The built-in edit action, likewise a composed `<lr-icon-button>`.
  * @csspart edit-button-control - The edit action's own native `<button>`.
- * @csspart edit-button__control - Deprecated alias of `edit-button-control`, on the same node;
- *   removal not before 23.0.0.
  * @csspart feedback - The embedded `lr-message-feedback`.
  * @status stable
  * @since 4.0.0
@@ -960,7 +955,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
       case 'regenerate':
         return html`<lr-icon-button
           part="regenerate-button"
-          exportparts="button:regenerate-button-control, button:regenerate-button__control"
+          exportparts="button:regenerate-button-control"
           aria-label=${this.localize('regenerateResponse')}
           @click=${this.onRegenerateClick}
         >
@@ -969,7 +964,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
       case 'edit':
         return html`<lr-icon-button
           part="edit-button"
-          exportparts="button:edit-button-control, button:edit-button__control"
+          exportparts="button:edit-button-control"
           aria-label=${this.localize('editMessage')}
           @click=${this.onEditClick}
         >

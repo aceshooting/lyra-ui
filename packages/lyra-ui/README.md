@@ -28,7 +28,7 @@
 library for accessible forms, dashboards, charts, data visualization, and AI chat/agent interfaces.
 Built with [Lit](https://lit.dev), it works with Lit, React, Vue, Angular, Svelte, and plain JavaScript.
 It is a practical open-source alternative to [Shoelace](https://shoelace.style/) and
-[Web Awesome](https://webawesome.com/), with 304 custom elements, native custom-element APIs,
+[Web Awesome](https://webawesome.com/), with 303 custom elements, native custom-element APIs,
 tree-shakeable imports, its own `--lr-*` design tokens, built-in localization and RTL support,
 and no runtime dependency on either project.
 
@@ -38,11 +38,14 @@ and no runtime dependency on either project.
 > users get a separate `sl-*` migration map because the APIs are not identical. No competitor runtime,
 > theme, token namespace, or source code is required by Lyra.
 
-## v21 highlights
+<a id="v21-highlights"></a>
+
+## Highlights
 
 | Area | Features and reference |
 | --- | --- |
-| Looks and branding | Opt-in shadcn look as [CSS](./llms/shared.md#the-shadcn-look--themesshadcncss) or a persistent [runtime token preset](./llms/shared.md#theme-modeaccentsurface-runtime-aceshootinglyra-uithemejs), with independent mode, accent, and surface settings. Decorative borders have their own token; control boundaries keep their contrast floor. |
+| Looks and branding | Lyra, shadcn, Material, data, terminal and high contrast compose with independent surface, density, mode and accent choices. Optional sheets and runtime definitions load only when imported; see [styling setup](./llms/shared/styles-and-tokens.md#composing-looks-surfaces-and-density). |
+| Theme builder | The [documentation editor](./llms/shared/styles-and-tokens.md#documentation-theme-builder) previews real controls, imports and exports validated presets, and provides contrast diagnostics and typography, motion, shape, elevation and chart-palette controls. It adds no application dependency. |
 | Navigation | [Menubar](./llms/components/lr-menubar.md), [navigation menu](./llms/components/lr-navigation-menu.md), [context menu](./llms/components/lr-context-menu.md), and [app-rail](./llms/components/lr-app-rail.md) sidebar controls with external launchers, shortcuts, resizing, and persistence. [Multi-split](./llms/components/lr-multi-split.md) exposes pane actions and optional launcher ARIA/focus association. |
 | Toggle controls | [Toggle](./llms/components/lr-toggle.md) and [toggle group](./llms/components/lr-toggle-group.md) provide pressed-button state, single or multiple selection, keyboard navigation, and joined styling. |
 | Markdown and streaming | [Markdown](./llms/components/lr-markdown.md) supports optional code-block headers with exact-source copying, progressive streaming, GFM table scrollers and column alignment, and themed read-only task checkboxes. |
@@ -54,11 +57,12 @@ Choose the original Lyra look by loading `theme.css`. To select shadcn through t
 
 ```js
 import '@aceshooting/lyra-ui/theme.css';
-import { applyLyraThemePreset } from '@aceshooting/lyra-ui/theme/presets.js';
-import { LYRA_SHADCN_THEME_PRESET } from '@aceshooting/lyra-ui/theme/presets/shadcn.js';
+import '@aceshooting/lyra-ui/looks/shadcn.css';
+import '@aceshooting/lyra-ui/accents.css';
+import { setLyraStyle } from '@aceshooting/lyra-ui/theme.js';
 
-applyLyraThemePreset(LYRA_SHADCN_THEME_PRESET);
-applyLyraThemePreset('sapphire'); // accent and system-following mode; keeps the shadcn look
+setLyraStyle({ look: 'shadcn', mode: 'system', accent: 'sapphire' });
+setLyraStyle({ accent: 'ruby' }); // keeps the other choices
 ```
 
 See the [changelog](CHANGELOG.md) for version-by-version changes and historical upgrade notes.
@@ -169,10 +173,10 @@ import "@aceshooting/lyra-ui/all.js";
 > registration entry, a family entry, or `@aceshooting/lyra-ui/all.js` for bulk registration.
 > An unregistered tag remains inert even when the import and build succeed.
 
-`all.js` registers 288 tags — every component **except** the 16 inventory-designated
+`all.js` registers 288 tags — every component **except** the 15 inventory-designated
 optional-peer-family tags: `<lr-chart>` and its 8 typed subclasses, `<lr-box-plot>`,
 `<lr-histogram>`, `<lr-map>`, `<lr-graph>`, `<lr-knowledge-graph-explorer>`, and
-`<lr-geojson-viewer>` with its deprecated `<lr-geojson-view>` alias (see Install above). Those always require their own explicit subpath import,
+`<lr-geojson-viewer>` (see Install above). Those always require their own explicit subpath import,
 even when pulling the rest of the library in bulk:
 
 ```js
@@ -574,9 +578,9 @@ setLyraLocale("fr"); // or just set <html lang="fr">/an ancestor `lang` — comp
 The dedicated `localization.js` entry is side-effect-free: it does not register the component
 graph. The package root continues to re-export the same runtime for compatibility, but importing
 the root remains registration-free. The same entry also carries `bridgeLyraLocale()`,
-`subscribeLyraLocale()` and `resolveLyraScopedString()`; their older
-`@aceshooting/lyra-ui/utilities/localization.js` entry point is deprecated, with removal not before
-23.0.0.
+`subscribeLyraLocale()` and `resolveLyraScopedString()`. Their former
+`@aceshooting/lyra-ui/utilities/localization.js` entry point was removed in 23.0.0;
+use the canonical `localization.js` route.
 
 ```html
 <!-- Per-instance: override specific keys on one element without a global registry. -->
@@ -783,7 +787,7 @@ covers every published component, and is regenerated by `pnpm run registration-g
 
 ## Components
 
-The catalog below lists all 304 tags in the current Custom Elements Manifest, grouped by
+The catalog below lists all 303 tags in the current Custom Elements Manifest, grouped by
 capability. The manifest and live docs are the authoritative sources for the complete generated
 API details.
 
@@ -1100,7 +1104,7 @@ each one-liner below.
 | `<lr-notebook-viewer>`                                                                 | — (extra)                                                                               | Read-only Jupyter notebook (nbformat 4.x) renderer composing existing components per cell — Markdown cells through `<lr-markdown>`, code cells through `<lr-code-block>`, rich outputs preferring image/HTML/JSON/plain-text in order; optional-DOMPurify sanitizes raw HTML/SVG output                           |
 | `<lr-spreadsheet-viewer>`                                                              | — (extra)                                                                               | Optional-SheetJS `.xlsx`/`.xls` workbook viewer with sheet tabs and virtualized rows                                                                                                                                                                                                                              |
 | `<lr-csv-viewer>`                                                                      | — (extra)                                                                               | Optional-PapaParse CSV viewer with quoted-field support and virtualized rows                                                                                                                                                                                                                                      |
-| `<lr-geojson-viewer>`                                                                  | — (extra)                                                                               | Document-registry bridge that renders a fetched `.geojson`/`application/geo+json` file through `<lr-map>`'s `dataLayers` (falls back to `<lr-json-viewer>` without the optional `maplibre-gl` peer); the former `<lr-geojson-view>` is a deprecated compatibility alias (removal not before 23.0.0)               |
+| `<lr-geojson-viewer>`                                                                  | — (extra)                                                                               | Document-registry bridge that renders a fetched `.geojson`/`application/geo+json` file through `<lr-map>`'s `dataLayers` (falls back to `<lr-json-viewer>` without the optional `maplibre-gl` peer); use the canonical `<lr-geojson-viewer>` tag; the old tag was removed in 23.0.0               |
 | `<lr-docx-viewer>`                                                                     | — (extra)                                                                               | Optional-Mammoth DOCX viewer that renders sanitized semantic HTML                                                                                                                                                                                                                                                 |
 | `<lr-email-viewer>`                                                                    | — (extra)                                                                               | Optional-PostalMime `.eml` viewer with sanitized HTML and plain-text fallback                                                                                                                                                                                                                                     |
 | `<lr-calendar-viewer>`                                                                 | — (extra)                                                                               | Optional-ical.js `.ics` viewer for event summaries and times                                                                                                                                                                                                                                                      |

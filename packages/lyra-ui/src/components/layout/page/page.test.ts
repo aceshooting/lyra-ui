@@ -324,12 +324,12 @@ it('emits a cancelable lr-nav-toggle-request before mutating navOpen, honoring a
   ).to.be.true;
 });
 
-describe('lr-nav-toggle-request and its deprecated lr-nav-toggle alias', () => {
+describe('lr-nav-toggle-request and its retired lr-nav-toggle alias', () => {
   const aliasUsage: readonly DeprecatedUsage[] = [
     { tag: 'lr-page', kind: 'event', name: 'lr-nav-toggle' },
   ];
 
-  it('fires the canonical request first, then the alias, as separate equal cancelable details', async () => {
+  it('fires only the canonical request with its cancelable detail', async () => {
     const page = (await fixture(html`<lr-page></lr-page>`)) as LyraPage;
     const seen: CustomEvent<{ open: boolean }>[] = [];
     const record = (event: Event) => seen.push(event as CustomEvent<{ open: boolean }>);
@@ -338,21 +338,17 @@ describe('lr-nav-toggle-request and its deprecated lr-nav-toggle alias', () => {
     page.showNavigation();
     expect(seen.map((event) => event.type)).to.deep.equal([
       'lr-nav-toggle-request',
-      'lr-nav-toggle',
     ]);
     expect(seen.map((event) => JSON.stringify(event.detail))).to.deep.equal([
       JSON.stringify({ open: true }),
-      JSON.stringify({ open: true }),
     ]);
-    expect(seen[0]!.detail === seen[1]!.detail, 'each event carries its own detail').to.equal(false);
     expect(seen.map((event) => [event.cancelable, event.bubbles, event.composed])).to.deep.equal([
-      [true, true, true],
       [true, true, true],
     ]);
     expect(page.navOpen).to.be.true;
   });
 
-  it('vetoes through the canonical request without a warning, while the alias still fires', async () => {
+  it('vetoes through the canonical request without a warning or retired notification', async () => {
     const page = (await fixture(html`<lr-page></lr-page>`)) as LyraPage;
     let aliasPrevented: boolean | undefined;
     page.addEventListener('lr-nav-toggle-request', (event) => event.preventDefault());
@@ -361,11 +357,11 @@ describe('lr-nav-toggle-request and its deprecated lr-nav-toggle alias', () => {
     });
     const warnings = await captureDeprecationWarnings(aliasUsage, () => page.showNavigation());
     expect(page.navOpen).to.be.false;
-    expect(aliasPrevented, 'the alias fires with its own undecided default').to.equal(false);
+    expect(aliasPrevented, 'the retired event is absent').to.equal(undefined);
     expect(warnings).to.have.length(0);
   });
 
-  it('still lets a listener on only the alias veto, and warns once naming lr-nav-toggle-request', async () => {
+  it('ignores the retired listener when opening navigation', async () => {
     const results: boolean[] = [];
     const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
       for (let index = 0; index < 2; index += 1) {
@@ -375,19 +371,16 @@ describe('lr-nav-toggle-request and its deprecated lr-nav-toggle alias', () => {
         results.push(page.navOpen);
       }
     });
-    expect(results).to.deep.equal([false, false]);
-    expect(warnings.map(({ key }) => key)).to.deep.equal([
-      'lyra-deprecated:lr-page:event:lr-nav-toggle',
-    ]);
-    expect(warnings[0]!.message).to.contain('lr-nav-toggle-request');
+    expect(results).to.deep.equal([true, true]);
+    expect(warnings).to.have.length(0);
   });
 
-  it('does not warn when an alias listener only observes', async () => {
+  it('does not notify a retired event listener', async () => {
     const page = (await fixture(html`<lr-page></lr-page>`)) as LyraPage;
     let observed = 0;
     page.addEventListener('lr-nav-toggle', () => (observed += 1));
     const warnings = await captureDeprecationWarnings(aliasUsage, () => page.toggleNavigation());
-    expect(observed).to.equal(1);
+    expect(observed).to.equal(0);
     expect(page.navOpen).to.be.true;
     expect(warnings).to.have.length(0);
   });

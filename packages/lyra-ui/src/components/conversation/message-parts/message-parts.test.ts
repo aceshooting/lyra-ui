@@ -374,61 +374,6 @@ it("omits reasoning parts while without-reasoning is set", async () => {
   expect(el.shadowRoot!.querySelectorAll('[data-type="reasoning"]').length).to.equal(0);
 });
 
-it('keeps the deprecated show-reasoning="false" alias equal to without-reasoning, warning once', async () => {
-  let el!: LyraMessageParts;
-  let both!: LyraMessageParts;
-  const warnings = await captureDeprecationWarnings(
-    [{ tag: "lr-message-parts", kind: "property", name: "showReasoning" }],
-    async () => {
-      el = (await fixture(
-        html`<lr-message-parts
-          content-mode="plain"
-          show-reasoning="false"
-          .parts=${parts.slice(0, 2)}
-        ></lr-message-parts>`
-      )) as LyraMessageParts;
-      both = (await fixture(
-        html`<lr-message-parts show-reasoning without-reasoning .parts=${parts.slice(0, 2)}></lr-message-parts>`
-      )) as LyraMessageParts;
-    }
-  );
-  expect(warnings.map((warning) => warning.key)).to.deep.equal([
-    "lyra-deprecated:lr-message-parts:property:showReasoning",
-  ]);
-  expect(el.withoutReasoning).to.be.true;
-  expect(el.showReasoning).to.be.false;
-  expect(el.shadowRoot!.querySelectorAll('[data-type="reasoning"]').length).to.equal(0);
-  expect(both.withoutReasoning, "the later without-reasoning attribute wins").to.be.true;
-  expect(both.showReasoning).to.be.false;
-});
-
-it("forwards a showReasoning write, syncs back from without-reasoning, and lets the last write win", async () => {
-  let el!: LyraMessageParts;
-  let both!: LyraMessageParts;
-  await captureDeprecationWarnings(
-    [{ tag: "lr-message-parts", kind: "property", name: "showReasoning" }],
-    async () => {
-      el = (await fixture(
-        html`<lr-message-parts content-mode="plain" .parts=${parts.slice(0, 2)}></lr-message-parts>`
-      )) as LyraMessageParts;
-      el.showReasoning = false;
-      await el.updateComplete;
-      both = (await fixture(
-        html`<lr-message-parts without-reasoning show-reasoning .parts=${parts.slice(0, 2)}></lr-message-parts>`
-      )) as LyraMessageParts;
-    }
-  );
-  expect(el.withoutReasoning).to.be.true;
-  expect(el.hasAttribute("without-reasoning")).to.be.true;
-  expect(el.shadowRoot!.querySelectorAll('[data-type="reasoning"]').length).to.equal(0);
-  el.withoutReasoning = false;
-  await el.updateComplete;
-  expect(el.showReasoning).to.be.true;
-  expect(el.shadowRoot!.querySelectorAll('[data-type="reasoning"]').length).to.equal(1);
-  expect(both.withoutReasoning, "the later show-reasoning attribute wins").to.be.false;
-  expect(both.showReasoning).to.be.true;
-});
-
 it("canonicalizes unsupported content modes to reflected markdown across direct, attribute, and lifecycle writes", async () => {
   expect(declaredMessagePartsContentModes).to.deep.equal(["plain", "markdown"]);
 
@@ -819,7 +764,7 @@ it("inherits independently rethemeable streaming, transcript, and error state lo
   expect(getComputedStyle(error).color).to.equal("rgb(13, 14, 15)");
 });
 
-it("still reads the deprecated --lr-message-parts-error-background alias below -error-bg", async () => {
+it("ignores the retired error-background token and retains error-bg", async () => {
   const wrapper = (await fixture(html`
     <div style="--lr-message-parts-error-background: rgb(10, 11, 12);">
       <lr-message-parts .parts=${[parts[8]!]}></lr-message-parts>
@@ -831,7 +776,7 @@ it("still reads the deprecated --lr-message-parts-error-background alias below -
   `)) as HTMLDivElement;
   const [alias, both] = [...wrapper.querySelectorAll("lr-message-parts")] as LyraMessageParts[];
   const errorOf = (el: LyraMessageParts) => el.shadowRoot!.querySelector('[part~="error"]') as HTMLElement;
-  expect(getComputedStyle(errorOf(alias!)).backgroundColor).to.equal("rgb(10, 11, 12)");
+  expect(getComputedStyle(errorOf(alias!)).backgroundColor).to.not.equal("rgb(10, 11, 12)");
   expect(getComputedStyle(errorOf(both!)).backgroundColor).to.equal("rgb(1, 2, 3)");
 });
 
@@ -1444,13 +1389,9 @@ describe("lr-message-parts rendered whitespace, code direction and code headers"
   });
 });
 
-describe('lr-message-parts deprecated code-block-chrome spelling', () => {
+describe('lr-message-parts canonical code-block-header spelling', () => {
   type Parts = LyraMessageParts & { shadowRoot: ShadowRoot };
-  type InnerMarkdown = HTMLElement & { codeBlockChrome: boolean; codeBlockHeader: boolean };
-  const usages = [
-    { tag: 'lr-message-parts', kind: 'property', name: 'codeBlockChrome' },
-    { tag: 'lr-markdown', kind: 'property', name: 'codeBlockChrome' },
-  ] as const;
+  type InnerMarkdown = HTMLElement & { codeBlockHeader: boolean };
   const fencedParts: MessagePart[] = [
     { id: 'r', type: 'reasoning', collapsed: false, text: '```ts\nreasoned();\n```' },
     { id: 'a', type: 'text', text: '```js\nanswer();\n```' },
@@ -1460,50 +1401,8 @@ describe('lr-message-parts deprecated code-block-chrome spelling', () => {
   const headerCounts = (el: Parts): number[] =>
     markdownIn(el).map((node) => node.shadowRoot?.querySelectorAll('[part="code-block-header"]').length ?? 0);
 
-  it('warns once for lr-message-parts only and forwards headers as code-block-header', async () => {
-    let forwarded: Array<{ chrome: boolean; header: boolean }> = [];
-    const warnings = await captureDeprecationWarnings(usages, async () => {
-      const el = await fixture<Parts>(
-        html`<lr-message-parts code-block-chrome .parts=${fencedParts}></lr-message-parts>`
-      );
-      await waitUntil(() => headerCounts(el).join() === '1,1', 'headers never rendered', { timeout: 5000 });
-      forwarded = markdownIn(el).map((node) => ({ chrome: node.codeBlockChrome, header: node.codeBlockHeader }));
-    });
-    expect(warnings.map(({ key }) => key)).to.deep.equal([
-      'lyra-deprecated:lr-message-parts:property:codeBlockChrome',
-    ]);
-    expect(warnings[0]!.message).to.contain('code-block-header');
-    // The inner lr-markdown receives only the canonical codeBlockHeader; its own deprecated
-    // codeBlockChrome follows silently.
-    expect(forwarded).to.deep.equal([
-      { chrome: true, header: true },
-      { chrome: true, header: true },
-    ]);
-  });
-
-  it('keeps code-block-chrome and code-block-header in step, the last write winning', async () => {
-    let el!: Parts;
-    let both!: Parts;
-    await captureDeprecationWarnings(usages, async () => {
-      el = await fixture<Parts>(html`<lr-message-parts .parts=${fencedParts}></lr-message-parts>`);
-      el.codeBlockChrome = true;
-      await el.updateComplete;
-      both = await fixture<Parts>(
-        html`<lr-message-parts code-block-chrome .parts=${fencedParts}></lr-message-parts>`
-      );
-      both.codeBlockHeader = false;
-      await both.updateComplete;
-    });
-    expect(el.codeBlockHeader, 'an alias write reaches the canonical').to.equal(true);
-    el.codeBlockHeader = false;
-    await el.updateComplete;
-    expect(el.codeBlockChrome, 'a canonical write syncs back to the alias').to.equal(false);
-    expect(both.codeBlockChrome, 'the later canonical write wins').to.equal(false);
-    await waitUntil(() => headerCounts(both).join() === '0,0', 'headers were never removed', { timeout: 5000 });
-  });
-
   it('never warns for code-block-header', async () => {
-    const warnings = await captureDeprecationWarnings(usages, async () => {
+    const warnings = await captureDeprecationWarnings([], async () => {
       const el = await fixture<Parts>(
         html`<lr-message-parts code-block-header .parts=${fencedParts}></lr-message-parts>`
       );
@@ -1512,20 +1411,6 @@ describe('lr-message-parts deprecated code-block-chrome spelling', () => {
     expect(warnings).to.have.length(0);
   });
 
-  it('removes the headers again when code-block-chrome is removed', async () => {
-    let after = '';
-    await captureDeprecationWarnings(usages, async () => {
-      const el = await fixture<Parts>(
-        html`<lr-message-parts code-block-chrome .parts=${fencedParts}></lr-message-parts>`
-      );
-      await waitUntil(() => headerCounts(el).join() === '1,1', 'headers never rendered', { timeout: 5000 });
-      el.removeAttribute('code-block-chrome');
-      await el.updateComplete;
-      await waitUntil(() => headerCounts(el).join() === '0,0', 'headers were never removed', { timeout: 5000 });
-      after = headerCounts(el).join();
-    });
-    expect(after).to.equal('0,0');
-  });
 });
 
 it('preserves interrupted content and emits a controlled owned resume request', async () => {

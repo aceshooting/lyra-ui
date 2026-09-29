@@ -682,7 +682,7 @@ describe('lr-video public contract', () => {
       await resetMouse();
     }
 
-    // The deprecated -background spelling still themes the hover, below the canonical -bg.
+    // The retired -background spelling is inert; the canonical -bg still paints.
     const aliasWrapper = await fixture<HTMLElement>(html`
       <div style="--lr-video-poster-play-button-hover-background: rgb(30, 31, 32)">
         <lr-video poster="https://example.test/poster.jpg"></lr-video>
@@ -698,7 +698,7 @@ describe('lr-video public contract', () => {
     try {
       await resetMouse();
       await hover(aliasButton!);
-      expect(getComputedStyle(aliasButton!).backgroundColor).to.equal('rgb(30, 31, 32)');
+      expect(getComputedStyle(aliasButton!).backgroundColor).not.to.equal('rgb(30, 31, 32)');
       await hover(bothButton!);
       expect(getComputedStyle(bothButton!).backgroundColor).to.equal('rgb(40, 41, 42)');
     } finally {

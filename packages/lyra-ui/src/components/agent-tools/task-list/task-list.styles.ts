@@ -15,7 +15,7 @@ export const styles = [
       border: var(--lr-border-width-thin) solid
         var(--lr-task-list-border-color, var(--lr-color-border));
       border-radius: var(--lr-task-list-radius, var(--lr-radius));
-      background: var(--lr-task-list-bg, var(--lr-task-list-background, var(--lr-color-surface)));
+      background: var(--lr-task-list-bg, var(--lr-color-surface));
       overflow: hidden;
     }
     /* Density escape -- same convention as lr-agent-run/lr-source-card's dense tier. Values sit behind

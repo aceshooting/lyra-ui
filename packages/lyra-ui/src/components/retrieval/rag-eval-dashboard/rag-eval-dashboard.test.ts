@@ -442,12 +442,12 @@ describe('lr-rag-eval-dashboard render cap', () => {
   });
 });
 
-describe('lr-rag-eval-dashboard deprecated show-chart alias', () => {
+describe('lr-rag-eval-dashboard retired show-chart alias', () => {
   const ALIAS: DeprecatedUsage[] = [{ tag: 'lr-rag-eval-dashboard', kind: 'property', name: 'showChart' }];
   const observe = (el: LyraRagEvalDashboard): string => String(el.shadowRoot!.querySelector('[part="chart"]') !== null);
   const mount = (markup: ReturnType<typeof html>) => fixture<LyraRagEvalDashboard>(markup);
 
-  it('applies without-chart without a deprecation warning', async () => {
+  it('applies without-chart with canonical defaults and no deprecation warning', async () => {
     let canonical = '';
     let plain = '';
     const warnings = await captureDeprecationWarnings(ALIAS, async () => {
@@ -456,66 +456,5 @@ describe('lr-rag-eval-dashboard deprecated show-chart alias', () => {
     });
     expect(canonical).to.not.equal(plain);
     expect(warnings).to.have.length(0);
-  });
-
-  it('keeps show-chart="false" equal to without-chart, warning once', async () => {
-    let canonical = '';
-    let alias = '';
-    let property = '';
-    let readback: unknown[] = [];
-    const warnings = await captureDeprecationWarnings(ALIAS, async () => {
-      canonical = observe(await mount(html`<lr-rag-eval-dashboard .metrics=${metrics} .runs=${runs} metric-id="groundedness" slice="all" without-chart></lr-rag-eval-dashboard>`));
-      alias = observe(await mount(html`<lr-rag-eval-dashboard .metrics=${metrics} .runs=${runs} metric-id="groundedness" slice="all" show-chart="false"></lr-rag-eval-dashboard>`));
-      const el = await mount(html`<lr-rag-eval-dashboard .metrics=${metrics} .runs=${runs} metric-id="groundedness" slice="all"></lr-rag-eval-dashboard>`);
-      el.showChart = false;
-      await el.updateComplete;
-      property = observe(el);
-      readback = [el.withoutChart, el.showChart, el.getAttribute('show-chart')];
-      // The canonical property syncs back into the alias.
-      el.withoutChart = false;
-      await el.updateComplete;
-      readback.push(el.showChart, el.hasAttribute('show-chart'));
-    });
-    expect(alias).to.equal(canonical);
-    expect(property).to.equal(canonical);
-    expect(readback).to.deep.equal([true, false, 'false', true, false]);
-    expect(warnings.map(({ key }) => key)).to.deep.equal([
-      'lyra-deprecated:lr-rag-eval-dashboard:property:showChart',
-    ]);
-    expect(warnings[0]!.message).to.contain('without-chart');
-  });
-
-  it('restores the default when show-chart is true or removed', async () => {
-    let plain = '';
-    let restored = '';
-    let removed = '';
-    await captureDeprecationWarnings(ALIAS, async () => {
-      plain = observe(await mount(html`<lr-rag-eval-dashboard .metrics=${metrics} .runs=${runs} metric-id="groundedness" slice="all"></lr-rag-eval-dashboard>`));
-      const el = await mount(html`<lr-rag-eval-dashboard .metrics=${metrics} .runs=${runs} metric-id="groundedness" slice="all" show-chart="false"></lr-rag-eval-dashboard>`);
-      el.showChart = true;
-      await el.updateComplete;
-      restored = observe(el);
-      el.showChart = false;
-      await el.updateComplete;
-      el.removeAttribute('show-chart');
-      await el.updateComplete;
-      removed = observe(el);
-    });
-    expect(restored).to.equal(plain);
-    expect(removed).to.equal(plain);
-  });
-
-  it('lets the later attribute win when markup carries both spellings', async () => {
-    let canonical = '';
-    let both = '';
-    await captureDeprecationWarnings(ALIAS, async () => {
-      canonical = observe(await mount(html`<lr-rag-eval-dashboard .metrics=${metrics} .runs=${runs} metric-id="groundedness" slice="all" without-chart></lr-rag-eval-dashboard>`));
-      const el = await mount(html`<lr-rag-eval-dashboard .metrics=${metrics} .runs=${runs} metric-id="groundedness" slice="all" show-chart without-chart></lr-rag-eval-dashboard>`);
-      expect(el.withoutChart).to.equal(true);
-      both = observe(el);
-      const reversed = await mount(html`<lr-rag-eval-dashboard .metrics=${metrics} .runs=${runs} metric-id="groundedness" slice="all" without-chart show-chart></lr-rag-eval-dashboard>`);
-      expect(reversed.withoutChart, 'the later alias attribute wins').to.equal(false);
-    });
-    expect(both).to.equal(canonical);
   });
 });

@@ -5,9 +5,7 @@ import { isRtl } from '../../../internal/rtl.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { styles } from './dock-panel.styles.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
-import { invertAlias, type LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -156,17 +154,11 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    edge: 'placement',
-    resizable: ['withoutResize', invertAlias, invertAlias],
-  };
 
   /** Which edge of its own container the panel is docked to. `'start'`/`'end'` are logical-inline
    *  (they mirror under RTL); `'top'`/`'bottom'` are block-direction. */
   @property({ reflect: true }) placement: LyraDockPanelEdge = 'end';
 
-  /** @deprecated Use `placement`; removal not before 23.0.0. */
-  @property({ reflect: true }) edge: LyraDockPanelEdge = 'end';
   /** The current docked extent along the resize axis, as a CSS length (e.g. `"320px"`).
    *
    *  Spelled `extent`, not `size`: everywhere else in the library `size` names a tier on the
@@ -184,15 +176,6 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   @property({ type: Boolean, reflect: true }) collapsed = false;
   /** When set, no drag handle renders at all and the panel is a fixed size. */
   @property({ type: Boolean, reflect: true, attribute: 'without-resize' }) withoutResize = false;
-
-  /** When `false`, no drag handle renders at all and the panel is a fixed size.
-   *  @deprecated Use `without-resize` (inverted); removal not before 23.0.0. */
-  @property({
-    type: Boolean,
-    reflect: true,
-    converter: trueDefaultBooleanConverter,
-  })
-  resizable = true;
 
   private drag: DragState | null = null;
   private dragOwnerWindow?: Window;
