@@ -1,11 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   compatibilityKey,
   assembleCompatibilityContext,
   resolveCompatibilityRecord,
   compatibilityExposure,
 } from './published-compatibility.mjs';
+import { readPublishedCaptureSync } from './published-compatibility-io.mjs';
 
 const record = {
   tag: 'lr-alpha', kind: 'property', name: 'oldValue', attribute: 'old-value',
@@ -85,6 +89,41 @@ test('rejects later floors, unpublished policy, missing retirement, duplicates a
     const input = options(); mutate(input);
     assert.throws(() => assembleCompatibilityContext(input));
   }
+});
+
+test('two-capture retired members retain the component snapshot from their exact retirement release', () => {
+  const history = join(dirname(fileURLToPath(import.meta.url)), 'fixtures/compatibility-history');
+  const published22 = readPublishedCaptureSync(join(history, '22.0.0')).facts;
+  const published23 = readPublishedCaptureSync(join(history, '23.0.0')).facts;
+  const index = JSON.parse(readFileSync(join(history, 'index.json'), 'utf8'));
+  const retirement = index.retirements.find(entry => entry.key.scope === 'member' && entry.key.tag === 'lr-activity-feed' &&
+    entry.key.kind === 'property' && entry.key.name === 'compact');
+  const oldPolicy = published22.records.find(entry => compatibilityKey(entry.key) === compatibilityKey(retirement.key));
+  const oldComponent = published22.components.find(entry => entry.tag === retirement.key.tag);
+  const newComponent = published23.components.find(entry => entry.tag === retirement.key.tag);
+  assert.equal(retirement.sourceRelease, 'lyra-ui@22.0.0');
+  assert.equal(oldComponent.surface.properties.some(entry => entry.name === 'compact'), true);
+  assert.equal(newComponent.surface.properties.some(entry => entry.name === 'compact'), false);
+  const current = { ...structuredClone(newComponent), maturity: { deprecations: [] } };
+  const captures = [
+    { ...published22, records: [oldPolicy], components: [oldComponent] },
+    { ...published23, records: [], components: [newComponent] },
+  ];
+  const context = assembleCompatibilityContext({ packageVersion: '24.0.0',
+    currentInventory: { components: [current], mappings: [], upstreams: {} }, captures, retirementIndex: [retirement] });
+  const resolved = resolveCompatibilityRecord(context, retirement.key);
+  assert.equal(context.sourceComponents['lr-activity-feed'].surface.properties.some(entry => entry.name === 'compact'), false);
+  assert.deepEqual(resolved.sourceComponent, oldComponent);
+  assert.equal(resolved.sourceMember.name, 'compact');
+  assert.equal(resolved.sourceMember.default, false);
+  const missingMember = structuredClone(captures);
+  missingMember[0].components[0].surface.properties = missingMember[0].components[0].surface.properties.filter(entry => entry.name !== 'compact');
+  assert.throws(() => assembleCompatibilityContext({ packageVersion: '24.0.0',
+    currentInventory: { components: [current], mappings: [], upstreams: {} }, captures: missingMember, retirementIndex: [retirement] }), /source member/u);
+  const missingOwner = structuredClone(captures);
+  missingOwner[0].components = [];
+  assert.throws(() => assembleCompatibilityContext({ packageVersion: '24.0.0',
+    currentInventory: { components: [current], mappings: [], upstreams: {} }, captures: missingOwner, retirementIndex: [retirement] }), /source component/u);
 });
 
 test('conservative exposure retains retired source owners and newly conflicting current owners', () => {

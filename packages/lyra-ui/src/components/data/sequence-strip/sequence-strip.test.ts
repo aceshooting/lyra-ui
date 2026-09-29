@@ -1,5 +1,4 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
-import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './sequence-strip.js';
 import type {
@@ -324,9 +323,9 @@ it('joins generated clauses with the effective locale list punctuation', async (
   }
 });
 
-it('uses accessibleLabel verbatim instead of the auto-generated summary when set', async () => {
+it('uses the host aria-label instead of the auto-generated summary when set', async () => {
   const el = (await fixture(
-    html`<lr-sequence-strip accessible-label="Custom summary"></lr-sequence-strip>`,
+    html`<lr-sequence-strip aria-label="Custom summary"></lr-sequence-strip>`,
   )) as LyraSequenceStrip;
   el.items = items;
   el.categories = categories;
@@ -334,9 +333,9 @@ it('uses accessibleLabel verbatim instead of the auto-generated summary when set
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Custom summary');
 });
 
-it('treats an explicitly empty accessibleLabel as a real override, distinct from an omitted one', async () => {
+it('treats an explicitly empty host aria-label as a real override, distinct from an omitted one', async () => {
   const explicit = (await fixture(
-    html`<lr-sequence-strip accessible-label=""></lr-sequence-strip>`,
+    html`<lr-sequence-strip aria-label=""></lr-sequence-strip>`,
   )) as LyraSequenceStrip;
   await explicit.updateComplete;
   expect(explicit.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
@@ -346,9 +345,9 @@ it('treats an explicitly empty accessibleLabel as a real override, distinct from
   expect(omitted.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('No items');
 });
 
-it('prefers the host aria-label and restores the compatibility fallback on removal', async () => {
+it('prefers the host aria-label and restores the generated summary on removal', async () => {
   const el = (await fixture(html`
-    <lr-sequence-strip accessible-label="Component alias" aria-label="Host label"></lr-sequence-strip>
+    <lr-sequence-strip aria-label="Host label"></lr-sequence-strip>
   `)) as LyraSequenceStrip;
   el.items = items;
   el.categories = categories;
@@ -937,12 +936,12 @@ describe('marker legend entry', () => {
     expect(label).to.equal('Text: 2, Tool: 1, Subagent: 1');
   });
 
-  it('leaves the summary untouched when markerLabel is unset, and defers to accessibleLabel when set', async () => {
+  it('leaves the summary untouched when markerLabel is unset, and defers to a host aria-label when set', async () => {
     const bare = await strip(html`<lr-sequence-strip with-legend></lr-sequence-strip>`);
     expect(bare.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Text: 2, Tool: 1');
 
     const custom = await strip(
-      html`<lr-sequence-strip with-legend marker-label="Subagent" accessible-label="Custom"></lr-sequence-strip>`,
+      html`<lr-sequence-strip with-legend marker-label="Subagent" aria-label="Custom"></lr-sequence-strip>`,
     );
     expect(custom.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Custom');
   });
@@ -1643,8 +1642,8 @@ describe('lr-sequence-strip legend visibility', () => {
 
 });
 
-it('lets host aria-label presence override the compatibility name, including empty', async () => {
-  const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip aria-label="Host name" accessible-label="Old name" .items=${items} .categories=${categories}></lr-sequence-strip>`);
+it('lets host aria-label presence override the generated name, including empty', async () => {
+  const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip aria-label="Host name" .items=${items} .categories=${categories}></lr-sequence-strip>`);
   const owner = () => el.shadowRoot!.querySelector('[part="base"]')!;
   expect(owner().getAttribute('aria-label')).to.equal('Host name');
   el.ariaLabel = '';
@@ -1652,8 +1651,5 @@ it('lets host aria-label presence override the compatibility name, including emp
   expect(owner().getAttribute('aria-label')).to.equal('');
   el.removeAttribute('aria-label');
   await el.updateComplete;
-  expect(owner().getAttribute('aria-label')).to.equal('Old name');
+  expect(owner().getAttribute('aria-label')).to.equal('Text: 2, Tool: 1');
 });
-
-expectDeprecatedUsage('lr-sequence-strip', 'attribute', 'accessible-label');
-expectDeprecatedUsage('lr-sequence-strip', 'property', 'accessibleLabel');

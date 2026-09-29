@@ -53,5 +53,5 @@ these events propose complete next values without mutating `items`.
 **Slots:** none. **Optional peer deps:** none.
 
 ```ts
-import "@aceshooting/lyra-ui/components/conversation/prompt-queue/prompt-queue.js";
+import "@aceshooting/lyra-ui/components/lr-prompt-queue.js";
 ```

@@ -1,4 +1,3 @@
-import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './terminal.js';
 import type { LyraTerminal } from './terminal.js';
@@ -1932,33 +1931,3 @@ it('scrolls an unwrapped terminal from the start of its lines under RTL and foll
   await el.updateComplete;
   expect(getComputedStyle(scrollport).direction).to.equal('rtl');
 });
-
-
-
-expectDeprecatedUsage('lr-terminal', 'event', 'lr-download');
-
-it('retains the deprecated lr-download veto alias', async () => {
-    const el = (await fixture(
-      html`<lr-terminal downloadable filename="out.log"></lr-terminal>`,
-    )) as LyraTerminal;
-    el.write('hi');
-    await el.updateComplete;
-    const original = URL.createObjectURL;
-    let createObjectURLCalled = false;
-    URL.createObjectURL = ((blob: Blob) => {
-      createObjectURLCalled = true;
-      return original.call(URL, blob);
-    }) as typeof URL.createObjectURL;
-    try {
-      el.addEventListener('lr-download', (e) => e.preventDefault(), { once: true });
-      const button = el.shadowRoot!.querySelector('[part="download-button"]') as HTMLButtonElement;
-      const listener = oneEvent(el, 'lr-download');
-      button.click();
-      const event = (await listener) as CustomEvent<{ filename: string }>;
-      expect(event.detail.filename).to.equal('out.log');
-      expect(event.defaultPrevented).to.be.true;
-      expect(createObjectURLCalled).to.be.false;
-    } finally {
-      URL.createObjectURL = original;
-    }
-  });

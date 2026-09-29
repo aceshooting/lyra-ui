@@ -1,7 +1,8 @@
-import { LyraSplitPanel } from '../src/lyra.js';
+import { LyraSplitPanel } from '../src/components/layout/split-panel/split-panel.class.js';
 import { LyraSplitPanel as LayoutLyraSplitPanel } from '../src/components/layout/index.js';
 import type {
-  LyraSplitPanelEventMap,
+  LyraSplitPanelEventMap } from '../src/components/layout/split-panel/split-panel.class.js';
+import {
   LyraSplitPanelSnapFunction,
   LyraSplitPanelSnapFunctionParams,
   LyraSplitPanelOrientation,

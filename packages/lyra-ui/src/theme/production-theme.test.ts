@@ -1,10 +1,9 @@
-import { expectDeprecatedUsage } from '../../test/expected-deprecations.js';
 import { fixture, expect, html } from '@open-wc/testing';
 import { LitElement } from 'lit';
 import { palette } from '../internal/tokens/palette.styles.js';
 import { tokens } from '../internal/tokens.styles.js';
 import { tag } from '../internal/prefix.js';
-import { setLyraTheme, type LyraThemeMode } from './theme.js';
+import { setLyraStyle, type LyraMode } from './theme.js';
 
 class ProductionThemeProbe extends LitElement {
   static override styles = [palette, tokens];
@@ -42,16 +41,14 @@ const SEMANTIC_ROLES = [
     ])),
 ] as const;
 
-expectDeprecatedUsage('./theme.js', 'function', 'setLyraTheme');
-
 describe('production theme rendering', () => {
   it('routes every representative neutral/brand emphasis through theme.css in light and dark mode', async () => {
     const sheet = await productionThemeSheet();
     const originalSheets = document.adoptedStyleSheets;
     document.adoptedStyleSheets = [...originalSheets, sheet];
     try {
-      for (const mode of ['light', 'dark'] satisfies LyraThemeMode[]) {
-        setLyraTheme({ mode, accent: null, tokens: null });
+      for (const mode of ['light', 'dark'] satisfies LyraMode[]) {
+        setLyraStyle({ mode, accent: null, overrides: null });
         const probe = await renderedProbe();
         const rootStyle = getComputedStyle(document.documentElement);
         const probeStyle = getComputedStyle(probe);
@@ -83,7 +80,7 @@ describe('production theme rendering', () => {
         expect(failures.join('\n')).to.equal('');
       }
     } finally {
-      setLyraTheme({ mode: 'unset', accent: null, tokens: null });
+      setLyraStyle({ mode: 'unset', accent: null, overrides: null });
       localStorage.removeItem('lyra-theme');
       document.adoptedStyleSheets = originalSheets;
     }
@@ -94,7 +91,7 @@ describe('production theme rendering', () => {
     const originalSheets = document.adoptedStyleSheets;
     document.adoptedStyleSheets = [...originalSheets, sheet];
     try {
-      setLyraTheme({ mode: 'dark', accent: '#e63950', tokens: null });
+      setLyraStyle({ mode: 'dark', accent: '#e63950', overrides: null });
       const probe = await renderedProbe();
       const rootStyle = getComputedStyle(document.documentElement);
       const probeStyle = getComputedStyle(probe);
@@ -114,7 +111,7 @@ describe('production theme rendering', () => {
       }
       expect(failures.join('\n')).to.equal('');
     } finally {
-      setLyraTheme({ mode: 'unset', accent: null, tokens: null });
+      setLyraStyle({ mode: 'unset', accent: null, overrides: null });
       localStorage.removeItem('lyra-theme');
       document.adoptedStyleSheets = originalSheets;
     }
@@ -125,11 +122,11 @@ describe('production theme rendering', () => {
     const originalSheets = document.adoptedStyleSheets;
     document.adoptedStyleSheets = [...originalSheets, sheet];
     try {
-      setLyraTheme({
+      setLyraStyle({
         mode: 'dark',
         accent: { danger: '#c81e3a', success: '#1f9d55' },
-        surface: '#101418',
-        tokens: null,
+        accentBackground: '#101418',
+        overrides: null,
       });
       const probe = await renderedProbe();
       const rootStyle = getComputedStyle(document.documentElement);
@@ -150,7 +147,7 @@ describe('production theme rendering', () => {
       }
       expect(failures.join('\n')).to.equal('');
     } finally {
-      setLyraTheme({ mode: 'unset', accent: null, surface: null, tokens: null });
+      setLyraStyle({ mode: 'unset', accent: null, accentBackground: null, overrides: null });
       localStorage.removeItem('lyra-theme');
       document.adoptedStyleSheets = originalSheets;
     }
@@ -217,7 +214,7 @@ describe('focus-ring tokens at consumer scope', () => {
     const originalSheets = document.adoptedStyleSheets;
     document.adoptedStyleSheets = [...originalSheets, sheet];
     try {
-      setLyraTheme({ mode: 'light', accent: null, tokens: null });
+      setLyraStyle({ mode: 'light', accent: null, overrides: null });
       const probe = await renderedProbe();
       const probeStyle = getComputedStyle(probe);
 

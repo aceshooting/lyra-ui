@@ -46,5 +46,5 @@ is pairwise Jaccard similarity across those visible chunk ids. Selection is cont
 same escape-hatch pattern as `lr-retrieval-results`'s `--lr-retrieval-results-selected-border`.
 
 ```ts
-import "@aceshooting/lyra-ui/components/retrieval/retrieval-compare/retrieval-compare.js";
+import "@aceshooting/lyra-ui/components/lr-retrieval-compare.js";
 ```

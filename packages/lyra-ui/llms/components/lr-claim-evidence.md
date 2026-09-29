@@ -67,5 +67,5 @@ Selection is controlled: activation emits the complete claim but does not assign
 **Slots:** none. **Optional peer deps:** none.
 
 ```ts
-import "@aceshooting/lyra-ui/components/retrieval/claim-evidence/claim-evidence.js";
+import "@aceshooting/lyra-ui/components/lr-claim-evidence.js";
 ```

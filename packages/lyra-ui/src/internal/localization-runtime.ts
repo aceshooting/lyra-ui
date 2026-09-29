@@ -925,8 +925,8 @@ function flattenedParentElement(element: Element): Element | null {
  * `locale=""` gets no such meaning: it is this library's own attribute, HTML's empty-string
  * semantics do not extend to it, and an empty one simply declares nothing.
  */
-function inheritedLocale(host: Element): string {
-  const explicit = host.getAttribute('locale') || host.getAttribute('lang');
+function inheritedLocale(host: Element, localeAttribute = host.getAttribute('locale')): string {
+  const explicit = localeAttribute || host.getAttribute('lang');
   if (explicit) return canonicalizeLyraLocale(explicit);
   if (host.getAttribute('lang') === '') return activeLocale || 'en';
   const documentElement = host.ownerDocument?.documentElement;
@@ -954,7 +954,7 @@ function inheritedLocale(host: Element): string {
  * arbitrary elements passed to the public resolvers get no caching.
  */
 const cacheableLocaleHosts = new WeakSet<Element>();
-const resolvedLocaleCache = new WeakMap<Element, string>();
+const resolvedLocaleCache = new WeakMap<Element, { attribute: string; value: string }>();
 const resolvedDirectionCache = new WeakMap<Element, 'ltr' | 'rtl'>();
 
 /**
@@ -977,13 +977,26 @@ export function invalidateLyraLocaleCache(host: Element): void {
 
 /** Resolve the locale inherited by a component host. */
 export function resolveLyraLocale(host: Element): string {
-  if (!cacheableLocaleHosts.has(host)) return inheritedLocale(host);
-  let locale = resolvedLocaleCache.get(host);
-  if (locale === undefined) {
-    locale = inheritedLocale(host);
-    resolvedLocaleCache.set(host, locale);
+  return cachedLocale(host, host.getAttribute('locale') || '');
+}
+
+function cachedLocale(host: Element, localeAttribute: string): string {
+  if (!cacheableLocaleHosts.has(host)) return inheritedLocale(host, localeAttribute);
+  let cached = resolvedLocaleCache.get(host);
+  if (cached === undefined || cached.attribute !== localeAttribute) {
+    cached = { attribute: localeAttribute, value: inheritedLocale(host, localeAttribute) };
+    resolvedLocaleCache.set(host, cached);
   }
-  return locale;
+  return cached.value;
+}
+
+/** Resolve a LyraElement's property-backed locale before its reflected attribute catches up. */
+export function resolveLyraLocaleWithHostOverride(
+  host: Element,
+  localeOverride: string
+): string {
+  if (localeOverride) return canonicalizeLyraLocale(localeOverride);
+  return cachedLocale(host, localeOverride);
 }
 
 function inheritedDirection(host: Element): 'ltr' | 'rtl' {
@@ -1032,7 +1045,7 @@ export function resolveLyraDirection(host: Element): 'ltr' | 'rtl' {
  * purely to seed a comparison.
  */
 export function peekLyraLocale(host: Element): string | undefined {
-  return resolvedLocaleCache.get(host);
+  return resolvedLocaleCache.get(host)?.value;
 }
 
 /** @see peekLyraLocale */
@@ -1180,11 +1193,35 @@ export function resolveLyraString(
   values?: Record<string, string | number>,
   defaults?: Readonly<LyraLocaleStrings>
 ): string {
+  return resolveLyraStringWithLocale(
+    () => resolveLyraLocale(host),
+    key,
+    overrides,
+    fallback,
+    values,
+    defaults
+  );
+}
+
+/**
+ * Resolves a component message using its effective locale property, including before Lit reflects
+ * that property to the host attribute during the current update.
+ *
+ * @internal Used by LyraElement; consumers should use {@link resolveLyraString}.
+ */
+export function resolveLyraStringWithLocale(
+  resolveLocale: () => string,
+  key: string,
+  overrides?: LyraLocaleStrings,
+  fallback?: string,
+  values?: Record<string, string | number>,
+  defaults?: Readonly<LyraLocaleStrings>
+): string {
   let message = safeMessageAt(overrides, key);
   if (message === undefined && typeof fallback === 'string') message = fallback;
   let locale: string | undefined;
   if (message === undefined) {
-    locale = resolveLyraLocale(host);
+    locale = resolveLocale();
     for (const candidate of localeCandidates(locale)) {
       const registered = safeMessageAt(locales.get(candidate), key);
       if (registered !== undefined) {
@@ -1197,7 +1234,7 @@ export function resolveLyraString(
   message ??= safeMessageAt(defaults, key) ?? key;
   let text: string;
   if (typeof message !== 'string') {
-    locale ??= resolveLyraLocale(host);
+    locale ??= resolveLocale();
     text = selectPluralMessage(
       message,
       locale,

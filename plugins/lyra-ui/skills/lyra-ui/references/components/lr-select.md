@@ -453,7 +453,7 @@ purposes.
   <lr-option value="perf">Performance</lr-option>
 </lr-select>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/forms/select/select.js";
+  import "@aceshooting/lyra-ui/components/lr-select.js";
   const sel = document.getElementById("tags");
   // A custom chip: return a node, and re-declare part="tag" to keep the built-in styling hooks.
   sel.getTag = (option, index) => `${index + 1}. ${option.label}`; // a string renders as text
@@ -502,3 +502,5 @@ purposes.
   `autoCommitSingleOption` unset to observe the normal dropdown chrome.
 
 ---
+
+<a id="date-and-range-controls"></a>

@@ -10,10 +10,6 @@ import { resolveValidityAnchor } from "../../../internal/anchored-validity.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import { setForcedColors } from "../../../../test/wtr-media.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
-import {
-  captureDeprecationWarnings,
-  expectDeprecatedUsage,
-} from "../../../../test/expected-deprecations.js";
 
 
 function sinkElement(politeness: "polite" | "assertive"): HTMLElement | null {
@@ -149,31 +145,25 @@ it('uses the localized dropzone instruction when the form label is omitted or em
   );
 
   const accessible = (await fixture(
-    html`<lr-file-input label="" .accessibleLabel=${'Pick reference files'}></lr-file-input>`,
+    html`<lr-file-input label="" aria-label="Pick reference files"></lr-file-input>`,
   )) as LyraFileInput;
   expect(accessible.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-label')).to.equal(
     'Pick reference files',
   );
-  expect(accessible.hasAttribute('accessible-label'), 'the property never reflects').to.equal(false);
 });
 
 describe('retired accessible-label attribute', () => {
-  it('ignores old attribute changes while retaining the property warning and host-name precedence', async () => {
+  it('ignores old attribute changes while retaining native host-name precedence', async () => {
     const el = await fixture<LyraFileInput>(html`<lr-file-input accessible-label="Retired"></lr-file-input>`);
     await el.updateComplete;
     const name = () => el.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-label');
     expect(name()).not.to.equal('Retired');
-    const warnings = await captureDeprecationWarnings([
-      { tag: 'lr-file-input', kind: 'property', name: 'accessibleLabel' },
-    ], async () => {
-      el.accessibleLabel = 'Programmatic';
-      await el.updateComplete;
-    });
-    expect(warnings.length).to.equal(1);
-    expect(name()).to.equal('Programmatic');
+    Reflect.set(el, 'accessibleLabel', 'Programmatic');
+    await el.updateComplete;
+    expect(name()).not.to.equal('Programmatic');
     el.setAttribute('accessible-label', 'Changed retired');
     await el.updateComplete;
-    expect(name()).to.equal('Programmatic');
+    expect(name()).not.to.equal('Programmatic');
     el.setAttribute('aria-label', '');
     await el.updateComplete;
     expect(name()).to.equal('');
@@ -182,7 +172,7 @@ describe('retired accessible-label attribute', () => {
     expect(name()).to.equal('');
     el.removeAttribute('aria-label');
     await el.updateComplete;
-    expect(name()).to.equal('Programmatic');
+    expect(name()).not.to.equal('Programmatic');
   });
 });
 
@@ -314,7 +304,7 @@ it("owns bounded immutable MIME policy snapshots and skips malformed or hostile 
   expect(el.allowedMimeTypes).to.deep.equal([]);
 });
 
-it("treats non-array MIME and validator policies as empty, and forwards a property-only accessible label", async () => {
+it("treats non-array MIME and validator policies as empty, and forwards the native host aria-label", async () => {
   const el = await fixture<LyraFileInput>(
     html`<lr-file-input></lr-file-input>`
   );
@@ -322,7 +312,7 @@ it("treats non-array MIME and validator policies as empty, and forwards a proper
   el.allowedMimeTypes = "text/csv" as unknown as readonly string[];
   el.forbiddenMimeTypes = [];
   el.validators = null as unknown as LyraFileInput["validators"];
-  el.accessibleLabel = "Private upload";
+  el.setAttribute("aria-label", "Private upload");
   await el.updateComplete;
 
   expect(el.allowedMimeTypes).to.deep.equal([]);
@@ -4494,7 +4484,6 @@ it('draws selected-file rows in the subtle border tier while the dropzone stays 
   );
 });
 
-expectDeprecatedUsage('lr-file-input', 'property', 'accessibleLabel');
 
 it('ignores retired compact inputs and isolates small-size overrides from other tiers', async () => {
   const el = await fixture<LyraFileInput>(html`<lr-file-input label="Attachments"></lr-file-input>`);

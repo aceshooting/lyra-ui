@@ -1,6 +1,5 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
-import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, nextFrame, oneEvent } from '@open-wc/testing';
 import './progress-bar.js';
 import './progress-ring.js';
@@ -916,10 +915,10 @@ it('normalizes value/max and resolves the accessible name identically for the ba
     ]);
   }
 
-  // Naming precedence: host aria-label (presence-based) > label > accessibleLabel > localized.
+  // Naming precedence: host aria-label (presence-based) > label > visible text > localized.
   const named = await fixture(html`<div>
-    <lr-progress-bar label="Mapped" .accessibleLabel=${'Explicit'}></lr-progress-bar>
-    <lr-progress-ring label="Mapped" .accessibleLabel=${'Explicit'}></lr-progress-ring>
+    <lr-progress-bar label="Mapped"></lr-progress-bar>
+    <lr-progress-ring label="Mapped"></lr-progress-ring>
   </div>`);
   const namedRoles = [...named.querySelectorAll('lr-progress-bar, lr-progress-ring')];
   await Promise.all(
@@ -937,7 +936,7 @@ it('normalizes value/max and resolves the accessible name identically for the ba
     (element as LyraProgressBar | LyraProgressRing).label = '';
     await (element as LyraProgressBar | LyraProgressRing).updateComplete;
   }
-  expect(names()).to.deep.equal(['Explicit', 'Explicit']);
+  expect(names()).to.deep.equal(['Progress', 'Progress']);
 
   for (const element of namedRoles) {
     element.setAttribute('aria-label', '');
@@ -1197,7 +1196,6 @@ for (const tag of ['lr-progress-bar', 'lr-progress-ring'] as const) {
         await mount(`<${tag} value="25" accessible-label="Other"></${tag}>`);
       });
       expect(name(el)).to.equal('Progress');
-      expect(el.accessibleLabel).to.equal('');
       expect(warnings).to.have.length(0);
     });
 
@@ -1214,19 +1212,5 @@ for (const tag of ['lr-progress-bar', 'lr-progress-ring'] as const) {
       });
     });
 
-    it('does not warn for the accessibleLabel property or the host aria-label', async () => {
-      const warnings = await captureDeprecationWarnings(ACCESSIBLE_LABEL, async () => {
-        const el = await mount(`<${tag} value="25" aria-label="Host"></${tag}>`);
-        el.accessibleLabel = 'Property';
-        el.removeAttribute('aria-label');
-        await el.updateComplete;
-        expect(name(el)).to.equal('Property');
-      });
-      expect(warnings).to.have.length(0);
-    });
   });
 }
-
-expectDeprecatedUsage('lr-progress-bar', 'property', 'accessibleLabel');
-
-expectDeprecatedUsage('lr-progress-ring', 'property', 'accessibleLabel');

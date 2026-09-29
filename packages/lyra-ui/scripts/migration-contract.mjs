@@ -237,7 +237,17 @@ export function buildMigrationContract(inventory, { renameLedger = null, exportD
         `${component.tag}: optionalPeers entries must be non-empty package names`,
       );
     }
-    components.set(component.tag, component);
+    const registrationRoute = component.registrationRoute ?? compatibilityContext?.componentRegistrationRoutes?.[component.tag];
+    if (registrationRoute !== undefined) {
+      invariant(
+        registrationRoute === `./components/${component.tag}.js`,
+        `${component.tag}: registrationRoute must be its stable tag-shaped package entry`,
+      );
+    }
+    components.set(
+      component.tag,
+      registrationRoute === undefined ? component : { ...component, registrationRoute },
+    );
   }
 
   const localMigrationFindings = validateLocalMigrations(inventory);
@@ -494,6 +504,9 @@ export function createMigrationRuntimeInventory(inventory, { renameLedger, expor
       .map((component) => ({
         tag: component.tag,
         registrationModule: component.registrationModule,
+        ...(compatibilityContext?.componentRegistrationRoutes?.[component.tag]
+          ? { registrationRoute: compatibilityContext.componentRegistrationRoutes[component.tag] }
+          : {}),
         rootIncluded: component.rootIncluded,
         optionalPeers: structuredClone(component.optionalPeers ?? []),
         surface: {

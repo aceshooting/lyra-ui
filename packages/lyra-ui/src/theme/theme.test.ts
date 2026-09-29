@@ -1,13 +1,46 @@
-import { expectDeprecatedUsage } from '../../test/expected-deprecations.js';
 import { expect } from '@open-wc/testing';
 import {
   applyLyraStyleScope,
   createLyraThemeBootstrap,
-  setLyraTheme,
-  getLyraTheme,
+  getLyraStyle,
   lyraThemeBootstrap,
+  setLyraStyle,
+  type LyraAccentBackground,
+  type LyraMode,
+  type LyraStyleChangeDetail,
+  type LyraThemeAccent,
   type LyraThemeTokenName,
+  type LyraThemeTokenValue,
 } from './theme.js';
+
+type ThemeRecordFixture = {
+  mode?: LyraMode | 'auto';
+  accent?: LyraThemeAccent;
+  surface?: LyraAccentBackground;
+  tokens?: Readonly<Record<LyraThemeTokenName, LyraThemeTokenValue>> | null;
+};
+
+/** Adapt legacy-shaped runtime vectors to the canonical writer; saved v1 records are tested separately. */
+function setStyleForTest(record: ThemeRecordFixture): void {
+  const choices = {
+    ...(record.mode === undefined ? {} : { mode: record.mode === 'auto' ? 'system' as const : record.mode }),
+    ...(record.accent === undefined ? {} : { accent: record.accent }),
+    ...(record.surface === undefined ? {} : { accentBackground: record.surface }),
+    ...(record.tokens === undefined ? {} : { overrides: record.tokens }),
+  };
+  setLyraStyle(choices);
+}
+
+/** Project the canonical style snapshot into the legacy-shaped runtime-vector assertions. */
+function legacyFixtureSnapshot(): { mode: string; accent: LyraThemeAccent | null; surface: LyraAccentBackground; tokens?: Readonly<Record<LyraThemeTokenName, LyraThemeTokenValue>> } {
+  const style = getLyraStyle();
+  return {
+    mode: style.mode === 'system' ? 'auto' : style.mode,
+    accent: style.accent as LyraThemeAccent | null,
+    surface: style.accentBackground,
+    ...(style.overrides ? { tokens: style.overrides } : {}),
+  };
+}
 
 const STORAGE_KEY = 'lyra-theme';
 const BRAND_RAMP_PROPERTIES = [
@@ -75,7 +108,7 @@ function inlineThemeProperties(): Record<string, string> {
 
 function resetRoot(): void {
   // This also detaches a live prefers-color-scheme listener installed by mode="auto".
-  setLyraTheme({ mode: 'unset', accent: null, surface: null, tokens: null });
+  setStyleForTest({ mode: 'unset', accent: null, surface: null, tokens: null });
   localStorage.removeItem(STORAGE_KEY);
   document.documentElement.removeAttribute('data-theme');
   document.documentElement.removeAttribute('data-lr-theme');
@@ -117,9 +150,6 @@ function contrast(left: string, right: string): number {
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
 
-expectDeprecatedUsage('./theme.js', 'function', 'setLyraTheme');
-expectDeprecatedUsage('./theme.js', 'function', 'getLyraTheme');
-
 describe('theme runtime', () => {
   afterEach(resetRoot);
 
@@ -128,28 +158,28 @@ describe('theme runtime', () => {
     expect(stateAfterImport.dataLrTheme).to.equal(null);
     expect(stateAfterImport.accent).to.equal('');
     expect(stateAfterImport.stored).to.equal(null);
-    expect(getLyraTheme()).to.deep.equal({ mode: 'auto', accent: null, surface: null });
+    expect(legacyFixtureSnapshot()).to.deep.equal({ mode: 'auto', accent: null, surface: null });
   });
 
   it('round-trips mode through localStorage and reflects it on the root', () => {
-    setLyraTheme({ mode: 'dark' });
+    setStyleForTest({ mode: 'dark' });
     expect(document.documentElement.getAttribute('data-theme')).to.equal('dark');
-    expect(getLyraTheme().mode).to.equal('dark');
+    expect(legacyFixtureSnapshot().mode).to.equal('dark');
   });
 
   it('reflects the mode on data-lr-theme, the selector theme.css actually keys on', () => {
-    setLyraTheme({ mode: 'dark' });
+    setStyleForTest({ mode: 'dark' });
     expect(document.documentElement.getAttribute('data-lr-theme')).to.equal('dark');
-    setLyraTheme({ mode: 'light' });
+    setStyleForTest({ mode: 'light' });
     expect(document.documentElement.getAttribute('data-lr-theme')).to.equal('light');
   });
 
   it('applies the accent as --lr-theme-accent and removes it again when cleared', () => {
-    setLyraTheme({ mode: 'light', accent: '#e63950' });
+    setStyleForTest({ mode: 'light', accent: '#e63950' });
     expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal('#e63950');
-    setLyraTheme({ accent: null });
+    setStyleForTest({ accent: null });
     expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal('');
-    expect(getLyraTheme().accent).to.equal(null);
+    expect(legacyFixtureSnapshot().accent).to.equal(null);
   });
 
   it('makes mode="auto" follow the current OS preference and keeps following changes', () => {
@@ -172,9 +202,9 @@ describe('theme runtime', () => {
     } as MediaQueryList;
     window.matchMedia = (() => media) as typeof window.matchMedia;
     try {
-      setLyraTheme({ mode: 'auto' });
+      setStyleForTest({ mode: 'auto' });
       expect(listeners.size).to.equal(1);
-      setLyraTheme({ mode: 'auto' });
+      setStyleForTest({ mode: 'auto' });
       expect(listeners.size, 'reapplying auto replaces rather than stacks listeners').to.equal(1);
       expect(document.documentElement.getAttribute('data-theme')).to.equal('dark');
       expect(document.documentElement.getAttribute('data-lr-theme')).to.equal('dark');
@@ -183,9 +213,9 @@ describe('theme runtime', () => {
       for (const listener of listeners) listener({ matches } as MediaQueryListEvent);
       expect(document.documentElement.getAttribute('data-theme')).to.equal('light');
       expect(document.documentElement.getAttribute('data-lr-theme')).to.equal('light');
-      expect(getLyraTheme().mode).to.equal('auto');
+      expect(legacyFixtureSnapshot().mode).to.equal('auto');
 
-      setLyraTheme({ mode: 'light' });
+      setStyleForTest({ mode: 'light' });
       expect(listeners.size, 'leaving auto detaches its listener').to.equal(0);
     } finally {
       window.matchMedia = originalMatchMedia;
@@ -215,9 +245,9 @@ describe('theme runtime', () => {
     });
     window.matchMedia = (() => media) as typeof window.matchMedia;
     try {
-      setLyraTheme({ mode: 'auto' });
+      setStyleForTest({ mode: 'auto' });
       expect(listeners.size).to.equal(1);
-      setLyraTheme({ mode: 'dark' });
+      setStyleForTest({ mode: 'dark' });
       expect(listeners.size).to.equal(0);
     } finally {
       window.matchMedia = originalMatchMedia;
@@ -225,16 +255,16 @@ describe('theme runtime', () => {
   });
 
   it('uses mode="unset" for a genuine no-override state', () => {
-    setLyraTheme({ mode: 'dark' });
-    setLyraTheme({ mode: 'unset' });
+    setStyleForTest({ mode: 'dark' });
+    setStyleForTest({ mode: 'unset' });
     expect(document.documentElement.getAttribute('data-theme')).to.equal(null);
     expect(document.documentElement.getAttribute('data-lr-theme')).to.equal(null);
-    expect(getLyraTheme().mode).to.equal('unset');
+    expect(legacyFixtureSnapshot().mode).to.equal('unset');
   });
 
   it('persists an accent without a visual ramp when mode is unset, since there is no known surface to contrast against', () => {
-    setLyraTheme({ mode: 'unset', accent: '#e63950' });
-    expect(getLyraTheme()).to.deep.equal({ mode: 'unset', accent: '#e63950', surface: null });
+    setStyleForTest({ mode: 'unset', accent: '#e63950' });
+    expect(legacyFixtureSnapshot()).to.deep.equal({ mode: 'unset', accent: '#e63950', surface: null });
     expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal('');
     for (const property of BRAND_RAMP_PROPERTIES) {
       expect(document.documentElement.style.getPropertyValue(property), property).to.equal('');
@@ -243,16 +273,16 @@ describe('theme runtime', () => {
 
   it('rejects CSS-wide keywords and var() references through the runtime accent validator', () => {
     // The bootstrap's own regex-based rejection of these is covered separately below; this
-    // exercises the same class of value through setLyraTheme()/normalizeAccent() directly.
+    // exercises the same class of value through setStyleForTest()/normalizeAccent() directly.
     for (const accent of ['inherit', 'initial', 'revert', 'revert-layer', 'unset', 'var(--brand)']) {
-      setLyraTheme({ mode: 'light', accent });
-      expect(getLyraTheme().accent, accent).to.equal(null);
+      setStyleForTest({ mode: 'light', accent });
+      expect(legacyFixtureSnapshot().accent, accent).to.equal(null);
       expect(document.documentElement.style.getPropertyValue('--lr-theme-accent'), accent).to.equal('');
     }
   });
 
   it('turns a valid accent into a complete contrast-checked semantic brand ramp', () => {
-    setLyraTheme({ mode: 'light', accent: '#e63950' });
+    setStyleForTest({ mode: 'light', accent: '#e63950' });
     const rootStyle = document.documentElement.style;
     for (const property of BRAND_RAMP_PROPERTIES) {
       expect(rootStyle.getPropertyValue(property), property).to.not.equal('');
@@ -269,7 +299,7 @@ describe('theme runtime', () => {
       ['light', '#ffffff', '#ffffff'],
       ['dark', '#1a1a1a', '#1a1a1a'],
     ] as const) {
-      setLyraTheme({ mode, accent });
+      setStyleForTest({ mode, accent });
       const rootStyle = document.documentElement.style;
       for (const tier of ['normal', 'loud'] as const) {
         const border = rootStyle.getPropertyValue(`--lr-theme-color-brand-border-${tier}`);
@@ -283,7 +313,7 @@ describe('theme runtime', () => {
   });
 
   it('derives a contrast-checked semantic ramp for a role beyond brand, e.g. danger', () => {
-    setLyraTheme({ mode: 'light', accent: { danger: '#c81e3a' } });
+    setStyleForTest({ mode: 'light', accent: { danger: '#c81e3a' } });
     const rootStyle = document.documentElement.style;
     const dangerRampProperties = BRAND_RAMP_PROPERTIES
       .filter((property) => property !== '--lr-theme-color-focus')
@@ -303,30 +333,30 @@ describe('theme runtime', () => {
     // A role beyond brand never touches the brand ramp or the (brand-only) focus token.
     expect(rootStyle.getPropertyValue('--lr-theme-color-brand-fill-loud')).to.equal('');
     expect(rootStyle.getPropertyValue('--lr-theme-color-focus')).to.equal('');
-    expect(getLyraTheme().accent).to.deep.equal({ danger: '#c81e3a' });
+    expect(legacyFixtureSnapshot().accent).to.deep.equal({ danger: '#c81e3a' });
   });
 
   it('derives a distinct accent hue per resolved mode from a { light, dark } per-role value, not just a different tint weight', () => {
     const lightBrand = '#2563eb';
     const darkBrand = '#f59e0b';
-    setLyraTheme({ mode: 'light', accent: lightBrand });
+    setStyleForTest({ mode: 'light', accent: lightBrand });
     const expectedLight = document.documentElement.style.getPropertyValue('--lr-theme-color-brand-fill-loud');
-    setLyraTheme({ mode: 'dark', accent: darkBrand });
+    setStyleForTest({ mode: 'dark', accent: darkBrand });
     const expectedDark = document.documentElement.style.getPropertyValue('--lr-theme-color-brand-fill-loud');
-    setLyraTheme({ mode: 'light', accent: { brand: { light: lightBrand, dark: darkBrand } } });
+    setStyleForTest({ mode: 'light', accent: { brand: { light: lightBrand, dark: darkBrand } } });
     expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal(lightBrand);
     const lightLoud = document.documentElement.style.getPropertyValue('--lr-theme-color-brand-fill-loud');
     expect(parseColor(lightLoud)).to.deep.equal(parseColor(expectedLight));
 
     // Same stored record, only the mode changes -- the OTHER base color must now paint.
-    setLyraTheme({ mode: 'dark' });
+    setStyleForTest({ mode: 'dark' });
     expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal(darkBrand);
     const darkLoud = document.documentElement.style.getPropertyValue('--lr-theme-color-brand-fill-loud');
     expect(parseColor(darkLoud)).to.deep.equal(parseColor(expectedDark));
 
     // Prove this is a hue change, not merely a different tint weight of the same base color.
     expect(parseColor(lightLoud)).to.not.deep.equal(parseColor(darkLoud));
-    expect(getLyraTheme().accent).to.deep.equal({ brand: { light: lightBrand, dark: darkBrand } });
+    expect(legacyFixtureSnapshot().accent).to.deep.equal({ brand: { light: lightBrand, dark: darkBrand } });
   });
 
   it('keeps following the OS preference with the correct per-mode accent branch after an auto flip', () => {
@@ -349,7 +379,7 @@ describe('theme runtime', () => {
     } as MediaQueryList;
     window.matchMedia = (() => media) as typeof window.matchMedia;
     try {
-      setLyraTheme({ mode: 'auto', accent: { brand: { light: '#2563eb', dark: '#f59e0b' } } });
+      setStyleForTest({ mode: 'auto', accent: { brand: { light: '#2563eb', dark: '#f59e0b' } } });
       expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal(
         matches ? '#f59e0b' : '#2563eb',
       );
@@ -365,9 +395,9 @@ describe('theme runtime', () => {
 
   it('mixes every role\'s ramp against a supplied surface reference instead of the hardcoded default background', () => {
     const customSurface = '#123456';
-    setLyraTheme({ mode: 'light', accent: '#e63950', surface: customSurface });
+    setStyleForTest({ mode: 'light', accent: '#e63950', surface: customSurface });
     const rootStyle = document.documentElement.style;
-    expect(getLyraTheme().surface).to.equal(customSurface);
+    expect(legacyFixtureSnapshot().surface).to.equal(customSurface);
     for (const tier of ['normal', 'loud'] as const) {
       const border = rootStyle.getPropertyValue(`--lr-theme-color-brand-border-${tier}`);
       expect(contrast(border, customSurface), `${tier} border contrast against the supplied surface`)
@@ -380,7 +410,7 @@ describe('theme runtime', () => {
     const withSurfaceQuiet = rootStyle.getPropertyValue('--lr-theme-color-brand-fill-quiet');
 
     resetRoot();
-    setLyraTheme({ mode: 'light', accent: '#e63950' });
+    setStyleForTest({ mode: 'light', accent: '#e63950' });
     const withDefaultQuiet = document.documentElement.style.getPropertyValue(
       '--lr-theme-color-brand-fill-quiet',
     );
@@ -390,7 +420,7 @@ describe('theme runtime', () => {
   });
 
   it('resolves modern absolute CSS colors through their painted sRGB pixels', () => {
-    setLyraTheme({ mode: 'light', accent: 'color(display-p3 1 0 0)' });
+    setStyleForTest({ mode: 'light', accent: 'color(display-p3 1 0 0)' });
     const loud = parseColor(
       document.documentElement.style.getPropertyValue('--lr-theme-color-brand-fill-loud'),
     );
@@ -399,8 +429,8 @@ describe('theme runtime', () => {
   });
 
   it('fails a malformed accent closed instead of persisting an inert CSS hook', () => {
-    setLyraTheme({ mode: 'light', accent: 'definitely-not-a-color' });
-    expect(getLyraTheme().accent).to.equal(null);
+    setStyleForTest({ mode: 'light', accent: 'definitely-not-a-color' });
+    expect(legacyFixtureSnapshot().accent).to.equal(null);
     expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal('');
     for (const property of BRAND_RAMP_PROPERTIES) {
       expect(document.documentElement.style.getPropertyValue(property), property).to.equal('');
@@ -413,9 +443,9 @@ describe('theme runtime', () => {
       throw new DOMException('Canvas pixels are unavailable', 'SecurityError');
     };
     try {
-      expect(() => setLyraTheme({ mode: 'light', accent: '#e63950' })).to.not.throw();
+      expect(() => setStyleForTest({ mode: 'light', accent: '#e63950' })).to.not.throw();
       expect(document.documentElement.getAttribute('data-theme')).to.equal('light');
-      expect(getLyraTheme().accent).to.equal(null);
+      expect(legacyFixtureSnapshot().accent).to.equal(null);
       expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal('');
     } finally {
       CanvasRenderingContext2D.prototype.getImageData = originalGetImageData;
@@ -428,9 +458,9 @@ describe('theme runtime', () => {
     const originalGetContext = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = (() => null) as typeof HTMLCanvasElement.prototype.getContext;
     try {
-      expect(() => setLyraTheme({ mode: 'light', accent: '#e63950' })).to.not.throw();
+      expect(() => setStyleForTest({ mode: 'light', accent: '#e63950' })).to.not.throw();
       expect(document.documentElement.getAttribute('data-theme')).to.equal('light');
-      expect(getLyraTheme().accent).to.equal(null);
+      expect(legacyFixtureSnapshot().accent).to.equal(null);
       expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal('');
     } finally {
       HTMLCanvasElement.prototype.getContext = originalGetContext;
@@ -447,7 +477,7 @@ describe('theme runtime', () => {
     };
     CanvasRenderingContext2D.prototype.getImageData = () => emptyPixel;
     try {
-      expect(() => setLyraTheme({ mode: 'light', accent: '#e63950' })).to.not.throw();
+      expect(() => setStyleForTest({ mode: 'light', accent: '#e63950' })).to.not.throw();
       // A fully-empty pixel resolves every channel (including alpha) to 0 via the `?? 0`
       // fallback, so the "resolved" accent degrades to the mode's own background color instead
       // of throwing or leaving a stale ramp; the cross-look contrast floor still applies.
@@ -467,8 +497,8 @@ describe('theme runtime', () => {
       'light-dark(red, blue)',
       'CanvasText',
     ]) {
-      setLyraTheme({ mode: 'light', accent });
-      expect(getLyraTheme().accent, accent).to.equal(null);
+      setStyleForTest({ mode: 'light', accent });
+      expect(legacyFixtureSnapshot().accent, accent).to.equal(null);
       expect(document.documentElement.style.getPropertyValue('--lr-theme-accent'), accent).to.equal(
         '',
       );
@@ -476,47 +506,49 @@ describe('theme runtime', () => {
   });
 
   it('normalizes a malformed direct mode instead of persisting inconsistent state', () => {
-    setLyraTheme({ mode: 'sepia' as never });
+    setStyleForTest({ mode: 'sepia' as never });
     const expected = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    expect(getLyraTheme().mode).to.equal('auto');
+    expect(legacyFixtureSnapshot().mode).to.equal('auto');
     expect(document.documentElement.getAttribute('data-theme')).to.equal(expected);
   });
 
   it('keeps unspecified fields at their current value', () => {
-    setLyraTheme({ mode: 'dark', accent: '#4f8ff7' });
-    setLyraTheme({ mode: 'light' });
-    expect(getLyraTheme()).to.deep.equal({ mode: 'light', accent: '#4f8ff7', surface: null });
+    setStyleForTest({ mode: 'dark', accent: '#4f8ff7' });
+    setStyleForTest({ mode: 'light' });
+    expect(legacyFixtureSnapshot()).to.deep.equal({ mode: 'light', accent: '#4f8ff7', surface: null });
     expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal('#4f8ff7');
   });
 
-  it('dispatches lr-theme-change on window', async () => {
+  it('dispatches lr-style-change on window', async () => {
     const event = new Promise<CustomEvent>((resolve) =>
-      window.addEventListener('lr-theme-change', (e) => resolve(e as CustomEvent), { once: true }),
+      window.addEventListener('lr-style-change', (e) => resolve(e as CustomEvent), { once: true }),
     );
-    setLyraTheme({ mode: 'light', accent: '#4f8ff7' });
+    setStyleForTest({ mode: 'light', accent: '#4f8ff7' });
     const detail = (await event).detail;
-    expect(detail).to.deep.equal({ mode: 'light', accent: '#4f8ff7', surface: null });
+    expect(detail.style).to.deep.equal(getLyraStyle());
+    expect(detail.changed).to.include('mode');
+    expect(detail.changed).to.include('accent');
   });
 
   it('re-reads localStorage on every call, so a cold read sees another session’s value', () => {
-    setLyraTheme({ mode: 'dark', accent: '#e63950' });
+    setStyleForTest({ mode: 'dark', accent: '#e63950' });
     // What a fresh page load (or another tab) leaves behind: storage written outside this
-    // module. An in-memory cache would still report the setLyraTheme() values above.
+    // module. An in-memory cache would still report the setStyleForTest() values above.
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: 'light', accent: '#4f8ff7' }));
-    expect(getLyraTheme()).to.deep.equal({ mode: 'light', accent: '#4f8ff7', surface: null });
+    expect(legacyFixtureSnapshot()).to.deep.equal({ mode: 'light', accent: '#4f8ff7', surface: null });
   });
 
   it('falls back to the default for malformed or unknown stored values', () => {
     localStorage.setItem(STORAGE_KEY, '{not json');
-    expect(getLyraTheme()).to.deep.equal({ mode: 'auto', accent: null, surface: null });
+    expect(legacyFixtureSnapshot()).to.deep.equal({ mode: 'auto', accent: null, surface: null });
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: 'sepia', accent: 42 }));
-    expect(getLyraTheme()).to.deep.equal({ mode: 'auto', accent: null, surface: null });
+    expect(legacyFixtureSnapshot()).to.deep.equal({ mode: 'auto', accent: null, surface: null });
   });
 
   it('does not throw when localStorage is unavailable, and still applies the theme', () => {
     // Storage still works here, so this leaves the module's "last applied" fallback at a known
     // value and the assertions below do not depend on what earlier tests left behind.
-    setLyraTheme({ mode: 'auto', accent: null });
+    setStyleForTest({ mode: 'auto', accent: null });
 
     const originalSetItem = Storage.prototype.setItem;
     const originalGetItem = Storage.prototype.getItem;
@@ -527,17 +559,17 @@ describe('theme runtime', () => {
       throw new Error('unavailable');
     };
     try {
-      expect(() => setLyraTheme({ mode: 'dark' })).to.not.throw();
+      expect(() => setStyleForTest({ mode: 'dark' })).to.not.throw();
       expect(document.documentElement.getAttribute('data-theme')).to.equal('dark');
-      expect(() => getLyraTheme()).to.not.throw();
+      expect(() => legacyFixtureSnapshot()).to.not.throw();
       // The getter describes what the document is actually showing, so a bound toggle UI is not
       // stuck rendering "auto" while the page is visibly dark.
-      expect(getLyraTheme()).to.deep.equal({ mode: 'dark', accent: null, surface: null });
+      expect(legacyFixtureSnapshot()).to.deep.equal({ mode: 'dark', accent: null, surface: null });
 
       // Apply-without-persist has to hold across more than one call: merging over the default
       // would silently reset the mode set above.
-      setLyraTheme({ accent: '#e63950' });
-      expect(getLyraTheme()).to.deep.equal({ mode: 'dark', accent: '#e63950', surface: null });
+      setStyleForTest({ accent: '#e63950' });
+      expect(legacyFixtureSnapshot()).to.deep.equal({ mode: 'dark', accent: '#e63950', surface: null });
       expect(document.documentElement.getAttribute('data-lr-theme')).to.equal('dark');
       expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal(
         '#e63950',
@@ -546,32 +578,32 @@ describe('theme runtime', () => {
       Storage.prototype.setItem = originalSetItem;
       Storage.prototype.getItem = originalGetItem;
       // Clear the module's latched persistence failure so later tests read real storage again.
-      setLyraTheme({ mode: 'auto', accent: null });
+      setStyleForTest({ mode: 'auto', accent: null });
     }
   });
 
   it('keeps merging over the applied theme when writes fail but reads succeed', () => {
-    setLyraTheme({ mode: 'auto', accent: null });
+    setStyleForTest({ mode: 'auto', accent: null });
 
     const originalSetItem = Storage.prototype.setItem;
     Storage.prototype.setItem = () => {
       throw new Error('QuotaExceededError');
     };
     try {
-      setLyraTheme({ mode: 'dark' });
+      setStyleForTest({ mode: 'dark' });
       // Storage is readable but now stale — the write above never landed, so it still says
       // `auto`. Merging over that read would drop the mode the document is actually showing.
-      setLyraTheme({ accent: '#4f8ff7' });
-      expect(getLyraTheme()).to.deep.equal({ mode: 'dark', accent: '#4f8ff7', surface: null });
+      setStyleForTest({ accent: '#4f8ff7' });
+      expect(legacyFixtureSnapshot()).to.deep.equal({ mode: 'dark', accent: '#4f8ff7', surface: null });
       expect(document.documentElement.getAttribute('data-lr-theme')).to.equal('dark');
     } finally {
       Storage.prototype.setItem = originalSetItem;
-      setLyraTheme({ mode: 'auto', accent: null });
+      setStyleForTest({ mode: 'auto', accent: null });
     }
   });
 
   it('does not throw when the corrective persistence write after an accent correction itself fails', () => {
-    setLyraTheme({ mode: 'auto', accent: null });
+    setStyleForTest({ mode: 'auto', accent: null });
     const originalSetItem = Storage.prototype.setItem;
     const originalGetImageData = CanvasRenderingContext2D.prototype.getImageData;
     Storage.prototype.setItem = () => {
@@ -584,28 +616,28 @@ describe('theme runtime', () => {
       // The first persistence attempt fails (setItem always throws), and the canvas failure then
       // corrects the accent to null, triggering a second, corrective localStorage.setItem call
       // that must also fail closed without throwing.
-      expect(() => setLyraTheme({ mode: 'light', accent: '#e63950' })).to.not.throw();
+      expect(() => setStyleForTest({ mode: 'light', accent: '#e63950' })).to.not.throw();
       expect(document.documentElement.getAttribute('data-theme')).to.equal('light');
       // Storage is fully unreachable, so the getter falls back to what was actually applied.
-      expect(getLyraTheme()).to.deep.equal({ mode: 'light', accent: null, surface: null });
+      expect(legacyFixtureSnapshot()).to.deep.equal({ mode: 'light', accent: null, surface: null });
     } finally {
       Storage.prototype.setItem = originalSetItem;
       CanvasRenderingContext2D.prototype.getImageData = originalGetImageData;
-      setLyraTheme({ mode: 'auto', accent: null });
+      setStyleForTest({ mode: 'auto', accent: null });
     }
   });
 
   it('does not expose mutable references to its storage fallback state', () => {
-    setLyraTheme({ mode: 'light', accent: '#4f8ff7' });
+    setStyleForTest({ mode: 'light', accent: '#4f8ff7' });
     const originalGetItem = Storage.prototype.getItem;
     Storage.prototype.getItem = () => {
       throw new Error('unavailable');
     };
     try {
-      const first = getLyraTheme();
+      const first = legacyFixtureSnapshot();
       first.mode = 'dark';
       first.accent = null;
-      expect(getLyraTheme()).to.deep.equal({ mode: 'light', accent: '#4f8ff7', surface: null });
+      expect(legacyFixtureSnapshot()).to.deep.equal({ mode: 'light', accent: '#4f8ff7', surface: null });
     } finally {
       Storage.prototype.getItem = originalGetItem;
     }
@@ -630,14 +662,14 @@ describe('theme runtime', () => {
       dispatchEvent: () => true,
     } as MediaQueryList;
     window.matchMedia = (() => media) as typeof window.matchMedia;
-    let detail: { mode: string; accent: string | null } | undefined;
-    window.addEventListener('lr-theme-change', (event) => {
+    let detail: { style: Readonly<{ accent: unknown }> } | undefined;
+    window.addEventListener('lr-style-change', (event) => {
       detail ??= (event as CustomEvent).detail;
     }, { once: true });
     try {
-      setLyraTheme({ mode: 'auto', accent: '#4f8ff7' });
-      if (!detail) throw new Error('Expected lr-theme-change detail');
-      detail.accent = null;
+      setStyleForTest({ mode: 'auto', accent: '#4f8ff7' });
+      if (!detail) throw new Error('Expected lr-style-change detail');
+      expect(Object.isFrozen(detail.style)).to.equal(true);
       matches = true;
       for (const listener of listeners) listener({ matches } as MediaQueryListEvent);
       expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal(
@@ -675,7 +707,7 @@ describe('lyraThemeBootstrap', () => {
 
   it('applies the same complete ramp as the production runtime', () => {
     const record = { mode: 'dark', accent: '#e63950' } as const;
-    setLyraTheme(record);
+    setStyleForTest(record);
     const expected = Object.fromEntries(
       ['--lr-theme-accent', ...BRAND_RAMP_PROPERTIES].map((property) => [
         property,
@@ -705,7 +737,7 @@ describe('lyraThemeBootstrap', () => {
       accent: { brand: '#e63950', danger: '#c81e3a', success: '#1f9d55' },
       surface: '#101418',
     } as const;
-    setLyraTheme(record);
+    setStyleForTest(record);
     const expected = Object.fromEntries(
       ['--lr-theme-accent', ...ALL_RAMP_PROPERTIES].map((property) => [
         property,
@@ -739,7 +771,7 @@ describe('lyraThemeBootstrap', () => {
     } as const;
 
     const capture = (mode: 'light' | 'dark') => {
-      setLyraTheme({ mode, ...record });
+      setStyleForTest({ mode, ...record });
       const snapshot = Object.fromEntries(
         ['--lr-theme-accent', ...BRAND_RAMP_PROPERTIES].map((property) => [
           property,
@@ -1027,7 +1059,7 @@ describe('lyraThemeBootstrap script-tag configuration', () => {
 });
 
 // ---------------------------------------------------------------------------------------------
-// Token maps: `setLyraTheme({ tokens })`, the contrast floor, ownership, and the bootstrap mirror.
+// Token maps: `setStyleForTest({ tokens })`, the contrast floor, ownership, and the bootstrap mirror.
 // ---------------------------------------------------------------------------------------------
 
 interface TokenGrammarFixture {
@@ -1154,9 +1186,9 @@ describe('theme token maps', () => {
   afterEach(resetRoot);
 
   it('leaves the snapshot, the record and the inline set unchanged when no map is used', () => {
-    setLyraTheme({ mode: 'light', accent: '#e63950' });
-    expect(getLyraTheme()).to.deep.equal({ mode: 'light', accent: '#e63950', surface: null });
-    expect(Object.keys(getLyraTheme())).to.not.include('tokens');
+    setStyleForTest({ mode: 'light', accent: '#e63950' });
+    expect(legacyFixtureSnapshot()).to.deep.equal({ mode: 'light', accent: '#e63950', surface: null });
+    expect(Object.keys(legacyFixtureSnapshot())).to.not.include('tokens');
     expect(Object.keys(storedRecord())).to.not.include('tokens');
     const expectedNames = new Set<string>(['--lr-theme-accent', ...ALL_RAMP_PROPERTIES]);
     for (const name of Object.keys(inlineThemeProperties())) expect(expectedNames.has(name), name).to.equal(true);
@@ -1179,44 +1211,44 @@ describe('theme token maps', () => {
   it('writes bare values inline and round-trips them through the getter, storage and the event', async () => {
     const tokens = { [T('font-size-m')]: '0.875rem', [T('border-radius-m')]: ' 0.5rem ' };
     const event = new Promise<CustomEvent>((resolve) => {
-      window.addEventListener('lr-theme-change', (changed) => resolve(changed as CustomEvent), { once: true });
+      window.addEventListener('lr-style-change', (changed) => resolve(changed as CustomEvent), { once: true });
     });
-    setLyraTheme({ mode: 'light', tokens });
-    const detail = (await event).detail as { tokens?: unknown };
+    setStyleForTest({ mode: 'light', tokens });
+    const detail = (await event).detail as { style: { overrides?: unknown } };
     const expected = { [T('font-size-m')]: '0.875rem', [T('border-radius-m')]: '0.5rem' };
     expect(inline(T('font-size-m'))).to.equal('0.875rem');
     expect(inline(T('border-radius-m'))).to.equal('0.5rem');
-    expect(getLyraTheme().tokens).to.deep.equal(expected);
-    expect(storedRecord()['tokens']).to.deep.equal(expected);
-    expect(detail.tokens).to.deep.equal(expected);
+    expect(legacyFixtureSnapshot().tokens).to.deep.equal(expected);
+    expect(storedRecord()['overrides']).to.deep.equal(expected);
+    expect(detail.style.overrides).to.deep.equal(expected);
     expect(ownershipList()).to.deep.equal([T('font-size-m'), T('border-radius-m')]);
   });
 
   it('writes the branch for the resolved mode and swaps it on an automatic flip', () => {
     const tokens = { [T('color-surface-default')]: { light: '#fafafa', dark: '#111111' } };
-    setLyraTheme({ mode: 'light', tokens });
+    setStyleForTest({ mode: 'light', tokens });
     expect(inline(T('color-surface-default'))).to.equal('#fafafa');
-    setLyraTheme({ mode: 'dark' });
+    setStyleForTest({ mode: 'dark' });
     expect(inline(T('color-surface-default'))).to.equal('#111111');
 
     const scheme = mockColorScheme(false);
-    const details: Array<{ tokens?: unknown }> = [];
+    const details: Array<{ style?: { overrides?: unknown } }> = [];
     const onChange = (event: Event) => details.push((event as CustomEvent).detail);
-    window.addEventListener('lr-theme-change', onChange);
+    window.addEventListener('lr-style-change', onChange);
     try {
-      setLyraTheme({ mode: 'auto' });
+      setStyleForTest({ mode: 'auto' });
       expect(inline(T('color-surface-default'))).to.equal('#fafafa');
       scheme.flip(true);
       expect(inline(T('color-surface-default'))).to.equal('#111111');
-      expect(details[details.length - 1]?.tokens).to.deep.equal({ [T('color-surface-default')]: { light: '#fafafa', dark: '#111111' } });
+      expect(details[details.length - 1]?.style?.overrides).to.deep.equal({ [T('color-surface-default')]: { light: '#fafafa', dark: '#111111' } });
     } finally {
-      window.removeEventListener('lr-theme-change', onChange);
+      window.removeEventListener('lr-style-change', onChange);
       scheme.restore();
     }
   });
 
   it('writes only bare values with mode unset, keeps per-mode entries in the snapshot, and applies no floor', () => {
-    setLyraTheme({
+    setStyleForTest({
       mode: 'unset',
       tokens: {
         [T('color-text-quiet')]: '#fafafa',
@@ -1225,7 +1257,7 @@ describe('theme token maps', () => {
     });
     expect(inline(T('color-text-quiet'))).to.equal('#fafafa');
     expect(inline(T('color-surface-default'))).to.equal('');
-    expect(getLyraTheme().tokens).to.deep.equal({
+    expect(legacyFixtureSnapshot().tokens).to.deep.equal({
       [T('color-text-quiet')]: '#fafafa',
       [T('color-surface-default')]: { light: '#fafafa', dark: '#111111' },
     });
@@ -1233,34 +1265,34 @@ describe('theme token maps', () => {
 
   it('keeps the map when tokens is omitted, and removes it for null, {} and an all-invalid map', () => {
     for (const removal of [null, {}, { color: 'red', [T('x')]: 'url(x)' }] as const) {
-      setLyraTheme({ mode: 'light', tokens: { [T('x')]: '1px', [T('y')]: '2px' } });
-      setLyraTheme({ mode: 'dark' });
+      setStyleForTest({ mode: 'light', tokens: { [T('x')]: '1px', [T('y')]: '2px' } });
+      setStyleForTest({ mode: 'dark' });
       expect(inline(T('x'))).to.equal('1px');
-      setLyraTheme({ tokens: removal as never });
+      setStyleForTest({ tokens: removal as never });
       expect(inline(T('x')), JSON.stringify(removal)).to.equal('');
       expect(inline(T('y'))).to.equal('');
-      expect(Object.keys(getLyraTheme())).to.not.include('tokens');
+      expect(Object.keys(legacyFixtureSnapshot())).to.not.include('tokens');
       expect(Object.keys(storedRecord())).to.not.include('tokens');
       expect(ownershipList()).to.deep.equal([]);
     }
   });
 
   it('replaces the previous map wholesale', () => {
-    setLyraTheme({ mode: 'light', tokens: { [T('a')]: '1px', [T('b')]: '2px' } });
-    setLyraTheme({ tokens: { [T('b')]: '3px', [T('c')]: '4px' } });
+    setStyleForTest({ mode: 'light', tokens: { [T('a')]: '1px', [T('b')]: '2px' } });
+    setStyleForTest({ tokens: { [T('b')]: '3px', [T('c')]: '4px' } });
     expect(inline(T('a'))).to.equal('');
     expect(inline(T('b'))).to.equal('3px');
     expect(inline(T('c'))).to.equal('4px');
-    expect(getLyraTheme().tokens).to.deep.equal({ [T('b')]: '3px', [T('c')]: '4px' });
+    expect(legacyFixtureSnapshot().tokens).to.deep.equal({ [T('b')]: '3px', [T('c')]: '4px' });
   });
 
   it('never touches an application-owned inline value that is not in a map', () => {
     document.documentElement.style.setProperty(T('font-size-m'), '1.25rem');
     try {
-      setLyraTheme({ mode: 'light', tokens: { [T('x')]: '1px' } });
-      setLyraTheme({ tokens: { [T('y')]: '1px' } });
-      setLyraTheme({ tokens: null, accent: '#e63950' });
-      setLyraTheme({ accent: null });
+      setStyleForTest({ mode: 'light', tokens: { [T('x')]: '1px' } });
+      setStyleForTest({ tokens: { [T('y')]: '1px' } });
+      setStyleForTest({ tokens: null, accent: '#e63950' });
+      setStyleForTest({ accent: null });
       expect(inline(T('font-size-m'))).to.equal('1.25rem');
     } finally {
       document.documentElement.style.removeProperty(T('font-size-m'));
@@ -1270,38 +1302,38 @@ describe('theme token maps', () => {
   it('drops every rejected name while valid siblings survive', async () => {
     const { names } = await tokenGrammar();
     for (const name of names.reject) {
-      setLyraTheme({ mode: 'light', tokens: { [name]: '1px', [T('sibling')]: '2px' } as never });
-      expect(getLyraTheme().tokens, name).to.deep.equal({ [T('sibling')]: '2px' });
+      setStyleForTest({ mode: 'light', tokens: { [name]: '1px', [T('sibling')]: '2px' } as never });
+      expect(legacyFixtureSnapshot().tokens, name).to.deep.equal({ [T('sibling')]: '2px' });
       expect(inline(T('sibling'))).to.equal('2px');
       if (name.startsWith('--')) expect(inline(name), name).to.equal('');
     }
     const accepted = Object.fromEntries(names.accept.map((name) => [name, '1px']));
-    setLyraTheme({ tokens: accepted });
-    expect(Object.keys(getLyraTheme().tokens ?? {})).to.deep.equal(names.accept);
+    setStyleForTest({ tokens: accepted });
+    expect(Object.keys(legacyFixtureSnapshot().tokens ?? {})).to.deep.equal(names.accept);
   });
 
   it('drops every rejected value and non-string shape, writing nothing for them', async () => {
     const { values } = await tokenGrammar();
     for (const value of values.reject) {
-      setLyraTheme({ mode: 'light', tokens: { [T('hostile')]: value } });
-      expect(getLyraTheme().tokens, JSON.stringify(value)).to.equal(undefined);
+      setStyleForTest({ mode: 'light', tokens: { [T('hostile')]: value } });
+      expect(legacyFixtureSnapshot().tokens, JSON.stringify(value)).to.equal(undefined);
       expect(inlineThemeProperties(), JSON.stringify(value)).to.deep.equal({});
     }
     const shapes: unknown[] = [42, [], {}, { light: 'url(x)', dark: 'url(y)' }, { light: 'red', other: 'blue' }, null, true];
     for (const shape of shapes) {
-      setLyraTheme({ tokens: { [T('hostile')]: shape } as never });
-      expect(getLyraTheme().tokens, JSON.stringify(shape)).to.equal(undefined);
+      setStyleForTest({ tokens: { [T('hostile')]: shape } as never });
+      expect(legacyFixtureSnapshot().tokens, JSON.stringify(shape)).to.equal(undefined);
       expect(inlineThemeProperties()).to.deep.equal({});
     }
   });
 
   it('caps a map at 512 entries', () => {
     const map = (size: number) => Object.fromEntries(Array.from({ length: size }, (_, index) => [T(`cap-${index}`), '1px']));
-    setLyraTheme({ mode: 'unset', tokens: map(513) });
-    expect(getLyraTheme().tokens).to.equal(undefined);
+    setStyleForTest({ mode: 'unset', tokens: map(513) });
+    expect(legacyFixtureSnapshot().tokens).to.equal(undefined);
     expect(inline(T('cap-0'))).to.equal('');
-    setLyraTheme({ tokens: map(512) });
-    expect(Object.keys(getLyraTheme().tokens ?? {}).length).to.equal(512);
+    setStyleForTest({ tokens: map(512) });
+    expect(Object.keys(legacyFixtureSnapshot().tokens ?? {}).length).to.equal(512);
     expect(inline(T('cap-511'))).to.equal('1px');
   });
 
@@ -1314,33 +1346,33 @@ describe('theme token maps', () => {
         throw new Error('hostile keys');
       },
     });
-    expect(() => setLyraTheme({ mode: 'light', tokens: hostile })).to.not.throw();
-    expect(getLyraTheme().tokens).to.equal(undefined);
+    expect(() => setStyleForTest({ mode: 'light', tokens: hostile })).to.not.throw();
+    expect(legacyFixtureSnapshot().tokens).to.equal(undefined);
     expect(inline(T('x'))).to.equal('');
 
     const throwingValue = { get [T('x')]() {
       throw new Error('hostile getter');
     } };
-    expect(() => setLyraTheme({ tokens: throwingValue as never })).to.not.throw();
-    expect(getLyraTheme().tokens).to.equal(undefined);
+    expect(() => setStyleForTest({ tokens: throwingValue as never })).to.not.throw();
+    expect(legacyFixtureSnapshot().tokens).to.equal(undefined);
 
     class ForeignMap {
       readonly [key: string]: string;
     }
     const instance = Object.assign(new ForeignMap(), { [T('x')]: '1px' });
-    setLyraTheme({ tokens: instance as never });
-    expect(getLyraTheme().tokens).to.equal(undefined);
+    setStyleForTest({ tokens: instance as never });
+    expect(legacyFixtureSnapshot().tokens).to.equal(undefined);
     expect(inline(T('x'))).to.equal('');
-    setLyraTheme({ tokens: { [T('x')]: Object.assign(new ForeignMap(), { light: '1px' }) } as never });
-    expect(getLyraTheme().tokens).to.equal(undefined);
+    setStyleForTest({ tokens: { [T('x')]: Object.assign(new ForeignMap(), { light: '1px' }) } as never });
+    expect(legacyFixtureSnapshot().tokens).to.equal(undefined);
   });
 
   it('floors body and quiet text against the page and the raised surface', () => {
-    setLyraTheme({ mode: 'light', tokens: { [T('color-surface-default')]: '#f0f0f0', [T('color-text-quiet')]: '#cccccc' } });
+    setStyleForTest({ mode: 'light', tokens: { [T('color-surface-default')]: '#f0f0f0', [T('color-text-quiet')]: '#cccccc' } });
     expect(contrast(inline(T('color-text-quiet')), '#f0f0f0')).to.be.at.least(4.5);
-    expect(getLyraTheme().tokens?.[T('color-text-quiet')]).to.equal('#cccccc');
+    expect(legacyFixtureSnapshot().tokens?.[T('color-text-quiet')]).to.equal('#cccccc');
 
-    setLyraTheme({
+    setStyleForTest({
       tokens: { [T('color-surface-default')]: '#ffffff', [T('color-surface-raised')]: '#e0e0e0', [T('color-text-quiet')]: '#767676' },
     });
     expect(contrast('#767676', '#ffffff')).to.be.at.least(4.5);
@@ -1349,37 +1381,37 @@ describe('theme token maps', () => {
     expect(contrast(inline(T('color-text-quiet')), '#e0e0e0')).to.be.at.least(4.5);
 
     // No raised surface in the map: the mode default is the second reference.
-    setLyraTheme({ mode: 'light', tokens: { [T('color-text-quiet')]: '#757575' } });
+    setStyleForTest({ mode: 'light', tokens: { [T('color-text-quiet')]: '#757575' } });
     expect(contrast(inline(T('color-text-quiet')), '#f6f8fa')).to.be.at.least(4.5);
-    setLyraTheme({ mode: 'dark', tokens: { [T('color-text-quiet')]: '#8a8a8a' } });
+    setStyleForTest({ mode: 'dark', tokens: { [T('color-text-quiet')]: '#8a8a8a' } });
     expect(contrast('#8a8a8a', '#1a1a1a')).to.be.at.least(4.5);
     expect(inline(T('color-text-quiet'))).to.not.equal('#8a8a8a');
     expect(contrast(inline(T('color-text-quiet')), '#22272e')).to.be.at.least(4.5);
-    expect(getLyraTheme().tokens?.[T('color-text-quiet')]).to.equal('#8a8a8a');
+    expect(legacyFixtureSnapshot().tokens?.[T('color-text-quiet')]).to.equal('#8a8a8a');
   });
 
   it('floors on-* against its fill and the strong-scrim foreground, synthesizing missing partners', () => {
-    setLyraTheme({ mode: 'light', tokens: { [T('color-brand-fill-loud')]: '#1d4ed8', [T('color-brand-on-loud')]: '#333333' } });
+    setStyleForTest({ mode: 'light', tokens: { [T('color-brand-fill-loud')]: '#1d4ed8', [T('color-brand-on-loud')]: '#333333' } });
     expect(inline(T('color-brand-on-loud'))).to.equal('rgb(255 255 255)');
 
-    setLyraTheme({ tokens: { [T('color-success-fill-loud')]: '#0c7830' } });
+    setStyleForTest({ tokens: { [T('color-success-fill-loud')]: '#0c7830' } });
     const synthesized = inline(T('color-success-on-loud'));
     expect(contrast(synthesized, '#0c7830')).to.be.at.least(4.5);
     expect(ownershipList()).to.include(T('color-success-on-loud'));
-    expect(getLyraTheme().tokens).to.deep.equal({ [T('color-success-fill-loud')]: '#0c7830' });
-    setLyraTheme({ tokens: null });
+    expect(legacyFixtureSnapshot().tokens).to.deep.equal({ [T('color-success-fill-loud')]: '#0c7830' });
+    setStyleForTest({ tokens: null });
     expect(inline(T('color-success-on-loud'))).to.equal('');
 
-    setLyraTheme({ tokens: { [T('color-overlay-strong')]: 'rgb(0 0 0 / 0.92)', [T('color-on-strong-overlay')]: '#333333' } });
+    setStyleForTest({ tokens: { [T('color-overlay-strong')]: 'rgb(0 0 0 / 0.92)', [T('color-on-strong-overlay')]: '#333333' } });
     expect(inline(T('color-on-strong-overlay'))).to.equal('rgb(255 255 255)');
 
-    setLyraTheme({ tokens: { [T('color-overlay-strong')]: 'rgb(255 255 255 / 0.9)' } });
+    setStyleForTest({ tokens: { [T('color-overlay-strong')]: 'rgb(255 255 255 / 0.9)' } });
     expect(inline(T('color-on-strong-overlay'))).to.equal('rgb(0 0 0)');
     expect(ownershipList()).to.include(T('color-on-strong-overlay'));
   });
 
   it('floors boundaries, chart series and terminal colours, and leaves decorative tokens verbatim', () => {
-    setLyraTheme({ mode: 'light', tokens: FLOOR_MAP });
+    setStyleForTest({ mode: 'light', tokens: FLOOR_MAP });
     for (const name of ['color-brand-border-normal', 'color-surface-border', 'color-border-strong', 'color-focus', 'color-chart-3']) {
       expect(contrast(inline(T(name)), '#ffffff'), name).to.be.at.least(3);
       expect(inline(T(name)), name).to.match(/^rgb\(/);
@@ -1389,7 +1421,7 @@ describe('theme token maps', () => {
     expect(text).to.not.equal('#777777');
     expect(contrast(inline(T('terminal-bg-black')), text)).to.be.at.least(4.5);
 
-    setLyraTheme({
+    setStyleForTest({
       tokens: {
         [T('color-brand-border-quiet')]: '#fefefe',
         [T('color-surface-border-subtle')]: '#fdfdfd',
@@ -1401,31 +1433,35 @@ describe('theme token maps', () => {
     expect(inline(T('color-danger-on-quiet'))).to.equal('#fefefe');
   });
 
-  it('writes passing colours, var() and light-dark() values string-identical to the input', () => {
+  it('writes passing literal colours and light-dark() values string-identical to the input', () => {
     const tokens = {
       [T('color-text-normal')]: '#111111',
-      [T('color-text-quiet')]: 'var(--application-quiet, #eeeeee)',
+      [T('color-text-quiet')]: '#333333',
       [T('color-focus')]: 'light-dark(#eeeeee, #111111)',
       [T('color-chart-1')]: 'oklch(0.3 0.1 250)',
     };
-    setLyraTheme({ mode: 'light', tokens });
+    setStyleForTest({ mode: 'light', tokens });
     for (const [name, value] of Object.entries(tokens)) expect(inline(name), name).to.equal(value);
   });
 
-  it('writes a row verbatim when its reference does not resolve to a colour', () => {
+  it('rejects unsupported external references while retaining valid overrides', () => {
     const tokens = {
       [T('color-surface-raised')]: 'var(--application-raised)',
-      [T('color-text-quiet')]: '#cccccc',
-      [T('terminal-color-red')]: '#ffeeee',
+      [T('color-text-quiet')]: '#333333',
+      [T('terminal-color-red')]: '#771111',
       [T('color-text-normal')]: 'var(--application-text)',
       [T('terminal-bg-black')]: '#fafafa',
     };
-    setLyraTheme({ mode: 'light', tokens });
-    for (const [name, value] of Object.entries(tokens)) expect(inline(name), name).to.equal(value);
+    setStyleForTest({ mode: 'light', tokens });
+    expect(inline(T('color-surface-raised'))).to.equal('');
+    expect(inline(T('color-text-normal'))).to.equal('');
+    for (const name of [T('color-text-quiet'), T('terminal-color-red'), T('terminal-bg-black')]) {
+      expect(inline(name), name).to.equal(tokens[name]);
+    }
   });
 
   it('prefers an explicit surface over the map surface, and mixes the accent over the map surface otherwise', () => {
-    setLyraTheme({
+    setStyleForTest({
       mode: 'light',
       surface: '#000000',
       tokens: { [T('color-surface-default')]: '#ffffff', [T('color-text-normal')]: '#111111' },
@@ -1433,107 +1469,122 @@ describe('theme token maps', () => {
     expect(contrast(inline(T('color-text-normal')), '#000000')).to.be.at.least(4.5);
 
     const capture = () => Object.fromEntries(BRAND_RAMP_PROPERTIES.map((name) => [name, inline(name)]));
-    setLyraTheme({ mode: 'dark', accent: '#e63950', surface: '#101418', tokens: null });
+    setStyleForTest({ mode: 'dark', accent: '#e63950', surface: '#101418', tokens: null });
     const expected = capture();
-    setLyraTheme({ surface: null, tokens: { [T('color-surface-default')]: '#101418' } });
+    setStyleForTest({ surface: null, tokens: { [T('color-surface-default')]: '#101418' } });
     expect(capture()).to.deep.equal(expected);
     expect(expected['--lr-theme-color-brand-fill-quiet']).to.not.equal('');
   });
 
   it('lets an accent override the map ramp, and reveals the map again when the accent is cleared', () => {
-    setLyraTheme({ mode: 'light', accent: '#e63950', tokens: { [T('color-brand-fill-loud')]: '#123456' } });
+    setStyleForTest({ mode: 'light', accent: '#e63950', tokens: { [T('color-brand-fill-loud')]: '#123456' } });
     expect(inline(T('color-brand-fill-loud'))).to.equal('rgb(184 46 64)');
-    setLyraTheme({ accent: null });
+    setStyleForTest({ accent: null });
     expect(inline(T('color-brand-fill-loud'))).to.equal('#123456');
   });
 
   for (const blocked of ['setItem', 'getItem'] as const) {
     it(`keeps the map and the snapshot shape when Storage.${blocked} throws`, () => {
-      setLyraTheme({ mode: 'light', tokens: null });
+      setStyleForTest({ mode: 'light', tokens: null });
       const original = Storage.prototype[blocked];
       (Storage.prototype as unknown as Record<string, unknown>)[blocked] = () => {
         throw new Error('unavailable');
       };
-      const details: Array<Record<string, unknown>> = [];
-      const onChange = (event: Event) => details.push((event as CustomEvent).detail);
-      window.addEventListener('lr-theme-change', onChange);
+      const details: LyraStyleChangeDetail[] = [];
+      const onChange = (event: CustomEvent<LyraStyleChangeDetail>) => { details.push(event.detail); };
+      window.addEventListener('lr-style-change', onChange);
       try {
-        setLyraTheme({ mode: 'light', tokens: { [T('x')]: '1px' } });
-        setLyraTheme({ mode: 'dark' });
+        setStyleForTest({ mode: 'light', tokens: { [T('x')]: '1px' } });
+        setStyleForTest({ mode: 'dark' });
         expect(inline(T('x'))).to.equal('1px');
-        expect(getLyraTheme().tokens).to.deep.equal({ [T('x')]: '1px' });
-        setLyraTheme({ tokens: null });
-        expect(getLyraTheme()).to.deep.equal({ mode: 'dark', accent: null, surface: null });
-        expect(Object.keys(details[details.length - 1] ?? {})).to.not.include('tokens');
+        expect(legacyFixtureSnapshot().tokens).to.deep.equal({ [T('x')]: '1px' });
+        setStyleForTest({ tokens: null });
+        expect(legacyFixtureSnapshot()).to.deep.equal({ mode: 'dark', accent: null, surface: null });
+        expect(Object.keys(details[details.length - 1]?.style ?? {})).to.not.include('overrides');
       } finally {
-        window.removeEventListener('lr-theme-change', onChange);
+        window.removeEventListener('lr-style-change', onChange);
         (Storage.prototype as unknown as Record<string, unknown>)[blocked] = original;
-        setLyraTheme({ mode: 'auto', accent: null, tokens: null });
+        setStyleForTest({ mode: 'auto', accent: null, tokens: null });
       }
     });
   }
 
   it('dispatches the map on an automatic flip only while one is applied', () => {
     const scheme = mockColorScheme(false);
-    const details: Array<Record<string, unknown>> = [];
-    const onChange = (event: Event) => details.push((event as CustomEvent).detail);
-    window.addEventListener('lr-theme-change', onChange);
+      const details: LyraStyleChangeDetail[] = [];
+      const onChange = (event: CustomEvent<LyraStyleChangeDetail>) => { details.push(event.detail); };
+    window.addEventListener('lr-style-change', onChange);
     try {
-      setLyraTheme({ mode: 'auto', tokens: null });
+      setStyleForTest({ mode: 'auto', tokens: null });
       scheme.flip(true);
-      expect(Object.keys(details[details.length - 1] ?? {})).to.not.include('tokens');
-      setLyraTheme({ tokens: { [T('x')]: '1px' } });
+      expect(Object.keys(details[details.length - 1]?.style ?? {})).to.not.include('overrides');
+      setStyleForTest({ tokens: { [T('x')]: '1px' } });
       scheme.flip(false);
-      expect(details[details.length - 1]?.['tokens']).to.deep.equal({ [T('x')]: '1px' });
+      expect(details[details.length - 1]?.['style']?.['overrides']).to.deep.equal({ [T('x')]: '1px' });
     } finally {
-      window.removeEventListener('lr-theme-change', onChange);
+      window.removeEventListener('lr-style-change', onChange);
       scheme.restore();
     }
   });
 
   it('exposes only frozen maps, so a mutated event detail cannot change a later flip', () => {
     const scheme = mockColorScheme(false);
-    let detail: { tokens?: Record<string, unknown> } | undefined;
+    let detail: { style?: { overrides?: Record<string, unknown> } } | undefined;
     const onChange = (event: Event) => {
       detail ??= (event as CustomEvent).detail;
     };
-    window.addEventListener('lr-theme-change', onChange);
+    window.addEventListener('lr-style-change', onChange);
     try {
-      setLyraTheme({ mode: 'auto', tokens: { [T('x')]: { light: '1px', dark: '2px' }, [T('y')]: '3px' } });
-      const tokens = getLyraTheme().tokens as Record<string, unknown>;
+      setStyleForTest({ mode: 'auto', tokens: { [T('space-m')]: { light: '1px', dark: '2px' }, [T('space-s')]: '3px' } });
+      const tokens = legacyFixtureSnapshot().tokens as Record<string, unknown>;
       expect(Object.isFrozen(tokens)).to.equal(true);
-      expect(Object.isFrozen(tokens[T('x')])).to.equal(true);
-      if (!detail?.tokens) throw new Error('Expected a detail map');
-      const map = detail.tokens;
+      expect(Object.isFrozen(tokens[T('space-m')])).to.equal(true);
+      if (!detail?.style?.overrides) throw new Error('Expected a detail map');
+      const map = detail.style.overrides;
       expect(() => {
-        map[T('y')] = '9px';
+        map[T('space-s')] = '9px';
       }).to.throw(TypeError);
       expect(() => {
-        (map[T('x')] as Record<string, string>)['dark'] = '9px';
+        (map[T('space-m')] as Record<string, string>)['dark'] = '9px';
       }).to.throw(TypeError);
       scheme.flip(true);
-      expect(inline(T('x'))).to.equal('2px');
-      expect(inline(T('y'))).to.equal('3px');
+      expect(inline(T('space-m'))).to.equal('2px');
+      expect(inline(T('space-s'))).to.equal('3px');
     } finally {
-      window.removeEventListener('lr-theme-change', onChange);
+      window.removeEventListener('lr-style-change', onChange);
       scheme.restore();
     }
   });
 
-  it('normalizes corrupt stored tokens safely', () => {
-    for (const tokens of ['red', ['red'], { [T('x')]: 'url(x)', color: 'red' }, 42]) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: 'light', accent: null, surface: null, tokens }));
-      expect(() => getLyraTheme()).to.not.throw();
-      expect(getLyraTheme(), JSON.stringify(tokens)).to.deep.equal({ mode: 'light', accent: null, surface: null });
+  it('normalizes corrupt stored overrides safely', () => {
+    for (const overrides of ['red', ['red'], { [T('x')]: 'url(x)', color: 'red' }, 42]) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: 'light', accent: null, surface: null, overrides }));
+      expect(() => legacyFixtureSnapshot()).to.not.throw();
+      expect(legacyFixtureSnapshot(), JSON.stringify(overrides)).to.deep.equal({ mode: 'light', accent: null, surface: null });
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: 'light', tokens: { [T('x')]: '1px', [T('y')]: 'url(y)' } }));
-    expect(getLyraTheme().tokens).to.deep.equal({ [T('x')]: '1px' });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: 'light', overrides: { [T('x')]: '1px', [T('y')]: 'url(y)' } }));
+    expect(legacyFixtureSnapshot().tokens).to.deep.equal({ [T('x')]: '1px' });
+  });
+
+  it('reads a saved v1 token map into a runtime look and drops unsafe values', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      mode: 'light',
+      tokens: { [T('x')]: '1px', [T('y')]: 'url(y)' },
+    }));
+    setLyraStyle({});
+    const style = getLyraStyle();
+    expect(style.look).to.equal('custom');
+    expect(style.lookForm).to.equal('runtime');
+    expect(style.overrides).to.equal(undefined);
+    expect(inline(T('x'))).to.equal('1px');
+    expect(inline(T('y'))).to.equal('');
+    expect(storedRecord()['tokens']).to.deep.equal({ [T('x')]: '1px' });
   });
 
   it('survives a style-attribute re-parse with every owned, ramp and accent value intact', async () => {
     const { values } = await tokenGrammar();
     const tokens = Object.fromEntries(values.accept.map((value, index) => [T(`round-trip-${index}`), value]));
-    setLyraTheme({ mode: 'light', accent: '#e63950', tokens });
+    setStyleForTest({ mode: 'light', accent: '#e63950', tokens });
     const copy = document.createElement('div');
     copy.setAttribute('style', document.documentElement.getAttribute('style') ?? '');
     const names = [...ownershipList(), ...ALL_RAMP_PROPERTIES, '--lr-theme-accent'];
@@ -1542,14 +1593,14 @@ describe('theme token maps', () => {
   });
 
   it('fails an unbalanced accent, surface or accent branch closed', () => {
-    setLyraTheme({ mode: 'light', accent: 'rgb(0 0 0' });
-    expect(getLyraTheme().accent).to.equal(null);
+    setStyleForTest({ mode: 'light', accent: 'rgb(0 0 0' });
+    expect(legacyFixtureSnapshot().accent).to.equal(null);
     expect(inline('--lr-theme-accent')).to.equal('');
     for (const name of ALL_RAMP_PROPERTIES) expect(inline(name), name).to.equal('');
-    setLyraTheme({ accent: null, surface: 'color-mix(in srgb, red, blue' });
-    expect(getLyraTheme().surface).to.equal(null);
-    setLyraTheme({ mode: 'dark', surface: null, accent: { brand: { light: 'rgb(0 0 0', dark: '#ffffff' } } });
-    expect(getLyraTheme().accent).to.deep.equal({ brand: { light: null, dark: '#ffffff' } });
+    setStyleForTest({ accent: null, surface: 'color-mix(in srgb, red, blue' });
+    expect(legacyFixtureSnapshot().surface).to.equal(null);
+    setStyleForTest({ mode: 'dark', surface: null, accent: { brand: { light: 'rgb(0 0 0', dark: '#ffffff' } } });
+    expect(legacyFixtureSnapshot().accent).to.deep.equal({ brand: { light: null, dark: '#ffffff' } });
   });
 
   for (const kind of ['context', 'pixels'] as const) {
@@ -1560,14 +1611,14 @@ describe('theme token maps', () => {
         [T('font-size-m')]: '1rem',
       };
       withCanvasFailure(kind, () => {
-        setLyraTheme({ mode: 'light', accent: '#e63950', tokens });
+        setStyleForTest({ mode: 'light', accent: '#e63950', tokens });
         for (const [name, value] of Object.entries(tokens)) expect(inline(name), name).to.equal(value);
         expect(inline(T('color-success-on-loud'))).to.equal('');
         expect(ownershipList()).to.deep.equal(Object.keys(tokens));
-        expect(getLyraTheme().accent).to.equal(null);
+        expect(legacyFixtureSnapshot().accent).to.equal(null);
         expect(inline('--lr-theme-accent')).to.equal('');
-        expect(getLyraTheme().tokens).to.deep.equal(tokens);
-        expect(storedRecord()['tokens']).to.deep.equal(tokens);
+        expect(legacyFixtureSnapshot().tokens).to.deep.equal(tokens);
+        expect(storedRecord()['overrides']).to.deep.equal(tokens);
       });
     });
   }
@@ -1582,8 +1633,8 @@ describe('theme token maps', () => {
       root.style.setProperty('--lr-theme-hostile-600', '1px');
       install(root);
       try {
-        expect(() => setLyraTheme({ mode: 'light', tokens: { [T('x')]: '1px' } })).to.not.throw();
-        expect(() => setLyraTheme({ tokens: null })).to.not.throw();
+        expect(() => setStyleForTest({ mode: 'light', tokens: { [T('x')]: '1px' } })).to.not.throw();
+        expect(() => setStyleForTest({ tokens: null })).to.not.throw();
         expect(root.style.getPropertyValue('display')).to.equal('block');
         expect(root.style.getPropertyValue('color')).to.equal('red');
         if (label === 'foreign names') expect(inline('--lr-theme-font-size-m')).to.equal('');
@@ -1604,7 +1655,7 @@ describe('theme token maps', () => {
   it('diff-writes: an identical re-apply mutates nothing, and a one-value change writes one property', async () => {
     // A quoted value too: WebKit re-serializes it with double quotes, which must not read as a change.
     const tokens = { [T('a')]: '1px', [T('b')]: '2px', [T('color-text-normal')]: '#111111', [T('font-family-body')]: '\'Geist\', sans-serif' };
-    setLyraTheme({ mode: 'light', accent: '#e63950', tokens });
+    setStyleForTest({ mode: 'light', accent: '#e63950', tokens });
     const rootStyle = document.documentElement.style;
     const originalSet = CSSStyleDeclaration.prototype.setProperty;
     const originalRemove = CSSStyleDeclaration.prototype.removeProperty;
@@ -1621,19 +1672,19 @@ describe('theme token maps', () => {
     const observer = new MutationObserver((batch) => records.push(...batch));
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
     try {
-      setLyraTheme({ mode: 'light', accent: '#e63950', tokens });
+      setStyleForTest({ mode: 'light', accent: '#e63950', tokens });
       await Promise.resolve();
       records.push(...observer.takeRecords());
       expect(calls).to.deep.equal({ set: 0, remove: 0 });
       expect(records.length).to.equal(0);
 
-      setLyraTheme({ tokens: { ...tokens, [T('b')]: '3px' } });
+      setStyleForTest({ tokens: { ...tokens, [T('b')]: '3px' } });
       expect(calls).to.deep.equal({ set: 1, remove: 0 });
 
       calls.set = 0;
       rootStyle.removeProperty(T('a'));
       calls.remove = 0;
-      setLyraTheme({ tokens: null });
+      setStyleForTest({ tokens: null });
       expect(calls).to.deep.equal({ set: 0, remove: 5 });
       for (const name of [T('b'), T('color-text-normal'), T('font-family-body'), '--_lr-ll-color-text-normal', '--_lr-ld-color-text-normal']) {
         expect(rootStyle.getPropertyValue(name), name).to.equal('');
@@ -1650,8 +1701,8 @@ describe('lyraThemeBootstrap token maps', () => {
   afterEach(resetRoot);
 
   /** Applies `record` through the runtime, captures the inline state, then clears it for the bootstrap. */
-  function runtimeThenBootstrap(record: Parameters<typeof setLyraTheme>[0]) {
-    setLyraTheme(record);
+  function runtimeThenBootstrap(record: Parameters<typeof setStyleForTest>[0]) {
+    setStyleForTest(record);
     const expected = { inline: inlineThemeProperties(), owned: ownershipList() };
     applyLyraStyleScope(document.documentElement, null);
     deleteOwnershipList();
@@ -1661,7 +1712,7 @@ describe('lyraThemeBootstrap token maps', () => {
     return { expected, actual: { inline: inlineThemeProperties(), owned: ownershipList() } };
   }
 
-  const records: Array<[string, Parameters<typeof setLyraTheme>[0]]> = [
+  const records: Array<[string, Parameters<typeof setStyleForTest>[0]]> = [
     ['bare values only', { mode: 'light', accent: null, tokens: { [T('font-size-m')]: '1rem', [T('border-radius-m')]: '4px' } }],
     ['per-mode values (light)', { mode: 'light', accent: null, tokens: { [T('color-surface-default')]: { light: '#fafafa', dark: '#111111' }, [T('x')]: { light: '1px', dark: null } } }],
     ['per-mode values (dark)', { mode: 'dark', accent: null, tokens: { [T('color-surface-default')]: { light: '#fafafa', dark: '#111111' }, [T('x')]: { light: '1px', dark: null } } }],
@@ -1751,7 +1802,7 @@ describe('lyraThemeBootstrap token maps', () => {
     expect(inline(T('color-success-on-loud'))).to.not.equal('');
     // This module never wrote these names itself (the previous test cleared its own list), so only
     // the handed-over list can remove them.
-    setLyraTheme({ tokens: null });
+    setLyraStyle({ look: 'lyra' });
     expect(inlineThemeProperties()).to.deep.equal({});
   });
 

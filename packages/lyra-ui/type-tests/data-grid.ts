@@ -1,5 +1,5 @@
+import { LyraDataGrid } from '../src/components/data/data-grid/data-grid.class.js';
 import {
-  LyraDataGrid,
   type DataGridCopyOptions,
   type DataGridCsvOptions,
   type DataGridExportOptions,

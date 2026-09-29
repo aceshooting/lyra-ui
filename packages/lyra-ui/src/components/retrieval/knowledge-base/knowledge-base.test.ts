@@ -863,7 +863,7 @@ describe('error state', () => {
     ).to.equal(false);
   });
 
-  it('does not leak the nested table\'s own `lr-retry` past this component\'s boundary as a second event', async () => {
+  it('does not leak a second canonical retry event from the nested table', async () => {
     const el = (await fixture(
       html`<lr-knowledge-base error .sources=${sources}></lr-knowledge-base>`
     )) as LyraKnowledgeBase;
@@ -873,7 +873,7 @@ describe('error state', () => {
     )!;
 
     let count = 0;
-    el.addEventListener('lr-retry', () => count++);
+    el.addEventListener('lr-retry-request', () => count++);
     retryButton.click();
     expect(count).to.equal(1);
   });
@@ -954,55 +954,38 @@ describe('lr-knowledge-base retired hide-summary and hide-create aliases', () =>
 });
 
 
-describe('knowledge-base retry request compatibility boundary', () => {
-  for (const veto of ['canonical', 'alias', 'none'] as const) {
-    it(`preserves ${veto} veto semantics without exposing child retry events`, async () => {
-      const el = await fixture<LyraKnowledgeBase>(html`<lr-knowledge-base error></lr-knowledge-base>`);
-      const table = el.shadowRoot!.querySelector('lr-table') as HTMLElement & {
-        error: boolean;
-        updateComplete: Promise<unknown>;
-      };
-      await table.updateComplete;
-      const events: string[] = [];
-      const childAliases: Event[] = [];
-      const childRequests: Event[] = [];
-      table.addEventListener('lr-retry-request', event => childRequests.push(event));
-      table.addEventListener('lr-retry', event => childAliases.push(event));
-      for (const type of ['lr-retry-request', 'lr-retry']) {
-        el.addEventListener(type, event => {
-          events.push(event.type);
-          expect(event.composedPath()[0] === el, 'only parent-owned events escape').to.equal(true);
-          expect(event.cancelable).to.equal(true);
-          expect((event as CustomEvent).detail).to.equal(null);
-          expect(el.error, 'dispatch precedes the outer commit').to.equal(true);
-          expect(table.error, 'dispatch precedes the nested commit').to.equal(true);
-          if (type === (veto === 'canonical' ? 'lr-retry-request' : veto === 'alias' ? 'lr-retry' : '')) {
-            event.preventDefault();
-          }
-        });
-      }
-      const warnings = await captureDeprecationWarnings([
-        { tag: 'lr-knowledge-base', kind: 'event', name: 'lr-retry' },
-        { tag: 'lr-table', kind: 'event', name: 'lr-retry' },
-      ], async () => {
-        table.shadowRoot!.querySelector<HTMLButtonElement>('[part="retry-button"]')!.click();
-        await el.updateComplete;
-        await table.updateComplete;
-      });
-      expect(events).to.deep.equal(['lr-retry-request', 'lr-retry']);
-      expect(childRequests).to.have.length(1);
-      expect(childRequests[0]!.defaultPrevented).to.equal(veto !== 'none');
-      expect(childAliases).to.have.length(1);
-      expect(childAliases[0]!.defaultPrevented, 'containment must not veto the child legacy alias').to.equal(false);
-      expect(el.error).to.equal(veto !== 'none');
-      expect(table.error).to.equal(veto !== 'none');
-      expect(warnings.map(warning => warning.key)).to.deep.equal(veto === 'alias'
-        ? ['lyra-deprecated:lr-knowledge-base:event:lr-retry'] : []);
-      if (veto === 'alias') expect(warnings[0]!.message).to.contain('lr-retry-request');
+describe('knowledge-base retry request boundary', () => {
+  it('forwards only the cancelable canonical request and preserves nested event ordering', async () => {
+    const el = await fixture<LyraKnowledgeBase>(html`<lr-knowledge-base error></lr-knowledge-base>`);
+    const table = el.shadowRoot!.querySelector('lr-table') as HTMLElement & {
+      error: boolean;
+      updateComplete: Promise<unknown>;
+    };
+    await table.updateComplete;
+    const events: string[] = [];
+    const childRequests: Event[] = [];
+    const childAliases: Event[] = [];
+    table.addEventListener('lr-retry-request', event => childRequests.push(event));
+    table.addEventListener('lr-retry', event => childAliases.push(event));
+    el.addEventListener('lr-retry', event => events.push(event.type));
+    el.addEventListener('lr-retry-request', event => {
+      events.push(event.type);
+      expect(event.cancelable).to.equal(true);
+      expect((event as CustomEvent).detail).to.equal(null);
+      expect(el.error, 'dispatch precedes the outer commit').to.equal(true);
+      expect(table.error, 'dispatch precedes the nested commit').to.equal(true);
+      event.preventDefault();
     });
-  }
+    table.shadowRoot!.querySelector<HTMLButtonElement>('[part="retry-button"]')!.click();
+    await el.updateComplete;
+    await table.updateComplete;
+    expect(events).to.deep.equal(['lr-retry-request']);
+    expect(childRequests).to.have.length(1);
+    expect(childAliases).to.have.length(0);
+    expect(el.error).to.equal(true);
+    expect(table.error).to.equal(true);
+  });
 });
-
 
 describe('knowledge-base retry reentry', () => {
   it('cancels a nested child retry before an outer veto and releases the guard for the next attempt', async () => {
@@ -1017,30 +1000,23 @@ describe('knowledge-base retry reentry', () => {
     const childRequests: Event[] = [];
     table.addEventListener('lr-retry-request', event => childRequests.push(event));
     el.addEventListener('lr-retry-request', () => events.push('request'));
-    el.addEventListener('lr-retry', () => events.push('alias'));
     el.addEventListener('lr-retry-request', event => {
       button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       event.preventDefault();
     }, { once: true });
-    const warnings = await captureDeprecationWarnings([
-      { tag: 'lr-knowledge-base', kind: 'event', name: 'lr-retry' },
-      { tag: 'lr-table', kind: 'event', name: 'lr-retry' },
-    ], async () => {
-      button.click();
-      await el.updateComplete;
-      await table.updateComplete;
-      expect(events).to.deep.equal(['request', 'alias']);
-      expect(childRequests).to.have.length(2);
-      expect(childRequests.every(event => event.defaultPrevented)).to.equal(true);
-      expect(el.error).to.equal(true);
-      expect(table.error).to.equal(true);
-      button.click();
-      await el.updateComplete;
-      await table.updateComplete;
-      expect(events).to.deep.equal(['request', 'alias', 'request', 'alias']);
-      expect(el.error).to.equal(false);
-      expect(table.error).to.equal(false);
-    });
-    expect(warnings).to.have.length(0);
+    button.click();
+    await el.updateComplete;
+    await table.updateComplete;
+    expect(events).to.deep.equal(['request']);
+    expect(childRequests).to.have.length(2);
+    expect(childRequests.every(event => event.defaultPrevented)).to.equal(true);
+    expect(el.error).to.equal(true);
+    expect(table.error).to.equal(true);
+    button.click();
+    await el.updateComplete;
+    await table.updateComplete;
+    expect(events).to.deep.equal(['request', 'request']);
+    expect(el.error).to.equal(false);
+    expect(table.error).to.equal(false);
   });
 });

@@ -15,7 +15,6 @@ import {
 import { readScrollbarWidth } from '../../../../test/scrollbar-reporting.js';
 import {
   captureDeprecationWarnings,
-  expectDeprecatedUsage,
   type DeprecatedUsage,
 } from '../../../../test/expected-deprecations.js';
 // Registers the real shipped `ar` catalog's `layout` slice (a side effect, like every
@@ -2111,25 +2110,23 @@ it("is accessible and supports a consumer supplied accessible label", async () =
   await expect(el).to.be.accessible();
 });
 
-it("keeps an explicitly empty programmatic name distinct from an omitted one", async () => {
+it("keeps an explicitly empty host aria-label distinct from an omitted one", async () => {
   const omitted = await carousel(html`
     <lr-carousel>
       <div>One</div>
       <div>Two</div>
     </lr-carousel>
   `);
-  expect(omitted.accessibleLabel).to.equal(undefined);
   expect(
     omitted.shadowRoot!.querySelector('[part~="base"]')!.getAttribute("aria-label")
   ).to.equal("Carousel");
 
   const explicitEmpty = await carousel(html`
-    <lr-carousel .accessibleLabel=${""}>
+    <lr-carousel aria-label="">
       <div>One</div>
       <div>Two</div>
     </lr-carousel>
   `);
-  expect(explicitEmpty.accessibleLabel).to.equal("");
   expect(
     explicitEmpty.shadowRoot!.querySelector('[part~="base"]')!.getAttribute("aria-label")
   ).to.equal("");
@@ -2180,15 +2177,6 @@ describe('lr-carousel: host aria-label and the deprecated accessible-label attri
     expect(regionName(el)).to.equal('Carousel');
   });
 
-  it('does not warn for a property-only accessibleLabel assignment', async () => {
-    const el = await carousel(html`<lr-carousel><div>One</div><div>Two</div></lr-carousel>`);
-    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
-      el.accessibleLabel = 'Assigned';
-      await el.updateComplete;
-    });
-    expect(warnings).to.have.length(0);
-    expect(regionName(el)).to.equal('Assigned');
-  });
 });
 
 it("preserves an explicitly empty host aria-label on both carousel landmarks", async () => {
@@ -3936,5 +3924,3 @@ describe('collecting already-slotted slides without relying on the initial slotc
     }
   });
 });
-
-expectDeprecatedUsage('lr-carousel', 'property', 'accessibleLabel');

@@ -15,10 +15,9 @@ import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import type { LyraToolCallBlock } from "../../agent-tools/tool-call-block/tool-call-block.class.js";
 import type { LyraToolCallChip } from "../../agent-tools/tool-call-chip/tool-call-chip.class.js";
 import { adaptAiSdkMessage } from "../../../ai/adapters/ai-sdk.js";
-import { captureDeprecationWarnings, expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
+import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 import type { ToolInvocation } from "../../../ai/types.js";
 
-expectDeprecatedUsage('lr-message-parts', 'property', 'accessibleLabel');
 
 function assertiveSinkTexts(doc: Document = document): string[] {
   return Array.from(
@@ -897,31 +896,15 @@ it("preserves an explicitly empty aria-label override by presence", async () => 
   ).to.equal("");
 });
 
-it('keeps the deprecated accessibleLabel accessor compatible with native aria-label and null removal', async () => {
+it('uses native aria-label and restores its localized name when the host label is removed', async () => {
   const el = (await fixture(html`
     <lr-message-parts aria-label="Native message name"
       .parts=${[{ id: 'text', type: 'text', text: 'Ready' }]}></lr-message-parts>
   `)) as LyraMessageParts;
-  expect(el.accessibleLabel).to.equal('Native message name');
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Native message name');
   el.removeAttribute('aria-label');
   await el.updateComplete;
-  expect(el.accessibleLabel).to.equal(null);
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Message content');
-});
-
-it('warns on direct deprecated accessibleLabel assignment while keeping its compatibility behavior', async () => {
-  const warnings = await captureDeprecationWarnings(
-    [{ tag: 'lr-message-parts', kind: 'property', name: 'accessibleLabel' }],
-    async () => {
-      const el = (await fixture(html`<lr-message-parts></lr-message-parts>`)) as LyraMessageParts;
-      el.accessibleLabel = 'Legacy programmatic name';
-      await el.updateComplete;
-      expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Legacy programmatic name');
-    }
-  );
-  expect(warnings).to.have.lengthOf(1);
-  expect(warnings[0]!.message).to.contain('accessibleLabel');
 });
 
 it("uses one nonempty first-wins part projection for rendering and error announcements", async () => {

@@ -60,8 +60,8 @@ way, and moving to the replacement removes the warning. A test suite that fails 
 while deliberately exercising a deprecated form can pre-seed Lit's development-mode
 `globalThis.litIssuedWarnings` set, before the element renders, with the key
 `lyra-deprecated:<owner>:<kind>:<name>` — `<kind>` and `<name>` as in the deprecation record.
-`<owner>` is the element name or package-relative module specifier; for example,
-`lyra-deprecated:./theme.js:function:setLyraTheme`.
+`<owner>` is the element name or package-relative module specifier. Theme migration guidance is in
+[styles and tokens](styles-and-tokens.md).
 
 ### Release history and upgrade notes
 
@@ -81,6 +81,13 @@ The major-version landmarks after 9.0.0 are:
   deprecated that finalization hook. Ordinary component consumers need no migration; only subclasses
   that themselves overrode the hook are affected. Collection snapshot enforcement moved to a
   decorator-agnostic accessor seam instead.
+
+- **24.0.0:** removed eligible v22 compatibility routes, including package-root component
+  constructors, duplicate nested registration entries, the combined `ssr-loader.js` entry, and the
+  retired theme/preset facade. Use stable tag-shaped registration entries, a component's
+  registration-free `.class.js` subpath, the split SSR/hydration entries, and the current style API.
+  The [v23-to-v24 migration guide](v23-to-v24-migration.md) gives the removed routes, ordered
+  consumer cleanup and retained-profile instructions.
 
 ### The support window
 
@@ -106,9 +113,9 @@ import "@aceshooting/lyra-ui/components/lr-combobox.js"; // registers <lr-combob
 import "@aceshooting/lyra-ui/components/lr-table.js"; // registers <lr-table>
 ```
 
-The older family-shaped registration paths remain supported for compatibility. Class-only
-`.class.js` entries still use their owning family path because they intentionally expose source
-organization and do not register a tag.
+Family barrel entries remain supported and register their family. Class-only `.class.js` entries
+use their owning family/component path because they intentionally expose source organization and
+do not register a tag.
 
 New application code can import any component through its stable tag-shaped path:
 
@@ -119,8 +126,7 @@ import "@aceshooting/lyra-ui/components/lr-tool-call-block.js";
 ```
 
 `llms/index.md` lists every tag and its owning implementation module. The stable tag-shaped alias
-and the family-shaped compatibility path both resolve through the package's `./components/*`
-export.
+and the supported family barrel each resolve through the package's component exports.
 
 The package root is a pure, side-effect-free export surface. Import a component entry to register
 only that tag, or use the explicit `all.js` entry when whole-library registration is needed:
@@ -129,17 +135,11 @@ only that tag, or use the explicit `all.js` entry when whole-library registratio
 import "@aceshooting/lyra-ui/all.js"; // explicitly registers the root-included tags
 ```
 
-Import component classes from their family-shaped `.class.js` subpaths. Deprecated root
-component-class exports refer to the component constructor bindings themselves, including a
-constructor re-exported from a module that also exports helpers or types. That deprecation does not
-extend to sibling helpers, constants, or types; those remain supported unless they have their own
-deprecation record. Use the owning component's granular `.class.js` subpath for class imports.
-Family-shaped registration imports are also deprecated. Both deprecated root component-class exports
-and family-shaped registration imports keep working throughout the compatibility window, with
-removal no earlier than 24.0.0. Stable tag-shaped registration imports and class-only subpaths are
-the canonical routes. The package root's helpers and types remain available. `all.js` is
-side-effectful and registers the root-included inventory; prefer tag-shaped imports in application
-code for smaller bundles.
+The package root does not re-export component constructors. Import a class from its owning
+component's `.class.js` subpath; import the stable tag-shaped entry to register it. The root remains
+a side-effect-free home for shared utilities and types. Family registration barrels and `all.js`
+remain side-effectful convenience entries; prefer tag-shaped imports for smaller application
+bundles.
 
 The entry points, then:
 
@@ -178,7 +178,7 @@ The entry points, then:
     LyraAnchor,
     LyraHighlight,
     AnchorTargetCapabilities,
-  } from "@aceshooting/lyra-ui/components/viewers/document-viewer/document-viewer.js";
+  } from "@aceshooting/lyra-ui/components/lr-document-viewer.js";
   ```
   Prefer the granular entry for component-local imports; use the root export when an application
   deliberately shares the contracts across several viewer integrations.
@@ -186,13 +186,13 @@ The entry points, then:
   a pre-resolved `src`) additionally needs
   `import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';` once.
 - **Other subpaths.** `@aceshooting/lyra-ui/theme.css` (ready-made light/dark theme),
-  `@aceshooting/lyra-ui/themes/shadcn.css` (opt-in shadcn/ui look, imported after `theme.css` — see
-  [The shadcn look](./styles-and-tokens.md#the-shadcn-look--themesshadcncss)),
+  `@aceshooting/lyra-ui/looks/shadcn.css` (opt-in shadcn/ui look, imported after `theme.css` — see
+  [The shadcn look](./styles-and-tokens.md#the-shadcn-look--looksshadcncss)),
   `@aceshooting/lyra-ui/tokens-root.css` (opt-in: the curated resolved `--lr-*` tokens at `:root`,
   so your own components can read them),
   `@aceshooting/lyra-ui/native.css` (opt-in native-element styles inside `.lr-native`),
   `@aceshooting/lyra-ui/utilities.css` (opt-in light-DOM layout/text/typography utilities),
-  `@aceshooting/lyra-ui/theme.js` (the zero-dependency mode/accent runtime),
+  `@aceshooting/lyra-ui/theme.js` (the zero-dependency style runtime),
   `@aceshooting/lyra-ui/localization.js` (side-effect-free locale runtime),
   `@aceshooting/lyra-ui/autoloader.js` (side-effect-free on-demand tag loading),
   `@aceshooting/lyra-ui/autoloader-cdn.js` (browser-guarded auto-start side effect),

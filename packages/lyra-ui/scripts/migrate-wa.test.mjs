@@ -287,6 +287,15 @@ test('free and Pro package identities share the Web Awesome ecosystem without co
 test('the packaged runtime projection stays narrow, complete, and fail-closed', () => {
   const runtimeInventory = createMigrationRuntimeInventory(checkedInventory, { renameLedger: readRenameLedger(), exportDeprecations: readExportDeprecations(), compatibilityContext: checkedCompatibilityContext });
   const runtimeContract = buildMigrationContract(runtimeInventory);
+  const accordionItem = runtimeInventory.components.find((component) => component.tag === 'lr-accordion-item');
+  const checkedPackageJson = JSON.parse(fs.readFileSync(path.join(scriptDir, '..', 'package.json'), 'utf8'));
+  assert.equal(checkedCompatibilityContext.packageVersion, checkedPackageJson.version);
+  assert.equal(
+    checkedCompatibilityContext.componentRegistrationRoutes['lr-accordion-item'],
+    './components/lr-accordion-item.js',
+    'registration alias must be established from the checked current package version and exports',
+  );
+  assert.equal(accordionItem?.registrationRoute, './components/lr-accordion-item.js');
   assert.equal(runtimeInventory.migrationRuntimeSchemaVersion, MIGRATION_RUNTIME_SCHEMA_VERSION);
   assert.deepEqual(
     runtimeInventory.lyraRenames.profiles.map((profile) => profile.origin),
@@ -324,6 +333,7 @@ test('the packaged runtime projection stays narrow, complete, and fail-closed', 
   const malformed = structuredClone(runtimeInventory);
   malformed.mappings[0].rewrites.attributes.push({ from: 'old', to: 'new', guess: true });
   assert.throws(() => buildMigrationContract(malformed), /unknown key/);
+
 });
 
 test('the packaged runtime executes from its adjacent projected contract', () => {
@@ -356,7 +366,7 @@ test('the packaged runtime executes from its adjacent projected contract', () =>
     assert.equal(
       fs.readFileSync(source, 'utf8'),
       [
-        "import '@aceshooting/lyra-ui/components/layout/details/accordion-item.js';",
+        "import '@aceshooting/lyra-ui/components/lr-accordion-item.js';",
         "document.body.innerHTML = '<lr-accordion-item>Panel</lr-accordion-item>';",
         '',
       ].join('\n'),
@@ -561,7 +571,9 @@ test('a documented unaliasedEvents reason is the only way an unmirrored upstream
 });
 
 test('the checked-in inventory is executable and carries its explicit event-prefix rewrite', () => {
-  const checkedContract = buildMigrationContract(checkedInventory);
+  const checkedContract = buildMigrationContract(checkedInventory, {
+    compatibilityContext: checkedCompatibilityContext,
+  });
   const input = [
     `import '@shoelace-style/shoelace/dist/components/animation/animation.js';`,
     '<sl-animation @sl-start="onStart"></sl-animation>',
@@ -574,7 +586,7 @@ test('the checked-in inventory is executable and carries its explicit event-pref
   assert.equal(
     result.content,
     [
-      `import '@aceshooting/lyra-ui/components/media/animation/animation.js';`,
+      `import '@aceshooting/lyra-ui/components/lr-animation.js';`,
       '<lr-animation @lr-start="onStart"></lr-animation>',
       '',
     ].join('\n'),
@@ -2476,7 +2488,7 @@ test('the public CLI dry-runs, reports, applies, and remains idempotent', () => 
       '',
     ].join('\n');
     const expected = [
-      `import '@aceshooting/lyra-ui/components/media/animation/animation.js';`,
+      `import '@aceshooting/lyra-ui/components/lr-animation.js';`,
       `document.body.innerHTML = '<lr-animation></lr-animation>';`,
       '',
     ].join('\n');

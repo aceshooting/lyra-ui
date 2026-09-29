@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { checkPublishedCompatibility, checkPublishedCompatibilitySync, readCurrentCompatibilityContext } from './check-published-compatibility.mjs';
-import { decodeEvidence, encodeEvidence, sha256, jsonBytes, validatePublishedCapture } from './published-compatibility-io.mjs';
+import { decodeCaptureEvidence, decodeEvidence, encodeEvidence, sha256, jsonBytes, validatePublishedCapture } from './published-compatibility-io.mjs';
 
 import { commitSourceWritePlan } from './source-fixture-io.mjs';
 import { readComponentMetadataSources, assembleComponentMetadata, createComponentMetadataWritePlan, commitComponentMetadataWritePlan } from './component-metadata-source.mjs';
@@ -75,11 +75,19 @@ test('actual source retirement partition agrees with verified history and preser
   ];
   for (const key of initialRetirements) assert.ok(retired.has(JSON.stringify(key)), `retired ${JSON.stringify(key)}`);
   const facts = verified.captures.find(entry => entry.capture.sourceVersion === '22.0.0').facts;
-  const completedCohort = facts.records
+  const previousCohort = facts.records
     .filter(entry => entry.policy.removalNotBefore === '23.0.0')
     .map(entry => compatibilityKey(entry.key));
-  assert.deepEqual([...retired].sort(), completedCohort.sort(),
-    'The complete published removal cohort must retire together');
+  const latestFacts = verified.captures.find(entry => entry.capture.sourceVersion === '23.0.0').facts;
+  const currentCohort = latestFacts.records
+    .filter(entry => entry.policy.removalNotBefore === '24.0.0')
+    .map(entry => compatibilityKey(entry.key));
+  assert.equal(previousCohort.length, 399);
+  assert.equal(currentCohort.length, 654);
+  assert.deepEqual([...retired].sort(), [...previousCohort, ...currentCohort].sort(),
+    'The complete published removal cohorts must retire together');
+  assert.equal(latestFacts.records.length - currentCohort.length, 8,
+    'All published upstream holds must survive');
   const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
   const context = await readCurrentCompatibilityContext(packageRoot);
   const historicalKeys = new Set(verified.captures.flatMap(entry => entry.facts.records.map(record => compatibilityKey(record.key))));
@@ -88,7 +96,7 @@ test('actual source retirement partition agrees with verified history and preser
     const key = compatibilityKey(published.key);
     assert.equal(context.records[key].state, retired.has(key) ? 'retired' : 'current', key);
     assert.deepEqual(context.records[key].policy, published.policy, key);
-    if (published.policy.removalNotBefore !== '23.0.0') assert.equal(context.records[key].state, 'current', key);
+    if (!retired.has(key)) assert.equal(context.records[key].state, 'current', key);
   }
 });
 
@@ -211,6 +219,34 @@ test('historical class aliases come from the exact verified published policy and
     ['capture.json', 'facts.json', 'evidence.json.gz'].map(file => `${entry.capture.sourceVersion}/${file}`))];
   assert.deepEqual(verified.snapshots.map(entry => entry.file.slice(directory.length + 1)).sort(), expectedInputs.sort());
   assert.ok(verified.snapshots.every(entry => Buffer.isBuffer(entry.original)));
+});
+
+test('capture evidence archives remain bound to their descriptors during recursive history reads', async () => {
+  const root = join(directory, '22.0.0');
+  const capture = JSON.parse(await readFile(join(root, 'capture.json'), 'utf8'));
+  const evidence = await readFile(join(root, 'evidence.json.gz'));
+  assert.throws(() => decodeCaptureEvidence({ ...capture, evidenceArchiveSha256: '0'.repeat(64) }, evidence), /Evidence archive hash mismatch/u);
+});
+
+test('published 23 capture verifies pinned source-history context and rejects history omission or substitution', async () => {
+  const root = join(directory, '23.0.0');
+  const capture = JSON.parse(await readFile(join(root, 'capture.json'), 'utf8'));
+  const facts = JSON.parse(await readFile(join(root, 'facts.json'), 'utf8'));
+  const archive = decodeEvidence(await readFile(join(root, 'evidence.json.gz')));
+  const verified = validatePublishedCapture(capture, facts, archive);
+  assert.equal(verified.facts.sourceVersion, '23.0.0');
+  assert.equal(verified.facts.records.length, 662);
+  assert.equal(verified.publishedMigration.lyraRenames.profiles.length, 2);
+  const withoutIndex = structuredClone(capture);
+  const indexInput = withoutIndex.inputs.findIndex(input => input.origin === 'source-history' && input.path.endsWith('/index.json'));
+  assert.notEqual(indexInput, -1);
+  withoutIndex.inputs.splice(indexInput, 1);
+  assert.throws(() => validatePublishedCapture(withoutIndex, facts, structuredClone(archive)), /unrelated payload|history|evidence input/u);
+  const substituted = structuredClone(capture);
+  const historicalCapture = substituted.inputs.find(input => input.origin === 'source-history' && input.path.endsWith('/22.0.0/capture.json'));
+  assert.ok(historicalCapture);
+  historicalCapture.path = historicalCapture.path.replace('/22.0.0/', '/23.0.0/');
+  assert.throws(() => validatePublishedCapture(substituted, facts, structuredClone(archive)), /incomplete|inventory|Git path|history/u);
 });
 
 test('every historical authority input remains guarded until a prepared fixture write commits', async () => {

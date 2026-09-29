@@ -14,9 +14,9 @@ Every `lr-*` component resolves its styling through this two-layer token system,
 
 For a ready-made light/dark base, import `@aceshooting/lyra-ui/theme.css` once and put
 `class="lr-light"`/`class="lr-dark"` (or `data-lr-theme="light"`/`"dark"`) on an ancestor.
-For the shadcn/ui look, also import `@aceshooting/lyra-ui/themes/shadcn.css`: it layers over
-`theme.css` in any load order and answers to shadcn's `.dark`/`.light` classes too (see
-[The shadcn look](./shared.md#the-shadcn-look--themesshadcncss)).
+For the shadcn/ui look, also import `@aceshooting/lyra-ui/looks/shadcn.css` and select
+`data-lr-look="shadcn"` on the root or a scoped ancestor; look and mode remain independent.
+See [Styles and tokens](./shared/styles-and-tokens.md) for runtime and stylesheet options.
 Per-component `--lr-<component>-*` custom properties (listed in each component's own section)
 override a single element without touching the shared layer.
 

@@ -27,6 +27,22 @@ import {
   type CalendarDay,
 } from './calendar-grid.js';
 import {
+  accessibleMatrixCellRect,
+  calendarCellAt as readCalendarCell,
+  calendarCellRect,
+  calendarDateAt as readCalendarDate,
+  calendarValueAt as readCalendarValue,
+  firstInteractiveCalendarCell as findFirstInteractiveCalendarCell,
+  firstInteractiveMatrixCell as findFirstInteractiveMatrixCell,
+  hitTestCalendar as hitTestCalendarGrid,
+  hitTestMatrix as hitTestMatrixGrid,
+  matrixCellRect,
+  nextInteractiveCalendarCell as findNextInteractiveCalendarCell,
+  nextInteractiveMatrixCell as findNextInteractiveMatrixCell,
+  type CalendarNavigationGeometry,
+  type MatrixNavigationGeometry,
+} from './heatmap-grid-navigation.js';
+import {
   getDateTimeFormat,
   getNumberFormat,
 } from '../../../internal/intl-cache.js';
@@ -1230,7 +1246,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const oldValue = this._cellSize;
     // A non-finite, zero, or negative explicit size would divide-by-zero (or draw inverted
     // geometry) in every cell-position calculation derived from it -- calendar mode's
-    // columnXFor()/weekAtX()/weekdayAtY()/calendarCellSize() and matrix mode's matrixCellSize()
+    // columnXFor()/navigation helpers/calendarCellSize() and matrix mode's matrixCellSize()
     // all divide by cellSize (directly or via + the calendar gap). Clamp to a sane positive floor, falling
     // back to the current mode-appropriate default (mirroring the getter's own fallback) for a
     // non-finite input.
@@ -2816,8 +2832,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * otherwise it's the (possibly explicitly-set) `cellSize` property, which
    * itself falls back to today's original 11px calendar default when left
    * unset (see `cellSize`'s accessor doc comment). Shared by `columnXFor()`,
-   * `rowYFor()`, `drawCalendar()`, and the hit-testing below (`weekAtX()`,
-   * `weekdayAtY()`, `cellRect()`) so they always agree on exactly the same
+   * `rowYFor()`, `drawCalendar()`, and the navigation/cell-rectangle helpers so they agree on the same
    * geometry as what's actually painted.
    */
   private calendarCellSize(): number {
@@ -2899,7 +2914,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * when set, otherwise the original evenly-spaced formula (now derived from
    * `calendarCellSize()` rather than the fixed `CAL_CELL` constant). Shared
    * by every calendar-mode drawing and hit-testing call site (`drawCalendar()`,
-   * `hitTestCalendar()`/`weekAtX()`, `cellRect()`) so painted geometry and
+   * calendar hit-testing and `cellRect()`) so painted geometry and
    * interactive hit-testing never disagree — mirrors the existing
    * `matrixCellSize()` invariant for matrix mode's
    * `drawMatrix()`/`hitTestMatrix()`/`cellRect()`.
@@ -2996,43 +3011,6 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     }
     this.cachedRowGeometry = { callback, cellSize, gap, positions };
     return positions;
-  }
-
-  /**
-   * Inverse of `columnXFor()`: resolves an x position (canvas-local CSS px)
-   * to the week column it falls in, or `null` if it's outside every column
-   * (`weekCount` is 0, or `x` doesn't land inside `[0, weekCount)`'s span).
-   * The default spacing has a closed-form inverse (division); an arbitrary
-   * `columnX` override doesn't, so that case instead scans each column's
-   * `[columnXFor(week), columnXFor(week + 1))` span — algebraically the same
-   * span the default formula's division derives — so hit-testing always
-   * agrees with wherever `columnXFor()` actually painted that column.
-   */
-  private weekAtX(x: number, weekCount: number): number | null {
-    const positions = this.calendarColumnPositions();
-    const cellSize = this.calendarCellSize();
-    for (let week = 0; week < weekCount; week++) {
-      const start = positions[week]!;
-      if (x >= start && x < start + cellSize) return week;
-    }
-    return null;
-  }
-
-  /**
-   * Inverse of `rowYFor()`: resolves a y position (canvas-local CSS px) to
-   * the weekday row it falls in (0-6), or `null` if it's outside every row.
-   * Mirrors `weekAtX()`'s closed-form-vs-scan split for the same reason: the
-   * default spacing has a closed-form inverse; an arbitrary `rowY` override
-   * doesn't.
-   */
-  private weekdayAtY(y: number): number | null {
-    const positions = this.calendarRowPositions();
-    const cellSize = this.calendarCellSize();
-    for (let weekday = 0; weekday < 7; weekday++) {
-      const start = positions[weekday]!;
-      if (y >= start && y < start + cellSize) return weekday;
-    }
-    return null;
   }
 
   /**
@@ -3983,23 +3961,46 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       : this.hitTestMatrix(x, y);
   }
 
+  private matrixNavigationGeometry(rows: number, cols: number): MatrixNavigationGeometry {
+    const cellSize = this.matrixCellSize(cols);
+    const shape = this.matrixCellShape(cellSize);
+    return {
+      rows,
+      cols,
+      padLeft: this.matrixPadLeft,
+      padTop: this.matrixPadTop,
+      cellSize,
+      cellWidth: shape.w,
+      cellHeight: shape.h,
+      customShape: shape.custom,
+    };
+  }
+
+  private calendarNavigationGeometry(): CalendarNavigationGeometry {
+    // Keep the pre-extraction getter order: cell size is resolved before the cached positions.
+    const cellSize = this.calendarCellSize();
+    const columnPositions = this.calendarColumnPositions();
+    const rowPositions = this.calendarRowPositions();
+    return {
+      weekCount: this.cachedCalendarGrid.weekCount,
+      cellSize,
+      columnPositions,
+      rowPositions,
+      padLeft: this.calendarPadLeft,
+      padTop: CAL_LABEL_H,
+    };
+  }
+
   private hitTestMatrix(x: number, y: number): MatrixCellPos | null {
     const rows = this.matrixRowLabels.length;
     const cols = this.matrixColLabels.length;
     if (rows === 0 || cols === 0) return null;
-    const cellSize = this.matrixCellSize(cols);
-    // Same resolved gutter the frame was painted with -- a hit test against the old fixed 60
-    // would map every click to the wrong column as soon as the gutter auto-sized.
-    const col = Math.floor((x - this.matrixPadLeft) / cellSize);
-    const row = Math.floor((y - this.matrixPadTop) / cellSize);
-    if (row < 0 || row >= rows || col < 0 || col >= cols) return null;
-    const shape = this.matrixCellShape(cellSize);
-    if (shape.custom && (
-      x - this.matrixPadLeft - col * cellSize >= shape.w ||
-      y - this.matrixPadTop - row * cellSize >= shape.h
-    )) return null;
-    const pos = { row, col };
-    return this.isCellInteractive(pos) ? pos : null;
+    return hitTestMatrixGrid(
+      x,
+      y,
+      this.matrixNavigationGeometry(rows, cols),
+      (pos) => this.isCellInteractive(pos),
+    );
   }
 
   /** The first interactive matrix cell in row-major order, or `null` if every cell is excluded —
@@ -4008,13 +4009,11 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     rows: number,
     cols: number
   ): MatrixCellPos | null {
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        if (this.isCellInteractive({ row: r, col: c }))
-          return { row: r, col: c };
-      }
-    }
-    return null;
+    return findFirstInteractiveMatrixCell(
+      rows,
+      cols,
+      (pos) => this.isCellInteractive(pos),
+    );
   }
 
   /** Steps from `(row, col)` by `(dRow, dCol)` repeatedly, skipping non-interactive cells, until
@@ -4029,29 +4028,26 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     rows: number,
     cols: number
   ): MatrixCellPos {
-    let r = row;
-    let c = col;
-    for (;;) {
-      const nr = Math.min(rows - 1, Math.max(0, r + dRow));
-      const nc = Math.min(cols - 1, Math.max(0, c + dCol));
-      if (nr === r && nc === c) return { row, col };
-      r = nr;
-      c = nc;
-      if (this.isCellInteractive({ row: r, col: c })) return { row: r, col: c };
-    }
+    return findNextInteractiveMatrixCell(
+      row,
+      col,
+      dRow,
+      dCol,
+      rows,
+      cols,
+      (pos) => this.isCellInteractive(pos),
+    );
   }
 
   /** Calendar-mode analogue of `firstInteractiveMatrixCell()`. */
   private firstInteractiveCalendarCell(
     weekCount: number
   ): CalendarCellPos | null {
-    for (let week = 0; week < weekCount; week++) {
-      for (let weekday = 0; weekday < 7; weekday++) {
-        const pos = this.calendarPos(week, weekday);
-        if (this.isCellInteractive(pos)) return pos;
-      }
-    }
-    return null;
+    return findFirstInteractiveCalendarCell(
+      weekCount,
+      (week, weekday) => this.calendarPos(week, weekday),
+      (pos) => this.isCellInteractive(pos),
+    );
   }
 
   /** Calendar-mode analogue of `nextInteractiveMatrixCell()`. */
@@ -4062,27 +4058,31 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     dWeekday: number,
     weekCount: number
   ): CalendarCellPos {
-    let w = week;
-    let d = weekday;
-    for (;;) {
-      const nw = Math.min(weekCount - 1, Math.max(0, w + dWeek));
-      const nd = Math.min(6, Math.max(0, d + dWeekday));
-      if (nw === w && nd === d) return this.calendarPos(week, weekday);
-      w = nw;
-      d = nd;
-      const pos = this.calendarPos(w, d);
-      if (this.isCellInteractive(pos)) return pos;
-    }
+    return findNextInteractiveCalendarCell(
+      week,
+      weekday,
+      dWeek,
+      dWeekday,
+      weekCount,
+      (nextWeek, nextWeekday) => this.calendarPos(nextWeek, nextWeekday),
+      (pos) => this.isCellInteractive(pos),
+    );
   }
 
   private hitTestCalendar(x: number, y: number): CalendarCellPos | null {
-    const { weekCount } = this.cachedCalendarGrid;
+    const weekCount = this.cachedCalendarGrid.weekCount;
     if (weekCount === 0) return null;
-    const week = this.weekAtX(x, weekCount);
-    const weekday = this.weekdayAtY(y);
-    if (week === null || weekday === null) return null;
-    const pos = this.calendarPos(week, weekday);
-    return this.isCellInteractive(pos) ? pos : null;
+    const columnPositions = this.calendarColumnPositions();
+    return hitTestCalendarGrid(
+      x,
+      y,
+      weekCount,
+      columnPositions,
+      () => this.calendarCellSize(),
+      () => this.calendarRowPositions(),
+      (week, weekday) => this.calendarPos(week, weekday),
+      (pos) => this.isCellInteractive(pos),
+    );
   }
 
   /**
@@ -4098,21 +4098,25 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     date: string;
     value: number;
   } {
-    const match = this.cachedCalendarCellsByPos.get(
-      `${pos.week}:${pos.weekday}`
+    return readCalendarCell(
+      pos.week,
+      pos.weekday,
+      this.cachedCalendarCellsByPos,
+      this.cachedCalendarDateByPos,
+      this.cachedCalendarGrid.firstWeekStart,
+      this.signedDomain,
     );
-    if (match) return { date: match.date, value: match.value };
-    return {
-      date: this.calendarDateAt(pos.week, pos.weekday),
-      value: this.calendarValueAt(pos.week, pos.weekday),
-    };
   }
 
   /** Resolves one calendar grid position's value while keeping a real signed `-1` distinct from
    * an absent day. Every calendar paint, text, predicate and event path uses this boundary. */
   private calendarValueAt(week: number, weekday: number): number {
-    const match = this.cachedCalendarCellsByPos.get(`${week}:${weekday}`);
-    return match ? match.value : this.signedDomain ? Number.NaN : -1;
+    return readCalendarValue(
+      week,
+      weekday,
+      this.cachedCalendarCellsByPos,
+      this.signedDomain,
+    );
   }
 
   /**
@@ -4123,10 +4127,11 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * offset from `firstWeekStart` (see `buildCalendarGrid()`).
    */
   private calendarDateAt(week: number, weekday: number): string {
-    const index = week * 7 + weekday;
-    return (
-      this.cachedCalendarDateByPos[index] ??
-      isoDateAtOffset(this.cachedCalendarGrid.firstWeekStart, index)
+    return readCalendarDate(
+      week,
+      weekday,
+      this.cachedCalendarDateByPos,
+      this.cachedCalendarGrid.firstWeekStart,
     );
   }
 
@@ -4148,22 +4153,12 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     h: number;
   } {
     if ('week' in pos) {
-      const cellSize = this.calendarCellSize();
-      return {
-        x: this.columnXFor(pos.week),
-        y: this.rowYFor(pos.weekday),
-        w: cellSize,
-        h: cellSize,
-      };
+      return calendarCellRect(pos.week, pos.weekday, this.calendarNavigationGeometry());
     }
-    const cellSize = this.matrixCellSize(this.matrixColLabels.length);
-    const shape = this.matrixCellShape(cellSize);
-    return {
-      x: this.matrixPadLeft + pos.col * cellSize,
-      y: this.matrixPadTop + pos.row * cellSize,
-      w: shape.w,
-      h: shape.h,
-    };
+    return matrixCellRect(
+      pos,
+      this.matrixNavigationGeometry(this.matrixRowLabels.length, this.matrixColLabels.length),
+    );
   }
 
   /** Geometry for the semantic cell overlay. Matrix buttons describe the bitmap that exists now,
@@ -4178,13 +4173,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     if ('week' in pos || !this.lastPaintedMatrixGeometry) {
       return this.cellRect(pos);
     }
-    const { padLeft, padTop, cellSize, cellWidth, cellHeight } = this.lastPaintedMatrixGeometry;
-    return {
-      x: padLeft + pos.col * cellSize,
-      y: padTop + pos.row * cellSize,
-      w: cellWidth ?? cellSize - 1,
-      h: cellHeight ?? cellSize - 1,
-    };
+    return accessibleMatrixCellRect(pos, this.lastPaintedMatrixGeometry);
   }
 
   /**

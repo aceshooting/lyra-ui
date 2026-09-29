@@ -8,6 +8,10 @@
     {
       "directory": "22.1.0",
       "captureSha256": "f8540df29566e9036641fffccbeb3c960335d0d2c4036faa04ef75ae7ba9ecea"
+    },
+    {
+      "directory": "23.0.0",
+      "captureSha256": "f4cd9f0ec726801cdd4eab8c1da9868ca90ee2bbefac2c039fffdd29b230cbce"
     }
   ],
   "retirements": [
@@ -4000,11 +4004,6551 @@
       },
       "removedIn": "23.0.0",
       "sourceRelease": "lyra-ui@22.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-approval-queue",
+        "kind": "event",
+        "name": "lr-approval-decision"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-attachment-trigger",
+        "kind": "property",
+        "name": "accessibleLabel"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-callout",
+        "kind": "property",
+        "name": "accessibleLabel"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-carousel",
+        "kind": "property",
+        "name": "accessibleLabel"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-combobox",
+        "kind": "event",
+        "name": "lr-retry"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-compare-panel",
+        "kind": "event",
+        "name": "lr-vote"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-confirm-bar",
+        "kind": "event",
+        "name": "lr-approve"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-confirm-bar",
+        "kind": "event",
+        "name": "lr-deny"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-context-meter",
+        "kind": "event",
+        "name": "lr-segment-activate"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-data-grid",
+        "kind": "event",
+        "name": "lr-retry"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-dialog",
+        "kind": "property",
+        "name": "accessibleLabel"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-document-library",
+        "kind": "event",
+        "name": "lr-retry"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-drawer",
+        "kind": "property",
+        "name": "accessibleLabel"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-dropdown",
+        "kind": "property",
+        "name": "arrow"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-eval-run",
+        "kind": "event",
+        "name": "lr-example-tool-approval-decide"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-export-button",
+        "kind": "event",
+        "name": "lr-export"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-file-input",
+        "kind": "property",
+        "name": "accessibleLabel"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-graph",
+        "kind": "event",
+        "name": "lr-link-click"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-graph",
+        "kind": "event",
+        "name": "lr-node-click"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-knowledge-base",
+        "kind": "event",
+        "name": "lr-retry"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-knowledge-graph-explorer",
+        "kind": "event",
+        "name": "lr-link-click"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-knowledge-graph-explorer",
+        "kind": "event",
+        "name": "lr-node-click"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-lightbox",
+        "kind": "event",
+        "name": "lr-lightbox-close"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-lite-chart",
+        "kind": "property",
+        "name": "accessibleLabel"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-markdown-core",
+        "kind": "event",
+        "name": "lr-link-click"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-markdown",
+        "kind": "event",
+        "name": "lr-link-click"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-message-actions",
+        "kind": "event",
+        "name": "lr-feedback-submit"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-message-feedback",
+        "kind": "event",
+        "name": "lr-feedback-submit"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-message-parts",
+        "kind": "event",
+        "name": "lr-link-click"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-message-parts",
+        "kind": "property",
+        "name": "accessibleLabel"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-progress-bar",
+        "kind": "property",
+        "name": "accessibleLabel"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-progress-ring",
+        "kind": "property",
+        "name": "accessibleLabel"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-reorder-item",
+        "kind": "property",
+        "name": "accessibleLabel"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-sequence-strip",
+        "kind": "attribute",
+        "name": "accessible-label"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-sequence-strip",
+        "kind": "property",
+        "name": "accessibleLabel"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-table",
+        "kind": "attribute",
+        "name": "accessible-label"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-table",
+        "kind": "event",
+        "name": "lr-retry"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-table",
+        "kind": "property",
+        "name": "accessibleLabel"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-terminal",
+        "kind": "event",
+        "name": "lr-download"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-thread-list",
+        "kind": "event",
+        "name": "lr-retry"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-thread-list",
+        "kind": "property",
+        "name": "compact"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-tool-approval-dialog",
+        "kind": "event",
+        "name": "lr-approve"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-tool-approval-dialog",
+        "kind": "event",
+        "name": "lr-deny"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "member",
+        "tag": "lr-tool-timeline",
+        "kind": "event",
+        "name": "lr-tool-approval-decide"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraAccordion"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraAccordionItem"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraActivityFeed"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraAgentEvalDashboard"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraAgentRun"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraAgentTrace"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraAgentWorkspace"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraAlert"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraAnimatedImage"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraAnimation"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraAppRail"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraAppRailGroup"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraAppRailItem"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraApprovalQueue"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraArchiveViewer"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraArtifactPanel"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraAttachmentChip"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraAttachmentTrigger"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraAudioVisualizer"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraAvatar"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraAvatarGroup"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraAvPlayer"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraBadge"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraBarChart"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraBoxPlot"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraBranchPicker"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraBreadcrumb"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraBreadcrumbItem"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraBrowserFrame"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraBubbleChart"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraButton"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraButtonGroup"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraCalendar"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraCalendarViewer"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraCallout"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraCard"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraCarousel"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraCarouselItem"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraChart"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraChatComposer"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraChatMessage"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraChatViewport"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraCheckbox"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraCheckboxGroup"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraCheckpoint"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraChip"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraChipGroup"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraChunkInspector"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraCitationBadge"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraClaimEvidence"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraCodeBlock"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraCodeBlockCore"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraCodeEditor"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraColorPicker"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraCombobox"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraCommandPalette"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraCommitCard"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraCommunityCard"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraComparePanel"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraConditionBuilder"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraConfirmBar"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraContactViewer"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraContextInspector"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraContextMenu"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraContextMeter"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraControlGroup"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraConversationItem"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraCopyButton"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraCsvViewer"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraDashboardGrid"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraDataGrid"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraDatasetViewer"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraDateInput"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraDatePicker"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraDetails"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraDialog"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraDiffView"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraDivider"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraDockPanel"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraDocumentCompare"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraDocumentLibrary"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraDocumentPreview"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraDocumentViewer"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraDocxViewer"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraDoughnutChart"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraDrawer"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraDrilldownPanel"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraDropdown"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraDropdownItem"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraDropZone"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraEbookViewer"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraEmailViewer"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraEmbeddingExplorer"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraEmojiPicker"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraEmpty"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraEntityCard"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraEntityChip"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraEntityDossier"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraEnvList"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraEvalDataset"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraEvalResult"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraEvalRun"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraExportButton"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraFileIcon"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraFileInput"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraFileTree"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraFilterBar"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraFlag"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraFlowCanvas"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraFlowControls"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraFlowMinimap"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraFlowNode"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraFlowRunStatus"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraFormatBytes"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraFormatDate"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraFormatNumber"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraFunnel"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraGauge"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraGenerationMetrics"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraGeojsonView"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraGeoJsonViewer"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraGraph"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraGraphLegend"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraGraphQueryBuilder"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraGroundingSummary"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraHandoffDivider"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraHeatmap"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraHighlightLayer"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraHistogram"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraHtmlViewer"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraIcon"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraIconButton"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraImageComparer"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraImageViewer"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraInclude"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraIngestionQueue"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraInput"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraIntersectionObserver"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraJsonSchemaViewer"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraJsonViewer"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraKbd"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraKnowledgeBase"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraKnowledgeBaseAdmin"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraKnowledgeGraphExplorer"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraKnownDate"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraLightbox"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraLineChart"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraLiteChart"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraLiveRegion"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraLocalePicker"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraMap"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraMarkdown"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraMarkdownCore"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraMcpApp"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraMediaCard"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraMemoryPanel"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraMentionPopover"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraMenu"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraMenubar"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraMenubarItem"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraMenuItem"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraMenuLabel"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraMessageActions"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraMessageFeedback"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraMessageParts"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraMindMap"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraModelSelect"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraModelSettingsPanel"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraMultiSplit"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraMutationObserver"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraNativeTimeInput"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraNavigationMenu"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraNavigationMenuItem"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraNeighborList"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraNodePalette"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraNotebookViewer"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraNumberInput"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraOption"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraOtpInput"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraPage"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraPageRail"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraPagination"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraPanZoom"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraPathStrip"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraPdfViewer"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraPhoneInput"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraPieChart"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraPolarAreaChart"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraPolicySummary"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraPollStatus"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraPopover"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraPopup"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraPptxViewer"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraProgressBar"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraProgressRing"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraPromptInput"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraPromptQueue"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraPromptStudio"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraProvenancePanel"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraPushToTalk"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraQrCode"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraRadarChart"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraRadio"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraRadioButton"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraRadioGroup"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraRagAnswer"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraRagEvalDashboard"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraRandomContent"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraRating"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraRealtimeSession"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraRelativeTime"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraReorderItem"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraReorderList"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraResizeObserver"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraResponsivePanel"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraResultCard"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraResultField"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraRetrievalCompare"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraRetrievalResults"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraRetrievalSearch"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraRetrievalTrace"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraRubricForm"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraScatterChart"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraScroller"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraSegmented"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraSelect"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraSelectionToolbar"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraSequencePlayback"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraSequenceStrip"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraSkeleton"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraSlider"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraSourceCard"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraSourceList"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraSourcePicker"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraSpanWaterfall"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraSparkline"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraSpinner"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraSplitPanel"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraSpreadsheetViewer"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraStackTrace"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraStat"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraStepper"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraStreamingText"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraStreamingTextCore"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraStreamStatus"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraSubagentPanel"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraSuggestionChips"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraSvgViewer"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraSwatchPicker"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraSwitch"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraTab"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraTabGroup"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraTable"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraTabPanel"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraTag"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraTaskList"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraTerminal"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraTestResults"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraTextarea"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraThinkingPanel"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraThreadList"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraTimeInput"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraTimeline"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraTimelineItem"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraTimeRange"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraToast"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraToastItem"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraToggle"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraToggleGroup"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraTokenInput"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraToolApprovalDialog"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraToolCallBlock"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraToolCallChip"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraToolParamForm"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraToolResultDialog"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraToolResultView"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraToolSelectDialog"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraToolTimeline"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraTooltip"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraTour"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraTraceTree"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraTranscriptFeed"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraTree"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraTreeItem"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraTypingIndicator"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraUsageBadge"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraVideo"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraVideoPlaylist"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraVirtualList"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraVisuallyHidden"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraVoicePicker"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraWidget"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraWidgetRenderer"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraWordCloud"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraXmlViewer"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "class",
+        "module": ".",
+        "name": "LyraZoomableFrame"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "constant",
+        "module": "./theme/presets.js",
+        "name": "LYRA_THEME_PRESETS"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "constant",
+        "module": "./theme/presets/shadcn.js",
+        "name": "LYRA_SHADCN_THEME_PRESET"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/activity-feed/activity-feed.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/agent-eval-dashboard/agent-eval-dashboard.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/agent-run/agent-run.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/agent-trace/agent-trace.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/approval-queue/approval-queue.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/artifact-panel/artifact-panel.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/browser-frame/browser-frame.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/commit-card/commit-card.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/compare-panel/compare-panel.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/confirm-bar/confirm-bar.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/context-inspector/context-inspector.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/eval-dataset/eval-dataset.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/eval-result/eval-result.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/evaluation-run/evaluation-run.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/mcp-app/mcp-app.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/policy-summary/policy-summary.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/prompt-studio/prompt-studio.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/result-card/result-card.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/result-card/result-field.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/schema-viewer/schema-viewer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/span-waterfall/span-waterfall.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/stack-trace/stack-trace.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/subagent-panel/subagent-panel.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/task-list/task-list.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/terminal/terminal.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/test-results/test-results.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/thinking-panel/thinking-panel.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/tool-approval-dialog/tool-approval-dialog.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/tool-call-block/tool-call-block.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/tool-call-chip/tool-call-chip.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/tool-param-form/tool-param-form.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/tool-result-dialog/tool-result-dialog.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/tool-result-view/tool-result-view.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/tool-select-dialog/tool-select-dialog.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/tool-timeline/tool-timeline.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/agent-tools/trace-tree/trace-tree.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/charts/chart/bar-chart.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/charts/chart/box-plot.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/charts/chart/bubble-chart.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/charts/chart/chart.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/charts/chart/doughnut-chart.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/charts/chart/histogram.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/charts/chart/line-chart.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/charts/chart/lite-chart.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/charts/chart/pie-chart.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/charts/chart/polar-area-chart.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/charts/chart/radar-chart.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/charts/chart/scatter-chart.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/agent-workspace/agent-workspace.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/audio-visualizer/audio-visualizer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/branch-picker/branch-picker.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/chat-composer/chat-composer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/chat-message/chat-message.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/chat-viewport/chat-viewport.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/checkpoint/checkpoint.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/code-block/code-block-core.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/code-block/code-block.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/conversation-item/conversation-item.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/generation-metrics/generation-metrics.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/handoff-divider/handoff-divider.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/markdown/markdown-core.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/markdown/markdown.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/message-actions/message-actions.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/message-feedback/message-feedback.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/message-parts/message-parts.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/model-select/model-select.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/model-settings-panel/model-settings-panel.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/prompt-input/prompt-input.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/prompt-queue/prompt-queue.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/push-to-talk/push-to-talk.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/realtime-session/realtime-session.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/selection-toolbar/selection-toolbar.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/stream-status/stream-status.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/streaming-text/streaming-text-core.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/streaming-text/streaming-text.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/suggestion-chips/suggestion-chips.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/thread-list/thread-list.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/transcript-feed/transcript-feed.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/typing-indicator/typing-indicator.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/usage-badge/usage-badge.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/voice-picker/voice-picker.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/conversation/widget-renderer/widget-renderer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/data/calendar/calendar.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/data/condition-builder/condition-builder.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/data/context-meter/context-meter.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/data/data-grid/data-grid.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/data/document-library/document-library.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/data/env-list/env-list.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/data/file-tree/file-tree.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/data/flow-canvas/flow-canvas.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/data/flow-controls/flow-controls.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/data/flow-minimap/flow-minimap.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/data/flow-node/flow-node.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/data/flow-run-status/flow-run-status.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/data/funnel/funnel.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/data/gauge/gauge.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/data/graph-query-builder/graph-query-builder.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/data/heatmap/heatmap.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/data/pagination/pagination.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/data/sequence-strip/sequence-strip.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/data/sparkline/sparkline.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/data/stat/stat.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/data/table/table.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/data/timeline/timeline-item.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/data/timeline/timeline.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/data/tree/tree-item.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/data/tree/tree.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/data/word-cloud/word-cloud.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/button/button.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/checkbox-group/checkbox-group.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/checkbox/checkbox.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/code-editor/code-editor.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/color-picker/color-picker.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/combobox/combobox.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/combobox/option.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/date-picker/date-input.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/date-picker/date-picker.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/emoji-picker/emoji-picker.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/icon-button/icon-button.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/input/input.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/input/native-time-input.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/input/number-input.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/input/time-input.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/locale-picker/locale-picker.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/otp-input/otp-input.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/phone-input/phone-input.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/radio/radio-button.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/radio/radio-group.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/radio/radio.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/rubric-form/rubric-form.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/select/select.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/slider/slider.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/swatch-picker/swatch-picker.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/switch/switch.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/textarea/textarea.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/time-range/time-range.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/toggle-group/toggle-group.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/toggle/toggle.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/forms/token-input/token-input.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/app-rail-group/app-rail-group.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/app-rail/app-rail-item.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/app-rail/app-rail.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/breadcrumb/breadcrumb-item.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/breadcrumb/breadcrumb.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/button-group/button-group.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/card/card.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/carousel/carousel-item.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/carousel/carousel.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/command-palette/command-palette.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/control-group/control-group.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/dashboard-grid/dashboard-grid.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/details/accordion-item.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/details/accordion.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/details/details.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/dock-panel/dock-panel.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/drilldown-panel/drilldown-panel.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/filter-bar/filter-bar.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/menu/dropdown-item.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/menu/menu-item.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/menu/menu-label.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/menu/menu.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/menubar/menubar-item.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/menubar/menubar.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/multi-split/multi-split.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/navigation-menu-item/navigation-menu-item.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/navigation-menu/navigation-menu.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/page/page.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/reorder-list/reorder-item.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/reorder-list/reorder-list.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/responsive-panel/responsive-panel.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/scroller/scroller.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/segmented/segmented.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/split-panel/split-panel.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/stepper/stepper.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/tab-group/tab-group.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/tab-group/tab-panel.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/tab-group/tab.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/virtual-list/virtual-list.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/layout/widget/widget.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/media/animated-image/animated-image.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/media/animation/animation.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/media/attachment-chip/attachment-chip.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/media/attachment-trigger/attachment-trigger.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/media/av-player/av-player.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/media/avatar-group/avatar-group.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/media/avatar/avatar.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/media/drop-zone/drop-zone.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/media/file-icon/file-icon.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/media/file-input/file-input.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/media/flag/flag.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/media/image-comparer/image-comparer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/media/image-viewer/image-viewer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/media/lightbox/lightbox.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/media/map/map.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/media/media-card/media-card.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/media/pan-zoom/pan-zoom.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/media/qr-code/qr-code.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/media/sequence-playback/sequence-playback.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/media/video-playlist/video-playlist.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/media/video/video.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/media/zoomable-frame/zoomable-frame.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/overlays/alert/alert.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/overlays/badge/badge.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/overlays/badge/tag.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/overlays/callout/callout.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/overlays/chip/chip-group.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/overlays/chip/chip.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/overlays/context-menu/context-menu.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/overlays/dialog/dialog.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/overlays/drawer/drawer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/overlays/empty/empty.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/overlays/kbd/kbd.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/overlays/overlay/dropdown.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/overlays/overlay/popover.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/overlays/overlay/tooltip.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/overlays/popup/popup.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/overlays/progress/progress-bar.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/overlays/progress/progress-ring.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/overlays/rating/rating.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/overlays/skeleton/skeleton.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/overlays/spinner/spinner.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/overlays/toast/toast-item.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/overlays/toast/toast.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/retrieval/chunk-inspector/chunk-inspector.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/retrieval/citation-badge/citation-badge.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/retrieval/claim-evidence/claim-evidence.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/retrieval/community-card/community-card.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/retrieval/embedding-explorer/embedding-explorer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/retrieval/entity-card/entity-card.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/retrieval/entity-chip/entity-chip.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/retrieval/entity-dossier/entity-dossier.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/retrieval/graph-legend/graph-legend.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/retrieval/graph/graph.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/retrieval/grounding-summary/grounding-summary.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/retrieval/ingestion-queue/ingestion-queue.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/retrieval/knowledge-base-admin/knowledge-base-admin.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/retrieval/knowledge-base/knowledge-base.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/retrieval/memory-panel/memory-panel.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/retrieval/mind-map/mind-map.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/retrieval/neighbor-list/neighbor-list.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/retrieval/node-palette/node-palette.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/retrieval/path-strip/path-strip.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/retrieval/provenance-panel/provenance-panel.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/retrieval/rag-answer/rag-answer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/retrieval/rag-eval-dashboard/rag-eval-dashboard.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/retrieval/retrieval-compare/retrieval-compare.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/retrieval/retrieval-results/retrieval-results.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/retrieval/retrieval-search/retrieval-search.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/retrieval/retrieval-trace/retrieval-trace.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/retrieval/source-card/source-card.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/retrieval/source-list/source-list.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/retrieval/source-picker/source-picker.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/utility/copy-button/copy-button.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/utility/diff-view/diff-view.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/utility/divider/divider.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/utility/export-button/export-button.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/utility/format/format-bytes.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/utility/format/format-date.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/utility/format/format-number.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/utility/format/relative-time.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/utility/icon/icon.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/utility/intersection-observer/intersection-observer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/utility/json-viewer/json-viewer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/utility/known-date/known-date.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/utility/live-region/live-region.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/utility/mention-popover/mention-popover.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/utility/mutation-observer/mutation-observer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/utility/poll-status/poll-status.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/utility/random-content/random-content.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/utility/resize-observer/resize-observer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/utility/tour/tour.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/utility/visually-hidden/visually-hidden.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/viewers/archive-viewer/archive-viewer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/viewers/calendar-viewer/calendar-viewer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/viewers/contact-viewer/contact-viewer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/viewers/csv-viewer/csv-viewer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/viewers/dataset-viewer/dataset-viewer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/viewers/document-compare/document-compare.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/viewers/document-preview/document-preview.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/viewers/document-viewer/document-viewer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/viewers/docx-viewer/docx-viewer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/viewers/ebook-viewer/ebook-viewer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/viewers/email-viewer/email-viewer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/viewers/geojson-view/geojson-viewer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/viewers/highlight-layer/highlight-layer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/viewers/html-viewer/html-viewer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/viewers/include/include.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/viewers/notebook-viewer/notebook-viewer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/viewers/page-rail/page-rail.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/viewers/pdf-viewer/pdf-viewer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/viewers/pptx-viewer/pptx-viewer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/viewers/spreadsheet-viewer/spreadsheet-viewer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/viewers/svg-viewer/svg-viewer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./components/viewers/xml-viewer/xml-viewer.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./ssr-loader.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./theme/presets.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "entry-point",
+        "module": null,
+        "name": "./theme/presets/shadcn.js"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "function",
+        "module": "./theme.js",
+        "name": "getLyraTheme"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "function",
+        "module": "./theme.js",
+        "name": "setLyraTheme"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "function",
+        "module": "./theme/presets.js",
+        "name": "applyLyraThemePreset"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "function",
+        "module": "./theme/presets.js",
+        "name": "defineLyraThemePreset"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "root-attribute",
+        "module": "./theme/presets.js",
+        "name": "data-lr-theme-preset"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "stylesheet",
+        "module": null,
+        "name": "./themes/shadcn.css"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "type",
+        "module": "./theme.js",
+        "name": "LyraTheme"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "type",
+        "module": "./theme.js",
+        "name": "LyraThemeChangeDetail"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "type",
+        "module": "./theme.js",
+        "name": "LyraThemeMode"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "type",
+        "module": "./theme/presets.js",
+        "name": "LyraThemePreset"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "type",
+        "module": "./theme/presets.js",
+        "name": "LyraThemePresetChangeDetail"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "type",
+        "module": "./theme/presets.js",
+        "name": "LyraThemePresetName"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "window-event",
+        "module": "./theme.js",
+        "name": "lr-theme-change"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
+    },
+    {
+      "key": {
+        "scope": "export",
+        "kind": "window-event",
+        "module": "./theme/presets.js",
+        "name": "lr-theme-preset-change"
+      },
+      "removedIn": "24.0.0",
+      "sourceRelease": "lyra-ui@23.0.0"
     }
   ],
   "policyWitnesses": {
     "file": "policy-witnesses.json.gz",
-    "sha256": "36ef97d2156b92013b6009bd97fc2a1ed1ff5039f8c5908a693b6d632ea416ce"
+    "sha256": "b2eda65af918d7a9baf5943cc1495356dc90cbd8237824cadbe0c499545ec8c3"
   },
   "guidanceTransitions": [
     {

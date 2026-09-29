@@ -7,7 +7,7 @@
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [overlays](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/overlays.md)
-- **Deprecated property** `accessibleLabel` since `22.0.0`; use attribute `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.`; removal not before `24.0.0` — The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 15 parts, 26 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -34,7 +34,7 @@ the slide animation are its own.
 - `contained: boolean = false` (attribute `contained`, reflected) — position within the nearest
   containing block without a backdrop, page inerting, focus trap, scroll lock, top-layer
   promotion, or global Escape ownership
-- `heading?: string`, `label: string`, `accessibleLabel: string = ''` (property only),
+- `heading?: string`, `label: string`,
   `withoutCloseButton: boolean = false` (attribute `without-close-button`, reflected),
   `noHeader: boolean = false` (attribute `no-header`, Shoelace's spelling, reflected),
   `withoutHeader: boolean = false` (attribute `without-header`, Web Awesome's spelling, reflected;
@@ -42,7 +42,7 @@ the slide animation are its own.
   hint), and `lightDismiss: boolean = false` (attribute `light-dismiss`) — inherited dialog naming,
   chrome and dismissal options. A plain `aria-label` attribute on the host names the panel, inherited
   unchanged from `lr-dialog`: it is the strongest naming override, by attribute presence including
-  an explicitly empty value, ahead of `accessibleLabel` and any slotted heading.
+  an explicitly empty value, ahead of any slotted heading.
 - `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected) — semantic level of
   the generated title, from `1` through `6`, or `none` for visual-only title text. A direct slotted
   heading retains its own native level.

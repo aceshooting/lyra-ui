@@ -100,7 +100,7 @@ Citation; truncated?: boolean; omittedTokens?: number; redactions?: ContextInspe
 RetrievalChunk[] }`) — forwarded from the built-in retrieval results.
 - `lr-citation-select` (`detail: CitationSelectEventDetail` = `{ citation: Citation }`, from
   `@aceshooting/lyra-ui/ai`) — forwarded from the built-in grounding summary.
-- `lr-tool-approval-decide` (`detail: ToolTimelineApprovalDetail` = `ToolApprovalEventDetail &
+- `lr-tool-approval-decide-request` (`detail: ToolTimelineApprovalDetail` = `ToolApprovalEventDetail &
 { args?: unknown }` = `{ invocationId: string; approved: boolean; args?: unknown }`) — forwarded
   from the built-in tool timeline; `args` is present only on approval and may differ from what the
   entry originally proposed (the dialog's inline edit step).

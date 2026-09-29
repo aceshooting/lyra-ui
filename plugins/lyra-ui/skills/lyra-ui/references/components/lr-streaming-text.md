@@ -137,7 +137,7 @@ sets `math` here.
   code-block-header
 ></lr-streaming-text>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/conversation/streaming-text/streaming-text.js";
+  import "@aceshooting/lyra-ui/components/lr-streaming-text.js";
 
   const out = document.getElementById("out");
   let text = "";

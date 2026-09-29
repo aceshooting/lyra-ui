@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readStyleModel, renderTheme, renderLook, renderDensity, renderGlass, renderFixedLook, renderAccents, renderRuntimeLook, referenceSurfaces, contrastSurfaces, modeResolverDeclarations, quote, STYLE_VERSION } from './style-axes-model.mjs';
+import { readStyleModel, renderTheme, renderLook, renderDensity, renderGlass, renderAccents, renderRuntimeLook, referenceSurfaces, contrastSurfaces, modeResolverDeclarations, quote, STYLE_VERSION } from './style-axes-model.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const model = readStyleModel(packageDir);
@@ -11,7 +11,6 @@ outputs.set('src/density.css', renderDensity(JSON.parse(readFileSync(join(packag
 outputs.set('src/surfaces/glass.css', renderGlass(JSON.parse(readFileSync(join(packageDir, 'tokens/surfaces/glass.json'), 'utf8'))));
 for (const look of model.looks) {
   outputs.set(`src/looks/${look.id}.css`, renderLook(model, look, { modeAliases: look.id === 'shadcn' }));
-  if (look.legacyInputs) outputs.set(`src/themes/${look.id}.css`, renderFixedLook(model, look));
   outputs.set(`src/theme/looks/${look.id}.ts`, renderRuntimeLook(look));
 }
 // The gemstone data module remains the canonical palette; runtime literals keep theme.js free of imports.

@@ -71,7 +71,7 @@ export function registrationDistPath(component) {
 /** Loads the public entry plus every granular registration, including root-excluded peer families. */
 export async function loadSsrFixtureContext() {
   contextPromise ??= (async () => {
-    const loader = await import('@aceshooting/lyra-ui/ssr-loader.js');
+    const loader = await import('@aceshooting/lyra-ui/ssr.js');
     const inventory = await readComponentInventory();
     for (const component of inventory.components) {
       await import(pathToFileURL(registrationDistPath(component)).href);

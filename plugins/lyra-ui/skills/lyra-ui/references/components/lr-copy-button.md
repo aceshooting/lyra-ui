@@ -138,7 +138,7 @@ for an application-level fallback:
   value="npm install @aceshooting/lyra-ui"
 ></lr-copy-button>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/utility/copy-button/copy-button.js";
+  import "@aceshooting/lyra-ui/components/lr-copy-button.js";
 
   const button = document.getElementById("copy");
   button.addEventListener("lr-copy", (event) =>

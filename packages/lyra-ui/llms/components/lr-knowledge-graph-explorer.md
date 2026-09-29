@@ -7,8 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecated event** `lr-link-click` since `22.0.0`; use event `lr-edge-activate`; removal not before `24.0.0` — Activation covers pointer and keyboard gestures. The old event remains available with its original detail; edge activation names its optional identifier edgeId.
-- **Deprecated event** `lr-node-click` since `22.0.0`; use event `lr-node-activate`; removal not before `24.0.0` — Activation covers pointer and keyboard gestures. The old event remains available with its original detail; edge activation names its optional identifier edgeId.
+- **Deprecations** none
 - **Optional peers** `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
 - **Themeable via** 13 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -132,8 +131,6 @@ filtered-out id). None change `selectedNodeId` or filters.
   (`detail: { nodeId, x, y }`), `lr-edge-activate` (`detail: { sourceNodeId, targetNodeId, edgeId? }`), `lr-community-activate`
   (`detail: { communityId }`), `lr-node-expand` (`detail: { nodeId }`, from `lr-graph` and/or `lr-neighbor-list`),
   `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, from `lr-path-strip`).
-- `lr-node-click` — deprecated alias emitted after `lr-node-activate` with the same detail.
-  `lr-link-click` follows `lr-edge-activate`, retaining its legacy `linkId` detail field.
 
 **Slots:** `details` — overrides the details popover's default content (an `lr-entity-card` with a
 nested `lr-neighbor-list` and a pin toggle) entirely, including the two additive slots below.
@@ -176,7 +173,7 @@ the composed graph too. Retheme the composed graph through `lr-graph`'s own cust
   resolves `LyraGraphNode.label || LyraGraphNode.accessibleLabel || LyraGraphNode.id` — a node with
   only a spoken `accessibleLabel` (no visible `label`) still shows that text instead of falling
   straight through to its raw id.
-- `lr-graph.getNodePosition()` and `lr-node-click`'s `{ x, y }` are graph-_local_ drawing
+- `lr-graph.getNodePosition()` and `lr-node-activate`'s `{ x, y }` are graph-_local_ drawing
   coordinates, never viewport pixels. For `renderer="svg"` this component resolves the real viewport
   rect from `event.composedPath()`'s `[part="node"]` element; for `renderer="canvas"` (no per-node
   DOM) it uses the click's `clientX`/`clientY`. While an svg-click popover stays open it re-anchors

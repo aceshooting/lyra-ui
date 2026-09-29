@@ -7,7 +7,7 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
-- **Deprecated event** `lr-tool-approval-decide` since `22.0.0`; use event `addEventListener('lr-tool-approval-decide-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 17 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -73,7 +73,7 @@ data or exhausting the page.
 non-approval entry activation and `lr-tool-render-error` (`detail: { invocationId: string;
 sourceKey?: string; toolName: string; error: unknown }`) for a contained nested renderer failure.
 The raw child chip-selection, renderer-error, details, and dialog events do not leak across the
-timeline boundary. `lr-tool-approval-decide-request` and `lr-tool-approval-decide` (`detail: ToolTimelineApprovalDetail` =
+timeline boundary. `lr-tool-approval-decide-request` (`detail: ToolTimelineApprovalDetail` =
 `ToolApprovalEventDetail & { args?: unknown; sourceKey?: string }` = `{ invocationId: string;
 approved: boolean; args?: unknown; sourceKey?: string }`, extending the shared detail from
 `@aceshooting/lyra-ui/ai`). `args` is present only when
@@ -88,9 +88,6 @@ A host may instead resolve the decision synchronously by reassigning `entries` (
 `finalizePendingApproval()`: the entry's live state is re-checked immediately after dispatch, so
 `pendingApproval` — and the shared dialog's pending presentation — is never set or left set for
 an entry that no longer needs a decision.
-`lr-tool-approval-decide` is the deprecated cancelable alias, dispatched after its request with
-the same detail. Either spelling can hold the pending decision; subscribe to one spelling. It is
-not a completed-decision notification.
 
 ```ts
 timeline.addEventListener("lr-tool-approval-decide-request", async (event) => {

@@ -195,6 +195,6 @@ ancestor to change every unset time input beneath it.
 ></lr-time-input>
 <lr-time-input label="Precise time" step="15" value="09:30:15"></lr-time-input>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/forms/input/time-input.js";
+  import "@aceshooting/lyra-ui/components/lr-time-input.js";
 </script>
 ```

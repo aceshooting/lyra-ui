@@ -77,7 +77,7 @@ Each access returns a fresh `LyraFormValidator<LyraKnownDate>[]`; its entry obse
 element's current `ValidityState` into `{ isValid, message, invalidKeys }` without changing it.
 
 ```ts
-import { LyraKnownDate } from "@aceshooting/lyra-ui/components/utility/known-date/known-date.js";
+import { LyraKnownDate } from "@aceshooting/lyra-ui/components/lr-known-date.js";
 
 const knownDate = document.querySelector("lr-known-date")!;
 const result = LyraKnownDate.validators[0].checkValidity(knownDate);

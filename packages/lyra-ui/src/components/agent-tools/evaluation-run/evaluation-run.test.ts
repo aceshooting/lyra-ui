@@ -1,4 +1,3 @@
-import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './evaluation-run.js';
 import type { LyraEvalRun, EvalExampleResult } from './evaluation-run.js';
@@ -473,10 +472,9 @@ it('contains raw lr-markdown events at the example boundary', async () => {
   expect(markdown.tagName.toLowerCase()).to.equal('lr-markdown');
 
   const leaked: string[] = [];
-  for (const type of ['lr-link-click', 'lr-render-error', 'lr-highlight-activate', 'lr-text-select', 'lr-anchor-result']) {
+  for (const type of ['lr-render-error', 'lr-highlight-activate', 'lr-text-select', 'lr-anchor-result']) {
     el.addEventListener(type, () => leaked.push(type));
   }
-  markdown.dispatchEvent(new CustomEvent('lr-link-click', { bubbles: true, composed: true, detail: { href: 'https://example.com' } }));
   markdown.dispatchEvent(new CustomEvent('lr-render-error', { bubbles: true, composed: true, detail: { error: new Error('boom') } }));
   markdown.dispatchEvent(new CustomEvent('lr-highlight-activate', { bubbles: true, composed: true, detail: { highlightId: 'h1' } }));
   markdown.dispatchEvent(new CustomEvent('lr-text-select', { bubbles: true, composed: true, detail: { text: 'x', anchor: null, rects: [] } }));
@@ -693,40 +691,4 @@ it('caps rendered example rows at the render ceiling and shows a localized limit
 it('renders no limit notice when examples stays within the render ceiling', async () => {
   const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
   expect((el.shadowRoot!.querySelector('[part="limit"]')) == null).to.be.true;
-});
-
-expectDeprecatedUsage('lr-eval-run', 'event', 'lr-example-tool-approval-decide');
-
-it('retains the deprecated lr-example-tool-approval-decide veto alias', async () => {
-  const pendingTrace: ToolTimelineEntry[] = [
-    {
-      id: 'call-pending',
-      name: 'search',
-      args: { query: 'refund policy' },
-      status: 'pending',
-      needsApproval: true,
-    },
-  ];
-  const withTrace: EvalExampleResult[] = [{ ...examples[0]!, toolTrace: pendingTrace }];
-  const el = (await fixture(html`<lr-eval-run .examples=${withTrace}></lr-eval-run>`)) as LyraEvalRun;
-  const row = await expandExample(el);
-  const timeline = row.querySelector<LyraToolTimeline>('[part="tool-trace"]')!;
-  const chip = timeline.shadowRoot!.querySelector('lr-tool-call-chip')!;
-
-  chip.dispatchEvent(new CustomEvent('lr-tool-call-chip-select', { bubbles: true, composed: true }));
-  await timeline.updateComplete;
-  const dialog = timeline.shadowRoot!.querySelector<LyraToolApprovalDialog>('lr-tool-approval-dialog')!;
-  expect(dialog.open).to.be.true;
-
-  let wrapperCancelable = false;
-  el.addEventListener('lr-example-tool-approval-decide', (event) => {
-    wrapperCancelable = event.cancelable;
-    event.preventDefault();
-  }, { once: true });
-  dialog.shadowRoot!.querySelector<HTMLElement>('[part="approve-button"]')!.click();
-  await dialog.updateComplete;
-
-  expect(wrapperCancelable).to.be.true;
-  expect(dialog.open).to.be.true;
-  expect(dialog.pendingAction).to.equal('approve');
 });

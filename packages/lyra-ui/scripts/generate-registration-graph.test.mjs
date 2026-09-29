@@ -75,7 +75,7 @@ const table = entries.find((entry) => entry.tag === 'lr-table');
 assert.ok(table, 'lr-table must have a registration-graph entry');
 assert.equal(table.entry, './components/lr-table.js');
 assert.equal(table.registrationModule, 'src/components/data/table/table.ts');
-assert.equal(table.distModule, './components/data/table/table.js');
+assert.equal(table.distModule, table.entry, 'the stable tag-shaped route is canonical after nested registration retirement');
 assert.deepEqual(table.registers, ['lr-empty', 'lr-pagination', 'lr-skeleton', 'lr-spinner', 'lr-table']);
 
 // Every entry registers at least its own tag (per-tag entries only -- a bridge entry has no own
@@ -185,6 +185,7 @@ assert.deepEqual(ebookViewerRegister.registers, ['lr-ebook-viewer']);
 // Every entry's distModule/entry must be a real, currently-published package.json#exports key --
 // a consumer resolving either field against the tarball must never dead-end.
 const packageJson = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf8'));
+assert.equal(packageJson.exports['./components/data/table/table.js'], undefined);
 for (const entry of allRows) {
   const label = entry.tag ?? entry.entry;
   assert.ok(packageJson.exports[entry.entry], `${label}: entry ${entry.entry} is not a published package.json#exports key`);
@@ -240,17 +241,9 @@ try {
   await generateRegistrationGraph(fixtureRoot);
   assert.equal(readFileSync(before.path, 'utf8'), rendered, 'regeneration must be idempotent');
 
-  const canonicalOnlyPackage = structuredClone(packageJson);
-  delete canonicalOnlyPackage.exports[badge.distModule];
-  writeFileSync(join(fixtureRoot, 'package.json'), JSON.stringify(canonicalOnlyPackage));
-  const canonicalOnly = await deriveRegistrationGraph(inventory, { packageDir: fixtureRoot });
-  const canonicalBadge = canonicalOnly.entries.find((entry) => entry.tag === badge.tag);
-  assert.equal(canonicalBadge.distModule, badge.entry, 'a canonical-only registration exposes its stable alias');
-  assert.deepEqual(canonicalBadge.registers, badge.registers);
-  assert.deepEqual(canonicalBadge.localeKeys, badge.localeKeys);
-
-  delete canonicalOnlyPackage.exports[badge.entry];
-  writeFileSync(join(fixtureRoot, 'package.json'), JSON.stringify(canonicalOnlyPackage));
+  const missingCanonicalPackage = structuredClone(packageJson);
+  delete missingCanonicalPackage.exports[badge.entry];
+  writeFileSync(join(fixtureRoot, 'package.json'), JSON.stringify(missingCanonicalPackage));
   await assert.rejects(
     deriveRegistrationGraph(inventory, { packageDir: fixtureRoot }),
     /lr-badge\.js: not a published package\.json#exports entry/,

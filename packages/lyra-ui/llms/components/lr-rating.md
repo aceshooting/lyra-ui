@@ -60,7 +60,7 @@ Each access returns a fresh `LyraFormValidator<LyraRating>[]`; its entry observe
 current `ValidityState` into `{ isValid, message, invalidKeys }` without changing it.
 
 ```ts
-import { LyraRating } from "@aceshooting/lyra-ui/components/overlays/rating/rating.js";
+import { LyraRating } from "@aceshooting/lyra-ui/components/lr-rating.js";
 
 const rating = document.querySelector("lr-rating")!;
 const result = LyraRating.validators[0].checkValidity(rating);
@@ -179,7 +179,7 @@ host beyond its container.
 ></lr-rating>
 <p id="preview"></p>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/overlays/rating/rating.js";
+  import "@aceshooting/lyra-ui/components/lr-rating.js";
 
   const rating = document.querySelector("lr-rating");
   const preview = document.getElementById("preview");

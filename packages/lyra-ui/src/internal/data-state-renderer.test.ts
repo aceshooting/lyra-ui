@@ -50,7 +50,7 @@ class DataStateStub extends LyraElement {
 
   @property({ attribute: false }) config: DataStateConfig = IDLE_STATE;
   @property({ attribute: false }) partPrefix: LyraDataStatePartPrefix = {};
-  @property({ attribute: false }) retryEventName = 'lr-retry';
+  @property({ attribute: false }) retryEventName = 'lr-retry-request';
 
   override render(): unknown {
     return litHtml`${renderDataState(this, this.config, this.partPrefix, this.retryEventName)}`;
@@ -334,16 +334,16 @@ it('still emits the retry event for a host that supplies no default action', asy
   // anything it threw would surface as an uncaught error and fail this file.
   const element = await stub({ error: true });
   const cancelableFlags: boolean[] = [];
-  element.addEventListener('lr-retry', (event) => cancelableFlags.push(event.cancelable));
+  element.addEventListener('lr-retry-request', (event) => cancelableFlags.push(event.cancelable));
 
   retryButton(element)!.click();
   expect(cancelableFlags, 'an absent onRetry must not suppress the event').to.deep.equal([true]);
 
   const veto = (event: Event): void => event.preventDefault();
-  element.addEventListener('lr-retry', veto);
+  element.addEventListener('lr-retry-request', veto);
   retryButton(element)!.click();
   expect(cancelableFlags).to.deep.equal([true, true]);
-  element.removeEventListener('lr-retry', veto);
+  element.removeEventListener('lr-retry-request', veto);
 });
 
 it('dispatches through a caller-supplied emit adapter when one is given', async () => {
@@ -354,8 +354,8 @@ it('dispatches through a caller-supplied emit adapter when one is given', async 
     ...IDLE_STATE,
     error: true,
     onRetry: () => (retries += 1),
-    // Annotated inline, the shape DataStateConfig.emitRetry documents for an adopting host.
-    emitRetry: (detail, init: { cancelable: true }) => {
+    // Annotated inline, the shape DataStateConfig.emitRetryRequest documents for an adopting host.
+    emitRetryRequest: (detail, init: { cancelable: true }) => {
       cancelableFlags.push(init.cancelable);
       const event = new CustomEvent('lr-host-retry', {
         ...init,
@@ -390,7 +390,7 @@ it('activates retry from the keyboard on the actually-focused control', async ()
   const button = await laidOutRetryButton(element);
 
   const events: string[] = [];
-  element.addEventListener('lr-retry', (event) => events.push(event.type));
+  element.addEventListener('lr-retry-request', (event) => events.push(event.type));
 
   button.focus();
   expect(
@@ -399,11 +399,11 @@ it('activates retry from the keyboard on the actually-focused control', async ()
   ).to.equal(true);
 
   await sendKeys({ press: 'Enter' });
-  expect(events).to.deep.equal(['lr-retry']);
+  expect(events).to.deep.equal(['lr-retry-request']);
   expect(retries).to.equal(1);
 
   await sendKeys({ press: 'Space' });
-  expect(events).to.deep.equal(['lr-retry', 'lr-retry']);
+  expect(events).to.deep.equal(['lr-retry-request', 'lr-retry-request']);
   expect(retries).to.equal(2);
 });
 
@@ -515,17 +515,17 @@ it('refuses in the renderer exactly the prefixes the stylesheet partial refuses'
   const element = await stub();
   const failed: DataStateConfig = { ...IDLE_STATE, error: true };
 
-  expect(() => renderDataState(element, failed, 'Results Error', 'lr-retry')).to.throw(TypeError);
-  expect(() => renderDataState(element, failed, { error: 'results error' }, 'lr-retry')).to.throw(
+  expect(() => renderDataState(element, failed, 'Results Error', 'lr-retry-request')).to.throw(TypeError);
+  expect(() => renderDataState(element, failed, { error: 'results error' }, 'lr-retry-request')).to.throw(
     TypeError,
   );
   expect(() =>
-    renderDataState(element, failed, `error'] , [part='row`, 'lr-retry'),
+    renderDataState(element, failed, `error'] , [part='row`, 'lr-retry-request'),
   ).to.throw(TypeError);
 
-  expect(() => renderDataState(element, failed, { error: 'results-error' }, 'lr-retry')).to.not.throw();
+  expect(() => renderDataState(element, failed, { error: 'results-error' }, 'lr-retry-request')).to.not.throw();
   expect(
-    () => renderDataState(element, failed, {}, 'lr-retry'),
+    () => renderDataState(element, failed, {}, 'lr-retry-request'),
     'the tier-name fallback is itself a valid part name',
   ).to.not.throw();
 });
@@ -552,29 +552,23 @@ it('is accessible in the empty state', async () => {
   await expect(element).to.be.accessible();
 });
 
-it('dispatches the canonical retry proposal before its compatibility veto alias', async () => {
+it('emits only the canonical retry request and commits only when it is not vetoed', async () => {
   let retries = 0;
-  const element = await stub();
-  const dispatch = (name: string) => (detail: null, init: { cancelable: true }) => {
-    const event = new CustomEvent(name, { ...init, detail, bubbles: true, composed: true });
-    element.dispatchEvent(event);
-    return event;
-  };
-  element.config = { ...IDLE_STATE, error: true, onRetry: () => retries++, emitRetryRequest: dispatch('lr-retry-request'), emitRetry: dispatch('lr-retry') };
-  await element.updateComplete;
-  const order: string[] = [];
-  element.addEventListener('lr-retry-request', () => order.push('request'));
-  element.addEventListener('lr-retry', () => order.push('legacy'));
+  const element = await stub({ error: true, onRetry: () => retries++ });
+  const canonical: string[] = [];
+  const oldAlias: string[] = [];
+  element.addEventListener('lr-retry-request', (event) => canonical.push(event.type));
+  element.addEventListener('lr-retry', (event) => oldAlias.push(event.type));
   const veto = (event: Event) => event.preventDefault();
   element.addEventListener('lr-retry-request', veto);
   retryButton(element)!.click();
-  expect(order).to.deep.equal(['request', 'legacy']);
+  expect(canonical).to.deep.equal(['lr-retry-request']);
+  expect(oldAlias).to.deep.equal([]);
   expect(retries).to.equal(0);
+
   element.removeEventListener('lr-retry-request', veto);
-  element.addEventListener('lr-retry', veto);
   retryButton(element)!.click();
-  expect(retries).to.equal(0);
-  element.removeEventListener('lr-retry', veto);
-  retryButton(element)!.click();
+  expect(canonical).to.deep.equal(['lr-retry-request', 'lr-retry-request']);
+  expect(oldAlias).to.deep.equal([]);
   expect(retries).to.equal(1);
 });

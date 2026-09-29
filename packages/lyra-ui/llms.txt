@@ -24,12 +24,16 @@ element count and complete tag list.
   SSR, shared utilities, the `@aceshooting/lyra-ui/ai` data types, and testing.
 - [llms/shared/imports-and-registration.md](./llms/shared/imports-and-registration.md): version
   policy, entry points, registration, and scoped registries.
+- [llms/shared/v23-to-v24-migration.md](./llms/shared/v23-to-v24-migration.md): project upgrade
+  sequence for retired routes, styling, SSR and event-detail compatibility.
 - [llms/shared/events-and-types.md](./llms/shared/events-and-types.md): event behavior and shared
   TypeScript contracts.
 - [llms/shared/forms-and-accessibility.md](./llms/shared/forms-and-accessibility.md): native forms,
   accessible names, shared form chrome, and accessibility scope.
 - [llms/shared/styles-and-tokens.md](./llms/shared/styles-and-tokens.md): tokens, stylesheets,
   theme APIs, surfaces, density, contrast, and motion.
+- [llms/shared/native-styles-and-utilities.md](./llms/shared/native-styles-and-utilities.md):
+  opt-in light-DOM native styles, typography, utility classes and reset integration.
 - [llms/shared/localization-and-rtl.md](./llms/shared/localization-and-rtl.md): locale catalogs,
   translated strings, pluralization, and right-to-left behavior.
 - [llms/shared/frameworks-and-ssr.md](./llms/shared/frameworks-and-ssr.md): framework declarations,
@@ -55,10 +59,11 @@ codemods) from the marketplace at <https://github.com/aceshooting/lyra-ui>.
 ## Rules that apply to every component
 
 - Prefer the stable tag-shaped registration path
-  `@aceshooting/lyra-ui/components/<tag>.js`, for example `components/lr-input.js`. Existing
-  family-shaped registration paths remain supported; class-only and helper modules still use their
-  owning family paths. `llms/index.md` lists the exact supported paths.
-- Theme only by setting `--lr-theme-*` custom properties; never hardcode a value that fights them.
+  `@aceshooting/lyra-ui/components/<tag>.js`, for example `components/lr-input.js`. Duplicate
+  nested registration paths were removed in v24; class-only and helper modules retain their family
+  paths. `llms/index.md` lists the exact supported paths.
+- Compose style axes through the style API or scope attributes, and customize with documented
+  `--lr-theme-*` inputs. Look up exact tokens in `llms/tokens.md`.
 - Lyra-specific events are `lr-`-prefixed `CustomEvent`s, bubbling and composed, with payload on
   `event.detail`; native wrappers may also relay the exact native events listed in their sections.
 - Form controls are form-associated: they participate in native `<form>` submission and validation.

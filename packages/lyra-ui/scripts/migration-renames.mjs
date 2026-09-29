@@ -54,6 +54,7 @@ const RENAME_TARGET_SHARED_REVIEW = 'RENAME_TARGET_SHARED_REVIEW';
 const NAME_GAINED_OWNER_REVIEW = 'NAME_GAINED_OWNER_REVIEW';
 const POLARITY_REVIEW = 'POLARITY_REVIEW';
 const DETAIL_SHAPE_REVIEW = 'DETAIL_SHAPE_REVIEW';
+const DETAIL_FIELD_REVIEW = 'DETAIL_FIELD_REVIEW';
 const DEPRECATED_MEMBER_REVIEW = 'DEPRECATED_MEMBER_REVIEW';
 const DEPRECATED_CONTENT_REVIEW = 'DEPRECATED_CONTENT_REVIEW';
 const RENAME_CONFLICT_REVIEW = 'RENAME_CONFLICT_REVIEW';
@@ -600,6 +601,11 @@ export function migrateRenameText(original, contract, options) {
   const openingTokens = scanAllOpeningTags(original, ignoredRanges, inComment);
   const acknowledgements = scanReviewAcknowledgements(original, ignoredRanges, starts, openingTokens);
   const litTemplates = LIT_TEMPLATE_FILE.test(file) ? rangeTester(taggedTemplateRanges(original, ['html', 'svg'], inComment)) : () => false;
+  const inLiteral = rangeTester(mergeRanges([
+    ...quotedStringRanges(original, inComment),
+    ...templateLiteralRanges(original, inComment),
+  ]));
+  const inCss = rangeTester(stylesheetRanges(original, file, inComment));
   const attributeSemantics = (offset) => ATTRIBUTE_SEMANTICS_FILE.test(file) || litTemplates(offset);
   const release = `Lyra ${profile.toMajor}`;
   const removal = `${profile.aliasRemovalMajor}.0.0`;
@@ -871,6 +877,58 @@ export function migrateRenameText(original, contract, options) {
     unownedReviews('event', name, start, owner);
   };
 
+  const reportedDetailFieldOffsets = new Set();
+  const detailFieldAccess = /\b([A-Za-z_$][\w$]*)\s*(?:\?\.|\.)\s*detail\s*(?:\?\.|\.)\s*(open|collapsed)\b/g;
+  const reportDetailField = (field, start, owner = null, event = null) => {
+    if (reportedDetailFieldOffsets.has(start)) return;
+    const exact = owner && event ? profile.detailFieldFor(owner, event) : null;
+    if (exact && exact.field === field) {
+      const target = exact.relation === 'equal' ? 'detail.expanded' : '!detail.expanded';
+      const relation = exact.relation === 'equal' ? 'carries the same value as' : 'is the inverse of';
+      const removal = exact.removedIn
+        ? ` It was removed in ${exact.removedIn}.`
+        : ' This notice does not assert that the field was removed.';
+      warn(start, {
+        tag: owner,
+        member: field,
+        code: DETAIL_FIELD_REVIEW,
+        target,
+        message: `The ${owner} ${event} detail field ${field} is deprecated: it ${relation} detail.expanded (${exact.notice}). Read ${target} in this handler by hand; no field rewrite was applied.${removal}`,
+      });
+      reportedDetailFieldOffsets.add(start);
+      return;
+    }
+    const candidates = event ? profile.detailFieldsNamed(event).filter((entry) => entry.field === field) : [];
+    const possible = candidates.length ? candidates : (profile.data.detailFields ?? []).filter((entry) => entry.field === field);
+    if (!possible.length) return;
+    const possibilities = [...new Set(possible.map((entry) => `${entry.tag}/${entry.event} (${entry.relation})`))];
+    warn(start, {
+      tag: null,
+      member: field,
+      code: DETAIL_FIELD_REVIEW,
+      target: null,
+      message: `This detail.${field} read has no proven Lyra tag and event. Matching published field contracts are ${possibilities.join(', ')}; identify the runtime detail type and migrate it by hand. No field rewrite was applied.`,
+    });
+    reportedDetailFieldOffsets.add(start);
+  };
+  const inspectMarkupDetailFields = (owner, event, attribute) => {
+    if (attribute.valueStart === null || attribute.valueEnd === null) return;
+    const value = original.slice(attribute.valueStart, attribute.valueEnd);
+    for (const match of value.matchAll(detailFieldAccess)) {
+      const start = attribute.valueStart + match.index + match[0].lastIndexOf(match[2]);
+      reportDetailField(match[2], start, owner, event);
+    }
+  };
+  // Inspect every event binding, including owners/events that have no rename or shape-migration
+  // row. These are precisely the cases where the field report must preserve ownership ambiguity.
+  for (const token of openingTokens) {
+    const owner = token.tag.toLowerCase();
+    for (const attribute of parseTagAttributes(original, token)) {
+      const event = markupEventName(attribute.rawName);
+      if (event && /^lr-/u.test(event.name)) inspectMarkupDetailFields(owner, event.name, attribute);
+    }
+  }
+
   const memberSite = ({ owner, kind, name, start, forms, dynamic, removal: removalRange }) => {
     const propertyChange = forms.filter(([candidateKind]) => candidateKind === 'property')
       .map(([, candidate]) => profile.propertyChangeFor(owner, candidate)).find(Boolean);
@@ -963,6 +1021,7 @@ export function migrateRenameText(original, contract, options) {
     for (const { attribute, event, key, renamed } of planned) {
       if (event) {
         if (/^lr-/.test(event.name)) {
+          inspectMarkupDetailFields(owner, event.name, attribute);
           eventSite({
             name: event.name,
             start: attribute.nameStart + event.offset,
@@ -1286,6 +1345,34 @@ export function migrateRenameText(original, contract, options) {
       if (inComment(match.index) || original.slice(match.index - 2, match.index) === '</') continue;
       reportReview(match.index, review);
     }
+  }
+
+  // Deprecated detail fields are never textually rewritten. A template binding proves its owner
+  // and event above; direct script reads are matched to an anchored querySelector listener when
+  // that shape is visible. Everything else stays an explicit ownership/type review.
+  const anchoredDetailListener = /(?:document\.)?querySelector\(\s*(['"])(lr-[a-z0-9-]+)\1\s*\)\s*!?\s*\.\s*addEventListener\(\s*(['"])(lr-[a-z0-9-]+)\3\s*,/g;
+  const unownedDetailListener = /[A-Za-z_$][\w$]*\s*\.\s*addEventListener\(\s*(['"])(lr-[a-z0-9-]+)\1\s*,/g;
+  const scriptListenerAt = (offset) => {
+    const start = Math.max(0, offset - 4096);
+    const prefix = original.slice(start, offset);
+    let result = null;
+    for (const pattern of [anchoredDetailListener, unownedDetailListener]) {
+      pattern.lastIndex = 0;
+      for (const match of prefix.matchAll(pattern)) {
+        const event = pattern === anchoredDetailListener ? match[4] : match[2];
+        const callbackStart = match.index + match[0].length;
+        const callback = prefix.slice(callbackStart);
+        if (!/=>|\bfunction\b/u.test(callback) || /\)\s*;/u.test(callback)) continue;
+        if (!result || match.index >= result.index) result = { owner: pattern === anchoredDetailListener ? match[2] : null, event, index: match.index };
+      }
+    }
+    return result;
+  };
+  for (const match of original.matchAll(detailFieldAccess)) {
+    const offset = match.index + match[0].lastIndexOf(match[2]);
+    if (reportedDetailFieldOffsets.has(offset) || inComment(offset) || inLiteral(offset) || inCss(offset)) continue;
+    const listener = scriptListenerAt(offset);
+    reportDetailField(match[2], offset, listener?.owner ?? null, listener?.event ?? null);
   }
 
   // --- Scripts: calls rooted at querySelector/closest/createElement('lr-*') prove their element.

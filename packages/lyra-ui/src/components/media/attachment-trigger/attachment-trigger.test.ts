@@ -1,5 +1,4 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
-import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
 import './attachment-trigger.js';
 import '../../layout/menu/menu.js';
@@ -9,9 +8,6 @@ import type { LyraMenu } from '../../layout/menu/menu.js';
 import type { LyraMenuItem } from '../../layout/menu/menu-item.js';
 import type { LyraDropdown } from '../../overlays/overlay/dropdown.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import {
-  captureDeprecationWarnings,
-} from '../../../../test/expected-deprecations.js';
 
 /** The single-capability control. `[part="trigger"]` is a composed `<lr-icon-button>` as of
  *  16.0.0, which owns the accessible name, the activation API and the part names. */
@@ -132,7 +128,6 @@ it('uses an image-specific aria-label for a single image capability', async () =
 
 it('leaves the localized default aria-label untouched when no name is supplied', async () => {
   const el = (await fixture(html`<lr-attachment-trigger></lr-attachment-trigger>`)) as LyraAttachmentTrigger;
-  expect(el.accessibleLabel).to.be.undefined;
   expect(trigger(el).getAttribute('aria-label')).to.equal('Attach files');
 
   el.capabilities = ['camera'];
@@ -160,13 +155,8 @@ it('overrides the active semantic owner with the host aria-label regardless of s
   expect(menuEl(el).getAttribute('label')).to.equal('Joindre des fichiers');
 });
 
-it('lets a host aria-label win over accessibleLabel on the active single or menu semantic owners', async () => {
-  const el = (await fixture(
-    html`<lr-attachment-trigger
-      aria-label="Author attachment action"
-      .accessibleLabel=${'Trigger fallback'}
-    ></lr-attachment-trigger>`,
-  )) as LyraAttachmentTrigger;
+it('uses the native host aria-label on the active single or menu semantic owners', async () => {
+  const el = (await fixture(html`<lr-attachment-trigger aria-label="Author attachment action"></lr-attachment-trigger>`)) as LyraAttachmentTrigger;
   expect(trigger(el).getAttribute('aria-label')).to.equal('Author attachment action');
 
   el.capabilities = ['files', 'image'];
@@ -179,9 +169,9 @@ it('lets a host aria-label win over accessibleLabel on the active single or menu
   );
 });
 
-it('preserves explicit-empty host aria-label precedence over accessibleLabel', async () => {
+it('preserves an explicitly empty host aria-label', async () => {
   const el = (await fixture(html`
-    <lr-attachment-trigger aria-label="" .accessibleLabel=${'Fallback'}></lr-attachment-trigger>
+    <lr-attachment-trigger aria-label=""></lr-attachment-trigger>
   `)) as LyraAttachmentTrigger;
   expect(trigger(el).getAttribute('aria-label')).to.equal('');
 
@@ -191,40 +181,20 @@ it('preserves explicit-empty host aria-label precedence over accessibleLabel', a
   expect(menuEl(el).getAttribute('label')).to.equal('');
 });
 
-it('names the trigger from the accessibleLabel property when the host has no aria-label', async () => {
-  const el = (await fixture(
-    html`<lr-attachment-trigger .accessibleLabel=${'Joindre des fichiers'}></lr-attachment-trigger>`,
-  )) as LyraAttachmentTrigger;
-  expect(trigger(el).getAttribute('aria-label')).to.equal('Joindre des fichiers');
-  expect(el.hasAttribute('accessible-label'), 'the property never reflects').to.be.false;
-
-  el.setAttribute('aria-label', 'Host name');
-  await el.updateComplete;
-  expect(trigger(el).getAttribute('aria-label')).to.equal('Host name');
-  el.removeAttribute('aria-label');
-  await el.updateComplete;
-  expect(trigger(el).getAttribute('aria-label')).to.equal('Joindre des fichiers');
-});
-
 describe('retired accessible-label attribute', () => {
-  it('ignores old attribute changes while retaining the property warning and host-name precedence', async () => {
+  it('ignores old attribute and property spellings while retaining native host naming', async () => {
     for (const capabilities of [['files'], ['files', 'image']] as const) {
       const el = await fixture<LyraAttachmentTrigger>(html`<lr-attachment-trigger accessible-label="Retired"></lr-attachment-trigger>`);
       el.capabilities = [...capabilities];
       await el.updateComplete;
       const name = () => (el.capabilities.length > 1 ? menuTriggerButton(el) : trigger(el)).getAttribute('aria-label');
       expect(name()).not.to.equal('Retired');
-      const warnings = await captureDeprecationWarnings([
-        { tag: 'lr-attachment-trigger', kind: 'property', name: 'accessibleLabel' },
-      ], async () => {
-        el.accessibleLabel = 'Programmatic';
-        await el.updateComplete;
-      });
-      expect(warnings.length).to.equal(1);
-      expect(name()).to.equal('Programmatic');
+      (el as LyraAttachmentTrigger & { accessibleLabel?: string }).accessibleLabel = 'Programmatic';
+      await el.updateComplete;
+      expect(name()).not.to.equal('Programmatic');
       el.setAttribute('accessible-label', 'Changed retired');
       await el.updateComplete;
-      expect(name()).to.equal('Programmatic');
+      expect(name()).not.to.equal('Changed retired');
       el.setAttribute('aria-label', '');
       await el.updateComplete;
       expect(name()).to.equal('');
@@ -233,7 +203,8 @@ describe('retired accessible-label attribute', () => {
       expect(name()).to.equal('');
       el.removeAttribute('aria-label');
       await el.updateComplete;
-      expect(name()).to.equal('Programmatic');
+      expect(name()).to.not.equal('Changed retired');
+      expect(name()).not.to.equal('Programmatic');
     }
   });
 });
@@ -913,7 +884,5 @@ it('starts in single-file mode and resets to it after removing explicit multiple
   await el.updateComplete;
   expect(hiddenInput(el)!.multiple).to.equal(false);
 });
-
-expectDeprecatedUsage('lr-attachment-trigger', 'property', 'accessibleLabel');
 
 expectStaleAttribute('lr-attachment-trigger', 'accessible-label');

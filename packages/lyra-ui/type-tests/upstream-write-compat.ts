@@ -1,35 +1,33 @@
-import {
-  LyraAnimation,
-  LyraBadge,
-  LyraBreadcrumbItem,
-  LyraButton,
-  LyraCheckbox,
-  LyraColorPicker,
-  LyraCombobox,
-  LyraDateInput,
-  LyraFileInput,
-  LyraIcon,
-  LyraIconButton,
-  LyraInput,
-  LyraKnownDate,
-  LyraNumberInput,
-  LyraOption,
-  LyraOtpInput,
-  LyraPopover,
-  LyraPopup,
-  LyraRadio,
-  LyraRadioGroup,
-  LyraRating,
-  LyraSelect,
-  LyraSplitPanel,
-  LyraSwitch,
-  LyraTag,
-  LyraTextarea,
-  LyraTimeInput,
-  LyraToastItem,
-  LyraToast,
-  LyraTooltip,
-} from '../src/lyra.js';
+import { LyraButton } from '../src/components/forms/button/button.class.js';
+import { LyraCheckbox } from '../src/components/forms/checkbox/checkbox.class.js';
+import { LyraColorPicker } from '../src/components/forms/color-picker/color-picker.class.js';
+import { LyraCombobox } from '../src/components/forms/combobox/combobox.class.js';
+import { LyraOption } from '../src/components/forms/combobox/option.class.js';
+import { LyraDateInput } from '../src/components/forms/date-picker/date-input.class.js';
+import { LyraIconButton } from '../src/components/forms/icon-button/icon-button.class.js';
+import { LyraInput } from '../src/components/forms/input/input.class.js';
+import { LyraNumberInput } from '../src/components/forms/input/number-input.class.js';
+import { LyraTimeInput } from '../src/components/forms/input/time-input.class.js';
+import { LyraOtpInput } from '../src/components/forms/otp-input/otp-input.class.js';
+import { LyraRadioGroup } from '../src/components/forms/radio/radio-group.class.js';
+import { LyraRadio } from '../src/components/forms/radio/radio.class.js';
+import { LyraSelect } from '../src/components/forms/select/select.class.js';
+import { LyraSwitch } from '../src/components/forms/switch/switch.class.js';
+import { LyraTextarea } from '../src/components/forms/textarea/textarea.class.js';
+import { LyraBreadcrumbItem } from '../src/components/layout/breadcrumb/breadcrumb-item.class.js';
+import { LyraSplitPanel } from '../src/components/layout/split-panel/split-panel.class.js';
+import { LyraAnimation } from '../src/components/media/animation/animation.class.js';
+import { LyraFileInput } from '../src/components/media/file-input/file-input.class.js';
+import { LyraBadge } from '../src/components/overlays/badge/badge.class.js';
+import { LyraTag } from '../src/components/overlays/badge/tag.class.js';
+import { LyraPopover } from '../src/components/overlays/overlay/popover.class.js';
+import { LyraTooltip } from '../src/components/overlays/overlay/tooltip.class.js';
+import { LyraPopup } from '../src/components/overlays/popup/popup.class.js';
+import { LyraRating } from '../src/components/overlays/rating/rating.class.js';
+import { LyraToastItem } from '../src/components/overlays/toast/toast-item.class.js';
+import { LyraToast } from '../src/components/overlays/toast/toast.class.js';
+import { LyraIcon } from '../src/components/utility/icon/icon.class.js';
+import { LyraKnownDate } from '../src/components/utility/known-date/known-date.class.js';
 import type {
   BadgeSize,
   BadgeVariant,

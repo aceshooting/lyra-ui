@@ -1,4 +1,4 @@
-import type { LyraMarkdownCore } from '../src/lyra.js';
+import type { LyraMarkdownCore } from '../src/components/conversation/markdown/markdown-core.class.js';
 
 declare const markdownCore: LyraMarkdownCore;
 

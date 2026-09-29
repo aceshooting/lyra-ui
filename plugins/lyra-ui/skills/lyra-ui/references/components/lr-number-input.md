@@ -152,7 +152,7 @@ The exact-320px RTL story keeps long label/hint copy and both fixed-size stepper
   without-spin-buttons="false"
 ></lr-number-input>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/forms/input/number-input.js";
+  import "@aceshooting/lyra-ui/components/lr-number-input.js";
 </script>
 ```
 
@@ -170,3 +170,5 @@ The exact-320px RTL story keeps long label/hint copy and both fixed-size stepper
   platform ignores all three on `type="number"`; use `min`/`max`/`step` instead.
 - `type` is re-forced to `number` on every connect, but a later `el.type = 'text'` on a connected
   element is not reverted — use `lr-input` when the type has to change.
+
+<a id="date-and-time-controls"></a>

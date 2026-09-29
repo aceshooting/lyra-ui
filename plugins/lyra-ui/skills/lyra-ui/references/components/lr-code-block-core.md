@@ -85,7 +85,7 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
   If `languages` changes while highlighting is loading, only results for the current map can update
   the displayed code. For a
   TypeScript annotation, use `import type { ShikiLanguageSource } from
-'@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js'`; the type-only
+'@aceshooting/lyra-ui/components/lr-code-block-core.js'`; the type-only
   granular import emits no registration side effect.
 - `copyAppearance: 'text' | 'icon' = 'text'` (attribute `copy-appearance`, reflected) — identical to
   `<lr-code-block>`'s own property: `'text'` is the labelled button, `'icon'` swaps the visible label
@@ -138,7 +138,7 @@ constant also avoids repeated component snapshots.
 ```ts
 import { html } from "lit";
 import jsonGrammar from "shiki/langs/json.mjs";
-import "@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js";
+import "@aceshooting/lyra-ui/components/lr-code-block-core.js";
 
 const languages = { json: jsonGrammar };
 const view = html`<lr-code-block-core

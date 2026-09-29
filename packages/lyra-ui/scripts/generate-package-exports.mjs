@@ -1,5 +1,8 @@
 import { deriveLocaleDeclarationExports } from './declaration-entrypoints.mjs';
 import { isMainModule } from './is-main-module.mjs';
+import { checkPublishedCompatibilitySync } from './check-published-compatibility.mjs';
+import { compatibilityKey } from './published-compatibility.mjs';
+import { compareVersions, parseVersion } from './component-metadata.mjs';
 
 // Replaces the broad component/AI wildcard package exports with the exact supported public
 // routes. Component registration/class entries and stable lr-* aliases come from the authoritative
@@ -355,10 +358,94 @@ export function deriveExplicitUtilityExports(
  * `./ai` itself preserves the curated AI barrel while preventing private adapter/assertion modules
  * from becoming accidental public contracts.
  */
-export function closeWildcardPackageExports(currentExports, componentExports, utilityExports = {}, localeExports = {}) {
+function wildcardMatches(pattern, exportPath) {
+  const marker = pattern.indexOf('*');
+  return marker >= 0 && exportPath.startsWith(pattern.slice(0, marker)) &&
+    exportPath.endsWith(pattern.slice(marker + 1));
+}
+
+/** Internal test seam; production callers supply only the verifier's detached result. */
+export function deriveRetiredExportIdentitiesFromVerifiedHistory(verified, packageVersion) {
+  if (!Array.isArray(verified?.captures) || !Array.isArray(verified?.retirements)) {
+    throw new TypeError('verified compatibility history must include capture and retirement arrays');
+  }
+  const publishedPolicies = new Map();
+  for (const { capture, facts } of verified.captures) {
+    for (const record of facts.records) {
+      const id = compatibilityKey(record.key);
+      const existing = publishedPolicies.get(id);
+      if (existing && JSON.stringify(existing.policy) !== JSON.stringify(record.policy)) {
+        throw new Error(`Conflicting published policy for retired export identity ${id}`);
+      }
+      publishedPolicies.set(id, {
+        key: record.key,
+        policy: record.policy,
+        sourceReleases: new Set([...(existing?.sourceReleases ?? []), capture.sourceRelease]),
+      });
+    }
+  }
+
+  const retired = [];
+  const seen = new Set();
+  for (const retirement of verified.retirements) {
+    const id = compatibilityKey(retirement.key);
+    if (seen.has(id)) throw new Error(`Duplicate compatibility retirement ${id}`);
+    seen.add(id);
+    const record = publishedPolicies.get(id);
+    if (!record || !record.sourceReleases.has(retirement.sourceRelease)) {
+      throw new Error(`Retirement has no exact published source record: ${id}`);
+    }
+    const { policy } = record;
+    const since = parseVersion(policy.since);
+    const floor = parseVersion(policy.removalNotBefore);
+    // `compareVersions` is the shared stable version parser used by compatibility policy.
+    if (!since || !floor || !retirement.sourceRelease.startsWith('lyra-ui@')) {
+      throw new Error(`Retirement has an invalid published notice window: ${id}`);
+    }
+    compareVersions(retirement.removedIn, policy.removalNotBefore);
+    if (compareVersions(retirement.removedIn, policy.removalNotBefore) < 0 ||
+        floor.major < since.major + 2 ||
+        compareVersions(packageVersion, retirement.removedIn) < 0) {
+      throw new Error(`Retirement is outside its published removal window: ${id}`);
+    }
+    if (retirement.key.scope === 'export' &&
+        ['entry-point', 'stylesheet'].includes(retirement.key.kind)) {
+      if (policy.kind !== retirement.key.kind) {
+        throw new Error(`Retirement kind disagrees with its published notice: ${id}`);
+      }
+      retired.push(retirement.key);
+    }
+  }
+  return retired;
+}
+
+function deriveRetiredExportIdentities(packageDir, packageVersion) {
+  const historyDir = join(packageDir, 'scripts', 'fixtures', 'compatibility-history');
+  return deriveRetiredExportIdentitiesFromVerifiedHistory(
+    checkPublishedCompatibilitySync(historyDir),
+    packageVersion,
+  );
+}
+
+export function closeWildcardPackageExports(
+  currentExports,
+  componentExports,
+  utilityExports = {},
+  localeExports = {},
+  retiredExportIdentities = [],
+) {
   invariant(currentExports && typeof currentExports === 'object' && !Array.isArray(currentExports), 'package exports must be an object');
+  invariant(Array.isArray(retiredExportIdentities), 'retired export identities must be an array');
+  const retiredPaths = new Set();
+  for (const key of retiredExportIdentities) {
+    invariant(key?.scope === 'export' && ['entry-point', 'stylesheet'].includes(key.kind),
+      'only exact retired entry-point and stylesheet identities may close package routes');
+    compatibilityKey(key);
+    retiredPaths.add(key.name);
+  }
   const generatedEntries = Object.entries(componentExports);
   const generatedUtilityEntries = Object.entries(utilityExports);
+  const generatedPaths = new Set([...generatedEntries, ...generatedUtilityEntries].map(([key]) => key));
   const result = {};
   let insertedComponents = false;
   let insertedUtilities = false;
@@ -389,7 +476,17 @@ export function closeWildcardPackageExports(currentExports, componentExports, ut
     }
     if (key === './ai/*') continue;
     if (key.startsWith('./translations/') && key !== './translations/*' && !key.startsWith('./translations/pseudo/')) continue;
+    if (retiredPaths.has(key)) continue;
     result[key] = value;
+  }
+  // An exact null blocks only a retired path that would otherwise continue resolving through a
+  // retained wildcard. This preserves useful wildcard routes while refusing source-absence
+  // heuristics and blanket wildcard shutdowns.
+  for (const exportPath of retiredPaths) {
+    if (generatedPaths.has(exportPath) || Object.hasOwn(result, exportPath)) continue;
+    if (Object.entries(result).some(([pattern, target]) =>
+      target !== null && pattern.includes('*') && wildcardMatches(pattern, exportPath)
+    )) result[exportPath] = null;
   }
   insertComponents();
   insertUtilities();
@@ -407,12 +504,24 @@ function expectedPackage(packageDir) {
     packageDir, exportDeprecations: metadata.exportDeprecations,
   });
   const utilityExports = deriveExplicitUtilityExports({ packageDir });
+  const historyIndexPath = join(packageDir, 'scripts', 'fixtures', 'compatibility-history', 'index.json');
+  // Small synthetic package fixtures have no publication history and explicitly get an empty
+  // retirement set. A real history directory with a missing index is not treated as empty.
+  const retiredExportIdentities = existsSync(historyIndexPath)
+    ? deriveRetiredExportIdentities(packageDir, pkg.version)
+    : [];
   return {
     packageJsonPath,
     pkg,
     componentExports,
     utilityExports,
-    exports: closeWildcardPackageExports(pkg.exports, componentExports, utilityExports, deriveLocaleDeclarationExports(packageDir)),
+    exports: closeWildcardPackageExports(
+      pkg.exports,
+      componentExports,
+      utilityExports,
+      deriveLocaleDeclarationExports(packageDir),
+      retiredExportIdentities,
+    ),
   };
 }
 

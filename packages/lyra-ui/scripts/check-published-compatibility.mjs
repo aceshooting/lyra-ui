@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
-import { assembleCompatibilityContext, compatibilityKey, policyKey } from './published-compatibility.mjs';
+import { assembleCompatibilityContext, compatibilityExportCandidates, policyKey } from './published-compatibility.mjs';
 import { readComponentMetadataSources, assembleComponentMetadata } from './component-metadata-source.mjs';
-import { inspectExportContract } from './component-metadata.mjs';
+import { compareVersions, inspectExportContract } from './component-metadata.mjs';
+import { checkPublishedFieldHistorySync } from './published-field-compatibility-io.mjs';
 import { dirname, join, resolve, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readPublishedCaptureSync, sha256, decodeEvidence, verifyPolicyWitnesses } from './published-compatibility-io.mjs';
@@ -55,28 +56,39 @@ export function readCurrentCompatibilityContextSync(packageDir = join(dirname(fi
   const packageJson = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf8'));
   const inventory = currentInventory ?? JSON.parse(readFileSync(join(packageDir, 'scripts/fixtures/component-inventory.json'), 'utf8'));
   const verified = checkPublishedCompatibilitySync(join(packageDir, 'scripts/fixtures/compatibility-history'));
-  const candidates = new Map();
-  const add = entry => candidates.set(compatibilityKey(policyKey(entry, 'export')), entry);
-  const currentExportKeys = new Set(metadata.exportDeprecations.map(entry => compatibilityKey(policyKey(entry, 'export'))));
-  for (const entry of metadata.exportDeprecations) add(entry);
-  for (const capture of verified.captures) for (const entry of capture.facts.records) {
-    if (entry.key.scope !== 'export' || currentExportKeys.has(compatibilityKey(entry.key))) continue;
-    add(entry.policy);
-    add({ ...entry.policy.replacement, module: entry.policy.replacement.module ?? entry.policy.module });
+  if (compareVersions(packageJson.version, '24.0.0') >= 0) {
+    checkPublishedFieldHistorySync(join(packageDir, 'scripts/fixtures/compatibility-history'), {
+      captures: verified.captures,
+    });
   }
+  const candidates = compatibilityExportCandidates(metadata, verified.captures.map(entry => entry.facts));
   const sourceCache = new Map();
   const readSource = path => {
     if (!sourceCache.has(path)) sourceCache.set(path, readFileSync(join(packageDir, path), 'utf8'));
     return sourceCache.get(path);
   };
   const currentExportSurface = [];
-  for (const entry of candidates.values()) {
+  for (const entry of candidates) {
     const fact = inspectExportContract(entry, { packageJson, readSource, exportDeprecations: metadata.exportDeprecations });
     if (fact.status === 'invalid') throw new Error(`Cannot inspect ${entry.name}: ${fact.findings.join('; ')}`);
     if (fact.status === 'present') currentExportSurface.push({ key: policyKey(entry, 'export'), ...fact });
   }
+  // The migration CLI emits this exact installed package route, not the implementation path
+  // named by component-inventory.json. The map is derived from the checked current version's
+  // actual exports and is intentionally absent for older package snapshots that did not publish
+  // a stable tag-shaped alias.
+  const componentRegistrationRoutes = Object.create(null);
+  for (const component of inventory.components) {
+    const route = `./components/${component.tag}.js`;
+    const exportEntry = packageJson.exports?.[route];
+    const defaultTarget = typeof exportEntry === 'string' ? exportEntry : exportEntry?.default;
+    if (defaultTarget === `./dist/components/${component.tag}.js`) {
+      componentRegistrationRoutes[component.tag] = route;
+    }
+  }
   return assembleCompatibilityContext({ packageVersion: packageJson.version, currentInventory: inventory,
     currentExportDeprecations: metadata.exportDeprecations, currentExportSurface,
+    componentRegistrationRoutes,
     captures: verified.captures.map(entry => entry.facts), retirementIndex: verified.retirements });
 }
 

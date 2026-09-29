@@ -1,4 +1,4 @@
-import { chmod, cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { chmod, cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -63,18 +63,6 @@ console.log(`Published declaration entries consolidated: ${consolidatedDeclarati
 for (const asset of ['theme.css', 'density.css', 'accents.css', 'preferences.css', 'looks', 'surfaces']) {
   await cp(join(packageDir, 'src', asset), join(packageDir, 'dist', asset), { recursive: true });
 }
-
-// Opt-in look presets (`@aceshooting/lyra-ui/themes/<name>.css`). Copied by listing the directory
-// rather than by name, so a preset added to src/themes/ cannot be exported (and made a
-// package.json#sideEffects entry, which generate-side-effects.mjs derives from the same tree)
-// without also being published. Copied before CSS compaction so the published copy is minified
-// like every other standalone stylesheet.
-const themesSourceDir = join(packageDir, 'src', 'themes');
-const themesDistDir = join(packageDir, 'dist', 'themes');
-const themePresets = (await readdir(themesSourceDir)).filter((name) => name.endsWith('.css')).sort();
-if (themePresets.length === 0) throw new Error('src/themes/ contains no .css preset to publish');
-await mkdir(themesDistDir, { recursive: true });
-await Promise.all(themePresets.map((name) => cp(join(themesSourceDir, name), join(themesDistDir, name))));
 
 const stylesDir = join(packageDir, 'dist', 'styles');
 await mkdir(stylesDir, { recursive: true });

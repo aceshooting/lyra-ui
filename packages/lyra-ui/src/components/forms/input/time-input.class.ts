@@ -411,6 +411,8 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   private genuineValue = '';
   private digitBuffer = '';
   private digitSegment?: SegmentName;
+  private inputDigitLocale = '';
+  private inputDigitMap?: Map<string, string>;
   private pendingSegmentFocus?: SegmentName;
   private restoringSegmentFocus = false;
   private cleanupPositioner?: DeferredOperationHandle;
@@ -661,17 +663,23 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   /** Accepts both ASCII digits and the active numbering system's single-key digit glyphs. */
   private inputDigit(key: string): string | undefined {
     if (/^[0-9]$/.test(key)) return key;
+    const locale = this.effectiveLocale;
+    if (this.inputDigitMap && this.inputDigitLocale === locale) return this.inputDigitMap.get(key);
+
+    const digits = new Map<string, string>();
     try {
-      const formatter = getNumberFormat(this.effectiveLocale, { useGrouping: false });
+      const formatter = getNumberFormat(locale, { useGrouping: false });
       for (let value = 0; value <= 9; value++) {
         const integer = formatter.formatToParts(value)
           .find((part) => part.type === 'integer')?.value;
-        if (integer === key) return String(value);
+        if (integer !== undefined && !digits.has(integer)) digits.set(integer, String(value));
       }
+      this.inputDigitLocale = locale;
+      this.inputDigitMap = digits;
     } catch {
       // ASCII remains accepted when an Intl implementation rejects the requested locale.
     }
-    return undefined;
+    return digits.get(key);
   }
 
   /** Formats a canonical constraint value through the same locale pattern as the segment UI. */

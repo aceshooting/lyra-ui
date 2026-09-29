@@ -13,6 +13,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseSync } from 'oxc-parser';
 import { findTransitiveRegistrationPaths } from './check-registration-architecture.mjs';
+import { checkPublishedCompatibilitySync } from './check-published-compatibility.mjs';
 import {
   ACKNOWLEDGED_INTERNAL_HELPER_MODULES,
   checkPackageExports,
@@ -21,11 +22,80 @@ import {
   CURATED_UTILITY_MODULES,
   deriveExplicitComponentExports,
   deriveExplicitUtilityExports,
+  deriveRetiredExportIdentitiesFromVerifiedHistory,
   findUnclassifiedHelperModules,
   generatePackageExports,
 } from './generate-package-exports.mjs';
 
 const packageDir = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+const packageVersion = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf8')).version;
+const verifiedRetiredExports = deriveRetiredExportIdentitiesFromVerifiedHistory(
+  checkPublishedCompatibilitySync(join(packageDir, 'scripts/fixtures/compatibility-history')),
+  packageVersion,
+);
+const verifiedRetiredNames = new Set(verifiedRetiredExports.map((key) => key.name));
+for (const retiredPath of ['./ssr-loader.js', './theme/presets.js', './themes/shadcn.css']) {
+  assert.ok(verifiedRetiredNames.has(retiredPath),
+    `the verified published history must retire the exact ${retiredPath} export route`);
+}
+
+const fixtureRouteKey = {
+  scope: 'export',
+  kind: 'entry-point',
+  module: null,
+  name: './fixture-retired.js',
+};
+const fixturePublishedHistory = (policy, retirement = {}) => ({
+  captures: [{
+    capture: { sourceRelease: 'lyra-ui@22.0.0' },
+    facts: { records: [{ key: fixtureRouteKey, policy }] },
+  }],
+  retirements: [{
+    key: fixtureRouteKey,
+    removedIn: '24.0.0',
+    sourceRelease: 'lyra-ui@22.0.0',
+    ...retirement,
+  }],
+});
+const fixtureRoutePolicy = {
+  kind: 'entry-point',
+  since: '22.0.0',
+  removalNotBefore: '24.0.0',
+};
+assert.deepEqual(
+  deriveRetiredExportIdentitiesFromVerifiedHistory(
+    fixturePublishedHistory(fixtureRoutePolicy),
+    '24.0.0',
+  ),
+  [fixtureRouteKey],
+  'an exact published notice and in-window retirement derive one route',
+);
+assert.throws(
+  () => deriveRetiredExportIdentitiesFromVerifiedHistory(
+    fixturePublishedHistory({ ...fixtureRoutePolicy, removalNotBefore: '23.0.0' }),
+    '24.0.0',
+  ),
+  /outside its published removal window/u,
+  'a retirement cannot bypass the full-major notice floor',
+);
+assert.throws(
+  () => deriveRetiredExportIdentitiesFromVerifiedHistory(
+    fixturePublishedHistory(fixtureRoutePolicy, { removedIn: '25.0.0' }),
+    '24.0.0',
+  ),
+  /outside its published removal window/u,
+  'a future removal record cannot close a route early',
+);
+assert.throws(
+  () => deriveRetiredExportIdentitiesFromVerifiedHistory({
+    ...fixturePublishedHistory(fixtureRoutePolicy),
+    retirements: [fixturePublishedHistory(fixtureRoutePolicy).retirements[0],
+      fixturePublishedHistory(fixtureRoutePolicy).retirements[0]],
+  }, '24.0.0'),
+  /Duplicate compatibility retirement/u,
+  'duplicate retirement identities fail closed',
+);
 
 assert.equal(
   deriveExplicitUtilityExports()['./utilities/localization.js'],
@@ -489,6 +559,28 @@ assert.equal(
 );
 assert.equal(derived['./components/forms/alpha/alpha.styles.js'], undefined);
 
+const cleanedDerived = deriveExplicitComponentExports(inventory, { helperModules });
+assert.equal(
+  cleanedDerived['./components/forms/alpha/alpha.js'],
+  undefined,
+  'retired nested family registration routes must not be generated without an exact compatibility record'
+);
+assert.equal(
+  cleanedDerived['./components/forms/alpha/alpha.class.js'],
+  './dist/components/forms/alpha/alpha.class.js',
+  'registration-free nested class routes remain canonical'
+);
+assert.deepEqual(
+  cleanedDerived['./components/lr-alpha.js'],
+  { types: './dist/components/forms/alpha/alpha.d.ts', default: './dist/components/lr-alpha.js' },
+  'tag-shaped registration routes remain canonical'
+);
+assert.equal(
+  cleanedDerived['./components/forms'],
+  './dist/components/forms/index.js',
+  'registration-free family barrels remain available'
+);
+
 const approvedPureHelperExports = deriveExplicitComponentExports(
   { schemaVersion: 1, components: [] },
   { helperModules: approvedPureHelperContracts.map(({ sourceModule }) => sourceModule) }
@@ -557,6 +649,38 @@ assert.deepEqual(
   { types: './dist/lyra.d.ts', default: './dist/lyra.js' },
   'closing and curating granular routes must not broaden the root entry'
 );
+
+const retiredClosed = closeWildcardPackageExports(
+  {
+    './ssr-loader.js': './dist/ssr-loader.js',
+    './theme/presets.js': './dist/theme/presets.js',
+    './theme/*': './dist/theme/*',
+    './themes/shadcn.css': './dist/themes/shadcn.css',
+    './look/*': './dist/look/*',
+  },
+  {},
+  {},
+  {},
+  [
+    { scope: 'export', kind: 'entry-point', module: null, name: './ssr-loader.js' },
+    { scope: 'export', kind: 'entry-point', module: null, name: './theme/presets.js' },
+    { scope: 'export', kind: 'stylesheet', module: null, name: './themes/shadcn.css' },
+    { scope: 'export', kind: 'stylesheet', module: null, name: './theme/retired.css' },
+  ],
+);
+assert.equal(retiredClosed['./ssr-loader.js'], undefined);
+assert.equal(retiredClosed['./theme/presets.js'], null,
+  'an exact retired seeded route is explicitly denied when a retained wildcard also matches it');
+assert.equal(retiredClosed['./themes/shadcn.css'], undefined);
+assert.equal(retiredClosed['./theme/*'], './dist/theme/*');
+assert.equal(retiredClosed['./theme/retired.css'], null,
+  'an exact retirement closes a route still matched by the retained theme wildcard');
+assert.equal(retiredClosed['./look/*'], './dist/look/*');
+assert.equal(retiredClosed['./look/current.css'], undefined,
+  'a retirement does not close unrelated wildcard paths');
+assert.throws(() => closeWildcardPackageExports({}, {}, {}, {}, [
+  { scope: 'member', tag: 'lr-alert', kind: 'component', name: 'lr-alert' },
+]), /only exact retired entry-point and stylesheet identities/u);
 
 assert.throws(
   () =>

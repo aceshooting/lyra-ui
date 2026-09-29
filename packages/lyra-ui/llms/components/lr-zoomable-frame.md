@@ -107,7 +107,7 @@ attributes, and inline properties Lyra changed, preserving any later iframe-owne
 a watched host-page theme attribute syncs again.
 
 ```js
-import "@aceshooting/lyra-ui/components/media/zoomable-frame/zoomable-frame.js";
+import "@aceshooting/lyra-ui/components/lr-zoomable-frame.js";
 ```
 
 ```html

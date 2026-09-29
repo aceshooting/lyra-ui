@@ -3538,7 +3538,7 @@
           "evidence": [
             {
               "file": "src/components/media/attachment-trigger/attachment-trigger.class.ts",
-              "line": 379,
+              "line": 364,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -10844,6 +10844,42 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/forms/combobox/combobox-rendering-a11y.test.ts",
+              "test": "is accessible",
+              "target": "el",
+              "state": "open"
+            },
+            {
+              "file": "src/components/forms/combobox/combobox-rendering-a11y.test.ts",
+              "test": "is accessible while showing the empty state (no matching rows)",
+              "target": "el",
+              "state": "open"
+            },
+            {
+              "file": "src/components/forms/combobox/combobox-rendering-a11y.test.ts",
+              "test": "is accessible while showing the loading state (async source pending)",
+              "target": "el",
+              "state": "open"
+            },
+            {
+              "file": "src/components/forms/combobox/combobox-rendering-a11y.test.ts",
+              "test": "is accessible with adornments slotted and the listbox open",
+              "target": "el",
+              "state": "open"
+            },
+            {
+              "file": "src/components/forms/combobox/combobox-rendering-a11y.test.ts",
+              "test": "is accessible with the listbox open, a keyboard-active option, and selected tags (multiple)",
+              "target": "el",
+              "state": "open"
+            },
+            {
+              "file": "src/components/forms/combobox/combobox-rendering-a11y.test.ts",
+              "test": "renders structured async-row adornments and preserves selected opaque data",
+              "target": "el",
+              "state": "open"
+            },
+            {
               "file": "src/components/forms/combobox/combobox-source-state.test.ts",
               "test": "keeps the expanded combobox pointing at a valid popup role while the source failed",
               "target": "el",
@@ -10852,42 +10888,6 @@
             {
               "file": "src/components/forms/combobox/combobox-source-state.test.ts",
               "test": "passes an accessibility audit while the error row is showing",
-              "target": "el",
-              "state": "open"
-            },
-            {
-              "file": "src/components/forms/combobox/combobox.test.ts",
-              "test": "is accessible",
-              "target": "el",
-              "state": "open"
-            },
-            {
-              "file": "src/components/forms/combobox/combobox.test.ts",
-              "test": "is accessible while showing the empty state (no matching rows)",
-              "target": "el",
-              "state": "open"
-            },
-            {
-              "file": "src/components/forms/combobox/combobox.test.ts",
-              "test": "is accessible while showing the loading state (async source pending)",
-              "target": "el",
-              "state": "open"
-            },
-            {
-              "file": "src/components/forms/combobox/combobox.test.ts",
-              "test": "is accessible with adornments slotted and the listbox open",
-              "target": "el",
-              "state": "open"
-            },
-            {
-              "file": "src/components/forms/combobox/combobox.test.ts",
-              "test": "is accessible with the listbox open, a keyboard-active option, and selected tags (multiple)",
-              "target": "el",
-              "state": "open"
-            },
-            {
-              "file": "src/components/forms/combobox/combobox.test.ts",
-              "test": "renders structured async-row adornments and preserves selected opaque data",
               "target": "el",
               "state": "open"
             }
@@ -10899,8 +10899,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/combobox/combobox-remediation.test.ts",
-              "test": "combobox leaves ${legacy ? 'legacy' : 'isComposing'} keys in the ${custom ? 'custom-value' : 'active-option'} filter",
+              "file": "src/components/forms/combobox/combobox-form-lifecycle.test.ts",
+              "test": "does not emit lr-filter when a keyboard selection commits and resets the query (multiple)",
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -10910,7 +10910,7 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/combobox/combobox.test.ts",
+              "file": "src/components/forms/combobox/combobox-rendering-a11y.test.ts",
               "test": "places the start adornment on the inline-start under dir=\"rtl\"",
               "kind": "rendered RTL test signal"
             }
@@ -11002,7 +11002,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2762,
+              "line": 2758,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -11037,7 +11037,9 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/combobox/combobox-form-lifecycle.test.ts",
           "src/components/forms/combobox/combobox-remediation.test.ts",
+          "src/components/forms/combobox/combobox-rendering-a11y.test.ts",
           "src/components/forms/combobox/combobox-source-state.test.ts",
           "src/components/forms/combobox/combobox.test.ts",
           "src/components/forms/combobox/option.test.ts",
@@ -14039,7 +14041,7 @@
           "evidence": [
             {
               "file": "src/components/data/data-grid/data-grid.class.ts",
-              "line": 2532,
+              "line": 2530,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -14293,31 +14295,31 @@
           "status": "automated",
           "evidence": [
             {
-              "file": "src/components/forms/date-picker/date-input.test.ts",
+              "file": "src/components/forms/date-picker/date-input-rendering-a11y.test.ts",
               "test": "exposes validationTarget/resetValidity and is accessible while open and populated",
               "target": "el",
               "state": "open"
             },
             {
-              "file": "src/components/forms/date-picker/date-input.test.ts",
+              "file": "src/components/forms/date-picker/date-input-rendering-a11y.test.ts",
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
-              "file": "src/components/forms/date-picker/date-input.test.ts",
+              "file": "src/components/forms/date-picker/date-input-rendering-a11y.test.ts",
               "test": "is accessible with adornments slotted",
               "target": "el",
               "state": "populated"
             },
             {
-              "file": "src/components/forms/date-picker/date-input.test.ts",
+              "file": "src/components/forms/date-picker/date-input-rendering-a11y.test.ts",
               "test": "stays accessible with a pinned exact control height",
               "target": "el",
               "state": "populated"
             },
             {
-              "file": "src/components/forms/date-picker/date-input.test.ts",
+              "file": "src/components/forms/date-picker/date-input-rendering-a11y.test.ts",
               "test": "tracks inherited theme heights at small and large sizes without extra action padding",
               "target": "el",
               "state": "populated"
@@ -14330,7 +14332,7 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/date-picker/date-input.test.ts",
+              "file": "src/components/forms/date-picker/date-input-form-lifecycle.test.ts",
               "test": "closes the popover on Escape from anywhere inside the form control",
               "kind": "component keyboard assertion signal"
             }
@@ -14341,7 +14343,7 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/date-picker/date-input.test.ts",
+              "file": "src/components/forms/date-picker/date-input-rendering-a11y.test.ts",
               "test": "places the start adornment on the inline-start under dir=\"rtl\"",
               "kind": "rendered RTL test signal"
             }
@@ -14453,8 +14455,11 @@
         "tests": [
           "src/components/forms/date-picker/calendar-core.test.ts",
           "src/components/forms/date-picker/date-input-closed-layout.test.ts",
+          "src/components/forms/date-picker/date-input-form-lifecycle.test.ts",
+          "src/components/forms/date-picker/date-input-rendering-a11y.test.ts",
           "src/components/forms/date-picker/date-input.test.ts",
           "src/components/forms/date-picker/date-picker-remediation.test.ts",
+          "src/components/forms/date-picker/date-picker-rendering-a11y.test.ts",
           "src/components/forms/date-picker/date-picker.test.ts",
           "src/components/forms/date-picker/positioning-strategy.test.ts"
         ],
@@ -14484,6 +14489,24 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/forms/date-picker/date-picker-rendering-a11y.test.ts",
+              "test": "is accessible",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/forms/date-picker/date-picker-rendering-a11y.test.ts",
+              "test": "is accessible with a preset row",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/forms/date-picker/date-picker-rendering-a11y.test.ts",
+              "test": "publishes disabled/range/readonly states and is accessible when populated",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/forms/date-picker/date-picker.test.ts",
               "test": "activates selection-view roving targets with Enter and Space, restoring focus in the destination view",
               "target": "years",
@@ -14492,24 +14515,6 @@
             {
               "file": "src/components/forms/date-picker/date-picker.test.ts",
               "test": "gives every selection view one roving tab stop on its selected period",
-              "target": "el",
-              "state": "populated"
-            },
-            {
-              "file": "src/components/forms/date-picker/date-picker.test.ts",
-              "test": "is accessible",
-              "target": "el",
-              "state": "populated"
-            },
-            {
-              "file": "src/components/forms/date-picker/date-picker.test.ts",
-              "test": "is accessible with a preset row",
-              "target": "el",
-              "state": "populated"
-            },
-            {
-              "file": "src/components/forms/date-picker/date-picker.test.ts",
-              "test": "publishes disabled/range/readonly states and is accessible when populated",
               "target": "el",
               "state": "populated"
             }
@@ -14521,7 +14526,7 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/date-picker/date-input.test.ts",
+              "file": "src/components/forms/date-picker/date-input-form-lifecycle.test.ts",
               "test": "closes the popover on Escape from anywhere inside the form control",
               "kind": "component keyboard assertion signal"
             }
@@ -14532,7 +14537,7 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/date-picker/date-input.test.ts",
+              "file": "src/components/forms/date-picker/date-input-rendering-a11y.test.ts",
               "test": "places the start adornment on the inline-start under dir=\"rtl\"",
               "kind": "rendered RTL test signal"
             }
@@ -14644,8 +14649,11 @@
         "tests": [
           "src/components/forms/date-picker/calendar-core.test.ts",
           "src/components/forms/date-picker/date-input-closed-layout.test.ts",
+          "src/components/forms/date-picker/date-input-form-lifecycle.test.ts",
+          "src/components/forms/date-picker/date-input-rendering-a11y.test.ts",
           "src/components/forms/date-picker/date-input.test.ts",
           "src/components/forms/date-picker/date-picker-remediation.test.ts",
+          "src/components/forms/date-picker/date-picker-rendering-a11y.test.ts",
           "src/components/forms/date-picker/date-picker.test.ts",
           "src/components/forms/date-picker/positioning-strategy.test.ts"
         ],
@@ -15799,7 +15807,7 @@
           "evidence": [
             {
               "file": "src/components/data/document-library/document-library.test.ts",
-              "line": 4,
+              "line": 3,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -16725,7 +16733,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/drawer/drawer.test.ts",
-              "line": 4,
+              "line": 3,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -17365,7 +17373,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1095,
+              "line": 1083,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -22805,7 +22813,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/graph/graph.class.ts",
-              "line": 989,
+              "line": 980,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -23717,7 +23725,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.class.ts",
-              "line": 2470,
+              "line": 2486,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -23754,6 +23762,7 @@
         "tests": [
           "src/components/data/heatmap/calendar-grid.test.ts",
           "src/components/data/heatmap/heatmap-calendar-spacing.test.ts",
+          "src/components/data/heatmap/heatmap-grid-navigation.test.ts",
           "src/components/data/heatmap/heatmap-i18n.test.ts",
           "src/components/data/heatmap/heatmap-legend-visibility.test.ts",
           "src/components/data/heatmap/heatmap-matrix-presentation.test.ts",
@@ -26654,7 +26663,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts",
-              "line": 545,
+              "line": 535,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -26908,7 +26917,7 @@
           "evidence": [
             {
               "file": "src/components/media/lightbox/lightbox.test.ts",
-              "test": "closes on Escape and emits lr-lightbox-close with reason \"escape\"",
+              "test": "closes on Escape and emits lr-close with the escape reason",
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -28059,7 +28068,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.class.ts",
-              "line": 3635,
+              "line": 3548,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -28094,6 +28103,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/media/map/map-data-layers.test.ts",
           "src/components/media/map/map-legend-icon-border.test.ts",
           "src/components/media/map/map-legend-icon.test.ts",
           "src/components/media/map/map-legend-scroll.test.ts",
@@ -29185,7 +29195,7 @@
           "evidence": [
             {
               "file": "src/components/utility/mention-popover/mention-popover.class.ts",
-              "line": 994,
+              "line": 982,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -30451,7 +30461,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/message-actions/message-actions.class.ts",
-              "line": 859,
+              "line": 855,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -33040,19 +33050,19 @@
           "status": "automated",
           "evidence": [
             {
-              "file": "src/components/forms/combobox/combobox.test.ts",
+              "file": "src/components/forms/combobox/combobox-rendering-a11y.test.ts",
               "test": "is accessible",
               "target": "el",
               "state": "open"
             },
             {
-              "file": "src/components/forms/combobox/combobox.test.ts",
+              "file": "src/components/forms/combobox/combobox-rendering-a11y.test.ts",
               "test": "is accessible with adornments slotted and the listbox open",
               "target": "el",
               "state": "open"
             },
             {
-              "file": "src/components/forms/combobox/combobox.test.ts",
+              "file": "src/components/forms/combobox/combobox-rendering-a11y.test.ts",
               "test": "is accessible with the listbox open, a keyboard-active option, and selected tags (multiple)",
               "target": "el",
               "state": "open"
@@ -33071,8 +33081,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/combobox/combobox-remediation.test.ts",
-              "test": "combobox leaves ${legacy ? 'legacy' : 'isComposing'} keys in the ${custom ? 'custom-value' : 'active-option'} filter",
+              "file": "src/components/forms/combobox/combobox-form-lifecycle.test.ts",
+              "test": "does not emit lr-filter when a keyboard selection commits and resets the query (multiple)",
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -33082,7 +33092,7 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/combobox/combobox.test.ts",
+              "file": "src/components/forms/combobox/combobox-rendering-a11y.test.ts",
               "test": "places the start adornment on the inline-start under dir=\"rtl\"",
               "kind": "rendered RTL test signal"
             }
@@ -33163,7 +33173,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2762,
+              "line": 2758,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -33198,7 +33208,9 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/combobox/combobox-form-lifecycle.test.ts",
           "src/components/forms/combobox/combobox-remediation.test.ts",
+          "src/components/forms/combobox/combobox-rendering-a11y.test.ts",
           "src/components/forms/combobox/combobox-source-state.test.ts",
           "src/components/forms/combobox/combobox.test.ts",
           "src/components/forms/combobox/option.test.ts",
@@ -35917,7 +35929,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1095,
+              "line": 1083,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -37854,26 +37866,32 @@
           "status": "automated",
           "evidence": [
             {
-              "file": "src/components/forms/radio/radio.test.ts",
+              "file": "src/components/forms/radio/radio-rendering-a11y.test.ts",
               "test": "accepts appearance=\"button\" on lr-radio and exports both WA and Shoelace parts",
               "target": "el",
               "state": "populated"
             },
             {
-              "file": "src/components/forms/radio/radio.test.ts",
+              "file": "src/components/forms/radio/radio-rendering-a11y.test.ts",
               "test": "is accessible as a label-less radio named only by aria-label",
               "target": "el",
               "state": "populated"
             },
             {
-              "file": "src/components/forms/radio/radio.test.ts",
+              "file": "src/components/forms/radio/radio-rendering-a11y.test.ts",
               "test": "is accessible at a non-default tier",
               "target": "el",
               "state": "populated"
             },
             {
-              "file": "src/components/forms/radio/radio.test.ts",
+              "file": "src/components/forms/radio/radio-rendering-a11y.test.ts",
               "test": "is accessible at a non-default tier",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/forms/radio/radio-rendering-a11y.test.ts",
+              "test": "renders radio semantics and explicit false states",
               "target": "el",
               "state": "populated"
             },
@@ -37881,12 +37899,6 @@
               "file": "src/components/forms/radio/radio.test.ts",
               "test": "moves selection and DOM focus when arrow navigation is used",
               "target": "group",
-              "state": "populated"
-            },
-            {
-              "file": "src/components/forms/radio/radio.test.ts",
-              "test": "renders radio semantics and explicit false states",
-              "target": "el",
               "state": "populated"
             }
           ],
@@ -38019,7 +38031,9 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/radio/radio-button.test.ts",
+          "src/components/forms/radio/radio-form-lifecycle.test.ts",
           "src/components/forms/radio/radio-remediation.test.ts",
+          "src/components/forms/radio/radio-rendering-a11y.test.ts",
           "src/components/forms/radio/radio.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -38199,7 +38213,9 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/radio/radio-button.test.ts",
+          "src/components/forms/radio/radio-form-lifecycle.test.ts",
           "src/components/forms/radio/radio-remediation.test.ts",
+          "src/components/forms/radio/radio-rendering-a11y.test.ts",
           "src/components/forms/radio/radio.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -38227,7 +38243,7 @@
           "status": "automated",
           "evidence": [
             {
-              "file": "src/components/forms/radio/radio.test.ts",
+              "file": "src/components/forms/radio/radio-rendering-a11y.test.ts",
               "test": "is accessible at a non-default tier",
               "target": "el",
               "state": "populated"
@@ -38379,7 +38395,9 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/radio/radio-button.test.ts",
+          "src/components/forms/radio/radio-form-lifecycle.test.ts",
           "src/components/forms/radio/radio-remediation.test.ts",
+          "src/components/forms/radio/radio-rendering-a11y.test.ts",
           "src/components/forms/radio/radio.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -39450,7 +39468,7 @@
           "evidence": [
             {
               "file": "src/components/layout/reorder-list/reorder-item-composition.test.ts",
-              "line": 4,
+              "line": 3,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -39627,7 +39645,7 @@
           "evidence": [
             {
               "file": "src/components/layout/reorder-list/reorder-item-composition.test.ts",
-              "line": 4,
+              "line": 3,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -42036,7 +42054,7 @@
           "status": "automated",
           "evidence": [
             {
-              "file": "src/components/forms/select/select.test.ts",
+              "file": "src/components/forms/select/select-rendering-a11y.test.ts",
               "test": "is accessible while open",
               "target": "el",
               "state": "open"
@@ -42048,26 +42066,32 @@
               "state": "open"
             },
             {
-              "file": "src/components/forms/select/select.test.ts",
+              "file": "src/components/forms/select/select-interaction.test.ts",
+              "test": "is accessible with a single enabled option",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/forms/select/select-rendering-a11y.test.ts",
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
-              "file": "src/components/forms/select/select.test.ts",
+              "file": "src/components/forms/select/select-rendering-a11y.test.ts",
               "test": "is accessible in every appearance",
               "target": "el",
               "state": "populated"
             },
             {
-              "file": "src/components/forms/select/select.test.ts",
+              "file": "src/components/forms/select/select-rendering-a11y.test.ts",
               "test": "is accessible while open and width-synced",
               "target": "el",
               "state": "populated"
             },
             {
-              "file": "src/components/forms/select/select.test.ts",
-              "test": "is accessible with a single enabled option",
+              "file": "src/components/forms/select/select-rendering-a11y.test.ts",
+              "test": "makes every mirrored adornment wrapper decorative and inert",
               "target": "el",
               "state": "populated"
             },
@@ -42090,12 +42114,6 @@
               "state": "populated"
             },
             {
-              "file": "src/components/forms/select/select.test.ts",
-              "test": "makes every mirrored adornment wrapper decorative and inert",
-              "target": "el",
-              "state": "populated"
-            },
-            {
               "file": "src/components/forms/select/unknown-option.test.ts",
               "test": "passes an accessibility audit with the synthetic row showing",
               "target": "el",
@@ -42109,8 +42127,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/select/select.test.ts",
-              "line": 9,
+              "file": "src/components/forms/select/select-interaction.test.ts",
+              "test": "preserves the active option when lr-hide is vetoed so Enter still selects it",
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -42120,7 +42138,7 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/select/select.test.ts",
+              "file": "src/components/forms/select/select-rendering-a11y.test.ts",
               "test": "contains a long selected value and adornments at 320px in LTR and RTL",
               "kind": "rendered RTL test signal"
             }
@@ -42244,6 +42262,9 @@
           "src/components/forms/select/option-refresh.test.ts",
           "src/components/forms/select/positioning-strategy.test.ts",
           "src/components/forms/select/select-closed-layout.test.ts",
+          "src/components/forms/select/select-form-lifecycle.test.ts",
+          "src/components/forms/select/select-interaction.test.ts",
+          "src/components/forms/select/select-rendering-a11y.test.ts",
           "src/components/forms/select/select.test.ts",
           "src/components/forms/select/top-layer.test.ts",
           "src/components/forms/select/unknown-option.test.ts"
@@ -42736,7 +42757,7 @@
           "evidence": [
             {
               "file": "src/components/data/sequence-strip/sequence-strip.class.ts",
-              "line": 474,
+              "line": 451,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -42956,37 +42977,37 @@
           "status": "automated",
           "evidence": [
             {
-              "file": "src/components/forms/slider/slider.test.ts",
+              "file": "src/components/forms/slider/slider-rendering-a11y.test.ts",
               "test": "is accessible as a labeled two-handle range with markers, a tooltip and a hint",
               "target": "el",
               "state": "populated"
             },
             {
-              "file": "src/components/forms/slider/slider.test.ts",
+              "file": "src/components/forms/slider/slider-rendering-a11y.test.ts",
               "test": "is accessible as a vertical, readonly slider",
               "target": "el",
               "state": "populated"
             },
             {
-              "file": "src/components/forms/slider/slider.test.ts",
+              "file": "src/components/forms/slider/slider-rendering-a11y.test.ts",
               "test": "is accessible at a non-default tier",
               "target": "el",
               "state": "populated"
             },
             {
-              "file": "src/components/forms/slider/slider.test.ts",
+              "file": "src/components/forms/slider/slider-rendering-a11y.test.ts",
               "test": "is accessible in a populated, labeled state with a fractional step",
               "target": "el",
               "state": "populated"
             },
             {
-              "file": "src/components/forms/slider/slider.test.ts",
+              "file": "src/components/forms/slider/slider-rendering-a11y.test.ts",
               "test": "keeps numeric inline readouts by default and opts into formatted label-row values",
               "target": "el",
               "state": "populated"
             },
             {
-              "file": "src/components/forms/slider/slider.test.ts",
+              "file": "src/components/forms/slider/slider-rendering-a11y.test.ts",
               "test": "projects both aria-invalid polarities to every focusable range thumb",
               "target": "el",
               "state": "populated"
@@ -42999,8 +43020,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/slider/slider-remediation.test.ts",
-              "test": "commits an enabled changed keyboard sequence once on ordinary blur",
+              "file": "src/components/forms/slider/slider-form-lifecycle.test.ts",
+              "test": "clears a pending keyboard commit when own or fieldset disablement interrupts the key sequence",
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -43010,7 +43031,7 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/slider/slider.test.ts",
+              "file": "src/components/forms/slider/slider-rendering-a11y.test.ts",
               "test": "contains standalone unbroken label, reference, and hint content at 320px in LTR and RTL",
               "kind": "rendered RTL test signal"
             }
@@ -43027,7 +43048,7 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/slider/slider.test.ts",
+              "file": "src/components/forms/slider/slider-rendering-a11y.test.ts",
               "test": "contains standalone unbroken label, reference, and hint content at 320px in LTR and RTL",
               "kind": "320px allocation test signal"
             }
@@ -43137,7 +43158,9 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/slider/slider-form-lifecycle.test.ts",
           "src/components/forms/slider/slider-remediation.test.ts",
+          "src/components/forms/slider/slider-rendering-a11y.test.ts",
           "src/components/forms/slider/slider.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -47959,7 +47982,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/terminal/terminal.class.ts",
-              "line": 826,
+              "line": 817,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -48610,7 +48633,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 5,
+              "line": 4,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -48947,26 +48970,26 @@
           "status": "automated",
           "evidence": [
             {
-              "file": "src/components/forms/time-range/time-range.test.ts",
+              "file": "src/components/forms/time-range/time-range-form-lifecycle.test.ts",
+              "test": "projects both aria-invalid polarities to the focusable range handles",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/forms/time-range/time-range-rendering-a11y.test.ts",
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
-              "file": "src/components/forms/time-range/time-range.test.ts",
+              "file": "src/components/forms/time-range/time-range-rendering-a11y.test.ts",
               "test": "is accessible with presets set",
               "target": "el",
               "state": "populated"
             },
             {
-              "file": "src/components/forms/time-range/time-range.test.ts",
+              "file": "src/components/forms/time-range/time-range-rendering-a11y.test.ts",
               "test": "is accessible with the active-preset props themed",
-              "target": "el",
-              "state": "populated"
-            },
-            {
-              "file": "src/components/forms/time-range/time-range.test.ts",
-              "test": "projects both aria-invalid polarities to the focusable range handles",
               "target": "el",
               "state": "populated"
             }
@@ -48978,8 +49001,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/time-range/time-range.test.ts",
-              "test": "moves the start handle with ArrowRight and emits lr-input then lr-change",
+              "file": "src/components/forms/time-range/time-range-form-lifecycle.test.ts",
+              "test": "rounds exponent-form steps without collapsing the nudge to zero",
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -49099,7 +49122,9 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/time-range/time-range-form-lifecycle.test.ts",
           "src/components/forms/time-range/time-range-remediation.test.ts",
+          "src/components/forms/time-range/time-range-rendering-a11y.test.ts",
           "src/components/forms/time-range/time-range.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -49629,7 +49654,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toast-item.class.ts",
-              "line": 524,
+              "line": 511,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -49802,7 +49827,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toast-item.class.ts",
-              "line": 524,
+              "line": 511,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -50433,7 +50458,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.test.ts",
-              "line": 1,
+              "test": "closes on Escape and emits lr-close with reason \"escape\"",
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -51918,7 +51943,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1095,
+              "line": 1083,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -53436,7 +53461,7 @@
           "evidence": [
             {
               "file": "src/components/media/video/video.class.ts",
-              "line": 20,
+              "line": 21,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -53616,7 +53641,7 @@
           "evidence": [
             {
               "file": "src/components/media/video-playlist/video-playlist.class.ts",
-              "line": 586,
+              "line": 571,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

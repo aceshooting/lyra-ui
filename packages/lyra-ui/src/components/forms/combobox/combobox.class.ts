@@ -1,4 +1,3 @@
-import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { acquireNativeControlDescription, type NativeControlDescriptionLease } from '../../../internal/native-control-description.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
@@ -393,8 +392,6 @@ export interface LyraComboboxEventMap<Multiple extends boolean = boolean> {
   'lr-activate': CustomEvent<{ value: string }>;
   'lr-source-error': CustomEvent<{ error: unknown; query: string }>;
   'lr-retry-request': CustomEvent<null>;
-  /** @deprecated Use `lr-retry-request`; removal not before 24.0.0. */
-  'lr-retry': CustomEvent<null>;
   input: InputEvent | CustomEvent<
     LyraEventDetailSnapshot<{
       readonly value: LyraPickerDetailValue<Multiple>;
@@ -515,7 +512,6 @@ export type LyraComboboxSourceErrorEvent =
  *   closing the listbox) by the time the rejection settles. Not cancelable — the failure has
  *   already happened and the error row is already what rendered, so there is nothing to veto.
  * @event lr-retry-request - Cancelable retry proposal before the default retry action. `detail: null`.
- * @event lr-retry - Deprecated veto alias of `lr-retry-request`; removal not before 24.0.0.
  *   The failed-load state's `[part='retry-button']` was activated. Cancelable —
  *   the built-in action calls `refresh()`, and `preventDefault()` leaves the failure on screen for
  *   a host that owns its own retry timing.
@@ -3769,17 +3765,12 @@ export class LyraCombobox<
                     headingLevel: 'none',
                     onRetry: () => this.refresh(),
                     emitRetryRequest: (detail, init: { cancelable: true }) => this.emit('lr-retry-request', detail, init),
-                    emitRetry: (detail, init: { cancelable: true }) => {
-                      const legacy = this.emit('lr-retry', detail, init);
-                      if (legacy.defaultPrevented) warnDeprecatedUsage(this, 'event', 'lr-retry', 'lr-retry-request');
-                      return legacy;
-                    },
                     // `error` is already this form control's validation-message slot; see the
                     // renderer's `slotNames` doc for why that collision has to be renamed here.
                     slotNames: { error: 'source-error' },
                   },
                   { error: 'source-error' },
-                  'lr-retry'
+                  'lr-retry-request'
                 )}
               </div>`
             : rows.length === 0

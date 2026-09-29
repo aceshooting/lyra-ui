@@ -7,7 +7,7 @@
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [overlays](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/overlays.md)
-- **Deprecated property** `accessibleLabel` since `22.0.0`; use attribute `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.`; removal not before `24.0.0` — The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 15 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -44,8 +44,6 @@ read, and neither is deprecated.
   the generated visible title (string property or rich `label` slot) at that semantic level;
   invalid untyped values retain level 3, while `none` keeps visual title text without heading
   semantics. A direct light-DOM heading retains its own native/ARIA level.
-- `accessibleLabel: string = ''` (property only) — explicit accessible-only name; unlike `label`,
-  it never renders visible text. In markup, use the host `aria-label`.
 - `heading?: string` — legacy visible-title fallback, after the `label` slot and `label` property;
   it has no effect when a direct light-DOM heading already supplies custom chrome
 - `withoutCloseButton: boolean = false` (attribute `without-close-button`, reflected) — removes the
@@ -274,7 +272,7 @@ from).
   </div>
 </lr-dialog>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/overlays/dialog/dialog.js";
+  import "@aceshooting/lyra-ui/components/lr-dialog.js";
 
   const dlg = document.getElementById("dlg");
   // Listeners first: `lr-show` is emitted synchronously inside show().
@@ -312,8 +310,8 @@ A dialog with no chrome of Lyra's own, animating faster and blurring the page be
 ```
 
 Accessible naming and visible title are separate. Naming precedence is: (1) host `aria-label`, by
-attribute presence including an explicitly empty value, (2) `accessibleLabel`, (3) the copied text
-of an unslotted direct light-DOM heading, then (4) the shadow-owned visible title wrapper.
+attribute presence including an explicitly empty value, (2) the copied text of an unslotted direct
+light-DOM heading, then (3) the shadow-owned visible title wrapper.
 Visible-title precedence is the rich `label` slot, then the mapped `label` property, then legacy
 `heading`. The direct-heading case copies text because an IDREF cannot cross from the panel's shadow
 tree to a light-DOM heading; the mapped title wrapper can use `aria-labelledby` because it lives in

@@ -194,11 +194,11 @@ function shadcnThemeRetentionMarkers() {
   return markers;
 }
 
-test('gates the shadcn preset canary on markers unique to each imported stylesheet', async () => {
+test('gates the shadcn look canary on markers unique to each imported stylesheet', async () => {
   assert.match(
     checkerSource,
-    /shadcnTheme: `import '@aceshooting\/lyra-ui\/themes\/shadcn\.css';\\nimport '@aceshooting\/lyra-ui\/theme\.css';/u,
-    'the canary imports the preset first, then the base theme',
+    /shadcnTheme: `import '@aceshooting\/lyra-ui\/looks\/shadcn\.css';\\nimport '@aceshooting\/lyra-ui\/theme\.css';/u,
+    'the canary imports the look first, then the base theme',
   );
   const branch = checkerSource.match(/if \(entry === 'shadcnTheme'\) \{(?<body>[\s\S]*?)\n {2}\}\n/u)?.groups?.body;
   assert.ok(branch, 'the shadcnTheme bundle assertion must remain inspectable');
@@ -211,14 +211,14 @@ test('gates the shadcn preset canary on markers unique to each imported styleshe
   const packageDir = fileURLToPath(new URL('../packages/lyra-ui/', import.meta.url));
   const stripComments = (text) => text.replace(/\/\*[\s\S]*?\*\//gu, '');
   const sources = {
-    preset: stripComments(await readFile(join(packageDir, 'src', 'themes', 'shadcn.css'), 'utf8')),
+    preset: stripComments(await readFile(join(packageDir, 'src', 'looks', 'shadcn.css'), 'utf8')),
     baseTheme: stripComments(await readFile(join(packageDir, 'src', 'theme.css'), 'utf8')),
   };
   // The tarball ships the build's minified copies, so check those forms too.
   const scratch = await mkdtemp(join(tmpdir(), 'lyra-packed-theme-markers-'));
   const minified = {};
   try {
-    await copyFile(join(packageDir, 'src', 'themes', 'shadcn.css'), join(scratch, 'shadcn.css'));
+    await copyFile(join(packageDir, 'src', 'looks', 'shadcn.css'), join(scratch, 'shadcn.css'));
     await copyFile(join(packageDir, 'src', 'theme.css'), join(scratch, 'theme.css'));
     await compactBuildCss(scratch);
     minified.preset = await readFile(join(scratch, 'shadcn.css'), 'utf8');
@@ -243,7 +243,7 @@ test('gates the shadcn preset canary on markers unique to each imported styleshe
     assert.deepEqual(await inspectFiles(['preset.css', 'base.css']), [], `${form}: both stylesheets retained`);
     const withoutPreset = await inspectFiles(['base.css']);
     assert.equal(withoutPreset.length, 1, `${form}: missing preset fails independently`);
-    assert.match(withoutPreset[0], /no retained preset/u);
+    assert.match(withoutPreset[0], /no retained look/u);
     const withoutBase = await inspectFiles(['preset.css']);
     assert.equal(withoutBase.length, 1, `${form}: missing base fails independently`);
     assert.match(withoutBase[0], /no retained base theme/u);

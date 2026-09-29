@@ -1,4 +1,3 @@
-import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
 import './compare-panel.js';
 import type { LyraComparePanel } from './compare-panel.js';
@@ -708,20 +707,17 @@ describe('lr-compare-panel deprecated --lr-compare-panel-selected-background ali
   });
 });
 
-expectDeprecatedUsage('lr-compare-panel', 'event', 'lr-vote');
-
-it('retains the deprecated lr-vote veto alias', async () => {
-    const el = (await fixture(html`<lr-compare-panel item-id="pair-1"></lr-compare-panel>`)) as LyraComparePanel;
-    let voteDuringEvent: unknown = 'unset';
-    el.addEventListener('lr-vote', (event) => {
-      voteDuringEvent = el.vote;
-      event.preventDefault();
-    });
-    (el.shadowRoot!.querySelector('[part="vote-button"]') as HTMLButtonElement).click();
-    await el.updateComplete;
-    expect(voteDuringEvent).to.equal(null);
-    expect(el.vote).to.equal(null);
-  });
+it('removes lr-vote while retaining the canonical request and its default write', async () => {
+  const el = await fixture<LyraComparePanel>(html`<lr-compare-panel item-id="pair-1"></lr-compare-panel>`);
+  let legacyEvents = 0;
+  el.addEventListener('lr-vote', () => legacyEvents++);
+  const request = oneEvent(el, 'lr-vote-request');
+  (el.shadowRoot!.querySelector('[part="vote-button"]') as HTMLButtonElement).click();
+  expect((await request).detail).to.deep.equal({ choice: 'a', itemId: 'pair-1' });
+  await el.updateComplete;
+  expect(el.vote).to.equal('a');
+  expect(legacyEvents).to.equal(0);
+});
 
 it('keeps explicit host vote writes and blocks recursive requests', async () => {
   const el = await fixture<LyraComparePanel>(html`<lr-compare-panel item-id="pair"></lr-compare-panel>`);

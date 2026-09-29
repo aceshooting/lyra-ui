@@ -1,4 +1,3 @@
-import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -98,8 +97,6 @@ export interface ToolTimelineRenderErrorDetail extends ToolTimelineActivateDetai
 export type ToolTimelineApprovalPending = ApprovalAction | null;
 
 export interface LyraToolTimelineEventMap {
-  /** @deprecated Use `lr-tool-approval-decide-request`. */
-  'lr-tool-approval-decide': LyraToolTimelineEventMap['lr-tool-approval-decide-request'];
   'lr-tool-approval-decide-request': CustomEvent<ToolTimelineApprovalDetail>;
   'lr-tool-activate': CustomEvent<ToolTimelineActivateDetail>;
   'lr-tool-render-error': CustomEvent<ToolTimelineRenderErrorDetail>;
@@ -301,7 +298,6 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * array does not update the view.
  *
  * @customElement lr-tool-timeline
- * @event lr-tool-approval-decide - Deprecated cancelable compatibility alias of `lr-tool-approval-decide-request`.
  * @event lr-tool-approval-decide-request - A pending entry's approval dialog was resolved.
  *   `detail: { invocationId, approved, args? }` — `args` (the dialog's current, possibly
  *   host-edited arguments) is present only when `approved` is `true`. Cancelable; preventing it
@@ -373,11 +369,6 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
 
   private emitToolApprovalDecideRequest(detail: LyraToolTimelineEventMap['lr-tool-approval-decide-request']['detail']): CustomEvent {
     const request = this.emit('lr-tool-approval-decide-request', Object.freeze(detail), { cancelable: true });
-    const alias = this.emit('lr-tool-approval-decide', Object.freeze(detail), { cancelable: true });
-    if (alias.defaultPrevented) {
-      warnDeprecatedUsage(this, 'event', 'lr-tool-approval-decide', 'lr-tool-approval-decide-request');
-      request.preventDefault();
-    }
     return request;
   }
   protected static override collectionSupport = collectionSupport;
@@ -779,9 +770,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
         .open=${reviewing !== undefined}
         @focus=${this.stopOwnedEvent}
         @blur=${this.stopOwnedEvent}
-        @lr-approve=${(event: Event) => event.stopPropagation()}
               @lr-approve-request=${this.onDialogApprove}
-        @lr-deny=${(event: Event) => event.stopPropagation()}
               @lr-deny-request=${this.onDialogDeny}
         @lr-close=${this.onDialogClose}
       ></lr-tool-approval-dialog>

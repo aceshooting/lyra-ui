@@ -7,8 +7,9 @@ import type {
   LyraHighlight,
   LyraHighlightTone,
   TextSelectDetail,
-} from '../src/components/viewers/document-viewer/document-viewer.js';
-import type { LyraDocumentPreview } from '../src/lyra.js';
+  } from '../src/components/viewers/document-viewer/document-viewer.js';
+import type { LyraDocumentPreview,
+} from '../src/lyra.js';
 
 const anchor: LyraAnchor = { kind: 'page', page: 1 };
 const kind: LyraAnchorKind = anchor.kind;

@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "requiredReleases": [
+    "lyra-ui@22.0.0",
+    "lyra-ui@22.1.0",
+    "lyra-ui@23.0.0"
+  ],
+  "attachments": [
+    {
+      "sourceRelease": "lyra-ui@22.0.0",
+      "descriptorSha256": "c7aaba4636e661583e1c6cf019878f33ac623c5dd6c69f29a4b58f991465a4ea"
+    },
+    {
+      "sourceRelease": "lyra-ui@22.1.0",
+      "descriptorSha256": "8caeff6f0cf9e301c3c289e85f2cdc23d0a42399d4f000709fbbb21febebeb6a"
+    },
+    {
+      "sourceRelease": "lyra-ui@23.0.0",
+      "descriptorSha256": "04f599147bb09a70c486caea53e9b4c6cfbd487787bc9a2f8c35225c5211549f"
+    }
+  ]
+}

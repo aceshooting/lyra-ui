@@ -476,8 +476,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   }
   private triggerElement?: HTMLElement;
   private slottedTrigger?: HTMLElement;
-  // The named `trigger` slot -- read once from `firstUpdated()` in addition to its own
-  // `@slotchange` listener; see `collectInitialSlotAssignment`'s doc.
+  // Initial trigger binding also runs from `firstUpdated()`; see the shared timing contract.
   @query('slot[name="trigger"]') private triggerSlotElement?: HTMLSlotElement;
   /**
    * True while the surface was opened by a transient `hover`/`focus` interaction rather than a
@@ -779,21 +778,10 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
 
   protected override firstUpdated(changed: PropertyValues): void {
     super.firstUpdated(changed);
-    // happy-dom (through at least 20.14.5) never fires the named `trigger` slot's INITIAL
-    // `slotchange` -- see `collectInitialSlotAssignment`'s own doc -- so a `<lr-popover>` whose
-    // slotted trigger already exists at connect (the ordinary "render once data is ready" Lit
-    // pattern) would otherwise never bind click/keydown/hover interactions to it: `slottedTrigger`
-    // stays `undefined` forever, and `syncInteractionTrigger()` falls through to `resolveForTrigger()`,
-    // which only resolves a `for`-id target. Collect once here too, from the slot's current
-    // assignment; `collectTriggerFromSlot()` is idempotent, so a real browser firing the initial
-    // event as well is a no-op past its own `next === this.slottedTrigger` guard.
-    // Deferred a microtask for the same reason `<lr-select>`'s equivalent fix is: calling this
-    // synchronously here can, for an already-`open` popover, reach `positionPopup()` and write the
-    // reactive `anchorPositioned` state after this same update was already marked complete,
-    // tripping Lit's "scheduled an update after an update completed" dev warning. A real
-    // `slotchange` event runs this same collection from a task/microtask entirely outside the
-    // update cycle, which never trips it; queuing a microtask here reproduces that same
-    // "outside the cycle" timing instead of writing state from inside it.
+    // Bind a trigger already present at connect so it receives interactions; duplicate delivery
+    // is ignored by the collector.
+    // Defer because an already-open popover can reach positionPopup() and update reactive
+    // anchorPositioned here, triggering Lit's post-update warning.
     const slot = this.triggerSlotElement;
     queueMicrotask(() => {
       collectInitialSlotAssignment(slot, (s) => this.collectTriggerFromSlot(s));
@@ -1203,9 +1191,8 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
 
   /**
    * Reads the named `trigger` slot's currently assigned element and applies it -- wired as the
-   * `slotchange` handler (via `onTriggerSlotChange`) for every later mutation, and called once
-   * more from `firstUpdated()` (see `collectInitialSlotAssignment`) to cover an environment, or a
-   * real-browser timing race, where the slot's initial assignment never fires `slotchange`.
+   * `slotchange` handler for later mutations and called from `firstUpdated()` for initial
+   * assignment.
    * Idempotent: a second call that reads back the same assigned element is a no-op past the
    * `next === this.slottedTrigger` guard.
    */

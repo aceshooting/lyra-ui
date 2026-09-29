@@ -297,7 +297,7 @@ describe('canvas renderer — interaction and a11y', () => {
     return el;
   }
 
-  it('clicking a node (via pointer hit-test) emits lr-node-click, same detail shape as svg mode', async () => {
+  it('clicking a node (via pointer hit-test) emits lr-node-activate, same detail shape as svg mode', async () => {
     const el = await mountCanvas();
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const target = el.simNodes[0]!;
@@ -306,7 +306,7 @@ describe('canvas renderer — interaction and a11y', () => {
     const clientY = rect.top + target.y!;
     let detail: { nodeId: string; x: number; y: number } | undefined;
     el.addEventListener(
-      'lr-node-click',
+      'lr-node-activate',
       (e) => (detail = (e as CustomEvent).detail)
     );
     const capture = stubPointerCapture(canvas);
@@ -371,7 +371,7 @@ describe('canvas renderer — interaction and a11y', () => {
     });
     let detail: { nodeId: string; x: number; y: number } | undefined;
     el.addEventListener(
-      'lr-node-click',
+      'lr-node-activate',
       (event) => (detail = (event as CustomEvent).detail)
     );
     try {
@@ -687,7 +687,7 @@ describe('canvas renderer — interaction and a11y', () => {
     ] as HTMLButtonElement[];
     let detail: { nodeId: string; x: number; y: number } | undefined;
     el.addEventListener(
-      'lr-node-click',
+      'lr-node-activate',
       (e) => (detail = (e as CustomEvent).detail)
     );
     items[0]!.dispatchEvent(

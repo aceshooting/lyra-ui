@@ -7,7 +7,7 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
-- **Deprecated event** `lr-link-click` since `22.0.0`; use event `lr-link-activate`; removal not before `24.0.0` — Activation includes pointer and keyboard gestures. The old event remains available after the canonical event with equal detail throughout the compatibility window.
+- **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 24 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -37,7 +37,7 @@ route or startup boundary render from an already-settled cache. The helper is ex
 the full and core granular entries:
 
 ```ts
-import { preloadMarkdown } from "@aceshooting/lyra-ui/components/conversation/markdown/markdown.js";
+import { preloadMarkdown } from "@aceshooting/lyra-ui/components/lr-markdown.js";
 
 await preloadMarkdown();
 ```
@@ -191,8 +191,6 @@ placed first and preserved inside both ceilings.
   link's `href` starts with `internal-link-prefix`; ordinary external links navigate normally and
   never fire this. If an intercepted link overlaps a painted highlight,
   `lr-highlight-activate` fires first for pointer and Enter activation.
-- `lr-link-click` — deprecated compatibility alias of `lr-link-activate`, emitted afterward with
-  the same detail.
 - `lr-render-error` (`detail: { error: unknown }`) — rendering fell back to plain text (see the
   fallback matrix below), or `math` is set but the `katex` peer isn't installed
 - `lr-highlight-activate` (`detail: { highlightId: string }`) — a painted `text-quote` highlight was clicked
@@ -313,7 +311,7 @@ settled code blocks:
 ````html
 <lr-markdown id="reply" streaming streaming-render="progressive" code-block-header></lr-markdown>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/conversation/markdown/markdown.js";
+  import "@aceshooting/lyra-ui/components/lr-markdown.js";
 
   const reply = document.querySelector("#reply");
   reply.content = ['A settled paragraph.', '', '```js', 'const answer = 42;', '```'].join('\n');

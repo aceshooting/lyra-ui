@@ -1,5 +1,4 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
-import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './dialog.js';
@@ -2285,11 +2284,9 @@ describe('lr-dialog renamed members', () => {
     let aliased!: LyraDialog;
     const warnings = await captureDeprecationWarnings(ACCESSIBLE_LABEL, async () => {
       aliased = await mount('<lr-dialog open accessible-label="Announced">Body</lr-dialog>');
-      const second = await mount('<lr-dialog accessible-label="Other">Body</lr-dialog>');
-      expect(second.accessibleLabel).to.equal('');
+      await mount('<lr-dialog accessible-label="Other">Body</lr-dialog>');
     });
     expect(panelName(aliased)).to.equal(null);
-    expect(aliased.accessibleLabel).to.equal('');
     expect(warnings).to.have.length(0);
     aliased.close('api');
   });
@@ -2364,28 +2361,4 @@ it('does not settle an interrupted close after its accepted notification reopens
   await el.updateComplete;
   expect(el.open).to.equal(true);
   expect(hidden).to.equal(0);
-});
-
-expectDeprecatedUsage('lr-dialog', 'property', 'accessibleLabel');
-
-it('warns once for the accessibleLabel property while native host naming stays current', async () => {
-  const usage = [{ tag: 'lr-dialog', kind: 'property', name: 'accessibleLabel' }] as const;
-  const warnings = await captureDeprecationWarnings(usage, async () => {
-    const el = await fixture<LyraDialog>(html`<lr-dialog open label="Heading"></lr-dialog>`);
-    el.accessibleLabel = 'Legacy fallback';
-    el.accessibleLabel = 'Updated fallback';
-    await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part~="panel"]')!.getAttribute('aria-label')).to.equal('Updated fallback');
-    el.ariaLabel = '';
-    await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part~="panel"]')!.getAttribute('aria-label')).to.equal('');
-  });
-  expect(warnings).to.have.length(1);
-  const current = await captureDeprecationWarnings(usage, async () => {
-    const el = await fixture<LyraDialog>(html`<lr-dialog open aria-label="Current name"></lr-dialog>`);
-    el.ariaLabel = 'Updated name';
-    await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part~="panel"]')!.getAttribute('aria-label')).to.equal('Updated name');
-  });
-  expect(current).to.have.length(0);
 });

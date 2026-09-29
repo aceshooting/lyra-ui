@@ -1,4 +1,4 @@
-import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
+import { maxCssTime } from '../../../internal/css-motion-time.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -36,20 +36,6 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_exportButtonLabel, LYRA_DEFAULT_exportFormatMenuLabel, LYRA_DEFAULT_statusError } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
-function parseCssTime(value: string): number {
-  const trimmed = value.trim();
-  if (trimmed.endsWith('ms')) return Number.parseFloat(trimmed);
-  if (trimmed.endsWith('s')) return Number.parseFloat(trimmed) * 1000;
-  return 0;
-}
-
-/** The longest of a possibly comma-separated `transition-duration`/`-delay` list, mirroring
- *  `<lr-toast>`'s own `maxCssTime`. */
-function maxCssTransitionTime(value: string): number {
-  return Math.max(0, ...value.split(',').map(parseCssTime).filter(Number.isFinite));
-}
-
 export type LyraExportFormat = 'csv' | 'json';
 
 /** The export trigger's compact treatments. Unset preserves its established chrome. */
@@ -61,7 +47,7 @@ const EXPORT_BUTTON_APPEARANCE = optionalLiteralSetConverter<LyraExportButtonApp
 ]);
 
 export interface LyraExportFormatDescriptor {
-  /** Stable format id carried through `lr-export`. */
+  /** Stable format id carried through `lr-export-request`. */
   readonly formatId: string;
   /** Consumer-supplied, already-localized menu label. */
   readonly label: string;
@@ -139,8 +125,6 @@ function projectExportFormat(value: unknown): LyraExportFormatOption | undefined
 
 export interface LyraExportButtonEventMap {
   'lr-export-request': CustomEvent<{ readonly format: string }>;
-  /** @deprecated Use `lr-export-request`; removal not before 24.0.0. */
-  'lr-export': CustomEvent<{ readonly format: string }>;
   'lr-export-complete': CustomEvent<{ readonly format: LyraExportFormat }>;
   'lr-export-error': CustomEvent<{ readonly format: LyraExportFormat; readonly error: unknown }>;
   'lr-show': CustomEvent<null>;
@@ -154,8 +138,8 @@ export interface LyraExportButtonEventMap {
  * ids are omitted before menu state, focus reconciliation, or export events; the first wins.
  *
  * Data reaches a built-in CSV/JSON download two ways, both resolved at download time rather than
- * at assignment time: the eager `rows` property (read after the cancelable `lr-export-request` and
- * its legacy alias, so a listener may assign it from inside its own handler) and the lazy `getRows`
+ * at assignment time: the eager `rows` property (read after the cancelable `lr-export-request`,
+ * so a listener may assign it from inside its own handler) and the lazy `getRows`
  * callback, which
  * replaces `rows` for that download and lets a consumer export a collection it already holds --
  * an `<lr-table>`'s `viewRows`, for instance -- without materializing a second copy here.
@@ -166,8 +150,6 @@ export interface LyraExportButtonEventMap {
  *   lets the built-in download proceed may still supply its data from inside the handler: the rows
  *   are read *after* this dispatch, so assigning `.rows` here is honoured, and a `getRows`
  *   callback is consulted at the same point.
- * @event lr-export - Deprecated cancelable veto alias fired after `lr-export-request` with equal detail.
- *   Either event may veto. Use `lr-export-request`; removal not before 24.0.0.
  * @event lr-export-complete - Fired after a non-cancelled download completes.
  * @event lr-export-error - Fired when a built-in CSV/JSON export cannot be serialized or
  *   downloaded. `detail: { format, error }`. The same failure is also announced through the
@@ -245,7 +227,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   /** Shallow frozen row snapshots. Nested cell values remain caller-owned opaque data.
    *
    *  Read late, not early: the built-in download serializes whatever this holds *after* the
-   *  cancelable `lr-export` event has been dispatched, so a listener may assign `.rows`
+   *  cancelable `lr-export-request` event has been dispatched, so a listener may assign `.rows`
    *  synchronously inside its own handler and that assignment is the data that gets downloaded.
    *  A consumer that would rather not keep an eagerly-materialized copy in the element at all
    *  sets {@link getRows} instead, which is consulted at the same point. */
@@ -278,7 +260,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   }
 
   /** Lazy row source, consulted only when a built-in CSV/JSON download is actually about to be
-   *  built -- after the cancelable `lr-export` event was not prevented, and never for a custom
+   *  built -- after the cancelable `lr-export-request` event was not prevented, and never for a custom
    *  format this component does not serialize itself. When set, it fully replaces {@link rows}
    *  for that download (the eager property is not merged into or read alongside it), so a
    *  consumer holding a large or derived collection elsewhere -- an `<lr-table>`'s `viewRows`,
@@ -596,8 +578,8 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     if (menu && view && !prefersReducedMotion(this)) {
       const computed = view.getComputedStyle(menu);
       const durationMs =
-        maxCssTransitionTime(computed.transitionDuration) +
-        maxCssTransitionTime(computed.transitionDelay);
+        maxCssTime(computed.transitionDuration) +
+        maxCssTime(computed.transitionDelay);
       if (durationMs > 0) {
         await new Promise<void>((resolve) => {
           let settled = false;
@@ -853,9 +835,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     this.exportFailed = false;
     const format = this.formatId(formatOption);
     const request = this.emit('lr-export-request', Object.freeze({ format }), { cancelable: true });
-    const ev = this.emit('lr-export', Object.freeze({ format }), { cancelable: true });
-    if (ev.defaultPrevented) warnDeprecatedUsage(this, 'event', 'lr-export', 'lr-export-request');
-    if (request.defaultPrevented || ev.defaultPrevented) return;
+    if (request.defaultPrevented) return;
 
     if (format !== 'csv' && format !== 'json') {
       // Custom formats are intentionally handler-only: Lyra owns the menu and
@@ -864,7 +844,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     }
     try {
       // Resolved inside the try, and only here: the rows a built-in download serializes are read
-      // after the veto point, so both a late `.rows` assignment from an `lr-export` listener and a
+      // after the veto point, so both a late `.rows` assignment from an `lr-export-request` listener and a
       // `getRows` callback see the same "collected at download time" contract.
       const rows = this.rowsToExport();
       if (format === 'csv') {
@@ -973,7 +953,6 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     `;
   }
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

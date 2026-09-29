@@ -172,12 +172,10 @@ const layerOrderStatementMatches = (code) =>
   }));
 const layerOrderStatements = (text) =>
   layerOrderStatementMatches(stripCssComments(text)).map(({ statement }) => statement);
-const themesDir = path.join(packageDir, 'src', 'themes');
-const presetAssets = readdirSync(themesDir)
+const lookAssets = readdirSync(path.join(packageDir, 'src', 'looks'))
   .filter((name) => name.endsWith('.css'))
   .sort()
-  .map((name) => path.join('src', 'themes', name));
-assert.ok(presetAssets.length > 0, 'src/themes/ must ship at least one preset for the layer-order check to cover');
+  .map((name) => path.join('src', 'looks', name));
 const layeredAssets = [
   path.join('src', 'theme.css'),
   path.join('src', 'preferences.css'),
@@ -185,7 +183,7 @@ const layeredAssets = [
   path.join('src', 'styles', 'utilities.css'),
   path.join('src', 'styles', 'tokens-root.css'),
   path.join('src', 'styles', 'design-tokens.css'),
-  ...presetAssets,
+  ...lookAssets,
 ];
 const layerOrderMismatches = [];
 for (const relative of layeredAssets) {

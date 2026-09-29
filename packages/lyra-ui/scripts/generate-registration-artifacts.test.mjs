@@ -248,7 +248,6 @@ try {
   for (const entry of [
     './dist/all.js',
     './dist/autoloader-cdn.js',
-    './dist/ssr-loader.js',
     './dist/ssr/all.js',
     './dist/components/charts/optional/optional.js',
     './dist/components/forms/alpha/beta-entry.js',
@@ -258,7 +257,6 @@ try {
     './dist/translations/fr.js',
     './src/all.ts',
     './src/autoloader-cdn.ts',
-    './src/ssr-loader.ts',
     './src/ssr/all.ts',
     './src/components/charts/optional/optional.ts',
     './src/components/forms/alpha/beta-entry.ts',

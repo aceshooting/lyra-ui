@@ -67,7 +67,7 @@ describe('optional chart palettes', () => {
   });
 
   it('keeps fixed-look ordered scales in the island mode under an opposite-mode ancestor', async () => {
-    const response = await fetch(new URL('../themes/shadcn.css', import.meta.url));
+    const response = await fetch(new URL('../looks/shadcn.css', import.meta.url));
     if (!response.ok) throw new Error('Missing fixed chart palette fixture');
     const fixed = new CSSStyleSheet();
     fixed.replaceSync(await response.text());

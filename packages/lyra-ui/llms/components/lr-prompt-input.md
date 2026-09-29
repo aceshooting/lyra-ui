@@ -107,5 +107,5 @@ create phantom spacing.
 **Optional peer deps:** none of its own.
 
 ```ts
-import "@aceshooting/lyra-ui/components/conversation/prompt-input/prompt-input.js";
+import "@aceshooting/lyra-ui/components/lr-prompt-input.js";
 ```

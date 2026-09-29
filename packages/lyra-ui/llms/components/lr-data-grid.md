@@ -7,7 +7,7 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
-- **Deprecated event** `lr-retry` since `22.0.0`; use event `addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 59 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -27,7 +27,7 @@ shadow root, runs that control without also emitting `lr-cell-click`. Passive ce
 to activate the cell.
 
 ```js
-import "@aceshooting/lyra-ui/components/data/data-grid/data-grid.js";
+import "@aceshooting/lyra-ui/components/lr-data-grid.js";
 ```
 
 Give the grid an accessible name with `label` or a host `aria-label`; the host attribute wins.
@@ -216,17 +216,14 @@ contract;
 `lr-copy` (frozen `{ ok: true, text }` after fulfillment); `lr-copy-error`
 (frozen `{ ok: false, text, reason, error }` after failure); `lr-error` (compatibility failure
 notification with no raw platform error text); `lr-data-error` does NOT itself set the built-in
-`error` state (see `error` above); `lr-retry-request` and `lr-retry` (`detail: null`, cancelable) — the built-in
+`error` state (see `error` above); `lr-retry-request` (`detail: null`, cancelable) — the built-in
 `[part='retry-button']` was activated, only rendered while `error` is set; the default action
 clears `error`, `preventDefault()` leaves it set instead. Every library event bubbles and is
-composed; only `lr-cell-contextmenu`, `lr-sort-request`, `lr-retry-request`, and `lr-retry` are cancelable. Structured
+composed; only `lr-cell-contextmenu`, `lr-sort-request`, and `lr-retry-request` are cancelable. Structured
 details and their owned collections are frozen. The toolbar search and active column-filter inputs
 re-dispatch `focus` and `blur` once from the grid host as bubbling, composed native `FocusEvent`s,
 preserving `relatedTarget` so delegated ancestors can observe editor entry and exit without
 crossing the shadow boundary.
-`lr-retry` is the deprecated cancelable alias, dispatched after `lr-retry-request` with the same
-null detail. Either event can veto clearing the error; subscribe to one spelling. Removal of the
-alias is not before 24.0.0.
 
 **Row context menus with `lr-context-menu`.** Wrap the grid in an `lr-context-menu` region and
 leave `lr-cell-contextmenu` **un-prevented**: preventing it suppresses the native menu, and the

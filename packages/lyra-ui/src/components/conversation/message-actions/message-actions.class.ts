@@ -201,8 +201,6 @@ export interface LyraMessageActionsEventMap {
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
   'lr-feedback-change': CustomEvent<{ rating: MessageFeedbackValue }>;
   'lr-feedback-submit-request': CustomEvent<LyraEventDetailSnapshot<MessageFeedbackSubmitDetail>>;
-  /** @deprecated Use `lr-feedback-submit-request`. */
-  'lr-feedback-submit': CustomEvent<LyraEventDetailSnapshot<MessageFeedbackSubmitDetail>>;
 }
 
 // Mirrors the shared icon set's viewBox/stroke conventions (internal/icons.ts's
@@ -288,7 +286,6 @@ function editIcon(): SVGTemplateResult {
  * @event lr-feedback-change - Bubbles unchanged from the embedded, thumbs-only
  *   `lr-message-feedback`. `detail: { rating }`. A colliding event from a slotted custom child is
  *   contained at the slot boundary and remains observable directly on that child.
- * @event lr-feedback-submit - Deprecated cancelable compatibility alias of `lr-feedback-submit-request`.
  * @event lr-feedback-submit-request - The built-in feedback control's terminal cancelable persistence
  *   request, including thumbs-only choices. Its frozen detail includes a nonblank `submissionId`;
  *   when prevented, pass that exact ID to `finalizePendingSubmit()` or
@@ -324,7 +321,6 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
-    'lr-feedback-submit',
     'lr-feedback-submit-request',
   ]);
 

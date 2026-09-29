@@ -1,5 +1,8 @@
-import { LyraToast } from '../src/lyra.js';
-import type { LyraToastEventMap, LyraToastOverflowDetail } from '../src/lyra.js';
+import { LyraToast } from '../src/components/overlays/toast/toast.class.js';
+import type {
+  LyraToastEventMap,
+  LyraToastOverflowDetail,
+} from '../src/lyra.js';
 
 const overflowDetail: LyraToastOverflowDetail = { count: 3 };
 const overflowEvent: LyraToastEventMap['lr-toast-overflow'] = new CustomEvent(

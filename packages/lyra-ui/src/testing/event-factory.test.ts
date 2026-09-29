@@ -1,9 +1,9 @@
 import { expect } from '@open-wc/testing';
 import { createLyraEvent } from './event-factory.js';
 
-it("matches lr-confirm-bar's own documented contract: lr-approve is cancelable, bubbling, and composed", () => {
-  const event = createLyraEvent('lr-confirm-bar', 'lr-approve', undefined);
-  expect(event.type).to.equal('lr-approve');
+it("matches lr-confirm-bar's own documented contract: lr-approve-request is cancelable, bubbling, and composed", () => {
+  const event = createLyraEvent('lr-confirm-bar', 'lr-approve-request', undefined);
+  expect(event.type).to.equal('lr-approve-request');
   expect(event.cancelable).to.be.true;
   expect(event.bubbles).to.be.true;
   expect(event.composed).to.be.true;
@@ -29,11 +29,11 @@ it('looks the cancelable flag up per tag, not per event name -- lr-switch-toggle
 it('produces a real CustomEvent whose flags let a preventDefault-based handler actually run -- the exact bug the hand-rolled alternative silently missed', () => {
   const target = document.createElement('div');
   let sawEvent = false;
-  target.addEventListener('lr-approve', (event) => {
+  target.addEventListener('lr-approve-request', (event) => {
     sawEvent = true;
     event.preventDefault();
   });
-  const event = createLyraEvent('lr-confirm-bar', 'lr-approve', { args: null, waitUntil: () => {} });
+  const event = createLyraEvent('lr-confirm-bar', 'lr-approve-request', { args: null, waitUntil: () => {} });
   target.dispatchEvent(event);
   expect(sawEvent).to.be.true;
   expect(event.defaultPrevented).to.be.true;
@@ -44,8 +44,8 @@ it('rejects a wrong detail shape, an event name the tag does not document, and a
   // are intentionally never invoked, only type-checked. A stale `@ts-expect-error` (one of these
   // calls stops being a type error) fails the type checker on its own, with no separate gate.
   function typeOnlyMisuse() {
-    // @ts-expect-error lr-approve's detail is `{ args, waitUntil }`, not `{ wrong: true }`
-    createLyraEvent('lr-confirm-bar', 'lr-approve', { wrong: true });
+    // @ts-expect-error lr-approve-request's detail is `{ args, waitUntil }`, not `{ wrong: true }`
+    createLyraEvent('lr-confirm-bar', 'lr-approve-request', { wrong: true });
     // @ts-expect-error lr-confirm-bar documents no `lr-nonexistent-event`
     createLyraEvent('lr-confirm-bar', 'lr-nonexistent-event', undefined);
     // @ts-expect-error `lr-not-a-real-tag` is not a registered tag

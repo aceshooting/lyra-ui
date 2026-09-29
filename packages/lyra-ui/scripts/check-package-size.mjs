@@ -10,7 +10,6 @@ const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const budgetsPath = join(packageDir, 'scripts', 'package-budgets.json');
 const FIXTURE_PATH = /(?:^|\/)fixtures(?:\/|$)/u;
 const REQUIRED_TARBALL_FILES = Object.freeze([
-  'dist/ssr-loader.js',
   'custom-elements.json',
   'llms.txt',
   'llms/index.md',

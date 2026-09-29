@@ -58,7 +58,7 @@ and clamped. **Slots:** none.
 **Optional peer deps:** none.
 
 ```ts
-import "@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-panel.js";
+import "@aceshooting/lyra-ui/components/lr-subagent-panel.js";
 ```
 
 **Additional API surface:**

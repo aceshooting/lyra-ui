@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { readFileSync, readdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import test from 'node:test';
 import {
   bundleBudgetSlackFinding,
   budgetKilobytesToBytes,
@@ -11,6 +14,8 @@ import {
   validateBundleBudgetPolicy,
 } from './bundle-budget-policy.mjs';
 import { positiveInitialMarginalGzipBytes } from './bundle-metrics.mjs';
+import { bundleCssMeasurement } from './bundle-css-entry.mjs';
+import { cssBudgetFinding, validateCssBundleConfig } from './bundle-css-policy.mjs';
 
 const scriptsDir = path.dirname(fileURLToPath(import.meta.url));
 const packageDir = path.join(scriptsDir, '..');
@@ -31,6 +36,12 @@ const initialBudgets = JSON.parse(
 const checker = readFileSync(
   path.join(scriptsDir, 'check-bundle-size.mjs'),
   'utf8',
+);
+const cssBudgets = JSON.parse(
+  readFileSync(path.join(scriptsDir, 'bundle-css-budgets.json'), 'utf8'),
+);
+const packageJson = JSON.parse(
+  readFileSync(path.join(packageDir, 'package.json'), 'utf8'),
 );
 const policyFixture = {
   $maximumHeadroomPercent: 4,
@@ -116,6 +127,106 @@ assert.doesNotThrow(
   () => validateBundleBudgetPolicy(budgets),
   'the checked-in budget schema must pin every hard ceiling to an exact reviewed measurement',
 );
+
+test('CSS budget config covers every shipped look and surface stylesheet without changing JS entries', () => {
+  const standalone = cssBudgets.measurements
+    .filter((measurement) => measurement.kind === 'standalone')
+    .map((measurement) => measurement.imports[0])
+    .sort();
+  const expected = Object.entries(packageJson.exports)
+    .filter(([subpath]) =>
+      subpath === './theme.css' ||
+      subpath === './native.css' ||
+      subpath === './density.css' ||
+      subpath === './accents.css' ||
+      subpath.startsWith('./looks/') && subpath.endsWith('.css') ||
+      subpath.startsWith('./surfaces/') && subpath.endsWith('.css'),
+    )
+    .map(([, target]) => target.replace(/^\.\//u, ''))
+    .sort();
+  assert.deepEqual(standalone, expected);
+  assert.doesNotThrow(
+    () => validateCssBundleConfig(cssBudgets, packageJson.exports, { allowUnreviewed: true }),
+  );
+  assert.doesNotThrow(
+    () => validateCssBundleConfig(cssBudgets, packageJson.exports),
+    'the ordinary check accepts only the closed, reviewed CSS measurement set',
+  );
+  const duplicateStandalone = structuredClone(cssBudgets);
+  duplicateStandalone.measurements.push({
+    id: 'theme-copy',
+    kind: 'standalone',
+    imports: ['dist/theme.css'],
+  });
+  assert.throws(
+    () => validateCssBundleConfig(duplicateStandalone, packageJson.exports, { allowUnreviewed: true }),
+    /cover each supported asset exactly once/u,
+  );
+  const unsafeImport = structuredClone(cssBudgets);
+  unsafeImport.measurements[0].imports[0] = 'dist/../src/internal/private.css';
+  assert.throws(
+    () => validateCssBundleConfig(unsafeImport, packageJson.exports, { allowUnreviewed: true }),
+    /unsafe CSS dist path/u,
+  );
+  assert.ok(
+    cssBudgets.measurements.some((measurement) =>
+      measurement.kind === 'composition' &&
+      measurement.imports.includes('dist/styles/native.css') &&
+      measurement.imports.some((entry) => entry.startsWith('dist/looks/')),
+    ),
+    'at least one composition must measure native styling with an explicit look',
+  );
+  assert.match(checker, /const entries = Object\.keys\(budgets\)/u);
+  assert.match(checker, /const cssBudgets = JSON\.parse\(readFileSync\(cssBudgetsPath/u);
+});
+
+test('CSS entry bundling uses one minified esbuild output and returns raw plus gzip bytes', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'lyra-css-entry-'));
+  try {
+    await mkdir(path.join(root, 'dist', 'looks'), { recursive: true });
+    await mkdir(path.join(root, 'dist', 'styles'), { recursive: true });
+    await writeFile(path.join(root, 'dist', 'theme.css'), '@layer lr-theme { :root { --one: red; } }');
+    await writeFile(path.join(root, 'dist', 'looks', 'shadcn.css'), '@layer lr-theme-preset.look { :root { --two: blue; } }');
+    await writeFile(path.join(root, 'dist', 'styles', 'native.css'), '.lr-native button { appearance: none; }');
+    const measurement = {
+      id: 'fixture-composition',
+      kind: 'composition',
+      imports: ['dist/theme.css', 'dist/looks/shadcn.css', 'dist/styles/native.css'],
+    };
+    const result = await bundleCssMeasurement({
+      build: (options) => {
+        assert.match(options.outfile, /lyra-css-fixture-composition\.css$/u,
+          'a CSS outfile must make the write:false esbuild output path deterministic');
+        return esbuild.build(options);
+      },
+    }, root, measurement);
+    assert.equal(result.id, measurement.id);
+    assert.equal(result.kind, measurement.kind);
+    assert.deepEqual(result.imports, measurement.imports);
+    assert.ok(result.minBytes > 0);
+    assert.ok(result.gzipBytes > 0);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+
+  await assert.rejects(
+    () => bundleCssMeasurement({
+      build: async () => ({
+        outputFiles: [
+          { path: '/fixture/output.css', contents: new Uint8Array([1]) },
+          { path: '/fixture/extra.css', contents: new Uint8Array([2]) },
+        ],
+      }),
+    }, path.resolve('.'), { id: 'bad-output', kind: 'standalone', imports: ['dist/theme.css'] }),
+    /must produce exactly one CSS output/u,
+  );
+});
+
+test('CSS hard ceiling findings use the shared whole-byte budget validator', () => {
+  assert.equal(cssBudgetFinding('theme', 1, { theme: 1 / 1024 }), null);
+  assert.match(cssBudgetFinding('theme', 2, { theme: 1 / 1024 }), /exceeds budget/u);
+  assert.throws(() => cssBudgetFinding('theme', 2, { theme: 0 }), /positive finite KiB/u);
+});
 
 function sourceFiles(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -321,11 +432,8 @@ assert.deepEqual(reviewedCeilingKeys, [
   'dist/hydration.js',
   'dist/localization.js',
   'dist/lyra.js',
-  'dist/ssr-loader.js',
   'dist/ssr.js',
   'dist/ssr/all.js',
-  'dist/theme/presets.js',
-  'dist/theme/presets/shadcn.js',
   'dist/theme/theme.js',
 ]);
 assert.ok(
@@ -337,11 +445,6 @@ assert.ok(
   'the CDN startup wrapper includes the complete manual-autoloader graph',
 );
 assert.ok(
-  budgets['dist/ssr-loader.js'] >=
-    budgets['dist/all.js'] + budgets['dist/hydration.js'] - 2,
-  'the compatibility SSR loader budget accounts for all registrations plus hydration support, allowing two KiB of independent ceiling rounding',
-);
-assert.ok(
   budgets['dist/ssr/all.js'] >= budgets['dist/all.js'],
   'the complete SSR inventory is a superset of the browser compatibility inventory',
 );
@@ -349,7 +452,6 @@ for (const entry of [
   'dist/hydration.js',
   'dist/ssr.js',
   'dist/ssr/all.js',
-  'dist/ssr-loader.js',
   'dist/autoloader.js',
   'dist/autoloader-cdn.js',
   ...[

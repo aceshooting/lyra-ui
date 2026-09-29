@@ -711,7 +711,7 @@ never disagree with what is rendered inside it.
 
 ```html
 <script type="module">
-  import '@aceshooting/lyra-ui/components/layout/app-rail-group/app-rail-group.js';
+  import '@aceshooting/lyra-ui/components/lr-app-rail-group.js';
 </script>
 
 <lr-app-rail>

@@ -1,13 +1,4 @@
-function parseCssTime(value: string): number {
-  const trimmed = value.trim();
-  const parsed = trimmed.endsWith('ms')
-    ? Number.parseFloat(trimmed)
-    : trimmed.endsWith('s')
-      ? Number.parseFloat(trimmed) * 1000
-      : 0;
-  if (Number.isFinite(parsed)) return parsed;
-  return 0;
-}
+import { parseCssTime } from '../../../internal/css-motion-time.js';
 
 function cssList(value: string): string[] {
   const values = value.split(',').map((item) => item.trim());

@@ -7,7 +7,7 @@
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [overlays](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/overlays.md)
-- **Deprecated property** `accessibleLabel` since `22.0.0`; use attribute `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.`; removal not before `24.0.0` — The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 5 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -22,10 +22,8 @@ A circular progress indicator with the same value contract as `lr-progress-bar`.
 (reflected), `variant: LyraProgressVariant = 'brand'` (reflected, added in 9.0.0 — matches sibling
 `lr-progress-bar`'s semantic-palette vocabulary: `neutral`/`brand`/`success`/`warning`/`danger`),
 `withValue: boolean = false` (attribute `with-value`),
-`label: string = ''` (the mapped accessible-name property), and
-`accessibleLabel: string = ''` (property only; in markup, name the ring with the host
-`aria-label`). Also
-`size: LyraSize = 'm'` (reflected) — `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' |
+`label: string = ''` (the mapped accessible-name property), and `size: LyraSize = 'm'` (reflected) —
+`'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' |
 'large'`. Outer diameter tier, on the shared six-step ladder: `1.25rem` (`2xs`), `1.75rem` (`xs`),
 `2.25rem` (`s`/`small`), `2.5rem` (`m`/`medium`, unchanged from before this property existed),
 `3rem` (`l`/`large`), `3.5rem` (`xl`) — each value feeds `--lr-progress-ring-size`'s private
@@ -33,8 +31,8 @@ default. An explicit `--lr-progress-ring-size` (or the upstream `--size` alias) 
 every tier. Matching sibling `lr-progress-bar`'s own `size`, this ladder scales exactly one
 dimension — `--lr-progress-ring-track-width`/`--lr-progress-ring-indicator-width` and the center
 label's font size are untouched by it. Host
-`aria-label` takes precedence; otherwise the name falls back to `label`, `accessibleLabel`, the
-visible default- or `label`-slot text when supplied, then the localized "Progress".
+`aria-label` takes precedence; otherwise the name falls back to `label`, visible default- or
+`label`-slot text when supplied, then the localized "Progress".
 Non-finite/out-of-range `value`/`max` are normalized (`max <= 0` falls
 back to `100`, `value` clamps to `[0, max]`) rather than producing NaN geometry.
 **Slots:** default — replaces the built-in center label, which otherwise renders the rounded

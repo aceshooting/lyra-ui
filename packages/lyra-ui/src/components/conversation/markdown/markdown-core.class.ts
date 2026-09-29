@@ -52,8 +52,6 @@ const katexState = createMarkdownKatexState();
 export interface LyraMarkdownCoreEventMap extends LyraAnchorTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-link-activate': CustomEvent<{ href: string }>;
-  /** @deprecated Use lr-link-activate. */
-  'lr-link-click': CustomEvent<{ href: string }>;
   'lr-content-settled': CustomEvent<null>;
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
@@ -159,7 +157,6 @@ export interface LyraMarkdownCoreEventMap extends LyraAnchorTargetEventMap {
  * `lr-render-error`.
  *
  * @customElement lr-markdown-core
- * @event lr-link-click - Deprecated compatibility alias of `lr-link-activate`, emitted afterward with the same detail.
  * @event lr-link-activate - Fired (and the click prevented) when a rendered
  *   link's `href` starts with `internal-link-prefix`. `detail: { href: string }`.
  *   Ordinary external links navigate normally

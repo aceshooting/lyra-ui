@@ -113,8 +113,9 @@ Two things to know before you ship it:
   `<lr-geojson-viewer>`. Their peers still load lazily, but those tags are intentionally outside the
   broad root registration surface and always need their own subpath import.
 
-The package root re-exports a broad compatibility surface of commonly used classes, helpers and
-types without registering components. A component's own entry point remains its complete contract.
+The package root exports library helpers and types without registering components; component
+classes come from their own registration-free `.class.js` subpaths. Import a tag registration entry
+when you want to define the custom element.
 
 ### Family entry points
 
@@ -205,20 +206,19 @@ Beyond `components/*`, the package publishes a small set of focused entries:
 | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `@aceshooting/lyra-ui/theme.css`                                 | Ready-made light + dark theme values. See [Theming](?path=/docs/guides-theming--docs).                                   |
 | `@aceshooting/lyra-ui/looks/<name>.css`                          | Optional look stylesheet, used with `theme.css` and the current style API. Import only the look you select.               |
-| `@aceshooting/lyra-ui/themes/shadcn.css`                         | Deprecated compatibility stylesheet; removal not before 24.0.0. Use `looks/shadcn.css` for new setup. See [Theming](?path=/docs/guides-theming--docs). |
+| `@aceshooting/lyra-ui/surfaces/<name>.css`                       | Optional surface treatment, used with `theme.css` and the current style API.                                                |
+| `@aceshooting/lyra-ui/density.css`                              | Optional compact and touch density definitions.                                                                             |
+| `@aceshooting/lyra-ui/accents.css`                              | Optional named accent definitions.                                                                                          |
 | `@aceshooting/lyra-ui/design-tokens.json`                        | Canonical DTCG token interchange for design and build tooling.                                                           |
 | `@aceshooting/lyra-ui/design-tokens.css`                         | Generated light/dark token fixture selectors for previews and design-tool validation; not a replacement for `theme.css`. |
 | `@aceshooting/lyra-ui/native.css`                                | Optional tokenized styles for native descendants of an explicit `.lr-native` scope.                                      |
 | `@aceshooting/lyra-ui/utilities.css`                             | Optional low-specificity `lr-*` layout, sizing, prose, typography, text, visibility, and Page helper classes.            |
 | `@aceshooting/lyra-ui/theme.js`                                  | Zero-dependency style runtime; `setLyraStyle()` persists the look, surface, density, mode, accent and overrides.          |
-| `@aceshooting/lyra-ui/theme/presets.js`                          | Deprecated compatibility facade; removal not before 24.0.0. Use `setLyraStyle()` and runtime looks for new setup.       |
-| `@aceshooting/lyra-ui/theme/presets/shadcn.js`                   | Deprecated compatibility preset; removal not before 24.0.0. Use `looks/shadcn.css` or `defineLyraLook()`.              |
 | `@aceshooting/lyra-ui/localization.js`                           | Side-effect-free locale runtime. See [Localization and RTL](?path=/docs/guides-localization-and-rtl--docs).              |
 | `@aceshooting/lyra-ui/translations/pseudo/en-XA.js` / `ar-XB.js` | Side-effect-only pseudo-locales for expansion and bidi testing.                                                          |
 | `@aceshooting/lyra-ui/autoloader.js`                             | Side-effect-free on-demand `discover()` / `start()` / `stop()` for rendered inventory tags.                              |
 | `@aceshooting/lyra-ui/autoloader-cdn.js`                         | Side-effect entry that auto-starts the guarded autoloader for ESM-CDN use.                                               |
 | `@aceshooting/lyra-ui/hydration.js`                              | Hydration-only browser hook without the server renderer.                                                                 |
-| `@aceshooting/lyra-ui/ssr-loader.js`                             | Deprecated compatibility loader; removal not before 24.0.0. New integrations can use `ssr.js` and `hydration.js`.        |
 | `@aceshooting/lyra-ui/ssr.js`                                    | Registration-free server helpers and SSR capability metadata.                                                            |
 | `@aceshooting/lyra-ui/ssr/all.js`                                | Server entry that explicitly registers the complete SSR catalog.                                                         |
 | `@aceshooting/lyra-ui/custom-elements-jsx`                       | Type-only React 19 / JSX template declarations.                                                                          |
@@ -245,6 +245,7 @@ when the application should persist and coordinate style choices:
 @import "@aceshooting/lyra-ui/theme.css";
 @import "@aceshooting/lyra-ui/looks/shadcn.css";
 @import "@aceshooting/lyra-ui/surfaces/glass.css";
+@import "@aceshooting/lyra-ui/accents.css";
 :root {
   --lr-theme-color-brand-fill-loud: #7c3aed;
 }
@@ -264,8 +265,8 @@ whatever the source order — so the `:root` override above wins even if your st
 before `theme.css`, and it needs no `!important`. `lr-utilities` and `lr-overrides` are named so you
 can opt your own layers into a defined position relative to Lyra's rather than inventing one, and
 `lr-theme-preset` holds an optional look stylesheet such as `looks/shadcn.css` (see
-[Theming](?path=/docs/guides-theming--docs)). The deprecated `themes/shadcn.css` compatibility path
-cannot be removed before 24.0.0, but is not the recommended starting point for new integrations.
+[Theming](?path=/docs/guides-theming--docs)). The `looks/shadcn.css` stylesheet is optional; import
+it only when the application selects that look.
 
 For CSS-authored scopes, set `data-lr-mode="light"` or `data-lr-mode="dark"` on any ancestor.
 `setLyraStyle({ mode })` provides the persisted runtime path. The `lr-light` / `lr-dark` classes and
@@ -401,9 +402,9 @@ survives in framework templates and in JavaScript, never in hand-written HTML.
 
 ## SSR and declarative shadow DOM
 
-Root and granular component imports are server-safe under Node 20+. Import the public loader before
-any other module that can import Lit. Its machine-readable matrix classifies every tag into one of
-two initial-render tiers:
+The package root and component registration entries are server-safe under Node 22+. On the server,
+register the page's tags and configure Lit's renderer with Lyra's SSR helpers. The machine-readable
+matrix classifies every tag into one of two initial-render tiers:
 
 - `render-and-hydrate` emits Declarative Shadow DOM and reuses the server nodes in the browser.
 - `client-render` preserves the host, serializable attributes, and light DOM on the server, then
@@ -411,10 +412,11 @@ two initial-render tiers:
   browser APIs during their first render.
 
 ```ts
+import "@aceshooting/lyra-ui/components/lr-page.js";
 import {
   lyraSsrElementRenderers,
   LYRA_SSR_SUPPORT_MATRIX,
-} from "@aceshooting/lyra-ui/ssr-loader.js";
+} from "@aceshooting/lyra-ui/ssr.js";
 import { render, LitElementRenderer } from "@lit-labs/ssr";
 import { html } from "lit";
 
@@ -423,10 +425,23 @@ const result = render(html`<lr-page><main>Dashboard</main></lr-page>`, {
 });
 ```
 
-The fallback renderer must precede `LitElementRenderer`. Property bindings cannot be serialized in
-the fallback tier, remote content remains client-only, and layout/observer/canvas/media work begins
-after hydration. `getLyraSsrMode()` and `diagnoseLyraHydration()` expose the declared tier and live
-readiness diagnostics; optional-peer components still need their granular registration import.
+The fallback renderer must precede `LitElementRenderer`. In the browser, load the hydration hook
+before registrations or other imports that reach Lit, then register the tags used by the page:
+
+```ts
+import "@aceshooting/lyra-ui/hydration.js";
+import "@aceshooting/lyra-ui/components/lr-page.js";
+import { diagnoseLyraHydration, getLyraSsrMode } from "@aceshooting/lyra-ui/ssr.js";
+
+const diagnostics = await diagnoseLyraHydration(document);
+```
+
+For an application that deliberately registers every server-supported tag,
+`@aceshooting/lyra-ui/ssr/all.js` provides the full server registration set. Property bindings
+cannot be serialized in the fallback tier, remote content remains client-only, and
+layout/observer/canvas/media work begins after hydration. `getLyraSsrMode()` and
+`diagnoseLyraHydration()` expose the declared tier and live readiness diagnostics; optional-peer
+components still need their granular registration import.
 
 ## Component status and deprecation
 

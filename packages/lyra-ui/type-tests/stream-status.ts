@@ -1,6 +1,6 @@
+import type { LyraStreamStatus } from '../src/components/conversation/stream-status/stream-status.class.js';
 import type {
   LyraStreamPhase,
-  LyraStreamStatus,
   StreamConnectionState,
   StreamStatusPhase,
 } from '../src/lyra.js';

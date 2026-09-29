@@ -65,32 +65,6 @@
       },
       "removalNotBefore": "10.0.0",
       "rationale": "The accordion-item part names the outer wrapper explicitly; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: Web Awesome still publishes its own deprecated `base` part on `wa-accordion-item`, and a mirrored tag owes its whole upstream surface, so this alias is removed only when upstream's is."
-    },
-    {
-      "tag": "lr-carousel",
-      "kind": "property",
-      "name": "accessibleLabel",
-      "since": "22.0.0",
-      "replacement": {
-        "kind": "attribute",
-        "name": "aria-label",
-        "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-      },
-      "removalNotBefore": "24.0.0",
-      "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
-    },
-    {
-      "tag": "lr-reorder-item",
-      "kind": "property",
-      "name": "accessibleLabel",
-      "since": "22.0.0",
-      "replacement": {
-        "kind": "attribute",
-        "name": "aria-label",
-        "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-      },
-      "removalNotBefore": "24.0.0",
-      "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
     }
   ]
 }

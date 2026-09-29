@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "viewport": { "width": 1000, "height": 800 },
+  "warmupSamples": 3,
+  "measuredSamples": 20,
+  "frameSampling": { "idleIntervals": 30 },
+  "key": "a",
+  "grid": {
+    "rowCount": 1000,
+    "targetIndex": 750,
+    "viewportHeight": 320,
+    "columns": [
+      { "id": "id", "field": "id", "label": "ID" },
+      { "id": "value", "field": "value", "label": "Value" }
+    ]
+  },
+  "tree": {
+    "nodeCount": 1000,
+    "targetIndex": 750,
+    "viewportHeight": 320
+  },
+  "scenarios": {
+    "registration": ["all requested tags are defined", "native input is rendered and visible"],
+    "typing": ["lr-input detail matches the native and host values", "updated value is rendered"],
+    "select": ["lr-change reports the selected option", "selected option is visible on the trigger"],
+    "dialog": ["dialog open state is true", "dialog panel is visible"],
+    "frame-delay": [
+      "an idle animation-frame interval is measured in the same page before interaction",
+      "raw workload intervals, estimated missed frames, and long tasks are recorded"
+    ],
+    "grid-scroll": ["requested row identity is visible", "virtual row window and DOM count are recorded"],
+    "grid-update": ["reassigned row revision is visible", "virtual row window and DOM count are recorded"],
+    "tree-scroll": ["requested node identity is visible", "all data nodes remain accounted for"],
+    "tree-update": ["reassigned node label is visible", "all data nodes remain accounted for"],
+    "style-switch": [
+      "all six public looks are selected through setLyraStyle",
+      "mode, accent, and density snapshots match every requested switch",
+      "button paint and control geometry settle to the expected computed values",
+      "CDP recalculated-style and layout counters and durations are reported per switch or explicitly missing"
+    ],
+    "nested-glass-switch": [
+      "outer and inner scopes select distinct look/mode/accent/density combinations with glass",
+      "both scoped button paints and geometry settle against computed token sentinels"
+    ],
+    "component-retention": [
+      "input, select, dialog, data-grid, and tree mount, update, activate, and disconnect",
+      "no detached instances or host DOM remain after forced collection",
+      "window and document listener counts return to the warmed-service baseline"
+    ]
+  },
+  "styleSwitch": {
+    "looks": ["lyra", "material", "shadcn", "data", "terminal", "high-contrast"],
+    "modes": ["light", "dark"],
+    "accents": ["sapphire", "emerald"],
+    "densities": ["comfortable", "compact", "touch"],
+    "sampleCount": 20,
+    "nestedGlassSampleCount": 10,
+    "settledPaintTimeoutMs": 2000,
+    "stableAnimationFrames": 3
+  },
+  "componentRetention": {
+    "tags": ["lr-input", "lr-select", "lr-dialog", "lr-data-grid", "lr-tree"],
+    "warmupCycles": 3,
+    "measuredCycles": 20,
+    "checkpoints": [10, 20],
+    "collection": "Chrome DevTools Protocol HeapProfiler.collectGarbage and Runtime.queryObjects"
+  },
+  "hydrationTiming": {
+    "status": "not-measured",
+    "reason": "The installed-tarball worker and browser correctness seam is prepared; timing remains pending the exclusive baseline/candidate window.",
+    "publicRoutes": ["./ssr.js", "./hydration.js", "./components/lr-input.js"],
+    "tag": "lr-input",
+    "mode": "render-and-hydrate",
+    "metric": "public hydration import to preserved, usable native input after registration",
+    "assertions": [
+      "public SSR, hydration, and tag registration routes remain importable",
+      "declarative shadow root is preserved",
+      "native input, value, and slotted light-DOM content survive hydration"
+    ]
+  }
+}

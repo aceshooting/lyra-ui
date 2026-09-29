@@ -6,7 +6,6 @@ import { composedAccessibilityTextResult } from '../../../internal/accessibility
 import { chevronIcon } from '../../../internal/icons.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
-import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { styles } from './reorder-item.styles.js';
 import { reorderIdentityChange, reorderOwnerUpdate, type ReorderIdentityOwner, type ReorderOwnerState } from './reorder-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -115,19 +114,6 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
    * property or attribute edits refresh the owner's movement boundaries. Removed standalone values
    * render as absent. */
   @property() value = '';
-
-  private legacyAccessibleLabel: string | undefined = undefined;
-
-  /** Compatibility fallback below the host aria-label, including an explicitly empty host value.
-   * @deprecated Use the host aria-label attribute or the native ariaLabel property. */
-  @property({ attribute: false })
-  get accessibleLabel(): string | undefined {
-    return this.legacyAccessibleLabel;
-  }
-  set accessibleLabel(value: string | undefined) {
-    warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
-    this.legacyAccessibleLabel = value;
-  }
 
   /** The host `aria-label`: names the row and, in place of its content, both move actions. */
   @property({ attribute: 'aria-label' }) private hostAccessibleLabel: string | null = null;
@@ -252,7 +238,6 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
 
   private get resolvedItemLabel(): string {
     if (this.hostAccessibleLabel !== null) return this.hostAccessibleLabel;
-    if (this.accessibleLabel !== undefined) return this.accessibleLabel;
     return composedAccessibilityTextResult(this.childNodes, {
       ancestorBoundary: this,
       maxCharacters: 256,

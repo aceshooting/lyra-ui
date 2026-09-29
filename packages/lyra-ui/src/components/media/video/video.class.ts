@@ -5,6 +5,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { formatMediaTime } from '../media-time.js';
 import {
   MAX_NATIVE_PLAYBACK_RATE,
   MIN_NATIVE_PLAYBACK_RATE,
@@ -147,23 +148,6 @@ function textTracks(media: HTMLVideoElement | undefined): TextTrack[] {
     if (track) result.push(track);
   }
   return result;
-}
-
-function formatTime(seconds: number, locale: string): string {
-  const total = Math.floor(finiteRange(seconds, 0, 0));
-  const hours = Math.floor(total / 3600);
-  const minutes = Math.floor((total % 3600) / 60);
-  const remaining = total % 60;
-  const regular = getNumberFormat(locale, { maximumFractionDigits: 0, useGrouping: false });
-  const padded = getNumberFormat(locale, {
-    maximumFractionDigits: 0,
-    minimumIntegerDigits: 2,
-    useGrouping: false,
-  });
-  if (hours > 0) {
-    return `${regular.format(hours)}:${padded.format(minutes)}:${padded.format(remaining)}`;
-  }
-  return `${regular.format(minutes)}:${padded.format(remaining)}`;
 }
 
 function unsupportedPromise(host: Element, message: string): Promise<never> {
@@ -1015,8 +999,8 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
               'avPlayerPosition',
               undefined,
               {
-                current: formatTime(this.currentTime, this.effectiveLocale),
-                duration: formatTime(this.duration, this.effectiveLocale),
+                current: formatMediaTime(this.currentTime, this.effectiveLocale),
+                duration: formatMediaTime(this.duration, this.effectiveLocale),
               },
             )}</span>
             <span part="timeline-track">
@@ -1025,9 +1009,9 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
             <span part="timeline-thumb" style=${styleMap({ 'inset-inline-start': `${progress}%` })}></span>
             ${this.renderThumbnail()}
           </div>
-          <span data-time>${formatTime(this.currentTime, this.effectiveLocale)}</span>
+          <span data-time>${formatMediaTime(this.currentTime, this.effectiveLocale)}</span>
           <span aria-hidden="true">/</span>
-          <span data-time>${formatTime(this.duration, this.effectiveLocale)}</span>
+          <span data-time>${formatMediaTime(this.duration, this.effectiveLocale)}</span>
           <span class="icon-button-stack">
             <button
               type="button"

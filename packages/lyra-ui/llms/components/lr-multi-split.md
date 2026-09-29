@@ -34,7 +34,7 @@ In responsive `collapse="start"`/`"end"` mode, the divider beside a floating pan
 layout track whether its drawer is open or closed. It remains a programmatically focusable
 separator for focus recovery. Rail mode keeps the divider track because both panes remain visible.
 
-Granular import: `@aceshooting/lyra-ui/components/layout/multi-split/multi-split.js`.
+Granular import: `@aceshooting/lyra-ui/components/lr-multi-split.js`.
 The Lyra-original v9 identity migration is mechanical: `lr-split` → `lr-multi-split`,
 `LyraSplit` → `LyraMultiSplit`, generic container authoring types → the corresponding
 `LyraMultiSplit*` names, identity-specific `lr-split-*` events → `lr-multi-split-*`, and

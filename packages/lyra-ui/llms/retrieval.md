@@ -8,8 +8,7 @@ native `title` remains an independent browser tooltip.
 
 Listen for `lr-edge-enter`/`lr-edge-leave` with `edgeId`, `lr-community-activate`,
 `lr-chunk-toggle`, or memory-panel `lr-memory-toggle`; their older retrieval alias events are no
-longer emitted. Graph and explorer `lr-node-click`/`lr-link-click` remain supported through their
-separate compatibility window. Source-card's own `lr-expand` event remains unchanged. Style graph
+longer emitted. Graph and explorer use `lr-node-activate`/`lr-edge-activate`. Source-card's own `lr-expand` event remains unchanged. Style graph
 nodes and edges with `--lr-graph-node-fill` and `--lr-graph-edge-color`; the old token fallbacks are removed.
 
 ## Breaking changes in 10.0.0
@@ -220,10 +219,7 @@ edgeId? }`; the optional `edgeId` is the stable `LyraGraphEdge.id` supplied by t
 Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable`), `lr-community-activate`
 (`detail: { communityId }`, a hull was activated by pointer or keyboard), `lr-selection-change`
 (`detail: { selectedNodeIds, selectedEdgeIds }`, a controlled selection intent), and `lr-viewport-change`
-(`detail: { k, x, y }`, a frame-coalesced camera/layout signal). Deprecated aliases, each fired
-right after its canonical event: `lr-node-click` (use `lr-node-activate`, equal detail),
-`lr-link-click` (use `lr-edge-activate`, renaming detail.linkId to detail.edgeId); these aliases
-remain through v23.
+(`detail: { k, x, y }`, a frame-coalesced camera/layout signal).
 
 **Slots:** none.
 
@@ -284,7 +280,7 @@ localized `part="error"` alert. Install with
 ```html
 <lr-graph style="display:block;height:500px"></lr-graph>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/retrieval/graph/graph.js";
+  import "@aceshooting/lyra-ui/components/lr-graph.js";
 
   const g = document.querySelector("lr-graph");
   g.nodes = [
@@ -1880,11 +1876,9 @@ before 9.0.0 — the library's only abbreviated event prefix. `<lr-knowledge-bas
 re-emitted them under the `lr-source-*` names, so a host listening on the admin shell needs no
 change; a host listening directly on `<lr-knowledge-base>` renames its four listeners.
 `lr-retry-request` (`detail: null`, cancelable) proposes a retry when the nested table's built-in
-retry button is activated. It fires before the deprecated cancelable `lr-retry` alias (also
-`detail: null`); preventing either event keeps both the parent and table in the error state.
-Without a veto, the default action clears `error`. The alias remains supported until removal no
-earlier than 24.0.0 and warns only when vetoed. This component contains both nested table retry
-events and re-proposes its own pair, so hosts receive each parent event once.
+retry button is activated. Preventing it keeps both the parent and table in the error state.
+Without a veto, the default action clears `error`. This component contains the nested table request
+and re-proposes its own canonical request, so hosts receive the parent event once.
 
 **Slots:** `error` — replaces the nested table's built-in failed-load state, including its retry
 button, while `error` is set.
@@ -2039,8 +2033,6 @@ filtered-out id). None change `selectedNodeId` or filters.
   (`detail: { nodeId, x, y }`), `lr-edge-activate` (`detail: { sourceNodeId, targetNodeId, edgeId? }`), `lr-community-activate`
   (`detail: { communityId }`), `lr-node-expand` (`detail: { nodeId }`, from `lr-graph` and/or `lr-neighbor-list`),
   `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, from `lr-path-strip`).
-- `lr-node-click` — deprecated alias emitted after `lr-node-activate` with the same detail.
-  `lr-link-click` follows `lr-edge-activate`, retaining its legacy `linkId` detail field.
 
 **Slots:** `details` — overrides the details popover's default content (an `lr-entity-card` with a
 nested `lr-neighbor-list` and a pin toggle) entirely, including the two additive slots below.
@@ -2083,7 +2075,7 @@ the composed graph too. Retheme the composed graph through `lr-graph`'s own cust
   resolves `LyraGraphNode.label || LyraGraphNode.accessibleLabel || LyraGraphNode.id` — a node with
   only a spoken `accessibleLabel` (no visible `label`) still shows that text instead of falling
   straight through to its raw id.
-- `lr-graph.getNodePosition()` and `lr-node-click`'s `{ x, y }` are graph-_local_ drawing
+- `lr-graph.getNodePosition()` and `lr-node-activate`'s `{ x, y }` are graph-_local_ drawing
   coordinates, never viewport pixels. For `renderer="svg"` this component resolves the real viewport
   rect from `event.composedPath()`'s `[part="node"]` element; for `renderer="canvas"` (no per-node
   DOM) it uses the click's `clientX`/`clientY`. While an svg-click popover stays open it re-anchors
@@ -2693,7 +2685,7 @@ Selection is controlled: activation emits the complete claim but does not assign
 **Slots:** none. **Optional peer deps:** none.
 
 ```ts
-import "@aceshooting/lyra-ui/components/retrieval/claim-evidence/claim-evidence.js";
+import "@aceshooting/lyra-ui/components/lr-claim-evidence.js";
 ```
 
 ## `lr-retrieval-compare`
@@ -2728,7 +2720,7 @@ is pairwise Jaccard similarity across those visible chunk ids. Selection is cont
 same escape-hatch pattern as `lr-retrieval-results`'s `--lr-retrieval-results-selected-border`.
 
 ```ts
-import "@aceshooting/lyra-ui/components/retrieval/retrieval-compare/retrieval-compare.js";
+import "@aceshooting/lyra-ui/components/lr-retrieval-compare.js";
 ```
 
 ## `lr-rag-eval-dashboard`
@@ -2774,7 +2766,7 @@ filtered run order; the host computes every metric and owns evaluation execution
 **Slots:** none. **Optional peer deps:** none.
 
 ```ts
-import "@aceshooting/lyra-ui/components/retrieval/rag-eval-dashboard/rag-eval-dashboard.js";
+import "@aceshooting/lyra-ui/components/lr-rag-eval-dashboard.js";
 ```
 
 `lr-grounding-summary` and `lr-rag-answer` now accept `GroundingAssessment.claims` and expose

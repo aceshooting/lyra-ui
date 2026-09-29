@@ -1,4 +1,3 @@
-import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './table.js';
 import '../../forms/select/select.js';
@@ -13,8 +12,6 @@ import { installTableTestHooks, type Row, columns, rows } from '../../../../test
 installTableTestHooks();
 
 
-expectDeprecatedUsage('lr-table', 'attribute', 'accessible-label');
-expectDeprecatedUsage('lr-table', 'property', 'accessibleLabel');
 
 
 it('supports opt-in multiple row selection without changing the default presentational mode', async () => {
@@ -936,7 +933,7 @@ it('renders the row-expand-toggle hover treatment shared by the sibling icon con
 it('skeleton rows keep column parity with expand toggles and row totals', async () => {
   const el = (await fixture(html`
     <lr-table
-      accessible-label="Scores"
+      aria-label="Scores"
       .columns=${columns}
       .rows=${rows}
       .expandedContent=${(row: Row) => html`<span>${row.name}</span>`}
@@ -957,7 +954,7 @@ describe('row expand toggle accessible name', () => {
   ];
 
   async function expandableTable(): Promise<LyraTable<Row>> {
-    const el = (await fixture(html`<lr-table accessible-label="People"></lr-table>`)) as LyraTable<Row>;
+    const el = (await fixture(html`<lr-table aria-label="People"></lr-table>`)) as LyraTable<Row>;
     el.columns = expandNameColumns;
     el.rows = rows;
     el.rowKey = (r) => r.id;

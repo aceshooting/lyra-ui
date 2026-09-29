@@ -74,7 +74,7 @@ extension?: string }`. Descriptor labels/descriptions are consumer-supplied, alr
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the native trigger button.
 
-**Events:** `lr-export-request` and `lr-export` (`detail: { format: string }`, **cancelable** — call `preventDefault()` to
+**Events:** `lr-export-request` (`detail: { format: string }`, **cancelable** — call `preventDefault()` to
 substitute your own server-generated download instead of the built-in client-side one; the rows a
 non-prevented built-in download serializes are read **after** this dispatch, so `.rows` assigned from
 inside the listener still reaches it, and `getRows` is consulted at the same point),
@@ -85,9 +85,6 @@ also shown via the trigger's `trigger-error` part and announced through the shar
 region, so a listener is needed only for additional handling; activation does not throw into
 consumer code), `lr-show`, `lr-hide` (cancelable format-menu visibility transitions; self-imposed
 closes caused by disablement, loading, or an unusable format list emit neither event).
-`lr-export` is the deprecated cancelable alias, dispatched after `lr-export-request` with equal
-detail. Either event can veto the export; subscribe to one spelling. Removal of the alias is not
-before 24.0.0.
 
 **Slots:** none.
 
@@ -135,7 +132,7 @@ change every unset export button beneath it.
     { key: "value", label: "Value" },
   ];
   exp.formats = ["csv", "json"]; // shows a format-choice menu instead of exporting immediately
-  exp.addEventListener("lr-export", (e) =>
+  exp.addEventListener("lr-export-request", (e) =>
     console.log("exporting", e.detail.format)
   );
 
@@ -149,7 +146,7 @@ change every unset export button beneath it.
       extension: "xlsx",
     },
   ];
-  exp.addEventListener("lr-export", async (e) => {
+  exp.addEventListener("lr-export-request", async (e) => {
     if (e.detail.format !== "xlsx") return;
     e.preventDefault();
     exp.loading = true;
@@ -339,7 +336,7 @@ for an application-level fallback:
   value="npm install @aceshooting/lyra-ui"
 ></lr-copy-button>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/utility/copy-button/copy-button.js";
+  import "@aceshooting/lyra-ui/components/lr-copy-button.js";
 
   const button = document.getElementById("copy");
   button.addEventListener("lr-copy", (event) =>
@@ -589,7 +586,7 @@ tokens `--lr-color-border-subtle`,
 
 ```ts
 import { html } from "lit";
-import "@aceshooting/lyra-ui/components/utility/json-viewer/json-viewer.js";
+import "@aceshooting/lyra-ui/components/lr-json-viewer.js";
 
 html`<lr-json-viewer
   .data=${apiResponse}
@@ -1408,7 +1405,7 @@ fetch allowlist, the response is still byte-capped, and the markup is still sani
 cannot widen what an icon is allowed to render.
 
 ```ts
-import "@aceshooting/lyra-ui/components/utility/icon/icon.js"; // registers <lr-icon>
+import "@aceshooting/lyra-ui/components/lr-icon.js"; // registers <lr-icon>
 import {
   registerIconLibrary,
   unregisterIconLibrary,
@@ -1717,7 +1714,7 @@ Each access returns a fresh `LyraFormValidator<LyraKnownDate>[]`; its entry obse
 element's current `ValidityState` into `{ isValid, message, invalidKeys }` without changing it.
 
 ```ts
-import { LyraKnownDate } from "@aceshooting/lyra-ui/components/utility/known-date/known-date.js";
+import { LyraKnownDate } from "@aceshooting/lyra-ui/components/lr-known-date.js";
 
 const knownDate = document.querySelector("lr-known-date")!;
 const result = LyraKnownDate.validators[0].checkValidity(knownDate);

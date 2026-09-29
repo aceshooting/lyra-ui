@@ -97,5 +97,5 @@ the shared assertive sink. Initial and reconnect renders stay silent.
 **Slots:** none. **Optional peer deps:** none.
 
 ```ts
-import "@aceshooting/lyra-ui/components/agent-tools/mcp-app/mcp-app.js";
+import "@aceshooting/lyra-ui/components/lr-mcp-app.js";
 ```

@@ -111,7 +111,6 @@ export class LyraStreamingTextCore extends StreamingTextRuntimeBase {
       .math=${this.math}
       .maxHeight=${this.maxHeight}
       @lr-render-error=${this.stopOwnedEvent}
-      @lr-link-click=${this.stopOwnedEvent}
       @lr-highlight-activate=${this.stopOwnedEvent}
       @lr-text-select=${this.stopOwnedEvent}
       @lr-anchor-result=${this.stopOwnedEvent}

@@ -215,28 +215,25 @@ it('box plot uses only the canonical canvas-tooltip color', async () => {
   expect(configOf(el).options.plugins.tooltip.bodyColor).to.equal('rgb(1, 2, 3)');
 });
 
-it('lite chart ignores accessible-label while retaining the programmatic fallback and its warning', async () => {
-  const usage = { tag: 'lr-lite-chart', kind: 'property', name: 'accessibleLabel' } as const;
+it('lite chart ignores retired naming aliases and follows host aria-label', async () => {
   let el!: LyraLiteChart;
   const attributeWarnings = await captureDeprecationWarnings([], async () => {
     el = await smallChartWith('lr-lite-chart') as LyraLiteChart;
     el.setAttribute('accessible-label', 'Old attribute');
     await el.updateComplete;
-    expect(el.accessibleLabel).to.equal(undefined);
+    expect('accessibleLabel' in el).to.equal(false);
     expect(svgName(el)).to.equal('Revenue');
   });
   expect(attributeWarnings).to.have.length(0);
-  const propertyWarnings = await captureDeprecationWarnings([usage], async () => {
-    el.accessibleLabel = 'Retained property';
+  const propertyWarnings = await captureDeprecationWarnings([], async () => {
+    Reflect.set(el, 'accessibleLabel', 'Retired property');
     await el.updateComplete;
   });
-  expect(propertyWarnings.map((warning) => warning.key)).to.deep.equal([
-    'lyra-deprecated:lr-lite-chart:property:accessibleLabel',
-  ]);
-  expect(svgName(el)).to.equal('Retained property');
+  expect(propertyWarnings).to.have.length(0);
+  expect(svgName(el)).to.equal('Revenue');
   el.setAttribute('accessible-label', 'Changed old attribute');
   await el.updateComplete;
-  expect(svgName(el)).to.equal('Retained property');
+  expect(svgName(el)).to.equal('Revenue');
   el.setAttribute('aria-label', 'Native name');
   await el.updateComplete;
   expect(svgName(el)).to.equal('Native name');
@@ -246,5 +243,5 @@ it('lite chart ignores accessible-label while retaining the programmatic fallbac
   el.removeAttribute('aria-label');
   el.removeAttribute('accessible-label');
   await el.updateComplete;
-  expect(svgName(el)).to.equal('Retained property');
+  expect(svgName(el)).to.equal('Revenue');
 });

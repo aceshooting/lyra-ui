@@ -7,7 +7,7 @@ export const importViewers = () => import('@aceshooting/lyra-ui/components/viewe
 export const importPersianLocale = () => import('@aceshooting/lyra-ui/translations/fa.js');
 export const importHebrewLocale = () => import('@aceshooting/lyra-ui/translations/he.js');
 export const importEmpty = () =>
-  import('@aceshooting/lyra-ui/components/overlays/empty/empty.js');
+  import('@aceshooting/lyra-ui/components/lr-empty.js');
 export const importEmptyClass = () =>
   import('@aceshooting/lyra-ui/components/overlays/empty/empty.class.js');
 export const importCsv = () =>

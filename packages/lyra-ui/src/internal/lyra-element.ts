@@ -72,14 +72,14 @@ import {
   recordInheritedLocaleRead,
 } from './inherited-context-observer.js';
 import {
-  canonicalizeLyraLocale,
   enableLyraLocaleCache,
   invalidateLyraLocaleCache,
   lyraLocaleCatalogVersion,
   peekLyraLocale,
   recordLyraOwnerDocumentConnection,
   resolveLyraDirection,
-  resolveLyraString,
+  resolveLyraLocaleWithHostOverride,
+  resolveLyraStringWithLocale,
   resolveLyraLocale,
   snapshotLyraLocaleStrings,
   subscribeLyraLocaleForHost,
@@ -690,15 +690,17 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     fallback?: string,
     values?: Record<string, string | number>
   ): string {
-    const message = resolveLyraString(
-      this,
+    let effectiveLocale: string | undefined;
+    const resolveLocale = () => (effectiveLocale ??= this.effectiveMessageLocale);
+    const message = resolveLyraStringWithLocale(
+      resolveLocale,
       key,
       this.strings,
       fallback,
       values,
       (this.constructor as typeof LyraElement).defaultStrings
     );
-    const locale = peekLyraLocale(this);
+    const locale = effectiveLocale ?? peekLyraLocale(this);
     recordInheritedLocaleRead(this, locale);
     if (locale !== undefined) {
       this.lastLocalizedCatalogVersion = lyraLocaleCatalogVersion(locale);
@@ -709,8 +711,8 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
 
   /** The canonical public locale used for message-catalog lookup and propagation to child controls. */
   protected get effectiveMessageLocale(): string {
-    if (this.locale) return canonicalizeLyraLocale(this.locale);
-    const locale = resolveLyraLocale(this);
+    const locale = resolveLyraLocaleWithHostOverride(this, this.locale);
+    if (this.locale) return locale;
     recordInheritedLocaleRead(this, locale);
     this.ensureLocaleSubscription();
     return locale;

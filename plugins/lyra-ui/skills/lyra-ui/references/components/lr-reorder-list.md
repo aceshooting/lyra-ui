@@ -118,9 +118,8 @@ between rows.
   `lr-reorder-request` order array.
 - `aria-label` (host attribute) — names the row and is appended to each repeated move action's
   accessible name in place of the row content.
-- `accessibleLabel?: string` (attribute: false) — explicit row identity used while the host has no
-  `aria-label`; when neither is present the item derives a bounded accessible text projection from
-  its row content.
+When the host has no `aria-label`, the item derives a bounded accessible text projection from its
+row content for the repeated move-action names.
 - `disabled: boolean = false` (reflected) — disables this row's own move buttons only; does not
   hide its slotted content.
 - `atStart: boolean`, `atEnd: boolean`, `listDisabled: boolean`, `pending: boolean` (readonly) —

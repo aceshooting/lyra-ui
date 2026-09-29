@@ -44,7 +44,7 @@ truncated tail can never shrink the axis and stretch the surviving bars across t
 window, `withoutAxis: boolean = false` (attribute `without-axis`) — hides the time-ruler row, and
 `label: string = ''`.
 
-The granular `@aceshooting/lyra-ui/components/agent-tools/trace-tree/trace-tree.js` entry also
+The granular `@aceshooting/lyra-ui/components/lr-trace-tree.js` entry also
 type-exports `LyraSpanKind` and `LyraSpanStatus`, and exports
 `normalizeLyraSpanKind(value)` / `normalizeLyraSpanStatus(value)` for normalizing provider data
 before assigning `spans`. These helpers are intentionally granular-only rather than root-barrel

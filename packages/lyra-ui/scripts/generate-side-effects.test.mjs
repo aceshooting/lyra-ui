@@ -95,7 +95,6 @@ try {
   writeFileSync(join(fixtureRoot, 'src', 'autoloader.ts'), 'export function discover() {}\n');
   writeFileSync(join(fixtureRoot, 'src', 'autoloader-cdn.ts'), "start(document);\n");
   writeFileSync(join(fixtureRoot, 'src', 'hydration.ts'), "installHydrationSupport();\n");
-  writeFileSync(join(fixtureRoot, 'src', 'ssr-loader.ts'), "installHydrationSupport();\n");
   writeFileSync(join(stylesDir, 'native.css'), '.lr-native button { color: var(--lr-color-text); }\n');
   writeFileSync(join(stylesDir, 'utilities.css'), '.lr-stack { display: flex; }\n');
   writeFileSync(join(fixtureRoot, 'src', 'theme.css'), ':root { --lr-test: 1; }\n');
@@ -109,10 +108,6 @@ try {
           './autoloader-cdn.js': {
             types: './dist/autoloader-cdn.d.ts',
             default: './dist/autoloader-cdn.js',
-          },
-          './ssr-loader.js': {
-            types: './dist/ssr-loader.d.ts',
-            default: './dist/ssr-loader.js',
           },
           './hydration.js': {
             types: './dist/hydration.d.ts',
@@ -144,7 +139,6 @@ try {
     './dist/components/forms/test-control/test-control.js',
     './dist/components/lr-test-control.js',
     './dist/hydration.js',
-    './dist/ssr-loader.js',
     './dist/ssr/all.js',
     './dist/styles/native.css',
     './dist/styles/utilities.css',
@@ -159,7 +153,6 @@ try {
     './src/components/forms/test-control/test-control.ts',
     './src/components/lr-test-control.ts',
     './src/hydration.ts',
-    './src/ssr-loader.ts',
     './src/ssr/all.ts',
     './src/styles/native.css',
     './src/styles/utilities.css',
@@ -230,7 +223,7 @@ try {
   writeFileSync(join(fixtureRoot, 'src', 'autoloader-cdn.ts'), "start(document);\n");
 
   const stalePackage = JSON.parse(readFileSync(join(fixtureRoot, 'package.json'), 'utf8'));
-  delete stalePackage.exports['./ssr-loader.js'];
+  delete stalePackage.exports['./hydration.js'];
   writeFileSync(join(fixtureRoot, 'package.json'), `${JSON.stringify(stalePackage, null, 2)}\n`);
   assert.throws(
     () =>

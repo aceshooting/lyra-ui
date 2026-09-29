@@ -412,7 +412,7 @@ describe('coverage: canvas renderer internals', () => {
     expect(released).to.deep.equal([43]);
   });
 
-  it('canvas pointer click resolves a link (not a node) and emits lr-link-click', async () => {
+  it('canvas pointer click resolves a link (not a node) and emits lr-edge-activate', async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -444,7 +444,7 @@ describe('coverage: canvas renderer internals', () => {
     const rect = canvas.getBoundingClientRect();
     let detail: { sourceNodeId: string; targetNodeId: string } | undefined;
     el.addEventListener(
-      'lr-link-click',
+      'lr-edge-activate',
       (e) => (detail = (e as CustomEvent).detail)
     );
     const midX = rect.left + 200;
@@ -1606,7 +1606,7 @@ describe('coverage: canvas pointer and hover edge cases', () => {
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
     let clicked = false;
-    el.addEventListener('lr-node-click', () => (clicked = true));
+    el.addEventListener('lr-node-activate', () => (clicked = true));
     el.addEventListener('lr-community-activate', () => (clicked = true));
     canvas.dispatchEvent(
       new PointerEvent('pointerdown', {
@@ -1958,7 +1958,7 @@ describe('coverage: render()/buildCanvasScene position fallbacks and shape-branc
     let clickDetail: { nodeId: string } | undefined;
     let expandDetail: { nodeId: string } | undefined;
     el.addEventListener(
-      'lr-node-click',
+      'lr-node-activate',
       (e) => (clickDetail = (e as CustomEvent).detail)
     );
     el.addEventListener(
@@ -1996,7 +1996,7 @@ describe('coverage: render()/buildCanvasScene position fallbacks and shape-branc
 
     let detail: { nodeId: string } | undefined;
     el.addEventListener(
-      'lr-node-click',
+      'lr-node-activate',
       (e) => (detail = (e as CustomEvent).detail)
     );
     pathEl.dispatchEvent(

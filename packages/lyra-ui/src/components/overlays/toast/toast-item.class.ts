@@ -1,3 +1,4 @@
+import { maxCssTime } from '../../../internal/css-motion-time.js';
 import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
@@ -49,20 +50,6 @@ import { LYRA_DEFAULT_close, LYRA_DEFAULT_closeWithContext, LYRA_DEFAULT_closeWi
 export type LyraToastVariant = LyraVariant;
 /** The library's one size ladder. */
 export type LyraToastSize = LyraSize;
-
-function parseTime(value: string): number {
-  const trimmed = value.trim();
-  if (trimmed.endsWith('ms')) return Number.parseFloat(trimmed);
-  if (trimmed.endsWith('s')) return Number.parseFloat(trimmed) * 1000;
-  return 0;
-}
-
-function maxCssTime(value: string): number {
-  return Math.max(
-    0,
-    ...value.split(',').map(parseTime).filter(Number.isFinite)
-  );
-}
 
 const CLOSE_LABEL_GRAPHEME_LIMIT = 40;
 

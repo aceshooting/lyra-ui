@@ -1,4 +1,4 @@
-import { LyraPage as RootLyraPage } from "../src/lyra.js";
+import { LyraPage as RootLyraPage } from '../src/components/layout/page/page.class.js';
 import { LyraDropdownItem } from "../src/components/layout/menu/dropdown-item.class.js";
 import { LyraPage } from "../src/components/layout/page/page.class.js";
 

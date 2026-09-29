@@ -1,4 +1,3 @@
-import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './reorder-item.js';
 import type { LyraReorderItem } from './reorder-item.class.js';
@@ -33,7 +32,7 @@ describe('<lr-reorder-item>', () => {
     expect(labelledText(up)).to.equal('Move up Row');
     expect(labelledText(down)).to.equal('Move down Row');
 
-    el.accessibleLabel = 'Account name';
+    el.ariaLabel = 'Account name';
     el.strings = { moveUp: 'Déplacer vers le haut', moveDown: 'Déplacer vers le bas' };
     await el.updateComplete;
     up = el.shadowRoot!.querySelector('[part="move-up-button"]')!;
@@ -351,5 +350,3 @@ describe('focusMoveButton()', () => {
     expect(el.focusMoveButton('down')).to.equal(false);
   });
 });
-
-expectDeprecatedUsage('lr-reorder-item', 'property', 'accessibleLabel');

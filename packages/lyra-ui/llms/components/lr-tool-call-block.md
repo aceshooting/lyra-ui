@@ -106,7 +106,7 @@ The running glyph spins and the pending glyph pulses at `--lr-transition-ambient
 
 ```html
 <script type="module">
-  import '@aceshooting/lyra-ui/components/agent-tools/tool-call-block/tool-call-block.js';
+  import '@aceshooting/lyra-ui/components/lr-tool-call-block.js';
 </script>
 
 <lr-tool-call-block name="web_search" call-id="call-1" status="success" duration-ms="1450"></lr-tool-call-block>

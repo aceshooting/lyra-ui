@@ -1,4 +1,3 @@
-import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -147,8 +146,6 @@ interface SearchState {
 }
 
 export interface LyraTerminalEventMap {
-  /** @deprecated Use `lr-download-request`. */
-  'lr-download': LyraTerminalEventMap['lr-download-request'];
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
   'lr-error': CustomEvent<null>;
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
@@ -185,7 +182,6 @@ export interface LyraTerminalEventMap {
  * @event lr-copy - `detail: { ok: true, text }` — the plain-text clipboard write completed.
  * @event lr-error - The clipboard write failed; generic no-detail notification.
  * @event lr-copy-error - `detail: { ok: false, text, reason, error }` — typed clipboard failure.
- * @event lr-download - Deprecated cancelable compatibility alias of `lr-download-request`.
  * @event lr-download-request - `detail: { filename }` — the download button was activated. Cancelable: by
  *   default this component itself builds an in-memory Blob of the current plain-text log and
  *   triggers a browser download via a synthetic `<a download>` click; a host that calls
@@ -285,11 +281,6 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   private emitDownloadRequest(detail: LyraTerminalEventMap['lr-download-request']['detail']): CustomEvent {
     const request = this.emit('lr-download-request', Object.freeze(detail), { cancelable: true });
-    const alias = this.emit('lr-download', Object.freeze(detail), { cancelable: true });
-    if (alias.defaultPrevented) {
-      warnDeprecatedUsage(this, 'event', 'lr-download', 'lr-download-request');
-      request.preventDefault();
-    }
     return request;
   }
   protected static override collectionSupport = collectionSupport;

@@ -122,7 +122,7 @@ tokens `--lr-color-border-subtle`,
 
 ```ts
 import { html } from "lit";
-import "@aceshooting/lyra-ui/components/utility/json-viewer/json-viewer.js";
+import "@aceshooting/lyra-ui/components/lr-json-viewer.js";
 
 html`<lr-json-viewer
   .data=${apiResponse}

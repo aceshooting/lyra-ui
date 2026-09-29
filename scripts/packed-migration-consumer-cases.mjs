@@ -2,6 +2,10 @@ import assert from 'node:assert/strict';
 import { compatibilityKey } from '../packages/lyra-ui/scripts/published-compatibility.mjs';
 
 const templateHandlerExpression = '${handler}';
+// These target events are also dispatched by nested lr-flow-canvas. The migration scanner
+// requires an owner/target review before moving either listener, even though the ledger names
+// the replacement event.
+const sharedTargetEventReviews = new Set(['lr-graph\u0000lr-node-click', 'lr-knowledge-graph-explorer\u0000lr-node-click']);
 
 const manualProperties = {
   compact: ['size', "'s'"], emptyCompact: ['emptySize', "'s'"],
@@ -98,7 +102,9 @@ export function createMemberMigrationCases(context, ledger) {
 /** Exact primary witnesses; no extra rewrite or diagnostic can be hidden by a successful exit. */
 export function assertMemberMigrationReport(report, cases, origin) {
   assert.equal(report.schemaVersion, 1); assert.equal(report.origin, origin);
-  const active = origin === 'lyra-v21' ? cases : [];
+  assert.ok(Array.isArray(cases) && cases.every(item => item?.record?.policy && typeof item.record.policy.removalNotBefore === 'string'),
+    'Member migration witnesses must retain their source policy');
+  const active = cases.filter(item => item.record.policy.removalNotBefore === (origin === 'lyra-v21' ? '23.0.0' : '24.0.0'));
   const rewritten = active.filter(item => item.automatic);
   const reviewed = active.filter(item => !item.automatic);
   assert.equal(report.changes.length, rewritten.length);
@@ -128,6 +134,55 @@ export function assertMemberMigrationReport(report, cases, origin) {
   }
 }
 
+/** Build executable, source-bound diagnostics for the current next-major member cohort. */
+export function createV24MemberMigrationCases(context, ledger) {
+  assert.match(context.packageVersion, /^24\.\d+\.\d+$/u, 'The v24 member cohort requires an installed v24 package');
+  const profile = ledger?.profiles?.find(item => item.origin === 'lyra-v22');
+  assert.ok(profile, 'Missing authored v22 migration profile');
+  const records = Object.values(context.records).filter(record => record.key.scope === 'member' && record.policy.removalNotBefore === '24.0.0');
+  assert.equal(records.length, 44, 'The v24 member cohort must contain exactly44 identities');
+  return records.sort((left, right) => {
+    const a = compatibilityKey(left.key); const b = compatibilityKey(right.key);
+    return a < b ? -1 : a > b ? 1 : 0;
+  }).map((record, index) => {
+    assert.equal(record.state, 'retired', `v24 candidate did not retire ${compatibilityKey(record.key)}`);
+    assert.equal(record.removedIn, '24.0.0', `Unexpected v24 retirement for ${compatibilityKey(record.key)}`);
+    const { tag, kind, name } = record.key;
+    const rule = profile.renames.find(item => item.tag === tag && item.kind === kind && item.from === name);
+    const review = profile.reviews.find(item => item.tag === tag && item.kind === kind && item.name === name);
+    assert.ok(Boolean(rule) !== Boolean(review), `Missing or conflicting v24 migration recipe: ${compatibilityKey(record.key)}`);
+    if (rule) assert.equal(rule.to, record.policy.replacement.name, `V24 ledger and policy target differ: ${compatibilityKey(record.key)}`);
+    let extension = 'ts';
+    let input;
+    let resolved;
+    if (kind === 'property') {
+      const oldValue = name === 'arrow' || name === 'compact' ? 'true' : "'Consumer value'";
+      input = `document.querySelector('${tag}')!.${name} = ${oldValue};\n`;
+      if (name === 'accessibleLabel') resolved = `document.querySelector('${tag}')!.setAttribute('aria-label', 'Consumer value');\n`;
+      else if (name === 'arrow') resolved = `document.querySelector('${tag}')!.withoutArrow = false;\n`;
+      else if (name === 'compact') resolved = `document.querySelector('${tag}')!.size = 's';\n`;
+      else assert.fail(`Unknown v24 property resolution: ${tag}.${name}`);
+    } else if (kind === 'attribute') {
+      extension = 'html';
+      input = `<${tag} ${name}="Consumer name"></${tag}>\n`;
+      resolved = `const resolved = html\`<${tag} aria-label="Consumer name"></${tag}>\`;\n`;
+    } else if (kind === 'event') {
+      assert.equal(typeof record.policy.replacement.name, 'string', `Event has no reviewed replacement name: ${compatibilityKey(record.key)}`);
+      input = `document.querySelector('${tag}')!.addEventListener('${name}', handler);\n`;
+      resolved = `document.querySelector('${tag}')!.addEventListener('${record.policy.replacement.name}', handler);\n`;
+    } else assert.fail(`Unsupported v24 member recipe: ${kind}`);
+    const sharedTargetReview = kind === 'event' && sharedTargetEventReviews.has(`${tag}\u0000${name}`);
+    const automatic = Boolean(rule && rule.polarity !== 'inverted' && !sharedTargetReview);
+    const column = kind === 'event' ? input.indexOf(`'${name}'`, input.indexOf('.addEventListener')) + 2
+      : kind === 'property' ? input.indexOf(`.${name} =`) + 2
+        : input.indexOf(` ${name}=`) + 2;
+    assert.ok(column > 1, `Missing exact v24 member input site: ${compatibilityKey(record.key)}`);
+    return { id: `p22-member-${String(index + 1).padStart(2, '0')}`, key: record.key, record, input, resolved,
+      extension, column, reportedTag: tag, rule, review, sharedTargetReview, automatic,
+      applied: automatic ? `${input.slice(0, column - 1)}${rule.to}${input.slice(column - 1 + name.length)}` : input };
+  });
+}
+
 export function selectMemberMigrationStage(context, cases) {
   assert.equal(cases.length, 390, 'Missing member cases');
   assert.equal(new Set(cases.map(item => compatibilityKey(item.key))).size, 390, 'Duplicate member cases');
@@ -139,4 +194,63 @@ export function selectMemberMigrationStage(context, cases) {
     if (item.record.state === 'retired') assert.equal(item.record.removedIn, '23.0.0');
   }
   return cases.every(item => item.record.state === 'retired') ? 'all-retirements' : 'exports-and-geojson';
+}
+
+/** Derive the next-major module cohort from the verified installed-package context. */
+export function createV24ExportMigrationCases(context) {
+  assert.match(context.packageVersion, /^24\.\d+\.\d+$/u, 'The v24 module cohort requires an installed v24 package');
+  const records = Object.values(context.records).filter(record => record.policy.removalNotBefore === '24.0.0');
+  assert.equal(records.length, 654, 'The v24 cohort must contain exactly654 published identities');
+  const members = records.filter(record => record.key.scope === 'member');
+  const exports = records.filter(record => record.key.scope === 'export');
+  assert.equal(members.length, 44, 'The v24 member cohort changed');
+  assert.equal(exports.length, 610, 'The v24 export cohort changed');
+  for (const record of records) {
+    assert.equal(record.state, 'retired', `v24 candidate did not retire ${compatibilityKey(record.key)}`);
+    assert.equal(record.removedIn, '24.0.0', `Unexpected v24 retirement for ${compatibilityKey(record.key)}`);
+  }
+
+  return exports.sort((left, right) => {
+    const a = compatibilityKey(left.key); const b = compatibilityKey(right.key);
+    return a < b ? -1 : a > b ? 1 : 0;
+  }).map((record, index) => {
+    const { kind, module, name } = record.key;
+    let extension = 'ts';
+    let input;
+    if (['class', 'constant', 'function', 'type'].includes(kind)) {
+      assert.equal(typeof module, 'string', `Named export has no module: ${compatibilityKey(record.key)}`);
+      const specifier = `@aceshooting/lyra-ui${module === '.' ? '' : module.slice(1)}`;
+      input = `import { ${name} } from '${specifier}';\n`;
+    } else if (kind === 'entry-point' || kind === 'stylesheet') {
+      extension = kind === 'stylesheet' ? 'css' : 'ts';
+      const specifier = `@aceshooting/lyra-ui${name.slice(1)}`;
+      input = kind === 'stylesheet' ? `@import '${specifier}';\n` : `import '${specifier}';\n`;
+    } else if (kind === 'root-attribute') {
+      extension = 'html';
+      input = `<html ${name}="legacy-value"></html>\n`;
+    } else if (kind === 'window-event') {
+      input = `window.addEventListener('${name}', handler);\n`;
+    } else assert.fail(`Unsupported v24 export recipe: ${kind}`);
+    const site = kind === 'class' || kind === 'constant' || kind === 'function' || kind === 'type'
+      ? name
+      : kind === 'root-attribute' || kind === 'window-event'
+        ? name
+        : `@aceshooting/lyra-ui${name.slice(1)}`;
+    const routeKey = ['class', 'constant', 'function', 'type'].includes(kind) && module && module !== '.'
+      ? { scope: 'export', kind: 'entry-point', name: module } : null;
+    const routeRecord = routeKey ? context.records[compatibilityKey(routeKey)] : null;
+    const routeColumn = routeKey ? input.indexOf(`@aceshooting/lyra-ui${module.slice(1)}`) + 1 : 0;
+    if (routeRecord?.state === 'retired' && routeRecord.removedIn === '24.0.0') assert.ok(routeColumn > 0, 'Nested route witness has no import site');
+    const additionalReviews = routeColumn > 0 && routeRecord?.state === 'retired' && routeRecord.removedIn === '24.0.0'
+      ? [{ key: routeKey, record: routeRecord, column: routeColumn }] : [];
+    return {
+      id: `p22-${String(index + 1).padStart(3, '0')}`,
+      key: record.key,
+      record,
+      input,
+      extension,
+      column: input.indexOf(site) + 1,
+      additionalReviews,
+    };
+  });
 }

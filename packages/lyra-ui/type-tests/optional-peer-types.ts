@@ -1,13 +1,18 @@
-import type { ChartConfiguration, Plugin } from 'chart.js';
-import type { Map as MapLibreMap, StyleSpecification } from 'maplibre-gl';
+import type {
+  ChartConfiguration,
+  Plugin } from 'chart.js';
+import type { Map as MapLibreMap,
+  StyleSpecification } from 'maplibre-gl';
 import type {
   LyraChart,
   LyraChartConfiguration,
   LyraChartPlugin,
-} from '../src/components/charts/chart/chart.class.js';
+  } from '../src/components/charts/chart/chart.class.js';
 import type { LyraMarkdown } from '../src/components/conversation/markdown/markdown.class.js';
 import type { LyraMap } from '../src/components/media/map/map.class.js';
-import type { LyraMapInstance, LyraMapStyleSpecification } from '../src/lyra.js';
+import type { LyraMapInstance,
+  LyraMapStyleSpecification,
+} from '../src/lyra.js';
 import type {
   LyraMarkedParser,
   MarkedExtension,

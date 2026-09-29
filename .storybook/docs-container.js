@@ -2,7 +2,7 @@ import { DocsContainer } from '@storybook/addon-docs/blocks';
 import { createElement, useEffect, useLayoutEffect, useState } from 'react';
 import { GLOBALS_UPDATED } from 'storybook/internal/core-events';
 import { create } from 'storybook/theming';
-import { setLyraTheme } from '../packages/lyra-ui/src/theme/theme.js';
+import { setLyraStyle } from '../packages/lyra-ui/src/theme/theme.js';
 
 import { normalizeStoryThemeName, storyColor, storyToken } from './theme-contract.js';
 
@@ -49,7 +49,7 @@ function initialThemeName(context) {
   }
 
   return normalizeStoryThemeName(
-    document.documentElement.dataset.lrTheme ?? themeFromUrl(),
+    document.documentElement.dataset.lrMode ?? themeFromUrl(),
   );
 }
 
@@ -58,7 +58,7 @@ export function LyraDocsContainer({ context, children }) {
   const [docsTheme, setDocsTheme] = useState(() => productionDocsTheme(themeName));
 
   useLayoutEffect(() => {
-    setLyraTheme({ mode: themeName, accent: null });
+    setLyraStyle({ mode: themeName, accent: null });
     setDocsTheme(productionDocsTheme(themeName));
   }, [themeName]);
 

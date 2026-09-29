@@ -1388,10 +1388,6 @@ enabled buttons retain pointer feedback.
 - `validationTarget: HTMLElement | undefined` — the focusable base of the dropzone control after
   first render. Assign another shadow descendant to override where native constraint-validation UI
   is anchored; assign `undefined` to restore the default focusable base
-- `accessibleLabel: string = ''` (property only, deprecated; removal not before 24.0.0) — accessible name forwarded to the semantic
-  dropzone and native file input, without changing visible copy. A host `aria-label` wins over it.
-  When neither is set, the form label (`label` or the `label` slot) names the dropzone, then the
-  localized instruction. In markup, name the dropzone with the host `aria-label`.
 - `acceptedMessage?: string` (attribute `accepted-message`) — live-region message after an
   accepted selection; `{count}` is replaced with the accepted count. Absence uses the localized
   singular/plural `fileInputAcceptedOne`/`fileInputAcceptedMany` default. Every explicit string,
@@ -1748,7 +1744,7 @@ attributes, and inline properties Lyra changed, preserving any later iframe-owne
 a watched host-page theme attribute syncs again.
 
 ```js
-import "@aceshooting/lyra-ui/components/media/zoomable-frame/zoomable-frame.js";
+import "@aceshooting/lyra-ui/components/lr-zoomable-frame.js";
 ```
 
 ```html
@@ -1814,7 +1810,7 @@ uses layout-participating CSS `zoom`, not a paint-only transform, so the viewpor
 range reaches the entire painted footprint at both logical edges in LTR and RTL.
 
 ```js
-import "@aceshooting/lyra-ui/components/media/pan-zoom/pan-zoom.js";
+import "@aceshooting/lyra-ui/components/lr-pan-zoom.js";
 ```
 
 ```html
@@ -2288,9 +2284,6 @@ capability as a row.
 - `multiple: boolean = false` (reflected) — forwarded to the hidden file input. Bare `multiple`
   opts into batches; `multiple="false"` remains false and removal restores single-file mode.
 - `disabled: boolean = false` (reflected)
-- `accessibleLabel?: string` (property only, deprecated; removal not before 24.0.0) — overrides either trigger shape's localized
-  accessible-name fallback. A host `aria-label`, including explicit empty, wins; in markup, name the
-  trigger with the host `aria-label`.
 - `triggerTitle?: string` (attribute `trigger-title`) — forwards a sighted-user hover tooltip to
   both the single-capability and multi-capability trigger buttons
 - `appearance: LyraAppearance = 'plain'` (reflected) — how the trigger fills itself, from the
@@ -2647,7 +2640,7 @@ normal rebuild (a keyframe/timing/direction change or reconnect); the registry n
 native timeline that is already running.
 
 ```js
-import "@aceshooting/lyra-ui/components/media/animation/animation.js";
+import "@aceshooting/lyra-ui/components/lr-animation.js";
 import { setAnimation } from "@aceshooting/lyra-ui/utilities/animation-registry.js";
 
 const animation = document.createElement("lr-animation");
@@ -2825,9 +2818,8 @@ detail.
 **Events:** cancelable `lr-show`, followed after a successful open render by `lr-after-show`;
 cancelable `lr-hide` (`detail: LyraLightboxHideDetail = { source: Element }`), then
 cancelable `lr-close-request` with `{ reason: LyraLightboxCloseReason }`; accepted dismissal
-sets `open = false` and emits non-cancelable `lr-close` with the same reason object. The deprecated
-`lr-lightbox-close` remains a string-detail, cancelable compatibility event between the proposal
-and state change. Use `lr-close-request` for vetoes and `lr-close` for accepted dismissals.
+sets `open = false` and emits non-cancelable `lr-close` with the same reason object. Use
+`lr-close-request` for vetoes and `lr-close` for accepted dismissals.
 `lr-after-hide` follows the closed render. Removal while open reports reason `unmount`. `lr-index-change` (`detail: { index }`, fired
 only for internally-driven navigation — a button, a keyboard shortcut, or `next()`/`previous()`/
 `goTo()`; **not** when a consumer sets `index`/`images` directly); `lr-zoom-change` (`detail: {
@@ -3217,7 +3209,7 @@ both LTR and RTL.
 Experimental inline native video player with custom controls, safe declarative sources/tracks,
 selectable captions, and bounded WebVTT thumbnail previews. It mirrors the public Web Awesome Video
 API under the `lr-` prefix. Import the granular registration entry with
-`import '@aceshooting/lyra-ui/components/media/video/video.js'`.
+`import '@aceshooting/lyra-ui/components/lr-video.js'`.
 
 When progress is unavailable, the disabled native range input and its visible timeline track retain
 resting paint under hover and press. Once media duration makes progress available, the track retains
@@ -3344,7 +3336,7 @@ failed, or empty thumbnail files fail closed to no preview; no caught remote err
 Experimental direct-child `<lr-video>` playlist with a visible current-video stage and
 keyboard-navigable item list. It mirrors the public Web Awesome Video Playlist API under the `lr-`
 prefix. Import the granular registration entry with
-`import '@aceshooting/lyra-ui/components/media/video-playlist/video-playlist.js'`.
+`import '@aceshooting/lyra-ui/components/lr-video-playlist.js'`.
 
 **Properties:** `controls: 'none' | 'standard' | 'full' = 'full'` (reflected and forwarded to every
 direct child), and `iconLibrary: string = 'system'` (attribute `icon-library`, non-reflected and
@@ -3534,16 +3526,16 @@ These named interfaces and helper signatures are available to typed integrations
   `LyraFileInputFilesEvent` below.
 
 - **`components-media-file-icon-file-type-metadata-contracts`** — Supporting data types and helpers for this component family.
-  Import: `@aceshooting/lyra-ui/components/media/file-icon/file-icon.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-file-icon.js`.
   `createFileTypeMetadataRegistry(entries?: readonly LyraFileTypeMetadataEntry[]): LyraFileTypeMetadataRegistry`
-  Import: `@aceshooting/lyra-ui/components/media/file-icon/file-icon.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-file-icon.js`.
   `getFileTypeMetadata(mimeType: string, fileName?: string): LyraResolvedFileTypeMetadata`
-  Import: `@aceshooting/lyra-ui/components/media/file-icon/file-icon.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-file-icon.js`.
   `LyraFileTypeMetadataEntry {
     readonly mimeTypes: string | readonly string[];
     readonly metadata: LyraFileTypeMetadata;
   }`
-  Import: `@aceshooting/lyra-ui/components/media/file-icon/file-icon.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-file-icon.js`.
   `LyraFileTypeMetadata {
     readonly label: string;
     readonly description?: string;
@@ -3552,11 +3544,11 @@ These named interfaces and helper signatures are available to typed integrations
     readonly category: LyraFileTypeCategory;
     readonly extensions?: readonly string[];
   }`
-  Import: `@aceshooting/lyra-ui/components/media/file-icon/file-icon.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-file-icon.js`.
   `LyraFileTypeMetadataRegistry {
     resolve(mimeType: string, fileName?: string): LyraResolvedFileTypeMetadata;
   }`
-  Import: `@aceshooting/lyra-ui/components/media/file-icon/file-icon.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-file-icon.js`.
   `LyraResolvedFileTypeMetadata extends LyraFileTypeMetadata {
     readonly provenance: 'builtin' | 'consumer';
     // Inherited from LyraFileTypeMetadata.

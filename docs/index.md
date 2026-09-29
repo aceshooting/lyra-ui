@@ -26,8 +26,10 @@ This file is a short index. The primary documentation lives on the sites linked 
 - **[Component integration cards](component-integration.md)** — per-tag imports, optional peers,
   direct/transitive component dependencies, and bundle measurements when available.
 
-- **[Roadmap](roadmap.md)** — v23 delivery status and the remaining v24 styling, localization,
-  compatibility-cleanup, and consumer commitments.
+- **[Roadmap](roadmap.md)** — the current v24 library contract and release gates. Its focused pages
+  retain the [v21/v22 foundations](roadmap/v21-v22-foundations.md),
+  [styling foundations](roadmap/styling-foundations.md), and
+  [post-v24 website and consumer rollout](roadmap/post-v24-rollout.md).
 
 ## Contributing & policies
 

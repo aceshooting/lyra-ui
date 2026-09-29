@@ -8,7 +8,7 @@ export const LYRA_DATA_LOOK = defineLyraLook({
     '--lr-theme-color-surface-default': { light: '#ffffff', dark: '#101820' },
     '--lr-theme-color-surface-raised': { light: '#f2f5f8', dark: '#192630' },
     '--lr-theme-color-surface-overlay': { light: '#ffffff', dark: '#202e39' },
-    '--lr-theme-color-text-normal': { light: '#172b3a', dark: '#eef5fa' },
+    '--lr-theme-color-text-normal': { light: '#10202c', dark: '#eef5fa' },
     '--lr-theme-color-text-quiet': { light: '#405a6b', dark: '#b8cbd8' },
     '--lr-theme-color-surface-border': { light: '#627989', dark: '#7d95a6' },
     '--lr-theme-color-surface-border-subtle': { light: '#d2dde5', dark: '#384e5e' },
@@ -81,7 +81,7 @@ export const LYRA_DATA_LOOK = defineLyraLook({
     '--lr-theme-color-chart-sequential-2': { light: '#638dcc', dark: '#638dcc' },
     '--lr-theme-color-chart-sequential-3': { light: '#163e72', dark: '#cce2ff' },
     '--lr-theme-color-chart-diverging-1': { light: '#853e16', dark: '#ffc28a' },
-    '--lr-theme-color-chart-diverging-2': { light: '#f2f5f8', dark: '#283d4c' },
+    '--lr-theme-color-chart-diverging-2': { light: '#f2f5f8', dark: '#1f2931' },
     '--lr-theme-color-chart-diverging-3': { light: '#164fa3', dark: '#9ec8ff' },
   },
 });

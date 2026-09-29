@@ -9,7 +9,7 @@
     --_lr-ld-color-surface-raised: #192630;
     --_lr-ll-color-surface-overlay: #ffffff;
     --_lr-ld-color-surface-overlay: #202e39;
-    --_lr-ll-color-text-normal: #172b3a;
+    --_lr-ll-color-text-normal: #10202c;
     --_lr-ld-color-text-normal: #eef5fa;
     --_lr-ll-color-text-quiet: #405a6b;
     --_lr-ld-color-text-quiet: #b8cbd8;
@@ -291,7 +291,7 @@
     --_lr-ll-color-chart-diverging-1: #853e16;
     --_lr-ld-color-chart-diverging-1: #ffc28a;
     --_lr-ll-color-chart-diverging-2: #f2f5f8;
-    --_lr-ld-color-chart-diverging-2: #283d4c;
+    --_lr-ld-color-chart-diverging-2: #1f2931;
     --_lr-ll-color-chart-diverging-3: #164fa3;
     --_lr-ld-color-chart-diverging-3: #9ec8ff;
   }

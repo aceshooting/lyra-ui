@@ -3061,7 +3061,6 @@ describe('mapped popover and tooltip compatibility', () => {
     expect(tooltip.withoutArrow).to.equal(false);
     expect(dropdown.placement).to.equal('bottom-start');
     expect(dropdown.distance).to.equal(0);
-    expect(dropdown.arrow).to.equal(true);
     expect(dropdown.withoutArrow).to.equal(false);
   });
 
@@ -3353,7 +3352,6 @@ for (const tag of ['lr-popover', 'lr-tooltip'] as const) {
 
 describe('lr-dropdown arrow and hyphenated popup parts', () => {
   const ARROW: readonly DeprecatedUsage[] = [
-    { tag: 'lr-dropdown', kind: 'property', name: 'arrow' },
     { tag: 'lr-popover', kind: 'property', name: 'arrow' },
   ];
 
@@ -3369,10 +3367,9 @@ describe('lr-dropdown arrow and hyphenated popup parts', () => {
       );
     });
     expect(warnings).to.have.length(0);
-    expect(bare.arrow).to.equal(true);
-    expect(bare.hasAttribute('arrow')).to.equal(false);
+    expect(bare.withoutArrow).to.equal(false);
     expect(bare.shadowRoot!.querySelectorAll('[part~="arrow"]').length).to.equal(1);
-    expect(opted.arrow).to.equal(false);
+    expect(opted.withoutArrow).to.equal(true);
     expect(opted.shadowRoot!.querySelectorAll('[part~="arrow"]').length).to.equal(0);
     const arrow = bare.shadowRoot!.querySelector('[part~="arrow"]')!;
     expect(arrow.getAttribute('part')!.split(/\s+/)).to.include.members(['arrow', 'popup-arrow']);

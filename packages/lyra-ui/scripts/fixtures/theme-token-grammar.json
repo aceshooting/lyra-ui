@@ -1,5 +1,5 @@
 {
-  "$comment": "Single source for the --lr-theme-* token-map grammar used by the runtime tokens field of setLyraTheme() and theme presets. Three consumers carry it: src/theme/theme.ts holds two literal copies (the module runtime, and the self-contained no-flash bootstrap), and scripts/theme-token-grammar.mjs builds the preset generator validator from this file. scripts/theme-token-grammar.test.mjs fails when either theme.ts copy drifts from these constants, or when modeDefaults drift from theme.css. The vectors are shared by the runtime, bootstrap, preset, generator and safe-css tests.",
+  "$comment": "Single source for the --lr-theme-* token-map grammar used by the style runtime and saved style records. src/theme/theme.ts holds two literal copies (the module runtime and the self-contained no-flash bootstrap), and scripts/theme-token-grammar.mjs supplies the style-axis generator. scripts/theme-token-grammar.test.mjs fails when either theme.ts copy drifts from these constants, or when modeDefaults drift from theme.css. The vectors are shared by the runtime, bootstrap, style-axis generator and safe-css tests.",
   "namePattern": {
     "source": "^--lr-theme-[a-z0-9]+(?:-[a-z0-9]+)*$",
     "flags": ""

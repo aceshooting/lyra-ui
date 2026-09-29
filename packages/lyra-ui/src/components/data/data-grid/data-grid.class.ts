@@ -1,4 +1,3 @@
-import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
@@ -667,7 +666,6 @@ function normalizedGroupBy(
  *   so a consumer that wants this rejection to replace the row content with the built-in
  *   failed-load state sets `error = true` from its own listener.
  * @event lr-retry-request - Cancelable retry proposal before the default retry action. `detail: null`.
- * @event lr-retry - Deprecated veto alias of `lr-retry-request`; removal not before 24.0.0.
  *   The built-in `[part='retry-button']` was activated, only rendered while
  *   `error` is set. Cancelable: the default action clears `error`; `preventDefault()` leaves it
  *   set instead.
@@ -4953,14 +4951,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
                 errorDescription: this.errorDescription,
                 onRetry: this.onErrorRetry,
                 emitRetryRequest: (detail, init: { cancelable: true }) => this.emit('lr-retry-request', detail, init),
-                emitRetry: (detail, init: { cancelable: true }) => {
-                  const legacy = this.emit('lr-retry', detail, init);
-                  if (legacy.defaultPrevented) warnDeprecatedUsage(this, 'event', 'lr-retry', 'lr-retry-request');
-                  return legacy;
-                },
               },
               'error',
-              'lr-retry'
+              'lr-retry-request'
             )}
           </div>
         </div>

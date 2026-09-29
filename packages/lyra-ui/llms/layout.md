@@ -75,7 +75,7 @@ In responsive `collapse="start"`/`"end"` mode, the divider beside a floating pan
 layout track whether its drawer is open or closed. It remains a programmatically focusable
 separator for focus recovery. Rail mode keeps the divider track because both panes remain visible.
 
-Granular import: `@aceshooting/lyra-ui/components/layout/multi-split/multi-split.js`.
+Granular import: `@aceshooting/lyra-ui/components/lr-multi-split.js`.
 The Lyra-original v9 identity migration is mechanical: `lr-split` → `lr-multi-split`,
 `LyraSplit` → `LyraMultiSplit`, generic container authoring types → the corresponding
 `LyraMultiSplit*` names, identity-specific `lr-split-*` events → `lr-multi-split-*`, and
@@ -512,7 +512,7 @@ cleans up on pointer up, cancellation, capture loss, disconnect, and orientation
 **Optional peer deps:** none.
 
 ```js
-import "@aceshooting/lyra-ui/components/layout/split-panel/split-panel.js";
+import "@aceshooting/lyra-ui/components/lr-split-panel.js";
 ```
 
 ```html
@@ -781,10 +781,8 @@ slide itself; they do not change the active slide or move focus away from it.
   custom, shadow-wrapped, labelled, disabled, and editable controls retain their own pointer input.
 - `slides: number` (read-only) — live assigned-slide count, updated after dynamic child changes.
 - `aria-label` (host attribute) — names the carousel landmark, taking precedence by presence,
-  including an explicitly empty value.
-- `accessibleLabel?: string` (attribute: false) — fallback landmark name used while the host has no
-  `aria-label`. Omitting it reads back `undefined` and uses the localized `carouselLabel` default;
-  an explicitly empty value is used as-is.
+  including an explicitly empty value; when absent, the component uses the localized
+  `carouselLabel` default.
 
 **9.0 cleanup:** the redundant Lyra-only `index`, `showIndicators`, and `goTo()` aliases were
 removed. Use mapped `currentSlide`, `pagination`, and `goToSlide()`. The writable/reflected
@@ -1716,9 +1714,8 @@ between rows.
   `lr-reorder-request` order array.
 - `aria-label` (host attribute) — names the row and is appended to each repeated move action's
   accessible name in place of the row content.
-- `accessibleLabel?: string` (attribute: false) — explicit row identity used while the host has no
-  `aria-label`; when neither is present the item derives a bounded accessible text projection from
-  its row content.
+When the host has no `aria-label`, the item derives a bounded accessible text projection from its
+row content for the repeated move-action names.
 - `disabled: boolean = false` (reflected) — disables this row's own move buttons only; does not
   hide its slotted content.
 - `atStart: boolean`, `atEnd: boolean`, `listDisabled: boolean`, `pending: boolean` (readonly) —
@@ -3031,7 +3028,7 @@ never disagree with what is rendered inside it.
 
 ```html
 <script type="module">
-  import '@aceshooting/lyra-ui/components/layout/app-rail-group/app-rail-group.js';
+  import '@aceshooting/lyra-ui/components/lr-app-rail-group.js';
 </script>
 
 <lr-app-rail>
@@ -5382,7 +5379,7 @@ allocation, and long localized or consumer-provided text cannot widen the Page.
 Import only the Page registration when it is the only layout component this bundle needs:
 
 ```js
-import "@aceshooting/lyra-ui/components/layout/page/page.js";
+import "@aceshooting/lyra-ui/components/lr-page.js";
 ```
 
 ```html
@@ -5509,7 +5506,7 @@ These named interfaces and helper signatures are available to typed integrations
   }`
 
 - **`components-layout-dashboard-grid-layout-types-contracts`** — Supporting data types and helpers for this component family.
-  Import: `@aceshooting/lyra-ui/components/layout/dashboard-grid/dashboard-grid.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-dashboard-grid.js`.
   `LyraDashboardCell {
     readonly cellId: string;
     readonly x: number;
@@ -5524,7 +5521,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly widget?: LyraWidgetNode | null;
     readonly label?: string;
   }`
-  Import: `@aceshooting/lyra-ui/components/layout/dashboard-grid/dashboard-grid.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-dashboard-grid.js`.
   `LyraDashboardPlacementResult {
     readonly accepted: boolean;
     readonly layout: readonly LyraDashboardCell[];
@@ -5532,7 +5529,7 @@ These named interfaces and helper signatures are available to typed integrations
   }`
 
 - **`components-layout-dashboard-grid-layout-contracts`** — Supporting data types and helpers for this component family.
-  Import: `@aceshooting/lyra-ui/components/layout/dashboard-grid/dashboard-grid.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-dashboard-grid.js`.
   `resolveLyraDashboardPlacement(layout: readonly LyraDashboardCell[], candidateCellId: string, requested: Readonly<{
     x: number;
     y: number;
@@ -6116,7 +6113,7 @@ item hosts, keeps only the first `open` item, and reveals and positions its pane
 
 ```html
 <script type="module">
-  import '@aceshooting/lyra-ui/components/layout/navigation-menu/navigation-menu.js';
+  import '@aceshooting/lyra-ui/components/lr-navigation-menu.js';
 </script>
 
 <header style="display: flex; align-items: center; justify-content: space-between">
@@ -6215,7 +6212,7 @@ The item does not take the `size` ladder.
 
 ```html
 <script type="module">
-  import '@aceshooting/lyra-ui/components/layout/navigation-menu-item/navigation-menu-item.js';
+  import '@aceshooting/lyra-ui/components/lr-navigation-menu-item.js';
 </script>
 
 <lr-navigation-menu-item>

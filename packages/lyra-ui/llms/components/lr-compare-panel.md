@@ -7,7 +7,7 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
-- **Deprecated event** `lr-vote` since `22.0.0`; use event `addEventListener('lr-vote-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 9 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -42,11 +42,9 @@ scroll position. `disabled: boolean = false` (reflected) disables every vote but
 **Slots:** `a` (the first output — any content, a chat message, markdown, a viewer), `b` (the second
 output), and `prompt` (optional shared-input header above both panes).
 
-**Events:** `lr-vote-request` and `lr-vote` — `detail: { choice: 'a' | 'b' | 'tie' | 'both-bad'; itemId: string }`.
+**Events:** `lr-vote-request` — `detail: { choice: 'a' | 'b' | 'tie' | 'both-bad'; itemId: string }`.
 This is a cancelable veto point emitted before `vote` changes; call `preventDefault()` to preserve
 the prior vote.
-`lr-vote` is the deprecated cancelable alias, dispatched after `lr-vote-request` with the same
-detail. Either event can veto the vote change; subscribe to one spelling, not both.
 
 
 **CSS parts:** `base` (the outer wrapper), `prompt` (the optional prompt header, hidden when the

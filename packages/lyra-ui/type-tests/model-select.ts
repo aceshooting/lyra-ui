@@ -1,4 +1,7 @@
-import type { LyraModelSelect, LyraModelSelectSelectionDirection } from '../src/lyra.js';
+import type { LyraModelSelect } from '../src/components/conversation/model-select/model-select.class.js';
+import type {
+  LyraModelSelectSelectionDirection,
+} from '../src/lyra.js';
 
 declare const modelSelect: LyraModelSelect;
 

@@ -130,7 +130,7 @@ fetch allowlist, the response is still byte-capped, and the markup is still sani
 cannot widen what an icon is allowed to render.
 
 ```ts
-import "@aceshooting/lyra-ui/components/utility/icon/icon.js"; // registers <lr-icon>
+import "@aceshooting/lyra-ui/components/lr-icon.js"; // registers <lr-icon>
 import {
   registerIconLibrary,
   unregisterIconLibrary,

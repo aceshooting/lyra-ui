@@ -94,7 +94,7 @@ entry for the flush and cancellation rules.
   value="09:30"
 ></lr-native-time-input>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/forms/input/native-time-input.js";
+  import "@aceshooting/lyra-ui/components/lr-native-time-input.js";
 </script>
 ```
 

@@ -1717,7 +1717,7 @@ retried; a stale response never paints over a newer `src`.
   Loading navigation…
 </lr-include>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/viewers/include/include.js";
+  import "@aceshooting/lyra-ui/components/lr-include.js";
 
   const include = document.querySelector("#navigation");
   include.addEventListener("lr-include-error", (event) => {
@@ -2266,19 +2266,19 @@ These named interfaces and helper signatures are available to typed integrations
   }`
 
 - **`components-viewers-calendar-viewer-calendar-loader-contracts`** — Supporting data types and helpers for this component family.
-  Import: `@aceshooting/lyra-ui/components/viewers/calendar-viewer/calendar-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-calendar-viewer.js`.
   `clearIcalCache(): void`
-  Import: `@aceshooting/lyra-ui/components/viewers/calendar-viewer/calendar-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-calendar-viewer.js`.
   `IcalApi {
     parse(source: string): unknown;
     Component: new (data: unknown) => IcalComponentApi;
     Event: new (component: unknown) => IcalEventApi;
   }`
-  Import: `@aceshooting/lyra-ui/components/viewers/calendar-viewer/calendar-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-calendar-viewer.js`.
   `IcalComponentApi {
     getAllSubcomponents(name: string): unknown[];
   }`
-  Import: `@aceshooting/lyra-ui/components/viewers/calendar-viewer/calendar-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-calendar-viewer.js`.
   `IcalEventApi {
     uid?: string;
     summary?: string;
@@ -2287,7 +2287,7 @@ These named interfaces and helper signatures are available to typed integrations
     location?: string;
     description?: string;
   }`
-  Import: `@aceshooting/lyra-ui/components/viewers/calendar-viewer/calendar-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-calendar-viewer.js`.
   `IcalTimeApi {
     toJSDate(): Date;
     isDate?: boolean;
@@ -2295,9 +2295,9 @@ These named interfaces and helper signatures are available to typed integrations
     month?: number;
     day?: number;
   }`
-  Import: `@aceshooting/lyra-ui/components/viewers/calendar-viewer/calendar-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-calendar-viewer.js`.
   `loadIcalDeps(importIcal?: () => Promise<unknown>): Promise<IcalApi | null>`
-  Import: `@aceshooting/lyra-ui/components/viewers/calendar-viewer/calendar-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-calendar-viewer.js`.
   `loadIcal(): Promise<IcalApi | null>`
 
 - **`components-viewers-calendar-viewer-calendar-viewer-contracts`** — Supporting data types and helpers for this component family.
@@ -2314,13 +2314,13 @@ These named interfaces and helper signatures are available to typed integrations
   }`
 
 - **`components-viewers-contact-viewer-vcard-contracts`** — Supporting data types and helpers for this component family.
-  Import: `@aceshooting/lyra-ui/components/viewers/contact-viewer/contact-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-contact-viewer.js`.
   `parseVCards(text: string, options?: number | ParseVCardsOptions): VCardContact[]`
-  Import: `@aceshooting/lyra-ui/components/viewers/contact-viewer/contact-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-contact-viewer.js`.
   `ParseVCardsOptions {
     maxContacts?: number;
   }`
-  Import: `@aceshooting/lyra-ui/components/viewers/contact-viewer/contact-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-contact-viewer.js`.
   `VCardAddress {
     poBox: string;
     extendedAddress: string;
@@ -2331,7 +2331,7 @@ These named interfaces and helper signatures are available to typed integrations
     country: string;
     types: string[];
   }`
-  Import: `@aceshooting/lyra-ui/components/viewers/contact-viewer/contact-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-contact-viewer.js`.
   `VCardContact {
     fn: string;
     n?: VCardName;
@@ -2340,7 +2340,7 @@ These named interfaces and helper signatures are available to typed integrations
     email: VCardTypedValue[];
     adr: VCardAddress[];
   }`
-  Import: `@aceshooting/lyra-ui/components/viewers/contact-viewer/contact-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-contact-viewer.js`.
   `VCardName {
     familyNames: string;
     givenNames: string;
@@ -2348,7 +2348,7 @@ These named interfaces and helper signatures are available to typed integrations
     honorificPrefixes: string;
     honorificSuffixes: string;
   }`
-  Import: `@aceshooting/lyra-ui/components/viewers/contact-viewer/contact-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-contact-viewer.js`.
   `VCardTypedValue {
     value: string;
     types: string[];
@@ -2375,21 +2375,21 @@ These named interfaces and helper signatures are available to typed integrations
   }`
 
 - **`components-viewers-document-viewer-anchors-contracts`** — Supporting data types and helpers for this component family.
-  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/document-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-document-viewer.js`.
   `AnchorResultDetail {
     found: boolean;
   }`
-  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/document-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-document-viewer.js`.
   `AnchorTargetCapabilities {
     anchors?: LyraAnchorKind[];
     search?: boolean;
     textSelect?: boolean;
   }`
-  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/document-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-document-viewer.js`.
   `HighlightActivateDetail {
     highlightId: string;
   }`
-  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/document-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-document-viewer.js`.
   `LyraHighlight {
     readonly id: string;
     readonly anchor: LyraAnchor;
@@ -2397,13 +2397,13 @@ These named interfaces and helper signatures are available to typed integrations
     readonly note?: string;
     readonly tone?: LyraHighlightTone;
   }`
-  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/document-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-document-viewer.js`.
   `TextSelectDetail {
     readonly text: string;
     readonly anchor: LyraAnchor | null;
     readonly rects: readonly TextSelectRect[];
   }`
-  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/document-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-document-viewer.js`.
   `TextSelectRect {
     readonly x: number;
     readonly y: number;
@@ -2509,20 +2509,20 @@ These named interfaces and helper signatures are available to typed integrations
   `snapshotLyraDocumentRendererPayload(value: LyraDocumentRendererPayload): LyraDocumentRendererPayload`
 
 - **`components-viewers-docx-viewer-docx-loader-contracts`** — Supporting data types and helpers for this component family.
-  Import: `@aceshooting/lyra-ui/components/viewers/docx-viewer/docx-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-docx-viewer.js`.
   `clearDocxDepsCache(): void`
-  Import: `@aceshooting/lyra-ui/components/viewers/docx-viewer/docx-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-docx-viewer.js`.
   `DocxDeps {
     mammoth: MammothApi | undefined;
     DOMPurify: HtmlSanitizer | undefined;
   }`
-  Import: `@aceshooting/lyra-ui/components/viewers/docx-viewer/docx-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-docx-viewer.js`.
   `getDocxDepsIfLoaded(): DocxDeps | undefined`
-  Import: `@aceshooting/lyra-ui/components/viewers/docx-viewer/docx-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-docx-viewer.js`.
   `loadDocxDeps(): Promise<DocxDeps>`
-  Import: `@aceshooting/lyra-ui/components/viewers/docx-viewer/docx-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-docx-viewer.js`.
   `loadMammothAndSanitizer(importMammoth?: () => Promise<unknown>, importDompurify?: () => Promise<unknown>): Promise<DocxDeps>`
-  Import: `@aceshooting/lyra-ui/components/viewers/docx-viewer/docx-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-docx-viewer.js`.
   `MammothApi {
     convertToHtml(input: {
       arrayBuffer: ArrayBuffer;
@@ -2550,32 +2550,32 @@ These named interfaces and helper signatures are available to typed integrations
   }`
 
 - **`components-viewers-email-viewer-email-loader-contracts`** — Supporting data types and helpers for this component family.
-  Import: `@aceshooting/lyra-ui/components/viewers/email-viewer/email-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-email-viewer.js`.
   `clearEmailDepsCache(): void`
-  Import: `@aceshooting/lyra-ui/components/viewers/email-viewer/email-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-email-viewer.js`.
   `EmailDeps {
     PostalMime: PostalMimeApi | undefined;
     DOMPurify: HtmlSanitizer | undefined;
   }`
-  Import: `@aceshooting/lyra-ui/components/viewers/email-viewer/email-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-email-viewer.js`.
   `getEmailDepsIfLoaded(): EmailDeps | undefined`
-  Import: `@aceshooting/lyra-ui/components/viewers/email-viewer/email-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-email-viewer.js`.
   `loadEmailAndSanitizer(importPostalMime?: () => Promise<unknown>, importDompurify?: () => Promise<unknown>): Promise<EmailDeps>`
-  Import: `@aceshooting/lyra-ui/components/viewers/email-viewer/email-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-email-viewer.js`.
   `loadEmailDeps(): Promise<EmailDeps>`
-  Import: `@aceshooting/lyra-ui/components/viewers/email-viewer/email-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-email-viewer.js`.
   `PostalAddressApi {
     name?: string;
     address?: string;
     group?: PostalAddressApi[];
   }`
-  Import: `@aceshooting/lyra-ui/components/viewers/email-viewer/email-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-email-viewer.js`.
   `PostalAttachmentApi {
     filename?: string | null;
     mimeType?: string;
     content: ArrayBuffer | Uint8Array | string;
   }`
-  Import: `@aceshooting/lyra-ui/components/viewers/email-viewer/email-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-email-viewer.js`.
   `PostalMessageApi {
     html?: string;
     text?: string;
@@ -2585,7 +2585,7 @@ These named interfaces and helper signatures are available to typed integrations
     date?: string;
     attachments?: PostalAttachmentApi[];
   }`
-  Import: `@aceshooting/lyra-ui/components/viewers/email-viewer/email-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-email-viewer.js`.
   `PostalMimeApi {
     parse(input: ArrayBuffer): Promise<PostalMessageApi>;
   }`
@@ -2751,20 +2751,20 @@ These named interfaces and helper signatures are available to typed integrations
   }`
 
 - **`components-viewers-spreadsheet-viewer-spreadsheet-loader-contracts`** — Supporting data types and helpers for this component family.
-  Import: `@aceshooting/lyra-ui/components/viewers/spreadsheet-viewer/spreadsheet-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-spreadsheet-viewer.js`.
   `clearSheetJsCache(): void`
-  Import: `@aceshooting/lyra-ui/components/viewers/spreadsheet-viewer/spreadsheet-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-spreadsheet-viewer.js`.
   `loadSheetJsCached(): Promise<SheetJsApi | null>`
-  Import: `@aceshooting/lyra-ui/components/viewers/spreadsheet-viewer/spreadsheet-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-spreadsheet-viewer.js`.
   `loadSheetJs(importXlsx?: () => Promise<unknown>): Promise<SheetJsApi | null>`
-  Import: `@aceshooting/lyra-ui/components/viewers/spreadsheet-viewer/spreadsheet-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-spreadsheet-viewer.js`.
   `SheetJsApi {
     read(input: ArrayBuffer, options?: Record<string, unknown>): SheetJsWorkbook;
     utils: {
       sheet_to_json(sheet: unknown, options?: Record<string, unknown>): unknown;
     };
   }`
-  Import: `@aceshooting/lyra-ui/components/viewers/spreadsheet-viewer/spreadsheet-viewer.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-spreadsheet-viewer.js`.
   `SheetJsWorkbook {
     SheetNames: string[];
     Sheets: Record<string, unknown>;

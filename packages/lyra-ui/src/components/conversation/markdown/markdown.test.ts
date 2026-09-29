@@ -574,11 +574,9 @@ it("intercepts a click on a link whose href matches internal-link-prefix and fir
   const a = el.shadowRoot!.querySelector("a")!;
 
   const listener = oneEvent(el, "lr-link-activate");
-  const legacy = oneEvent(el, 'lr-link-click');
   withNavigationBlocked(() => a.click());
   const { detail } = await listener;
   expect(detail).to.deep.equal({ href: "/docs/setup" });
-  expect((await legacy).detail).to.deep.equal(detail);
 });
 
 it("does not fire lr-link-activate for an ordinary external link", async () => {

@@ -1,4 +1,3 @@
-import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
@@ -15,8 +14,6 @@ import { LYRA_DEFAULT_comparePanel, LYRA_DEFAULT_compareResponseA, LYRA_DEFAULT_
 export type CompareVote = 'a' | 'b' | 'tie' | 'both-bad';
 
 export interface LyraComparePanelEventMap {
-  /** @deprecated Use `lr-vote-request`. */
-  'lr-vote': LyraComparePanelEventMap['lr-vote-request'];
   'lr-vote-request': CustomEvent<{ choice: CompareVote; itemId: string }>;
 }
 
@@ -33,7 +30,6 @@ export interface LyraComparePanelEventMap {
  * @slot a - The first output (any content — a chat message, markdown, a viewer).
  * @slot b - The second output.
  * @slot prompt - Optional shared-input header above both panes.
- * @event lr-vote - Deprecated cancelable compatibility alias of `lr-vote-request`.
  * @event lr-vote-request - `detail: { choice, itemId }`. Cancelable; preventing it preserves the prior vote.
  * @csspart base - The outer wrapper.
  * @csspart prompt - The optional prompt header, hidden when the `prompt` slot is empty.
@@ -76,11 +72,6 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
 
   private emitVoteRequest(detail: LyraComparePanelEventMap['lr-vote-request']['detail']): CustomEvent {
     const request = this.emit('lr-vote-request', Object.freeze(detail), { cancelable: true });
-    const alias = this.emit('lr-vote', Object.freeze(detail), { cancelable: true });
-    if (alias.defaultPrevented) {
-      warnDeprecatedUsage(this, 'event', 'lr-vote', 'lr-vote-request');
-      request.preventDefault();
-    }
     return request;
   }
   protected static override collectionSupport = collectionSupport;

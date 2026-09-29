@@ -178,9 +178,9 @@ so the default close button never wins merely because it appears first in shadow
 
 - An arrow pointing at the anchor is exposed as the `arrow` CSS part. Popover, dropdown and tooltip render
   it by default and `without-arrow` (boolean, reflected) suppresses it. Popup retains its own
-  false-defaulting `arrow` opt-in. Dropdown retains the deprecated inverse `arrow` alias
-  (removal not before 24.0.0); there, `arrow="false"` equals `without-arrow`. The part's attribute also carries the **resolved side** as
-  a second token — `arrow-top`, `arrow-bottom`, `arrow-left`, `arrow-right` — so
+  false-defaulting `arrow` opt-in. Dropdown uses the shared `without-arrow` control. The part's
+  attribute also carries the **resolved side** as a second token — `arrow-top`, `arrow-bottom`,
+  `arrow-left`, `arrow-right` — so
   `::part(arrow arrow-top)` styles one side. `::part(arrow)[data-side]` and
   `::part(arrow) .inner` are invalid selectors that silently never match; the state is in the part
   name.
@@ -608,7 +608,7 @@ the slide animation are its own.
 - `contained: boolean = false` (attribute `contained`, reflected) — position within the nearest
   containing block without a backdrop, page inerting, focus trap, scroll lock, top-layer
   promotion, or global Escape ownership
-- `heading?: string`, `label: string`, `accessibleLabel: string = ''` (property only),
+- `heading?: string`, `label: string`,
   `withoutCloseButton: boolean = false` (attribute `without-close-button`, reflected),
   `noHeader: boolean = false` (attribute `no-header`, Shoelace's spelling, reflected),
   `withoutHeader: boolean = false` (attribute `without-header`, Web Awesome's spelling, reflected;
@@ -616,7 +616,7 @@ the slide animation are its own.
   hint), and `lightDismiss: boolean = false` (attribute `light-dismiss`) — inherited dialog naming,
   chrome and dismissal options. A plain `aria-label` attribute on the host names the panel, inherited
   unchanged from `lr-dialog`: it is the strongest naming override, by attribute presence including
-  an explicitly empty value, ahead of `accessibleLabel` and any slotted heading.
+  an explicitly empty value, ahead of any slotted heading.
 - `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected) — semantic level of
   the generated title, from `1` through `6`, or `none` for visual-only title text. A direct slotted
   heading retains its own native level.
@@ -744,8 +744,6 @@ read, and neither is deprecated.
   the generated visible title (string property or rich `label` slot) at that semantic level;
   invalid untyped values retain level 3, while `none` keeps visual title text without heading
   semantics. A direct light-DOM heading retains its own native/ARIA level.
-- `accessibleLabel: string = ''` (property only) — explicit accessible-only name; unlike `label`,
-  it never renders visible text. In markup, use the host `aria-label`.
 - `heading?: string` — legacy visible-title fallback, after the `label` slot and `label` property;
   it has no effect when a direct light-DOM heading already supplies custom chrome
 - `withoutCloseButton: boolean = false` (attribute `without-close-button`, reflected) — removes the
@@ -974,7 +972,7 @@ from).
   </div>
 </lr-dialog>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/overlays/dialog/dialog.js";
+  import "@aceshooting/lyra-ui/components/lr-dialog.js";
 
   const dlg = document.getElementById("dlg");
   // Listeners first: `lr-show` is emitted synchronously inside show().
@@ -1012,8 +1010,8 @@ A dialog with no chrome of Lyra's own, animating faster and blurring the page be
 ```
 
 Accessible naming and visible title are separate. Naming precedence is: (1) host `aria-label`, by
-attribute presence including an explicitly empty value, (2) `accessibleLabel`, (3) the copied text
-of an unslotted direct light-DOM heading, then (4) the shadow-owned visible title wrapper.
+attribute presence including an explicitly empty value, (2) the copied text of an unslotted direct
+light-DOM heading, then (3) the shadow-owned visible title wrapper.
 Visible-title precedence is the rich `label` slot, then the mapped `label` property, then legacy
 `heading`. The direct-heading case copies text because an IDREF cannot cross from the panel's shadow
 tree to a light-DOM heading; the mapped title wrapper can use `aria-labelledby` because it lives in
@@ -1596,7 +1594,7 @@ the custom element upgrades, so finish the handoff explicitly with `show()`:
   fallback.addEventListener("toggle", async () => {
     if (!fallback.open || !popover.hidden) return;
     registration ??= import(
-      "@aceshooting/lyra-ui/components/overlays/overlay/popover.js"
+      "@aceshooting/lyra-ui/components/lr-popover.js"
     ).catch((error) => {
       registration = undefined; // let a later interaction retry
       throw error;
@@ -1860,7 +1858,7 @@ or to remember it on every new one:
   <p>Anchored content.</p>
 </lr-popover>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/overlays/overlay/popover.js";
+  import "@aceshooting/lyra-ui/components/lr-popover.js";
 
   const popover = document.querySelector("lr-popover");
   let ready = false;
@@ -2181,10 +2179,9 @@ its surface.
 - `containingElement?: HTMLElement` (property only) — an external element that counts as inside for
   light-dismiss handling.
 - `withoutArrow: boolean = false` (attribute `without-arrow`, reflected) — suppresses the
-  pointer. `arrow: boolean = true` remains its deprecated inverse alias (removal not before
-  24.0.0). Set `without-arrow` to preserve the previous omitted-arrow appearance.
-- `arrowPlacement`, `arrowPadding`, and `accessibleLabel` (`aria-label`) are retained from
-  `lr-popover` for existing Lyra consumers.
+  pointer. Set `without-arrow` to preserve the previous omitted-arrow appearance.
+- `arrowPlacement`, `arrowPadding`, and `accessibleLabel` (`aria-label`) are inherited from
+  `lr-popover`.
 - `popupRole: 'menu'` (attribute `popup-role`) is the narrowed inherited surface. Dropdowns cannot
   be changed into dialogs; use `lr-popover popup-role="dialog"` for arbitrary dialog-like content.
 
@@ -2270,8 +2267,8 @@ The menu content is exactly what `lr-dropdown` takes, so every row type composes
 
 ```html
 <script type="module">
-  import '@aceshooting/lyra-ui/components/overlays/context-menu/context-menu.js';
-  import '@aceshooting/lyra-ui/components/layout/menu/menu-label.js';
+  import '@aceshooting/lyra-ui/components/lr-context-menu.js';
+  import '@aceshooting/lyra-ui/components/lr-menu-label.js';
 </script>
 
 <lr-context-menu label="File actions">
@@ -2572,10 +2569,8 @@ A determinate or indeterminate progress bar with an independently visible label 
 formatted percentage.
 
 **Properties:** `value` (reflected), `max`, `indeterminate`, `variant`, `withValue` (`with-value`),
-and `label` (mapped accessible-name property), plus `accessibleLabel` (property only) — Lyra's own
-explicit name, read after `label`. In markup, name the bar with the host `aria-label`, which has
-the highest precedence. Also
-`size: LyraSize = 'm'` (reflected) — `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' |
+`label` (mapped accessible-name property), and `size: LyraSize = 'm'` (reflected) —
+`'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' |
 'large'`. Track/indicator thickness tier, on the shared six-step ladder: `0.25rem` (`2xs`),
 `0.375rem` (`xs`), `0.625rem` (`s`/`small`), `1rem` (`m`/`medium`, unchanged from before this
 property existed), `1.25rem` (`l`/`large`), `1.5rem` (`xl`) — each value feeds
@@ -2625,10 +2620,8 @@ A circular progress indicator with the same value contract as `lr-progress-bar`.
 (reflected), `variant: LyraProgressVariant = 'brand'` (reflected, added in 9.0.0 — matches sibling
 `lr-progress-bar`'s semantic-palette vocabulary: `neutral`/`brand`/`success`/`warning`/`danger`),
 `withValue: boolean = false` (attribute `with-value`),
-`label: string = ''` (the mapped accessible-name property), and
-`accessibleLabel: string = ''` (property only; in markup, name the ring with the host
-`aria-label`). Also
-`size: LyraSize = 'm'` (reflected) — `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' |
+`label: string = ''` (the mapped accessible-name property), and `size: LyraSize = 'm'` (reflected) —
+`'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' |
 'large'`. Outer diameter tier, on the shared six-step ladder: `1.25rem` (`2xs`), `1.75rem` (`xs`),
 `2.25rem` (`s`/`small`), `2.5rem` (`m`/`medium`, unchanged from before this property existed),
 `3rem` (`l`/`large`), `3.5rem` (`xl`) — each value feeds `--lr-progress-ring-size`'s private
@@ -2636,8 +2629,8 @@ default. An explicit `--lr-progress-ring-size` (or the upstream `--size` alias) 
 every tier. Matching sibling `lr-progress-bar`'s own `size`, this ladder scales exactly one
 dimension — `--lr-progress-ring-track-width`/`--lr-progress-ring-indicator-width` and the center
 label's font size are untouched by it. Host
-`aria-label` takes precedence; otherwise the name falls back to `label`, `accessibleLabel`, the
-visible default- or `label`-slot text when supplied, then the localized "Progress".
+`aria-label` takes precedence; otherwise the name falls back to `label`, visible default- or
+`label`-slot text when supplied, then the localized "Progress".
 Non-finite/out-of-range `value`/`max` are normalized (`max <= 0` falls
 back to `100`, `value` clamps to `[0, max]`) rather than producing NaN geometry.
 **Slots:** default — replaces the built-in center label, which otherwise renders the rounded
@@ -2844,8 +2837,8 @@ the remove button's `:hover` fill).
 
 <lr-tag variant="brand" appearance="outlined" with-remove>Design</lr-tag>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/overlays/badge/badge.js";
-  import "@aceshooting/lyra-ui/components/overlays/badge/tag.js";
+  import "@aceshooting/lyra-ui/components/lr-badge.js";
+  import "@aceshooting/lyra-ui/components/lr-tag.js";
 
   document.querySelector("lr-tag").addEventListener("lr-remove", (e) => {
     e.target.remove(); // in an app, update the backing collection instead
@@ -2969,7 +2962,7 @@ reuses the existing Lyra toast layer instead of creating a second placement syst
 </button>
 
 <script type="module">
-  import "@aceshooting/lyra-ui/components/overlays/alert/alert.js";
+  import "@aceshooting/lyra-ui/components/lr-alert.js";
 
   const alert = document.querySelector("#session-alert");
   alert.addEventListener("lr-after-hide", () => console.log("Alert is hidden"));
@@ -3002,8 +2995,7 @@ property and rich-slot heading wrapper at that semantic level, invalid untyped v
 carries when it first mounts; see the announcement paragraph that closes this section),
 `open: boolean = true`
 (reflected as a presence attribute — `open="false"` is accepted in plain markup; `false` removes the
-semantic content and hides the host surface), and `accessibleLabel: string = ''` (property only;
-used only when the host has no `aria-label` attribute). In markup, name the callout with the host
+semantic content and hides the host surface). In markup, name the callout with the host
 `aria-label`, which has highest precedence by presence, including an explicitly empty value.
 
 Every reflected closed set normalizes identically from markup and untyped JavaScript writes:
@@ -3094,7 +3086,7 @@ any nested level. `display:none`/`content-visibility:hidden` prune a branch; a
 stay silent. Nested forwarding slots expose their flattened assigned text instead of fallback
 content, and later assignment plus assigned-node text/style/visibility mutations are observed.
 Mutations that leave that accessible text unchanged are deduplicated. A nonempty host
-`aria-label` (or `accessibleLabel` fallback) prefixes visible update text as context, with an
+`aria-label` prefixes visible update text as context, with an
 equality check preventing duplicate copy. The complete localized
 `calloutAnnouncementWithContext: '{context}: {content}'` message owns both fields, their order, and
 punctuation; override that key through `strings` rather than prejoining either field. An explicitly
@@ -3165,7 +3157,7 @@ Each access returns a fresh `LyraFormValidator<LyraRating>[]`; its entry observe
 current `ValidityState` into `{ isValid, message, invalidKeys }` without changing it.
 
 ```ts
-import { LyraRating } from "@aceshooting/lyra-ui/components/overlays/rating/rating.js";
+import { LyraRating } from "@aceshooting/lyra-ui/components/lr-rating.js";
 
 const rating = document.querySelector("lr-rating")!;
 const result = LyraRating.validators[0].checkValidity(rating);
@@ -3284,7 +3276,7 @@ host beyond its container.
 ></lr-rating>
 <p id="preview"></p>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/overlays/rating/rating.js";
+  import "@aceshooting/lyra-ui/components/lr-rating.js";
 
   const rating = document.querySelector("lr-rating");
   const preview = document.getElementById("preview");

@@ -14,7 +14,7 @@
       "dark": "#203227"
     },
     "--lr-theme-color-text-normal": {
-      "light": "#183626",
+        "light": "#0d2115",
       "dark": "#e5f5e9"
     },
     "--lr-theme-color-text-quiet": {

@@ -7,9 +7,7 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
-- **Deprecated attribute** `accessible-label` since `22.0.0`; use attribute `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.`; removal not before `24.0.0` — The native host accessible-name API replaces the component-specific fallback while preserving its existing runtime behavior throughout the compatibility window.
-- **Deprecated event** `lr-retry` since `22.0.0`; use event `addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
-- **Deprecated property** `accessibleLabel` since `22.0.0`; use attribute `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.`; removal not before `24.0.0` — The native host accessible-name API replaces the component-specific fallback while preserving its existing runtime behavior throughout the compatibility window.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 46 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -18,15 +16,10 @@
 
 ## `lr-table`
 
-Sort/select-aware data table with a bounded 100-row default projection. A sortable header first
-emits cancelable `lr-sort-request`; accepted transactions emit `lr-sort` with the same canonical
-`sortKey`/`sortDir`. Client mode updates sort state and orders rows; server mode leaves sort state
-controlled. Optional filtering, bounded pagination, and loading chrome are built in. A
-`columns[].heatValue`-opted-in heat-tint mode paints a shared, normalized color-mix background across
-every tinted cell (auto-derived domain, or overridden via `heatTintScale`); `rowTotal`/`grandTotal`
-add a trailing totals column mirroring `expandedContent`'s leading one — `rowTotal(row)` renders
-per-row, `grandTotal(rows)` renders at its intersection with the footer row — both sharing `footer`'s
-own "consumer computes/renders" contract rather than assuming addition.
+Sort/select-aware table with a bounded 100-row default page, filtering, pagination, and loading
+states. Sort requests are cancelable; accepted client requests update `sortKey`/`sortDir` and order
+rows, while server mode leaves that state controlled. `columns[].heatValue` opts into a shared heat
+scale; `rowTotal`/`grandTotal` position caller-computed totals in a trailing column.
 
 Effective locale changes recollate and filter the current view while keeping activation and edit
 lookups aligned with the rendered page. Direct row focus uses the same stable-key restoration rules;
@@ -38,15 +31,8 @@ it survives and otherwise clamps focus to the nearest surviving index. Moving fo
 table before the update is applied always wins; nested editors and controls keep their independent
 focus contracts.
 
-**9.0 migration:** replace `selectedKey = key` with `selectedRowKeys = new Set([key])`; both single
-and multiple modes now use that one store. Replace `columnsHidden` with read-only
-`hasHiddenPriorityColumns`, `showAllColumns` with `priorityColumnsVisible`, and the two former
-column-visibility events with `lr-priority-columns-visibility-change { visible }`. Column
-`sticky: true` becomes `sticky: 'start'`; `editable: true` becomes
-`editTrigger: 'double-click'`, and `editable: 'always'` becomes `editTrigger: 'always'`. Sort
-listeners now receive phased readonly `{ phase, sortKey, sortDir }` details from
-`lr-sort-request`/`lr-sort`. A bare table now projects 100 rows per page (with inputs bounded to
-1..500); set an explicit finite `page-size` when a different window is required.
+For historical migration mappings, see the [changelog](../CHANGELOG.md). Current property and event
+contracts follow.
 
 **TypeScript:** `LyraTable<T, K extends string | number = string | number>` takes a second type
 parameter for the row-key type. `K` types `rowKey`'s return value,
@@ -306,7 +292,8 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   grouped table on a column unrelated to the group key reorders rows inside their groups and
   leaves the grouping intact. The one exception: when the sorted column's value is constant inside
   every group — the group column itself, most obviously — there is nothing to reorder within a
-  group, so the **groups** are ordered by that value instead.
+  group, so the **groups** are ordered by that value instead. To force another group order,
+  pre-sort `rows` or use `sort-mode="server"`.
 - `groupLabel?: (key: string | number, rows: readonly T[]) => unknown` (attribute: false) — custom group
   header content; without it, the group key is rendered as text
 - `expandedContent?: (row: T) => unknown` (attribute: false) — enables a leading expand toggle and
@@ -489,13 +476,10 @@ The internal filter input's composed native `input`/`change` events are containe
 `lr-filter-change` crosses the host boundary. Cell-editor `input`/`change` events are likewise
 contained while an accepted edit publishes `lr-cell-edit`. Internal filter/cell-editor native
 `focus` and `blur` are re-dispatched from the host as bubbling, composed events (the native ones
-are neither). `lr-retry-request` and `lr-retry` — the built-in `[part='retry-button']` was activated, only rendered while
+are neither). `lr-retry-request` — the built-in `[part='retry-button']` was activated, only rendered while
 `error` is set. **Cancelable**: the default action clears `error`; calling `preventDefault()` leaves
 it set, for a consumer that owns its own retry timing (e.g. it wants to keep the banner up until a
 fresh load has actually started, or failed again immediately).
-`lr-retry` is the deprecated cancelable alias, dispatched after `lr-retry-request` with the same
-null detail. Either event can veto clearing the error; subscribe to one spelling. Removal of the
-alias is not before 24.0.0.
 
 **Slots:** `empty` — replaces the built-in empty state on the two _data_-empty branches (no rows at
 all, and filtered/paginated down to zero). Left unfilled, the built-in `[part='empty']` `<lr-empty>`
@@ -579,41 +563,33 @@ body's `max-block-size`). `--lr-table-heat-tint-lo` (default `var(--lr-color-bra
 `--lr-table-heat-tint-hi` (default `var(--lr-color-brand)`) — the `color-mix()` ramp endpoints
 for heat-tint mode's per-cell background, consulted only on columns/rows that define `heatValue`;
 `--lr-table-resize-min-width` (default `var(--lr-size-3rem)`) and
-`--lr-table-resize-handle-opacity` (default `0.12`) control resizable-column behavior. The latter
-remains the legacy shared opacity fallback; `--lr-table-resize-handle-hover-bg` (default
-`var(--lr-color-brand)`), `--lr-table-resize-handle-hover-opacity` (defaulting to the legacy
+`--lr-table-resize-handle-opacity` (default `0.12`) control resizable-column behavior.
+`--lr-table-resize-handle-hover-bg` (default
+`var(--lr-color-brand)`), `--lr-table-resize-handle-hover-opacity` (defaulting to that
 opacity), `--lr-table-resize-handle-active-bg` (defaulting to the hover background), and
 `--lr-table-resize-handle-active-opacity` (defaulting to twice the hover opacity) independently
 retune the rendered interaction states. These heat-tint/resize hooks are not redeclared on the component host: set them on
 `lr-table` or on a theme ancestor, and a table-level value wins through the normal cascade.
-`--lr-table-row-selected-bg` (default `var(--lr-color-brand-quiet)`) — the background of a row whose
-`aria-selected` is `true`, including that row's own `sticky` column cell. Like every state-scoped
-custom property in this library it is an inline
-`var()` fallback at its point of use and is **not** declared on `:host`, so it can be set on the
-element _or on any ancestor_ and still reach the rule that reads it. It exists because Shadow Parts
-forbids an attribute selector after `::part()` — `::part(row)[aria-selected='true']` is invalid CSS —
-so the only prior lever for restyling the selected row was overriding the library-wide
-`--lr-color-brand-quiet` token, which repaints everything else reading it.
+State-scoped hooks below use inline `var()` fallbacks, so values on `lr-table` or an ancestor remain
+effective. Shadow Parts cannot select an attribute after `::part()`.
+`--lr-table-row-selected-bg` (default `var(--lr-color-brand-quiet)`) paints a selected row and its
+own `sticky` cell when `aria-selected="true"`.
 `--lr-table-row-stripe-bg` (default `transparent`) — the background of alternating body rows,
 including each row's own `sticky` column cell. The
-component marks the alternating rows itself, so this works without an invalid `::part(row)` attribute
-or structural-pseudo-class selector and does not affect group, expanded, hover, or selected rows. A
+component marks the alternating rows itself; this does not affect group, expanded, hover, or selected rows. A
 row's hover and pressed fills reach its `sticky` column cell the same way, through an internal
 custom property rather than a themeable token, since neither state has a public hook today.
 `--lr-table-header-sorted-bg` (default `var(--lr-color-surface)`) and `--lr-table-header-sorted-color` (default
 `inherit`) restyle the **currently-sorted** column's header cell (`[aria-sort]` other than `none`),
 including a `sticky` column's own header cell. The opaque surface default prevents body rows from
 showing through the sticky header while it scrolls.
-Same shape and rationale as `--lr-table-row-selected-bg`: inline `var()` fallbacks, not on `:host`,
-because `::part(header-cell)[aria-sort]` is invalid CSS. The `sort-icon` part styles only the
-indicator; these tokens style the header cell itself. Use `::part(sort-icon-inactive)` and
+The `sort-icon` part styles only the indicator; these tokens style the header cell. Use `::part(sort-icon-inactive)` and
 `::part(sort-icon-active)` to style the two indicator states without private selectors.
 `--lr-table-sticky-offset` (default `0`) is measured and written inline per column by the component
 so multiple `sticky` columns stack instead of overlapping; it is a read-out, not a knob you set.
 `--lr-table-heat-t` is likewise component-written (each `[data-heat]` cell's position on the ramp).
 `[part="base"]`, the table's own scroll container, also honors the opt-in theme-level
-`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`auto`, matching
-its previous unconditional `scrollbar-width: auto`) — set either on `:root` or any ancestor for one
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`auto`) — set either on `:root` or any ancestor for one
 declaration to retheme every internal scroll container in the library, including
 `lr-virtual-list`, `lr-scroller`, `lr-carousel`, `lr-code-block`, and `lr-code-editor`.
 
@@ -660,31 +636,18 @@ declaration to retheme every internal scroll container in the library, including
 
 **Known gotchas:**
 
-- accepted sortable-header activation writes `sortKey`/`sortDir` only in client mode. Server mode
-  keeps those properties controlled and reports the accepted proposal in `lr-sort`; veto
-  `lr-sort-request` to suppress both state change and commit. The built-in transaction toggles only
-  between two directions, so a tri-state header (asc → desc → unsorted) remains consumer-owned.
+- The built-in sort transaction toggles between `asc` and `desc`; a tri-state header with an
+  unsorted state remains consumer-owned. Veto `lr-sort-request` to suppress state change and commit.
 - `sortValue`/`cell` are read off the column object by identity. Mutating a column **in place**
   (`t.columns[0].sortValue = …`) neither re-renders nor re-sorts; assign a new `columns` array.
-- `groupBy` + client sorting are **not** in conflict: the sort runs per group, not across the whole
-  set, so group rows stay contiguous. The consequence is that the group order is normally yours to
-  control — it follows first appearance in `rows`. The single exception is a sort on a column whose
-  value is constant inside every group (the group column itself, a column functionally determined
-  by the group key, or any column at all when every group holds one row): the within-group sort
-  would be a provable no-op, so the groups are ordered by that constant value instead. That is what
-  keeps `aria-sort` and the header chevron honest — otherwise clicking the group column would flip
-  both while changing nothing. To force a group order in any other case, sort `rows` into it before
-  assigning them (or set `sort-mode="server"` and own the whole ordering).
 - both single and multiple row selection use `selectedRowKeys`; the component does not synthesize a
   checkbox column, so a bulk-select UI still belongs in `headerCell()`/`cell()` callbacks.
 - A host `aria-label` (or native `ariaLabel` property) names the internal `<table role="grid">`.
-  Presence wins, including an explicitly empty string. `accessibleLabel?: string` (attribute
-  `accessible-label`) remains a deprecated fallback, with removal not before 24.0.0; an explicit
-  empty fallback stays empty when the host name is absent. Caller text bypasses localization.
+  Presence wins, including an explicitly empty string. Caller text in the host `aria-label` bypasses localization.
 - `caption: string = ''` — an optional visible `<caption>` (exposed as the `caption` CSS part). When
-  no `accessibleLabel`/host `aria-label` is present the caption also names the grid via
+  no host `aria-label` is present the caption also names the grid via
   `aria-labelledby`.
-- A grid with **none** of `accessibleLabel`, host `aria-label`, or `caption` logs a one-time
+- A grid with **none** of host `aria-label` or `caption` logs a one-time
   `console.warn` on first render in development builds only — an unnamed grid is an accessibility
   defect that otherwise renders silently. Production and unknown/unbundled runtimes do not log it.
 - `revealColumnsLabel`/`columnsHideLabel` only ever reach the DOM on
@@ -692,11 +655,10 @@ declaration to retheme every internal scroll container in the library, including
   `priority`. Setting either label with no `priority` column is therefore always inert — it logs
   the same shape of one-time, development-only, production-silent `console.warn` as the missing
   accessible-name check above, rather than failing silently.
-- Full roving-tabindex grid keyboard pattern (one `tabindex="0"` stop among header cells, one among
-  body rows) — Left/Right/Home/End move within the header row, Up/Down/Home/End move within the
-  body, Down from the header enters the body's roving stop and Up from the body's first row returns
-  to the header, Enter/Space still only sort/activate — a genuine strength versus most siblings in
-  this family. A `priority`-hidden header/cell is skipped when computing the visible header stops,
+- The grid has one roving `tabindex="0"` stop among header cells and one among body rows.
+  Left/Right/Home/End navigate headers; Up/Down/Home/End navigate rows. Down from a header enters
+  the body, Up from its first row returns to the header, and Enter/Space sort or activate.
+  A `priority`-hidden header/cell is skipped when computing visible header stops,
   so arrow-key navigation never strands the roving stop on a hidden column.
 - a `cell()` template can render its own interactive content without it being swallowed by
   row/column activation. Delegated clicks and Enter/Space inspect the event's composed path for
@@ -730,23 +692,9 @@ declaration to retheme every internal scroll container in the library, including
   as the cell's accessible _name_, replacing the cell's content rather than supplementing it (the
   same caveat `lr-stat`'s `exactValue` carries). Use it for a longer form of what the cell already
   shows, never for information that exists nowhere else.
-- `editTrigger: 'always'` deliberately does not re-assert a `'text'`/`'number'` cell's source value
-  once the user has typed into it. That is the native dirty-value-flag behavior the attribute
-  binding buys, and it is the point: a background `rows` refresh cannot silently overwrite an
-  in-progress edit. If you need the
-  opposite — an authoritative external value that always wins — do not use `'always'`; re-key the
-  row (`rowKey`) so the editor is recreated rather than updated, or use `editTrigger: 'double-click'` and let
-  the short-lived double-click editor's property binding re-assert. Also note the two things
-  `'always'` intentionally does _not_ do: it never sets the roving `tabindex` (its editors are
-  ordinary tab stops, so Tab order in that column interleaves with the grid's two roving stops,
-  the same way the row-expand toggle's already does), and it never cancels Escape.
-- `editType: 'select'` renders a native `<select>`, populated from `columns[].editOptions`
-  (`{ value: string; label: string }[]`, one `<option>` per entry in order); a `'select'` column
-  with no `editOptions` renders an empty, valueless `<select>` rather than throwing. Unlike the
-  `'text'`/`'number'` editors, `<select>`/`<option>` carry no native dirty-value flag, so the
-  protection described above for a persistent `'always'` editor does not extend to a `'select'`
-  one — a background `rows` refresh re-applies the selection to a persistent select editor even
-  after the user has picked a different, uncommitted option. The double-click flavor is unaffected
-  by this distinction either way, since it is always short-lived.
+- For an externally authoritative value, re-key the row (`rowKey`) to recreate an `'always'`
+  editor, or use the transient `editTrigger: 'double-click'` editor. Persistent text/number editors
+  otherwise retain dirty drafts; persistent select editors re-apply refreshed selections, as
+  described under `columns[].editTrigger` above.
 
 ---

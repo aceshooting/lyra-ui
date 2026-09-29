@@ -125,14 +125,6 @@ export interface LyraKnowledgeGraphExplorerEventMap {
   >;
   'lr-node-activate': CustomEvent<{ nodeId: string; x: number; y: number }>;
   'lr-edge-activate': CustomEvent<{ sourceNodeId: string; targetNodeId: string; edgeId?: string }>;
-  /** @deprecated Use lr-node-activate. */
-  'lr-node-click': CustomEvent<{ nodeId: string; x: number; y: number }>;
-  /** @deprecated Use lr-edge-activate and its edgeId detail field. */
-  'lr-link-click': CustomEvent<{
-    sourceNodeId: string;
-    targetNodeId: string;
-    linkId?: string;
-  }>;
   'lr-node-expand': CustomEvent<{ nodeId: string }>;
   /** Bubbles unchanged from the composed `lr-graph`. */
   'lr-community-activate': CustomEvent<{ communityId: string }>;
@@ -154,7 +146,7 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  * `lr-popover.showAt()` (the details overlay itself).
  *
  * **How the details popover finds its viewport position.** `lr-graph.getNodePosition()` and the
- * `lr-node-click` event's `{ x, y }` are in the graph's own *local drawing space* (pre pan/zoom),
+ * `lr-node-activate` event's `{ x, y }` are in the graph's own *local drawing space* (pre pan/zoom),
  * never viewport pixels -- passing them straight to `showAt()` would anchor the popover at the
  * wrong place as soon as the graph has panned or zoomed even once. A direct node click resolves
  * the correct viewport rect the way this library's own documented `lr-graph` + `lr-popover.showAt()`
@@ -218,8 +210,6 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  *   `detail: { hiddenTypes }`. See the class doc above. Direct host assignments do not emit.
  * @event lr-node-activate - Bubbles unchanged from the composed graph with `{ nodeId, x, y }`.
  * @event lr-edge-activate - Bubbles unchanged from the composed graph with `{ sourceNodeId, targetNodeId, edgeId? }`.
- * @event lr-node-click - Deprecated: use `lr-node-activate`. Bubbles straight through from the composed `lr-graph`, unmodified.
- * @event lr-link-click - Deprecated: use `lr-edge-activate` and `edgeId`. Bubbles straight through from the composed `lr-graph`, unmodified.
  * @event lr-node-expand - Bubbles straight through from `lr-graph` and/or `lr-neighbor-list` (the
  *   same event name/detail shape from either source) -- this component never appends neighbors
  *   itself, only forwards the request; a host fetches/generates the expansion and assigns updated

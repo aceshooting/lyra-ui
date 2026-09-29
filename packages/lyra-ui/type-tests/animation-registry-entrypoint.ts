@@ -6,7 +6,7 @@ import {
   type LyraElementAnimation,
   type LyraGetAnimationOptions,
   type LyraResolvedElementAnimation,
-} from '../src/utilities/animation-registry.js';
+  } from '../src/utilities/animation-registry.js';
 import {
   getAnimation as getRootAnimation,
   setAnimation as setRootAnimation,

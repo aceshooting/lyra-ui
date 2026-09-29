@@ -7,7 +7,7 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
-- **Deprecated event** `lr-link-click` since `22.0.0`; use event `lr-link-activate`; removal not before `24.0.0` — Activation includes pointer and keyboard gestures. The old event remains available after the canonical event with equal detail throughout the compatibility window.
+- **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 24 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -81,8 +81,7 @@ as the full class; the core route exports its own `Marked` alias.
 
 **Events:** `lr-link-activate`, `lr-render-error`, `lr-highlight-activate`, `lr-text-select`,
 `lr-anchor-result`, `lr-content-settled`, `lr-copy`, `lr-copy-error` — identical detail shapes to
-`<lr-markdown>`'s own. `lr-link-click` is the deprecated compatibility alias of `lr-link-activate`,
-emitted afterward with the same detail.
+`<lr-markdown>`'s own.
 
 **Slots:** none — content comes from the `content` property, not light-DOM children.
 
@@ -119,7 +118,7 @@ on.
 ````ts
 import { html } from "lit";
 import python from "shiki/langs/python.mjs";
-import "@aceshooting/lyra-ui/components/conversation/markdown/markdown-core.js";
+import "@aceshooting/lyra-ui/components/lr-markdown-core.js";
 
 const view = html`<lr-markdown-core
   .content=${"# Report\n\n```python\nprint('hi')\n```\n\n```bash\necho hi\n```"}

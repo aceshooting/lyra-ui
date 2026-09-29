@@ -1,6 +1,3 @@
-import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
-expectDeprecatedUsage('lr-export-button', 'event', 'lr-export');
-
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './export-button.js';
 import type {
@@ -73,7 +70,7 @@ it('omits descriptors without nonblank labels and stays inert for an empty forma
   el.formats = [];
   await el.updateComplete;
   const emitted: string[] = [];
-  for (const type of ['lr-export', 'lr-export-complete', 'lr-export-error', 'lr-show', 'lr-hide']) {
+  for (const type of ['lr-export-request', 'lr-export-complete', 'lr-export-error', 'lr-show', 'lr-hide']) {
     el.addEventListener(type, () => emitted.push(type));
   }
   const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
@@ -98,7 +95,7 @@ it('disables the trigger and emits nothing when every configured format is rejec
 
   expect(el.formats).to.deep.equal([]);
   const emitted: string[] = [];
-  for (const type of ['lr-export', 'lr-export-complete', 'lr-export-error', 'lr-show', 'lr-hide']) {
+  for (const type of ['lr-export-request', 'lr-export-complete', 'lr-export-error', 'lr-show', 'lr-hide']) {
     el.addEventListener(type, () => emitted.push(type));
   }
   const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
@@ -109,26 +106,29 @@ it('disables the trigger and emits nothing when every configured format is rejec
   expect(emitted).to.deep.equal([]);
 });
 
-it('emits lr-export then lr-export-complete for a single format', async () => {
+it('emits lr-export-request then lr-export-complete for a single format', async () => {
   const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.rows = rows;
   el.columns = columns;
   await el.updateComplete;
   const btn = el.shadowRoot!.querySelector('button') as HTMLButtonElement;
-  const exportEvent = oneEvent(el, 'lr-export');
+  let legacyEvents = 0;
+  el.addEventListener('lr-export', () => legacyEvents++);
+  const exportEvent = oneEvent(el, 'lr-export-request');
   const completeEvent = oneEvent(el, 'lr-export-complete');
   btn.click();
   const ev = await exportEvent;
   expect(ev.detail.format).to.equal('csv');
   expect(Object.isFrozen(ev.detail)).to.equal(true);
   await completeEvent;
+  expect(legacyEvents).to.equal(0);
 });
 
-it('suppresses the built-in download when lr-export is cancelled', async () => {
+it('suppresses the built-in download when lr-export-request is cancelled', async () => {
   const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.rows = rows;
   el.columns = columns;
-  el.addEventListener('lr-export', (e) => e.preventDefault());
+  el.addEventListener('lr-export-request', (e) => e.preventDefault());
   await el.updateComplete;
   let completed = false;
   el.addEventListener('lr-export-complete', () => (completed = true));
@@ -159,12 +159,12 @@ it('normalizes unique nonempty formatId values before menu state and export even
 
   const items = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="menu-item"]')];
   expect(items.map((item) => item.textContent!.trim())).to.deep.equal(['CSV', 'First Excel']);
-  const exported = oneEvent(el, 'lr-export');
+  const exported = oneEvent(el, 'lr-export-request');
   items[1]!.click();
   expect((await exported).detail).to.deep.equal({ format: 'xlsx' });
 });
 
-it('renders custom format descriptors and carries their formatId through lr-export', async () => {
+it('renders custom format descriptors and carries their formatId through lr-export-request', async () => {
   const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.formats = [
     'csv',
@@ -176,7 +176,7 @@ it('renders custom format descriptors and carries their formatId through lr-expo
   expect(items[1]!.querySelector('[part="format-description"]')!.textContent).to.equal(
     'Native spreadsheet format',
   );
-  const exportEvent = oneEvent(el, 'lr-export');
+  const exportEvent = oneEvent(el, 'lr-export-request');
   items[1]!.click();
   expect((await exportEvent).detail.format).to.equal('xlsx');
 });
@@ -220,7 +220,7 @@ it('disables activation and exposes busy state while loading', async () => {
   expect(el.getAttribute('aria-busy')).to.equal('true');
   expect(el.hasAttribute('loading')).to.be.true;
   let exported = false;
-  el.addEventListener('lr-export', () => (exported = true));
+  el.addEventListener('lr-export-request', () => (exported = true));
   trigger.click();
   expect(exported).to.be.false;
   el.loading = false;
@@ -862,7 +862,7 @@ it('blocks export via an already-open menu item once disabled is set, even witho
   await el.updateComplete;
 
   let exported = false;
-  el.addEventListener('lr-export', () => (exported = true));
+  el.addEventListener('lr-export-request', () => (exported = true));
   const menuItem = el.shadowRoot!.querySelector('[part="menu-item"]') as HTMLButtonElement;
   menuItem.click();
   await el.updateComplete;
@@ -903,7 +903,7 @@ it('does not open the menu or export when disabled', async () => {
   expect(trigger.disabled).to.be.true;
 
   let exported = false;
-  el.addEventListener('lr-export', () => (exported = true));
+  el.addEventListener('lr-export-request', () => (exported = true));
   trigger.click();
   await el.updateComplete;
   expect(el.open).to.be.false;
@@ -1217,7 +1217,7 @@ it('focus() delegates to the native trigger button', async () => {
 it('click() delegates to the native trigger and respects its disabled state', async () => {
   const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   let exports = 0;
-  el.addEventListener('lr-export', (event) => {
+  el.addEventListener('lr-export-request', (event) => {
     event.preventDefault();
     exports++;
   });
@@ -1697,7 +1697,7 @@ describe('lazy row source', () => {
     await el.updateComplete;
 
     const callsBeforeExport: string[] = [];
-    el.addEventListener('lr-export', () => callsBeforeExport.push('export-event'));
+    el.addEventListener('lr-export-request', () => callsBeforeExport.push('export-event'));
     let calls = 0;
     el.getRows = () => {
       calls += 1;
@@ -1739,11 +1739,11 @@ describe('lazy row source', () => {
     expect(text).to.equal('ID,Name\r\na,Alpha');
   });
 
-  it('honours rows assigned late, from inside the cancelable lr-export listener', async () => {
+  it('honours rows assigned late, from inside the cancelable lr-export-request listener', async () => {
     const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
     el.columns = columns;
     await el.updateComplete;
-    el.addEventListener('lr-export', () => {
+    el.addEventListener('lr-export-request', () => {
       el.rows = [{ id: 'late', name: 'Late' }];
     });
 
@@ -1760,7 +1760,7 @@ describe('lazy row source', () => {
       calls += 1;
       return rows;
     };
-    el.addEventListener('lr-export', (event) => event.preventDefault());
+    el.addEventListener('lr-export-request', (event) => event.preventDefault());
     await el.updateComplete;
 
     (el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement).click();
@@ -1946,7 +1946,7 @@ it('requests an export before collecting rows and retains the legacy veto event'
     expect(event.detail).to.deep.equal({ format: 'csv' });
     event.preventDefault();
   });
-  el.addEventListener('lr-export', () => order.push('legacy'));
+  el.addEventListener('lr-export-request', () => order.push('legacy'));
   el.addEventListener('lr-export-complete', () => order.push('complete'));
   el.shadowRoot!.querySelector<HTMLButtonElement>('button')!.click();
   expect(order).to.deep.equal(['request', 'legacy']);

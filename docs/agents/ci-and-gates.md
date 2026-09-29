@@ -133,20 +133,25 @@ internally by `registrations`), `component-metadata:history` (a manual git-histo
 and `coverage-floors` (reviewed limits, not derived output — already outside `contract-policy` for
 the same reason).
 
-**Theme presets and the token grammar.** `scripts/generate-theme-presets.mjs` turns each
-`src/themes/<name>.css` look into the committed runtime preset `src/theme/presets/<name>.ts`
-(`pnpm run theme-presets`, part of `regen`); its `--check` (`check:theme-presets`, in
-`contract-policy`) fails on a stale or orphaned module and on any stylesheet that breaks the file-shape
-contract (layer statement, one `lr-theme-preset` block, a light rule then a dark rule, `--lr-theme-*`
-only, grammar-valid single-line values, fill/on pairing, identical key sets per mode). The token
-grammar itself has one source, `scripts/fixtures/theme-token-grammar.json`: `theme.ts` carries two
-literal copies (runtime and self-contained bootstrap), and `scripts/theme-token-grammar.test.mjs`
-fails when either drifts from the fixture or when the fixture's mode-default reference colours
-drift from `theme.css` — edit all three together. The bootstrap's shipped bytes have their own
-ceiling, `scripts/theme-bootstrap-budget.json`, enforced by `check:theme-bootstrap` (chained into
-`build`) together with an inline-script safety check (`</`, `<!--`, `<script`, raw U+2028/U+2029);
-it is not in `bundle-budgets.json` because `check-bundle-size.mjs` re-minifies, and raising it needs
-a reviewed re-measurement.
+**Composable styling and the token grammar.** Author shared theme inputs in
+`tokens/canonical-tokens.json`, looks in `tokens/looks/*.json`, and the density and glass treatments
+in `tokens/density.json` and `tokens/surfaces/glass.json`. `pnpm run style-axes` generates the
+production theme, optional look/surface/density/accent stylesheets, runtime look definitions and the
+style model embedded in `theme.ts`; `check:style-axes` in `contract-policy` fails when any
+projection is stale. Edit the token sources and regenerate these outputs instead of hand-editing
+them. The runtime API is `setLyraStyle()`/`getLyraStyle()`/`resetLyraStyle()` from `theme.js`, with
+`defineLyraLook()` for runtime look definitions; there is no theme-preset generator or preset
+facade.
+
+The token grammar has one source, `scripts/fixtures/theme-token-grammar.json`: `theme.ts` carries
+two literal copies (runtime and self-contained bootstrap), and `scripts/theme-token-grammar.mjs`
+builds the generator validator from the fixture. `scripts/theme-token-grammar.test.mjs` (in
+`test:tooling`) fails when either copy drifts or when the fixture's mode-default reference colours
+drift from `theme.css`. The bootstrap's shipped bytes have their own ceiling,
+`scripts/theme-bootstrap-budget.json`, enforced by `check:theme-bootstrap` (chained into `build`)
+together with an inline-script safety check (`</`, `<!--`, `<script`, raw U+2028/U+2029); it is not
+in `bundle-budgets.json` because `check-bundle-size.mjs` re-minifies, and raising it needs a reviewed
+re-measurement.
 
 ## CI: `.github/workflows/ci.yml` is authoritative
 
@@ -237,9 +242,10 @@ the PR checks list tells you which of these to reproduce locally:
    needs `dist/` (the tarball's `files` list includes it) but nothing else `build-and-coverage`
    needs, so it gets its own `pnpm build` rather than waiting on that job. It verifies the tarball's
    required files, then runs the complete packed install/import/declaration/bundle/framework
-   contract and packed-size budget. Only ATTW is skipped in this lane. ATTW's 2,730 typed package
-   export routes are sorted and round-robin partitioned across sixteen runners (ten with 171
-   routes and six with 170). One producer runs real `pnpm pack`, verifies tracked-source freshness,
+   contract and packed-size budget. Only ATTW is skipped in this lane. ATTW's 2,435 package
+   export entries are sorted and round-robin partitioned across sixteen runners (three with 153
+   entries and thirteen with 152). The inventory is derived from the current exports map, excluding
+   CSS and the classic-script bootstrap asset. One producer runs real `pnpm pack`, verifies tracked-source freshness,
    and uploads the tarball with its SHA-256 checksum. Every worker verifies those same bytes and
    checks the packed name, version, and ordered exports against its checkout before selecting its
    partition. The 12-minute worker limit is unchanged; a measured 171-route partition took 4m55s,

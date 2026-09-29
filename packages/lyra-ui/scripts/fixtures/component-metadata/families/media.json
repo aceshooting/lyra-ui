@@ -37,19 +37,6 @@
   },
   "deprecations": [
     {
-      "tag": "lr-attachment-trigger",
-      "kind": "property",
-      "name": "accessibleLabel",
-      "since": "22.0.0",
-      "replacement": {
-        "kind": "attribute",
-        "name": "aria-label",
-        "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-      },
-      "removalNotBefore": "24.0.0",
-      "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
-    },
-    {
       "tag": "lr-file-input",
       "kind": "part",
       "name": "base",
@@ -74,32 +61,6 @@
       },
       "removalNotBefore": "10.0.0",
       "rationale": "The form-control-label part follows the shared form-control vocabulary; label remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-file-input` still publishes its own deprecated `label` part, so this alias is removed only when upstream's is."
-    },
-    {
-      "tag": "lr-file-input",
-      "kind": "property",
-      "name": "accessibleLabel",
-      "since": "22.0.0",
-      "replacement": {
-        "kind": "attribute",
-        "name": "aria-label",
-        "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-      },
-      "removalNotBefore": "24.0.0",
-      "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
-    },
-    {
-      "tag": "lr-lightbox",
-      "kind": "event",
-      "name": "lr-lightbox-close",
-      "since": "22.0.0",
-      "replacement": {
-        "kind": "event",
-        "name": "lr-close",
-        "usage": "Observe lr-close with detail.reason after dismissal; use lr-close-request to veto it. The legacy event retains its string detail and pre-close cancellation."
-      },
-      "removalNotBefore": "24.0.0",
-      "rationale": "The shared close notification reports a reason object; a separate close-request event owns cancellation. The former lightbox-specific event remains compatible throughout the deprecation window."
     },
     {
       "tag": "lr-qr-code",

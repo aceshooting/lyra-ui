@@ -7,8 +7,7 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
-- **Deprecated event** `lr-approve` since `22.0.0`; use event `addEventListener('lr-approve-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
-- **Deprecated event** `lr-deny` since `22.0.0`; use event `addEventListener('lr-deny-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 19 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -107,13 +106,10 @@ deliberately *not* affected: while a decision is awaiting resolution, focus stil
 **Slots:** default — supplementary body content between the heading and the actions (e.g. a
 `lr-diff-view`). `footer` — extra content at the start of the action row.
 
-**Events:** `lr-approve-request` and `lr-approve` (`detail: { args, waitUntil }` — `args` is the `args` prop as-is, matching
-`lr-tool-approval-dialog`'s own `args` detail; cancelable), `lr-deny-request` and `lr-deny` (`detail: { waitUntil }`, the
+**Events:** `lr-approve-request` (`detail: { args, waitUntil }` — `args` is the `args` prop as-is, matching
+`lr-tool-approval-dialog`'s own `args` detail; cancelable), `lr-deny-request` (`detail: { waitUntil }`, the
 same resolver and no denial data of its own; cancelable), `lr-decision-settled`
 (`detail: { decision }`; non-cancelable).
-`lr-approve` and `lr-deny` are deprecated cancelable aliases of their respective requests. Each
-follows its request with the same detail, including `waitUntil`; either spelling can veto.
-Subscribe to one spelling per action to avoid handling the same proposal twice.
 
 `waitUntil(promise: Promise<unknown>) => void` is ExtendableEvent-style. Calling it from the
 listener holds the bar in its `pendingAction` presentation — `loading` on the activated control,

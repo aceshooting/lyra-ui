@@ -163,7 +163,7 @@ Plus shared tokens
 ```html
 <lr-switch name="notifications" checked>Enable notifications</lr-switch>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/forms/switch/switch.js";
+  import "@aceshooting/lyra-ui/components/lr-switch.js";
   const sw = document.querySelector("lr-switch");
   sw.addEventListener("lr-change", (e) => console.log(e.detail.checked)); // prefixed alias
   sw.addEventListener("change", (e) => console.log(e.target.checked)); // native-style, no detail
@@ -187,3 +187,5 @@ checkbox and does not emit `lr-change`.
   neither that nor slotted label text, the control has no accessible name.
 
 ---
+
+<a id="range-controls"></a>

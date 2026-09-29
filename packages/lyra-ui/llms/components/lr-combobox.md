@@ -7,7 +7,7 @@
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
-- **Deprecated event** `lr-retry` since `22.0.0`; use event `addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 34 parts, 36 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-option` (same section below)
@@ -70,7 +70,7 @@ focus explicitly — the browser does not replay the focus event after custom-el
   input.addEventListener("focus", async () => {
     if (!combobox.hidden) return;
     registration ??= import(
-      "@aceshooting/lyra-ui/components/forms/combobox/combobox.js"
+      "@aceshooting/lyra-ui/components/lr-combobox.js"
     ).catch((error) => {
       registration = undefined; // let a later interaction retry
       throw error;
@@ -416,16 +416,13 @@ async `source` call plus the exact query string that call was made with (the rej
 query, not necessarily the live `query`/`inputValue`, which may have moved on — or been cleared by
 closing the listbox — by the time the rejection settles). The rendered copy stays localized and
 never shows the raw error.
-`lr-retry-request` and `lr-retry` are cancelable; the built-in failed-load action calls `refresh()`, and `preventDefault()`
+`lr-retry-request` is cancelable; the built-in failed-load action calls `refresh()`, and `preventDefault()`
 leaves the failure on screen. While the failure state is the only popup content, the popup swaps
 `role="listbox"` for `role="dialog"` (the input gains the matching `aria-haspopup="dialog"` and
 drops `aria-activedescendant`, and the popup carries the localized failure heading as its accessible
 name). `dialog` is one of the four popup roles WAI-ARIA lets a `role="combobox"` own, so the still
 expanded `aria-controls` target keeps a valid owner while holding a retry `button` that is not a
 legal listbox child. A successful retry restores `role="listbox"`.
-`lr-retry` is the deprecated cancelable alias, dispatched after `lr-retry-request` with the same
-null detail. Either event can veto the built-in refresh; subscribe to one spelling. Removal of the
-alias is not before 24.0.0.
 
 **The clear button covers two axes, and announces only the one that moved.** A combobox owns both a
 committed selection and an in-progress filter query, so the button renders whenever either has
@@ -732,3 +729,5 @@ synchronous and fires no `input`/`change`/`lr-change` event.
 - `part="tag-label"` — The selected-tag label. Kept on one line and truncated with an ellipsis at `--tag-max-size` (default `var(--lr-size-5rem)`), rather than wrapped. Note that `lr-select`'s tag of the same name defaults to `var(--lr-size-12rem)`, so the same `--tag-max-size` value yields a wider tag there.
 
 ---
+
+<a id="popup-select-keyboard"></a>

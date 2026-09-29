@@ -41,7 +41,7 @@ disabled state.
   resize="auto"
 ></lr-textarea>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/forms/textarea/textarea.js";
+  import "@aceshooting/lyra-ui/components/lr-textarea.js";
   const bio = document.querySelector('lr-textarea[label="Bio"]');
   await bio.updateComplete; // both calls are no-ops before the first render
   bio.scrollPosition({ top: 0 }); // pin a restored draft back to the top

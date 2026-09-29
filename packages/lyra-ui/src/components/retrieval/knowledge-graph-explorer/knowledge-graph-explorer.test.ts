@@ -688,7 +688,7 @@ describe('lr-knowledge-graph-explorer', () => {
   it('types every documented bubbled child event in the explorer EventMap', () => {
     const events: [
       LyraKnowledgeGraphExplorerEventMap['lr-node-activate'],
-      LyraKnowledgeGraphExplorerEventMap['lr-link-click'],
+      LyraKnowledgeGraphExplorerEventMap['lr-edge-activate'],
       LyraKnowledgeGraphExplorerEventMap['lr-node-expand'],
       LyraKnowledgeGraphExplorerEventMap['lr-community-activate'],
       LyraKnowledgeGraphExplorerEventMap['lr-relation-activate']
@@ -696,7 +696,7 @@ describe('lr-knowledge-graph-explorer', () => {
       new CustomEvent('lr-node-activate', {
         detail: { nodeId: 'a', x: 1, y: 2 },
       }),
-      new CustomEvent('lr-link-click', {
+      new CustomEvent('lr-edge-activate', {
         detail: { sourceNodeId: 'a', targetNodeId: 'b' },
       }),
       new CustomEvent('lr-node-expand', { detail: { nodeId: 'a' } }),
@@ -709,7 +709,7 @@ describe('lr-knowledge-graph-explorer', () => {
     ];
     expect(events.map((event) => event.type)).to.deep.equal([
       'lr-node-activate',
-      'lr-link-click',
+      'lr-edge-activate',
       'lr-node-expand',
       'lr-community-activate',
       'lr-relation-activate',

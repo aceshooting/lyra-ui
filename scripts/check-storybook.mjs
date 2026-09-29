@@ -206,16 +206,16 @@ async function waitForDocs(page, baseUrl, id, theme = 'dark') {
   }
   try {
     await frame.waitForFunction(
-      (expectedTheme) => document.documentElement.dataset.lrTheme === expectedTheme,
+      (expectedTheme) => document.documentElement.dataset.lrMode === expectedTheme,
       theme,
       { timeout: 15_000 },
     );
   } catch {
     const state = await frame.evaluate(() => ({
-      dataset: document.documentElement.dataset.lrTheme,
+      dataset: document.documentElement.dataset.lrMode,
       url: location.href,
     }));
-    throw new Error(`${id} Docs did not apply theme ${theme}: ${JSON.stringify(state)}`);
+    throw new Error(`${id} Docs did not apply mode ${theme}: ${JSON.stringify(state)}`);
   }
   return frame;
 }
@@ -592,7 +592,7 @@ async function main() {
       const checkbox = document.querySelector('lr-checkbox');
       const checkboxLabel = checkbox?.shadowRoot?.querySelector('[part="label"]');
       return {
-        dataset: document.documentElement.dataset.lrTheme,
+        dataset: document.documentElement.dataset.lrMode,
         wrapperBackground: wrapper ? getComputedStyle(wrapper).backgroundColor : '',
         headingColor: heading ? getComputedStyle(heading).color : '',
         checkboxColor: checkboxLabel ? getComputedStyle(checkboxLabel).color : '',
@@ -626,7 +626,7 @@ async function main() {
     }
 
     await chooseToolbarTheme(page, 'Dark', 'Light');
-    await docsFrame.waitForFunction(() => document.documentElement.dataset.lrTheme === 'light');
+    await docsFrame.waitForFunction(() => document.documentElement.dataset.lrMode === 'light');
     await page.waitForFunction(() => getComputedStyle(document.body).backgroundColor === 'rgb(255, 255, 255)');
     const lightDocsTheme = await docsFrame.evaluate(() => {
       const wrapper = document.querySelector('.sbdocs-wrapper');
@@ -643,7 +643,7 @@ async function main() {
       throw new Error(`light Docs theme did not follow the toolbar: ${JSON.stringify(lightDocsTheme)}`);
     }
 
-    // No high-contrast pass here: `LyraThemeMode` is `'light' | 'dark' | 'auto'` and theme.css
+    // No high-contrast pass here: `LyraMode` is `'light' | 'dark' | 'system' | 'unset'` and theme.css
     // declares no high-contrast block, so the mode this used to select existed only in Storybook's
     // former hand-maintained preview palette. Storybook now renders the production theme. The
     // unit tests cover the structural forced-color-adjust/encoding contract; the visual manifest's
@@ -655,7 +655,7 @@ async function main() {
       const heading = document.querySelector('.lr-landing h1');
       const primaryButtonText = document.querySelector('.lr-landing__button--primary p');
       return {
-        dataset: document.documentElement.dataset.lrTheme,
+        dataset: document.documentElement.dataset.lrMode,
         backgroundImage: landing ? getComputedStyle(landing).backgroundImage : '',
         headingBackground: heading ? getComputedStyle(heading).backgroundImage : '',
         primaryButtonColor: primaryButtonText ? getComputedStyle(primaryButtonText).color : '',
@@ -799,13 +799,13 @@ async function main() {
 
     // Read the RESOLVED values, not `documentElement.style`. Storybook used to write the theme as
     // inline custom properties from its own preview palette; it now calls the production
-    // `setLyraTheme()`, which sets `data-lr-theme` and lets theme.css supply the tokens. Asserting
+    // `setLyraStyle()`, which selects the style axes and lets theme.css supply the tokens. Asserting
     // the inline style therefore tested the harness rather than the shipped theme.
     await waitForCheckedStory(page, baseUrl, 'checkbox--default', { width: 1280, height: 800 }, 'dark');
     const darkTheme = await page.evaluate(() => {
       const styles = getComputedStyle(document.documentElement);
       return {
-        mode: document.documentElement.dataset.lrTheme,
+        mode: document.documentElement.dataset.lrMode,
         scheme: styles.colorScheme,
         surface: styles.getPropertyValue('--lr-theme-color-surface-default').trim(),
       };

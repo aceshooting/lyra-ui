@@ -140,7 +140,7 @@ export interface LyraContextInspectorEventMap
  *   clipboard failure.
  * @event lr-toolbar-actions-change - No-detail coordination event surfaced unchanged from the
  *   embedded copy button when its logical toolbar action changes availability or backing trigger.
- * @event lr-export - `detail: { format }`, surfaced by the embedded `lr-export-button`, one row
+ * @event lr-export-request - `detail: { format }`, surfaced by the embedded `lr-export-button`, one row
  *   per segment. Cancelable — see that component's own contract for substituting a
  *   server-generated export.
  * @event lr-export-complete - `detail: { format }`, fired after a non-cancelled export completes.

@@ -144,7 +144,7 @@ allocation, and long localized or consumer-provided text cannot widen the Page.
 Import only the Page registration when it is the only layout component this bundle needs:
 
 ```js
-import "@aceshooting/lyra-ui/components/layout/page/page.js";
+import "@aceshooting/lyra-ui/components/lr-page.js";
 ```
 
 ```html

@@ -490,7 +490,7 @@ it('keeps SVG node, link, and conditional-hull pointer geometry at least 24px un
   // outer SVG for this coordinate even though native hit testing correctly reaches the line; a
   // failed DOM-node equality assertion also makes WTR recursively serialize the SVG tree.
   let pointerActivations = 0;
-  el.addEventListener('lr-node-click', () => pointerActivations++);
+  el.addEventListener('lr-node-activate', () => pointerActivations++);
   try {
     await resetMouse();
     await sendMouse({
@@ -504,8 +504,8 @@ it('keeps SVG node, link, and conditional-hull pointer geometry at least 24px un
   expect(select(hits.node[0]!).on('mousedown.drag')).to.be.a('function');
 
   const activations: string[] = [];
-  el.addEventListener('lr-node-click', () => activations.push('node'));
-  el.addEventListener('lr-link-click', () => activations.push('link'));
+  el.addEventListener('lr-node-activate', () => activations.push('node'));
+  el.addEventListener('lr-edge-activate', () => activations.push('link'));
   el.addEventListener('lr-community-activate', () => activations.push('hull'));
   hits.node[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   hits.link[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -792,7 +792,7 @@ it('keeps zero-width and fully transparent links non-operable while retaining to
     ).length
   ).to.equal(7);
   let activations = 0;
-  el.addEventListener('lr-link-click', () => activations++);
+  el.addEventListener('lr-edge-activate', () => activations++);
   for (const link of rendered.slice(0, 6))
     link.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   expect(activations).to.equal(0);
@@ -867,7 +867,7 @@ it('uses the effective default link paint when deciding whether a link is operab
   expect(link.getAttribute('aria-hidden')).to.equal(null);
 });
 
-it('emits lr-node-click when a node is activated', async () => {
+it('emits lr-node-activate when a node is activated', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.edges = links;
@@ -881,7 +881,7 @@ it('emits lr-node-click when a node is activated', async () => {
   );
   let detail: { nodeId: string; x: number; y: number } | undefined;
   el.addEventListener(
-    'lr-node-click',
+    'lr-node-activate',
     (e) => (detail = (e as CustomEvent).detail)
   );
   (el.shadowRoot!.querySelector('[part="node"]') as HTMLElement).dispatchEvent(
@@ -893,7 +893,7 @@ it('emits lr-node-click when a node is activated', async () => {
   expect(detail!.y).to.be.a('number');
 });
 
-it('emits lr-link-click with the source/target ids when a link is activated', async () => {
+it('emits lr-edge-activate with the source/target ids when a link is activated', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.edges = links;
@@ -907,7 +907,7 @@ it('emits lr-link-click with the source/target ids when a link is activated', as
   );
   let detail: { sourceNodeId: string; targetNodeId: string } | undefined;
   el.addEventListener(
-    'lr-link-click',
+    'lr-edge-activate',
     (e) => (detail = (e as CustomEvent).detail)
   );
   (el.shadowRoot!.querySelector('[part="link"]') as HTMLElement).dispatchEvent(
@@ -1239,17 +1239,17 @@ it('uses rich accessible labels/descriptions and carries a stable link id throug
   );
   expect(link.querySelector('title')?.textContent).to.equal('Seven citations');
   let detail:
-    | { sourceNodeId: string; targetNodeId: string; linkId?: string }
+    | { sourceNodeId: string; targetNodeId: string; edgeId?: string }
     | undefined;
   el.addEventListener(
-    'lr-link-click',
+    'lr-edge-activate',
     (e) => (detail = (e as CustomEvent).detail)
   );
   link.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   expect(detail).to.deep.equal({
     sourceNodeId: 'a',
     targetNodeId: 'b',
-    linkId: 'citation-7',
+    edgeId: 'citation-7',
   });
 });
 
@@ -1291,7 +1291,7 @@ it('applies sanitized per-link color and numeric dash styling', async () => {
   ).to.be.false;
 });
 
-it('emits lr-node-click when a node is activated via keyboard (Enter/Space)', async () => {
+it('emits lr-node-activate when a node is activated via keyboard (Enter/Space)', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.edges = links;
@@ -1305,7 +1305,7 @@ it('emits lr-node-click when a node is activated via keyboard (Enter/Space)', as
   );
   let detail: { nodeId: string; x: number; y: number } | undefined;
   el.addEventListener(
-    'lr-node-click',
+    'lr-node-activate',
     (e) => (detail = (e as CustomEvent).detail)
   );
   (el.shadowRoot!.querySelector('[part="node"]') as HTMLElement).dispatchEvent(
@@ -1316,7 +1316,7 @@ it('emits lr-node-click when a node is activated via keyboard (Enter/Space)', as
   expect(detail?.y).to.be.a('number');
 });
 
-it('emits lr-link-click when a link is activated via keyboard (Enter/Space)', async () => {
+it('emits lr-edge-activate when a link is activated via keyboard (Enter/Space)', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.edges = links;
@@ -1330,7 +1330,7 @@ it('emits lr-link-click when a link is activated via keyboard (Enter/Space)', as
   );
   let detail: { sourceNodeId: string; targetNodeId: string } | undefined;
   el.addEventListener(
-    'lr-link-click',
+    'lr-edge-activate',
     (e) => (detail = (e as CustomEvent).detail)
   );
   (el.shadowRoot!.querySelector('[part="link"]') as HTMLElement).dispatchEvent(

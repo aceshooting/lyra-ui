@@ -2178,12 +2178,10 @@ describe("scrollToAnchor / highlights (text-quote)", () => {
     let highlightFired = false;
     el.addEventListener("lr-highlight-activate", () => (highlightFired = true));
     const listener = oneEvent(el, "lr-link-activate");
-    const legacy = oneEvent(el, 'lr-link-click');
     withNavigationBlocked(() =>
       (el.shadowRoot!.querySelector("a") as HTMLElement).click()
     );
     const { detail } = await listener;
-    expect((await legacy).detail).to.deep.equal(detail);
     expect(detail).to.deep.equal({ href: "/docs/world" });
     expect(highlightFired).to.be.false;
   });

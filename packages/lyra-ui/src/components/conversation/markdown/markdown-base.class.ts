@@ -122,8 +122,6 @@ function keyboardHighlightIdFrom(
 export interface MarkdownRuntimeEventMap extends LyraAnchorTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-link-activate': CustomEvent<{ href: string }>;
-  /** @deprecated Use lr-link-activate. */
-  'lr-link-click': CustomEvent<{ href: string }>;
   'lr-content-settled': CustomEvent<null>;
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
@@ -838,7 +836,6 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     if (highlightId) this.emit('lr-highlight-activate', { highlightId });
     if (href !== null) {
       this.emit('lr-link-activate', { href });
-      this.emit('lr-link-click', { href });
     }
   };
 

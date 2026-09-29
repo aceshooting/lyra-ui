@@ -10,7 +10,9 @@
 // `emit()` is `protected`, so every assertion below is written from inside a subclass, which is
 // also exactly how a real component calls it.
 
-import { LyraElement } from '../src/lyra.js';
+import {
+  LyraElement,
+} from '../src/lyra.js';
 
 interface ProbeEventMap {
   /** A detail-carrying event: `detail` is required and structurally checked. */

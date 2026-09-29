@@ -1,4 +1,3 @@
-import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import { LitElement, html as litHtml, type PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
@@ -1740,39 +1739,3 @@ describe('lr-confirm-bar heading-level', () => {
     expect(heading(el).hasAttribute('aria-level')).to.equal(false);
   });
 });
-
-
-expectDeprecatedUsage('lr-confirm-bar', 'event', 'lr-approve');
-
-expectDeprecatedUsage('lr-confirm-bar', 'event', 'lr-deny');
-
-it('retains the deprecated lr-approve veto alias', async () => {
-  const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
-  const approve = el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton;
-  el.addEventListener('lr-approve', (event) => event.preventDefault(), { once: true });
-  approve.click();
-  await el.updateComplete;
-  approve.focus();
-  el.decision = 'approved';
-  await el.updateComplete;
-  expect(el.shadowRoot!.activeElement!.getAttribute('part')).to.equal('status');
-});
-
-it('retains the deprecated lr-deny veto alias', async () => {
-    const approveEl = (await fixture(html`<lr-confirm-bar .args=${{ x: 1 }}></lr-confirm-bar>`)) as LyraConfirmBar;
-    approveEl.addEventListener('lr-approve-request', (e) => e.preventDefault());
-    (approveEl.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
-    await approveEl.updateComplete;
-    expect(approveEl.decision).to.equal(null);
-    expect(approveEl.pendingAction).to.equal('approve');
-    expect(approveEl.hasAttribute('pending-action')).to.be.true;
-    expect(approveEl.shadowRoot!.querySelector('[part="approve-button"]')).to.exist;
-    expect(approveEl.shadowRoot!.querySelector('[part="deny-button"]')).to.exist;
-
-    const denyEl = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
-    denyEl.addEventListener('lr-deny', (e) => e.preventDefault());
-    (denyEl.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).click();
-    await denyEl.updateComplete;
-    expect(denyEl.decision).to.equal(null);
-    expect(denyEl.pendingAction).to.equal('deny');
-  });

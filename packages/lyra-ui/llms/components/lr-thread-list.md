@@ -7,8 +7,7 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
-- **Deprecated event** `lr-retry` since `22.0.0`; use event `addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
-- **Deprecated property** `compact` / `compact` since `22.0.0`; use property `Use size="s" for compact rows and size="m" for the default row density.`; removal not before `24.0.0` — The shared size vocabulary describes row density and search-control scale together. The boolean compatibility spelling remains mapped to the small and medium size tiers throughout its deprecation window.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 42 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -92,9 +91,7 @@ data mode only: built-in icon buttons rendered into each row's `actions` slot. `
 = false` (attribute `with-archived`, reflected) — data mode: include `archived` threads (in their own
 trailing group). `withoutRename: boolean = false` (attribute `without-rename`, reflected) — forwarded to
 each data-mode row, turning its inline rename off.
-`compact: boolean = false` (reflected, deprecated; removal not before 24.0.0) — compatibility
-alias of `size="s"` when true and `size="m"` when false. Use `size` for both search and data rows;
-slotted rows retain their own size. `stickyGroups: boolean = false` (attribute `sticky-groups`, reflected) — data mode: pins
+`stickyGroups: boolean = false` (attribute `sticky-groups`, reflected) — data mode: pins
 the current date/custom group's header to the top of the scroll viewport while its rows are in view,
 pushing it off as the next group's header arrives. Group headers are ordinary virtualized rows, so
 this renders an `aria-hidden` copy of the header into the internal `lr-virtual-list`'s sticky layer:
@@ -186,9 +183,7 @@ assignment simply wins last. `searchable` only: `blur`/`focus` (no detail) — r
 the internal search `<input>`'s own `blur`/`focus`, bubbling and composed unlike the native events,
 which are neither. `lr-retry-request` (`detail: null`, cancelable) — the built-in `[part='retry-button']`
 was activated, only rendered while `error` is set; the default action clears `error`,
-`preventDefault()` leaves it set instead. `lr-retry` is its deprecated cancelable veto alias,
-emitted after `lr-retry-request` and before the default action; canceling either event keeps the
-error state.
+`preventDefault()` leaves it set instead.
 **CSS parts:** `base`, `search`/`search-input` (the search field wrapper and `<input
 type="search">`), `clear-button` (clears the search field; rendered only while it has a value,
 mirroring `<lr-input>`'s own `clearable` contract's part name), `list` (the list region), `empty`,

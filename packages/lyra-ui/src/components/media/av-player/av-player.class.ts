@@ -23,6 +23,7 @@ import { finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { attachInternalsSafely } from '../../../internal/form-associated.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { formatMediaTime } from '../media-time.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { styles } from './av-player.styles.js';
@@ -167,22 +168,6 @@ function waveformPaintPeaks(peaks: readonly number[], maxBars: number): readonly
   }
   result[preEndpointBars] = finiteRange(peaks[finalIndex]!, 0, 0, 1);
   return result;
-}
-
-function formatTime(seconds: number, locale: string): string {
-  const total = Math.round(finiteRange(seconds, 0, 0));
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
-  const regular = getNumberFormat(locale, { maximumFractionDigits: 0, useGrouping: false });
-  const padded = getNumberFormat(locale, {
-    maximumFractionDigits: 0,
-    minimumIntegerDigits: 2,
-    useGrouping: false,
-  });
-  const mm = (h > 0 ? padded : regular).format(m);
-  const ss = padded.format(s);
-  return h > 0 ? `${regular.format(h)}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
 export interface LyraAvPlayerEventMap {
@@ -1317,7 +1302,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
       ?data-active-match=${isActiveMatch}
       @click=${() => this.seek(start)}
     >
-      <span part="cue-time">${formatTime(start, this.effectiveLocale)}</span>
+      <span part="cue-time">${formatMediaTime(start, this.effectiveLocale, 'round')}</span>
       ${c.speaker ? html`<span part="cue-speaker">${c.speaker}</span>` : nothing}
       <span part="cue-text">${c.text}</span>
     </button>`;
@@ -1426,7 +1411,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
           aria-valuemin="0"
           aria-valuemax=${String(this.duration)}
           aria-valuenow=${String(this.currentTimeState)}
-          aria-valuetext=${this.localize('avPlayerPosition', undefined, { current: formatTime(this.currentTimeState, this.effectiveLocale), duration: formatTime(this.duration, this.effectiveLocale) })}
+          aria-valuetext=${this.localize('avPlayerPosition', undefined, { current: formatMediaTime(this.currentTimeState, this.effectiveLocale, 'round'), duration: formatMediaTime(this.duration, this.effectiveLocale, 'round') })}
           aria-label=${this.localize('avPlayerTimeline')}
           @click=${this.onTimelineClick}
           @keydown=${this.onTimelineKeyDown}

@@ -21,22 +21,14 @@ form-associated via the same `FormAssociated` mixin as `lr-textarea`. Ships the 
 `label`/`hint`/`errorText` form-control chrome as `lr-textarea`/`lr-select`, and the same
 `size` scale as `lr-select`/`lr-combobox`.
 
-`stepUp()` and `stepDown()` use the current `value`, `step`, `min`, and `max` properties in the same
-synchronous call, including changes made immediately beforehand. They preserve native step alignment
-and bounds, update form submission silently, and remain no-ops before the native input has rendered
-or while disabled/readonly. Native `step="any"` remains a non-steppable no-op.
-
-Removing `label`, `hint`, `help-text`, or `error-text` safely omits that content while retaining
-native `null` property readback. Explicit empty strings remain empty and later supplied text renders
-normally. The same inherited behavior applies to `lr-number-input` and `lr-native-time-input`.
+Removing `label`, `hint`, `help-text`, or `error-text` omits that content while retaining native
+`null` property readback. Explicit empty strings remain empty. `lr-number-input` and
+`lr-native-time-input` inherit this behavior.
 
 Changing own `disabled` from true to false in the same task that disables an ancestor fieldset keeps
 the native editing control effectively disabled. The enabled first-legend exception and explicit
 own-disabled state retain their native meaning; validity and form submission follow the effective
 disabled state.
-
-Pressing Enter submits the ancestor `<form>` — the implicit submission a native `<input>` performs;
-see "Enter-to-submit" below for the exact rules and for which controls deliberately opt out.
 
 Public `--lr-input-*` theme inputs stay undeclared on the host, so an ancestor theme wrapper can
 override size, appearance, and pill fallbacks; a value set directly on the element still wins.
@@ -65,12 +57,9 @@ shared hit target (42px including the row border at the default theme); `l` and 
 - `value: string = ''` (from `FormAssociated`)
 - `defaultValue: string = ''` — reset value, backed by the standard `value` content attribute;
   `default-value` is accepted as a Shoelace attribute alias
-- `name: string` (from `FormAssociated`) and the plain inherited `id` are both forwarded to the
-  internal native `<input>` (previously the internal input carried neither, only a fixed
-  `id="input"`), so shadow-DOM-aware password managers that key field detection off the actual
-  control's own `name`/`id` — not `autocomplete` alone — recognize `<lr-input>` fields. The
-  internal `<label for>` tracks whichever id is in use. Leaving `id` unset on the host keeps the
-  internal input at `id="input"`, identical to before
+- `name: string` (from `FormAssociated`) and inherited `id` are forwarded to the native input for
+  password-manager field detection. The internal `<label for>` tracks that id; without a host `id`,
+  the input uses `id="input"`
 - `placeholder: string = ''`
 - `clearable: boolean = false` (reflected) — shows a localized clear action while a `text` or
   `search` input has a value; clearing preserves input focus
@@ -89,18 +78,13 @@ shared hit target (42px including the row border at the default theme); `l` and 
 - `title: string = ''` — forwarded to the native input
 - `spellcheck: boolean = true` — forwarded to the native input, including `spellcheck="false"`
 - `autocapitalize: string = ''` / `autocorrect` (read: `boolean = true`; write:
-  `boolean | 'off' | 'on'`; attribute values `on`/`off`)
+  `boolean | 'off' | 'on'`; markup `autocorrect="on"`/`autocorrect="off"`)
 - `inputMode: string = ''` (attribute `inputmode`) / `enterKeyHint: string = ''` (attribute
   `enterkeyhint`) — `autocapitalize`, `inputMode`, and `enterKeyHint` are forwarded verbatim to the
   native input and an empty string omits them; `autocorrect` is normalized to canonical `on`/`off`
 - Lowercase native IDLs `inputmode: string` and `enterkeyhint: string` delegate to the camel-case
   native properties; `autocorrect` reads as boolean while accepting both Web Awesome's boolean
   writes and Shoelace's `'off'`/`'on'` writes
-
-**8.0 migration:** the former camel-case string property `autoCorrect` is not retained as a public
-alias. Prefer boolean `autocorrect` writes in new code; migrated Shoelace `'off'`/`'on'` property
-writes remain valid and read back as booleans. Markup uses `autocorrect="on"` /
-`autocorrect="off"`.
 
 - `min?: number | string` / `max?: number | string` (attributes `min`/`max`) /
   `step?: number | 'any'` (attribute `step`, accepts the native `'any'` value alongside a number)
@@ -118,10 +102,7 @@ writes remain valid and read back as booleans. Markup uses `autocorrect="on"` /
   forwarded to the native input and reported as `validity.patternMismatch`. Anchored to the whole
   value by the platform, so no `^`/`$` is needed; an empty value never violates it
 - `passwordToggle: boolean = false` (attribute `password-toggle`, reflected — `type="password"`
-  only) — renders the built-in show/hide-password button. **Breaking in 8.0.0: this is now opt-in.**
-  Before, `type="password"` always rendered the toggle and there was no way to remove it; a consumer
-  whose threat model or visual design excludes one had to hide it with CSS. Add `password-toggle`
-  to keep the old rendering
+  only) — opt-in built-in show/hide-password button
 - `passwordVisible: boolean = false` (attribute `password-visible` — `type="password"` only) —
   whether the field currently reveals its raw text. Toggled by the built-in button, and also
   settable up front with or without that button being rendered
@@ -142,10 +123,8 @@ writes remain valid and read back as booleans. Markup uses `autocorrect="on"` /
   referenced element only needs a string `.value`, so a native `<input>`/`<textarea>` works the
   same as another `lr-input`; see "A new-password field" below for the password-confirmation shape
 - `withoutSpinButtons: boolean = false` (attribute `without-spin-buttons`, reflected —
-  `type="number"` only) — suppresses the browser's own increment/decrement spin buttons.
-  **Breaking in 8.0.0:** `type="number"` used to hide them unconditionally; left unset, the
-  platform's spinners now render exactly as they do on a bare `<input type="number">`.
-  `<lr-number-input>` defaults this the other way (`true`), so its rendering is unchanged
+  `type="number"` only) — suppresses native spin buttons; unset leaves them visible.
+  `<lr-number-input>` defaults this to `true`
 - `noSpinButtons: boolean = false` (attribute `no-spin-buttons`) — Shoelace alias for
   `withoutSpinButtons`; either suppresses native number spinners
 - `debounce?: number` (attribute `debounce`, ms) — how long to wait after the last keystroke
@@ -195,7 +174,8 @@ Three more native passthroughs:
   non-finite `steps` falls back to `1`; `0` is a no-op, as is `step="any"`, as is any `type` the
   platform gives no allowed value step (it throws `InvalidStateError` for those, which is swallowed
   here), and as is `disabled` or `readonly`. `type="number"` and `type="time"` are the two that step
-  — on a time field the unit is seconds, matching its `step`.
+  — on a time field the unit is seconds, matching its `step`. They use the current properties in
+  that synchronous call and are also no-ops before the native input renders.
   `<lr-number-input>`'s stepper buttons build on these and _do_ emit, because a button press is a
   user edit.
 
@@ -281,10 +261,8 @@ what is specific to it.
 
 - **`size` accepts both spellings of every tier.** The canonical ladder is
   `2xs`/`xs`/`s`/`m`/`l`/`xl`, and `small`/`medium`/`large` — Web Awesome's and Shoelace's names —
-  are accepted as exact synonyms for `s`/`m`/`l`. Nothing is normalized away in JS: the shared
-  stylesheet matches both spellings in the same selector list, so `size="small"` costs nothing and
-  `el.size` reads back whatever you wrote. A migration off either upstream is a tag rename with no
-  attribute rewrite. One ladder now drives `lr-button`, `lr-input`, `lr-select`, `lr-combobox`,
+  are accepted as exact synonyms for `s`/`m`/`l`. `el.size` reads back the spelling supplied.
+  One ladder drives `lr-button`, `lr-input`, `lr-select`, `lr-combobox`,
   `lr-date-input`, `lr-textarea`, `lr-checkbox`, `lr-radio`, `lr-switch` and `lr-slider`, so
   same-`size` controls line up in a toolbar row by construction. Retune a whole tier from one place
   with `--lr-theme-form-control-height-*` rather than per component. Set
@@ -293,9 +271,8 @@ what is specific to it.
   radius.
 - **`appearance` is the fill vocabulary and nothing else.** `accent` (the loud semantic fill),
   `filled` (a quiet tint of the same tone), `outlined` (a border, no fill), `filled-outlined`
-  (both) and `plain` (neither). It used to double as a _container_ treatment on other components;
-  that meaning moved to `frame` (`card`/`plain`) in 8.0.0, so `appearance` means one thing
-  library-wide. `lr-button` adds two tiers of its own on top (`quiet` and `link`). Text fields
+  (both) and `plain` (neither). Container treatment uses `frame` (`card`/`plain`).
+  `lr-button` adds `quiet` and `link`. Text fields
   (`lr-input`, `lr-textarea`, and `lr-select`) default to `outlined`; `lr-button` defaults to `accent`.
 - **`pill` rounds the control's ends.** Available on `lr-input`, `lr-number-input`, `lr-time-input`,
   `lr-textarea`, `lr-select`, `lr-combobox`, `lr-date-input`, `lr-phone-input`, `lr-token-input`,
@@ -303,13 +280,9 @@ what is specific to it.
   component's own `--lr-*-radius` knob to `--lr-radius-pill` — rather than declaring a radius on a
   part, so the knob stays the single corner-radius override point and a consumer's own value still
   wins over it.
-- **`setCustomValidity(message)` and `resetValidity()` are on every form-associated _value_ control
-  here** — every one
-  that submits something, whether it drives `ElementInternals` through the shared mixin or by hand.
-  (`lr-button` is a form-associated submitter, so an ancestor `<fieldset disabled>` and
-  `form.elements` reach it, but it carries no value or validity and therefore has no such method;
-  `lr-icon-button` is deliberately not form-associated.) It is the standard channel for a rejection
-  no client-side constraint can express — a server-side
+- **`setCustomValidity(message)` and `resetValidity()` are on every form-associated value control
+  here and on the form-associated `lr-button` submitter.** `lr-icon-button` is not form-associated.
+  These methods handle a rejection no client-side constraint can express — a server-side
   "that email is already registered". A non-empty message raises `customError` and becomes
   `validationMessage`, so the control fails `checkValidity()`, blocks submission, and matches
   `:invalid`/`:state(invalid)`.
@@ -398,7 +371,7 @@ Several controls expose the same pair: a per-`size` `*-min-height` **floor**, an
 <lr-input type="time" label="Reminder" id="reminder"></lr-input>
 <button type="button" id="open-picker">Pick a time</button>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/forms/input/input.js";
+  import "@aceshooting/lyra-ui/components/lr-input.js";
   const time = document.getElementById("reminder");
   // showPicker() needs user activation, so drive it from a real click.
   document
@@ -411,14 +384,8 @@ Several controls expose the same pair: a per-`size` `*-min-height` **floor**, an
 attribute form is enough to turn each on. `autofocus` is likewise `false`-defaulting — none of
 these four needs the property form to be reset.
 
-**A new-password field.** There is no dedicated password-purpose preset — a deliberate decision,
-not an omission: the only thing such a preset would actually save is `autocomplete`, and that value
-has no single correct default for "a password field" (`new-password` on a set/change/reset flow,
-`current-password` on a login one, and one is never derivable from the other), so a `purpose`
-property would still need a second parameter carrying that same distinction, in exchange for a
-non-standard vocabulary a migrating `wa-`/`sl-`/native `<input type="password">` author would have
-to learn instead of carrying over unchanged. Compose the existing primitives directly, the same way
-a plain native `<input type="password">` does:
+**A new-password field.** Set `autocomplete` explicitly: use `new-password` for set/change/reset
+flows and `current-password` for login. A confirmation pair can use `match`:
 
 ```html
 <lr-input
@@ -440,12 +407,8 @@ a plain native `<input type="password">` does:
 ></lr-input>
 ```
 
-`autocomplete="new-password"` (rather than the bare `password` token, and never `current-password`
-on a set/change/reset flow) is the platform contract that keeps a browser's or password manager's
-own generator and save prompt from cross-contaminating a change/reset flow with the account's
-existing credential; set it explicitly on every field in the pair, since `autocomplete` has no
-purpose-derived default here. `match` (above) is what makes the second field fail validity —
-`customError`, with a localized mismatch message — for as long as its value disagrees with the
+Set `autocomplete="new-password"` on both fields in the pair; there is no purpose-derived default.
+`match` makes the second field fail with a localized `customError` while its value differs from the
 first field's, referenced here by id.
 
 **Known gotchas:**
@@ -465,24 +428,13 @@ first field's, referenced here by id.
   value, and the localized `valueInvalid` string when only the script-value check did.
 - An empty value is never `tooShort` and never a `patternMismatch` — both native constraints skip
   the empty string, and `required` is what rejects it.
-- **The `password-toggle` button is opt-in as of 8.0.0.** A bare `type="password"` now ships no
-  toggle at all, and the `password-toggle` part is absent from the shadow tree with it — a
-  `::part(password-toggle)` rule, or a test that queries for it, silently matches nothing until the
-  attribute is set. The toggle never renders for a non-password `type`, opted in or not.
-- **`type="number"` no longer hides the native spin buttons on its own.** Set
-  `without-spin-buttons` (or use `<lr-number-input>`, which defaults it to `true` and draws its own
-  stepper pair) to get the previous rendering back.
-- `showPicker()` swallows every platform failure by design, so it returns without telling you the
-  picker didn't open. Don't build a flow that assumes a picker is now on screen.
-- `stepUp()`/`stepDown()` are silent — they emit no `input`/`change`. Emit your own, or drive the
-  value through a real user affordance, if downstream state depends on those events.
-- **A `match` id reference resolves in this element's own root, not the whole document.** Two
-  fields inside two different shadow roots (a confirm field composed by one component, the field it
-  should match composed by an unrelated one) must pair through a direct element reference
-  (`confirm.match = passwordEl`) instead of an id string — exactly like every other idref this
-  library resolves, `aria-describedby` included. An id that does not resolve at all (a typo, or an
-  element removed later) is inert rather than a permanent block on submission: `match` stops
-  applying, it does not fail closed.
+- `password-toggle` and its CSS part render only for `type="password"` with the opt-in attribute.
+  Native number spinners remain visible unless `without-spin-buttons` is set; `lr-number-input`
+  defaults to its own stepper pair.
+- `showPicker()` can return without opening a picker. `stepUp()`/`stepDown()` emit no `input` or
+  `change`; downstream observers needing those events should use a user affordance or emit them.
+- A `match` id resolves in this element's own root. Use a direct element reference
+  (`confirm.match = passwordEl`) across shadow roots. An unresolved id makes the constraint inert.
 
 **Additional API surface:**
 

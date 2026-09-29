@@ -628,7 +628,7 @@ describe('nodeLabels', () => {
 });
 
 describe('expand affordance', () => {
-  it('dblclick on a node emits exactly one lr-node-expand after two lr-node-click events, and stops propagation', async () => {
+  it('dblclick on a node emits exactly one lr-node-expand after two lr-node-activate events, and stops propagation', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;
     el.edges = links;
@@ -644,7 +644,7 @@ describe('expand affordance', () => {
     let clickCount = 0;
     let expandDetail: { nodeId: string } | undefined;
     let expandCount = 0;
-    el.addEventListener('lr-node-click', () => clickCount++);
+    el.addEventListener('lr-node-activate', () => clickCount++);
     el.addEventListener('lr-node-expand', (e) => {
       expandCount++;
       expandDetail = (e as CustomEvent).detail;
@@ -1332,12 +1332,12 @@ describe('selection', () => {
     await expect(el).to.be.accessible();
   });
 
-  it('existing graph usage unaffected: lr-node-click/lr-link-click still fire unchanged alongside selection', async () => {
+  it('existing graph usage unaffected: lr-node-activate/lr-edge-activate still fire unchanged alongside selection', async () => {
     const el = await mountSelectable('single');
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
     let clickDetail: { nodeId: string; x: number; y: number } | undefined;
     el.addEventListener(
-      'lr-node-click',
+      'lr-node-activate',
       (e) => (clickDetail = (e as CustomEvent).detail)
     );
     nodeEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));

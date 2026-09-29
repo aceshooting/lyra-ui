@@ -7,8 +7,7 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
-- **Deprecated attribute** `accessible-label` since `22.0.0`; use attribute `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.`; removal not before `24.0.0` — The native host accessible-name API replaces the component-specific fallback while preserving its existing runtime behavior throughout the compatibility window.
-- **Deprecated property** `accessibleLabel` since `22.0.0`; use attribute `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.`; removal not before `24.0.0` — The native host accessible-name API replaces the component-specific fallback while preserving its existing runtime behavior throughout the compatibility window.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 11 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -34,9 +33,8 @@ so the consumer updates `selectedIndex` when it accepts that activation. Setting
 additionally renders a static `[part="legend"]` key below the strip, so the color-to-category
 mapping is readable without visiting each cell.
 
-A standard host `aria-label` names the internal list and wins by presence, including empty.
-The deprecated `accessible-label` fallback applies only when the host name is absent; otherwise
-the generated category-count summary names it. When an
+A standard host `aria-label` names the internal list and wins by presence, including empty. With
+no host label, the generated category-count summary names it. When an
 `items` refresh occurs while a cell owns focus, its `id` remains the sole roving stop; removal
 clamps focus to the nearest survivor, or to the stable list base when no cells remain. Unfocused
 refreshes do not move focus. A queued Arrow/Home/End focus is bound to the current item-array
@@ -83,9 +81,6 @@ readonly color, readonly label? }`; `color`
   internal `id`. Both collection properties are cloned and frozen at assignment,
   bounded to the first 10,000 source entries, and require reassignment after changes; empty/blank
   ids are omitted and duplicates use the first valid entry, so identity is deterministic
-- `accessibleLabel?: string` (attribute `accessible-label`, deprecated; removal not before
-  24.0.0) — compatibility fallback below the host `aria-label` or native `ariaLabel` property.
-  When both are absent, the list receives a localized per-category count summary.
 - `withLegend: boolean = false` (attribute `with-legend`, reflected) — renders a static
   `[part="legend"]` key below the strip, one swatch + label row per `categories` entry, in array
   order. The key describes the _scheme_, not the current data: a category with no matching item

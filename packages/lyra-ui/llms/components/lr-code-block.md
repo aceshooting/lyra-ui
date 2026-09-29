@@ -83,7 +83,7 @@ highlighted markup.
   for that language — an additive, opt-in escape hatch for a build scoped to just the languages a
   consumer actually needs. A `language` absent from this map (or `languages` left unset) falls back
   to the default dynamic-import path unchanged. For a TypeScript annotation, use
-  `import type { ShikiLanguageInput } from '@aceshooting/lyra-ui/components/conversation/code-block/code-block.js'`;
+  `import type { ShikiLanguageInput } from '@aceshooting/lyra-ui/components/lr-code-block.js'`;
   the type-only granular import emits no registration side effect.
   The map key need not be the grammar module's own registered name or one of its declared
   aliases — Lyra derives the Shiki `langAlias` mapping this needs automatically, so a key such as
@@ -205,7 +205,7 @@ highlighting.
 
 ```ts
 import { html } from "lit";
-import "@aceshooting/lyra-ui/components/conversation/code-block/code-block.js";
+import "@aceshooting/lyra-ui/components/lr-code-block.js";
 
 const view = html`<lr-code-block
   language="typescript"

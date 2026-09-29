@@ -89,7 +89,7 @@ const NAME_PATTERNS = Object.freeze({
 const MODULE_REVIEW_KINDS = ['entry-point', 'stylesheet', 'function', 'type', 'constant', 'class', 'window-event', 'root-attribute'];
 const MODULE_PATH_PATTERN = /^\.\/[A-Za-z0-9_./-]+\.(?:js|css)$/;
 const moduleReviewKey = (entry) => [entry.kind, entry.module ?? '', entry.name].join('\u0000');
-const PROFILE_LIST_KEYS = ['renames', 'defaults', 'detailChanges', 'propertyChanges', 'retiredEvents', 'reviews', 'slotContent', 'moduleReviews'];
+const PROFILE_LIST_KEYS = ['renames', 'defaults', 'detailChanges', 'detailFields', 'propertyChanges', 'retiredEvents', 'reviews', 'slotContent', 'moduleReviews'];
 const AUTHORED_PROFILE_KEYS = ['origin', 'fromMajor', 'toMajor', 'aliasRemovalMajor', ...PROFILE_LIST_KEYS];
 const PROJECTED_PROFILE_KEYS = [...AUTHORED_PROFILE_KEYS, 'exposure'];
 
@@ -129,7 +129,7 @@ export function emptyRenameLedger() {
     schemaVersion: LYRA_RENAME_LEDGER_SCHEMA_VERSION,
     profiles: LYRA_RENAME_PROFILES.map((header) => ({
       ...header,
-      ...Object.fromEntries(PROFILE_LIST_KEYS.map((list) => [list, []])),
+      ...Object.fromEntries(PROFILE_LIST_KEYS.filter((list) => list !== 'detailFields').map((list) => [list, []])),
     })),
   };
 }
@@ -151,6 +151,7 @@ function entryLabel(origin, list, entry) {
   if (list === 'defaults') return `${origin}: default ${entry?.tag} ${entry?.attribute}`;
   if (list === 'retiredEvents') return `${origin}: retired event ${entry?.tag} ${entry?.event}`;
   if (list === 'detailChanges') return `${origin}: detail change ${entry?.tag} ${entry?.event}`;
+  if (list === 'detailFields') return `${origin}: detail field ${entry?.tag} ${entry?.event} ${entry?.detailType}.${entry?.field}`;
   if (list === 'propertyChanges') return `${origin}: property change ${entry?.tag} ${entry?.property}`;
   if (list === 'slotContent') return `${origin}: slot content ${entry?.tag} ${JSON.stringify(entry?.slot ?? null)}`;
   return `${origin}: review ${entry?.tag} ${entry?.kind} ${JSON.stringify(entry?.name ?? null)}`;
@@ -161,6 +162,7 @@ function sortKey(list, entry) {
   if (list === 'renames') return [entry.tag, entry.kind, entry.from].join('\u0000');
   if (list === 'defaults') return [entry.tag, entry.attribute].join('\u0000');
   if (list === 'detailChanges' || list === 'retiredEvents') return [entry.tag, entry.event].join('\u0000');
+  if (list === 'detailFields') return [entry.tag, entry.event, entry.module, entry.detailType, entry.field].join('\u0000');
   if (list === 'propertyChanges') return [entry.tag, entry.property].join('\u0000');
   if (list === 'slotContent') return [entry.tag, entry.slot].join('\u0000');
   return [entry.tag, entry.kind, entry.name].join('\u0000');
@@ -272,6 +274,38 @@ function validateDetailEntry(findings, label, entry, projected) {
   validateName(findings, label, 'event', 'event', entry.event);
   validateSummary(findings, label, entry.summary);
   validateProjectedSince(findings, label, entry, projected);
+}
+
+function validateDetailFieldEntry(findings, label, entry, projected) {
+  const allowed = ['tag', 'event', 'module', 'detailType', 'field', 'relation', 'replacement', 'role', 'notice', 'removalNotBefore', 'observedIn', 'removedIn'];
+  const unknown = unknownKeys(entry, allowed);
+  if (unknown.length) findings.push(`${label}: unknown key(s) ${unknown.join(', ')}`);
+  validateName(findings, label, 'event', 'event', entry.event);
+  if (typeof entry.module !== 'string' || !/^(?:layout|conversation)\/[a-z0-9-]+\/[a-z0-9-]+(?:\.class|-shared)\.ts$/u.test(entry.module)) {
+    findings.push(`${label}: module must be a canonical layout or conversation detail source path`);
+  }
+  if (typeof entry.detailType !== 'string' || !JS_IDENTIFIER_PATTERN.test(entry.detailType)) findings.push(`${label}: detailType must be an exported type name`);
+  if (typeof entry.field !== 'string' || !JS_IDENTIFIER_PATTERN.test(entry.field)) findings.push(`${label}: field must be a property name`);
+  if (!['equal', 'inverse'].includes(entry.relation)) findings.push(`${label}: relation must be equal or inverse`);
+  if (entry.replacement !== 'expanded') findings.push(`${label}: replacement must be expanded`);
+  if (!['request', 'settled'].includes(entry.role) || typeof entry.event !== 'string' || (entry.role === 'request') !== entry.event.endsWith('-request')) {
+    findings.push(`${label}: role must match whether the event is a request event`);
+  }
+  if (typeof entry.notice !== 'string' || !/^\/\*\*[\s\S]*@deprecated\b[\s\S]*\*\/$/u.test(entry.notice)) {
+    findings.push(`${label}: notice must preserve the exact deprecation JSDoc`);
+  }
+  if (entry.removalNotBefore !== '23.0.0') findings.push(`${label}: removalNotBefore must preserve the declared 23.0.0 floor`);
+  if (entry.observedIn !== '22.0.0') findings.push(`${label}: observedIn must name the earliest verified packed observation, 22.0.0`);
+  if (projected && typeof entry.observedIn === 'string' && !parseVersion(entry.observedIn)) findings.push(`${label}: observedIn must be a semantic version`);
+  if (entry.removedIn !== undefined && entry.removedIn !== '24.0.0') findings.push(`${label}: removedIn requires the separately authorized actual 24.0.0 retirement`);
+  if (entry.removedIn !== undefined) {
+    const removal = parseVersion(entry.removedIn);
+    const floor = parseVersion(entry.removalNotBefore);
+    const observed = parseVersion(entry.observedIn);
+    if (!removal || !floor || !observed || removal[0] < floor[0] + 1 || removal[0] < observed[0] + 2) {
+      findings.push(`${label}: removedIn must clear the declared floor and a full intervening published major`);
+    }
+  }
 }
 
 function validateRetiredEventEntry(findings, label, entry, projected) {
@@ -429,7 +463,7 @@ export function validateRenameLedgerShape(ledger, { projected = false } = {}) {
       }
     }
     for (const list of PROFILE_LIST_KEYS) {
-      if (['propertyChanges', 'retiredEvents'].includes(list) && profile[list] === undefined) continue;
+      if (['propertyChanges', 'retiredEvents', 'detailFields'].includes(list) && profile[list] === undefined) continue;
       if (!Array.isArray(profile[list])) {
         findings.push(`${origin}: ${list} must be an array`);
         continue;
@@ -453,6 +487,9 @@ export function validateRenameLedgerShape(ledger, { projected = false } = {}) {
         } else if (list === 'renames') validateRenameEntry(findings, label, entry, projected);
         else if (list === 'defaults') validateDefaultEntry(findings, label, entry, projected);
         else if (list === 'detailChanges') validateDetailEntry(findings, label, entry, projected);
+        else if (list === 'detailFields') {
+          validateDetailFieldEntry(findings, label, entry, projected);
+        }
         else if (list === 'retiredEvents') {
           validateRetiredEventEntry(findings, label, entry, projected);
           if (projected && entry.since !== `${profile.toMajor}.0.0`) findings.push(`${label}: since must match the target major release`);
@@ -493,6 +530,14 @@ export function validateRenameLedgerShape(ledger, { projected = false } = {}) {
     }
     if (projected) validateExposure(findings, profile);
   }
+  if (ledger.profiles.length === LYRA_RENAME_PROFILES.length) {
+    const historicalFields = ledger.profiles[0]?.detailFields;
+    const nextFields = ledger.profiles[1]?.detailFields;
+    if ((Array.isArray(historicalFields) || Array.isArray(nextFields)) &&
+      JSON.stringify(historicalFields ?? []) !== JSON.stringify(nextFields ?? [])) {
+      findings.push('lyra-v21 and lyra-v22 detailFields must preserve the same verified field exposures');
+    }
+  }
   return findings;
 }
 
@@ -528,13 +573,18 @@ function historicalMember(context, tag, kind, name) {
   const key = JSON.stringify(['member', tag, kind, name]);
   return context?.records?.[key] ?? context?.records?.[context?.aliases?.[key]] ?? null;
 }
+function historicalSourceComponent(context, tag, record = null) {
+  const historical = record ?? historicalMember(context, tag, 'component', tag);
+  if (historical?.state !== 'retired') return null;
+  return historical.sourceComponent ?? context?.sourceComponents?.[tag] ?? null;
+}
 function historicalExport(context, entry) {
   return context?.records?.[JSON.stringify(['export', entry.kind, entry.module ?? null, entry.name])] ?? null;
 }
 function ownerFor(components, context, tag) {
   const current = components.get(tag);
   if (current) return current;
-  return historicalMember(context, tag, 'component', tag)?.state === 'retired' ? context.sourceComponents[tag] : null;
+  return historicalSourceComponent(context, tag);
 }
 function policyFor(component, context, tag, kind, name) {
   return deprecationRecordFor(component, kind, name) ?? historicalMember(context, tag, kind, name)?.policy ?? null;
@@ -656,6 +706,13 @@ export function validateRenameLedger(ledger, { inventory, exportDeprecations = [
     // not the target's, so the target may be a mirrored name whose own default never changes.
     const inversionCompanions = new Set();
 
+    for (const entry of profile.detailFields ?? []) {
+      const label = entryLabel(origin, 'detailFields', entry);
+      const component = ownerFor(components, compatibilityContext, entry.tag);
+      if (!component) findings.push(`${label}: component is not in the inventory`);
+      else if (!surfaceEntry(component, 'event', entry.event)) findings.push(`${label}: the event is not dispatched by ${entry.tag}`);
+    }
+
     for (const entry of profile.renames) {
       const label = entryLabel(origin, 'renames', entry);
       const component = ownerFor(components, compatibilityContext, entry.tag);
@@ -667,8 +724,9 @@ export function validateRenameLedger(ledger, { inventory, exportDeprecations = [
       checkLyraOnly(label, entry.tag, entry.kind, entry.from);
       checkSharedToken(label, entry.kind, entry.from);
       checkSharedToken(label, entry.kind, entry.to);
-      const retired = historicalMember(compatibilityContext, entry.tag, entry.kind, entry.from)?.state === 'retired';
-      const from = surfaceEntry(retired ? compatibilityContext.sourceComponents[entry.tag] : component, entry.kind, entry.from);
+      const historical = historicalMember(compatibilityContext, entry.tag, entry.kind, entry.from);
+      const retired = historical?.state === 'retired';
+      const from = surfaceEntry(retired ? historicalSourceComponent(compatibilityContext, entry.tag, historical) : component, entry.kind, entry.from);
       const targetOwner = replacementOwner(components, compatibilityContext, entry.tag, entry.kind, entry.from);
       const to = surfaceEntry(targetOwner, entry.kind, entry.to);
       if (!from) findings.push(`${label}: the deprecated alias ${entry.from} is not on the public surface`);
@@ -747,8 +805,14 @@ export function validateRenameLedger(ledger, { inventory, exportDeprecations = [
       const label = entryLabel(origin, 'propertyChanges', entry);
       const component = ownerFor(components, compatibilityContext, entry.tag);
       if (!component) findings.push(`${label}: component is not in the inventory`);
-      else if (!surfaceEntry(component, 'property', entry.property)) findings.push(`${label}: the property is not on the public surface`);
-      else checkLyraOnly(label, entry.tag, 'property', entry.property);
+      else {
+        const historical = historicalMember(compatibilityContext, entry.tag, 'property', entry.property);
+        const propertyOwner = historical?.state === 'retired'
+          ? historical.sourceComponent ?? historicalSourceComponent(compatibilityContext, entry.tag, historical)
+          : component;
+        if (!surfaceEntry(propertyOwner, 'property', entry.property)) findings.push(`${label}: the property is not on the public surface`);
+        else checkLyraOnly(label, entry.tag, 'property', entry.property);
+      }
     }
 
     for (const entry of profile.slotContent) {
@@ -883,6 +947,7 @@ export function projectRenameLedger(ledger, inventory, { exportDeprecations = []
         defaults: profile.defaults.map((entry) => ({ ...structuredClone(entry), since: release })),
         retiredEvents: (profile.retiredEvents ?? []).map((entry) => ({ ...structuredClone(entry), since: release })),
         detailChanges: profile.detailChanges.map((entry) => ({ ...structuredClone(entry), since: release })),
+        ...(Array.isArray(profile.detailFields) ? { detailFields: profile.detailFields.map((entry) => structuredClone(entry)) } : {}),
         propertyChanges: (profile.propertyChanges ?? []).map((entry) => ({ ...structuredClone(entry), since: release })),
         reviews: profile.reviews.map((entry) => {
           const record = recordFor(entry, entry.kind, entry.name);
@@ -960,7 +1025,8 @@ export function createRenameProfiles(projection, { lyraVersion = null } = {}) {
     const available = (list) =>
       (full[list] ?? []).filter((entry) => {
         if (lyraVersion === null) return true;
-        if (entry.since !== UNRELEASED_VERSION && compareVersions(entry.since, lyraVersion) <= 0) return true;
+        const availableFrom = list === 'detailFields' ? entry.observedIn : entry.since;
+        if (availableFrom !== UNRELEASED_VERSION && compareVersions(availableFrom, lyraVersion) <= 0) return true;
         skipped.push({ list, ...entry });
         return false;
       }).map(entry => {
@@ -976,6 +1042,8 @@ export function createRenameProfiles(projection, { lyraVersion = null } = {}) {
     const reviewsByName = indexBy(data.reviews, (entry) => nameKey(entry.kind, entry.name));
     const detailsByOwner = new Map(data.detailChanges.map((entry) => [ownerKey(entry.tag, 'event', entry.event), entry]));
     const detailsByName = indexBy(data.detailChanges, (entry) => entry.event);
+    const fieldsByOwnerEvent = new Map((data.detailFields ?? []).map((entry) => [ownerKey(entry.tag, 'event', entry.event), entry]));
+    const fieldsByEvent = indexBy(data.detailFields ?? [], (entry) => entry.event);
     const retiredByOwner = new Map(data.retiredEvents.map((entry) => [ownerKey(entry.tag, 'event', entry.event), entry]));
     const retiredByName = indexBy(data.retiredEvents, (entry) => entry.event);
     const propertiesByOwner = new Map(data.propertyChanges.map((entry) => [ownerKey(entry.tag, 'property', entry.property), entry]));
@@ -985,7 +1053,7 @@ export function createRenameProfiles(projection, { lyraVersion = null } = {}) {
     const defaultsByTag = indexBy(data.defaults, (entry) => entry.tag);
     const slotContentByTag = indexBy(data.slotContent, (entry) => entry.tag);
     const tags = new Set(
-      [...data.renames, ...data.reviews, ...data.detailChanges, ...data.retiredEvents, ...data.propertyChanges, ...data.defaults, ...data.slotContent].map((entry) => entry.tag),
+      [...data.renames, ...data.reviews, ...data.detailChanges, ...(data.detailFields ?? []), ...data.retiredEvents, ...data.propertyChanges, ...data.defaults, ...data.slotContent].map((entry) => entry.tag),
     );
     const renamesNamed = (kind, name) => renamesByName.get(nameKey(kind, name)) ?? [];
     const exposersOf = (kind, name) => exposure.get(kind)?.get(name) ?? new Set();
@@ -1009,6 +1077,8 @@ export function createRenameProfiles(projection, { lyraVersion = null } = {}) {
       reviewsNamed: (kind, name) => reviewsByName.get(nameKey(kind, name)) ?? [],
       detailFor: (tag, event) => detailsByOwner.get(ownerKey(tag, 'event', event)) ?? null,
       detailsNamed: (event) => detailsByName.get(event) ?? [],
+      detailFieldFor: (tag, event) => fieldsByOwnerEvent.get(ownerKey(tag, 'event', event)) ?? null,
+      detailFieldsNamed: (event) => fieldsByEvent.get(event) ?? [],
       retiredEventFor: (tag, event) => retiredByOwner.get(ownerKey(tag, 'event', event)) ?? null,
       retiredEventsNamed: (event) => retiredByName.get(event) ?? [],
       propertyChangeFor: (tag, property) => propertiesByOwner.get(ownerKey(tag, 'property', property)) ?? null,

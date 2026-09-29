@@ -1,4 +1,3 @@
-import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './dropdown.js';
@@ -841,7 +840,7 @@ for (const shape of ['direct', 'nested'] as const) {
               <lr-dropdown
                 placement="bottom-end"
                 .hoist=${hoist}
-                .arrow=${arrow}
+                .withoutArrow=${!arrow}
                 style="--show-duration: 0ms; --hide-duration: 0ms; --lr-transition-fast: 0ms;"
               >
                 <button slot="trigger" type="button">Settings</button>
@@ -911,7 +910,7 @@ for (const consumerMenu of [false, true]) {
         <lr-dropdown-item value=${String(index)}>Action ${index + 1}</lr-dropdown-item>
       `);
       const el = await fixture<LyraDropdown>(html`
-        <lr-dropdown .arrow=${arrow} style="--show-duration: 0ms; --hide-duration: 0ms; --lr-transition-fast: 0ms;">
+        <lr-dropdown .withoutArrow=${!arrow} style="--show-duration: 0ms; --hide-duration: 0ms; --lr-transition-fast: 0ms;">
           <button slot="trigger" type="button">Actions</button>
           ${consumerMenu ? html`
             <lr-menu>
@@ -1296,24 +1295,15 @@ describe('collecting an already-slotted consumer menu without relying on the ini
   });
 });
 
-it('uses one inverted arrow setting while preserving explicit legacy false', async () => {
+it('uses without-arrow as the dropdown arrow control', async () => {
   const el = await basic();
   expect(el.withoutArrow).to.equal(false);
-  expect(el.arrow).to.equal(true);
   expect(el.shadowRoot!.querySelector('[part~="arrow"]') !== null).to.equal(true);
   el.withoutArrow = true;
   await el.updateComplete;
-  expect(el.arrow).to.equal(false);
   expect(el.shadowRoot!.querySelector('[part~="arrow"]') === null).to.equal(true);
-  el.setAttribute('arrow', 'false');
+  el.removeAttribute('without-arrow');
   await el.updateComplete;
-  expect(el.withoutArrow).to.equal(true);
-  el.removeAttribute('arrow');
-  await el.updateComplete;
-  expect(el.arrow).to.equal(true);
   expect(el.shadowRoot!.querySelector('[part~="arrow"]') !== null).to.equal(true);
   expect(el.withoutArrow).to.equal(false);
 });
-
-expectDeprecatedUsage('lr-dropdown', 'attribute', 'arrow');
-expectDeprecatedUsage('lr-dropdown', 'property', 'arrow');

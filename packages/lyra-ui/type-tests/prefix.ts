@@ -1,4 +1,6 @@
-import { defineElement } from '../src/lyra.js';
+import {
+  defineElement,
+} from '../src/lyra.js';
 import { defineElement as defineGranular } from '../src/utilities/prefix.js';
 
 declare const elementConstructor: CustomElementConstructor;

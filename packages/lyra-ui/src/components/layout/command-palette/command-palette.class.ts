@@ -880,19 +880,27 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
       if (model.rows[middle]!.top + this.rowPitch < minimum) low = middle + 1;
       else high = middle;
     }
-    const visibleIndexes = new Set<number>();
-    for (let index = low; index < model.rows.length; index++) {
+    const groups: CommandResultGroup[] = [];
+    let group: CommandResultGroup | undefined;
+    const appendRow = (row: CommandResultRow): void => {
+      if (group?.index !== row.groupIndex) {
+        group = { ...model.groups[row.groupIndex]!, rows: [] };
+        groups.push(group);
+      }
+      group.rows.push(row);
+    };
+    // Flat rows retain group order. Insert an off-window active row on its original
+    // side of the window so adjacent rows from that same group share one heading.
+    const active = model.rows[this.activeIndex];
+    if (active && this.activeIndex < low) appendRow(active);
+    let index = low;
+    for (; index < model.rows.length; index++) {
       const row = model.rows[index]!;
       if (row.top > maximum) break;
-      visibleIndexes.add(index);
+      appendRow(row);
     }
-    if (this.activeIndex >= 0) visibleIndexes.add(this.activeIndex);
-    return model.groups
-      .map((entry) => ({
-        ...entry,
-        rows: entry.rows.filter((row) => visibleIndexes.has(row.index)),
-      }))
-      .filter((entry) => entry.rows.length > 0);
+    if (active && this.activeIndex >= index) appendRow(active);
+    return groups;
   }
 
   private optionId(index: number): string {

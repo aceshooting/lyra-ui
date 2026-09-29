@@ -16,44 +16,21 @@
 
 ## `lr-button`
 
-Host `aria-keyshortcuts` is forwarded reactively to the internal native button or link, including
-attribute removal and button/link presentation changes.
+Renders a native `<button>` or, with a safe `href`, a native `<a>`. Submit/reset use the
+browser-resolved form owner, including an external `form` owner, and run as default actions of the
+composed `click`; `preventDefault()` vetoes them, while `stopPropagation()` alone does not. The
+form's later `submit`/`reset` event can be canceled separately. Link mode navigates instead, and a
+disabled link has `aria-disabled="true"` with no `href`, focus, or navigation.
 
-A generic action-button primitive. Renders an internal native `<button>`; `type="submit"`/
-`type="reset"` are handled by the component itself via its browser-resolved form owner (including
-an external owner named by `form`), since a shadow-internal native button doesn't participate in a
-light-DOM form's submission on its own. They remain default actions of the composed native
-`click`: `preventDefault()` from any listener on that click path vetoes submit/reset before it
-runs, while `stopPropagation()` alone does not. Canceling the form's later `submit` or `reset`
-event remains an independent veto point.
+Host `aria-keyshortcuts` and `aria-describedby` follow the internal button or link reactively.
+Description IDs resolve in the host root, preserving order, unresolved IDs, and duplicates; source
+replacement, removal, reconnection, and adoption update the relationship. Accessible names and
+`aria-controls` have separate contracts below.
 
-External descriptions follow the current source element identity when an element with the same ID
-replaces it, when a source is removed or reinserted, and when the control reconnects or moves to
-another document. Host-root lookup and ordering follow the current `aria-describedby` list,
-including unresolved IDs and duplicates. Switching between native button and anchor modes keeps the
-relationship on the current action. Existing accessible names and `aria-controls` relationships
-retain their separate contracts.
-
-Set `href` to a safe link URL and the root renders as a real `<a part="base" href=…>` instead — a
-link styled as a button (e.g. a CTA). Native navigation is then the activation, so the submit/reset
-handling and `type` have no effect in that mode. A disabled link button (its own `disabled` or an
-ancestor `<fieldset disabled>`) renders the anchor with `aria-disabled="true"` and **no `href`**, so
-it is neither focusable nor navigable; it also dims to `--lr-opacity-disabled` with a `not-allowed`
-cursor and no hover/press feedback, exactly like the disabled `<button>` path (an `<a>` can never
-match `:disabled`, so that arm of the styling keys off `aria-disabled` instead). An
-unsafe/unparseable `href` falls back to the native `<button>`.
-
-The label does **not** grow to fill a stretched button. `[part="label"]` shrink-wraps its text and
-the whole icon+label pair centres under `--lr-button-justify`, so the icon-to-text distance is
-exactly `--lr-button-gap`. Before 16.0.0 the label was `flex: 1 1 auto`, which parked every spare
-pixel inside the label box and — because the native `<button>` UA stylesheet centres text, which the
-label wrapper inherited — floated the text in the middle of a wide empty row. A `with-caret` button,
-and one with an `end`/`suffix` adornment, keep the growing label so that trailing affordance stays
-pinned to the trailing content edge. `--lr-button-label-grow: 1` restores the old stretch and `0`
-opts a caret/end-adornment row out of pinning. The label is also `text-align: start` now, which
-fixes two side effects of the inherited centring: a label narrower than its own text centred the
-overflow so the ellipsis appeared at the end while the start of the word was clipped, and the `<a>`
-root (which never inherited the centring) disagreed with the `<button>` root across a mode switch.
+`[part="label"]` shrink-wraps with `text-align: start`, keeping ellipsis at the trailing edge.
+The icon and label stay centered under `--lr-button-justify`, separated by `--lr-button-gap`.
+`with-caret` or an `end`/`suffix` adornment makes the label grow to pin trailing content; use
+`--lr-button-label-grow: 1` to opt into that stretch or `0` to opt out.
 
 **Properties:**
 
@@ -63,7 +40,8 @@ root (which never inherited the centring) disagreed with the `<button>` root acr
   so a `mailto:` href paired with `download` falls back to the native `<button>`. Unset (the default)
   renders a plain `<button>`, unchanged. `type` (submit/reset) has no effect while the anchor
   renders. While the button is disabled the anchor is rendered **without** `href` (keeping
-  `aria-disabled="true"`), so a disabled link button cannot navigate. An unsafe/unparseable value
+  `aria-disabled="true"`), so it cannot navigate; it also uses `--lr-opacity-disabled`, a
+  `not-allowed` cursor, and no hover/press feedback. An unsafe/unparseable value
   falls back to the native `<button>`
 - `target?: string` — native anchor `target`, used only while `href` resolves to a link. Setting it
   (e.g. `'_blank'`) automatically force-adds `noopener noreferrer` to the rendered anchor's
@@ -81,15 +59,11 @@ root (which never inherited the centring) disagreed with the `<button>` root acr
   `primary` → `brand`, and `text` → neutral `appearance="plain"`. The Lyra/Web Awesome default is
   intentionally still `neutral`
 - `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' | 'quiet' | 'link' =
-'accent'` (reflected) — the library's shared fill vocabulary plus this component's own two extra
-  tiers. **Breaking in 8.0.0: the default moved from `'filled'` to `'accent'`**, so a bare
-  `<lr-button>` now paints the loud fill it used to need `appearance="accent"` for. The two are no
-  longer near-duplicates: `'accent'` takes the active `variant`'s **loud** fill
+'accent'` (reflected) — the shared fill vocabulary plus two button-specific tiers. `'accent'`
+  takes the active `variant`'s **loud** fill
   (`--lr-button-accent-fill`) with the foreground guaranteed legible on it, while `'filled'` takes
   that variant's **quiet** tint (`--lr-button-fill`) — a secondary-action fill that still reads as a
-  fill rather than as the page surface. Before 8.0.0 every chromatic variant's `'filled'` and
-  `'accent'` resolved to the same loud token and rendered identically, while `variant="neutral"`'s
-  `'filled'` was the page surface, i.e. no fill at all. `'filled-outlined'` is `'filled'`'s fill and
+  fill rather than as the page surface. `'filled-outlined'` is `'filled'`'s fill and
   foreground carrying the outlined tier's border colour, for a filled button that must still read as
   bounded on a same-toned surface. `'quiet'` is a de-emphasized tier:
   transparent background with a bordered, muted-text chrome; its text/border tokens are **not**
@@ -164,21 +138,12 @@ root (which never inherited the centring) disagreed with the `<button>` root acr
 - `formTarget?: string` (attribute `formtarget`) — overrides the form owner's `target`. Distinct
   from `target`, which is the anchor target used in link mode
 
-All five are `undefined`/`false` by default. When any of them — or `name`/`value` — is set, the
-submission runs through a **transient native `<button type="submit">`** inserted directly after the
-host, used as `requestSubmit()`'s submitter and removed again in the same synchronous step (in a
-`finally`, so a throwing or validation-blocked submission can't leave it behind). That is what makes
-the name/value pair reach the submitted `FormData` and the overrides reach the real submission:
-`requestSubmit()` only accepts a submitter the form actually owns, and a custom element is never
-one. While that stand-in exists it _is_ the form's submitter, so **`SubmitEvent.submitter` is the
-transient native button, not this host**. With none of those properties set, submission stays a
-plain `requestSubmit()` with a `null` submitter, and all of it is inert in link mode.
-For each string override, presence rather than truthiness chooses the transient path and its raw
-attribute is copied, so explicit empty values remain distinguishable from absence. Only the
-canonical native/upstream spellings are supported; the former hyphenated Lyra aliases were
-removed.
-
-Each size tier's `min-block-size` floor is exposed as its own token (see below).
+All five default to `undefined`/`false`. When one or `name`/`value` is set, the component inserts a
+transient native submit button after the host, passes it to `requestSubmit()`, and removes it in the
+same synchronous step even if submission fails. Its `name`/`value` reaches `FormData`, its `form*`
+overrides apply, and **`SubmitEvent.submitter` is that native button, not the host**. With none
+set, `requestSubmit()` has a `null` submitter. Presence, including an explicitly empty string,
+selects the transient path; string attributes are copied verbatim. Link mode ignores all of this.
 
 **Getters/methods:** `click()`, `focus(options?)`, and `blur()` — forwarded to the internal base
 element (the `<button>`, or the `<a>` in anchor mode); `click()` also runs the component's
@@ -189,9 +154,7 @@ consumer error and restores the current `required`/`value` constraint. `formStat
 restores `value` for session history/autofill without changing submitter-only form-data semantics.
 
 **Events:** a plain native `click` bubbles and composes through the shadow boundary unmodified
-(disabled while `disabled` or `loading`). In button mode, submit/reset runs only after that click's
-listener path has accepted the default action; calling `preventDefault()` on the host or an
-ancestor therefore vetoes it, while propagation control by itself does not. The internal button's
+(disabled while `disabled` or `loading`). The internal button's
 `focus` and `blur` — which do not
 cross the shadow boundary on their own — are re-dispatched from the host as bubbling, composed
 events. `lr-invalid` (no
@@ -220,9 +183,8 @@ set), `spinner` (present only while `loading`).
 **CSS custom states:** `disabled` (including fieldset-disablement and loading), `icon-button`
 (one text-free default-slot element), `link` (safe anchor mode), and `loading`.
 
-**Themeable custom properties.** The colour slots below are re-pointed at the active `variant`'s row
-of the library's shared semantic colour grid, so the component carries no `:host([variant='…'])`
-block of its own — the ones marked variant-independent are the exceptions:
+**Themeable custom properties.** Colour slots follow the active `variant`'s semantic colour row
+unless marked variant-independent:
 
 - `--lr-button-accent` (default `--lr-color-fill-loud`) — text/glyph colour for the chrome-less
   tiers (`outlined`, `plain`, `link`), i.e. the variant's loud fill borrowed as a foreground.
@@ -261,13 +223,9 @@ text/border counterparts, letting e.g. `appearance="quiet"` (which has its own r
 default**. Chromatic `plain` text moves toward body text during hover/press to retain contrast
 against the moving fill; the other appearances keep their resting text colour. The hover colour
 override also applies while pressed, and the border fallback remains the resting border colour.
-`appearance="link"` ignores `--lr-button-hover-color` (its own hover rule sets a higher-specificity
-colour mix) and renders with no border at any state, so `--lr-button-hover-border` has no visible
-effect there. **Breaking in 8.0.0:** this replaced `--lr-button-hover-brightness`,
-which no longer exists — a `filter: brightness()` multiplies every channel, so it moved a mid-toned
-fill but did nothing at all to a pure white or pure black one, and it dimmed the label and icons
-along with the box. Retuning `--lr-button-fill` or `--lr-button-accent-fill` now retunes that tier's
-hover and press with it.
+`appearance="link"` ignores `--lr-button-hover-color` and renders without a border, so
+`--lr-button-hover-border` has no effect there. Retuning either fill token also retunes its tier's
+hover and press. For removed historical tokens, see the [changelog](../CHANGELOG.md).
 
 `--lr-button-width` (default `100%`) is the internal control's inline size, so it follows the host's
 own width; override it to `auto` for a compact inline composition. `--lr-button-active-scale`
@@ -279,11 +237,9 @@ the `loading` spinner's rotation period; that token itself collapses to `0.001ms
 The per-`size` `min-block-size` floors are `--lr-button-size-2xs`, `--lr-button-size-xs`,
 `--lr-button-size-s`, `--lr-button-size-m`, `--lr-button-size-l` and
 `--lr-button-size-xl`. Each defaults to the matching tier of the shared form-control ladder
-(`--lr-form-control-height-2xs` … `-xl`, i.e. 1.25rem, 1.5rem, 1.875rem, 2.5rem, 3rem, 3.5rem), so a
-button shares the same minimum-height ladder as sibling form controls rather than relying on a
-second hand-maintained list — which is exactly how the scales drifted apart before 8.0.0. This is
-density/floor parity, not guaranteed pixel-height parity: content and nested actions can make a
-composed control such as `lr-date-input` taller. Each token is read only by its own tier
+(`--lr-form-control-height-2xs` … `-xl`, i.e. 1.25rem, 1.5rem, 1.875rem, 2.5rem, 3rem, 3.5rem).
+These are minimum-height floors; content and nested actions can make a composed control taller.
+Each token is read only by its own tier
 (`--lr-button-size-s` also serves `size="small"`, and so on for the other two aliases), and all are
 ignored by `appearance="link"`.
 Retheming `--lr-theme-form-control-height-*` moves every control on the ladder together.
@@ -301,16 +257,14 @@ changes its private default to `--lr-radius-pill`. `--lr-button-caret-size` (def
 `var(--lr-size-0-75em)`) is the `with-caret`
 chevron's font size — declared in `em`, so it tracks every `size` tier through the button's own font
 size instead of needing a per-tier value.
-`--lr-button-shadow` is **undeclared by default**, so `box-shadow` falls back to `none` —
-byte-identical to before this property existed — set it to add a drop shadow (e.g. an
-elevated/floating action button) without a `::part(base)` rule. `appearance="link"` always renders
+`--lr-button-shadow` is **undeclared by default**, so `box-shadow` falls back to `none`; set it
+for a drop shadow without a `::part(base)` rule. `appearance="link"` always renders
 with no shadow regardless of this token — a zero-chrome inline link has no box to elevate.
 `--lr-button-justify` (default `center`) is the `justify-content` of the internal button's row. With
 the label no longer growing, this is what positions the icon+label pair inside a stretched control:
 `flex-start` packs it against the leading edge, `space-between` pushes the adornments apart.
-`--lr-button-label-grow` (default `0`) is the `flex-grow` of `[part="label"]`; `1` restores the
-pre-16.0.0 behaviour where the label absorbed every spare pixel of a stretched button, and it also
-overrides the automatic grow a `with-caret`/`end`-adornment button applies.
+`--lr-button-label-grow` (default `0`) is the `flex-grow` of `[part="label"]`; `1` fills spare
+space, and an explicit value overrides the grow applied by `with-caret`/`end` adornments.
 
 **Retuning one `size` tier's geometry, without a `::part(base)` rule.** Four more properties carry
 the active tier's geometry. Every `:host([size='…'])` rule changes only private defaults — no
@@ -376,10 +330,8 @@ box no matter what tier or override is in play.
 
 **Known gotchas:**
 
-- `accessibleLabel`/a host `aria-label` is forwarded reactively to the internal button or anchor as
-  a literal string (for an icon-only button). Host `aria-describedby` targets in the host's root
-  are resolved onto the focused internal control through `ariaDescribedByElements`; external
-  `aria-labelledby` is not copied across the shadow boundary.
+- Host `aria-describedby` targets resolve onto the focused internal control through
+  `ariaDescribedByElements`; external `aria-labelledby` is not copied across the shadow boundary.
 - For a toggle that owns its pressed state — a vetoable request, `lr-change`, and optional grouping
   behind one tab stop — use `lr-toggle` / `lr-toggle-group` rather than flipping host `aria-pressed`
   in a click handler.
@@ -387,13 +339,12 @@ box no matter what tier or override is in play.
   For toggle buttons, host `aria-pressed="true|false|mixed"` reaches the focused native button —
   BUTTONS only. A link button (`href` set) never receives it, because `role="link"` does not support
   `aria-pressed`; remove `href` and the same host attribute starts reaching the `<button>` that
-  replaces the anchor. That link carve-out arrived in **16.0.0** — before it, `aria-pressed` was
-  forwarded onto the anchor as well, asserting a state `role="link"` does not have. Navigation can
+  replaces the anchor. Navigation can
   use the global `aria-current="page|step|location|date|time|true|false"`, which does reach the
   anchor. Both states update reactively, including native `ariaPressed`/`ariaCurrent` property
   assignments, attribute removal and `href` changes. Empty or unsupported tokens are omitted. The native button/link role
   remains unchanged for an enabled control: use pressed state for button toggles and current state
-  for navigation links. A DISABLED link button drops `href` (so it genuinely cannot navigate) and
+  for navigation links. A disabled link button drops `href` and
   therefore also drops the anchor's implicit role, so it renders an explicit `role="link"` — without
   it, the forwarded `aria-label`/`aria-haspopup`/`aria-expanded`/`aria-current` would sit on a
   role-less generic element, which is prohibited.
@@ -406,12 +357,7 @@ box no matter what tier or override is in play.
 - Is form-associated (`static formAssociated = true` + `attachInternals()`), so it participates in
   an ancestor `<form>.elements` the same way `wa-button` does — a sibling text field's own
   Enter-to-submit lookup (which scans `form.elements` for a `type === 'submit'` control) finds it.
-- **`SubmitEvent.submitter` is not this element** whenever `name`/`value` or any `form*` override is
-  set: it is the transient native `<button>` described above. That native submitter remains
-  connected throughout synchronous `requestSubmit()` handling, so a `submit` listener can read
-  its `name`, `value` and `form*` fields and construct `FormData` with it. It is removed after
-  submission handling returns; its identity is distinct from the `lr-button` host.
-- The `form*` overrides and `type` are all inert while `href` renders the anchor — native navigation
-  is the activation there, and an anchor has no submit/reset concept.
+- A `submit` listener can read the transient native submitter's `name`, `value`, and `form*` fields
+  while it remains connected during synchronous `requestSubmit()` handling.
 
 ---

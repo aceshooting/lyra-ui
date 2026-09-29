@@ -1,4 +1,3 @@
-import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './table.js';
 import '../../forms/select/select.js';
@@ -14,8 +13,6 @@ import { installTableTestHooks, type Row, columns, rows, forcedWidthHeaderCell, 
 installTableTestHooks();
 
 
-expectDeprecatedUsage('lr-table', 'attribute', 'accessible-label');
-expectDeprecatedUsage('lr-table', 'property', 'accessibleLabel');
 
 
 it('retains content-driven rows until a theme or table minimum is supplied and respects inherited density', async () => {
@@ -25,7 +22,7 @@ it('retains content-driven rows until a theme or table minimum is supplied and r
     <div>
       <style>${await densityResponse.text()}</style>
       <section data-lr-density="comfortable">
-        <lr-table accessible-label="Rows" .columns=${columns} .rows=${rows}></lr-table>
+        <lr-table aria-label="Rows" .columns=${columns} .rows=${rows}></lr-table>
       </section>
     </div>
   `);
@@ -1401,7 +1398,7 @@ describe('--lr-table-row-stripe-bg', () => {
 });
 
 it('rejects a column width that would inject extra declarations into the col element', async () => {
-  const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<Row>;
+  const el = (await fixture(html`<lr-table aria-label="Scores"></lr-table>`)) as LyraTable<Row>;
   el.columns = [
     {
       key: 'name',
@@ -1537,7 +1534,7 @@ describe('scrollMode', () => {
   async function responsiveTable(width: number): Promise<{ wrapper: HTMLElement; el: LyraTable<Row> }> {
     const wrapper = await fixture<HTMLElement>(html`
       <div style=${`inline-size: ${width}px; max-inline-size: 100%;`}>
-        <lr-table scroll-mode="auto" accessible-label="Accounts"></lr-table>
+        <lr-table scroll-mode="auto" aria-label="Accounts"></lr-table>
       </div>
     `);
     const el = wrapper.querySelector('lr-table') as LyraTable<Row>;
@@ -1626,7 +1623,7 @@ describe('decorative edges versus control boundaries', () => {
       { key: 'score', label: 'Score', align: 'end', cell: (r) => r.score },
     ];
     const el = (await fixture(html`<lr-table
-      accessible-label="People"
+      aria-label="People"
       filterable
       has-more
       style=${borderTokens}
@@ -1646,7 +1643,7 @@ describe('decorative edges versus control boundaries', () => {
 
   it('keeps the only drawn edge of the load-more button on --lr-color-border', async () => {
     const el = (await fixture(html`<lr-table
-      accessible-label="People"
+      aria-label="People"
       has-more
       style=${borderTokens}
       .columns=${columns}
@@ -1661,7 +1658,7 @@ describe('decorative edges versus control boundaries', () => {
 
   it('keeps the filter field and retry button boundaries on --lr-color-border', async () => {
     const el = (await fixture(html`<lr-table
-      accessible-label="People"
+      aria-label="People"
       filterable
       error
       style=${borderTokens}

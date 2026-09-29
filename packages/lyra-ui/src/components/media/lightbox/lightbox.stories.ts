@@ -45,7 +45,7 @@ export const Default: Story = {
 };
 
 /** The promise-based `show()`/`hide()`/`close()` lifecycle matches the shared Lyra overlay
- * phases. Cancel `lr-show`, `lr-hide`, or `lr-lightbox-close` to veto the corresponding request. */
+ * phases. Cancel `lr-show`, `lr-hide`, or `lr-close-request` to veto the corresponding request. */
 export const LifecycleMethods: Story = {
   render: () => html`
     <button @click=${(event: Event) => {

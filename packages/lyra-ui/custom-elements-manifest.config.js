@@ -125,7 +125,6 @@ export const ACCESSOR_RUNTIME_CONTRACTS = new Map([
   [
     'lr-dropdown',
     {
-      arrow: { default: 'false', attribute: 'arrow' },
       disabled: { default: 'false', attribute: 'disabled' },
       distance: { default: '0', attribute: 'distance' },
       placement: { default: "'bottom-start'", attribute: 'placement' },
@@ -600,6 +599,7 @@ export const ATTRIBUTE_ONLY_CONTRACTS = new Map([
   ['lr-icon-button', { 'aria-labelledby': { type: 'string | null' } }],
   // Same IDREF resolution as lr-icon-button: onto the internal button's `ariaLabelledByElements`.
   ['lr-toggle', { 'aria-labelledby': { type: 'string | null' } }],
+  ['lr-message-parts', { 'aria-label': { type: 'string | null' } }],
 ]);
 
 /** Reflected attributes that exist only as framework/hydration transport and must not be
@@ -1417,21 +1417,6 @@ export default {
         }
 
         sortManifest(customElementsManifest);
-      },
-    },
-    {
-      name: 'lr-current-native-attribute-of-deprecated-property',
-      packageLinkPhase({ customElementsManifest }) {
-        const declaration = customElementsManifest.modules.flatMap((module) => module.declarations ?? [])
-          .find((entry) => entry.tagName === 'lr-message-parts');
-        const member = declaration?.members?.find((entry) => entry.name === 'accessibleLabel');
-        const attribute = declaration?.attributes?.find((entry) => entry.name === 'aria-label');
-        if (!member?.deprecated || member.attribute !== 'aria-label' || !attribute?.deprecated) {
-          throw new Error('lr-message-parts: native aria-label projection requires the deprecated accessibleLabel mapping');
-        }
-        // The legacy property keeps native attribute hydration during its compatibility window.
-        // Its JSDoc notice must not deprecate the surviving native attribute spelling.
-        attribute.deprecated = false;
       },
     },
     {

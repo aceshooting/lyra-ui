@@ -51,6 +51,20 @@ export function policyKey(policy, scope = 'member') {
     : { scope, kind: policy.kind, module: policy.module ?? null, name: policy.name };
 }
 
+/** Current exports and historical export policies/replacements inspected in the exact source. */
+export function compatibilityExportCandidates(metadata, captures) {
+  const candidates = new Map();
+  const add = entry => candidates.set(compatibilityKey(policyKey(entry, 'export')), entry);
+  const current = new Set(metadata.exportDeprecations.map(entry => compatibilityKey(policyKey(entry, 'export'))));
+  for (const entry of metadata.exportDeprecations) add(entry);
+  for (const capture of captures) for (const entry of capture.records) {
+    if (entry.key.scope !== 'export' || current.has(compatibilityKey(entry.key))) continue;
+    add(entry.policy);
+    add({ ...entry.policy.replacement, module: entry.policy.replacement.module ?? entry.policy.module });
+  }
+  return [...candidates.values()];
+}
+
 function member(component, kind, name) {
   if (kind === 'component') return component ? { name: component.tag, deprecated: Boolean(component.maturity?.deprecated) } : null;
   return component?.surface?.[sections[kind === 'slot-content' ? 'slot' : kind]]?.find(item => item.name === name) ?? null;
@@ -137,22 +151,29 @@ export function extractPublishedCompatibility({ metadata, inventory, packageJson
 
 /** Validates actual-version eligibility and produces detached facts for existing ledger operations. */
 export function assembleCompatibilityContext({ packageVersion, currentInventory, currentExportDeprecations = [],
-  currentExportSurface = null, captures = [], retirementIndex = [] }) {
+  currentExportSurface = null, componentRegistrationRoutes = {}, captures = [], retirementIndex = [] }) {
   version(packageVersion);
   requireThat(Array.isArray(captures) && Array.isArray(retirementIndex), 'Compatibility captures and retirements must be arrays');
   const components = index(currentInventory.components, item => item.tag, 'current owner');
+  requireThat(plain(componentRegistrationRoutes), 'Current component registration routes must be an object');
+  for (const [tag, route] of Object.entries(componentRegistrationRoutes)) {
+    requireThat(components[tag], `Registration route references an unknown current component: ${tag}`);
+    requireThat(route === `./components/${tag}.js`, `Registration route is not the stable tag-shaped route for ${tag}`);
+  }
   const currentRecords = index([
     ...currentInventory.components.flatMap(component => policies(component).map(policy => ({ key: policyKey(policy), policy }))),
     ...currentExportDeprecations.map(policy => ({ key: policyKey(policy, 'export'), policy })),
   ], item => compatibilityKey(item.key), 'current policy');
   const exportSurface = index(currentExportSurface ?? [], item => compatibilityKey(item.key), 'current export surface');
   const retirements = index(retirementIndex, item => compatibilityKey(item.key), 'retirement');
-  const historical = Object.create(null); const sourceComponents = Object.create(null); const mirrors = new Set();
+  const historical = Object.create(null); const sourceComponents = Object.create(null); const capturesByRelease = new Map(); const mirrors = new Set();
   const exposure = Object.fromEntries(exposureKinds.map(kind => [kind, Object.create(null)]));
   const addExposure = (kind, name, tags) => { exposure[kind][name] = [...new Set([...(exposure[kind][name] ?? []), ...tags])].sort(); };
   for (const capture of captures) {
     version(capture.sourceVersion);
     requireThat(capture.sourceRelease === `lyra-ui@${capture.sourceVersion}` && compare(capture.sourceVersion, packageVersion) <= 0, 'Invalid published capture version');
+    requireThat(!capturesByRelease.has(capture.sourceRelease), `Duplicate published capture: ${capture.sourceRelease}`);
+    capturesByRelease.set(capture.sourceRelease, capture);
     for (const component of capture.components) {
       // Multiple released snapshots retain the latest source contract while exact policy must agree.
       const previous = sourceComponents[component.tag];
@@ -193,6 +214,15 @@ export function assembleCompatibilityContext({ packageVersion, currentInventory,
       requireThat(!currentMember || key.kind === 'slot-content', `Current notice is missing for surviving source: ${id}`);
       requireThat(retirement, `Missing retirement record: ${id}`);
       requireThat(sources.includes(retirement.sourceRelease), `Retirement has no exact published source: ${id}`);
+      const retirementSource = capturesByRelease.get(retirement.sourceRelease);
+      const sourceComponent = key.scope === 'member'
+        ? retirementSource?.components.find(component => component.tag === key.tag) ?? null
+        : null;
+      const sourceMember = key.scope === 'member' && sourceComponent ? member(sourceComponent, key.kind, key.name) : null;
+      if (key.scope === 'member') {
+        requireThat(sourceComponent, `Retirement has no exact published source component: ${id}`);
+        requireThat(sourceMember, `Retirement has no exact published source member: ${id}`);
+      }
       requireThat(compare(packageVersion, retirement.removedIn) >= 0, `Cannot remove ${id} before ${retirement.removedIn}`);
       requireThat(compare(retirement.removedIn, policy.removalNotBefore) >= 0 && version(policy.removalNotBefore)[0] >= version(policy.since)[0] + 2, `Retirement violates published floor: ${id}`);
       const pairedId = key.scope === 'member' && key.kind === 'property' && policy.attribute
@@ -226,7 +256,7 @@ export function assembleCompatibilityContext({ packageVersion, currentInventory,
       requireThat(publishedReplacement, `Replacement was not available in the published compatibility window: ${id}`);
       requireThat(replacementMember && !replacementMember.deprecated, `Missing current supported replacement: ${id}`);
       records[id] = { state: 'retired', key, policy, removedIn: retirement.removedIn,
-        sourceMember: key.scope === 'member' ? member(sourceComponents[key.tag]?.component, key.kind, key.name) : null,
+        sourceComponent, sourceMember,
         sourceOwner: key.tag ?? null, replacementOwner, replacementMember };
     }
     if (key.scope === 'member' && key.kind === 'property' && policy.attribute) {
@@ -246,7 +276,7 @@ export function assembleCompatibilityContext({ packageVersion, currentInventory,
       ? compatibilityKey({ ...published.key, kind: 'attribute', name: published.policy.attribute }) : null;
     requireThat(!mirrors.has(id) && (!paired || !mirrors.has(paired)), `Protected upstream mirrored member cannot retire: ${id}`);
   }
-  return freeze(clone({ schemaVersion: 1, packageVersion, records, aliases, exposure,
+  return freeze(clone({ schemaVersion: 1, packageVersion, componentRegistrationRoutes, records, aliases, exposure,
     sourceComponents: Object.fromEntries(Object.entries(sourceComponents).map(([tag, entry]) => [tag, entry.component])) }));
 }
 

@@ -1,3 +1,4 @@
+import { maxCssTime } from '../../../internal/css-motion-time.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
@@ -72,20 +73,6 @@ const SUBMENU_CLOSE_DELAY = 300;
  *  literal this reset used before it moved onto the shared debounce controller, and identical to
  *  `<lr-select>`'s listbox type-ahead. */
 const TYPE_AHEAD_RESET_MS = 500;
-
-function parseCssTime(value: string): number {
-  const trimmed = value.trim();
-  if (trimmed.endsWith('ms')) return Number.parseFloat(trimmed);
-  if (trimmed.endsWith('s')) return Number.parseFloat(trimmed) * 1000;
-  return 0;
-}
-
-/** The longest comma-separated transition time in a `transitionDuration`/`transitionDelay`
- *  computed-style pair -- mirrors `toast-item.class.ts`'s identical helper for its own exit
- *  transition wait. */
-function maxCssTime(value: string): number {
-  return Math.max(0, ...value.split(',').map(parseCssTime).filter(Number.isFinite));
-}
 
 function isLyraMenuItemElement(value: unknown): value is LyraMenuItem {
   if (!isHtmlElement(value)) return false;
@@ -344,9 +331,8 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   // both only drive imperative side effects (applyRovingTabIndex()/.focus()).
   private items: LyraMenuItem[] = [];
   private activeIndex = -1;
-  // happy-dom never fires the default slot's INITIAL `slotchange` (only a later mutation), so the
-  // slot's current assignment is also collected once from `firstUpdated()` -- see
-  // `collectInitialSlotAssignment`'s doc.
+  // Initial assignment is collected from `firstUpdated()` as well; see
+  // `collectInitialSlotAssignment` for the shared timing contract.
   @query('slot:not([name])') private itemsSlot?: HTMLSlotElement;
 
   private cleanup?: DeferredOperationHandle;
@@ -441,20 +427,9 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     // attributes, so seed them once from the real slots after the first render.
     this.syncRegionState();
     this.syncPresentationState();
-    // happy-dom (through at least 20.14.5) never fires the default slot's INITIAL `slotchange`
-    // either -- see `collectInitialSlotAssignment`'s own doc -- so `this.items` (the menu's own
-    // item registry, driving keyboard navigation, roving tabindex, and the default active item)
-    // would otherwise stay empty forever for a menu whose `<lr-menu-item>` children already exist
-    // at connect: `syncItemsFromSlot()` runs exclusively from `onItemsSlotChange` today, and
-    // `connectedCallback()`'s own reconnect refresh only re-runs it once `hasUpdated` is already
-    // true. Collect once here too, from the slot's current assignment. `items`/`activeIndex` are
-    // plain fields, not reactive (see their own doc), so writing them here carries none of
-    // `select.class.ts`'s "scheduled an update after an update completed" risk -- but the
-    // collection is still deferred a microtask, matching every sibling fix in this sweep, so a
-    // real browser's own initial `slotchange` (which fires asynchronously, outside this update)
-    // always lands through the exact same code path rather than a special synchronous one.
-    // `syncItemsFromSlot()`'s own leading identity/order check makes the second call, when a real
-    // `slotchange` also fires for this same batch, a no-op.
+    // Seed the registry so items present at connect participate in keyboard navigation. Its
+    // identity/order check makes duplicate delivery a no-op; defer so both paths use event-like
+    // timing (see collectInitialSlotAssignment()).
     const slot = this.itemsSlot;
     queueMicrotask(() => {
       collectInitialSlotAssignment(slot, (s) => this.syncItemsFromSlot(s));

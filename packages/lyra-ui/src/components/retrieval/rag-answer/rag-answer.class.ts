@@ -350,7 +350,6 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
               ><lr-markdown
                 .content=${this.answer}
                 @lr-render-error=${this.stopOwnedEvent}
-                @lr-link-click=${this.stopOwnedEvent}
                 @lr-highlight-activate=${this.stopOwnedEvent}
                 @lr-text-select=${this.stopOwnedEvent}
                 @lr-anchor-result=${this.stopOwnedEvent}

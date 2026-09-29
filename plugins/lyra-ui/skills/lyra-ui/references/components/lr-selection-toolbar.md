@@ -80,5 +80,5 @@ surface together with every other floating surface in the library. `--lr-overlay
 inside the same `role="toolbar"` element and roving-tabindex group. **Optional peer deps:** none.
 
 ```ts
-import "@aceshooting/lyra-ui/components/conversation/selection-toolbar/selection-toolbar.js";
+import "@aceshooting/lyra-ui/components/lr-selection-toolbar.js";
 ```

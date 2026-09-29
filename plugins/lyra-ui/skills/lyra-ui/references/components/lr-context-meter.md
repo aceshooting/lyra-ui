@@ -7,7 +7,7 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
-- **Deprecated event** `lr-segment-activate` since `22.0.0`; use event `addEventListener('lr-segment-activate-request', event => { /* Call preventDefault() to veto the proposed selection toggle. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 17 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -87,9 +87,7 @@ library event. **Cancelable, and a real veto point**: the default action is this
 `index` in its own `selectedIndices`, so `preventDefault()` keeps the current selection and hands
 that state entirely to the consumer. Never emitted in the default presentational mode. Because the
 event dispatches synchronously *before* the write, a listener reading `selectedIndices` inside its
-own handler sees the pre-activation value. The deprecated cancelable `lr-segment-activate` alias fires
-after the request and before that write, with the same detail. Either event can veto; vetoing only
-the legacy alias issues a development warning. Reentrant activation during dispatch is ignored.
+own handler sees the pre-activation value. Reentrant activation during dispatch is ignored.
 Replacing the segment collection, disabling interaction, or disconnecting during dispatch cancels
 the default write.
 

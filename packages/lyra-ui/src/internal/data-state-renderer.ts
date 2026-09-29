@@ -85,7 +85,7 @@ export interface DataStateConfig {
    * it in exactly this shape, `init` annotation included:
    *
    * ```ts
-   * emitRetry: (detail, init: { cancelable: true }) => this.emit('lr-retry', detail, init),
+   * emitRetryRequest: (detail, init: { cancelable: true }) => this.emit('lr-retry-request', detail, init),
    * ```
    *
    * Worth the second spelling because the literal `this.emit('<name>', ...)` then stays inside the
@@ -95,8 +95,6 @@ export interface DataStateConfig {
    * annotation is load-bearing for the same checks and is not made redundant by the contextual
    * type this interface already supplies; `RequestCommitOptions.emitRequest` states why in full.
    */
-  emitRetry?: (detail: null, init: { cancelable: true }) => CustomEvent;
-  /** Canonical request adapter. When supplied, the older emitRetry adapter remains a veto alias. */
   emitRetryRequest?: (detail: null, init: { cancelable: true }) => CustomEvent;
   /**
    * Overrides the name of the `<slot>` a branch is wrapped in. Each branch defaults to its own
@@ -311,11 +309,7 @@ function builtInState(
     requestThenCommit<null, CustomEvent>({
       requestDetail: null,
       emitRequest: (detail, init) => {
-        const request = config.emitRetryRequest?.(detail, init);
-        const legacy = config.emitRetry?.(detail, init) ?? api.emit(retryEventName, detail, init);
-        if (!request) return legacy;
-        if (legacy.defaultPrevented) request.preventDefault();
-        return request;
+        return config.emitRetryRequest?.(detail, init) ?? api.emit(retryEventName, detail, init);
       },
       commit: () => config.onRetry?.(),
     });

@@ -18,23 +18,26 @@ in `references/index.md`; do not repeat a remembered count.
 ## Look up the exact API before writing any `lr-*` markup
 
 Never infer attributes, slots, events, parts or CSS custom properties from memory, or from a
-similarly-named component in another library. The reference is split so a lookup costs a few
-hundred tokens:
+similarly-named component in another library. Read the component and shared guides needed for the
+task:
 
 | Need | Read |
 |---|---|
-| Which component to use / its import path | `references/index.md` |
-| One component's full API | `references/components/<tag>.md` — path derived from the tag, no search needed |
-| Library-wide behavior | `references/shared.md` (combined compatibility guide) |
-| Imports, registration, events, forms, styling, localization, frameworks, AI, or utilities | The matching `references/shared/<topic>.md` guide |
+| Find a component by need | Search `references/index.md` for the relevant family or term |
+| Known tag's full API and import | `references/components/<tag>.md` — derive the path from the tag, skipping the index |
+| Imports, registration, events, forms, styling, localization, frameworks, AI, or utilities | The matching focused `references/shared/<topic>.md` guide below |
 | Design tokens | `references/tokens.md` |
+| Native light-DOM CSS, typography and utility classes | `references/shared/native-styles-and-utilities.md` |
 | What to `npm install` | `references/peers.md` |
-| `wa-*`/`sl-*` renames | `references/migration.md` |
+| One `wa-*`/`sl-*` tag | Search for that tag's section in `references/migration.md`; read the applicable mapping and warning |
+| Lyra v23 → v24 project upgrade | `references/shared/v23-to-v24-migration.md` |
 
-For a narrow library-wide lookup, choose the matching file in `references/shared/`:
-`imports-and-registration.md`, `events-and-types.md`, `forms-and-accessibility.md`,
-`styles-and-tokens.md`, `localization-and-rtl.md`, `frameworks-and-ssr.md`, `ai-and-peers.md`, or
-`testing-and-utilities.md`. `references/shared.md` remains the combined compatibility guide.
+Focused `references/shared/` files: `imports-and-registration.md`, `v23-to-v24-migration.md`,
+`events-and-types.md`, `forms-and-accessibility.md`, `styles-and-tokens.md`,
+`native-styles-and-utilities.md`,
+`localization-and-rtl.md`, `frameworks-and-ssr.md`, `ai-and-peers.md`, and
+`testing-and-utilities.md`. `references/shared.md` remains an aggregate for tools that require a
+single compatibility document.
 
 Example: `<lr-table>` → `references/components/lr-table.md`. Each component file carries
 its import path, optional peers, properties with types and defaults, events with payloads, slots,
@@ -75,15 +78,15 @@ lookups. Equivalent resources are `lyra://catalog`, `lyra://component/{tag}`, an
   <lr-combobox label="Fruit"></lr-combobox>
   ```
 
-  `import '@aceshooting/lyra-ui';` is registration-free in v8. `all.js` gives the explicit
+  `import '@aceshooting/lyra-ui';` is registration-free. `all.js` gives the explicit
   compatibility registration set — prefer per-component entries in application code — and omits
   the 15 peer-gated tags (the chart family, `lr-map`, `lr-graph`, `lr-knowledge-graph-explorer`,
   `lr-geojson-viewer`).
 
-- **Theme only through `--lr-theme-*` custom properties.** Never hardcode a color, spacing or font
-  value that fights the token system; override the relevant `--lr-theme-*` property on any ancestor
-  instead. `references/tokens.md` is the full catalog — look the name up, don't invent it.
-  `@aceshooting/lyra-ui/theme.css` is an optional ready-made light/dark base.
+- **Use documented style axes and tokens.** Compose look, surface, density, mode and accent through
+  the style API or scope attributes; customize with the documented `--lr-theme-*` inputs.
+  `references/shared/styles-and-tokens.md` explains the API and `references/tokens.md` lists exact
+  tokens. `@aceshooting/lyra-ui/theme.css` is an optional light/dark base.
 
 - **Lyra-specific events are `lr-*`-prefixed `CustomEvent`s** (`lr-change`, `lr-input`, …),
   bubbling and composed, with payload on `event.detail`; they are non-cancelable unless the
@@ -105,12 +108,10 @@ lookups. Equivalent resources are `lyra://catalog`, `lyra://component/{tag}`, an
 
 ## Migrating from Web Awesome or Shoelace
 
-`references/migration.md` holds `wa-*`/`sl-*` mappings, import rewrites, classifications and
-warnings. Determine each occurrence's actual source ecosystem and installed version — coinstalling
-both doesn't change either one's provenance. Apply only verified automatic mappings and their
-documented rewrites; manual/warning-required cases (`*-include` sanitization/same-origin
-differences in both ecosystems, Shoelace alert lifecycle timing and cancellation) need their
-stated follow-up. Coverage of a tag is not a blanket automatic-rewrite guarantee.
+`references/migration.md` holds `wa-*`/`sl-*` mappings, import rewrites and warnings. Determine
+each occurrence's source ecosystem and installed version. Apply verified automatic mappings;
+review warnings and semantic differences in context. A mapped tag does not guarantee a safe
+automatic rewrite.
 
 Some deprecated Lyra spellings remain supported while the mirrored upstream still publishes them;
 their `removalNotBefore` floor is not an automatic removal date. Prefer the current Lyra spelling
@@ -118,9 +119,10 @@ for new code and see `references/migration.md` for the exact protected list. In 
 `lr-icon`'s `autoWidth` is only a CSS-level alias for `canvas="auto"`; explicit `canvas` wins, so
 review selector reach before changing `[auto-width]` rules. Do not blanket-rewrite these aliases.
 
-Read `references/components/<tag>.md` for the target's actual contract. Lyra combobox accepts both
-`clearable` and `with-clear`. A tag absent from the tables has no documented counterpart — check
-`references/index.md` for one covering the same need.
+Read `references/components/<tag>.md` for the target contract. Lyra combobox accepts both
+`clearable` and `with-clear`; a tag absent from the tables has no documented counterpart. For a
+Lyra v23 → v24 upgrade, use `references/shared/v23-to-v24-migration.md` for the route, style, SSR
+and event-detail changes.
 
 `/lyra-ui:migrate` performs verified rewrites and reports manual/unresolved occurrences (both
 ecosystems are best-effort). `/lyra-ui:review` audits a whole consumer project: fixes local misuse

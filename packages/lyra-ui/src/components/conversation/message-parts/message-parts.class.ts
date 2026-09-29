@@ -1,4 +1,3 @@
-import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { MarkdownStreamingRender } from '../markdown/markdown-shared.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
@@ -183,6 +182,7 @@ export interface LyraMessagePartsEventMap
  * so that nested code direction cannot be overridden with `::part()` from outside.
  *
  * @customElement lr-message-parts
+ * @attr {string | null} aria-label - Accessible name for the internal message-part group.
  * @event lr-citation-select - A citation part was activated. `detail: { citation }`.
  * @event lr-part-resume - Requests host-managed resume of an interrupted, resumable part. `detail: { part }`.
  * @event lr-part-retry - Retry was requested for a retryable error part. `detail: { part }`.
@@ -192,7 +192,6 @@ export interface LyraMessagePartsEventMap
  * @event lr-render-error - Passthrough from rendered Markdown, tool-result, or widget content, or
  * tool-call block (`callId` included).
  * @event lr-link-activate - Passthrough from rendered Markdown.
- * @event lr-link-click - Deprecated compatibility alias of `lr-link-activate`.
  * @event lr-highlight-activate - Passthrough from rendered Markdown.
  * @event lr-text-select - Passthrough from rendered Markdown.
  * @event lr-anchor-result - Passthrough from rendered Markdown.
@@ -334,19 +333,6 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
    *  tool-call/tool-result parts), where unbounded live DOM can visibly stall the main thread. */
   @property({ type: Number, attribute: 'max-rendered-parts' }) maxRenderedParts = 0;
 
-  /** Accessible name override for the internal message-part group.
-   * @deprecated Use the host's native `aria-label` attribute. */
-  @property({ attribute: 'aria-label' })
-  get accessibleLabel(): string | null { return this._accessibleLabel; }
-  set accessibleLabel(value: string | null) {
-    if (value !== null && !this.hasAttribute('aria-label')) {
-      warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'ariaLabel');
-    }
-    const previous = this._accessibleLabel;
-    this._accessibleLabel = value;
-    this.requestUpdate('accessibleLabel', previous);
-  }
-  private _accessibleLabel: string | null = null;
   private knownErrorIds = new Set<string>();
   /** First tool-call's projected `redactedFields` per invocation id; only non-empty entries. */
   private redactionByInvocation = new Map<string, readonly unknown[]>();
@@ -696,7 +682,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   }
 
   override render(): TemplateResult {
-    const label = this.getAttribute('aria-label') ?? this.accessibleLabel ?? this.localize('messagePartsLabel');
+    const label = this.getAttribute('aria-label') ?? this.localize('messagePartsLabel');
     // Ranks are derived from the FULL sequence, before any rendering window is applied, so a
     // citation's number stays stable even once an earlier citation rolls out of view.
     const allParts = this.effectiveParts;

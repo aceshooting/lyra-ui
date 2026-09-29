@@ -1,4 +1,3 @@
-import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -144,8 +143,8 @@ export interface LyraSequenceStripEventMap {
  * Exactly one cell is tabbable; Left/Right and Home/End rove through the cells and show the same
  * detail tooltip as pointer hover. Clicking a cell, or pressing Enter/Space on the roving cell,
  * emits the controlled `lr-item-activate` event without moving selection. A host `aria-label`
- * names the host itself without being duplicated on the internal list; `accessible-label` names
- * that list, otherwise its category summary does.
+ * names the host itself without being duplicated on the internal list; otherwise the list uses its
+ * category summary.
  * A category whose label is omitted or blank uses the localized unnamed-category label for
  * affected list-item names and tooltips, its summary clause, and its legend row.
  * Controlled item refreshes preserve the focused
@@ -277,30 +276,8 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     this._categories = Object.freeze(next);
     this.requestUpdate('categories', previous);
   }
-  /** Overrides the auto-generated `aria-label` (a per-category "label: count" summary). Unset
-   *  computes the summary from `items`/`categories`; an explicitly empty string renders as an
-   *  empty label rather than falling back to the auto-generated summary.
-   * @deprecated Use the host `aria-label` or native `ariaLabel` property; removal not before 24.0.0.
-   */
-  @property({ attribute: 'accessible-label' })
-  get accessibleLabel(): string | undefined { return this.legacyAccessibleLabel; }
-  set accessibleLabel(value: string | undefined) {
-    const previous = this.legacyAccessibleLabel;
-    this.legacyAccessibleLabel = value;
-    if (value !== undefined && !this.hasAttribute('accessible-label')) {
-      warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'ariaLabel');
-    }
-    this.requestUpdate('accessibleLabel', previous);
-  }
-  private legacyAccessibleLabel?: string;
-
   /** The canonical host accessible name. Presence wins, including an explicitly empty string. */
   @property({ attribute: 'aria-label' }) private hostAccessibleLabel: string | null = null;
-
-  override attributeChangedCallback(name: string, previous: string | null, value: string | null): void {
-    super.attributeChangedCallback(name, previous, value);
-    if (name === 'accessible-label' && value !== null) warnDeprecatedUsage(this, 'attribute', name, 'aria-label');
-  }
 
   /**
    * Index of the currently selected item, or `-1` (the default) for none — the controlled selection
@@ -685,7 +662,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
 
   override render(): TemplateResult {
     const categoryMap = this.categoryMap();
-    const ariaLabel = this.hostAccessibleLabel ?? this.accessibleLabel ?? this.autoSummary();
+    const ariaLabel = this.hostAccessibleLabel ?? this.autoSummary();
     const cells = this.cells();
     const activeIndex = this.hoverIndex ?? this.keyboardIndex;
     const active = activeIndex !== null ? cells[activeIndex] : undefined;

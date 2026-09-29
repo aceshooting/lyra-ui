@@ -11,8 +11,8 @@ Style composed controls through `copy-button-control`, `edit-button-control`, an
 `regenerate-button-control`. Use the documented `-bg` and `-color` tokens and the
 `--lr-typing-indicator-*` namespace. The old double-underscore parts and replaced tokens have no effect.
 
-Thread-list's deprecated `compact` control, message-parts' programmatic `accessibleLabel`, and
-existing link, retry and feedback compatibility events remain supported.
+Use `size` for thread-list density, native host `aria-label` for message-parts naming, and the
+canonical request and activation events described in each component section.
 
 ## Breaking changes and fixes in 9.0.0
 
@@ -51,7 +51,7 @@ route or startup boundary render from an already-settled cache. The helper is ex
 the full and core granular entries:
 
 ```ts
-import { preloadMarkdown } from "@aceshooting/lyra-ui/components/conversation/markdown/markdown.js";
+import { preloadMarkdown } from "@aceshooting/lyra-ui/components/lr-markdown.js";
 
 await preloadMarkdown();
 ```
@@ -205,8 +205,6 @@ placed first and preserved inside both ceilings.
   link's `href` starts with `internal-link-prefix`; ordinary external links navigate normally and
   never fire this. If an intercepted link overlaps a painted highlight,
   `lr-highlight-activate` fires first for pointer and Enter activation.
-- `lr-link-click` — deprecated compatibility alias of `lr-link-activate`, emitted afterward with
-  the same detail.
 - `lr-render-error` (`detail: { error: unknown }`) — rendering fell back to plain text (see the
   fallback matrix below), or `math` is set but the `katex` peer isn't installed
 - `lr-highlight-activate` (`detail: { highlightId: string }`) — a painted `text-quote` highlight was clicked
@@ -327,7 +325,7 @@ settled code blocks:
 ````html
 <lr-markdown id="reply" streaming streaming-render="progressive" code-block-header></lr-markdown>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/conversation/markdown/markdown.js";
+  import "@aceshooting/lyra-ui/components/lr-markdown.js";
 
   const reply = document.querySelector("#reply");
   reply.content = ['A settled paragraph.', '', '```js', 'const answer = 42;', '```'].join('\n');
@@ -465,8 +463,7 @@ as the full class; the core route exports its own `Marked` alias.
 
 **Events:** `lr-link-activate`, `lr-render-error`, `lr-highlight-activate`, `lr-text-select`,
 `lr-anchor-result`, `lr-content-settled`, `lr-copy`, `lr-copy-error` — identical detail shapes to
-`<lr-markdown>`'s own. `lr-link-click` is the deprecated compatibility alias of `lr-link-activate`,
-emitted afterward with the same detail.
+`<lr-markdown>`'s own.
 
 **Slots:** none — content comes from the `content` property, not light-DOM children.
 
@@ -503,7 +500,7 @@ on.
 ````ts
 import { html } from "lit";
 import python from "shiki/langs/python.mjs";
-import "@aceshooting/lyra-ui/components/conversation/markdown/markdown-core.js";
+import "@aceshooting/lyra-ui/components/lr-markdown-core.js";
 
 const view = html`<lr-markdown-core
   .content=${"# Report\n\n```python\nprint('hi')\n```\n\n```bash\necho hi\n```"}
@@ -1762,7 +1759,7 @@ sets `math` here.
   code-block-header
 ></lr-streaming-text>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/conversation/streaming-text/streaming-text.js";
+  import "@aceshooting/lyra-ui/components/lr-streaming-text.js";
 
   const out = document.getElementById("out");
   let text = "";
@@ -2084,7 +2081,7 @@ highlighted markup.
   for that language — an additive, opt-in escape hatch for a build scoped to just the languages a
   consumer actually needs. A `language` absent from this map (or `languages` left unset) falls back
   to the default dynamic-import path unchanged. For a TypeScript annotation, use
-  `import type { ShikiLanguageInput } from '@aceshooting/lyra-ui/components/conversation/code-block/code-block.js'`;
+  `import type { ShikiLanguageInput } from '@aceshooting/lyra-ui/components/lr-code-block.js'`;
   the type-only granular import emits no registration side effect.
   The map key need not be the grammar module's own registered name or one of its declared
   aliases — Lyra derives the Shiki `langAlias` mapping this needs automatically, so a key such as
@@ -2206,7 +2203,7 @@ highlighting.
 
 ```ts
 import { html } from "lit";
-import "@aceshooting/lyra-ui/components/conversation/code-block/code-block.js";
+import "@aceshooting/lyra-ui/components/lr-code-block.js";
 
 const view = html`<lr-code-block
   language="typescript"
@@ -2323,7 +2320,7 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
   If `languages` changes while highlighting is loading, only results for the current map can update
   the displayed code. For a
   TypeScript annotation, use `import type { ShikiLanguageSource } from
-'@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js'`; the type-only
+'@aceshooting/lyra-ui/components/lr-code-block-core.js'`; the type-only
   granular import emits no registration side effect.
 - `copyAppearance: 'text' | 'icon' = 'text'` (attribute `copy-appearance`, reflected) — identical to
   `<lr-code-block>`'s own property: `'text'` is the labelled button, `'icon'` swaps the visible label
@@ -2376,7 +2373,7 @@ constant also avoids repeated component snapshots.
 ```ts
 import { html } from "lit";
 import jsonGrammar from "shiki/langs/json.mjs";
-import "@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js";
+import "@aceshooting/lyra-ui/components/lr-code-block-core.js";
 
 const languages = { json: jsonGrammar };
 const view = html`<lr-code-block-core
@@ -2629,8 +2626,7 @@ write fulfills (bubbles/composed already, not re-emitted). A failed write surfac
 `detail: { ok: false, text, reason, error }`; `reason` is `'unsupported' | 'denied' | 'failed'`.
 `lr-feedback-change`/`lr-feedback-submit-request` — bubble unchanged from the embedded, thumbs-only
 `lr-message-feedback`; the frozen submit detail includes its `submissionId`, which is the value to
-pass to either settlement method. Its deprecated cancelable `lr-feedback-submit` compatibility
-alias also bubbles unchanged and retains the same detail and cancellation behavior. A colliding event from an
+pass to either settlement method. A colliding event from an
 arbitrary slotted child is contained at that slot boundary rather than being mistaken for a
 built-in action.
 
@@ -2726,8 +2722,6 @@ When uncanceled it retains the synchronous close/announce/focus behavior. The op
 `<textarea>`'s native `focus` and `blur` are re-dispatched as bubbling, composed host events.
 `lr-toolbar-actions-change` is the no-detail coordination event emitted when the provider's logical
 toolbar actions change availability or order.
-The deprecated cancelable compatibility alias `lr-feedback-submit` carries the same frozen detail
-and cancellation behavior as `lr-feedback-submit-request`.
 **CSS parts:** `base` (the root), `thumbs` (wrapper around both thumb buttons), `up-button`,
 `down-button`, `panel` (the inline detail disclosure, only rendered when `reasons` is non-empty or
 `commentable` is set), `reasons` (the reason-chip group), `comment` (the comment `<textarea>`), and
@@ -3133,9 +3127,7 @@ data mode only: built-in icon buttons rendered into each row's `actions` slot. `
 = false` (attribute `with-archived`, reflected) — data mode: include `archived` threads (in their own
 trailing group). `withoutRename: boolean = false` (attribute `without-rename`, reflected) — forwarded to
 each data-mode row, turning its inline rename off.
-`compact: boolean = false` (reflected, deprecated; removal not before 24.0.0) — compatibility
-alias of `size="s"` when true and `size="m"` when false. Use `size` for both search and data rows;
-slotted rows retain their own size. `stickyGroups: boolean = false` (attribute `sticky-groups`, reflected) — data mode: pins
+`stickyGroups: boolean = false` (attribute `sticky-groups`, reflected) — data mode: pins
 the current date/custom group's header to the top of the scroll viewport while its rows are in view,
 pushing it off as the next group's header arrives. Group headers are ordinary virtualized rows, so
 this renders an `aria-hidden` copy of the header into the internal `lr-virtual-list`'s sticky layer:
@@ -3227,9 +3219,7 @@ assignment simply wins last. `searchable` only: `blur`/`focus` (no detail) — r
 the internal search `<input>`'s own `blur`/`focus`, bubbling and composed unlike the native events,
 which are neither. `lr-retry-request` (`detail: null`, cancelable) — the built-in `[part='retry-button']`
 was activated, only rendered while `error` is set; the default action clears `error`,
-`preventDefault()` leaves it set instead. `lr-retry` is its deprecated cancelable veto alias,
-emitted after `lr-retry-request` and before the default action; canceling either event keeps the
-error state.
+`preventDefault()` leaves it set instead.
 **CSS parts:** `base`, `search`/`search-input` (the search field wrapper and `<input
 type="search">`), `clear-button` (clears the search field; rendered only while it has a value,
 mirroring `<lr-input>`'s own `clearable` contract's part name), `list` (the list region), `empty`,
@@ -3524,9 +3514,10 @@ readonly slot?: string; readonly actionId?: string; readonly payload?: unknown }
   structure throws `TypeError`. Node records, child arrays, and prop records are copied and frozen,
   while opaque prop values and action payloads intentionally retain caller identity.
 
-The package root and the normal `widget-renderer.js` registration entry expose the renderer
-`LyraWidgetRenderer`/`LyraWidgetRendererEventMap` together with the complete stable authoring
-surface: `LyraWidgetNode`, `LyraWidgetBinding`, `LyraWidgetDocument`, `createWidgetDocument`,
+The `widget-renderer.class.js` class entry and stable `components/lr-widget-renderer.js` registration
+entry expose `LyraWidgetRenderer`; its event-map type and stable authoring contracts remain available from
+the curated package root: `LyraWidgetRendererEventMap`, `LyraWidgetNode`, `LyraWidgetBinding`,
+`LyraWidgetDocument`, `createWidgetDocument`,
 `LyraWidgetPropType`, `LyraWidgetInteraction`, `LyraWidgetTypeDefinition`,
 `LyraWidgetTypeRegistry`, `createWidgetTypeRegistry`, `isWidgetTypeRegistry`, and
 `DEFAULT_WIDGET_TYPE_REGISTRY`. Advanced consumers that need `resolveTree`, `ResolveContext`,
@@ -3611,8 +3602,8 @@ import {
   createWidgetDocument,
   createWidgetTypeRegistry,
   DEFAULT_WIDGET_TYPE_REGISTRY,
-} from "@aceshooting/lyra-ui/components/conversation/widget-renderer/widget-renderer.js";
-import "@aceshooting/lyra-ui/components/data/sparkline/sparkline.js";
+} from "@aceshooting/lyra-ui/components/lr-widget-renderer.js";
+import "@aceshooting/lyra-ui/components/lr-sparkline.js";
 import { tag } from "@aceshooting/lyra-ui/utilities/prefix.js";
 
 const registry = createWidgetTypeRegistry([
@@ -3646,7 +3637,7 @@ import { LyraWidgetRenderer } from "@aceshooting/lyra-ui/components/conversation
 import { createWidgetDocument } from "@aceshooting/lyra-ui/components/conversation/widget-renderer/resolve.js";
 import { createWidgetTypeRegistry } from "@aceshooting/lyra-ui/components/conversation/widget-renderer/registry.js";
 import { defineElement, tag } from "@aceshooting/lyra-ui/utilities/prefix.js";
-import "@aceshooting/lyra-ui/components/forms/input/input.js";
+import "@aceshooting/lyra-ui/components/lr-input.js";
 
 defineElement("widget-renderer", LyraWidgetRenderer);
 
@@ -3979,7 +3970,7 @@ Citation; truncated?: boolean; omittedTokens?: number; redactions?: ContextInspe
 RetrievalChunk[] }`) — forwarded from the built-in retrieval results.
 - `lr-citation-select` (`detail: CitationSelectEventDetail` = `{ citation: Citation }`, from
   `@aceshooting/lyra-ui/ai`) — forwarded from the built-in grounding summary.
-- `lr-tool-approval-decide` (`detail: ToolTimelineApprovalDetail` = `ToolApprovalEventDetail &
+- `lr-tool-approval-decide-request` (`detail: ToolTimelineApprovalDetail` = `ToolApprovalEventDetail &
 { args?: unknown }` = `{ invocationId: string; approved: boolean; args?: unknown }`) — forwarded
   from the built-in tool timeline; `args` is present only on approval and may differ from what the
   entry originally proposed (the dialog's inline edit step).
@@ -4130,7 +4121,7 @@ original reference.
 `MessagePartRenderer = (part: MessagePart, index: number) => unknown`; `MessagePartsToolDisplay =
 'chip' | 'block'`; `MessagePart` and its discriminated part shapes come from the
 `@aceshooting/lyra-ui/ai` subpath. `MessagePartsToolDisplay` is exported from the component module
-(`@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.js`, or the side-effect-free
+(`@aceshooting/lyra-ui/components/lr-message-parts.js`, or the side-effect-free
 `message-parts.class.js`); it is not a package-root export. `MarkdownStreamingRenderMode = 'plain' | 'progressive'` is exported from the `lr-markdown` and
 `lr-markdown-core` component modules. Tool results are a strict
 success/error union: a success has `result` and cannot have `error`; an error has `error` and may
@@ -4140,7 +4131,7 @@ are ignored so each rendered identity and announcement remains unambiguous.
 
 **Events:** `lr-citation-select` (`{ citation }`), `lr-part-retry` (`{ part }`), `lr-part-resume` (`{ part }`). Composed child
 events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`, `lr-copy-error`,
-`lr-highlight-activate`, `lr-link-activate`, deprecated compatibility alias `lr-link-click` (same `{ href }` detail, emitted afterward), `lr-preview-request`, `lr-remove`, `lr-render-error`, `lr-retry`,
+`lr-highlight-activate`, `lr-link-activate`, `lr-preview-request`, `lr-remove`, `lr-render-error`, `lr-retry`,
 `lr-search-change`, `lr-text-select`, `lr-toggle` (from reasoning panels and tool-call blocks),
 `lr-tool-call-chip-select`, `lr-widget-action`,
 and `lr-widget-state-change`. The `lr-tool-chip-select` alias passthrough was removed in 9.0.0.
@@ -4173,7 +4164,7 @@ message or the localized fallback. Existing history and reconnect renders stay s
 error id and later adding it again creates a new announcement.
 
 ```ts
-import "@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.js";
+import "@aceshooting/lyra-ui/components/lr-message-parts.js";
 ```
 
 ```html
@@ -4303,7 +4294,7 @@ create phantom spacing.
 **Optional peer deps:** none of its own.
 
 ```ts
-import "@aceshooting/lyra-ui/components/conversation/prompt-input/prompt-input.js";
+import "@aceshooting/lyra-ui/components/lr-prompt-input.js";
 ```
 
 ## `lr-prompt-queue`
@@ -4345,7 +4336,7 @@ these events propose complete next values without mutating `items`.
 **Slots:** none. **Optional peer deps:** none.
 
 ```ts
-import "@aceshooting/lyra-ui/components/conversation/prompt-queue/prompt-queue.js";
+import "@aceshooting/lyra-ui/components/lr-prompt-queue.js";
 ```
 
 ## `lr-selection-toolbar`
@@ -4414,7 +4405,7 @@ surface together with every other floating surface in the library. `--lr-overlay
 inside the same `role="toolbar"` element and roving-tabindex group. **Optional peer deps:** none.
 
 ```ts
-import "@aceshooting/lyra-ui/components/conversation/selection-toolbar/selection-toolbar.js";
+import "@aceshooting/lyra-ui/components/lr-selection-toolbar.js";
 ```
 
 ## `lr-realtime-session`
@@ -4465,7 +4456,7 @@ silent, and sinks follow the component's `ownerDocument` when it is adopted.
 remain host-owned.
 
 ```ts
-import "@aceshooting/lyra-ui/components/conversation/realtime-session/realtime-session.js";
+import "@aceshooting/lyra-ui/components/lr-realtime-session.js";
 ```
 
 ## Consumer integration notes
@@ -4559,8 +4550,8 @@ These named interfaces and helper signatures are available to typed integrations
   grammar maps. Mutable maps and unusual grammar values retain identity-only caching. Every
   distinct active engine (see `setShikiCoreEngine()` below) gets its own cached core per
   `languages` object -- two engines never share one.
-  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js` (also
-  re-exported from `@aceshooting/lyra-ui/components/conversation/markdown/markdown-core.js`) --
+  Import: `@aceshooting/lyra-ui/components/lr-code-block-core.js` (also
+  re-exported from `@aceshooting/lyra-ui/components/lr-markdown-core.js`) --
   `shiki-types.js` itself is an internal support module with no package subpath export.
   `setShikiCoreEngine(engine: ShikiEngineOption): void`
   Selects the regex-scanning engine every subsequent `loadShikiHighlighterCore()` call builds its
@@ -4568,22 +4559,22 @@ These named interfaces and helper signatures are available to typed integrations
   `'javascript'` selects shiki's pure-JS engine instead, avoiding WebAssembly entirely. A function
   value is called on first use per distinct `languages` object and may return the engine
   synchronously or via a promise.
-  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js` (also
+  Import: `@aceshooting/lyra-ui/components/lr-code-block-core.js` (also
   `.../markdown/markdown-core.js`).
   `ShikiEngineOption = 'oniguruma' | 'javascript' | ShikiRegexEngineFactory`
-  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js` (also
+  Import: `@aceshooting/lyra-ui/components/lr-code-block-core.js` (also
   `.../markdown/markdown-core.js`).
   `ShikiRegexEngineFactory = () => ShikiRegexEngine | Promise<ShikiRegexEngine>`
   A factory `setShikiCoreEngine()` accepts directly: called once per distinct `languages` object
   the first time it is used.
-  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js` (also
+  Import: `@aceshooting/lyra-ui/components/lr-code-block-core.js` (also
   `.../markdown/markdown-core.js`).
   `resolvedShikiLanguages(languages: Readonly<Record<string, ShikiLanguageSource>>): Record<string, ShikiLanguageInput>`
   The already-resolved subset of a `languages` map that may also contain lazy loaders -- the subset
   `loadShikiHighlighterCore()` seeds a `HighlighterCore` with at creation. Returns the same object
   unchanged when there is no loader, preserving identity-keyed core reuse for a caller that never
   uses one.
-  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js` (also
+  Import: `@aceshooting/lyra-ui/components/lr-code-block-core.js` (also
   `.../markdown/markdown-core.js`).
   `ensureShikiLanguageLoaded(core: ShikiHighlighterCore, key: string, source: ShikiLanguageSource): Promise<boolean>`
   Resolves one `languages` entry that may be a lazy loader, loading it into `core` via
@@ -4609,19 +4600,19 @@ These named interfaces and helper signatures are available to typed integrations
     patterns?: unknown[];
     repository?: Record<string, unknown>;
   }`
-  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-block.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-code-block.js`.
   `ShikiLanguageInput = ShikiLanguageRegistration | readonly ShikiLanguageRegistration[]`
-  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-code-block-core.js`.
   `ShikiLanguageLoader = () => Promise<ShikiLanguageInput | { default: ShikiLanguageInput }>`
   Called at most once per key, memoized, the first time a fenced block requests that language. May
   return either a grammar directly or an ES module namespace/default-export wrapper around one,
   matching a plain `() => import('@shikijs/langs/<name>')` call site verbatim.
-  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-code-block-core.js`.
   `ShikiLanguageSource = ShikiLanguageInput | ShikiLanguageLoader`
   One `languages` map entry on `<lr-code-block-core>`/`<lr-markdown-core>`: either an
   already-resolved grammar (seeded eagerly into the `HighlighterCore` at creation) or a lazy
   `ShikiLanguageLoader`.
-  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js` (also
+  Import: `@aceshooting/lyra-ui/components/lr-code-block-core.js` (also
   `.../markdown/markdown-core.js`).
   `ShikiRegexEngine {
     createScanner(patterns: readonly (string | RegExp)[]): unknown;
@@ -4741,7 +4732,7 @@ These named interfaces and helper signatures are available to typed integrations
       text: string;
     }): string;
   }`
-  Import: `@aceshooting/lyra-ui/components/conversation/markdown/markdown.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-markdown.js`.
   `preloadMarkdown(): Promise<MarkdownDeps>`
 
 - **`components-conversation-markdown-markdown-shared-contracts`** — Supporting data types and helpers for this component family.
@@ -4912,12 +4903,5 @@ These named interfaces and helper signatures are available to typed integrations
 `MarkdownStreamingRender = 'plain' | 'progressive'` is the canonical streaming mode type;
 `MarkdownStreamingRenderMode` remains an equivalent compatibility export.
 
-Markdown, Markdown Core and Message Parts retain `lr-link-click` as a deprecated compatibility
-event through v23. It follows `lr-link-activate` with the same `{ href }` detail.
-
-On `lr-thread-list`, `lr-retry-request` is the canonical retry veto. The deprecated `lr-retry`
-alias still fires afterward and may veto the same action; removal is not before 24.0.0.
-
-The feedback persistence event's previous `lr-feedback-submit` spelling remains a deprecated
-cancelable compatibility alias of `lr-feedback-submit-request`, including through
-`lr-message-actions`. Listen to one spelling; either can hold the same correlated submission.
+Markdown, Markdown Core and Message Parts use `lr-link-activate`; thread-list retries use
+`lr-retry-request`; and message feedback uses `lr-feedback-submit-request`.

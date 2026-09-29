@@ -7,7 +7,7 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
-- **Deprecated event** `lr-download` since `22.0.0`; use event `addEventListener('lr-download-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 16 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -65,7 +65,7 @@ plain text of the whole buffer.
 
 **Events:** `lr-copy` (`detail: { ok: true, text }`, emitted only after a successful clipboard write),
 `lr-error` (no detail) and `lr-copy-error` (`detail: { ok: false, text, reason, error }`) on clipboard failure,
-`lr-download-request` and `lr-download` (`detail: { filename }`, cancelable — by
+`lr-download-request` (`detail: { filename }`, cancelable — by
 default the component creates a plain-text `Blob`/object URL and activates a synthetic
 `<a download>`; `preventDefault()` suppresses that built-in download so the host can substitute
 server-side or other handling),
@@ -74,9 +74,6 @@ matchCountExact, activeIndex }`; `matchCountExact` is `false` once a search hits
 ceiling, marking `matchCount` as a lower bound rather than an exact total),
 `lr-highlight-activate` (`detail: { highlightId }`), and `lr-text-select` (`detail: {
 text, anchor, rects }`).
-`lr-download` is the deprecated cancelable alias, dispatched after `lr-download-request` with the
-same filename detail. Either event can suppress the built-in download; it is not a completion
-notification. Subscribe to one spelling.
 
 
 **CSS parts:** `base`, `toolbar` (only rendered when copy/download are enabled), `copy-button`,

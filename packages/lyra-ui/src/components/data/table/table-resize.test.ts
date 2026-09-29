@@ -1,4 +1,3 @@
-import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './table.js';
 import '../../forms/select/select.js';
@@ -12,8 +11,6 @@ import { installTableTestHooks, type Row, columns, rows, priorityColumns } from 
 installTableTestHooks();
 
 
-expectDeprecatedUsage('lr-table', 'attribute', 'accessible-label');
-expectDeprecatedUsage('lr-table', 'property', 'accessibleLabel');
 
 
 it('resizes a resizable column through its native pointer handle and emits live widths', async () => {

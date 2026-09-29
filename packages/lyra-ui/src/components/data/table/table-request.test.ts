@@ -1,7 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import './table.js';
 import type { LyraTable } from './table.js';
-import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 
 it('requests a keyboard column resize before changing the accepted width', async () => {
   const el = await fixture<LyraTable<{ name: string }>>(html`<lr-table aria-label="Rows"></lr-table>`);
@@ -23,16 +22,14 @@ it('requests a keyboard column resize before changing the accepted width', async
   expect(handle.getAttribute('aria-valuenow')).to.equal('120');
 });
 
-it('retains a deprecated retry veto while the canonical request stays first', async () => {
+it('emits only the canonical retry request, whose veto suppresses the default error clear', async () => {
   const el = await fixture<LyraTable>(html`<lr-table aria-label="Rows" error></lr-table>`);
   const order: string[] = [];
   el.addEventListener('lr-retry-request', () => order.push('request'));
-  el.addEventListener('lr-retry', (event) => { order.push('legacy'); event.preventDefault(); });
-  const warnings = await captureDeprecationWarnings([{ tag: 'lr-table', kind: 'event', name: 'lr-retry' }], async () => {
-    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="retry-button"]')!.click();
-    await el.updateComplete;
-  });
-  expect(order).to.deep.equal(['request', 'legacy']);
+  el.addEventListener('lr-retry', () => order.push('legacy'));
+  el.addEventListener('lr-retry-request', (event) => event.preventDefault());
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="retry-button"]')!.click();
+  await el.updateComplete;
+  expect(order).to.deep.equal(['request']);
   expect(el.error).to.be.true;
-  expect(warnings.length).to.equal(1);
 });

@@ -615,7 +615,7 @@ export interface LyraComponentTypeMap {
       | 'lr-run-retry'
       | 'lr-stop'
       | 'lr-submit'
-      | 'lr-tool-approval-decide';
+      | 'lr-tool-approval-decide-request';
     cssNames: never;
     attributeAliases: {
       'aria-label'?: LyraAgentWorkspace['accessibleLabel'];
@@ -907,7 +907,6 @@ export interface LyraComponentTypeMap {
     >;
     events: LyraApprovalQueueEventMap;
     eventNames:       | 'lr-approval-close'
-      | 'lr-approval-decision'
       | 'lr-approval-decision-request'
       | 'lr-approval-select';
     cssNames:       | '--lr-approval-queue-selected-border';
@@ -1041,7 +1040,6 @@ export interface LyraComponentTypeMap {
     properties: LyraElementProperties<
       LyraAttachmentTrigger,
       | 'accept'
-      | 'accessibleLabel'
       | 'appearance'
       | 'capabilities'
       | 'disabled'
@@ -1838,7 +1836,6 @@ export interface LyraComponentTypeMap {
     element: LyraCallout;
     properties: LyraElementProperties<
       LyraCallout,
-      | 'accessibleLabel'
       | 'announce'
       | 'appearance'
       | 'closable'
@@ -1919,7 +1916,6 @@ export interface LyraComponentTypeMap {
     element: LyraCarousel;
     properties: LyraElementProperties<
       LyraCarousel,
-      | 'accessibleLabel'
       | 'autoplay'
       | 'autoplayInterval'
       | 'currentSlide'
@@ -2857,7 +2853,6 @@ export interface LyraComponentTypeMap {
       | 'lr-filter'
       | 'lr-hide'
       | 'lr-invalid'
-      | 'lr-retry'
       | 'lr-retry-request'
       | 'lr-show'
       | 'lr-source-error';
@@ -3025,8 +3020,7 @@ export interface LyraComponentTypeMap {
       {}
     >;
     events: LyraComparePanelEventMap;
-    eventNames:       | 'lr-vote'
-      | 'lr-vote-request';
+    eventNames:       | 'lr-vote-request';
     cssNames:       | '--lr-compare-panel-max-height'
       | '--lr-compare-panel-selected-bg'
       | '--lr-compare-panel-selected-border-color'
@@ -3079,10 +3073,8 @@ export interface LyraComponentTypeMap {
       {}
     >;
     events: LyraConfirmBarEventMap;
-    eventNames:       | 'lr-approve'
-      | 'lr-approve-request'
+    eventNames:       | 'lr-approve-request'
       | 'lr-decision-settled'
-      | 'lr-deny'
       | 'lr-deny-request';
     cssNames:       | '--lr-confirm-bar-approved-color'
       | '--lr-confirm-bar-bg'
@@ -3158,9 +3150,9 @@ export interface LyraComponentTypeMap {
       | 'lr-copy'
       | 'lr-copy-error'
       | 'lr-error'
-      | 'lr-export'
       | 'lr-export-complete'
       | 'lr-export-error'
+      | 'lr-export-request'
       | 'lr-hide'
       | 'lr-show'
       | 'lr-toolbar-actions-change';
@@ -3213,8 +3205,7 @@ export interface LyraComponentTypeMap {
       {}
     >;
     events: LyraContextMeterEventMap;
-    eventNames:       | 'lr-segment-activate'
-      | 'lr-segment-activate-request';
+    eventNames:       | 'lr-segment-activate-request';
     cssNames:       | '--lr-context-meter-disabled-opacity'
       | '--lr-context-meter-legend-swatch-size'
       | '--lr-context-meter-segment-color'
@@ -3456,7 +3447,6 @@ export interface LyraComponentTypeMap {
       | 'lr-group-collapse'
       | 'lr-group-expand'
       | 'lr-page-change'
-      | 'lr-retry'
       | 'lr-retry-request'
       | 'lr-row-collapse'
       | 'lr-row-expand'
@@ -3810,7 +3800,6 @@ export interface LyraComponentTypeMap {
     element: LyraDialog;
     properties: LyraElementProperties<
       LyraDialog,
-      | 'accessibleLabel'
       | 'heading'
       | 'headingLevel'
       | 'label'
@@ -4021,7 +4010,6 @@ export interface LyraComponentTypeMap {
     events: LyraDocumentLibraryEventMap;
     eventNames:       | 'lr-filter-change'
       | 'lr-open'
-      | 'lr-retry'
       | 'lr-retry-request'
       | 'lr-selection-change'
       | 'lr-sort'
@@ -4265,7 +4253,6 @@ export interface LyraComponentTypeMap {
     element: LyraDrawer;
     properties: LyraElementProperties<
       LyraDrawer,
-      | 'accessibleLabel'
       | 'contained'
       | 'heading'
       | 'headingLevel'
@@ -4403,7 +4390,6 @@ export interface LyraComponentTypeMap {
       LyraDropdown,
       | 'accessibleLabel'
       | 'anchor'
-      | 'arrow'
       | 'arrowPadding'
       | 'arrowPlacement'
       | 'containingElement'
@@ -4885,7 +4871,6 @@ export interface LyraComponentTypeMap {
       | 'lr-example-claim-select'
       | 'lr-example-toggle'
       | 'lr-example-tool-activate'
-      | 'lr-example-tool-approval-decide'
       | 'lr-example-tool-approval-decide-request'
       | 'lr-example-tool-render-error';
     cssNames: never;
@@ -4913,8 +4898,7 @@ export interface LyraComponentTypeMap {
       {}
     >;
     events: LyraExportButtonEventMap;
-    eventNames:       | 'lr-export'
-      | 'lr-export-complete'
+    eventNames:       | 'lr-export-complete'
       | 'lr-export-error'
       | 'lr-export-request'
       | 'lr-hide'
@@ -4969,7 +4953,6 @@ export interface LyraComponentTypeMap {
       LyraFileInput,
       | 'accept'
       | 'acceptedMessage'
-      | 'accessibleLabel'
       | 'allowedMimeTypes'
       | 'capture'
       | 'customError'
@@ -5525,9 +5508,7 @@ export interface LyraComponentTypeMap {
       | 'lr-edge-activate'
       | 'lr-edge-enter'
       | 'lr-edge-leave'
-      | 'lr-link-click'
       | 'lr-node-activate'
-      | 'lr-node-click'
       | 'lr-node-enter'
       | 'lr-node-expand'
       | 'lr-node-leave'
@@ -6410,8 +6391,7 @@ export interface LyraComponentTypeMap {
       {}
     >;
     events: LyraKnowledgeBaseEventMap;
-    eventNames:       | 'lr-retry'
-      | 'lr-retry-request'
+    eventNames:       | 'lr-retry-request'
       | 'lr-source-create'
       | 'lr-source-delete'
       | 'lr-source-pause'
@@ -6482,9 +6462,7 @@ export interface LyraComponentTypeMap {
     eventNames:       | 'lr-community-activate'
       | 'lr-edge-activate'
       | 'lr-hidden-types-change'
-      | 'lr-link-click'
       | 'lr-node-activate'
-      | 'lr-node-click'
       | 'lr-node-expand'
       | 'lr-path-request'
       | 'lr-pin-change'
@@ -6595,7 +6573,6 @@ export interface LyraComponentTypeMap {
       | 'lr-close-request'
       | 'lr-hide'
       | 'lr-index-change'
-      | 'lr-lightbox-close'
       | 'lr-show'
       | 'lr-zoom-change';
     cssNames:       | '--lr-lightbox-control-bg'
@@ -6728,7 +6705,6 @@ export interface LyraComponentTypeMap {
     element: LyraLiteChart;
     properties: LyraElementProperties<
       LyraLiteChart,
-      | 'accessibleLabel'
       | 'axisLabelText'
       | 'barGapRatio'
       | 'barSlotWidth'
@@ -6980,7 +6956,6 @@ export interface LyraComponentTypeMap {
       | 'lr-copy-error'
       | 'lr-highlight-activate'
       | 'lr-link-activate'
-      | 'lr-link-click'
       | 'lr-render-error'
       | 'lr-text-select';
     cssNames:       | '--lr-code-block-tab-size'
@@ -7050,7 +7025,6 @@ export interface LyraComponentTypeMap {
       | 'lr-copy-error'
       | 'lr-highlight-activate'
       | 'lr-link-activate'
-      | 'lr-link-click'
       | 'lr-render-error'
       | 'lr-text-select';
     cssNames:       | '--lr-code-block-tab-size'
@@ -7326,7 +7300,6 @@ export interface LyraComponentTypeMap {
       | 'lr-edit'
       | 'lr-error'
       | 'lr-feedback-change'
-      | 'lr-feedback-submit'
       | 'lr-feedback-submit-request'
       | 'lr-regenerate';
     cssNames: never;
@@ -7358,7 +7331,6 @@ export interface LyraComponentTypeMap {
     eventNames:       | 'blur'
       | 'focus'
       | 'lr-feedback-change'
-      | 'lr-feedback-submit'
       | 'lr-feedback-submit-request'
       | 'lr-toolbar-actions-change';
     cssNames:       | '--lr-message-feedback-down-active-bg'
@@ -7375,7 +7347,6 @@ export interface LyraComponentTypeMap {
     element: LyraMessageParts;
     properties: LyraElementProperties<
       LyraMessageParts,
-      | 'accessibleLabel'
       | 'codeBlockHeader'
       | 'contentMode'
       | 'disabled'
@@ -7397,7 +7368,6 @@ export interface LyraComponentTypeMap {
       | 'lr-copy-error'
       | 'lr-highlight-activate'
       | 'lr-link-activate'
-      | 'lr-link-click'
       | 'lr-part-resume'
       | 'lr-part-retry'
       | 'lr-preview-request'
@@ -7416,7 +7386,7 @@ export interface LyraComponentTypeMap {
       | '--lr-message-parts-error-color'
       | '--lr-message-parts-streaming-color';
     attributeAliases: {
-      'aria-label'?: LyraMessageParts['accessibleLabel'];
+      'aria-label'?: LyraAttributeValue<string | null>;
       'code-block-header'?: LyraMessageParts['codeBlockHeader'];
       'content-mode'?: LyraMessageParts['contentMode'];
       'max-rendered-parts'?: LyraMessageParts['maxRenderedParts'];
@@ -8897,7 +8867,6 @@ export interface LyraComponentTypeMap {
     element: LyraProgressBar;
     properties: LyraElementProperties<
       LyraProgressBar,
-      | 'accessibleLabel'
       | 'indeterminate'
       | 'label'
       | 'locale'
@@ -8932,7 +8901,6 @@ export interface LyraComponentTypeMap {
     element: LyraProgressRing;
     properties: LyraElementProperties<
       LyraProgressRing,
-      | 'accessibleLabel'
       | 'indeterminate'
       | 'label'
       | 'locale'
@@ -9651,7 +9619,6 @@ export interface LyraComponentTypeMap {
     element: LyraReorderItem;
     properties: LyraElementProperties<
       LyraReorderItem,
-      | 'accessibleLabel'
       | 'disabled'
       | 'locale'
       | 'strings'
@@ -10307,7 +10274,6 @@ export interface LyraComponentTypeMap {
     element: LyraSequenceStrip;
     properties: LyraElementProperties<
       LyraSequenceStrip,
-      | 'accessibleLabel'
       | 'categories'
       | 'items'
       | 'locale'
@@ -10327,7 +10293,6 @@ export interface LyraComponentTypeMap {
       | '--lr-sequence-strip-selected-color'
       | '--lr-sequence-strip-selected-focus-color';
     attributeAliases: {
-      'accessible-label'?: LyraSequenceStrip['accessibleLabel'];
       'aria-label'?: LyraAttributeValue<string | null>;
       'marker-label'?: LyraSequenceStrip['markerLabel'];
       'selected-index'?: LyraSequenceStrip['selectedIndex'];
@@ -11177,7 +11142,6 @@ export interface LyraComponentTypeMap {
     element: LyraTable;
     properties: LyraElementProperties<
       LyraTable,
-      | 'accessibleLabel'
       | 'announce'
       | 'autocapitalize'
       | 'autoCorrect'
@@ -11249,7 +11213,6 @@ export interface LyraComponentTypeMap {
       | 'lr-load-more'
       | 'lr-page-change'
       | 'lr-priority-columns-visibility-change'
-      | 'lr-retry'
       | 'lr-retry-request'
       | 'lr-row-activate'
       | 'lr-row-expand-request'
@@ -11283,7 +11246,6 @@ export interface LyraComponentTypeMap {
       | '--lr-theme-scrollbar-gutter'
       | '--lr-theme-scrollbar-width';
     attributeAliases: {
-      'accessible-label'?: LyraTable['accessibleLabel'];
       'aria-label'?: LyraAttributeValue<string | null>;
       'autocorrect'?: LyraTable['autoCorrect'];
       'columns-hide-label'?: LyraTable['columnsHideLabel'];
@@ -11429,7 +11391,6 @@ export interface LyraComponentTypeMap {
     events: LyraTerminalEventMap;
     eventNames:       | 'lr-copy'
       | 'lr-copy-error'
-      | 'lr-download'
       | 'lr-download-request'
       | 'lr-error'
       | 'lr-follow-change'
@@ -11622,7 +11583,6 @@ export interface LyraComponentTypeMap {
       LyraThreadList,
       | 'activeConversationId'
       | 'collapsedGroupIds'
-      | 'compact'
       | 'error'
       | 'errorDescription'
       | 'errorHeading'
@@ -11658,7 +11618,6 @@ export interface LyraComponentTypeMap {
       | 'lr-group-toggle'
       | 'lr-group-toggle-request'
       | 'lr-query-change'
-      | 'lr-retry'
       | 'lr-retry-request'
       | 'lr-select'
       | 'lr-thread-archive'
@@ -12120,10 +12079,8 @@ export interface LyraComponentTypeMap {
     events: LyraToolApprovalDialogEventMap;
     eventNames:       | 'blur'
       | 'focus'
-      | 'lr-approve'
       | 'lr-approve-request'
       | 'lr-close'
-      | 'lr-deny'
       | 'lr-deny-request';
     cssNames:       | '--lr-tool-approval-dialog-hover-border-color'
       | '--lr-tool-approval-dialog-invalid-border-color'
@@ -12366,7 +12323,6 @@ export interface LyraComponentTypeMap {
     >;
     events: LyraToolTimelineEventMap;
     eventNames:       | 'lr-tool-activate'
-      | 'lr-tool-approval-decide'
       | 'lr-tool-approval-decide-request'
       | 'lr-tool-render-error';
     cssNames:       | '--lr-tool-timeline-approved-bg'

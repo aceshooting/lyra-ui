@@ -33,7 +33,6 @@ import {
 } from './chart-forced-colors.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { sanitizeCssColor, sanitizeCssLength } from '../../../internal/safe-css.js';
-import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import {
   acquireAnnouncementSink,
@@ -48,6 +47,14 @@ import {
   normalizeChartChromeLegendPosition,
   type LyraChartChromeLegendPosition,
 } from './chart-chrome.js';
+import {
+  categoryLabelGrowth,
+  hasCategoryLabelText,
+  sparseCategoryLabelExtent,
+  visibleCategoryLabelIndexes,
+  widestEstimatedCategoryLabel,
+  type CategoryLabelSelectionBounds,
+} from './lite-chart-axis-layout.js';
 import type {
   LyraChartDatumActivateDetail,
   LyraChartFormatter,
@@ -184,6 +191,12 @@ const MAX_AUTO_VALUE_AXIS_GUTTER = 240;
 const MAX_AUTO_VALUE_AXIS_GUTTER_FRACTION = 0.4;
 /** A practical ceiling that keeps scroll-mode SVG/CSS geometry finite even for hostile inputs. */
 const MAX_SCROLL_CONTENT_WIDTH = 1_000_000;
+const CATEGORY_LABEL_SELECTION_BOUNDS: CategoryLabelSelectionBounds = Object.freeze({
+  characterWidth: APPROX_LABEL_CHARACTER_WIDTH,
+  laneInset: AUTO_CATEGORY_LABEL_INSET,
+  maxContentWidth: MAX_SCROLL_CONTENT_WIDTH,
+  maxRenderedRecords: MAX_RENDERED_CHART_RECORDS,
+});
 
 /**
  * Picks a "nice" (1/2/5 × 10^n) step size for an axis spanning `span` over
@@ -223,116 +236,6 @@ function logDomainFraction(value: number, lo: number, hi: number): number {
   if (value >= top) return 1;
   const fraction = (Math.log10(value) - Math.log10(bottom)) / (Math.log10(top) - Math.log10(bottom));
   return Number.isFinite(fraction) ? Math.min(1, Math.max(0, fraction)) : 0;
-}
-
-/** Whether a category tick's resolved text paints anything. */
-function hasCategoryLabelText(label: string | null | undefined): boolean {
-  return (label ?? '').trim() !== '';
-}
-
-/** Visual side a category label grows toward from its tick. The first and last categories sit on
- *  the plot's own edges, so renderChart() anchors them toward the interior (`start`/`end`, keywords
- *  swapped under RTL so the visual side stays the same); every other label is centered. */
-type CategoryLabelGrowth = 'middle' | 'left' | 'right';
-
-function categoryLabelGrowth(index: number, count: number): CategoryLabelGrowth {
-  if (count <= 1) return 'middle';
-  if (index === 0) return 'right';
-  return index === count - 1 ? 'left' : 'middle';
-}
-
-/**
- * `maxLabels="auto"` selection that measures each label where it actually paints. A centered label
- * spends half its width on each side of its tick, but an inward-anchored boundary label spends all
- * of it on the interior side, reaching half a label further toward its neighbor than a centered
- * lane reserves. So label *centers* (half a label inside an anchored tick) are spaced evenly between
- * the two boundary labels, each interior target snaps to the nearest remaining candidate, and the
- * densest count whose every adjacent pair keeps `gap` between their estimated extents wins. The
- * first and last candidates are always kept, and source order is preserved.
- *
- * `positions` are the candidates' tick coordinates, finite and non-decreasing. Returns the kept
- * indexes into `positions`, or `undefined` when every candidate already fits.
- */
-function anchorAwareCategoryLabelPicks(
-  positions: readonly number[],
-  width: number,
-  gap: number,
-  firstGrowth: CategoryLabelGrowth,
-  lastGrowth: CategoryLabelGrowth,
-): number[] | undefined {
-  const count = positions.length;
-  if (count <= 2) return undefined;
-  const last = count - 1;
-  const leftEdge = (candidate: number): number => {
-    const growth = candidate === 0 ? firstGrowth : candidate === last ? lastGrowth : 'middle';
-    const x = positions[candidate]!;
-    return growth === 'right' ? x : growth === 'left' ? x - width : x - width / 2;
-  };
-  // A pair that fits exactly must not be rejected by floating-point rounding.
-  const clears = (before: number, after: number): boolean =>
-    leftEdge(after) - (leftEdge(before) + width) >= gap - 1e-6;
-  let everyCandidateFits = true;
-  for (let candidate = 1; candidate < count && everyCandidateFits; candidate++) {
-    everyCandidateFits = clears(candidate - 1, candidate);
-  }
-  if (everyCandidateFits) return undefined;
-
-  const firstCenter = leftEdge(0) + width / 2;
-  const span = leftEdge(last) + width / 2 - firstCenter;
-  const densest = Math.min(last, Math.floor(span / (width + gap) + 1e-9) + 1);
-  for (let labels = densest; labels > 2; labels--) {
-    const picks = [0];
-    let candidate = 1;
-    let fits = true;
-    for (let slot = 1; slot < labels - 1 && fits; slot++) {
-      const center = firstCenter + (slot * span) / (labels - 1);
-      // Leave one distinct candidate for every slot still to fill, then take the nearest center.
-      const latest = last - (labels - 1 - slot);
-      while (
-        candidate < latest &&
-        Math.abs(positions[candidate + 1]! - center) <= Math.abs(positions[candidate]! - center)
-      ) candidate++;
-      fits = clears(picks[picks.length - 1]!, candidate);
-      picks.push(candidate++);
-    }
-    if (fits && clears(picks[picks.length - 1]!, last)) return [...picks, last];
-  }
-  return [0, last];
-}
-
-/**
- * Pre-layout width budget for one rendered category tick. A labelled tick whose adjacent rendered
- * ticks are all labelled keeps the uniform `width` exactly. A tick next to empty ticks may use their
- * room: toward a labelled tick it takes half the gap (so two growing neighbors can never both claim
- * it, and never reach into the other's own slot); toward only empty ticks it takes up to the outer
- * edge of the outermost one. A centered tick takes the smaller side twice so it stays symmetric; a
- * boundary tick grows toward the plot interior only. fitCategoryLabels() refines this after layout.
- */
-function sparseCategoryLabelExtent(
-  labels: readonly string[],
-  xs: readonly number[],
-  position: number,
-  grow: 'middle' | 'left' | 'right',
-  pitch: number,
-  width: number,
-): number {
-  if (!hasCategoryLabelText(labels[position])) return width;
-  const emptyBefore = position > 0 && !hasCategoryLabelText(labels[position - 1]);
-  const emptyAfter = position < labels.length - 1 && !hasCategoryLabelText(labels[position + 1]);
-  if (!emptyBefore && !emptyAfter) return width;
-  const x = xs[position]!;
-  const halfToward = (step: -1 | 1): number => {
-    let outermost = -1;
-    for (let index = position + step; index >= 0 && index < labels.length; index += step) {
-      if (hasCategoryLabelText(labels[index])) return Math.abs(x - xs[index]!) / 2;
-      outermost = index;
-    }
-    return outermost < 0 ? Number.POSITIVE_INFINITY : Math.abs(x - xs[outermost]!) + pitch / 2;
-  };
-  const extent = grow === 'middle'
-    ? 2 * Math.min(halfToward(-1), halfToward(1)) - BAR_CORNER_RADIUS
-    : halfToward(grow === 'right' ? 1 : -1) - BAR_CORNER_RADIUS;
-  return finiteRange(Math.max(width, extent), width, width, MAX_SCROLL_CONTENT_WIDTH);
 }
 
 function domainFraction(value: number, lo: number, hi: number): number {
@@ -842,19 +745,6 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    *  painted inside the shadow root and exposed through that token. This component takes no opinion
    *  on what the highlight looks like, only which marks it applies to. */
   @property({ attribute: false }) selectedIndices: readonly number[] = [];
-  private legacyAccessibleLabel: string | undefined = undefined;
-
-  /** Compatibility fallback below the host aria-label, including an explicitly empty host value.
-   * @deprecated Use the host aria-label attribute or the native ariaLabel property. */
-  @property({ attribute: false })
-  get accessibleLabel(): string | undefined {
-    return this.legacyAccessibleLabel;
-  }
-  set accessibleLabel(value: string | undefined) {
-    warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
-    this.legacyAccessibleLabel = value;
-  }
-
   /** The host `aria-label`, which names the chart ahead of every other source. Declared so a
    *  later change re-renders the `<svg>` name. */
   @property({ attribute: 'aria-label' }) private hostAccessibleLabel: string | null = null;
@@ -2425,52 +2315,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
   /** The widest rendered category label under the deterministic per-character estimate. */
   private widestEstimatedCategoryLabel(renderedIndexes: readonly number[]): number {
-    let widest = 0;
-    for (const index of renderedIndexes) {
-      const label = this.labels[index] ?? '';
-      widest = Math.max(widest, label.length * APPROX_LABEL_CHARACTER_WIDTH);
-    }
-    return widest;
-  }
-
-  /** Width-only automatic cap, kept for tick positions that are not in source order (a reordering
-   *  `barX`), where "adjacent label" has no single meaning to measure. */
-  private automaticMaxLabels(
-    n: number,
-    plotW: number,
-    renderedIndexes: readonly number[],
-  ): number {
-    if (n <= 1) return n;
-    const widest = this.widestEstimatedCategoryLabel(renderedIndexes);
-    if (widest === 0) return n;
-    const lane = widest + AUTO_CATEGORY_LABEL_INSET;
-    const fits = Math.floor(finiteRange(plotW, 0, 0, MAX_SCROLL_CONTENT_WIDTH) / lane);
-    return Math.min(n, Math.max(2, fits));
-  }
-
-  /** Automatic selection against the labels' anchored extents (anchorAwareCategoryLabelPicks()):
-   *  `undefined` renders every sampled label; `null` means the tick positions are not in source
-   *  order, so the caller falls back to the width-only cap. */
-  private automaticLabelIndexes(
-    n: number,
-    renderedIndexes: readonly number[],
-    tickX: (index: number) => number,
-  ): Set<number> | undefined | null {
-    if (n <= 1) return undefined;
-    const widest = this.widestEstimatedCategoryLabel(renderedIndexes);
-    if (widest === 0) return undefined;
-    const positions = renderedIndexes.map(tickX);
-    for (let candidate = 1; candidate < positions.length; candidate++) {
-      if (!(positions[candidate]! >= positions[candidate - 1]!)) return null;
-    }
-    const picks = anchorAwareCategoryLabelPicks(
-      positions,
-      widest,
-      AUTO_CATEGORY_LABEL_INSET,
-      categoryLabelGrowth(renderedIndexes[0]!, n),
-      categoryLabelGrowth(renderedIndexes[renderedIndexes.length - 1]!, n),
-    );
-    return picks && new Set(picks.map((candidate) => renderedIndexes[candidate]!));
+    return widestEstimatedCategoryLabel(this.labels, renderedIndexes, APPROX_LABEL_CHARACTER_WIDTH);
   }
 
   /** Indexes retained by `maxLabels`, selected from the generated mark sample so an independently
@@ -2488,33 +2333,21 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     tickX?: (index: number) => number,
   ): Set<number> | undefined {
     if (this.maxLabels == null) return undefined;
-    if (this.maxLabels === 'auto' && tickX) {
-      const automatic = this.automaticLabelIndexes(n, renderedIndexes, tickX);
-      if (automatic !== null) return automatic;
+    let estimatedWidth: number | undefined;
+    let positions: number[] | undefined;
+    if (this.maxLabels === 'auto' && tickX && n > 1) {
+      estimatedWidth = this.widestEstimatedCategoryLabel(renderedIndexes);
+      if (estimatedWidth > 0) positions = renderedIndexes.map(tickX);
     }
-    const requested = this.maxLabels === 'auto'
-      ? this.automaticMaxLabels(n, plotW, renderedIndexes)
-      : this.maxLabels;
-    if (typeof requested !== 'number') return undefined;
-    // finiteCount() falls back to `n` itself for a non-finite maxLabels (NaN/Infinity, e.g. an
-    // unparsable attribute) -- making the `n <= max` check below always true, i.e. reproducing "no
-    // cap", the same behavior as maxLabels being unset entirely. An explicit *negative* (but
-    // finite) value instead clamps to `0` (finiteCount's own floor, same convention as
-    // `normalizeBucketCount()`'s handling of a negative bucket count elsewhere in this codebase),
-    // while the documented first/last guarantee still keeps both endpoints.
-    const max = finiteCount(requested, n);
-    if (n <= max) return undefined;
-    const renderedCount = renderedIndexes.length;
-    const count = Math.min(
-      renderedCount,
-      MAX_RENDERED_CHART_RECORDS,
-      Math.max(2, max),
-    );
-    if (count <= 1) return new Set(count === 1 ? [renderedIndexes[0]!] : []);
-    return new Set(
-      Array.from({ length: count }, (_, index) =>
-        renderedIndexes[Math.round((index * (renderedCount - 1)) / (count - 1))]!,
-      ),
+    return visibleCategoryLabelIndexes(
+      n,
+      plotW,
+      renderedIndexes,
+      this.labels,
+      this.maxLabels,
+      positions,
+      CATEGORY_LABEL_SELECTION_BOUNDS,
+      estimatedWidth,
     );
   }
 
@@ -2710,6 +2543,8 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         growth,
         categoryLabelPitch,
         categoryLabelWidth,
+        BAR_CORNER_RADIUS,
+        MAX_SCROLL_CONTENT_WIDTH,
       );
       const displayLabel = this.displayCategoryLabel(fullLabel, labelExtent);
       return svg`<text
@@ -2730,7 +2565,6 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       this.hostAccessibleLabel ??
       hostAriaLabel(this) ??
       (this.label ||
-        this.accessibleLabel ||
         (datasetLabels.length
           ? getListFormat(this.effectiveLocale, { type: 'conjunction' }).format(datasetLabels)
           : '') ||

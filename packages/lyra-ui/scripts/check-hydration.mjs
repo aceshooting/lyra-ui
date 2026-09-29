@@ -15,20 +15,20 @@ import {
 
 // Exercise the published metadata through a production bundler, not only the direct browser
 // module graph below. A side-effect-only hydration entry missing from package.json#sideEffects is
-// silently discarded when ssr-loader imports it; direct ESM tests cannot reveal that failure.
+// silently discarded by a consumer bundler; direct ESM tests cannot reveal that failure.
 const requireFromPackage = createRequire(join(packageDir, 'package.json'));
-const requireFromLoaderHost = createRequire(
+const requireFromBundlerHost = createRequire(
   requireFromPackage.resolve('@web/dev-server-esbuild')
 );
-const esbuild = requireFromLoaderHost('esbuild');
+const esbuild = requireFromBundlerHost('esbuild');
 const packageJson = JSON.parse(
   await readFile(join(packageDir, 'package.json'), 'utf8')
 );
 const optionalPeers = Object.keys(packageJson.peerDependencies ?? {}).filter(
   (name) => packageJson.peerDependenciesMeta?.[name]?.optional === true
 );
-const bundledLoader = await esbuild.build({
-  entryPoints: [join(packageDir, 'dist', 'ssr-loader.js')],
+const bundledHydration = await esbuild.build({
+  entryPoints: [join(packageDir, 'dist', 'hydration.js')],
   absWorkingDir: packageDir,
   bundle: true,
   external: optionalPeers.flatMap((name) => [name, `${name}/*`]),
@@ -37,13 +37,13 @@ const bundledLoader = await esbuild.build({
   write: false,
   logLevel: 'silent',
 });
-const bundledLoaderSource = new TextDecoder().decode(
-  bundledLoader.outputFiles[0].contents
+const bundledHydrationSource = new TextDecoder().decode(
+  bundledHydration.outputFiles[0].contents
 );
 assert.match(
-  bundledLoaderSource,
+  bundledHydrationSource,
   /defer-hydration/,
-  'production bundling ssr-loader must retain the transitive Lit hydration hook'
+  'production bundling hydration.js must retain the Lit hydration hook'
 );
 
 const hydrationTagArg = process.argv.find((argument) =>
@@ -1099,7 +1099,7 @@ const documentHtml = `<!doctype html>
           }
         });
         globalThis.__lyraHydrationStage = 'importing-loader';
-        const loader = await import('/dist/ssr-loader.js');
+        const loader = await import('/dist/hydration.js');
         globalThis.__lyraHydrationStage = 'importing-optional-registrations';
         await Promise.all(${JSON.stringify(
           optionalRegistrationUrls

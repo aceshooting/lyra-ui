@@ -1,4 +1,3 @@
-import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './table.js';
@@ -15,8 +14,6 @@ import { installTableTestHooks, type Row, columns, editableColumns, rows } from 
 installTableTestHooks();
 
 
-expectDeprecatedUsage('lr-table', 'attribute', 'accessible-label');
-expectDeprecatedUsage('lr-table', 'property', 'accessibleLabel');
 
 
 it('reflects spellcheck=false when assigned as a property', async () => {
@@ -219,7 +216,7 @@ describe('keyboard entry into double-click cell editing (WCAG 2.1.1)', () => {
   });
 
   it('passes axe with an editable cell open for editing', async () => {
-    const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<Row>;
+    const el = (await fixture(html`<lr-table aria-label="Scores"></lr-table>`)) as LyraTable<Row>;
     el.columns = editableColumns;
     el.rows = rows;
     el.rowKey = (r) => r.id;

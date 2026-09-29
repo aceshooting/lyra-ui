@@ -16,11 +16,13 @@ Read it end to end only if you genuinely need everything. Otherwise:
 | find the right component | `llms/index.md` (every tag, its import path, one-line purpose) |
 | get library-wide behavior right | `llms/shared.md` (status, imports/autoloading, events, forms, theming/styles, i18n/RTL, TS/frameworks, SSR, utilities, AI types) |
 | theme it | `llms/tokens.md` |
+| opt into native CSS or utility classes | `llms/shared/native-styles-and-utilities.md` |
 | know what to `npm install` | `llms/peers.md` |
 | port `wa-*`/`sl-*` markup | `llms/migration.md` (per-tag classification, safe rewrites, and warnings) |
+| upgrade Lyra v23 to v24 | `llms/shared/v23-to-v24-migration.md` (routes, styling, SSR and event details) |
 
 Prefer stable tag-shaped registration imports such as
 `@aceshooting/lyra-ui/components/lr-input.js`; each registers its tag as a side effect without
-coupling application code to Lyra's source-family layout. Existing family-shaped registration
-paths remain supported. Class-only and helper modules continue to use their owning family paths;
-a sibling `.class.js` exports a class without registering it.
+coupling application code to Lyra's source-family layout. The former duplicate nested registration
+paths are removed in v24. Class-only and helper modules retain their owning family paths; a
+`.class.js` module exports a class without registering it.

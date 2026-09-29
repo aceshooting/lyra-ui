@@ -5170,6 +5170,63 @@ describe('dataLayers clustering and heatmap', () => {
   const entry = (extra: Record<string, unknown>) =>
     [{ sourceId: 'pins', geojson: POINTS, ...extra }] as unknown as LyraMap['dataLayers'];
 
+  it('skips color resolution for unused data-layer stops and fallbacks', async () => {
+    const { el } = await connectedMapWithoutMaplibre();
+    stubMaplibreMap(el);
+    el.dataLayers = [
+      { sourceId: 'plain', geojson: POINTS, strokeColor: 'red',
+        line: { stops: [[0, 'var(--lr-color-success)'], [1, 'var(--lr-color-warning)']] },
+        point: { colors: [['one', 'var(--lr-color-danger)']] } },
+      { sourceId: 'cluster', geojson: POINTS, color: 'var(--lr-color-success)',
+        cluster: { colorSteps: [[0, 'red']] } },
+      { sourceId: 'heatmap', geojson: POINTS, kind: 'heatmap', heatmap: { stops: [[1, 'red']] } },
+      { sourceId: 'default-ramp', geojson: POINTS, kind: 'heatmap', heatmap: { stops: [[0, 'red']] } },
+    ] as unknown as LyraMap['dataLayers'];
+    await el.updateComplete;
+
+    const paint = el as unknown as {
+      canonicalDataLayers: readonly { sourceId: string; cluster?: unknown }[];
+      lineColor(layer: unknown): string | unknown[];
+      paintPoints(sourceId: string, layer: unknown): void;
+      clusterColorExpression(layer: unknown, cluster: unknown): string | unknown[];
+      heatmapColorExpression(layer: unknown): unknown[];
+    };
+    const byId = (id: string) => paint.canonicalDataLayers.find((layer) => layer.sourceId === id)!;
+    const originalDescriptor = Object.getOwnPropertyDescriptor(window, 'getComputedStyle');
+    const originalGetComputedStyle = window.getComputedStyle.bind(window);
+    let colorResolutions = 0;
+    Object.defineProperty(window, 'getComputedStyle', {
+      configurable: true,
+      value: (element: Element, pseudo?: string | null) => {
+        if (element === el) colorResolutions += 1;
+        return originalGetComputedStyle(element, pseudo);
+      },
+    });
+    try {
+      const plain = byId('plain');
+      expect(paint.lineColor(plain)).to.equal('red');
+      paint.paintPoints(dataLayerResourceId(el, 'plain'), plain);
+      expect(colorResolutions, 'absent fields leave line and point stops unresolved').to.equal(0);
+
+      const cluster = byId('cluster');
+      expect(paint.clusterColorExpression(cluster, cluster.cluster)).to.deep.equal([
+        'step', ['get', 'point_count'], 'red', 0, 'red',
+      ]);
+      expect(colorResolutions, 'cluster steps do not read the unused fallback').to.equal(0);
+
+      expect(paint.heatmapColorExpression(byId('heatmap'))).to.deep.equal([
+        'interpolate', ['linear'], ['heatmap-density'], 0, 'rgba(0, 0, 0, 0)', 1, 'red',
+      ]);
+      expect(colorResolutions, 'a usable authored heatmap ramp skips default tokens').to.equal(0);
+
+      expect(paint.heatmapColorExpression(byId('default-ramp')).length).to.be.greaterThan(6);
+      expect(colorResolutions, 'an unusable authored ramp resolves default tokens').to.be.greaterThan(0);
+    } finally {
+      if (originalDescriptor) Object.defineProperty(window, 'getComputedStyle', originalDescriptor);
+      else delete (window as unknown as { getComputedStyle?: typeof getComputedStyle }).getComputedStyle;
+    }
+  });
+
   const suffixes = (layers: Map<string, StubLayer>, sourceId: string): string[] =>
     [...layers.keys()].filter((id) => id.startsWith(sourceId)).map((id) => id.slice(sourceId.length)).sort();
 

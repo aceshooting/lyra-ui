@@ -31,7 +31,6 @@ const budgets = {
 };
 
 const requiredTarballFiles = [
-  'dist/ssr-loader.js',
   'custom-elements.json',
   'llms.txt',
   'llms/index.md',

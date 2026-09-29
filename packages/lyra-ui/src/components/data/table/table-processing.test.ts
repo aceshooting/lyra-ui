@@ -1,4 +1,3 @@
-import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './table.js';
@@ -15,8 +14,6 @@ import { installTableTestHooks, type Row, columns, rows } from '../../../../test
 installTableTestHooks();
 
 
-expectDeprecatedUsage('lr-table', 'attribute', 'accessible-label');
-expectDeprecatedUsage('lr-table', 'property', 'accessibleLabel');
 
 
 it('shows a rendered hover affordance on the public filter control', async () => {
@@ -330,7 +327,7 @@ it('renders a visual sort-direction chevron only in the active sort column, mark
 });
 
 it('optionally keeps inactive sortable headers discoverable without changing sort semantics or geometry', async () => {
-  const el = await fixture<LyraTable<Row>>(html`<lr-table sort-indicators="all" accessible-label="Results"
+  const el = await fixture<LyraTable<Row>>(html`<lr-table sort-indicators="all" aria-label="Results"
     .columns=${columns.map((column) => ({ ...column, sortable: true }))} .rows=${rows}></lr-table>`);
   const headers = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="header-cell"]')];
   const before = headers.map((header) => header.getBoundingClientRect().width);
@@ -356,7 +353,7 @@ it('retains server sort proposals, RTL placement and public inactive-icon stylin
   const wrapper = await fixture<HTMLElement>(html`<div>
     <style>lr-table.sort-affordance::part(sort-icon-inactive) { color: rgb(17, 85, 153); }</style>
     <lr-table class="sort-affordance" dir="rtl" sort-mode="server" sort-indicators="all"
-      accessible-label="Results" .columns=${columns.map((column) => ({ ...column, sortable: true }))}
+      aria-label="Results" .columns=${columns.map((column) => ({ ...column, sortable: true }))}
       .rows=${rows}></lr-table>
   </div>`);
   const el = wrapper.querySelector<LyraTable<Row>>('lr-table')!;
@@ -631,7 +628,7 @@ describe('lr-table client-side sorting', () => {
   ];
 
   const sortTable = async (): Promise<LyraTable<SortRow>> => {
-    const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<SortRow>;
+    const el = (await fixture(html`<lr-table aria-label="Scores"></lr-table>`)) as LyraTable<SortRow>;
     el.columns = sortColumns;
     el.rows = sortRows;
     el.rowKey = (r) => r.id;
@@ -669,7 +666,7 @@ describe('lr-table client-side sorting', () => {
   });
 
   it('falls back to a locale-aware numeric string collator when a column has no sortValue', async () => {
-    const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<SortRow>;
+    const el = (await fixture(html`<lr-table aria-label="Scores"></lr-table>`)) as LyraTable<SortRow>;
     el.columns = [{ key: 'name', label: 'Name', sortable: true, cell: (r) => r.name }];
     el.rows = [
       { id: '10', name: 'item10', score: 0 },
@@ -684,7 +681,7 @@ describe('lr-table client-side sorting', () => {
   });
 
   it('sorts null/undefined sortValue results last regardless of direction', async () => {
-    const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<SortRow>;
+    const el = (await fixture(html`<lr-table aria-label="Scores"></lr-table>`)) as LyraTable<SortRow>;
     el.columns = sortColumns;
     el.rows = [
       { id: 'a', name: 'A', score: null },
@@ -701,7 +698,7 @@ describe('lr-table client-side sorting', () => {
   });
 
   it('never sorts by a column that is not marked sortable', async () => {
-    const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<SortRow>;
+    const el = (await fixture(html`<lr-table aria-label="Scores"></lr-table>`)) as LyraTable<SortRow>;
     el.columns = [
       { key: 'name', label: 'Name', cell: (r) => r.name },
       {
@@ -769,7 +766,7 @@ describe('lr-table client-side sorting', () => {
   it('keeps row identity across a client sort with no rowKey set', async () => {
     // keyOf() falls back to the row's index in `rows`, and the sort permutes entries while each
     // entry keeps that original index -- so identity survives a re-sort even without rowKey.
-    const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<SortRow>;
+    const el = (await fixture(html`<lr-table aria-label="Scores"></lr-table>`)) as LyraTable<SortRow>;
     el.columns = sortColumns;
     el.rows = sortRows;
     el.selectionMode = 'single';
@@ -792,7 +789,7 @@ describe('lr-table client-side sorting', () => {
       { id: 'a', name: '\u00e4pple', score: 0 },
     ];
     const localeTable = async (locale: string): Promise<LyraTable<SortRow>> => {
-      const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<SortRow>;
+      const el = (await fixture(html`<lr-table aria-label="Scores"></lr-table>`)) as LyraTable<SortRow>;
       el.columns = [{ key: 'name', label: 'Name', sortable: true, cell: (r) => r.name }];
       el.rows = localeRows;
       el.rowKey = (r) => r.id;
@@ -816,7 +813,7 @@ describe('lr-table client-side sorting', () => {
   });
 
   it('leaves row order and sort state untouched with sortMode/defaultSortDir/sortValue unset (regression)', async () => {
-    const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<SortRow>;
+    const el = (await fixture(html`<lr-table aria-label="Scores"></lr-table>`)) as LyraTable<SortRow>;
     el.columns = [
       { key: 'name', label: 'Name', sortable: true, cell: (r) => r.name },
       { key: 'score', label: 'Score', sortable: true, cell: (r) => r.score },
@@ -863,7 +860,7 @@ describe('lr-table client-side sorting with groupBy', () => {
   ];
 
   const groupedTable = async (): Promise<LyraTable<GroupSortRow>> => {
-    const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<GroupSortRow>;
+    const el = (await fixture(html`<lr-table aria-label="Scores"></lr-table>`)) as LyraTable<GroupSortRow>;
     el.columns = groupSortColumns;
     el.rows = groupSortRows;
     el.rowKey = (r) => r.id;
@@ -999,7 +996,7 @@ describe('sticky + sortable header pointer feedback', () => {
     const el = (await fixture(html`
       <lr-table
         style="--lr-transition-fast: 0s"
-        accessible-label="Scores"
+        aria-label="Scores"
         .columns=${stickySortableColumns}
         .rows=${rows}
       ></lr-table>

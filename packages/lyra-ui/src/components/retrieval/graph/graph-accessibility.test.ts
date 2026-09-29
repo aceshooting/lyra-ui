@@ -488,7 +488,7 @@ describe('coverage: private-helper direct branches', () => {
 
     let detail: { sourceNodeId: string; targetNodeId: string } | undefined;
     el.addEventListener(
-      'lr-link-click',
+      'lr-edge-activate',
       (e) => (detail = (e as CustomEvent).detail)
     );
     (el as unknown as { onLinkClick: (l: unknown) => void }).onLinkClick(raw);
@@ -781,7 +781,7 @@ describe('coverage: private-helper direct branches', () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     let detail: { nodeId: string; x: number; y: number } | undefined;
     el.addEventListener(
-      'lr-node-click',
+      'lr-node-activate',
       (e) => (detail = (e as CustomEvent).detail)
     );
     (el as unknown as { onNodeClick: (n: { id: string }) => void }).onNodeClick(

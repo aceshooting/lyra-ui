@@ -7,7 +7,7 @@
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md)
-- **Deprecated property** `accessibleLabel` since `22.0.0`; use attribute `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.`; removal not before `24.0.0` — The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 18 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -54,10 +54,6 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
   and description; host `aria-label` wins by presence, including an explicit empty string
 - `aria-label` (host attribute) — names the chart's `<svg>` ahead of every other source, by
   presence.
-- `accessibleLabel?: string` (attribute: false) — fallback below the host `aria-label` and `label`,
-  ahead of the locale-formatted dataset names and localized chart name.
-  Deprecated: use the native host `aria-label` or `ariaLabel` property. The programmatic fallback
-  remains supported; the old `accessible-label` attribute is inert. Unset keeps the auto-derived name.
 - `height: string = '280px'` — accepts a valid CSS `height` as a private fallback. A consumer-set
   `--lr-chart-height` always wins; invalid values, declaration-breaking input, and `url()` remove
   the fallback and leave the public token/default in control.

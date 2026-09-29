@@ -46,6 +46,7 @@ const paste = (target: Element, value: string): Event => {
 };
 
 expectLocaleFallback('ar-EG', ['fieldRequired', 'timeInputEmptySegment', 'timeInputHour', 'timeInputInvalid', 'timeInputLabel', 'timeInputMinMessage', 'timeInputMinute', 'timeInputOpen', 'timeInputPopup']);
+expectLocaleFallback('fa-IR', ['fieldRequired', 'timeInputHour', 'timeInputLabel', 'timeInputMinute', 'timeInputOpen', 'timeInputPopup']);
 expectLocaleFallback('de-DE', ['fieldRequired', 'timeInputHour', 'timeInputLabel', 'timeInputMinute', 'timeInputOpen', 'timeInputPopup']);
 expectLocaleFallback('ja-JP', ['fieldRequired', 'timeInputEmptySegment', 'timeInputHour', 'timeInputInvalid', 'timeInputLabel', 'timeInputMinute', 'timeInputOpen', 'timeInputPopup']);
 
@@ -308,6 +309,39 @@ describe('lr-time-input segmented field', () => {
     expect(el.validity.rangeUnderflow).to.equal(true);
     expect(el.validationMessage).to.include('١٣:٤٥');
     expect(el.validationMessage).not.to.include('13:45');
+  });
+
+  it('builds the native digit map once per locale while keeping ASCII and unknown keys unchanged', async () => {
+    const el = await fixture<LyraTimeInput>(html`<lr-time-input locale="ar-EG" hour-format="24"></lr-time-input>`);
+    const original = Intl.NumberFormat.prototype.formatToParts;
+    let reads = 0;
+    Intl.NumberFormat.prototype.formatToParts = function (...args: Parameters<typeof original>) {
+      reads += 1;
+      return original.apply(this, args);
+    };
+    try {
+      key(segment(el, 'hour'), '1');
+      expect(reads).to.equal(0);
+      key(segment(el, 'hour'), '٢');
+      expect(reads).to.equal(10);
+      key(segment(el, 'minute'), '٣');
+      key(segment(el, 'minute'), 'x');
+      expect(reads).to.equal(10);
+      await el.updateComplete;
+      expect(el.value).to.equal('12:03');
+
+      el.locale = 'fa-IR';
+      await el.updateComplete;
+      el.value = '12:03';
+      key(segment(el, 'minute'), '۴');
+      expect(reads).to.equal(20);
+      key(segment(el, 'minute'), '۵');
+      expect(reads).to.equal(20);
+      await el.updateComplete;
+      expect(el.value).to.equal('12:45');
+    } finally {
+      Intl.NumberFormat.prototype.formatToParts = original;
+    }
   });
 
   it('fills segments with digits, auto-advances, and emits native plus compatibility events', async () => {

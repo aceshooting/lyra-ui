@@ -42,7 +42,7 @@ the custom element upgrades, so finish the handoff explicitly with `show()`:
   fallback.addEventListener("toggle", async () => {
     if (!fallback.open || !popover.hidden) return;
     registration ??= import(
-      "@aceshooting/lyra-ui/components/overlays/overlay/popover.js"
+      "@aceshooting/lyra-ui/components/lr-popover.js"
     ).catch((error) => {
       registration = undefined; // let a later interaction retry
       throw error;
@@ -306,7 +306,7 @@ or to remember it on every new one:
   <p>Anchored content.</p>
 </lr-popover>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/overlays/overlay/popover.js";
+  import "@aceshooting/lyra-ui/components/lr-popover.js";
 
   const popover = document.querySelector("lr-popover");
   let ready = false;

@@ -1,4 +1,3 @@
-import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -527,8 +526,6 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
   'lr-row-expand-toggle': CustomEvent<Readonly<{ row: T; rowKey: K; expanded: boolean }>>;
   'lr-load-more': CustomEvent<null>;
   'lr-retry-request': CustomEvent<null>;
-  /** @deprecated Use `lr-retry-request`; removal not before 24.0.0. */
-  'lr-retry': CustomEvent<null>;
   'lr-selection-change': CustomEvent<Readonly<{ selectedRowKeys: readonly K[] }>>;
   'lr-filter-change': CustomEvent<Readonly<{ filterText: string }>>;
   'lr-page-change': CustomEvent<Readonly<{ page: number }>>;
@@ -760,7 +757,7 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  * data-empty branch above, which replace them too. Precedence when more than one state could apply
  * at once: `loading` beats `error` beats every empty branch, so a `loading` table never flashes a
  * stale `error`, and an `error` table never falls through to "no rows"/"no columns" copy
- * underneath it. The retry button's `lr-retry` is cancelable: the built-in action clears `error`,
+ * underneath it. The retry button's `lr-retry-request` is cancelable: the built-in action clears `error`,
  * and `preventDefault()` leaves it set for a consumer that owns its own retry timing.
  *
  * `layout` sets a floor on the `<table>`'s `table-layout`: `'fixed'` forces it even with no column
@@ -777,7 +774,6 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  * @event lr-row-activate - A row was activated by pointer or Enter/Space. `detail: { row }`.
  * @event lr-load-more - The "load more" control was activated.
  * @event lr-retry-request - Cancelable retry proposal before the default retry action. `detail: null`.
- * @event lr-retry - Deprecated veto alias of `lr-retry-request`; removal not before 24.0.0.
  *   The built-in `[part='retry-button']` was activated, only rendered while
  *   `error` is set. Cancelable: the default action clears `error`; `preventDefault()` leaves it
  *   set instead.
@@ -1120,33 +1116,11 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  overrides a direction the user just chose for the column they are still on. Defaults to
    *  `'asc'`; set `'desc'` for a most-recent-first or highest-first table. */
   @property({ attribute: 'default-sort-dir' }) defaultSortDir: TableSortDirection = 'asc';
-  /** Compatibility accessible-name fallback for the grid. Host `aria-label` wins by presence,
-   * including the empty string. Without a host name, an explicitly empty compatibility value
-   * remains a real override; omitted names let the caption name the grid.
-   * @deprecated Use the host `aria-label` or native `ariaLabel` property; removal not before 24.0.0.
-   */
-  @property({ attribute: 'accessible-label' })
-  get accessibleLabel(): string | undefined { return this.legacyAccessibleLabel; }
-  set accessibleLabel(value: string | undefined) {
-    const previous = this.legacyAccessibleLabel;
-    this.legacyAccessibleLabel = value;
-    if (value !== undefined && !this.hasAttribute('accessible-label')) {
-      warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'ariaLabel');
-    }
-    this.requestUpdate('accessibleLabel', previous);
-  }
-  private legacyAccessibleLabel?: string;
-
   /** The canonical host accessible name. Presence wins, including an explicitly empty string. */
   @property({ attribute: 'aria-label' }) private hostAccessibleLabel: string | null = null;
 
-  override attributeChangedCallback(name: string, previous: string | null, value: string | null): void {
-    super.attributeChangedCallback(name, previous, value);
-    if (name === 'accessible-label' && value !== null) warnDeprecatedUsage(this, 'attribute', name, 'aria-label');
-  }
-
   /** Optional visible caption rendered as the table's `<caption>`. Also names the grid (via
-   *  `aria-labelledby`) when no `accessibleLabel`/host `aria-label` is set. Consumer-supplied
+   *  `aria-labelledby`) when no host `aria-label` is set. Consumer-supplied
    *  text, not localized. */
   @property() caption = '';
 
@@ -1887,10 +1861,10 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     super.firstUpdated(changed);
     // A grid with no accessible name is a real a11y defect but silently renders. The shared
     // development diagnostic is page-bounded and production-silent.
-    if (!this.accessibleLabel && !this.hasAttribute('aria-label') && !this.caption) {
+    if (!this.hasAttribute('aria-label') && !this.caption) {
       devWarnOnce(
         MISSING_ACCESSIBLE_NAME_WARNING,
-        '<lr-table> has no accessible name: set `accessibleLabel`, a host `aria-label`, or ' +
+        '<lr-table> has no accessible name: set a host `aria-label` or ' +
           '`caption` so assistive technology can identify the grid.'
       );
     }
@@ -3621,7 +3595,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  error branch in `render()` so the two cannot drift in copy, parts, or slot name -- both go
    *  through the shared {@link renderDataState} ladder renderer (`internal/data-state-renderer.ts`),
    *  which owns the `error`-prefixed part naming, the `error` slot wrapping, and the cancelable
-   *  `lr-retry` request/commit pair. `compactDefault` differs between callers: the row sits inside
+   *  `lr-retry-request` request/commit pair. `compactDefault` differs between callers: the row sits inside
    *  an existing grid and defaults to compact, while the standalone branch owns the whole component
    *  box and matches the other full-area empty states. */
   private renderErrorContent(compactDefault: boolean): unknown {
@@ -3644,14 +3618,9 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
           this.error = false;
         },
         emitRetryRequest: (detail, init: { cancelable: true }) => this.emit('lr-retry-request', detail, init),
-        emitRetry: (detail, init: { cancelable: true }) => {
-          const legacy = this.emit('lr-retry', detail, init);
-          if (legacy.defaultPrevented) warnDeprecatedUsage(this, 'event', 'lr-retry', 'lr-retry-request');
-          return legacy;
-        },
       },
       'error',
-      'lr-retry'
+      'lr-retry-request'
     );
   }
 
@@ -3705,7 +3674,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     // its own shell here: its whole point is that the <colgroup>/<thead>/filter/pagination chrome
     // stays put, which is only achievable by rendering the real table.
     const hasHostAriaLabel = this.hasAttribute('aria-label');
-    const gridAriaLabel = this.hostAccessibleLabel ?? this.accessibleLabel ?? nothing;
+    const gridAriaLabel = this.hostAccessibleLabel ?? nothing;
 
     // Sorted, not merely filtered: `footer`/`grandTotal` are documented as seeing every rendered
     // row "post-sort, pre-pagination", and an aggregate that reads position (a first/last value, a
@@ -3781,7 +3750,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
             part="table"
             role="grid"
             aria-label=${gridAriaLabel}
-            aria-labelledby=${this.accessibleLabel == null && !hasHostAriaLabel && this.caption
+            aria-labelledby=${!hasHostAriaLabel && this.caption
               ? this.captionId
               : nothing}
             aria-multiselectable=${String(this.selectionMode === 'multiple')}

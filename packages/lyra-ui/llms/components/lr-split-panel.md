@@ -93,7 +93,7 @@ cleans up on pointer up, cancellation, capture loss, disconnect, and orientation
 **Optional peer deps:** none.
 
 ```js
-import "@aceshooting/lyra-ui/components/layout/split-panel/split-panel.js";
+import "@aceshooting/lyra-ui/components/lr-split-panel.js";
 ```
 
 ```html

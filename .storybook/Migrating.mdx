@@ -50,8 +50,8 @@ For an `exact` or fully specified `rewritten` mapping, the codemod can update:
 - opening/closing tags and exact tag-name string uses;
 - contract-recorded attributes/properties, slots, events, CSS parts, CSS custom properties, and methods;
 - explicit default-preservation attributes where the inventory declares them; and
-- supported side-effect registration imports, routing them to Lyra's real
-  `@aceshooting/lyra-ui/components/<family>/<dir>/<file>.js` path.
+- supported side-effect registration imports, routing them to Lyra's stable
+  `@aceshooting/lyra-ui/components/lr-<tag>.js` path.
 
 A whole-package registration import is changed only when every discovered use from that ecosystem
 is automatic. That prevents a root import from being rewritten while a manual component beside it
@@ -168,3 +168,11 @@ See [Theming](?path=/docs/guides-theming--docs) for the token layers and overrid
   subpaths.
 - [Theming](?path=/docs/guides-theming--docs) — mapping design-token values.
 - <a href="./llms/migration.md" target="_blank" rel="noreferrer">`llms/migration.md`</a> — the generated per-tag decision and rewrite details.
+
+## Upgrading between Lyra UI majors
+
+This page and the generated `llms/migration.md` cover Web Awesome and Shoelace consumers. Projects
+already using Lyra UI should follow the separate [v23-to-v24 project migration guide](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/shared/v23-to-v24-migration.md)
+for import and SSR route changes, independent style-axis migration, the two retained historical
+Lyra CLI profiles, and event-detail compatibility that requires manual review. Confirm the exact
+v24 package is published before upgrading a production project.

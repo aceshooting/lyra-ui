@@ -66,7 +66,7 @@ uses layout-participating CSS `zoom`, not a paint-only transform, so the viewpor
 range reaches the entire painted footprint at both logical edges in LTR and RTL.
 
 ```js
-import "@aceshooting/lyra-ui/components/media/pan-zoom/pan-zoom.js";
+import "@aceshooting/lyra-ui/components/lr-pan-zoom.js";
 ```
 
 ```html

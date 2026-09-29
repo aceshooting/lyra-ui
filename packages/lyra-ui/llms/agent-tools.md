@@ -1050,10 +1050,10 @@ renders at the start of the action row, before Deny/Edit/Approve.
 void` and `close(reason = 'api'): void` close through the same reasoned lifecycle, emit `lr-close`,
 and return focus to whatever had it before opening; all are no-ops when already in the target state.
 
-**Events:** `lr-approve-request` and `lr-approve` (`detail: { args: unknown }` — the current, already-parsed arguments: the
+**Events:** `lr-approve-request` (`detail: { args: unknown }` — the current, already-parsed arguments: the
 original `args` prop, or the user's edited-and-validated version if an edit was in progress.
 Cancelable: a listener calling `preventDefault()` sets `pendingAction` to `'approve'` instead of
-closing; otherwise followed by `lr-close` with reason `'approve'`), `lr-deny-request` and `lr-deny`
+closing; otherwise followed by `lr-close` with reason `'approve'`), `lr-deny-request`
 (`detail: null`, cancelable, with the same `pendingAction` mechanism,
 setting `pendingAction` to `'deny'`; otherwise followed by `lr-close` with reason `'deny'`), `lr-close`
 (`detail: { reason: ToolApprovalDialogCloseReason }` — fired exactly once per dismissal, via Escape, an opted-in
@@ -1062,9 +1062,7 @@ dialog inside a consumer's own `<lr-dialog>` means that dialog's `lr-close` list
 this event, see `<lr-dialog>`'s `lr-close` section in `overlays.md` for the full list of emitters
 and the target-filtering guard), and no-detail `focus`/`blur` events
 re-dispatched when the raw-JSON editor gains or loses focus.
-`lr-approve` and `lr-deny` are deprecated cancelable aliases of their respective requests. Each
-follows its request with the same detail; preventing either spelling holds that decision pending.
-Subscribe to one spelling per action. `lr-close` remains the non-cancelable dismissal notification.
+`lr-close` remains the non-cancelable dismissal notification.
 
 `waitUntil()` is `<lr-confirm-bar>`-only and this dialog does not carry it. The two components share
 the `lr-approve-request`/`lr-deny-request` event *names*, so the generated `HTMLElementEventMap['lr-approve-request']` is the
@@ -1587,11 +1585,9 @@ scroll position. `disabled: boolean = false` (reflected) disables every vote but
 **Slots:** `a` (the first output — any content, a chat message, markdown, a viewer), `b` (the second
 output), and `prompt` (optional shared-input header above both panes).
 
-**Events:** `lr-vote-request` and `lr-vote` — `detail: { choice: 'a' | 'b' | 'tie' | 'both-bad'; itemId: string }`.
+**Events:** `lr-vote-request` — `detail: { choice: 'a' | 'b' | 'tie' | 'both-bad'; itemId: string }`.
 This is a cancelable veto point emitted before `vote` changes; call `preventDefault()` to preserve
 the prior vote.
-`lr-vote` is the deprecated cancelable alias, dispatched after `lr-vote-request` with the same
-detail. Either event can veto the vote change; subscribe to one spelling, not both.
 
 
 **CSS parts:** `base` (the outer wrapper), `prompt` (the optional prompt header, hidden when the
@@ -1638,7 +1634,7 @@ truncated tail can never shrink the axis and stretch the surviving bars across t
 window, `withoutAxis: boolean = false` (attribute `without-axis`) — hides the time-ruler row, and
 `label: string = ''`.
 
-The granular `@aceshooting/lyra-ui/components/agent-tools/trace-tree/trace-tree.js` entry also
+The granular `@aceshooting/lyra-ui/components/lr-trace-tree.js` entry also
 type-exports `LyraSpanKind` and `LyraSpanStatus`, and exports
 `normalizeLyraSpanKind(value)` / `normalizeLyraSpanStatus(value)` for normalizing provider data
 before assigning `spans`. These helpers are intentionally granular-only rather than root-barrel
@@ -1817,7 +1813,7 @@ plain text of the whole buffer.
 
 **Events:** `lr-copy` (`detail: { ok: true, text }`, emitted only after a successful clipboard write),
 `lr-error` (no detail) and `lr-copy-error` (`detail: { ok: false, text, reason, error }`) on clipboard failure,
-`lr-download-request` and `lr-download` (`detail: { filename }`, cancelable — by
+`lr-download-request` (`detail: { filename }`, cancelable — by
 default the component creates a plain-text `Blob`/object URL and activates a synthetic
 `<a download>`; `preventDefault()` suppresses that built-in download so the host can substitute
 server-side or other handling),
@@ -1826,9 +1822,6 @@ matchCountExact, activeIndex }`; `matchCountExact` is `false` once a search hits
 ceiling, marking `matchCount` as a lower bound rather than an exact total),
 `lr-highlight-activate` (`detail: { highlightId }`), and `lr-text-select` (`detail: {
 text, anchor, rects }`).
-`lr-download` is the deprecated cancelable alias, dispatched after `lr-download-request` with the
-same filename detail. Either event can suppress the built-in download; it is not a completion
-notification. Subscribe to one spelling.
 
 
 **CSS parts:** `base`, `toolbar` (only rendered when copy/download are enabled), `copy-button`,
@@ -2340,13 +2333,10 @@ deliberately *not* affected: while a decision is awaiting resolution, focus stil
 **Slots:** default — supplementary body content between the heading and the actions (e.g. a
 `lr-diff-view`). `footer` — extra content at the start of the action row.
 
-**Events:** `lr-approve-request` and `lr-approve` (`detail: { args, waitUntil }` — `args` is the `args` prop as-is, matching
-`lr-tool-approval-dialog`'s own `args` detail; cancelable), `lr-deny-request` and `lr-deny` (`detail: { waitUntil }`, the
+**Events:** `lr-approve-request` (`detail: { args, waitUntil }` — `args` is the `args` prop as-is, matching
+`lr-tool-approval-dialog`'s own `args` detail; cancelable), `lr-deny-request` (`detail: { waitUntil }`, the
 same resolver and no denial data of its own; cancelable), `lr-decision-settled`
 (`detail: { decision }`; non-cancelable).
-`lr-approve` and `lr-deny` are deprecated cancelable aliases of their respective requests. Each
-follows its request with the same detail, including `waitUntil`; either spelling can veto.
-Subscribe to one spelling per action to avoid handling the same proposal twice.
 
 `waitUntil(promise: Promise<unknown>) => void` is ExtendableEvent-style. Calling it from the
 listener holds the bar in its `pendingAction` presentation — `loading` on the activated control,
@@ -2816,8 +2806,9 @@ end: number; reason?: string }` marks character ranges within `text` that are re
 **Events:** `lr-citation-activate` (`detail: { sourceId: string; index: number }`, surfaced by a
 segment's embedded `lr-citation-badge`), `lr-citation-open` (`detail: { sourceId: string; index:
 number; href?: string }`, the "full preview" signal), `lr-copy` (`detail: { ok: true; text: string }`, from the
-embedded `lr-copy-button`), `lr-export` (`detail: { format: string }`, from the embedded
-`lr-export-button`), `lr-export-complete` (`detail: { format: string }`, after a non-cancelled export
+embedded `lr-copy-button`), cancelable `lr-export-request` (`detail: { format: string }`, surfaced by
+the embedded `lr-export-button`; call `preventDefault()` to handle the request without its built-in
+download), `lr-export-complete` (`detail: { format: 'csv' | 'json' }`, after a non-cancelled export
 finishes), `lr-error` (the embedded clipboard write failed), `lr-copy-error` (`detail: { ok: false;
 text: string; reason: string; error: unknown }`, the detailed clipboard failure),
 `lr-toolbar-actions-change` (no detail, surfaced unchanged when the embedded copy button's logical
@@ -2980,7 +2971,7 @@ active? }`. `label` and `variant` customize application-defined lifecycle displa
 **Events:** `lr-example-toggle` (`detail: EvalExampleToggleDetail` = `{ exampleId: string; expanded:
 boolean }`), `lr-example-citation-select` (`detail: EvalCitationSelectDetail` = `{ exampleId:
 string; citation: Citation }` — the nested `lr-grounding-summary`'s own `{ citation }` correlated
-with the example it came from, so a host needn't walk the DOM), `lr-example-tool-approval-decide-request` and `lr-example-tool-approval-decide`
+with the example it came from, so a host needn't walk the DOM), `lr-example-tool-approval-decide-request`
 (`detail: EvalToolApprovalDetail` = `ToolTimelineApprovalDetail & { exampleId: string }` =
 `{ invocationId: string; approved: boolean; args?: unknown; sourceKey?: string; exampleId: string
 }`). The approval
@@ -2990,9 +2981,7 @@ host resolves asynchronous validation. The component also contains and correlate
 child events as `lr-example-claim-select` (`{ exampleId, claim }`),
 `lr-example-tool-activate` (`{ exampleId, invocationId, sourceKey? }`), and
 `lr-example-tool-render-error` (`{ exampleId, invocationId, sourceKey?, toolName, error }`).
-`lr-example-tool-approval-decide` is the deprecated cancelable alias, dispatched after its request
-with the same correlated detail. Preventing either spelling propagates the nested approval veto;
-subscribe to one spelling.
+The cancelable `lr-example-tool-approval-decide-request` propagates its veto to the nested approval.
 
 
 **CSS parts:** `base`, `header`,
@@ -3097,7 +3086,7 @@ data or exhausting the page.
 non-approval entry activation and `lr-tool-render-error` (`detail: { invocationId: string;
 sourceKey?: string; toolName: string; error: unknown }`) for a contained nested renderer failure.
 The raw child chip-selection, renderer-error, details, and dialog events do not leak across the
-timeline boundary. `lr-tool-approval-decide-request` and `lr-tool-approval-decide` (`detail: ToolTimelineApprovalDetail` =
+timeline boundary. `lr-tool-approval-decide-request` (`detail: ToolTimelineApprovalDetail` =
 `ToolApprovalEventDetail & { args?: unknown; sourceKey?: string }` = `{ invocationId: string;
 approved: boolean; args?: unknown; sourceKey?: string }`, extending the shared detail from
 `@aceshooting/lyra-ui/ai`). `args` is present only when
@@ -3112,9 +3101,6 @@ A host may instead resolve the decision synchronously by reassigning `entries` (
 `finalizePendingApproval()`: the entry's live state is re-checked immediately after dispatch, so
 `pendingApproval` — and the shared dialog's pending presentation — is never set or left set for
 an entry that no longer needs a decision.
-`lr-tool-approval-decide` is the deprecated cancelable alias, dispatched after its request with
-the same detail. Either spelling can hold the pending decision; subscribe to one spelling. It is
-not a completed-decision notification.
 
 ```ts
 timeline.addEventListener("lr-tool-approval-decide-request", async (event) => {
@@ -3207,12 +3193,10 @@ heading while an explicit empty string renders no heading/name. Later duplicate 
 ids and empty/blank ids are omitted before count, selection, dialog lookup, or decision events are
 derived.
 
-**Events:** `lr-approval-select` (`{ invocationId }`), `lr-approval-decision-request` and `lr-approval-decision` (`{ invocationId,
+**Events:** `lr-approval-select` (`{ invocationId }`), `lr-approval-decision-request` (`{ invocationId,
 approved, args? }`), and `lr-approval-close` (`{ invocationId, reason }`).
 `lr-approval-decision-request` is cancelable; calling `preventDefault()` vetoes the nested approve/deny
 request and keeps the decision dialog pending.
-`lr-approval-decision` is the deprecated cancelable alias, dispatched after the request with the
-same detail. Preventing either event keeps the nested decision pending; subscribe to one spelling.
 The selection and close events are non-cancelable notifications.
 
 Resolved rows (`approved`/`denied`) are never actionable. Replacing `requests` reconciles stale
@@ -3316,7 +3300,7 @@ the shared assertive sink. Initial and reconnect renders stay silent.
 **Slots:** none. **Optional peer deps:** none.
 
 ```ts
-import "@aceshooting/lyra-ui/components/agent-tools/mcp-app/mcp-app.js";
+import "@aceshooting/lyra-ui/components/lr-mcp-app.js";
 ```
 
 ## `lr-prompt-studio`
@@ -3394,7 +3378,7 @@ not collapse to indistinguishable generic names.
 **Slots:** none. **Optional peer deps:** none.
 
 ```ts
-import "@aceshooting/lyra-ui/components/agent-tools/prompt-studio/prompt-studio.js";
+import "@aceshooting/lyra-ui/components/lr-prompt-studio.js";
 ```
 
 **Additional API surface:**
@@ -3511,7 +3495,7 @@ and clamped. **Slots:** none.
 **Optional peer deps:** none.
 
 ```ts
-import "@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-panel.js";
+import "@aceshooting/lyra-ui/components/lr-subagent-panel.js";
 ```
 
 **Additional API surface:**
@@ -4206,7 +4190,7 @@ The running glyph spins and the pending glyph pulses at `--lr-transition-ambient
 
 ```html
 <script type="module">
-  import '@aceshooting/lyra-ui/components/agent-tools/tool-call-block/tool-call-block.js';
+  import '@aceshooting/lyra-ui/components/lr-tool-call-block.js';
 </script>
 
 <lr-tool-call-block name="web_search" call-id="call-1" status="success" duration-ms="1450"></lr-tool-call-block>

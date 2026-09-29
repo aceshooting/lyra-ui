@@ -13,12 +13,12 @@
 // composed control's own registration entry for the filter `type`s actually declared:
 //
 //   import '@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar-register.js';
-//   import '@aceshooting/lyra-ui/components/forms/select/select.js';      // type: 'select'
-//   import '@aceshooting/lyra-ui/components/forms/combobox/combobox.js';  // type: 'combobox'
-//   import '@aceshooting/lyra-ui/components/overlays/overlay/dropdown.js';     // type: 'checkbox-menu'
-//   import '@aceshooting/lyra-ui/components/layout/menu/dropdown-item.js';     // type: 'checkbox-menu'
-//   import '@aceshooting/lyra-ui/components/forms/date-picker/date-input.js';  // type: 'date' | 'date-range'
-//   import '@aceshooting/lyra-ui/components/forms/input/input.js';             // type: 'text'
+//   import '@aceshooting/lyra-ui/components/lr-select.js';         // type: 'select'
+//   import '@aceshooting/lyra-ui/components/lr-combobox.js';      // type: 'combobox'
+//   import '@aceshooting/lyra-ui/components/lr-dropdown.js';      // type: 'checkbox-menu'
+//   import '@aceshooting/lyra-ui/components/lr-dropdown-item.js'; // type: 'checkbox-menu'
+//   import '@aceshooting/lyra-ui/components/lr-date-input.js';    // type: 'date' | 'date-range'
+//   import '@aceshooting/lyra-ui/components/lr-input.js';         // type: 'text'
 //
 // `type: 'chip'` needs no registration entry at all -- it renders no control, only its own
 // active-filter chip, which the unconditional `<lr-chip>`/`<lr-chip-group>` imports below already
@@ -29,14 +29,14 @@
 // `<lr-chip>`/`<lr-chip-group>` render the active-filter row whenever any filter has a value
 // (gated further by `activeFiltersDisplay`, but never provably absent for a generic bar):
 //
-//   import '@aceshooting/lyra-ui/components/forms/button/button.js';
-//   import '@aceshooting/lyra-ui/components/overlays/chip/chip.js';
-//   import '@aceshooting/lyra-ui/components/overlays/chip/chip-group.js';
+//   import '@aceshooting/lyra-ui/components/lr-button.js';
+//   import '@aceshooting/lyra-ui/components/lr-chip.js';
+//   import '@aceshooting/lyra-ui/components/lr-chip-group.js';
 //
 // `<lr-spinner>` (the `loading` status) is the one built-in dependency this entry omits even
 // though every filter bar could use it: `loading` is a plain boolean any consumer can leave unset
 // entirely, unlike a filter `type`, which the `filters` array always names outright. Import
-// `.../overlays/spinner/spinner.js` too if the bar ever sets `loading`.
+// `@aceshooting/lyra-ui/components/lr-spinner.js` too if the bar ever sets `loading`.
 //
 // A filter definition whose `type` has no matching import above renders no usable control until
 // something else registers it -- the same trade `icon-button-register.ts` documents for

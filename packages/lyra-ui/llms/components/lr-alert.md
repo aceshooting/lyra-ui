@@ -130,7 +130,7 @@ reuses the existing Lyra toast layer instead of creating a second placement syst
 </button>
 
 <script type="module">
-  import "@aceshooting/lyra-ui/components/overlays/alert/alert.js";
+  import "@aceshooting/lyra-ui/components/lr-alert.js";
 
   const alert = document.querySelector("#session-alert");
   alert.addEventListener("lr-after-hide", () => console.log("Alert is hidden"));

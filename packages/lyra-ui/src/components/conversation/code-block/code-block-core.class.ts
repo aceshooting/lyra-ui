@@ -34,8 +34,8 @@ export interface LyraCodeBlockCoreEventMap extends LyraCodeBlockBaseEventMap {}
  * capability leaf) with `languages`' already-resolved entries — never `loadShikiHighlighter()`, the
  * default ~200-language dynamic-import table loader `<lr-code-block>` calls. This component's own
  * module never textually contains a call to (or import of) `loadShikiHighlighter` at all, so a
- * consumer importing this entry point instead of `code-block.js` gets a
- * genuinely shiki-full-table-free build.
+ * consumer importing `@aceshooting/lyra-ui/components/lr-code-block-core.js` instead of
+ * `@aceshooting/lyra-ui/components/lr-code-block.js` gets a genuinely shiki-full-table-free build.
  *
  * A `languages` entry may also be a lazy loader (`() => import('@shikijs/langs/<name>')`) instead
  * of an already-resolved grammar — resolved and registered into the highlighter (via
@@ -268,7 +268,7 @@ export class LyraCodeBlockCore extends LyraCodeBlockBase {
    *  default) never highlights at all. Replacing the map starts a new loading generation; an
    *  older map that settles later cannot clear the current map's loading state or replace its
    *  highlighted output. For a TypeScript annotation, use `import type { ShikiLanguageSource } from
-   *  '@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js'`; this granular
+   *  '@aceshooting/lyra-ui/components/lr-code-block-core.js'`; this granular
    *  type-only import emits no registration side effect. */
   @property({ attribute: false }) languages: Readonly<Record<
     string,

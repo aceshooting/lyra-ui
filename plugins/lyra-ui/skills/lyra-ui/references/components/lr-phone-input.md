@@ -227,7 +227,7 @@ consumer-supplied lazy loader below. Because the import expression lives in cons
 numbering metadata enters a bundle that does not opt in.
 
 ```ts
-import "@aceshooting/lyra-ui/components/forms/phone-input/phone-input.js";
+import "@aceshooting/lyra-ui/components/lr-phone-input.js";
 import { loadLibphonenumberAdapter } from "@aceshooting/lyra-ui/components/forms/phone-input/phone-input.class.js";
 
 const phone = document.querySelector("lr-phone-input");
@@ -299,3 +299,5 @@ import "@aceshooting/lyra-ui/components/media/flag/flag-peer.js";
 - `--lr-phone-input-country-hover-bg` — Country trigger hover background. Default: `var(--lr-color-brand-quiet)`.
 
 ---
+
+<a id="time-range-controls"></a>

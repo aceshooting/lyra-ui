@@ -1,0 +1,769 @@
+{
+  "schemaVersion": 1,
+  "sourceRelease": "lyra-ui@22.0.0",
+  "sourceVersion": "22.0.0",
+  "git": {
+    "tagObject": "8998b273573fc95e82934e70630c86e78c09e672",
+    "commit": "cc29151f1c0a4deb2d0dbf03623115e7d56cef9e"
+  },
+  "captureDescriptorSha256": "02f79d81c3812f94fa63aa152d5dce42926e415b94795de112d9867a13c9a36a",
+  "package": {
+    "name": "@aceshooting/lyra-ui",
+    "version": "22.0.0",
+    "tarballSha256": "2a1daf2e1c2f6f371323e1400ea4d1657203c45572c29cc5a3f89831d6aceb67",
+    "registryIntegrity": "sha512-ps7eHKnj77bTGib5nzrSKX2eUe9ekdqjaue0/RJvQg8T64wRNlPcIAJGWoEzJYjzLFX84Pv2hBIPzuM3Mmbxog=="
+  },
+  "extractorVersion": 1,
+  "inputs": [
+    {
+      "origin": "packed",
+      "role": "packed-declaration",
+      "path": "package/dist/components/conversation/chat-message/chat-message.class.d.ts",
+      "sha256": "5039b286271431002537adab31e7270e665f6cd79b1c518376d90a86a53a16f5",
+      "bytes": 16127,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/conversation/chat-message/chat-message.class.js",
+      "sha256": "b3296144ce35691767ad56f8dffeb4bc361c9d21f72f2bacaa7387262889bdb4",
+      "bytes": 11167,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-declaration",
+      "path": "package/dist/components/conversation/chat-message/chat-message.d.ts",
+      "sha256": "cdd1f2e79ac6eb50c757f3e68ce4ef54d82d8098120926496439fe12905fe658",
+      "bytes": 192,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/conversation/chat-message/chat-message.js",
+      "sha256": "ec3da56b0f1710df51b2e9a8f7853f6579bd90e0d8e773a8fd994bf15cf5e7e1",
+      "bytes": 241,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-declaration",
+      "path": "package/dist/components/conversation/code-block/code-block-base.class.d.ts",
+      "sha256": "6361c13fdef2a2cdc0831acfd6e1979d02f6a0117e0189c3a8201620393fe872",
+      "bytes": 3415,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/conversation/code-block/code-block-base.class.js",
+      "sha256": "19f49dcf89f9949c763cc0a66312c0b11b03ce2dafd448298b64197e14f37212",
+      "bytes": 6685,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-declaration",
+      "path": "package/dist/components/conversation/code-block/code-block-core.class.d.ts",
+      "sha256": "005f91c06f1b42507d5c1b215adec4c2a71d272c86d23f25338195ea22bbb098",
+      "bytes": 15635,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/conversation/code-block/code-block-core.class.js",
+      "sha256": "83aee1e95512d4c4d8e33ba9f10cecd9193f0838fb31c3f8c784472ca47f0c5c",
+      "bytes": 6174,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-declaration",
+      "path": "package/dist/components/conversation/code-block/code-block-core.d.ts",
+      "sha256": "236a357e7ce981f6da610ddc5a0a5ec48da01eb100363b0e6804be9108d378c9",
+      "bytes": 475,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/conversation/code-block/code-block-core.js",
+      "sha256": "ae52e736d5fcf49a7373f53bd415f88e55897cc9b76297c4f384ade99f869b9c",
+      "bytes": 427,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-declaration",
+      "path": "package/dist/components/conversation/code-block/code-block-shared.d.ts",
+      "sha256": "e9d10866859527bd3481c4c71690b18cae9fa16f65c33d7556e61abb1f917782",
+      "bytes": 17963,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-declaration",
+      "path": "package/dist/components/conversation/code-block/code-block.class.d.ts",
+      "sha256": "a4b5e67535023df446a553a611985d8d6425db4d91197e50c7f0eb5675c1b283",
+      "bytes": 16219,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/conversation/code-block/code-block.class.js",
+      "sha256": "814c8d0e2c64bbcc1c48a9293ae037efed5daab351056857cfa7e92d21da91cf",
+      "bytes": 5469,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-declaration",
+      "path": "package/dist/components/conversation/code-block/code-block.d.ts",
+      "sha256": "6d26f7a8b9000e80786b8147248f5b502d8dda451bfec57f9930c2bf3e50bd5e",
+      "bytes": 293,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/conversation/code-block/code-block.js",
+      "sha256": "b6aaf6079c8328ba663335eb3137869ca27cbcfc98bc6de65483d35847236ca2",
+      "bytes": 282,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-declaration",
+      "path": "package/dist/components/conversation/thread-list/thread-list.class.d.ts",
+      "sha256": "c3d99f6f759597db4ad521ff86a565c94cfa48c511e8af2295a2c22023524bc2",
+      "bytes": 32806,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/conversation/thread-list/thread-list.class.js",
+      "sha256": "1fcb310ead42c548d3c8ad4800331ea6b45dd0d0c51e36de9ee150dd5f471595",
+      "bytes": 31357,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-declaration",
+      "path": "package/dist/components/conversation/thread-list/thread-list.d.ts",
+      "sha256": "8883d55acf6b644c3cdc35df6d69273376280d79ad89d35d43bd97e836eadf18",
+      "bytes": 328,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/conversation/thread-list/thread-list.js",
+      "sha256": "e57d830b99002a92998c2d0fbf0fd1e4834e3420f13fc0ec03ab56cdf5a189a6",
+      "bytes": 374,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-declaration",
+      "path": "package/dist/components/layout/app-rail-group/app-rail-group.class.d.ts",
+      "sha256": "0d83305ca4807a493823db77f5425bb236c5169fd6c2956b7e73a14f45146ac3",
+      "bytes": 10302,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/layout/app-rail-group/app-rail-group.class.js",
+      "sha256": "ce3d0dc9d5154c1f860d10ee5a38bcd6f5b3461c8b3724b77bbe7dbec6cd5e8b",
+      "bytes": 6121,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-declaration",
+      "path": "package/dist/components/layout/app-rail-group/app-rail-group.d.ts",
+      "sha256": "e22c05593d7cdc1ed0cb6b04e6d67639737750a555dd79c80b22845e567a383c",
+      "bytes": 147,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/layout/app-rail-group/app-rail-group.js",
+      "sha256": "cabafb41f6b62d4e2eebdf911dad45aa6f847d536d9ffac24a47b867d490f0ae",
+      "bytes": 200,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-declaration",
+      "path": "package/dist/components/layout/app-rail/app-rail-item.class.d.ts",
+      "sha256": "68d33b75785a21ccd3af68fa8e1602ba5dfa38d07d764631af9dc1ace1956720",
+      "bytes": 17992,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/layout/app-rail/app-rail-item.class.js",
+      "sha256": "91484e57eb43d0f2a7be65b33074d175ebd2b3d665801614d20193bdcce86bbc",
+      "bytes": 11295,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-declaration",
+      "path": "package/dist/components/layout/app-rail/app-rail-item.d.ts",
+      "sha256": "b4dc992eddd9528d5f2caf822da42bc809f82a486e1b255ddfadc612ebeabd5c",
+      "bytes": 145,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/layout/app-rail/app-rail-item.js",
+      "sha256": "147a75d6cbe3c71d3d3fd00e7d7029d917e7bdfba4b143921f310705607cd517",
+      "bytes": 195,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-declaration",
+      "path": "package/dist/components/layout/app-rail/app-rail.class.d.ts",
+      "sha256": "e009965b88ddc9c82ca32722a2ede3ea3e3e14ee09245628b6095bea5667f6f5",
+      "bytes": 48950,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/layout/app-rail/app-rail.class.js",
+      "sha256": "25c723ee7e59de057d9cdec6edf4ff9adeda314f37f830348dd9af83ad4399fc",
+      "bytes": 29799,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-declaration",
+      "path": "package/dist/components/layout/app-rail/app-rail.d.ts",
+      "sha256": "324fccddf3303d25afc7055d8f3210c4efd5c15b9e253f1a958e9dd63a717027",
+      "bytes": 162,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/layout/app-rail/app-rail.js",
+      "sha256": "8fec5d46da93cde07cecd241a5739d0960ccd7e08c81de9141ff98f4adc6d05d",
+      "bytes": 199,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-declaration",
+      "path": "package/dist/components/layout/details/details.class.d.ts",
+      "sha256": "00c9398ef1c7443185836d81ef6b6737f87e036095d548958daaa48ca6fb19d1",
+      "bytes": 12653,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/layout/details/details.class.js",
+      "sha256": "5b0f70f186b8e0aed2de943f1036be77a234549e2317fb1105407c48a782490f",
+      "bytes": 10371,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-declaration",
+      "path": "package/dist/components/layout/details/details.d.ts",
+      "sha256": "6292ddd5df875f35aa6d1d76f0061f287dcbc1a296c6d53ec0bd36a5428b39c6",
+      "bytes": 133,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/layout/details/details.js",
+      "sha256": "26ed1f28968fb36148a85b211e690f1cf512e31539b9d3d386e05d804620be9a",
+      "bytes": 169,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-declaration",
+      "path": "package/dist/components/layout/dock-panel/dock-panel.class.d.ts",
+      "sha256": "c7b92f7e2f148544a75eaa4c193ff17af683ffa1fc7e156a6d317e9a4025613b",
+      "bytes": 12890,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/layout/dock-panel/dock-panel.class.js",
+      "sha256": "316da9fbadd30cdd542456565146d364591255235d985b0f6aebcc3876184ad6",
+      "bytes": 11902,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-declaration",
+      "path": "package/dist/components/layout/dock-panel/dock-panel.d.ts",
+      "sha256": "179a9956cfe33435354b81416e47b6e6a27ee04681a634945756b495ecd6f902",
+      "bytes": 139,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/layout/dock-panel/dock-panel.js",
+      "sha256": "0184c83c994dd65bed391b09ae1ce4fa0efd6aa9b45b69ebd7d96cef46d32b17",
+      "bytes": 182,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-declaration",
+      "path": "package/dist/components/layout/multi-split/multi-split.class.d.ts",
+      "sha256": "1dc0caf92e5a72d298293d047a1f968127a19fec20fe76785b52889c18b0442f",
+      "bytes": 47884,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/layout/multi-split/multi-split.class.js",
+      "sha256": "e51a1de3b226f30338dc81b98309c9a5490c40a1624f6428904a032ff1ec92dc",
+      "bytes": 45150,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-declaration",
+      "path": "package/dist/components/layout/multi-split/multi-split.d.ts",
+      "sha256": "d88980ff295d12d1d58078b5c0e4c3dad813f5f204456dcc7cebbd31aeb6074c",
+      "bytes": 141,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/layout/multi-split/multi-split.js",
+      "sha256": "318e11a2b61fe76def72974022defb611866e73152b98dd8e3be51509e9934fc",
+      "bytes": 187,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-declaration",
+      "path": "package/dist/components/layout/navigation-menu-item/navigation-menu-item.class.d.ts",
+      "sha256": "fb11214fbb237c4e2c3e266b24a4c157981ee7010a920c1944253fede6df82a4",
+      "bytes": 10747,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/layout/navigation-menu-item/navigation-menu-item.class.js",
+      "sha256": "11f85a0c16654cf17ee1f900859a0fb59f530164d627b7a3e7dfd64130cbcb4c",
+      "bytes": 16179,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-declaration",
+      "path": "package/dist/components/layout/navigation-menu-item/navigation-menu-item.d.ts",
+      "sha256": "728c8e4ecf9422fe5f4740610cdfc9ef3f636835e4be322dd2f9e2fcedb7a64b",
+      "bytes": 159,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/layout/navigation-menu-item/navigation-menu-item.js",
+      "sha256": "c6ae5a560c79c58beda4c26fbef33eaa6e955d78f7f04181a2950bb30a7d4e0f",
+      "bytes": 230,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/lr-app-rail-group.js",
+      "sha256": "7cb6ebb972080cc533aa77d38d0d27087dce8a4e86586045191d8fc07ee8bb7b",
+      "bytes": 56,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/lr-app-rail-item.js",
+      "sha256": "75ee51b4744d5982fcea008272482a6afc579ee3144f6b8fb80e00297d92780d",
+      "bytes": 49,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/lr-app-rail.js",
+      "sha256": "518ee75db1c53a3c2ec100688ee1dc690064d07e2b9b8bcba56dbeaffea79611",
+      "bytes": 44,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/lr-chat-message.js",
+      "sha256": "250ec29bd071305f3e7af668db0bff4b7bff581e8d77cbe5d2178300328338de",
+      "bytes": 58,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/lr-code-block-core.js",
+      "sha256": "8159fa0fbca78246191d16d7aa73f4b57bd5fb96b3688e2c209e92fb8dfaa9c1",
+      "bytes": 59,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/lr-code-block.js",
+      "sha256": "556e0db9d3fcd356db8ef578fb0f2c68e5a52024d3d43992392bd1404cad9714",
+      "bytes": 54,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/lr-details.js",
+      "sha256": "f13455a9d3eb0032b633d47da32d6edb56228561f346d681283458d94876ca1a",
+      "bytes": 42,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/lr-dock-panel.js",
+      "sha256": "62633fdd93f5d15af4da1e104437cefc32249439d6de48e49b8259fee1be7b1a",
+      "bytes": 48,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/lr-multi-split.js",
+      "sha256": "0f8987dc20713b889b4d26ba809e10aab2489e54ae80672125a467d030b937b6",
+      "bytes": 50,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/lr-navigation-menu-item.js",
+      "sha256": "c07dd74364b6fa612f33cef96dd81417fdf273991c382e9e1f30e546187aa361",
+      "bytes": 68,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "packed-runtime",
+      "path": "package/dist/components/lr-thread-list.js",
+      "sha256": "7d0d1b1c59c4a574c2df19ecc300e8bb11fefcb4f9622b9e8aac5c8193a5e9f1",
+      "bytes": 56,
+      "gitBlob": null
+    },
+    {
+      "origin": "source",
+      "role": "source-declaration",
+      "path": "packages/lyra-ui/src/components/conversation/chat-message/chat-message.class.ts",
+      "sha256": "4b3b0e3d3ac2f31082650b9ace7e3997c1eade0bc485347f83493afcde615373",
+      "bytes": 32893,
+      "gitBlob": "46d2d900bc7aa86dc3c26ae481e2daa0bcad7acd"
+    },
+    {
+      "origin": "source",
+      "role": "source-runtime",
+      "path": "packages/lyra-ui/src/components/conversation/chat-message/chat-message.ts",
+      "sha256": "94712e78dcb08986b32efe14368e9d682a7d11e9971e55c032ae738c50a7c121",
+      "bytes": 365,
+      "gitBlob": "26fe453d5a460de07db41208756fa2f225479554"
+    },
+    {
+      "origin": "source",
+      "role": "source-runtime",
+      "path": "packages/lyra-ui/src/components/conversation/code-block/code-block-base.class.ts",
+      "sha256": "4e5c23878ecc77feb4893f960b65bd9210430d18c98cc3edcee0861005747366",
+      "bytes": 10501,
+      "gitBlob": "21d65bb018f098c42048083f76d1b80c55b8d713"
+    },
+    {
+      "origin": "source",
+      "role": "source-runtime",
+      "path": "packages/lyra-ui/src/components/conversation/code-block/code-block-core.class.ts",
+      "sha256": "fe2e0e2cacc1c8f1011f4ecb4254f4a65d321e3cb2623a4ceb40abfeb3a756af",
+      "bytes": 25041,
+      "gitBlob": "6ff7ab6850cca0263b41e8a47c9c3ef26504acd3"
+    },
+    {
+      "origin": "source",
+      "role": "source-runtime",
+      "path": "packages/lyra-ui/src/components/conversation/code-block/code-block-core.ts",
+      "sha256": "ee176d878c47acbe212b96a38620a332d85ac221d0423cc42b85eb931e186308",
+      "bytes": 1511,
+      "gitBlob": "931269f289db949563f5631c31e0ce2d3798fb6a"
+    },
+    {
+      "origin": "source",
+      "role": "source-declaration",
+      "path": "packages/lyra-ui/src/components/conversation/code-block/code-block-shared.ts",
+      "sha256": "41a677d2d17175ca248edf471ebc1f53e1617f6d3fd231fff33e6f213c4f5aa6",
+      "bytes": 47139,
+      "gitBlob": "adf35561d1153c2cb03f95560bb2e8afa28283c1"
+    },
+    {
+      "origin": "source",
+      "role": "source-runtime",
+      "path": "packages/lyra-ui/src/components/conversation/code-block/code-block.class.ts",
+      "sha256": "f2b31346166af22df1ee5882fef7e895b81d966b80f557d7381fe4e36fc922ed",
+      "bytes": 24267,
+      "gitBlob": "f8ed2c72aca3697ce70ca34a24b7e7ab5da25542"
+    },
+    {
+      "origin": "source",
+      "role": "source-runtime",
+      "path": "packages/lyra-ui/src/components/conversation/code-block/code-block.ts",
+      "sha256": "e276713fcbffa2d2033a5d25fd7e3c19f4cf3564cce5f5ae6ac78385b46cce09",
+      "bytes": 1287,
+      "gitBlob": "59bf1ab7851bac70b010325add6dc71cf2653c2f"
+    },
+    {
+      "origin": "source",
+      "role": "source-declaration",
+      "path": "packages/lyra-ui/src/components/conversation/thread-list/thread-list.class.ts",
+      "sha256": "8c7020e836ccbbfcbcf99dc6227b863a2c2f808c4f0964a95a5706f44bc2029c",
+      "bytes": 80520,
+      "gitBlob": "ace838aced76d357d12980d7dcda5ef6313a5bbd"
+    },
+    {
+      "origin": "source",
+      "role": "source-runtime",
+      "path": "packages/lyra-ui/src/components/conversation/thread-list/thread-list.ts",
+      "sha256": "b42a39e9c31017b91a3dd35c44746d399c676c100e16865964f46c5781d7d056",
+      "bytes": 596,
+      "gitBlob": "7f6e4daa7b0a19f59e4ee1dca02684b47438ca5a"
+    },
+    {
+      "origin": "source",
+      "role": "source-declaration",
+      "path": "packages/lyra-ui/src/components/layout/app-rail-group/app-rail-group.class.ts",
+      "sha256": "673a57ac12c53401ff991f6b55a42c3f5268cb9a249e7953dbf46d1de677e79e",
+      "bytes": 18502,
+      "gitBlob": "3b55be7c80a37c44aea25de4c1e9ea438d748cb2"
+    },
+    {
+      "origin": "source",
+      "role": "source-runtime",
+      "path": "packages/lyra-ui/src/components/layout/app-rail-group/app-rail-group.ts",
+      "sha256": "0e315a7feef607b8593cf005c3e67e98828ff877722f66dcfa751c93b5ed8d36",
+      "bytes": 325,
+      "gitBlob": "8ef5952c7e38afb5ae8ce1a5d6f4b1be2851ca9a"
+    },
+    {
+      "origin": "source",
+      "role": "source-declaration",
+      "path": "packages/lyra-ui/src/components/layout/app-rail/app-rail-item.class.ts",
+      "sha256": "cd76ed7288d30f657842e83acd3551f4716c48ea28d5a59cf771b79ee4a0b5e9",
+      "bytes": 34752,
+      "gitBlob": "a7cf39a221fbcf36225871bff862d255623fa602"
+    },
+    {
+      "origin": "source",
+      "role": "source-runtime",
+      "path": "packages/lyra-ui/src/components/layout/app-rail/app-rail-item.ts",
+      "sha256": "27fadc0aa5c13774c331ce2e7078eddf74f287ecfc87725d58fd8b95cda256a9",
+      "bytes": 318,
+      "gitBlob": "f96b7d904ecc31bcd2f1ea09071ed3c808612213"
+    },
+    {
+      "origin": "source",
+      "role": "source-declaration",
+      "path": "packages/lyra-ui/src/components/layout/app-rail/app-rail.class.ts",
+      "sha256": "db588c23afaffd17059e3c3032458977edbdb3f66293d823bacaea81af74e2c8",
+      "bytes": 103976,
+      "gitBlob": "cd86a9db20767a54aea470c11a74abf535ebf6a6"
+    },
+    {
+      "origin": "source",
+      "role": "source-runtime",
+      "path": "packages/lyra-ui/src/components/layout/app-rail/app-rail.ts",
+      "sha256": "aa9f610132785e9ab44dcc3404a1a9e60dc288ad678b7e7a9258bbe2d19a026f",
+      "bytes": 319,
+      "gitBlob": "298ce88b46888fa8f17054fe980cc351e02d6844"
+    },
+    {
+      "origin": "source",
+      "role": "source-declaration",
+      "path": "packages/lyra-ui/src/components/layout/details/details.class.ts",
+      "sha256": "313c2eaece8ee5f1f4d418acaeeea522fcf3b97c5a9720f2710c08796bf88df0",
+      "bytes": 30182,
+      "gitBlob": "2fe3ac4b7e0ef9ea8ec6f9beed63250fe18ec298"
+    },
+    {
+      "origin": "source",
+      "role": "source-runtime",
+      "path": "packages/lyra-ui/src/components/layout/details/details.ts",
+      "sha256": "8e463b08250d2ea9d226d50b604e8fae75be1cb30e41ff021e02f69a679a665a",
+      "bytes": 286,
+      "gitBlob": "3dc2cf66caf340ffe20d511c397005932a6b6bc1"
+    },
+    {
+      "origin": "source",
+      "role": "source-declaration",
+      "path": "packages/lyra-ui/src/components/layout/dock-panel/dock-panel.class.ts",
+      "sha256": "5fd0fbb6d287d683390e6269c18517622cdb438626d2f1a4609fd66de5741234",
+      "bytes": 30923,
+      "gitBlob": "adc8363e0f50052fa3dd7321cedd89802b60ba2c"
+    },
+    {
+      "origin": "source",
+      "role": "source-runtime",
+      "path": "packages/lyra-ui/src/components/layout/dock-panel/dock-panel.ts",
+      "sha256": "da9e2d14dea533c9bac21fcc609888f26aebfb6e7ea6ae52de84f61355cb1c48",
+      "bytes": 302,
+      "gitBlob": "a5073ddc3299ce4421fac4404daef971cdcd5adf"
+    },
+    {
+      "origin": "source",
+      "role": "source-declaration",
+      "path": "packages/lyra-ui/src/components/layout/multi-split/multi-split.class.ts",
+      "sha256": "aa46ac063961e74027a69bb4902c162a4dd5f27d66e4d73224564ad12777d8d3",
+      "bytes": 133241,
+      "gitBlob": "0cd66fd97d22ecc4440bbe79d2cc39c269578913"
+    },
+    {
+      "origin": "source",
+      "role": "source-runtime",
+      "path": "packages/lyra-ui/src/components/layout/multi-split/multi-split.ts",
+      "sha256": "4cd0f59444ffd747a110abc2c2f9ee951ec23514badb012713009f2ec48f210a",
+      "bytes": 308,
+      "gitBlob": "583adb2f044d6cdd6d5b8d9f29a7795dcb2265fc"
+    },
+    {
+      "origin": "source",
+      "role": "source-declaration",
+      "path": "packages/lyra-ui/src/components/layout/navigation-menu-item/navigation-menu-item.class.ts",
+      "sha256": "356b58de7ddd264ed38c72e0f08d8595c343c73d2b32d9694b8bbb28f556bc46",
+      "bytes": 32961,
+      "gitBlob": "65d4ca87ffc89dbca373c8745e620107acb3c073"
+    },
+    {
+      "origin": "source",
+      "role": "source-runtime",
+      "path": "packages/lyra-ui/src/components/layout/navigation-menu-item/navigation-menu-item.ts",
+      "sha256": "cf3b2c9fa48e65e53525ad4a59a2103665f1a7096e7c5f5f116066ee2f77b773",
+      "bytes": 361,
+      "gitBlob": "0043ff060a023c30cea377e3dda8c7ec14cbd25a"
+    },
+    {
+      "origin": "source",
+      "role": "source-runtime",
+      "path": "packages/lyra-ui/src/components/lr-app-rail-group.ts",
+      "sha256": "c9034535972b4f5b4eae1a2acc4dd1487b008a457f11ed9be4f51e3cad138458",
+      "bytes": 181,
+      "gitBlob": "b51eda88a6481eb80dc17e9e697412be64732e81"
+    },
+    {
+      "origin": "source",
+      "role": "source-runtime",
+      "path": "packages/lyra-ui/src/components/lr-app-rail-item.ts",
+      "sha256": "81a5840a42988782402d29aef1ae908203c83fba5aa1b6fb40dac32c095bb359",
+      "bytes": 174,
+      "gitBlob": "47c1c679622d0c4a4be3063c5b44bcd29b47b06a"
+    },
+    {
+      "origin": "source",
+      "role": "source-runtime",
+      "path": "packages/lyra-ui/src/components/lr-app-rail.ts",
+      "sha256": "300772a61b1129abca234913fa8d57d7f17291353df4c0beb195db1704030622",
+      "bytes": 169,
+      "gitBlob": "b92bccbeb33e7a74c2b66107656f711a9ac26505"
+    },
+    {
+      "origin": "source",
+      "role": "source-runtime",
+      "path": "packages/lyra-ui/src/components/lr-chat-message.ts",
+      "sha256": "2937b1d6385babab6e45b2f4936f3e17ed040be847c4caee9ab97a63a5a39064",
+      "bytes": 183,
+      "gitBlob": "7be9251a0cb2df9a17bcdaeddf341008bc5829ca"
+    },
+    {
+      "origin": "source",
+      "role": "source-runtime",
+      "path": "packages/lyra-ui/src/components/lr-code-block-core.ts",
+      "sha256": "b3a25b219d8923cabfa43866eda255975a7a2ae35379f4e09ad836202fd7fc04",
+      "bytes": 184,
+      "gitBlob": "a6a5334c189d1322e0a2e048303dccd6a2c48fcc"
+    },
+    {
+      "origin": "source",
+      "role": "source-runtime",
+      "path": "packages/lyra-ui/src/components/lr-code-block.ts",
+      "sha256": "94ac24d69b6413f90f3c40beb09f150863a482a51910047095d12a31655f2da7",
+      "bytes": 179,
+      "gitBlob": "858ae0fdf5c95223e86aeae9f3f1a31368d0cf28"
+    },
+    {
+      "origin": "source",
+      "role": "source-runtime",
+      "path": "packages/lyra-ui/src/components/lr-details.ts",
+      "sha256": "cc3395eb9ced80d2f6c96da410b69fdc71dd98f68857163b95f49ce0a39f1860",
+      "bytes": 167,
+      "gitBlob": "35e5b3d892e055b5992099621a361b1400ba26bb"
+    },
+    {
+      "origin": "source",
+      "role": "source-runtime",
+      "path": "packages/lyra-ui/src/components/lr-dock-panel.ts",
+      "sha256": "19625a7ffd9282124da1dcc3fae098a60b1097ffd4d46438ecdfb5f78312b6f4",
+      "bytes": 173,
+      "gitBlob": "abcf99ffbbc934abf7ee1d7252ebce0f754ba215"
+    },
+    {
+      "origin": "source",
+      "role": "source-runtime",
+      "path": "packages/lyra-ui/src/components/lr-multi-split.ts",
+      "sha256": "4d69d97b092ebf9dac04def4b778e066a3b8d277821c5316a5c82ab55778e4e1",
+      "bytes": 175,
+      "gitBlob": "76d785a1eb8de6cdc8ee6a0beb37de3abf0786aa"
+    },
+    {
+      "origin": "source",
+      "role": "source-runtime",
+      "path": "packages/lyra-ui/src/components/lr-navigation-menu-item.ts",
+      "sha256": "eefa22f0b94ead7cd8b2c55ac49a8ab3f9417e9a7542c48174e3a57691bc240f",
+      "bytes": 193,
+      "gitBlob": "2564dee4f78b8f922780d4701a83e78d1879512b"
+    },
+    {
+      "origin": "source",
+      "role": "source-runtime",
+      "path": "packages/lyra-ui/src/components/lr-thread-list.ts",
+      "sha256": "347fc651234916b7a14e7b8225219678baeeaf9ec4d6694dab83d63fff23f2b1",
+      "bytes": 181,
+      "gitBlob": "7100ff52516530f601e36e63af221c6e683dcd99"
+    }
+  ],
+  "tarball": {
+    "memberCount": 4072,
+    "membersSha256": "9da5569585a405e8637013d6a62b5439f6cd14a36b177c2bb6951366fa4f181f"
+  },
+  "evidenceArchiveSha256": "ebe155f46812476f2cc392685b812564dbce316d51f19029dec91445a0561f3d",
+  "factsSha256": "b11e3ffd63acf620f7bfc1e2e2e9478caaa5655c74eeb320dab1f05ae347a4d1"
+}

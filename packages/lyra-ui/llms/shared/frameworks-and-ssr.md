@@ -32,12 +32,16 @@ and adapters emit empty JavaScript and do not register elements.
 
 ## SSR and declarative shadow DOM
 
+When replacing the removed combined `ssr-loader.js` route, split browser hydration from component
+registration and server rendering as shown below. The [v23-to-v24 migration guide](v23-to-v24-migration.md)
+has the ordered upgrade steps and environment-specific import mapping.
+
 Root, `all.js`, and granular component imports are server-safe under the supported Node 22+ runtime.
 `@aceshooting/lyra-ui/ssr/all.js` is the **server-only** convenience entry: unlike the browser
 `all.js`, it registers the complete inventory including the optional-peer families — defining those
 tags never imports their peers (each component loads its own lazily, client-side), and the
 browser-bundle argument for excluding them does not apply to a server render. Use the public
-`@aceshooting/lyra-ui/ssr-loader.js` entry for the tested Lit SSR contract. Its exported
+`@aceshooting/lyra-ui/ssr.js` entry for the tested Lit SSR contract. Its exported
 `LYRA_SSR_SUPPORT_MATRIX`, `LYRA_SSR_RENDER_AND_HYDRATE_TAGS`, and
 `LYRA_SSR_CLIENT_RENDER_TAGS` classify every inventory tag exactly once:
 
@@ -50,7 +54,7 @@ browser-bundle argument for excluding them does not apply to a server render. Us
 Server setup (the fallback must precede Lit's renderer):
 
 ```ts
-import { lyraSsrElementRenderers } from "@aceshooting/lyra-ui/ssr-loader.js";
+import { lyraSsrElementRenderers } from "@aceshooting/lyra-ui/ssr.js";
 import { render, LitElementRenderer } from "@lit-labs/ssr";
 import { html } from "lit";
 
@@ -59,7 +63,7 @@ const result = render(html`<lr-page><main>Dashboard</main></lr-page>`, {
 });
 ```
 
-In the browser, import `@aceshooting/lyra-ui/ssr-loader.js` before any other module that can import
+In the browser, import `@aceshooting/lyra-ui/hydration.js` before any other module that can import
 Lit. This installs `@lit-labs/ssr-client/lit-element-hydrate-support.js` before component
 registration. `getLyraSsrMode(tagName)` reads one tag's tier, and
 `diagnoseLyraHydration(document)` inspects current Lyra hosts in the supplied tree and every

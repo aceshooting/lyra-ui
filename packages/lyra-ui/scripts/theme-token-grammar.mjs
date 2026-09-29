@@ -3,9 +3,8 @@
 // src/theme/theme.ts copies literally into its runtime and its self-contained bootstrap
 // (scripts/theme-token-grammar.test.mjs keeps all three identical).
 //
-// The preset generator (scripts/generate-theme-presets.mjs) validates every declaration of a
-// src/themes/*.css look through this module, so a committed runtime preset can never carry a value
-// that the runtime or defineLyraThemePreset() would reject.
+// The style-axis generator validates every authored look input through this module, so a committed
+// look definition cannot carry a value that the runtime would reject.
 
 import { readFileSync } from 'node:fs';
 
@@ -65,7 +64,7 @@ export function unsafeValueReason(value) {
   return null;
 }
 
-/** True for a value the runtime, the bootstrap and defineLyraThemePreset() all accept. */
+/** True for a value the runtime and the bootstrap accept. */
 export function isSafeLyraThemeTokenValue(value) {
   return unsafeValueReason(value) === null;
 }

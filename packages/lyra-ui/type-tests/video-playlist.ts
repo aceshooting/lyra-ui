@@ -1,8 +1,9 @@
+import { LyraVideoPlaylist } from '../src/components/media/video-playlist/video-playlist.class.js';
 import {
-  LyraVideoPlaylist,
   type LyraVideoPlaylistItem,
-} from '../src/components/media/video-playlist/video-playlist.class.js';
-import type { LyraVideoPlaylistItem as RootVideoPlaylistItem } from '../src/lyra.js';
+  } from '../src/components/media/video-playlist/video-playlist.class.js';
+import type { LyraVideoPlaylistItem as RootVideoPlaylistItem,
+} from '../src/lyra.js';
 
 const playlist = document.querySelector('lr-video-playlist');
 const typedPlaylist: LyraVideoPlaylist | null = playlist;

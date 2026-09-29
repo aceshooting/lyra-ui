@@ -89,7 +89,7 @@ not collapse to indistinguishable generic names.
 **Slots:** none. **Optional peer deps:** none.
 
 ```ts
-import "@aceshooting/lyra-ui/components/agent-tools/prompt-studio/prompt-studio.js";
+import "@aceshooting/lyra-ui/components/lr-prompt-studio.js";
 ```
 
 **Additional API surface:**

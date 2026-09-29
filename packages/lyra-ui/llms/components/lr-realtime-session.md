@@ -62,5 +62,5 @@ silent, and sinks follow the component's `ownerDocument` when it is adopted.
 remain host-owned.
 
 ```ts
-import "@aceshooting/lyra-ui/components/conversation/realtime-session/realtime-session.js";
+import "@aceshooting/lyra-ui/components/lr-realtime-session.js";
 ```

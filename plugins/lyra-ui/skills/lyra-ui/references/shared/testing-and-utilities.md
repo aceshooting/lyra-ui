@@ -208,10 +208,8 @@ they carry no `tag`: `components/media/flag/flag-peer.js`,
 stand in for. They are a separate array rather than tag-less rows mixed into `entries`, so a reader
 that keys `entries` by `tag` keeps working; `integrations`, `distModule` and `localeKeys` are all
 additive, which is why the schema version is unchanged. `registrationModule` is the `src/` path used
-internally; `distModule` is that same module's own published deep specifier (e.g.
-`./components/data/table/table.js`) so a caller holding either a per-tag alias or a deep import can
-resolve the other without reading `src/` or walking `dist/` — for an integration bridge,
-`distModule` equals `entry`, since there is no separate alias. `registers` is every `lr-*` tag
+internally; `distModule` is a retained published specifier and equals the stable `entry` for v24
+per-tag registrations and integration bridges. `registers` is every `lr-*` tag
 importing `entry` defines, direct or transitive, derived from the same transitive-import analysis
 `scripts/check-component-dependencies.mjs` already performs against the real registration graph
 (not a second hand-maintained list). `localeKeys` is every `LyraMessageKey` the registered tags can
@@ -254,8 +252,8 @@ same way `all.js` registers its root-included tags (the package root itself regi
 and want a single import; reach for the granular
 `@aceshooting/lyra-ui/components/<tag>.js` path when you do not, because a barrel cannot be
 tree-shaken down to the two elements you actually render. The tag-shaped path remains stable if a
-component moves between Lyra's internal family folders; existing family-shaped registration paths
-remain supported.
+component moves between Lyra's internal family folders. Duplicate nested registration paths were
+removed in v24; family barrels remain supported.
 
 ```js
 import "@aceshooting/lyra-ui/components/forms"; // every form control

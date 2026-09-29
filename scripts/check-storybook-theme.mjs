@@ -10,6 +10,11 @@ const main = readFileSync(join(root, '.storybook/main.js'), 'utf8');
 const landing = readFileSync(join(root, '.storybook/landing.css'), 'utf8');
 const introduction = readFileSync(join(root, '.storybook/Introduction.mdx'), 'utf8');
 const accessibilityDocs = readFileSync(join(root, 'docs/accessibility.md'), 'utf8');
+const themingGuide = readFileSync(join(root, '.storybook/Theming.mdx'), 'utf8');
+const gettingStartedGuide = readFileSync(join(root, '.storybook/GettingStarted.mdx'), 'utf8');
+const migratingGuide = readFileSync(join(root, '.storybook/Migrating.mdx'), 'utf8');
+const localizationGuide = readFileSync(join(root, '.storybook/LocalizationAndRtl.mdx'), 'utf8');
+const shadcnStories = readFileSync(join(root, '.storybook/ShadcnLook.stories.js'), 'utf8');
 const storyThemeSource = readFileSync(join(root, '.storybook/story-theme.js'), 'utf8');
 const docsContainerSource = readFileSync(join(root, '.storybook/docs-container.js'), 'utf8');
 
@@ -36,9 +41,13 @@ for (const required of [
   `{ value: 'dark', title: 'Dark' }`,
   `import '../packages/lyra-ui/src/theme.css';`,
   `import '../packages/lyra-ui/src/all.js';`,
-  `import { setLyraTheme } from '../packages/lyra-ui/src/theme/theme.js';`,
+  `import { setLyraStyle } from '../packages/lyra-ui/src/theme/theme.js';`,
   `import { normalizeStoryThemeName } from './theme-contract.js';`,
-  'setLyraTheme({ mode: theme, accent: null });',
+  "surface: 'solid',",
+  "density: 'comfortable',",
+  'mode: theme,',
+  'accent: null,',
+  'setLyraStyle({',
   'bootstrapLyraPresentationFromUrl();',
   'decorators: [withLyraTheme]',
   'container: LyraDocsContainer',
@@ -51,9 +60,108 @@ for (const required of [
 if (preview.includes('backgrounds:')) {
   throw new Error('Storybook must use the semantic theme toolbar instead of a canvas-only background switch');
 }
-for (const unsupported of ['high-contrast', 'density: {', 'lyraDensity', '--lr-docs-density-gap']) {
+for (const unsupported of [
+  'high-contrast',
+  'density: {',
+  'lyraDensity',
+  '--lr-docs-density-gap',
+  `setLyraTheme`,
+  `themes/shadcn.css`,
+]) {
   if (preview.includes(unsupported)) {
     throw new Error(`Storybook preview advertises unsupported presentation state: ${unsupported}`);
+  }
+}
+if (landing.includes('data-lr-theme')) {
+  throw new Error('Storybook landing styles must follow the canonical data-lr-mode marker');
+}
+for (const required of [
+  `@aceshooting/lyra-ui/components/lr-page.js`,
+  `@aceshooting/lyra-ui/ssr.js`,
+  `@aceshooting/lyra-ui/hydration.js`,
+  `@aceshooting/lyra-ui/ssr/all.js`,
+  `@aceshooting/lyra-ui/looks/<name>.css`,
+  `@aceshooting/lyra-ui/accents.css`,
+]) {
+  if (!gettingStartedGuide.includes(required)) {
+    throw new Error(`Getting Started guide is missing current package guidance ${required}`);
+  }
+}
+for (const [name, source] of [
+  ['Getting Started', gettingStartedGuide],
+  ['Migrating', migratingGuide],
+  ['Localization and RTL', localizationGuide],
+]) {
+  for (const unsupported of [
+    'setLyraTheme',
+    'theme/presets',
+    'themes/shadcn.css',
+    'ssr-loader.js',
+    'components/<family>/<dir>/<file>.js',
+    'components/forms/locale-picker/locale-picker.js',
+  ]) {
+    if (source.includes(unsupported)) {
+      throw new Error(`${name} guide documents retired package route ${unsupported}`);
+    }
+  }
+}
+for (const required of [
+  `import { setLyraStyle } from '../packages/lyra-ui/src/theme/theme.js';`,
+  'data-lr-look=${look}',
+  'data-lr-mode=${mode}',
+  "sideBySide('shadcn/ui', 'shadcn')",
+  "sideBySide('Lyra', 'lyra')",
+  "globals: { look: 'shadcn' }",
+]) {
+  if (!shadcnStories.includes(required)) {
+    throw new Error(`Shadcn stories are missing scoped style behavior ${required}`);
+  }
+}
+for (const unsupported of [
+  'setLyraTheme',
+  'themes/shadcn.css',
+  'data-lr-theme=',
+]) {
+  if (shadcnStories.includes(unsupported)) {
+    throw new Error(`Shadcn stories use retired styling API ${unsupported}`);
+  }
+}
+if (docsContainerSource.includes('setLyraTheme') || docsContainerSource.includes('dataset.lrTheme')) {
+  throw new Error('Storybook docs container must use the canonical style API and data-lr-mode marker');
+}
+if (
+  !docsContainerSource.includes("import { setLyraStyle } from '../packages/lyra-ui/src/theme/theme.js';") ||
+  !docsContainerSource.includes('dataset.lrMode') ||
+  !docsContainerSource.includes('setLyraStyle({ mode: themeName, accent: null })')
+) {
+  throw new Error('Storybook docs container must synchronize the docs theme through canonical style state');
+}
+for (const required of [
+  `import { getLyraStyle, resetLyraStyle, setLyraStyle } from '@aceshooting/lyra-ui/theme.js';`,
+  "setLyraStyle({ mode: 'system' })",
+  "look: 'shadcn'",
+  "surface: 'glass'",
+  "density: 'compact'",
+  'getLyraStyle()',
+  'resetLyraStyle(',
+  `@aceshooting/lyra-ui/looks/shadcn.css`,
+]) {
+  if (!themingGuide.includes(required)) {
+    throw new Error(`Theming guide is missing canonical style usage ${required}`);
+  }
+}
+for (const unsupported of [
+  'setLyraTheme',
+  'getLyraTheme',
+  'applyLyraThemePreset',
+  'defineLyraThemePreset',
+  'theme/presets',
+  'themes/shadcn.css',
+  'lr-theme-change',
+  'lr-theme-preset-change',
+]) {
+  if (themingGuide.includes(unsupported)) {
+    throw new Error(`Theming guide documents retired styling API ${unsupported}`);
   }
 }
 if (preview.includes(`import '../packages/lyra-ui/src/lyra.js';`)) {
@@ -98,7 +206,7 @@ if (!main.includes('createGroupedStoryIndexer')) {
   throw new Error('Storybook must group story index entries by source family');
 }
 
-for (const selector of [`:root[data-lr-theme='light']`, `:root[data-lr-theme='dark']`]) {
+for (const selector of [`:root[data-lr-mode='light']`, `:root[data-lr-mode='dark']`]) {
   if (!landing.includes(selector)) {
     throw new Error(`Storybook landing page is missing ${selector}`);
   }

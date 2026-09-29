@@ -2,6 +2,7 @@ import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { formatMediaTime } from '../media-time.js';
 import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { activeElementIn } from '../../../internal/active-element.js';
@@ -120,22 +121,6 @@ function validPlaybackRate(value: unknown): value is number {
     value >= MIN_NATIVE_PLAYBACK_RATE &&
     value <= MAX_NATIVE_PLAYBACK_RATE
   );
-}
-
-function formatDuration(seconds: number, locale: string): string {
-  const total = Math.floor(finiteRange(seconds, 0, 0));
-  const hours = Math.floor(total / 3600);
-  const minutes = Math.floor((total % 3600) / 60);
-  const remaining = total % 60;
-  const regular = getNumberFormat(locale, { maximumFractionDigits: 0, useGrouping: false });
-  const padded = getNumberFormat(locale, {
-    maximumFractionDigits: 0,
-    minimumIntegerDigits: 2,
-    useGrouping: false,
-  });
-  return hours > 0
-    ? `${regular.format(hours)}:${padded.format(minutes)}:${padded.format(remaining)}`
-    : `${regular.format(minutes)}:${padded.format(remaining)}`;
 }
 
 function sourceSnapshot(src: string, type: string, media: string): LyraVideoPlaylistSource {
@@ -935,7 +920,7 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
           <span data-item-copy>
             <span part="playlist-title">${title}</span>
             <span part="playlist-duration" id=${durationId}>
-              ${duration > 0 ? formatDuration(duration, this.effectiveLocale) : nothing}
+              ${duration > 0 ? formatMediaTime(duration, this.effectiveLocale) : nothing}
             </span>
           </span>
         </button>

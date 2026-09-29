@@ -1,3 +1,4 @@
+import { maxCssTime } from '../../../internal/css-motion-time.js';
 import {
   html,
   nothing,
@@ -24,19 +25,6 @@ import { activeElementIn } from '../../../internal/active-element.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_mentionResultCount, LYRA_DEFAULT_mentionResultPosition, LYRA_DEFAULT_mentionSuggestions, LYRA_DEFAULT_noMatches } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
-function parseCssTime(value: string): number {
-  const trimmed = value.trim();
-  if (trimmed.endsWith('ms')) return Number.parseFloat(trimmed);
-  if (trimmed.endsWith('s')) return Number.parseFloat(trimmed) * 1000;
-  return 0;
-}
-
-/** The longest of a possibly comma-separated `transition-duration`/`-delay` list, mirroring
- *  `<lr-toast>`'s own `maxCssTime`. */
-function maxCssTransitionTime(value: string): number {
-  return Math.max(0, ...value.split(',').map(parseCssTime).filter(Number.isFinite));
-}
 
 /** One candidate row — an `@`-mentionable person/entity, or a `/`-command. */
 export interface LyraMentionItem {
@@ -1202,8 +1190,8 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     if (listbox && view && !prefersReducedMotion(this)) {
       const computed = view.getComputedStyle(listbox);
       const durationMs =
-        maxCssTransitionTime(computed.transitionDuration) +
-        maxCssTransitionTime(computed.transitionDelay);
+        maxCssTime(computed.transitionDuration) +
+        maxCssTime(computed.transitionDelay);
       if (durationMs > 0) {
         await new Promise<void>((resolve) => {
           let settled = false;

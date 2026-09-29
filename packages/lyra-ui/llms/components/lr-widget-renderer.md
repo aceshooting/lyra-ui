@@ -58,9 +58,10 @@ readonly slot?: string; readonly actionId?: string; readonly payload?: unknown }
   structure throws `TypeError`. Node records, child arrays, and prop records are copied and frozen,
   while opaque prop values and action payloads intentionally retain caller identity.
 
-The package root and the normal `widget-renderer.js` registration entry expose the renderer
-`LyraWidgetRenderer`/`LyraWidgetRendererEventMap` together with the complete stable authoring
-surface: `LyraWidgetNode`, `LyraWidgetBinding`, `LyraWidgetDocument`, `createWidgetDocument`,
+The `widget-renderer.class.js` class entry and stable `components/lr-widget-renderer.js` registration
+entry expose `LyraWidgetRenderer`; its event-map type and stable authoring contracts remain available from
+the curated package root: `LyraWidgetRendererEventMap`, `LyraWidgetNode`, `LyraWidgetBinding`,
+`LyraWidgetDocument`, `createWidgetDocument`,
 `LyraWidgetPropType`, `LyraWidgetInteraction`, `LyraWidgetTypeDefinition`,
 `LyraWidgetTypeRegistry`, `createWidgetTypeRegistry`, `isWidgetTypeRegistry`, and
 `DEFAULT_WIDGET_TYPE_REGISTRY`. Advanced consumers that need `resolveTree`, `ResolveContext`,
@@ -145,8 +146,8 @@ import {
   createWidgetDocument,
   createWidgetTypeRegistry,
   DEFAULT_WIDGET_TYPE_REGISTRY,
-} from "@aceshooting/lyra-ui/components/conversation/widget-renderer/widget-renderer.js";
-import "@aceshooting/lyra-ui/components/data/sparkline/sparkline.js";
+} from "@aceshooting/lyra-ui/components/lr-widget-renderer.js";
+import "@aceshooting/lyra-ui/components/lr-sparkline.js";
 import { tag } from "@aceshooting/lyra-ui/utilities/prefix.js";
 
 const registry = createWidgetTypeRegistry([
@@ -180,7 +181,7 @@ import { LyraWidgetRenderer } from "@aceshooting/lyra-ui/components/conversation
 import { createWidgetDocument } from "@aceshooting/lyra-ui/components/conversation/widget-renderer/resolve.js";
 import { createWidgetTypeRegistry } from "@aceshooting/lyra-ui/components/conversation/widget-renderer/registry.js";
 import { defineElement, tag } from "@aceshooting/lyra-ui/utilities/prefix.js";
-import "@aceshooting/lyra-ui/components/forms/input/input.js";
+import "@aceshooting/lyra-ui/components/lr-input.js";
 
 defineElement("widget-renderer", LyraWidgetRenderer);
 

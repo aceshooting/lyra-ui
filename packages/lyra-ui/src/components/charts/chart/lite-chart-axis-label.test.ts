@@ -1,6 +1,20 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './lite-chart.js';
 import type { LyraLiteChart } from './lite-chart.js';
+import {
+  automaticCategoryLabelIndexes,
+  categoryLabelGrowth,
+  sparseCategoryLabelExtent,
+  visibleCategoryLabelIndexes,
+  type CategoryLabelSelectionBounds,
+} from './lite-chart-axis-layout.js';
+
+const SELECTION_BOUNDS: CategoryLabelSelectionBounds = {
+  characterWidth: 7,
+  laneInset: 10,
+  maxContentWidth: 1_000_000,
+  maxRenderedRecords: 1_000,
+};
 
 const LABELS = ['Jan', 'Feb', 'Mar', 'Apr'];
 const DATASETS = [{ label: 'Revenue', data: [1, 2, 3, 4] }];
@@ -168,6 +182,94 @@ describe('lr-lite-chart axisLabelText', () => {
       .axisLabelText=${(label: string, index: number) => (index === 0 ? label : null)}
     ></lr-lite-chart>`);
     await expect(el).to.be.accessible();
+  });
+});
+
+describe('pure category-axis layout math', () => {
+  it('scans sampled labels once and skips tick coordinates for empty labels', () => {
+    const chart = document.createElement('lr-lite-chart') as LyraLiteChart;
+    const select = chart as unknown as {
+      visibleLabelIndexes(
+        count: number,
+        plotWidth: number,
+        renderedIndexes: readonly number[],
+        tickX: (index: number) => number,
+      ): Set<number> | undefined;
+    };
+    const indexes = [0, 1, 2, 3, 4, 5];
+    let labelReads = 0;
+    const trackedLabels = (label: string) => new Proxy(indexes.map(() => label), {
+      get(target, key, receiver) {
+        if (typeof key === 'string' && /^\d+$/.test(key)) labelReads += 1;
+        return Reflect.get(target, key, receiver) as unknown;
+      },
+    });
+    // Instrument the class's private selector after the public collection setter snapshots input.
+    Object.defineProperty(chart, 'labels', {
+      configurable: true,
+      writable: true,
+      value: trackedLabels('Long label'),
+    });
+    chart.maxLabels = 'auto';
+    let coordinateReads = 0;
+    const monotonic = (index: number) => { coordinateReads += 1; return index * 200; };
+    expect(select.visibleLabelIndexes(6, 100, indexes, monotonic)).to.equal(undefined);
+    expect(labelReads, 'monotonic automatic selection reads each label once').to.equal(6);
+    expect(coordinateReads).to.equal(6);
+
+    labelReads = 0;
+    coordinateReads = 0;
+    const reordered = [0, 200, 100, 300, 400, 500];
+    expect(select.visibleLabelIndexes(6, 100, indexes, (index) => {
+      coordinateReads += 1;
+      return reordered[index]!;
+    })).to.deep.equal(new Set([0, 5]));
+    expect(labelReads, 'width-only fallback reuses the same estimate').to.equal(6);
+    expect(coordinateReads).to.equal(6);
+
+    chart.labels = trackedLabels('');
+    labelReads = 0;
+    coordinateReads = 0;
+    expect(select.visibleLabelIndexes(6, 100, indexes, monotonic)).to.equal(undefined);
+    expect(labelReads).to.equal(6);
+    expect(coordinateReads, 'empty labels never generate tick coordinates').to.equal(0);
+
+    chart.maxLabels = 2;
+    labelReads = 0;
+    expect(select.visibleLabelIndexes(6, 100, indexes, monotonic)).to.deep.equal(new Set([0, 5]));
+    expect(labelReads, 'explicit caps never estimate label widths').to.equal(0);
+    expect(coordinateReads).to.equal(0);
+  });
+
+  it('keeps empty and single-category selections uncapped', () => {
+    expect(visibleCategoryLabelIndexes(0, 0, [], [], 'auto', [], SELECTION_BOUNDS)).to.equal(undefined);
+    expect(visibleCategoryLabelIndexes(1, 4, [0], ['solo'], 0, undefined, SELECTION_BOUNDS))
+      .to.deep.equal(new Set([0]));
+    expect(categoryLabelGrowth(0, 1)).to.equal('middle');
+  });
+
+  it('preserves first and last sampled categories when a narrow plot requests two labels', () => {
+    const labels = Array.from({ length: 10 }, () => 'Category');
+    const indexes = Array.from({ length: labels.length }, (_, index) => index);
+    expect(visibleCategoryLabelIndexes(10, 48, indexes, labels, 'auto', undefined, SELECTION_BOUNDS))
+      .to.deep.equal(new Set([0, 9]));
+    expect(visibleCategoryLabelIndexes(10, 400, indexes, labels, 1, undefined, SELECTION_BOUNDS))
+      .to.deep.equal(new Set([0, 9]));
+  });
+
+  it('falls back to width-only selection for reordered ticks and retains source order', () => {
+    const indexes = [0, 1, 2, 3, 4, 5];
+    const labels = indexes.map(() => 'Long label');
+    const positions = [0, 80, 40, 120, 200, 280];
+    expect(automaticCategoryLabelIndexes(6, indexes, positions, labels, SELECTION_BOUNDS)).to.equal(null);
+    expect(visibleCategoryLabelIndexes(6, 100, indexes, labels, 'auto', positions, SELECTION_BOUNDS))
+      .to.deep.equal(new Set([0, 5]));
+  });
+
+  it('lets a sparse boundary label grow only through empty neighboring slots', () => {
+    expect(sparseCategoryLabelExtent(
+      ['month', '', '', 'next'], [0, 20, 40, 60], 0, categoryLabelGrowth(0, 4), 20, 10, 4, 1_000_000,
+    )).to.equal(26);
   });
 });
 

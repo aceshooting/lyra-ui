@@ -149,11 +149,13 @@ Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS
   utilities, and separate decorative and control-border tokens.
 
 See the [feature guide](./packages/lyra-ui/README.md#highlights) for APIs and examples.
-The [roadmap](./docs/roadmap.md) describes the remaining release commitments.
+The [roadmap](./docs/roadmap.md) tracks the v24 library release; its
+[rollout page](./docs/roadmap/post-v24-rollout.md) covers the later website, admin and consumer work.
 For version-by-version changes and older upgrades, use the
 [package changelog](./packages/lyra-ui/CHANGELOG.md).
 Upgrading to v23? Review the [compatibility and sizing changes](./packages/lyra-ui/README.md#upgrading-to-v23)
 before updating existing layouts.
+Upgrading to v24? Follow the [project migration and cleanup guide](./packages/lyra-ui/llms/shared/v23-to-v24-migration.md).
 
 ## Principles & Guidelines
 
@@ -262,8 +264,10 @@ the packed package.
 Root and granular component imports are server-safe. Lyra ships a tested `@lit-labs/ssr` support
 matrix: compatible components emit Declarative Shadow DOM and hydrate in place, while components
 that need browser DOM during their first render use an explicit host-and-light-DOM fallback before
-rendering on upgrade. Import `@aceshooting/lyra-ui/ssr-loader.js` before any other Lit module in the
-browser. See
+rendering on upgrade. On the server, register the components used by the rendered page and use
+Lyra's SSR helpers from `@aceshooting/lyra-ui/ssr.js`. In the browser, import
+`@aceshooting/lyra-ui/hydration.js` before component registrations or other Lit imports, then
+register only the tags the page uses. See
 [`packages/lyra-ui/README.md#ssr--declarative-shadow-dom`](./packages/lyra-ui/README.md#ssr--declarative-shadow-dom)
 for the renderer setup, machine-readable matrix, diagnostics, and capability limits.
 
@@ -317,8 +321,11 @@ the 12.1.0 qualification snapshot; release-run wall time can still vary with hos
 
 - **Humans:** the [live docs site](https://aceshooting.github.io/lyra-ui/) (Storybook — every
   component's canvas, source, and props/events/slots reference).
+- **Release scope:** the [roadmap](./docs/roadmap.md) and its
+  [post-publication rollout](./docs/roadmap/post-v24-rollout.md).
 - **AI agents integrating this library:** [`packages/lyra-ui/llms.txt`](./packages/lyra-ui/llms.txt)
-  (short index) and [`llms-full.txt`](./packages/lyra-ui/llms-full.txt) (full API reference).
+  indexes per-component references and focused guides, so an integration task can load only the
+  relevant API details.
 - **Contributors working on this repo itself:** [`AGENTS.md`](./AGENTS.md) (AI agents) and
   [`CONTRIBUTING.md`](./CONTRIBUTING.md) (humans).
 - **Accessibility:** [`docs/accessibility.md`](./docs/accessibility.md) — which guarantees a gate
@@ -375,7 +382,7 @@ main `$lyra-ui` skill remains the exact API reference.
 
 ## Status
 
-`@aceshooting/lyra-ui` source is versioned at `23.0.0`; `@aceshooting/lyra-flags` source at `2.3.0`
+`@aceshooting/lyra-ui` source is versioned at `24.0.0`; `@aceshooting/lyra-flags` source at `2.3.0`
 — see each package's own `CHANGELOG.md` for release history. Published npm versions can lag these
 source versions while a release is being qualified. The two are versioned independently (not
 always lockstep) with [Changesets](https://github.com/changesets/changesets) and follow semver.

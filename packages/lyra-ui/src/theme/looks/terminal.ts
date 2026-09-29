@@ -8,7 +8,7 @@ export const LYRA_TERMINAL_LOOK = defineLyraLook({
     '--lr-theme-color-surface-default': { light: '#fcfdf9', dark: '#0e1713' },
     '--lr-theme-color-surface-raised': { light: '#f1f5eb', dark: '#18271e' },
     '--lr-theme-color-surface-overlay': { light: '#fcfdf9', dark: '#203227' },
-    '--lr-theme-color-text-normal': { light: '#183626', dark: '#e5f5e9' },
+    '--lr-theme-color-text-normal': { light: '#0d2115', dark: '#e5f5e9' },
     '--lr-theme-color-text-quiet': { light: '#44634d', dark: '#afc9b7' },
     '--lr-theme-color-surface-border': { light: '#6b806b', dark: '#7c9e87' },
     '--lr-theme-color-surface-border-subtle': { light: '#d7e1d0', dark: '#395343' },

@@ -1,4 +1,7 @@
-import type { LyraVoicePicker, LyraVoicePickerSelectionDirection } from '../src/lyra.js';
+import type { LyraVoicePicker } from '../src/components/conversation/voice-picker/voice-picker.class.js';
+import type {
+  LyraVoicePickerSelectionDirection,
+} from '../src/lyra.js';
 
 declare const voicePicker: LyraVoicePicker;
 

@@ -700,12 +700,10 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
         heading=${this.localize(CONFIRM_HEADING_KEY[p.kind])}
         @keydown=${(e: KeyboardEvent) =>
           this.onConfirmKeyDown(e, () => this.resolveItemDecision(p, false))}
-        @lr-approve=${(event: Event) => event.stopPropagation()}
         @lr-approve-request=${(e: CustomEvent) => {
           e.stopPropagation();
           this.resolveItemDecision(p, true);
         }}
-        @lr-deny=${(event: Event) => event.stopPropagation()}
         @lr-deny-request=${(e: CustomEvent) => {
           e.stopPropagation();
           this.resolveItemDecision(p, false);
@@ -818,12 +816,10 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
             this.onConfirmKeyDown(e, () =>
               this.resolveForgetAllDecision(forgetPending, false)
             )}
-          @lr-approve=${(event: Event) => event.stopPropagation()}
         @lr-approve-request=${(e: CustomEvent) => {
             e.stopPropagation();
             this.resolveForgetAllDecision(forgetPending, true);
           }}
-          @lr-deny=${(event: Event) => event.stopPropagation()}
         @lr-deny-request=${(e: CustomEvent) => {
             e.stopPropagation();
             this.resolveForgetAllDecision(forgetPending, false);

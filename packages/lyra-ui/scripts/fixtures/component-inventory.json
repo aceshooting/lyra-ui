@@ -2,7 +2,7 @@
   "$comment": "Authoritative component, public-surface, and upstream mapping inventory. Refresh with generate-component-inventory.mjs using the pinned published manifests and artifact-bound black-box evidence; do not infer upstream behavior from implementation source.",
   "schemaVersion": 1,
   "pins": {
-    "lyraVersion": "23.0.0",
+    "lyraVersion": "24.0.0",
     "webawesome": {
       "version": "3.11.0",
       "commit": "1d05f1a4468336de35d2c61282a953ef07da3bdf"
@@ -4468,7 +4468,7 @@
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-tool-approval-decide",
+            "name": "lr-tool-approval-decide-request",
             "type": "CustomEvent<ToolTimelineApprovalDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
@@ -7361,21 +7361,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-approval-queue",
-            "kind": "event",
-            "name": "lr-approval-decision",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-approval-decision-request",
-              "usage": "addEventListener('lr-approval-decision-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -7517,24 +7503,6 @@
             "type": "CustomEvent<{ invocationId: string; reason: ToolApprovalDialogCloseReason }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-approval-decision",
-            "type": "LyraApprovalQueueEventMap['lr-approval-decision-request']",
-            "cancelable": "always",
-            "deprecated": {
-              "tag": "lr-approval-queue",
-              "kind": "event",
-              "name": "lr-approval-decision",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-approval-decision-request",
-                "usage": "addEventListener('lr-approval-decision-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-            }
           },
           {
             "name": "lr-approval-decision-request",
@@ -8975,21 +8943,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-attachment-trigger",
-            "kind": "property",
-            "name": "accessibleLabel",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "attribute",
-              "name": "aria-label",
-              "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -9102,27 +9056,6 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
-          },
-          {
-            "name": "accessibleLabel",
-            "attribute": null,
-            "type": "string | undefined",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": {
-              "tag": "lr-attachment-trigger",
-              "kind": "property",
-              "name": "accessibleLabel",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "attribute",
-                "name": "aria-label",
-                "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
-            },
-            "hasDefault": false
           },
           {
             "name": "appearance",
@@ -17382,21 +17315,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-callout",
-            "kind": "property",
-            "name": "accessibleLabel",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "attribute",
-              "name": "aria-label",
-              "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -17533,27 +17452,6 @@
           }
         ],
         "properties": [
-          {
-            "name": "accessibleLabel",
-            "attribute": null,
-            "type": "string",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": {
-              "tag": "lr-callout",
-              "kind": "property",
-              "name": "accessibleLabel",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "attribute",
-                "name": "aria-label",
-                "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
-            },
-            "hasDefault": false
-          },
           {
             "name": "announce",
             "attribute": "announce",
@@ -18324,21 +18222,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-carousel",
-            "kind": "property",
-            "name": "accessibleLabel",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "attribute",
-              "name": "aria-label",
-              "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -18501,27 +18385,6 @@
           }
         ],
         "properties": [
-          {
-            "name": "accessibleLabel",
-            "attribute": null,
-            "type": "string | undefined",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": {
-              "tag": "lr-carousel",
-              "kind": "property",
-              "name": "accessibleLabel",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "attribute",
-                "name": "aria-label",
-                "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
-            },
-            "hasDefault": false
-          },
           {
             "name": "autoplay",
             "attribute": "autoplay",
@@ -28969,21 +28832,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-combobox",
-            "kind": "event",
-            "name": "lr-retry",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-retry-request",
-              "usage": "addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -30156,25 +30005,6 @@
             "name": "lr-invalid",
             "type": "CustomEvent<null>",
             "cancelable": "always",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-retry",
-            "type": "CustomEvent<null>",
-            "cancelable": "always",
-            "deprecated": {
-              "tag": "lr-combobox",
-              "kind": "event",
-              "name": "lr-retry",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-retry-request",
-                "usage": "addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-            },
             "constructor": "CustomEvent"
           },
           {
@@ -31882,21 +31712,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-compare-panel",
-            "kind": "event",
-            "name": "lr-vote",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-vote-request",
-              "usage": "addEventListener('lr-vote-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -32072,24 +31888,6 @@
           }
         ],
         "events": [
-          {
-            "name": "lr-vote",
-            "type": "LyraComparePanelEventMap['lr-vote-request']",
-            "cancelable": "always",
-            "deprecated": {
-              "tag": "lr-compare-panel",
-              "kind": "event",
-              "name": "lr-vote",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-vote-request",
-                "usage": "addEventListener('lr-vote-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-            }
-          },
           {
             "name": "lr-vote-request",
             "type": "CustomEvent<{ choice: CompareVote; itemId: string }>",
@@ -32452,34 +32250,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-confirm-bar",
-            "kind": "event",
-            "name": "lr-approve",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-approve-request",
-              "usage": "addEventListener('lr-approve-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-          },
-          {
-            "tag": "lr-confirm-bar",
-            "kind": "event",
-            "name": "lr-deny",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-deny-request",
-              "usage": "addEventListener('lr-deny-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -32773,24 +32544,6 @@
         ],
         "events": [
           {
-            "name": "lr-approve",
-            "type": "LyraConfirmBarEventMap['lr-approve-request']",
-            "cancelable": "always",
-            "deprecated": {
-              "tag": "lr-confirm-bar",
-              "kind": "event",
-              "name": "lr-approve",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-approve-request",
-                "usage": "addEventListener('lr-approve-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-            }
-          },
-          {
             "name": "lr-approve-request",
             "type": "CustomEvent<{ args: unknown; waitUntil: ConfirmBarWaitUntil }>",
             "cancelable": "always",
@@ -32801,24 +32554,6 @@
             "type": "CustomEvent<{ decision: ApprovalDecision }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-deny",
-            "type": "LyraConfirmBarEventMap['lr-deny-request']",
-            "cancelable": "always",
-            "deprecated": {
-              "tag": "lr-confirm-bar",
-              "kind": "event",
-              "name": "lr-deny",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-deny-request",
-                "usage": "addEventListener('lr-deny-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-            }
           },
           {
             "name": "lr-deny-request",
@@ -33676,12 +33411,6 @@
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-export",
-            "type": "CustomEvent<{ readonly format: string }>",
-            "cancelable": "always",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-export-complete",
             "type": "CustomEvent<{ readonly format: LyraExportFormat }>",
             "cancelable": "never",
@@ -33691,6 +33420,12 @@
             "name": "lr-export-error",
             "type": "CustomEvent<{ readonly format: LyraExportFormat; readonly error: unknown }>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-export-request",
+            "type": "CustomEvent<{ readonly format: string }>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -34103,21 +33838,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-context-meter",
-            "kind": "event",
-            "name": "lr-segment-activate",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-segment-activate-request",
-              "usage": "addEventListener('lr-segment-activate-request', event => { /* Call preventDefault() to veto the proposed selection toggle. */ })"
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -34298,25 +34019,6 @@
         ],
         "slots": [],
         "events": [
-          {
-            "name": "lr-segment-activate",
-            "type": "CustomEvent<LyraContextMeterSegmentActivateDetail>",
-            "cancelable": "always",
-            "deprecated": {
-              "tag": "lr-context-meter",
-              "kind": "event",
-              "name": "lr-segment-activate",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-segment-activate-request",
-                "usage": "addEventListener('lr-segment-activate-request', event => { /* Call preventDefault() to veto the proposed selection toggle. */ })"
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-            },
-            "constructor": "CustomEvent"
-          },
           {
             "name": "lr-segment-activate-request",
             "type": "CustomEvent<LyraContextMeterSegmentActivateDetail>",
@@ -36283,21 +35985,7 @@
         "profile": "mapped-experimental",
         "rationale": "This implementation reinstates an earlier Lyra tag with the experimental Web Awesome 3.11 public surface and remains experimental while production usage is gathered.",
         "graduationCriteria": "Eligible for stable status once the mapped public surface, populated accessibility states, cross-browser behavior, and virtualization edge cases demonstrate sustained reliability.",
-        "deprecations": [
-          {
-            "tag": "lr-data-grid",
-            "kind": "event",
-            "name": "lr-retry",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-retry-request",
-              "usage": "addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -37222,25 +36910,6 @@
             "name": "lr-page-change",
             "type": "CustomEvent<DataGridPageDetail>",
             "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-retry",
-            "type": "CustomEvent<null>",
-            "cancelable": "always",
-            "deprecated": {
-              "tag": "lr-data-grid",
-              "kind": "event",
-              "name": "lr-retry",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-retry-request",
-                "usage": "addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-            },
             "constructor": "CustomEvent"
           },
           {
@@ -41851,21 +41520,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-dialog",
-            "kind": "property",
-            "name": "accessibleLabel",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "attribute",
-              "name": "aria-label",
-              "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -42019,27 +41674,6 @@
           }
         ],
         "properties": [
-          {
-            "name": "accessibleLabel",
-            "attribute": null,
-            "type": "string",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": {
-              "tag": "lr-dialog",
-              "kind": "property",
-              "name": "accessibleLabel",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "attribute",
-                "name": "aria-label",
-                "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
-            },
-            "hasDefault": false
-          },
           {
             "name": "heading",
             "attribute": "heading",
@@ -43738,21 +43372,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-document-library",
-            "kind": "event",
-            "name": "lr-retry",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-retry-request",
-              "usage": "addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -44034,25 +43654,6 @@
             "name": "lr-open",
             "type": "CustomEvent<DocumentLibraryOpenDetail>",
             "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-retry",
-            "type": "CustomEvent<null>",
-            "cancelable": "always",
-            "deprecated": {
-              "tag": "lr-document-library",
-              "kind": "event",
-              "name": "lr-retry",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-retry-request",
-                "usage": "addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-            },
             "constructor": "CustomEvent"
           },
           {
@@ -46430,21 +46031,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-drawer",
-            "kind": "property",
-            "name": "accessibleLabel",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "attribute",
-              "name": "aria-label",
-              "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -46618,27 +46205,6 @@
           }
         ],
         "properties": [
-          {
-            "name": "accessibleLabel",
-            "attribute": null,
-            "type": "string",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": {
-              "tag": "lr-dialog",
-              "kind": "property",
-              "name": "accessibleLabel",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "attribute",
-                "name": "aria-label",
-                "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
-            },
-            "hasDefault": false
-          },
           {
             "name": "contained",
             "attribute": "contained",
@@ -47814,22 +47380,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-dropdown",
-            "kind": "property",
-            "name": "arrow",
-            "attribute": "arrow",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "property",
-              "name": "withoutArrow",
-              "usage": "Set withoutArrow to the inverse of arrow; use without-arrow to preserve the former arrow-free default."
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "The shared negative arrow switch resolves conflicting arrow inputs and defaults to false. The retained positive alias has the inverse value and remains functional throughout the compatibility window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -47873,29 +47424,6 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
-          },
-          {
-            "name": "arrow",
-            "property": "arrow",
-            "type": "boolean",
-            "reflects": true,
-            "inferred": false,
-            "deprecated": {
-              "tag": "lr-dropdown",
-              "kind": "property",
-              "name": "arrow",
-              "attribute": "arrow",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "property",
-                "name": "withoutArrow",
-                "usage": "Set withoutArrow to the inverse of arrow; use without-arrow to preserve the former arrow-free default."
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "The shared negative arrow switch resolves conflicting arrow inputs and defaults to false. The retained positive alias has the inverse value and remains functional throughout the compatibility window."
-            },
-            "hasDefault": true,
-            "default": false
           },
           {
             "name": "arrow-padding",
@@ -48118,29 +47646,6 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
-          },
-          {
-            "name": "arrow",
-            "attribute": "arrow",
-            "type": "boolean",
-            "readonly": false,
-            "reflects": true,
-            "deprecated": {
-              "tag": "lr-dropdown",
-              "kind": "property",
-              "name": "arrow",
-              "attribute": "arrow",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "property",
-                "name": "withoutArrow",
-                "usage": "Set withoutArrow to the inverse of arrow; use without-arrow to preserve the former arrow-free default."
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "The shared negative arrow switch resolves conflicting arrow inputs and defaults to false. The retained positive alias has the inverse value and remains functional throughout the compatibility window."
-            },
-            "hasDefault": true,
-            "default": false
           },
           {
             "name": "arrowPadding",
@@ -53117,21 +52622,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-eval-run",
-            "kind": "event",
-            "name": "lr-example-tool-approval-decide",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-example-tool-approval-decide-request",
-              "usage": "addEventListener('lr-example-tool-approval-decide-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -53270,24 +52761,6 @@
             "type": "CustomEvent<EvalToolActivateDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-example-tool-approval-decide",
-            "type": "LyraEvalRunEventMap['lr-example-tool-approval-decide-request']",
-            "cancelable": "always",
-            "deprecated": {
-              "tag": "lr-eval-run",
-              "kind": "event",
-              "name": "lr-example-tool-approval-decide",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-example-tool-approval-decide-request",
-                "usage": "addEventListener('lr-example-tool-approval-decide-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-            }
           },
           {
             "name": "lr-example-tool-approval-decide-request",
@@ -53436,21 +52909,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-export-button",
-            "kind": "event",
-            "name": "lr-export",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-export-request",
-              "usage": "addEventListener('lr-export-request', event => { /* Review the request detail and call preventDefault() to veto. */ })"
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "The request event identifies the veto phase; the legacy event preserves its equal detail and cancellation behavior."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -53703,25 +53162,6 @@
         ],
         "slots": [],
         "events": [
-          {
-            "name": "lr-export",
-            "type": "CustomEvent<{ readonly format: string }>",
-            "cancelable": "always",
-            "deprecated": {
-              "tag": "lr-export-button",
-              "kind": "event",
-              "name": "lr-export",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-export-request",
-                "usage": "addEventListener('lr-export-request', event => { /* Review the request detail and call preventDefault() to veto. */ })"
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "The request event identifies the veto phase; the legacy event preserves its equal detail and cancellation behavior."
-            },
-            "constructor": "CustomEvent"
-          },
           {
             "name": "lr-export-complete",
             "type": "CustomEvent<{ readonly format: LyraExportFormat }>",
@@ -54209,19 +53649,6 @@
             },
             "removalNotBefore": "10.0.0",
             "rationale": "The form-control-label part follows the shared form-control vocabulary; label remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-file-input` still publishes its own deprecated `label` part, so this alias is removed only when upstream's is."
-          },
-          {
-            "tag": "lr-file-input",
-            "kind": "property",
-            "name": "accessibleLabel",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "attribute",
-              "name": "aria-label",
-              "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
           }
         ]
       },
@@ -54543,27 +53970,6 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "accessibleLabel",
-            "attribute": null,
-            "type": "string",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": {
-              "tag": "lr-file-input",
-              "kind": "property",
-              "name": "accessibleLabel",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "attribute",
-                "name": "aria-label",
-                "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
-            },
             "hasDefault": false
           },
           {
@@ -60257,34 +59663,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-graph",
-            "kind": "event",
-            "name": "lr-link-click",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-edge-activate",
-              "usage": "lr-edge-activate"
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "Activation covers pointer and keyboard gestures. The old event remains available with its original detail; edge activation names its optional identifier edgeId."
-          },
-          {
-            "tag": "lr-graph",
-            "kind": "event",
-            "name": "lr-node-click",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-node-activate",
-              "usage": "lr-node-activate"
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "Activation covers pointer and keyboard gestures. The old event remains available with its original detail; edge activation names its optional identifier edgeId."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -60758,47 +60137,9 @@
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-link-click",
-            "type": "CustomEvent<{ sourceNodeId: string; targetNodeId: string; linkId?: string; }>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-graph",
-              "kind": "event",
-              "name": "lr-link-click",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-edge-activate",
-                "usage": "lr-edge-activate"
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "Activation covers pointer and keyboard gestures. The old event remains available with its original detail; edge activation names its optional identifier edgeId."
-            },
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-node-activate",
             "type": "CustomEvent<{ nodeId: string; x: number; y: number }>",
             "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-node-click",
-            "type": "CustomEvent<{ nodeId: string; x: number; y: number }>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-graph",
-              "kind": "event",
-              "name": "lr-node-click",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-node-activate",
-                "usage": "lr-node-activate"
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "Activation covers pointer and keyboard gestures. The old event remains available with its original detail; edge activation names its optional identifier edgeId."
-            },
             "constructor": "CustomEvent"
           },
           {
@@ -70419,21 +69760,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-knowledge-base",
-            "kind": "event",
-            "name": "lr-retry",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-retry-request",
-              "usage": "addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -70620,25 +69947,6 @@
           }
         ],
         "events": [
-          {
-            "name": "lr-retry",
-            "type": "CustomEvent<null>",
-            "cancelable": "always",
-            "deprecated": {
-              "tag": "lr-knowledge-base",
-              "kind": "event",
-              "name": "lr-retry",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-retry-request",
-                "usage": "addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-            },
-            "constructor": "CustomEvent"
-          },
           {
             "name": "lr-retry-request",
             "type": "CustomEvent<null>",
@@ -71090,34 +70398,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-knowledge-graph-explorer",
-            "kind": "event",
-            "name": "lr-link-click",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-edge-activate",
-              "usage": "lr-edge-activate"
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "Activation covers pointer and keyboard gestures. The old event remains available with its original detail; edge activation names its optional identifier edgeId."
-          },
-          {
-            "tag": "lr-knowledge-graph-explorer",
-            "kind": "event",
-            "name": "lr-node-click",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-node-activate",
-              "usage": "lr-node-activate"
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "Activation covers pointer and keyboard gestures. The old event remains available with its original detail; edge activation names its optional identifier edgeId."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -71470,51 +70751,9 @@
             "composed": true
           },
           {
-            "name": "lr-link-click",
-            "type": "CustomEvent<{ sourceNodeId: string; targetNodeId: string; linkId?: string; }>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-knowledge-graph-explorer",
-              "kind": "event",
-              "name": "lr-link-click",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-edge-activate",
-                "usage": "lr-edge-activate"
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "Activation covers pointer and keyboard gestures. The old event remains available with its original detail; edge activation names its optional identifier edgeId."
-            },
-            "constructor": "CustomEvent",
-            "bubbles": true,
-            "composed": true
-          },
-          {
             "name": "lr-node-activate",
             "type": "CustomEvent<{ nodeId: string; x: number; y: number }>",
             "cancelable": "never",
-            "constructor": "CustomEvent",
-            "bubbles": true,
-            "composed": true
-          },
-          {
-            "name": "lr-node-click",
-            "type": "CustomEvent<{ nodeId: string; x: number; y: number }>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-knowledge-graph-explorer",
-              "kind": "event",
-              "name": "lr-node-click",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-node-activate",
-                "usage": "lr-node-activate"
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "Activation covers pointer and keyboard gestures. The old event remains available with its original detail; edge activation names its optional identifier edgeId."
-            },
             "constructor": "CustomEvent",
             "bubbles": true,
             "composed": true
@@ -72677,21 +71916,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-lightbox",
-            "kind": "event",
-            "name": "lr-lightbox-close",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-close",
-              "usage": "Observe lr-close with detail.reason after dismissal; use lr-close-request to veto it. The legacy event retains its string detail and pre-close cancellation."
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "The shared close notification reports a reason object; a separate close-request event owns cancellation. The former lightbox-specific event remains compatible throughout the deprecation window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -73000,32 +72225,13 @@
           {
             "name": "lr-hide",
             "type": "CustomEvent<LyraLightboxHideDetail>",
-            "cancelable": "conditional",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-index-change",
             "type": "CustomEvent<{ index: number }>",
             "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-lightbox-close",
-            "type": "CustomEvent<LyraLightboxCloseReason>",
-            "cancelable": "conditional",
-            "deprecated": {
-              "tag": "lr-lightbox",
-              "kind": "event",
-              "name": "lr-lightbox-close",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-close",
-                "usage": "Observe lr-close with detail.reason after dismissal; use lr-close-request to veto it. The legacy event retains its string detail and pre-close cancellation."
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "The shared close notification reports a reason object; a separate close-request event owns cancellation. The former lightbox-specific event remains compatible throughout the deprecation window."
-            },
             "constructor": "CustomEvent"
           },
           {
@@ -74247,21 +73453,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-lite-chart",
-            "kind": "property",
-            "name": "accessibleLabel",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "attribute",
-              "name": "aria-label",
-              "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -74537,27 +73729,6 @@
           }
         ],
         "properties": [
-          {
-            "name": "accessibleLabel",
-            "attribute": null,
-            "type": "string | undefined",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": {
-              "tag": "lr-lite-chart",
-              "kind": "property",
-              "name": "accessibleLabel",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "attribute",
-                "name": "aria-label",
-                "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
-            },
-            "hasDefault": false
-          },
           {
             "name": "axisLabelText",
             "attribute": null,
@@ -76813,21 +75984,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-markdown",
-            "kind": "event",
-            "name": "lr-link-click",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-link-activate",
-              "usage": "lr-link-activate"
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "Activation includes pointer and keyboard gestures. The old event remains available after the canonical event with equal detail throughout the compatibility window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -77264,25 +76421,6 @@
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-link-click",
-            "type": "CustomEvent<{ href: string }>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-markdown",
-              "kind": "event",
-              "name": "lr-link-click",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-link-activate",
-                "usage": "lr-link-activate"
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "Activation includes pointer and keyboard gestures. The old event remains available after the canonical event with equal detail throughout the compatibility window."
-            },
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-render-error",
             "type": "CustomEvent<{ error: unknown }>",
             "cancelable": "never",
@@ -77599,21 +76737,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-markdown-core",
-            "kind": "event",
-            "name": "lr-link-click",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-link-activate",
-              "usage": "lr-link-activate"
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "Activation includes pointer and keyboard gestures. The old event remains available after the canonical event with equal detail throughout the compatibility window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -78041,25 +77165,6 @@
             "name": "lr-link-activate",
             "type": "CustomEvent<{ href: string }>",
             "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-link-click",
-            "type": "CustomEvent<{ href: string }>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-markdown-core",
-              "kind": "event",
-              "name": "lr-link-click",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-link-activate",
-                "usage": "lr-link-activate"
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "Activation includes pointer and keyboard gestures. The old event remains available after the canonical event with equal detail throughout the compatibility window."
-            },
             "constructor": "CustomEvent"
           },
           {
@@ -80821,21 +79926,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-message-actions",
-            "kind": "event",
-            "name": "lr-feedback-submit",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-feedback-submit-request",
-              "usage": "addEventListener('lr-feedback-submit-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -81042,25 +80133,6 @@
             "bubbles": true
           },
           {
-            "name": "lr-feedback-submit",
-            "type": "CustomEvent<LyraEventDetailSnapshot<MessageFeedbackSubmitDetail>>",
-            "cancelable": "always",
-            "deprecated": {
-              "tag": "lr-message-actions",
-              "kind": "event",
-              "name": "lr-feedback-submit",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-feedback-submit-request",
-                "usage": "addEventListener('lr-feedback-submit-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-            },
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-feedback-submit-request",
             "type": "CustomEvent<LyraEventDetailSnapshot<MessageFeedbackSubmitDetail>>",
             "cancelable": "always",
@@ -81168,21 +80240,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-message-feedback",
-            "kind": "event",
-            "name": "lr-feedback-submit",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-feedback-submit-request",
-              "usage": "addEventListener('lr-feedback-submit-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -81416,24 +80474,6 @@
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-feedback-submit",
-            "type": "LyraMessageFeedbackEventMap['lr-feedback-submit-request']",
-            "cancelable": "always",
-            "deprecated": {
-              "tag": "lr-message-feedback",
-              "kind": "event",
-              "name": "lr-feedback-submit",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-feedback-submit-request",
-                "usage": "addEventListener('lr-feedback-submit-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-            }
-          },
-          {
             "name": "lr-feedback-submit-request",
             "type": "CustomEvent<LyraEventDetailSnapshot<MessageFeedbackSubmitDetail>>",
             "cancelable": "always",
@@ -81639,34 +80679,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-message-parts",
-            "kind": "event",
-            "name": "lr-link-click",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-link-activate",
-              "usage": "lr-link-activate"
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "Activation includes pointer and keyboard gestures. The old event remains available after the canonical event with equal detail throughout the compatibility window."
-          },
-          {
-            "tag": "lr-message-parts",
-            "kind": "property",
-            "name": "accessibleLabel",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "attribute",
-              "name": "aria-label",
-              "usage": "element.setAttribute('aria-label', 'Message content');"
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "Use the native host accessible name. The legacy property remains an alias of the aria-label attribute throughout the compatibility window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -81709,11 +80722,11 @@
         "attributes": [
           {
             "name": "aria-label",
-            "property": "accessibleLabel",
+            "property": "aria-label",
             "type": "string | null",
             "reflects": false,
             "inferred": false,
-            "deprecated": false,
+            "deprecated": null,
             "hasDefault": false
           },
           {
@@ -81796,27 +80809,6 @@
           }
         ],
         "properties": [
-          {
-            "name": "accessibleLabel",
-            "attribute": "aria-label",
-            "type": "string | null",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": {
-              "tag": "lr-message-parts",
-              "kind": "property",
-              "name": "accessibleLabel",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "attribute",
-                "name": "aria-label",
-                "usage": "element.setAttribute('aria-label', 'Message content');"
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "Use the native host accessible name. The legacy property remains an alias of the aria-label attribute throughout the compatibility window."
-            },
-            "hasDefault": false
-          },
           {
             "name": "codeBlockHeader",
             "attribute": "code-block-header",
@@ -81957,25 +80949,6 @@
             "name": "lr-link-activate",
             "type": "CustomEvent<{ href: string }>",
             "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-link-click",
-            "type": "CustomEvent<{ href: string }>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-message-parts",
-              "kind": "event",
-              "name": "lr-link-click",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-link-activate",
-                "usage": "lr-link-activate"
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "Activation includes pointer and keyboard gestures. The old event remains available after the canonical event with equal detail throughout the compatibility window."
-            },
             "constructor": "CustomEvent"
           },
           {
@@ -99938,21 +98911,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-progress-bar",
-            "kind": "property",
-            "name": "accessibleLabel",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "attribute",
-              "name": "aria-label",
-              "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -100075,27 +99034,6 @@
           }
         ],
         "properties": [
-          {
-            "name": "accessibleLabel",
-            "attribute": null,
-            "type": "string",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": {
-              "tag": "lr-progress-bar",
-              "kind": "property",
-              "name": "accessibleLabel",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "attribute",
-                "name": "aria-label",
-                "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
-            },
-            "hasDefault": false
-          },
           {
             "name": "indeterminate",
             "attribute": "indeterminate",
@@ -100317,21 +99255,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-progress-ring",
-            "kind": "property",
-            "name": "accessibleLabel",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "attribute",
-              "name": "aria-label",
-              "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -100454,27 +99378,6 @@
           }
         ],
         "properties": [
-          {
-            "name": "accessibleLabel",
-            "attribute": null,
-            "type": "string",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": {
-              "tag": "lr-progress-ring",
-              "kind": "property",
-              "name": "accessibleLabel",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "attribute",
-                "name": "aria-label",
-                "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
-            },
-            "hasDefault": false
-          },
           {
             "name": "indeterminate",
             "attribute": "indeterminate",
@@ -109153,21 +108056,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-reorder-item",
-            "kind": "property",
-            "name": "accessibleLabel",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "attribute",
-              "name": "aria-label",
-              "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -109229,27 +108118,6 @@
           }
         ],
         "properties": [
-          {
-            "name": "accessibleLabel",
-            "attribute": null,
-            "type": "string | undefined",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": {
-              "tag": "lr-reorder-item",
-              "kind": "property",
-              "name": "accessibleLabel",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "attribute",
-                "name": "aria-label",
-                "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window."
-            },
-            "hasDefault": false
-          },
           {
             "name": "atEnd",
             "attribute": null,
@@ -116605,34 +115473,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-sequence-strip",
-            "kind": "attribute",
-            "name": "accessible-label",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "attribute",
-              "name": "aria-label",
-              "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "The native host accessible-name API replaces the component-specific fallback while preserving its existing runtime behavior throughout the compatibility window."
-          },
-          {
-            "tag": "lr-sequence-strip",
-            "kind": "property",
-            "name": "accessibleLabel",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "attribute",
-              "name": "aria-label",
-              "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "The native host accessible-name API replaces the component-specific fallback while preserving its existing runtime behavior throughout the compatibility window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -116650,27 +115491,6 @@
       "counterparts": [],
       "surface": {
         "attributes": [
-          {
-            "name": "accessible-label",
-            "property": "accessibleLabel",
-            "type": "string | undefined",
-            "reflects": false,
-            "inferred": false,
-            "deprecated": {
-              "tag": "lr-sequence-strip",
-              "kind": "attribute",
-              "name": "accessible-label",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "attribute",
-                "name": "aria-label",
-                "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "The native host accessible-name API replaces the component-specific fallback while preserving its existing runtime behavior throughout the compatibility window."
-            },
-            "hasDefault": false
-          },
           {
             "name": "aria-label",
             "property": "hostAccessibleLabel",
@@ -116722,27 +115542,6 @@
           }
         ],
         "properties": [
-          {
-            "name": "accessibleLabel",
-            "attribute": "accessible-label",
-            "type": "string | undefined",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": {
-              "tag": "lr-sequence-strip",
-              "kind": "property",
-              "name": "accessibleLabel",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "attribute",
-                "name": "aria-label",
-                "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "The native host accessible-name API replaces the component-specific fallback while preserving its existing runtime behavior throughout the compatibility window."
-            },
-            "hasDefault": false
-          },
           {
             "name": "categories",
             "attribute": null,
@@ -126384,47 +125183,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-table",
-            "kind": "attribute",
-            "name": "accessible-label",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "attribute",
-              "name": "aria-label",
-              "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "The native host accessible-name API replaces the component-specific fallback while preserving its existing runtime behavior throughout the compatibility window."
-          },
-          {
-            "tag": "lr-table",
-            "kind": "event",
-            "name": "lr-retry",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-retry-request",
-              "usage": "addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-          },
-          {
-            "tag": "lr-table",
-            "kind": "property",
-            "name": "accessibleLabel",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "attribute",
-              "name": "aria-label",
-              "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "The native host accessible-name API replaces the component-specific fallback while preserving its existing runtime behavior throughout the compatibility window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -126447,27 +125206,6 @@
       "counterparts": [],
       "surface": {
         "attributes": [
-          {
-            "name": "accessible-label",
-            "property": "accessibleLabel",
-            "type": "string | undefined",
-            "reflects": false,
-            "inferred": false,
-            "deprecated": {
-              "tag": "lr-table",
-              "kind": "attribute",
-              "name": "accessible-label",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "attribute",
-                "name": "aria-label",
-                "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "The native host accessible-name API replaces the component-specific fallback while preserving its existing runtime behavior throughout the compatibility window."
-            },
-            "hasDefault": false
-          },
           {
             "name": "announce",
             "property": "announce",
@@ -126908,27 +125646,6 @@
           }
         ],
         "properties": [
-          {
-            "name": "accessibleLabel",
-            "attribute": "accessible-label",
-            "type": "string | undefined",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": {
-              "tag": "lr-table",
-              "kind": "property",
-              "name": "accessibleLabel",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "attribute",
-                "name": "aria-label",
-                "usage": "Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback."
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "The native host accessible-name API replaces the component-specific fallback while preserving its existing runtime behavior throughout the compatibility window."
-            },
-            "hasDefault": false
-          },
           {
             "name": "announce",
             "attribute": "announce",
@@ -127576,25 +126293,6 @@
             "name": "lr-priority-columns-visibility-change",
             "type": "CustomEvent<Readonly<{ visible: boolean }>>",
             "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-retry",
-            "type": "CustomEvent<null>",
-            "cancelable": "always",
-            "deprecated": {
-              "tag": "lr-table",
-              "kind": "event",
-              "name": "lr-retry",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-retry-request",
-                "usage": "addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-            },
             "constructor": "CustomEvent"
           },
           {
@@ -128942,21 +127640,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-terminal",
-            "kind": "event",
-            "name": "lr-download",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-download-request",
-              "usage": "addEventListener('lr-download-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -129261,24 +127945,6 @@
             "type": "CustomEvent<LyraClipboardWriteFailure>",
             "cancelable": "never",
             "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-download",
-            "type": "LyraTerminalEventMap['lr-download-request']",
-            "cancelable": "always",
-            "deprecated": {
-              "tag": "lr-terminal",
-              "kind": "event",
-              "name": "lr-download",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-download-request",
-                "usage": "addEventListener('lr-download-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-            }
           },
           {
             "name": "lr-download-request",
@@ -131635,35 +130301,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-thread-list",
-            "kind": "event",
-            "name": "lr-retry",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-retry-request",
-              "usage": "addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-          },
-          {
-            "tag": "lr-thread-list",
-            "kind": "property",
-            "name": "compact",
-            "attribute": "compact",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "property",
-              "name": "size",
-              "usage": "Use size=\"s\" for compact rows and size=\"m\" for the default row density."
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "The shared size vocabulary describes row density and search-control scale together. The boolean compatibility spelling remains mapped to the small and medium size tiers throughout its deprecation window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -131695,29 +130333,6 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
-          },
-          {
-            "name": "compact",
-            "property": "compact",
-            "type": "boolean",
-            "reflects": true,
-            "inferred": false,
-            "deprecated": {
-              "tag": "lr-thread-list",
-              "kind": "property",
-              "name": "compact",
-              "attribute": "compact",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "property",
-                "name": "size",
-                "usage": "Use size=\"s\" for compact rows and size=\"m\" for the default row density."
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "The shared size vocabulary describes row density and search-control scale together. The boolean compatibility spelling remains mapped to the small and medium size tiers throughout its deprecation window."
-            },
-            "hasDefault": true,
-            "default": false
           },
           {
             "name": "error",
@@ -131848,29 +130463,6 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[]"
-          },
-          {
-            "name": "compact",
-            "attribute": "compact",
-            "type": "boolean",
-            "readonly": false,
-            "reflects": true,
-            "deprecated": {
-              "tag": "lr-thread-list",
-              "kind": "property",
-              "name": "compact",
-              "attribute": "compact",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "property",
-                "name": "size",
-                "usage": "Use size=\"s\" for compact rows and size=\"m\" for the default row density."
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "The shared size vocabulary describes row density and search-control scale together. The boolean compatibility spelling remains mapped to the small and medium size tiers throughout its deprecation window."
-            },
-            "hasDefault": true,
-            "default": false
           },
           {
             "name": "error",
@@ -132160,25 +130752,6 @@
             "name": "lr-query-change",
             "type": "CustomEvent<{ text: string }>",
             "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-retry",
-            "type": "CustomEvent<null>",
-            "cancelable": "always",
-            "deprecated": {
-              "tag": "lr-thread-list",
-              "kind": "event",
-              "name": "lr-retry",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-retry-request",
-                "usage": "addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-            },
             "constructor": "CustomEvent"
           },
           {
@@ -137321,34 +135894,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-tool-approval-dialog",
-            "kind": "event",
-            "name": "lr-approve",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-approve-request",
-              "usage": "addEventListener('lr-approve-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-          },
-          {
-            "tag": "lr-tool-approval-dialog",
-            "kind": "event",
-            "name": "lr-deny",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-deny-request",
-              "usage": "addEventListener('lr-deny-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -137698,24 +136244,6 @@
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-approve",
-            "type": "LyraToolApprovalDialogEventMap['lr-approve-request']",
-            "cancelable": "always",
-            "deprecated": {
-              "tag": "lr-tool-approval-dialog",
-              "kind": "event",
-              "name": "lr-approve",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-approve-request",
-                "usage": "addEventListener('lr-approve-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-            }
-          },
-          {
             "name": "lr-approve-request",
             "type": "CustomEvent<{ args: unknown }>",
             "cancelable": "always",
@@ -137726,24 +136254,6 @@
             "type": "CustomEvent<LyraToolApprovalDialogCloseDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-deny",
-            "type": "LyraToolApprovalDialogEventMap['lr-deny-request']",
-            "cancelable": "always",
-            "deprecated": {
-              "tag": "lr-tool-approval-dialog",
-              "kind": "event",
-              "name": "lr-deny",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-deny-request",
-                "usage": "addEventListener('lr-deny-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-            }
           },
           {
             "name": "lr-deny-request",
@@ -140468,21 +138978,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-tool-timeline",
-            "kind": "event",
-            "name": "lr-tool-approval-decide",
-            "since": "22.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-tool-approval-decide-request",
-              "usage": "addEventListener('lr-tool-approval-decide-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-            },
-            "removalNotBefore": "24.0.0",
-            "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -140591,24 +139087,6 @@
             "type": "CustomEvent<ToolTimelineActivateDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-tool-approval-decide",
-            "type": "LyraToolTimelineEventMap['lr-tool-approval-decide-request']",
-            "cancelable": "always",
-            "deprecated": {
-              "tag": "lr-tool-timeline",
-              "kind": "event",
-              "name": "lr-tool-approval-decide",
-              "since": "22.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-tool-approval-decide-request",
-                "usage": "addEventListener('lr-tool-approval-decide-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-              },
-              "removalNotBefore": "24.0.0",
-              "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-            }
           },
           {
             "name": "lr-tool-approval-decide-request",

@@ -7,7 +7,7 @@
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [overlays](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/overlays.md)
-- **Deprecated property** `accessibleLabel` since `22.0.0`; use attribute `Use element.ariaLabel or setAttribute('aria-label', label); host attribute presence takes precedence over the compatibility fallback.`; removal not before `24.0.0` — The native host accessible-name API replaces this fallback property. The earlier accessible-label attribute deprecation has its own published release window; the programmatic property remains supported throughout its later window.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 8 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -40,8 +40,7 @@ property and rich-slot heading wrapper at that semantic level, invalid untyped v
 carries when it first mounts; see the announcement paragraph that closes this section),
 `open: boolean = true`
 (reflected as a presence attribute — `open="false"` is accepted in plain markup; `false` removes the
-semantic content and hides the host surface), and `accessibleLabel: string = ''` (property only;
-used only when the host has no `aria-label` attribute). In markup, name the callout with the host
+semantic content and hides the host surface). In markup, name the callout with the host
 `aria-label`, which has highest precedence by presence, including an explicitly empty value.
 
 Every reflected closed set normalizes identically from markup and untyped JavaScript writes:
@@ -132,7 +131,7 @@ any nested level. `display:none`/`content-visibility:hidden` prune a branch; a
 stay silent. Nested forwarding slots expose their flattened assigned text instead of fallback
 content, and later assignment plus assigned-node text/style/visibility mutations are observed.
 Mutations that leave that accessible text unchanged are deduplicated. A nonempty host
-`aria-label` (or `accessibleLabel` fallback) prefixes visible update text as context, with an
+`aria-label` prefixes visible update text as context, with an
 equality check preventing duplicate copy. The complete localized
 `calloutAnnouncementWithContext: '{context}: {content}'` message owns both fields, their order, and
 punctuation; override that key through `strings` rather than prejoining either field. An explicitly

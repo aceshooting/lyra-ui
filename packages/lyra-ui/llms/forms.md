@@ -78,7 +78,7 @@ calling an entry projects the control's current `ValidityState` into `{ isValid,
 invalidKeys }` without mutating the control.
 
 ```ts
-import { LyraInput } from "@aceshooting/lyra-ui/components/forms/input/input.js";
+import { LyraInput } from "@aceshooting/lyra-ui/components/lr-input.js";
 
 const input = document.querySelector("lr-input")!;
 const result = LyraInput.validators[0].checkValidity(input);
@@ -117,6 +117,18 @@ published `invalid` painted every greyed-out control in the form red.
 required field still matches `:state(required)`, exactly like native `:required`. Style the barred
 case through `:state(disabled)`/`:disabled` and `:state(readonly)` instead. Full description in
 `llms/shared.md` → "CSS custom states".
+
+## Forms guide index
+
+This index links to detailed contracts below and the shared form/accessibility foundations; each
+contract is maintained once at its owning destination.
+
+- **Form lifecycle and validation:** [form association, reset, validity and disabled state](./shared/forms-and-accessibility.md#form-association) and [disabled/readonly validation behavior](#disabled-and-readonly-controls-publish-no-invalid-state).
+- **Popup selection and keyboard behavior:** [`lr-combobox` and `lr-option`](#popup-selection-keyboard), [`lr-select`](#popup-select-keyboard), and [`lr-radio-group`](#radio-group-controls).
+- **Date and time controls:** [`lr-date-picker` / `lr-date-input`](#date-and-range-controls), [`lr-time-input`](#date-and-time-controls), and [`lr-time-range`](#time-range-controls).
+- **Range controls:** [`lr-slider`](#range-controls) and [`lr-time-range`](#time-range-controls).
+
+<a id="popup-selection-keyboard"></a>
 
 ## `lr-combobox` / `lr-option`
 
@@ -173,7 +185,7 @@ focus explicitly — the browser does not replay the focus event after custom-el
   input.addEventListener("focus", async () => {
     if (!combobox.hidden) return;
     registration ??= import(
-      "@aceshooting/lyra-ui/components/forms/combobox/combobox.js"
+      "@aceshooting/lyra-ui/components/lr-combobox.js"
     ).catch((error) => {
       registration = undefined; // let a later interaction retry
       throw error;
@@ -519,16 +531,13 @@ async `source` call plus the exact query string that call was made with (the rej
 query, not necessarily the live `query`/`inputValue`, which may have moved on — or been cleared by
 closing the listbox — by the time the rejection settles). The rendered copy stays localized and
 never shows the raw error.
-`lr-retry-request` and `lr-retry` are cancelable; the built-in failed-load action calls `refresh()`, and `preventDefault()`
+`lr-retry-request` is cancelable; the built-in failed-load action calls `refresh()`, and `preventDefault()`
 leaves the failure on screen. While the failure state is the only popup content, the popup swaps
 `role="listbox"` for `role="dialog"` (the input gains the matching `aria-haspopup="dialog"` and
 drops `aria-activedescendant`, and the popup carries the localized failure heading as its accessible
 name). `dialog` is one of the four popup roles WAI-ARIA lets a `role="combobox"` own, so the still
 expanded `aria-controls` target keeps a valid owner while holding a retry `button` that is not a
 legal listbox child. A successful retry restores `role="listbox"`.
-`lr-retry` is the deprecated cancelable alias, dispatched after `lr-retry-request` with the same
-null detail. Either event can veto the built-in refresh; subscribe to one spelling. Removal of the
-alias is not before 24.0.0.
 
 **The clear button covers two axes, and announces only the one that moved.** A combobox owns both a
 committed selection and an in-progress filter query, so the button renders whenever either has
@@ -835,6 +844,8 @@ synchronous and fires no `input`/`change`/`lr-change` event.
 - `part="tag-label"` — The selected-tag label. Kept on one line and truncated with an ellipsis at `--tag-max-size` (default `var(--lr-size-5rem)`), rather than wrapped. Note that `lr-select`'s tag of the same name defaults to `var(--lr-size-12rem)`, so the same `--tag-max-size` value yields a wider tag there.
 
 ---
+
+<a id="popup-select-keyboard"></a>
 
 ## `lr-select`
 
@@ -1275,7 +1286,7 @@ purposes.
   <lr-option value="perf">Performance</lr-option>
 </lr-select>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/forms/select/select.js";
+  import "@aceshooting/lyra-ui/components/lr-select.js";
   const sel = document.getElementById("tags");
   // A custom chip: return a node, and re-declare part="tag" to keep the built-in styling hooks.
   sel.getTag = (option, index) => `${index + 1}. ${option.label}`; // a string renders as text
@@ -1324,6 +1335,8 @@ purposes.
   `autoCommitSingleOption` unset to observe the normal dropdown chrome.
 
 ---
+
+<a id="date-and-range-controls"></a>
 
 ## `lr-date-picker` / `lr-date-input` (+ `calendar-core.ts`)
 
@@ -1809,7 +1822,7 @@ disabled state.
   resize="auto"
 ></lr-textarea>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/forms/textarea/textarea.js";
+  import "@aceshooting/lyra-ui/components/lr-textarea.js";
   const bio = document.querySelector('lr-textarea[label="Bio"]');
   await bio.updateComplete; // both calls are no-ops before the first render
   bio.scrollPosition({ top: 0 }); // pin a restored draft back to the top
@@ -2019,44 +2032,21 @@ including when that allocation shrinks after the content renders.
 
 ## `lr-button`
 
-Host `aria-keyshortcuts` is forwarded reactively to the internal native button or link, including
-attribute removal and button/link presentation changes.
+Renders a native `<button>` or, with a safe `href`, a native `<a>`. Submit/reset use the
+browser-resolved form owner, including an external `form` owner, and run as default actions of the
+composed `click`; `preventDefault()` vetoes them, while `stopPropagation()` alone does not. The
+form's later `submit`/`reset` event can be canceled separately. Link mode navigates instead, and a
+disabled link has `aria-disabled="true"` with no `href`, focus, or navigation.
 
-A generic action-button primitive. Renders an internal native `<button>`; `type="submit"`/
-`type="reset"` are handled by the component itself via its browser-resolved form owner (including
-an external owner named by `form`), since a shadow-internal native button doesn't participate in a
-light-DOM form's submission on its own. They remain default actions of the composed native
-`click`: `preventDefault()` from any listener on that click path vetoes submit/reset before it
-runs, while `stopPropagation()` alone does not. Canceling the form's later `submit` or `reset`
-event remains an independent veto point.
+Host `aria-keyshortcuts` and `aria-describedby` follow the internal button or link reactively.
+Description IDs resolve in the host root, preserving order, unresolved IDs, and duplicates; source
+replacement, removal, reconnection, and adoption update the relationship. Accessible names and
+`aria-controls` have separate contracts below.
 
-External descriptions follow the current source element identity when an element with the same ID
-replaces it, when a source is removed or reinserted, and when the control reconnects or moves to
-another document. Host-root lookup and ordering follow the current `aria-describedby` list,
-including unresolved IDs and duplicates. Switching between native button and anchor modes keeps the
-relationship on the current action. Existing accessible names and `aria-controls` relationships
-retain their separate contracts.
-
-Set `href` to a safe link URL and the root renders as a real `<a part="base" href=…>` instead — a
-link styled as a button (e.g. a CTA). Native navigation is then the activation, so the submit/reset
-handling and `type` have no effect in that mode. A disabled link button (its own `disabled` or an
-ancestor `<fieldset disabled>`) renders the anchor with `aria-disabled="true"` and **no `href`**, so
-it is neither focusable nor navigable; it also dims to `--lr-opacity-disabled` with a `not-allowed`
-cursor and no hover/press feedback, exactly like the disabled `<button>` path (an `<a>` can never
-match `:disabled`, so that arm of the styling keys off `aria-disabled` instead). An
-unsafe/unparseable `href` falls back to the native `<button>`.
-
-The label does **not** grow to fill a stretched button. `[part="label"]` shrink-wraps its text and
-the whole icon+label pair centres under `--lr-button-justify`, so the icon-to-text distance is
-exactly `--lr-button-gap`. Before 16.0.0 the label was `flex: 1 1 auto`, which parked every spare
-pixel inside the label box and — because the native `<button>` UA stylesheet centres text, which the
-label wrapper inherited — floated the text in the middle of a wide empty row. A `with-caret` button,
-and one with an `end`/`suffix` adornment, keep the growing label so that trailing affordance stays
-pinned to the trailing content edge. `--lr-button-label-grow: 1` restores the old stretch and `0`
-opts a caret/end-adornment row out of pinning. The label is also `text-align: start` now, which
-fixes two side effects of the inherited centring: a label narrower than its own text centred the
-overflow so the ellipsis appeared at the end while the start of the word was clipped, and the `<a>`
-root (which never inherited the centring) disagreed with the `<button>` root across a mode switch.
+`[part="label"]` shrink-wraps with `text-align: start`, keeping ellipsis at the trailing edge.
+The icon and label stay centered under `--lr-button-justify`, separated by `--lr-button-gap`.
+`with-caret` or an `end`/`suffix` adornment makes the label grow to pin trailing content; use
+`--lr-button-label-grow: 1` to opt into that stretch or `0` to opt out.
 
 **Properties:**
 
@@ -2066,7 +2056,8 @@ root (which never inherited the centring) disagreed with the `<button>` root acr
   so a `mailto:` href paired with `download` falls back to the native `<button>`. Unset (the default)
   renders a plain `<button>`, unchanged. `type` (submit/reset) has no effect while the anchor
   renders. While the button is disabled the anchor is rendered **without** `href` (keeping
-  `aria-disabled="true"`), so a disabled link button cannot navigate. An unsafe/unparseable value
+  `aria-disabled="true"`), so it cannot navigate; it also uses `--lr-opacity-disabled`, a
+  `not-allowed` cursor, and no hover/press feedback. An unsafe/unparseable value
   falls back to the native `<button>`
 - `target?: string` — native anchor `target`, used only while `href` resolves to a link. Setting it
   (e.g. `'_blank'`) automatically force-adds `noopener noreferrer` to the rendered anchor's
@@ -2084,15 +2075,11 @@ root (which never inherited the centring) disagreed with the `<button>` root acr
   `primary` → `brand`, and `text` → neutral `appearance="plain"`. The Lyra/Web Awesome default is
   intentionally still `neutral`
 - `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' | 'quiet' | 'link' =
-'accent'` (reflected) — the library's shared fill vocabulary plus this component's own two extra
-  tiers. **Breaking in 8.0.0: the default moved from `'filled'` to `'accent'`**, so a bare
-  `<lr-button>` now paints the loud fill it used to need `appearance="accent"` for. The two are no
-  longer near-duplicates: `'accent'` takes the active `variant`'s **loud** fill
+'accent'` (reflected) — the shared fill vocabulary plus two button-specific tiers. `'accent'`
+  takes the active `variant`'s **loud** fill
   (`--lr-button-accent-fill`) with the foreground guaranteed legible on it, while `'filled'` takes
   that variant's **quiet** tint (`--lr-button-fill`) — a secondary-action fill that still reads as a
-  fill rather than as the page surface. Before 8.0.0 every chromatic variant's `'filled'` and
-  `'accent'` resolved to the same loud token and rendered identically, while `variant="neutral"`'s
-  `'filled'` was the page surface, i.e. no fill at all. `'filled-outlined'` is `'filled'`'s fill and
+  fill rather than as the page surface. `'filled-outlined'` is `'filled'`'s fill and
   foreground carrying the outlined tier's border colour, for a filled button that must still read as
   bounded on a same-toned surface. `'quiet'` is a de-emphasized tier:
   transparent background with a bordered, muted-text chrome; its text/border tokens are **not**
@@ -2167,21 +2154,12 @@ root (which never inherited the centring) disagreed with the `<button>` root acr
 - `formTarget?: string` (attribute `formtarget`) — overrides the form owner's `target`. Distinct
   from `target`, which is the anchor target used in link mode
 
-All five are `undefined`/`false` by default. When any of them — or `name`/`value` — is set, the
-submission runs through a **transient native `<button type="submit">`** inserted directly after the
-host, used as `requestSubmit()`'s submitter and removed again in the same synchronous step (in a
-`finally`, so a throwing or validation-blocked submission can't leave it behind). That is what makes
-the name/value pair reach the submitted `FormData` and the overrides reach the real submission:
-`requestSubmit()` only accepts a submitter the form actually owns, and a custom element is never
-one. While that stand-in exists it _is_ the form's submitter, so **`SubmitEvent.submitter` is the
-transient native button, not this host**. With none of those properties set, submission stays a
-plain `requestSubmit()` with a `null` submitter, and all of it is inert in link mode.
-For each string override, presence rather than truthiness chooses the transient path and its raw
-attribute is copied, so explicit empty values remain distinguishable from absence. Only the
-canonical native/upstream spellings are supported; the former hyphenated Lyra aliases were
-removed.
-
-Each size tier's `min-block-size` floor is exposed as its own token (see below).
+All five default to `undefined`/`false`. When one or `name`/`value` is set, the component inserts a
+transient native submit button after the host, passes it to `requestSubmit()`, and removes it in the
+same synchronous step even if submission fails. Its `name`/`value` reaches `FormData`, its `form*`
+overrides apply, and **`SubmitEvent.submitter` is that native button, not the host**. With none
+set, `requestSubmit()` has a `null` submitter. Presence, including an explicitly empty string,
+selects the transient path; string attributes are copied verbatim. Link mode ignores all of this.
 
 **Getters/methods:** `click()`, `focus(options?)`, and `blur()` — forwarded to the internal base
 element (the `<button>`, or the `<a>` in anchor mode); `click()` also runs the component's
@@ -2192,9 +2170,7 @@ consumer error and restores the current `required`/`value` constraint. `formStat
 restores `value` for session history/autofill without changing submitter-only form-data semantics.
 
 **Events:** a plain native `click` bubbles and composes through the shadow boundary unmodified
-(disabled while `disabled` or `loading`). In button mode, submit/reset runs only after that click's
-listener path has accepted the default action; calling `preventDefault()` on the host or an
-ancestor therefore vetoes it, while propagation control by itself does not. The internal button's
+(disabled while `disabled` or `loading`). The internal button's
 `focus` and `blur` — which do not
 cross the shadow boundary on their own — are re-dispatched from the host as bubbling, composed
 events. `lr-invalid` (no
@@ -2223,9 +2199,8 @@ set), `spinner` (present only while `loading`).
 **CSS custom states:** `disabled` (including fieldset-disablement and loading), `icon-button`
 (one text-free default-slot element), `link` (safe anchor mode), and `loading`.
 
-**Themeable custom properties.** The colour slots below are re-pointed at the active `variant`'s row
-of the library's shared semantic colour grid, so the component carries no `:host([variant='…'])`
-block of its own — the ones marked variant-independent are the exceptions:
+**Themeable custom properties.** Colour slots follow the active `variant`'s semantic colour row
+unless marked variant-independent:
 
 - `--lr-button-accent` (default `--lr-color-fill-loud`) — text/glyph colour for the chrome-less
   tiers (`outlined`, `plain`, `link`), i.e. the variant's loud fill borrowed as a foreground.
@@ -2264,13 +2239,9 @@ text/border counterparts, letting e.g. `appearance="quiet"` (which has its own r
 default**. Chromatic `plain` text moves toward body text during hover/press to retain contrast
 against the moving fill; the other appearances keep their resting text colour. The hover colour
 override also applies while pressed, and the border fallback remains the resting border colour.
-`appearance="link"` ignores `--lr-button-hover-color` (its own hover rule sets a higher-specificity
-colour mix) and renders with no border at any state, so `--lr-button-hover-border` has no visible
-effect there. **Breaking in 8.0.0:** this replaced `--lr-button-hover-brightness`,
-which no longer exists — a `filter: brightness()` multiplies every channel, so it moved a mid-toned
-fill but did nothing at all to a pure white or pure black one, and it dimmed the label and icons
-along with the box. Retuning `--lr-button-fill` or `--lr-button-accent-fill` now retunes that tier's
-hover and press with it.
+`appearance="link"` ignores `--lr-button-hover-color` and renders without a border, so
+`--lr-button-hover-border` has no effect there. Retuning either fill token also retunes its tier's
+hover and press. For removed historical tokens, see the [changelog](../CHANGELOG.md).
 
 `--lr-button-width` (default `100%`) is the internal control's inline size, so it follows the host's
 own width; override it to `auto` for a compact inline composition. `--lr-button-active-scale`
@@ -2282,11 +2253,9 @@ the `loading` spinner's rotation period; that token itself collapses to `0.001ms
 The per-`size` `min-block-size` floors are `--lr-button-size-2xs`, `--lr-button-size-xs`,
 `--lr-button-size-s`, `--lr-button-size-m`, `--lr-button-size-l` and
 `--lr-button-size-xl`. Each defaults to the matching tier of the shared form-control ladder
-(`--lr-form-control-height-2xs` … `-xl`, i.e. 1.25rem, 1.5rem, 1.875rem, 2.5rem, 3rem, 3.5rem), so a
-button shares the same minimum-height ladder as sibling form controls rather than relying on a
-second hand-maintained list — which is exactly how the scales drifted apart before 8.0.0. This is
-density/floor parity, not guaranteed pixel-height parity: content and nested actions can make a
-composed control such as `lr-date-input` taller. Each token is read only by its own tier
+(`--lr-form-control-height-2xs` … `-xl`, i.e. 1.25rem, 1.5rem, 1.875rem, 2.5rem, 3rem, 3.5rem).
+These are minimum-height floors; content and nested actions can make a composed control taller.
+Each token is read only by its own tier
 (`--lr-button-size-s` also serves `size="small"`, and so on for the other two aliases), and all are
 ignored by `appearance="link"`.
 Retheming `--lr-theme-form-control-height-*` moves every control on the ladder together.
@@ -2304,16 +2273,14 @@ changes its private default to `--lr-radius-pill`. `--lr-button-caret-size` (def
 `var(--lr-size-0-75em)`) is the `with-caret`
 chevron's font size — declared in `em`, so it tracks every `size` tier through the button's own font
 size instead of needing a per-tier value.
-`--lr-button-shadow` is **undeclared by default**, so `box-shadow` falls back to `none` —
-byte-identical to before this property existed — set it to add a drop shadow (e.g. an
-elevated/floating action button) without a `::part(base)` rule. `appearance="link"` always renders
+`--lr-button-shadow` is **undeclared by default**, so `box-shadow` falls back to `none`; set it
+for a drop shadow without a `::part(base)` rule. `appearance="link"` always renders
 with no shadow regardless of this token — a zero-chrome inline link has no box to elevate.
 `--lr-button-justify` (default `center`) is the `justify-content` of the internal button's row. With
 the label no longer growing, this is what positions the icon+label pair inside a stretched control:
 `flex-start` packs it against the leading edge, `space-between` pushes the adornments apart.
-`--lr-button-label-grow` (default `0`) is the `flex-grow` of `[part="label"]`; `1` restores the
-pre-16.0.0 behaviour where the label absorbed every spare pixel of a stretched button, and it also
-overrides the automatic grow a `with-caret`/`end`-adornment button applies.
+`--lr-button-label-grow` (default `0`) is the `flex-grow` of `[part="label"]`; `1` fills spare
+space, and an explicit value overrides the grow applied by `with-caret`/`end` adornments.
 
 **Retuning one `size` tier's geometry, without a `::part(base)` rule.** Four more properties carry
 the active tier's geometry. Every `:host([size='…'])` rule changes only private defaults — no
@@ -2379,10 +2346,8 @@ box no matter what tier or override is in play.
 
 **Known gotchas:**
 
-- `accessibleLabel`/a host `aria-label` is forwarded reactively to the internal button or anchor as
-  a literal string (for an icon-only button). Host `aria-describedby` targets in the host's root
-  are resolved onto the focused internal control through `ariaDescribedByElements`; external
-  `aria-labelledby` is not copied across the shadow boundary.
+- Host `aria-describedby` targets resolve onto the focused internal control through
+  `ariaDescribedByElements`; external `aria-labelledby` is not copied across the shadow boundary.
 - For a toggle that owns its pressed state — a vetoable request, `lr-change`, and optional grouping
   behind one tab stop — use `lr-toggle` / `lr-toggle-group` rather than flipping host `aria-pressed`
   in a click handler.
@@ -2390,13 +2355,12 @@ box no matter what tier or override is in play.
   For toggle buttons, host `aria-pressed="true|false|mixed"` reaches the focused native button —
   BUTTONS only. A link button (`href` set) never receives it, because `role="link"` does not support
   `aria-pressed`; remove `href` and the same host attribute starts reaching the `<button>` that
-  replaces the anchor. That link carve-out arrived in **16.0.0** — before it, `aria-pressed` was
-  forwarded onto the anchor as well, asserting a state `role="link"` does not have. Navigation can
+  replaces the anchor. Navigation can
   use the global `aria-current="page|step|location|date|time|true|false"`, which does reach the
   anchor. Both states update reactively, including native `ariaPressed`/`ariaCurrent` property
   assignments, attribute removal and `href` changes. Empty or unsupported tokens are omitted. The native button/link role
   remains unchanged for an enabled control: use pressed state for button toggles and current state
-  for navigation links. A DISABLED link button drops `href` (so it genuinely cannot navigate) and
+  for navigation links. A disabled link button drops `href` and
   therefore also drops the anchor's implicit role, so it renders an explicit `role="link"` — without
   it, the forwarded `aria-label`/`aria-haspopup`/`aria-expanded`/`aria-current` would sit on a
   role-less generic element, which is prohibited.
@@ -2409,13 +2373,8 @@ box no matter what tier or override is in play.
 - Is form-associated (`static formAssociated = true` + `attachInternals()`), so it participates in
   an ancestor `<form>.elements` the same way `wa-button` does — a sibling text field's own
   Enter-to-submit lookup (which scans `form.elements` for a `type === 'submit'` control) finds it.
-- **`SubmitEvent.submitter` is not this element** whenever `name`/`value` or any `form*` override is
-  set: it is the transient native `<button>` described above. That native submitter remains
-  connected throughout synchronous `requestSubmit()` handling, so a `submit` listener can read
-  its `name`, `value` and `form*` fields and construct `FormData` with it. It is removed after
-  submission handling returns; its identity is distinct from the `lr-button` host.
-- The `form*` overrides and `type` are all inert while `href` renders the anchor — native navigation
-  is the activation there, and an anchor has no submit/reset concept.
+- A `submit` listener can read the transient native submitter's `name`, `value`, and `form*` fields
+  while it remains connected during synchronous `requestSubmit()` handling.
 
 ---
 
@@ -2609,22 +2568,14 @@ form-associated via the same `FormAssociated` mixin as `lr-textarea`. Ships the 
 `label`/`hint`/`errorText` form-control chrome as `lr-textarea`/`lr-select`, and the same
 `size` scale as `lr-select`/`lr-combobox`.
 
-`stepUp()` and `stepDown()` use the current `value`, `step`, `min`, and `max` properties in the same
-synchronous call, including changes made immediately beforehand. They preserve native step alignment
-and bounds, update form submission silently, and remain no-ops before the native input has rendered
-or while disabled/readonly. Native `step="any"` remains a non-steppable no-op.
-
-Removing `label`, `hint`, `help-text`, or `error-text` safely omits that content while retaining
-native `null` property readback. Explicit empty strings remain empty and later supplied text renders
-normally. The same inherited behavior applies to `lr-number-input` and `lr-native-time-input`.
+Removing `label`, `hint`, `help-text`, or `error-text` omits that content while retaining native
+`null` property readback. Explicit empty strings remain empty. `lr-number-input` and
+`lr-native-time-input` inherit this behavior.
 
 Changing own `disabled` from true to false in the same task that disables an ancestor fieldset keeps
 the native editing control effectively disabled. The enabled first-legend exception and explicit
 own-disabled state retain their native meaning; validity and form submission follow the effective
 disabled state.
-
-Pressing Enter submits the ancestor `<form>` — the implicit submission a native `<input>` performs;
-see "Enter-to-submit" below for the exact rules and for which controls deliberately opt out.
 
 Public `--lr-input-*` theme inputs stay undeclared on the host, so an ancestor theme wrapper can
 override size, appearance, and pill fallbacks; a value set directly on the element still wins.
@@ -2653,12 +2604,9 @@ shared hit target (42px including the row border at the default theme); `l` and 
 - `value: string = ''` (from `FormAssociated`)
 - `defaultValue: string = ''` — reset value, backed by the standard `value` content attribute;
   `default-value` is accepted as a Shoelace attribute alias
-- `name: string` (from `FormAssociated`) and the plain inherited `id` are both forwarded to the
-  internal native `<input>` (previously the internal input carried neither, only a fixed
-  `id="input"`), so shadow-DOM-aware password managers that key field detection off the actual
-  control's own `name`/`id` — not `autocomplete` alone — recognize `<lr-input>` fields. The
-  internal `<label for>` tracks whichever id is in use. Leaving `id` unset on the host keeps the
-  internal input at `id="input"`, identical to before
+- `name: string` (from `FormAssociated`) and inherited `id` are forwarded to the native input for
+  password-manager field detection. The internal `<label for>` tracks that id; without a host `id`,
+  the input uses `id="input"`
 - `placeholder: string = ''`
 - `clearable: boolean = false` (reflected) — shows a localized clear action while a `text` or
   `search` input has a value; clearing preserves input focus
@@ -2677,18 +2625,13 @@ shared hit target (42px including the row border at the default theme); `l` and 
 - `title: string = ''` — forwarded to the native input
 - `spellcheck: boolean = true` — forwarded to the native input, including `spellcheck="false"`
 - `autocapitalize: string = ''` / `autocorrect` (read: `boolean = true`; write:
-  `boolean | 'off' | 'on'`; attribute values `on`/`off`)
+  `boolean | 'off' | 'on'`; markup `autocorrect="on"`/`autocorrect="off"`)
 - `inputMode: string = ''` (attribute `inputmode`) / `enterKeyHint: string = ''` (attribute
   `enterkeyhint`) — `autocapitalize`, `inputMode`, and `enterKeyHint` are forwarded verbatim to the
   native input and an empty string omits them; `autocorrect` is normalized to canonical `on`/`off`
 - Lowercase native IDLs `inputmode: string` and `enterkeyhint: string` delegate to the camel-case
   native properties; `autocorrect` reads as boolean while accepting both Web Awesome's boolean
   writes and Shoelace's `'off'`/`'on'` writes
-
-**8.0 migration:** the former camel-case string property `autoCorrect` is not retained as a public
-alias. Prefer boolean `autocorrect` writes in new code; migrated Shoelace `'off'`/`'on'` property
-writes remain valid and read back as booleans. Markup uses `autocorrect="on"` /
-`autocorrect="off"`.
 
 - `min?: number | string` / `max?: number | string` (attributes `min`/`max`) /
   `step?: number | 'any'` (attribute `step`, accepts the native `'any'` value alongside a number)
@@ -2706,10 +2649,7 @@ writes remain valid and read back as booleans. Markup uses `autocorrect="on"` /
   forwarded to the native input and reported as `validity.patternMismatch`. Anchored to the whole
   value by the platform, so no `^`/`$` is needed; an empty value never violates it
 - `passwordToggle: boolean = false` (attribute `password-toggle`, reflected — `type="password"`
-  only) — renders the built-in show/hide-password button. **Breaking in 8.0.0: this is now opt-in.**
-  Before, `type="password"` always rendered the toggle and there was no way to remove it; a consumer
-  whose threat model or visual design excludes one had to hide it with CSS. Add `password-toggle`
-  to keep the old rendering
+  only) — opt-in built-in show/hide-password button
 - `passwordVisible: boolean = false` (attribute `password-visible` — `type="password"` only) —
   whether the field currently reveals its raw text. Toggled by the built-in button, and also
   settable up front with or without that button being rendered
@@ -2730,10 +2670,8 @@ writes remain valid and read back as booleans. Markup uses `autocorrect="on"` /
   referenced element only needs a string `.value`, so a native `<input>`/`<textarea>` works the
   same as another `lr-input`; see "A new-password field" below for the password-confirmation shape
 - `withoutSpinButtons: boolean = false` (attribute `without-spin-buttons`, reflected —
-  `type="number"` only) — suppresses the browser's own increment/decrement spin buttons.
-  **Breaking in 8.0.0:** `type="number"` used to hide them unconditionally; left unset, the
-  platform's spinners now render exactly as they do on a bare `<input type="number">`.
-  `<lr-number-input>` defaults this the other way (`true`), so its rendering is unchanged
+  `type="number"` only) — suppresses native spin buttons; unset leaves them visible.
+  `<lr-number-input>` defaults this to `true`
 - `noSpinButtons: boolean = false` (attribute `no-spin-buttons`) — Shoelace alias for
   `withoutSpinButtons`; either suppresses native number spinners
 - `debounce?: number` (attribute `debounce`, ms) — how long to wait after the last keystroke
@@ -2783,7 +2721,8 @@ Three more native passthroughs:
   non-finite `steps` falls back to `1`; `0` is a no-op, as is `step="any"`, as is any `type` the
   platform gives no allowed value step (it throws `InvalidStateError` for those, which is swallowed
   here), and as is `disabled` or `readonly`. `type="number"` and `type="time"` are the two that step
-  — on a time field the unit is seconds, matching its `step`.
+  — on a time field the unit is seconds, matching its `step`. They use the current properties in
+  that synchronous call and are also no-ops before the native input renders.
   `<lr-number-input>`'s stepper buttons build on these and _do_ emit, because a button press is a
   user edit.
 
@@ -2869,10 +2808,8 @@ what is specific to it.
 
 - **`size` accepts both spellings of every tier.** The canonical ladder is
   `2xs`/`xs`/`s`/`m`/`l`/`xl`, and `small`/`medium`/`large` — Web Awesome's and Shoelace's names —
-  are accepted as exact synonyms for `s`/`m`/`l`. Nothing is normalized away in JS: the shared
-  stylesheet matches both spellings in the same selector list, so `size="small"` costs nothing and
-  `el.size` reads back whatever you wrote. A migration off either upstream is a tag rename with no
-  attribute rewrite. One ladder now drives `lr-button`, `lr-input`, `lr-select`, `lr-combobox`,
+  are accepted as exact synonyms for `s`/`m`/`l`. `el.size` reads back the spelling supplied.
+  One ladder drives `lr-button`, `lr-input`, `lr-select`, `lr-combobox`,
   `lr-date-input`, `lr-textarea`, `lr-checkbox`, `lr-radio`, `lr-switch` and `lr-slider`, so
   same-`size` controls line up in a toolbar row by construction. Retune a whole tier from one place
   with `--lr-theme-form-control-height-*` rather than per component. Set
@@ -2881,9 +2818,8 @@ what is specific to it.
   radius.
 - **`appearance` is the fill vocabulary and nothing else.** `accent` (the loud semantic fill),
   `filled` (a quiet tint of the same tone), `outlined` (a border, no fill), `filled-outlined`
-  (both) and `plain` (neither). It used to double as a _container_ treatment on other components;
-  that meaning moved to `frame` (`card`/`plain`) in 8.0.0, so `appearance` means one thing
-  library-wide. `lr-button` adds two tiers of its own on top (`quiet` and `link`). Text fields
+  (both) and `plain` (neither). Container treatment uses `frame` (`card`/`plain`).
+  `lr-button` adds `quiet` and `link`. Text fields
   (`lr-input`, `lr-textarea`, and `lr-select`) default to `outlined`; `lr-button` defaults to `accent`.
 - **`pill` rounds the control's ends.** Available on `lr-input`, `lr-number-input`, `lr-time-input`,
   `lr-textarea`, `lr-select`, `lr-combobox`, `lr-date-input`, `lr-phone-input`, `lr-token-input`,
@@ -2891,13 +2827,9 @@ what is specific to it.
   component's own `--lr-*-radius` knob to `--lr-radius-pill` — rather than declaring a radius on a
   part, so the knob stays the single corner-radius override point and a consumer's own value still
   wins over it.
-- **`setCustomValidity(message)` and `resetValidity()` are on every form-associated _value_ control
-  here** — every one
-  that submits something, whether it drives `ElementInternals` through the shared mixin or by hand.
-  (`lr-button` is a form-associated submitter, so an ancestor `<fieldset disabled>` and
-  `form.elements` reach it, but it carries no value or validity and therefore has no such method;
-  `lr-icon-button` is deliberately not form-associated.) It is the standard channel for a rejection
-  no client-side constraint can express — a server-side
+- **`setCustomValidity(message)` and `resetValidity()` are on every form-associated value control
+  here and on the form-associated `lr-button` submitter.** `lr-icon-button` is not form-associated.
+  These methods handle a rejection no client-side constraint can express — a server-side
   "that email is already registered". A non-empty message raises `customError` and becomes
   `validationMessage`, so the control fails `checkValidity()`, blocks submission, and matches
   `:invalid`/`:state(invalid)`.
@@ -2986,7 +2918,7 @@ Several controls expose the same pair: a per-`size` `*-min-height` **floor**, an
 <lr-input type="time" label="Reminder" id="reminder"></lr-input>
 <button type="button" id="open-picker">Pick a time</button>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/forms/input/input.js";
+  import "@aceshooting/lyra-ui/components/lr-input.js";
   const time = document.getElementById("reminder");
   // showPicker() needs user activation, so drive it from a real click.
   document
@@ -2999,14 +2931,8 @@ Several controls expose the same pair: a per-`size` `*-min-height` **floor**, an
 attribute form is enough to turn each on. `autofocus` is likewise `false`-defaulting — none of
 these four needs the property form to be reset.
 
-**A new-password field.** There is no dedicated password-purpose preset — a deliberate decision,
-not an omission: the only thing such a preset would actually save is `autocomplete`, and that value
-has no single correct default for "a password field" (`new-password` on a set/change/reset flow,
-`current-password` on a login one, and one is never derivable from the other), so a `purpose`
-property would still need a second parameter carrying that same distinction, in exchange for a
-non-standard vocabulary a migrating `wa-`/`sl-`/native `<input type="password">` author would have
-to learn instead of carrying over unchanged. Compose the existing primitives directly, the same way
-a plain native `<input type="password">` does:
+**A new-password field.** Set `autocomplete` explicitly: use `new-password` for set/change/reset
+flows and `current-password` for login. A confirmation pair can use `match`:
 
 ```html
 <lr-input
@@ -3028,12 +2954,8 @@ a plain native `<input type="password">` does:
 ></lr-input>
 ```
 
-`autocomplete="new-password"` (rather than the bare `password` token, and never `current-password`
-on a set/change/reset flow) is the platform contract that keeps a browser's or password manager's
-own generator and save prompt from cross-contaminating a change/reset flow with the account's
-existing credential; set it explicitly on every field in the pair, since `autocomplete` has no
-purpose-derived default here. `match` (above) is what makes the second field fail validity —
-`customError`, with a localized mismatch message — for as long as its value disagrees with the
+Set `autocomplete="new-password"` on both fields in the pair; there is no purpose-derived default.
+`match` makes the second field fail with a localized `customError` while its value differs from the
 first field's, referenced here by id.
 
 **Known gotchas:**
@@ -3053,24 +2975,13 @@ first field's, referenced here by id.
   value, and the localized `valueInvalid` string when only the script-value check did.
 - An empty value is never `tooShort` and never a `patternMismatch` — both native constraints skip
   the empty string, and `required` is what rejects it.
-- **The `password-toggle` button is opt-in as of 8.0.0.** A bare `type="password"` now ships no
-  toggle at all, and the `password-toggle` part is absent from the shadow tree with it — a
-  `::part(password-toggle)` rule, or a test that queries for it, silently matches nothing until the
-  attribute is set. The toggle never renders for a non-password `type`, opted in or not.
-- **`type="number"` no longer hides the native spin buttons on its own.** Set
-  `without-spin-buttons` (or use `<lr-number-input>`, which defaults it to `true` and draws its own
-  stepper pair) to get the previous rendering back.
-- `showPicker()` swallows every platform failure by design, so it returns without telling you the
-  picker didn't open. Don't build a flow that assumes a picker is now on screen.
-- `stepUp()`/`stepDown()` are silent — they emit no `input`/`change`. Emit your own, or drive the
-  value through a real user affordance, if downstream state depends on those events.
-- **A `match` id reference resolves in this element's own root, not the whole document.** Two
-  fields inside two different shadow roots (a confirm field composed by one component, the field it
-  should match composed by an unrelated one) must pair through a direct element reference
-  (`confirm.match = passwordEl`) instead of an id string — exactly like every other idref this
-  library resolves, `aria-describedby` included. An id that does not resolve at all (a typo, or an
-  element removed later) is inert rather than a permanent block on submission: `match` stops
-  applying, it does not fail closed.
+- `password-toggle` and its CSS part render only for `type="password"` with the opt-in attribute.
+  Native number spinners remain visible unless `without-spin-buttons` is set; `lr-number-input`
+  defaults to its own stepper pair.
+- `showPicker()` can return without opening a picker. `stepUp()`/`stepDown()` emit no `input` or
+  `change`; downstream observers needing those events should use a user affordance or emit them.
+- A `match` id resolves in this element's own root. Use a direct element reference
+  (`confirm.match = passwordEl`) across shadow roots. An unresolved id makes the constraint inert.
 
 **Additional API surface:**
 
@@ -3214,7 +3125,7 @@ The exact-320px RTL story keeps long label/hint copy and both fixed-size stepper
   without-spin-buttons="false"
 ></lr-number-input>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/forms/input/number-input.js";
+  import "@aceshooting/lyra-ui/components/lr-number-input.js";
 </script>
 ```
 
@@ -3232,6 +3143,8 @@ The exact-320px RTL story keeps long label/hint copy and both fixed-size stepper
   platform ignores all three on `type="number"`; use `min`/`max`/`step` instead.
 - `type` is re-forced to `number` on every connect, but a later `el.type = 'text'` on a connected
   element is not reverted — use `lr-input` when the type has to change.
+
+<a id="date-and-time-controls"></a>
 
 ## `lr-time-input`
 
@@ -3414,7 +3327,7 @@ ancestor to change every unset time input beneath it.
 ></lr-time-input>
 <lr-time-input label="Precise time" step="15" value="09:30:15"></lr-time-input>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/forms/input/time-input.js";
+  import "@aceshooting/lyra-ui/components/lr-time-input.js";
 </script>
 ```
 
@@ -3498,7 +3411,7 @@ entry for the flush and cancellation rules.
   value="09:30"
 ></lr-native-time-input>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/forms/input/native-time-input.js";
+  import "@aceshooting/lyra-ui/components/lr-native-time-input.js";
 </script>
 ```
 
@@ -3717,7 +3630,7 @@ consumer-supplied lazy loader below. Because the import expression lives in cons
 numbering metadata enters a bundle that does not opt in.
 
 ```ts
-import "@aceshooting/lyra-ui/components/forms/phone-input/phone-input.js";
+import "@aceshooting/lyra-ui/components/lr-phone-input.js";
 import { loadLibphonenumberAdapter } from "@aceshooting/lyra-ui/components/forms/phone-input/phone-input.class.js";
 
 const phone = document.querySelector("lr-phone-input");
@@ -3789,6 +3702,8 @@ import "@aceshooting/lyra-ui/components/media/flag/flag-peer.js";
 - `--lr-phone-input-country-hover-bg` — Country trigger hover background. Default: `var(--lr-color-brand-quiet)`.
 
 ---
+
+<a id="time-range-controls"></a>
 
 ## `lr-time-range`
 
@@ -4148,7 +4063,7 @@ do not need to load Lit. The consumer still owns localized labels, display order
 value:
 
 ```ts
-import "@aceshooting/lyra-ui/components/forms/swatch-picker/swatch-picker.js";
+import "@aceshooting/lyra-ui/components/lr-swatch-picker.js";
 import { GEMSTONES } from "@aceshooting/lyra-ui/theme/gemstones-data.js";
 
 const order = ["emerald", "ruby", "sapphire", "hematite"] as const;
@@ -4232,9 +4147,9 @@ The consuming Lit component imports these granular entries and lists
 button in the application uses `icon` or `src`:
 
 ```ts
-import '@aceshooting/lyra-ui/components/forms/icon-button/icon-button.js';
-import '@aceshooting/lyra-ui/components/overlays/overlay/popover.js';
-import '@aceshooting/lyra-ui/components/forms/swatch-picker/swatch-picker.js';
+import '@aceshooting/lyra-ui/components/lr-icon-button.js';
+import '@aceshooting/lyra-ui/components/lr-popover.js';
+import '@aceshooting/lyra-ui/components/lr-swatch-picker.js';
 import {
   GEMSTONE_KEYS,
   GEMSTONES,
@@ -4697,7 +4612,7 @@ Plus shared tokens
 ```html
 <lr-switch name="notifications" checked>Enable notifications</lr-switch>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/forms/switch/switch.js";
+  import "@aceshooting/lyra-ui/components/lr-switch.js";
   const sw = document.querySelector("lr-switch");
   sw.addEventListener("lr-change", (e) => console.log(e.detail.checked)); // prefixed alias
   sw.addEventListener("change", (e) => console.log(e.target.checked)); // native-style, no detail
@@ -4721,6 +4636,8 @@ checkbox and does not emit `lr-change`.
   neither that nor slotted label text, the control has no accessible name.
 
 ---
+
+<a id="range-controls"></a>
 
 ## `lr-slider`
 
@@ -5437,6 +5354,8 @@ control cannot be edited and restores the current intrinsic result when editing 
 ```
 
 ---
+
+<a id="radio-group-controls"></a>
 
 ## `lr-radio-group`
 
@@ -6251,7 +6170,7 @@ of authoring `positioning-strategy`/`hoist` on each instance.
   swatches="#e11d48;#2563eb;#16a34a"
 ></lr-color-picker>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/forms/color-picker/color-picker.js";
+  import "@aceshooting/lyra-ui/components/lr-color-picker.js";
   const picker = document.querySelector("lr-color-picker");
   // Objects give each entry a real accessible name:
   picker.swatches = [
@@ -7191,7 +7110,7 @@ and press get outline affordances, and disabled toggles read as `GrayText` at fu
 
 ```html
 <script type="module">
-  import '@aceshooting/lyra-ui/components/forms/toggle/toggle.js';
+  import '@aceshooting/lyra-ui/components/lr-toggle.js';
 </script>
 
 <lr-toggle value="bold">Bold</lr-toggle>
@@ -7302,8 +7221,8 @@ toggles join, and `var(--lr-space-2xs)` when vertical) and `--lr-toggle-group-wr
 
 ```html
 <script type="module">
-  import '@aceshooting/lyra-ui/components/forms/toggle-group/toggle-group.js';
-  import '@aceshooting/lyra-ui/components/forms/toggle/toggle.js';
+  import '@aceshooting/lyra-ui/components/lr-toggle-group.js';
+  import '@aceshooting/lyra-ui/components/lr-toggle.js';
 </script>
 
 <lr-toggle-group label="Text formatting" appearance="outlined">

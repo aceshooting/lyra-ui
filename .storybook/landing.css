@@ -1,5 +1,5 @@
 :root,
-:root[data-lr-theme='dark'] {
+:root[data-lr-mode='dark'] {
   --lr-docs-ink: #f5f7ff;
   --lr-docs-heading: #ffffff;
   --lr-docs-muted: #a7b1cc;
@@ -31,7 +31,7 @@
   --lr-docs-mark-filter: drop-shadow(0 0 1.5rem rgb(141 231 255 / 28%));
 }
 
-:root[data-lr-theme='light'] {
+:root[data-lr-mode='light'] {
   --lr-docs-ink: #172033;
   --lr-docs-heading: #0f172a;
   --lr-docs-muted: #475569;

@@ -99,8 +99,8 @@ export function joinAccessibleVisibleText(
  * Accessible name for the `role="progressbar"` node, in the precedence both components document.
  *
  * A host `aria-label` wins by attribute *presence*, so an explicitly empty value stays empty rather
- * than reviving a fallback. Otherwise: the mapped `label` property, then `accessibleLabel`, then the
- * visible slotted label text, then the localized default the caller passes in (never a literal
+ * than reviving a fallback. Otherwise: the mapped `label` property, then the visible slotted label
+ * text, then the localized default the caller passes in (never a literal
  * string here -- the caller resolves it through `localize()` so `registerLyraLocale()` keeps
  * working).
  */
@@ -108,10 +108,9 @@ export function resolveProgressLabel(parts: {
   /** The host `aria-label` attribute's value, `null` while it is absent. */
   hostAriaLabel: string | null;
   label: string;
-  accessibleLabel: string;
   visibleText: string;
   localizedFallback: string;
 }): string {
   if (parts.hostAriaLabel !== null) return parts.hostAriaLabel;
-  return parts.label || parts.accessibleLabel || parts.visibleText || parts.localizedFallback;
+  return parts.label || parts.visibleText || parts.localizedFallback;
 }

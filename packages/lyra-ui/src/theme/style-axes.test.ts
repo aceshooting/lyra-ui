@@ -1,14 +1,11 @@
-import { captureDeprecationWarnings, expectDeprecatedUsage } from '../../test/expected-deprecations.js';
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import {
-  applyLyraStyleScope, createLyraThemeBootstrap, defineLyraLook, getLyraStyle, getLyraTheme,
-  lyraStyleAttributes, parseLyraStyleRecord, resetLyraStyle, setLyraStyle, setLyraTheme,
+  applyLyraStyleScope, createLyraThemeBootstrap, defineLyraLook, getLyraStyle,
+  lyraStyleAttributes, parseLyraStyleRecord, resetLyraStyle, setLyraStyle,
 } from './theme.js';
 import { LYRA_SHADCN_LOOK } from './looks/shadcn.js';
 import { LYRA_MATERIAL_LOOK } from './looks/material.js';
 import { lyraLookCss } from './look-css.js';
-import { applyLyraThemePreset } from './presets.js';
-import { LYRA_SHADCN_THEME_PRESET } from './presets/shadcn.js';
 
 const input = (element: Element, name: string): string => getComputedStyle(element).getPropertyValue(`--lr-theme-${name}`).trim();
 let sheets: CSSStyleSheet[];
@@ -66,23 +63,7 @@ afterEach(() => {
   else localStorage.setItem('lyra-theme', previousRecord);
 });
 
-expectDeprecatedUsage('./theme.js', 'function', 'setLyraTheme');
-expectDeprecatedUsage('./theme.js', 'function', 'getLyraTheme');
-expectDeprecatedUsage('./theme/presets.js', 'function', 'applyLyraThemePreset');
-
 describe('independent style axes', () => {
-  it('warns once for a deprecated module call while preserving the shared state', async () => {
-    const warnings = await captureDeprecationWarnings([
-      { tag: './theme.js', kind: 'function', name: 'setLyraTheme' },
-    ], () => {
-      setLyraTheme({ mode: 'dark' });
-      setLyraTheme({ mode: 'light' });
-    });
-    expect(warnings.length).to.equal(1);
-    expect(warnings[0]!.message).to.include('setLyraStyle');
-    expect(getLyraStyle().mode).to.equal('light');
-  });
-
   it('composes shadcn, glass, density and accent and resets only the requested field', () => {
     setLyraStyle({ look: 'shadcn', accent: 'sapphire', mode: 'dark' });
     setLyraStyle({ surface: 'glass', density: 'compact' });
@@ -137,9 +118,9 @@ describe('independent style axes', () => {
     expect(region.style.getPropertyPriority('--lr-theme-font-family-body')).to.equal('important');
   });
 
-  it('retains built-in look identity through the legacy preset facade', () => {
+  it('retains built-in look identity while composing independent axes', () => {
     setLyraStyle({ surface: 'glass', density: 'compact', mode: 'dark' });
-    applyLyraThemePreset(LYRA_SHADCN_THEME_PRESET);
+    setLyraStyle({ look: LYRA_SHADCN_LOOK });
     expect(getLyraStyle()).to.include({ look: 'shadcn', surface: 'glass', density: 'compact', mode: 'dark' });
     resetLyraStyle(['look']);
     expect(input(document.documentElement, 'color-surface-default')).to.equal('#1a1a1a');
@@ -149,17 +130,6 @@ describe('independent style axes', () => {
     setLyraStyle({ look: 'material', mode: 'dark' });
     localStorage.setItem('lyra-theme', '{broken');
     expect(getLyraStyle()).to.include({ look: 'lyra', mode: 'system' });
-  });
-
-  it('uses the same state when old and new setters alternate', () => {
-    setLyraStyle({ look: 'material', surface: 'glass', density: 'touch' });
-    setLyraTheme({ mode: 'dark', accent: 'aquamarine' });
-    expect(getLyraStyle()).to.include({ look: 'material', surface: 'glass', density: 'touch', mode: 'dark' });
-    expect(document.documentElement.getAttribute('data-lr-accent')).to.equal('custom');
-    expect(getLyraTheme().accent).to.equal('aquamarine');
-    setLyraStyle({ accent: 'aquamarine' });
-    expect(document.documentElement.getAttribute('data-lr-accent')).to.equal('aquamarine');
-    expect(getLyraTheme().accent).to.equal('#22d3ee');
   });
 
   it('applies stylesheet and runtime look definitions to the same rendered values', async () => {
@@ -214,7 +184,7 @@ describe('independent style axes', () => {
 
   it('restores the selected contrast branch before theme.css loads', () => {
     document.adoptedStyleSheets = [];
-    setLyraTheme({ mode: 'light', tokens: { '--lr-theme-color-text-quiet': '#000000' } });
+    setLyraStyle({ mode: 'light', overrides: { '--lr-theme-color-text-quiet': '#000000' } });
     const expected = input(document.documentElement, 'color-text-quiet');
     applyLyraStyleScope(document.documentElement, null);
     new Function(createLyraThemeBootstrap())();

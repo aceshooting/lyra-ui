@@ -78,7 +78,7 @@ shown when `stages` exceeds the 500-stage render ceiling)
 
 ```html
 <script type="module">
-  import '@aceshooting/lyra-ui/components/data/funnel/funnel.js';
+  import '@aceshooting/lyra-ui/components/lr-funnel.js';
 </script>
 
 <lr-funnel id="signup" label="Self-serve signup" share-precision="1"></lr-funnel>

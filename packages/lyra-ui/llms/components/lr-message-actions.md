@@ -7,7 +7,7 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
-- **Deprecated event** `lr-feedback-submit` since `22.0.0`; use event `addEventListener('lr-feedback-submit-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 7 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -68,8 +68,7 @@ write fulfills (bubbles/composed already, not re-emitted). A failed write surfac
 `detail: { ok: false, text, reason, error }`; `reason` is `'unsupported' | 'denied' | 'failed'`.
 `lr-feedback-change`/`lr-feedback-submit-request` — bubble unchanged from the embedded, thumbs-only
 `lr-message-feedback`; the frozen submit detail includes its `submissionId`, which is the value to
-pass to either settlement method. Its deprecated cancelable `lr-feedback-submit` compatibility
-alias also bubbles unchanged and retains the same detail and cancellation behavior. A colliding event from an
+pass to either settlement method. A colliding event from an
 arbitrary slotted child is contained at that slot boundary rather than being mistaken for a
 built-in action.
 

@@ -285,7 +285,7 @@ export class LyraCodeBlock extends LyraCodeBlockBase {
    *  this map (or left unset, or when `languages` itself is unset) falls
    *  back to that default dynamic-import path unchanged. For a TypeScript
    *  annotation, use `import type { ShikiLanguageInput } from
-   *  '@aceshooting/lyra-ui/components/conversation/code-block/code-block.js'`;
+   *  '@aceshooting/lyra-ui/components/lr-code-block.js'`;
    *  this granular type-only import emits no registration side effect. */
   @property({ attribute: false }) languages?: Readonly<Record<
     string,

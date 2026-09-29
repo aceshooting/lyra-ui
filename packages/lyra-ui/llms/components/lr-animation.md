@@ -91,7 +91,7 @@ normal rebuild (a keyframe/timing/direction change or reconnect); the registry n
 native timeline that is already running.
 
 ```js
-import "@aceshooting/lyra-ui/components/media/animation/animation.js";
+import "@aceshooting/lyra-ui/components/lr-animation.js";
 import { setAnimation } from "@aceshooting/lyra-ui/utilities/animation-registry.js";
 
 const animation = document.createElement("lr-animation");

@@ -215,10 +215,13 @@ it('registers nothing from the root, exactly one tag from a granular entry, and 
     expect(typeof widgetDefaultRegistry['DEFAULT_WIDGET_TYPE_REGISTRY']).to.equal('object');
     expect(definedAmong(registry, packageTags).join(',')).to.equal('');
 
-    // 2. A granular registration entry registers EXACTLY its own tag -- and registers the very
-    //    class the root re-exports, which a `typeof` check could not distinguish from a duplicate.
+    // 2. A granular registration entry registers exactly its own tag. The package root no longer
+    //    exports component constructors; use the registration-free class subpath when a class is
+    //    needed directly.
     await entrypoints.importEmpty();
-    expect(registry.get('lr-empty') === root['LyraEmpty']).to.be.true;
+    expect('LyraEmpty' in root).to.equal(false);
+    expect(typeof classEntry['LyraEmpty']).to.equal('function');
+    expect(registry.get('lr-empty') === classEntry['LyraEmpty']).to.be.true;
     expect(definedAmong(registry, packageTags).join(',')).to.equal('lr-empty');
 
     // 3. `all.js` is the documented compatibility path for the pre-8 root side effect: the whole
@@ -284,8 +287,39 @@ it('does not publish src/internal as a deep-import subpath', async () => {
   expect(Object.keys(manifest.exports)).to.include('./utilities/*');
 });
 
+it('keeps canonical component routes and closes duplicate nested registration routes', async () => {
+  const packageManifestPath = '/package.json';
+  const manifest = (await import(packageManifestPath)) as unknown as { exports: Record<string, unknown> };
+  expect(manifest.exports['./components/overlays/empty/empty.js']).to.equal(undefined);
+  expect(manifest.exports['./components/overlays/empty/empty.class.js']).to.equal(
+    './dist/components/overlays/empty/empty.class.js',
+  );
+  expect(manifest.exports['./components/lr-empty.js']).to.deep.equal({
+    types: './dist/components/overlays/empty/empty.d.ts',
+    default: './dist/components/lr-empty.js',
+  });
+  expect(manifest.exports['./components/overlays']).to.equal('./dist/components/overlays/index.js');
+  expect(manifest.exports['./ssr-loader.js']).to.equal(undefined);
+  expect(manifest.exports['./hydration.js']).to.deep.equal({
+    types: './dist/hydration.d.ts',
+    default: './dist/hydration.js',
+  });
+  expect(manifest.exports['./ssr.js']).to.deep.equal({
+    types: './dist/ssr.d.ts',
+    default: './dist/ssr.js',
+  });
+  expect(manifest.exports['./all.js']).to.deep.equal({
+    types: './dist/all.d.ts',
+    default: './dist/all.js',
+  });
+  expect(manifest.exports['./autoloader.js']).to.deep.equal({
+    types: './dist/autoloader.d.ts',
+    default: './dist/autoloader.js',
+  });
+});
 
-it('retains the same distinct GeoJSON constructor in the root and family without registering its retired tag', async function () {
+
+it('keeps GeoJSON constructors on canonical class and family routes without a root export', async function () {
   this.timeout(240_000);
   const { frame, registry, importModule } = await createEntrypointRealm();
   try {
@@ -296,10 +330,12 @@ it('retains the same distinct GeoJSON constructor in the root and family without
     expect(registry.get('lr-geojson-viewer') === undefined).to.equal(true);
     expect(registry.get('lr-geojson-view') === undefined).to.equal(true);
     const viewers = await entrypoints.importViewers();
-    expect(root['LyraGeojsonView'] === viewers['LyraGeojsonView']).to.equal(true);
-    expect(root['LyraGeojsonView'] === root['LyraGeoJsonViewer']).to.equal(false);
-    expect(Object.getPrototypeOf(root['LyraGeojsonView']) === root['LyraGeoJsonViewer']).to.equal(true);
-    expect(registry.get('lr-geojson-viewer') === root['LyraGeoJsonViewer']).to.equal(true);
+    expect('LyraGeojsonView' in root).to.equal(false);
+    expect('LyraGeoJsonViewer' in root).to.equal(false);
+    expect(typeof viewers['LyraGeojsonView']).to.equal('function');
+    expect(typeof viewers['LyraGeoJsonViewer']).to.equal('function');
+    expect(Object.getPrototypeOf(viewers['LyraGeojsonView']) === viewers['LyraGeoJsonViewer']).to.equal(true);
+    expect(registry.get('lr-geojson-viewer') === viewers['LyraGeoJsonViewer']).to.equal(true);
     expect(registry.get('lr-geojson-view') === undefined).to.equal(true);
   } finally {
     frame.remove();

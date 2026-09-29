@@ -92,7 +92,7 @@ test('builds one deterministic card per public tag with honest missing gzip evid
     tag: 'lr-a',
     family: 'utility',
     imports: {
-      registration: '@aceshooting/lyra-ui/components/utility/a/a.js',
+      registration: '@aceshooting/lyra-ui/components/lr-a.js',
       class: '@aceshooting/lyra-ui/components/utility/a/a.class.js',
     },
     peers: [],
@@ -188,11 +188,11 @@ test('renders explicit none and not-measured states instead of ambiguous blanks'
   assert.match(markdown, /id="lr-a"/);
   assert.match(
     markdown,
-    /\| <a id="lr-a"><\/a>`lr-a` \| utility \| `import '@aceshooting\/lyra-ui\/components\/utility\/a\/a\.js';` \| none \| `lr-b` \| none \| not measured/,
+    /\| <a id="lr-a"><\/a>`lr-a` \| utility \| `import '@aceshooting\/lyra-ui\/components\/lr-a\.js';` \| none \| `lr-b` \| none \| not measured/,
   );
 });
 
-test('states the class-import derivation and gzip-ledger pointer once instead of per row', async () => {
+test('states the class-import location and gzip-ledger pointer once instead of per row', async () => {
   const ledger = await buildComponentIntegration({
     packageDir: '/not-used',
     inventory,
@@ -200,9 +200,9 @@ test('states the class-import derivation and gzip-ledger pointer once instead of
     graph,
   });
   const markdown = renderIntegrationCards(ledger);
-  assert.match(markdown, /`\.class` inserted before `\.js`/);
+  assert.match(markdown, /side-effect-free class import is recorded in the JSON ledger/);
   assert.match(markdown, /packages\/lyra-ui\/scripts\/fixtures\/component-integration\.json/);
-  assert.match(markdown, /`import '@aceshooting\/lyra-ui\/components\/utility\/a\/a\.js';`/);
+  assert.match(markdown, /`import '@aceshooting\/lyra-ui\/components\/lr-a\.js';`/);
   assert.ok(!markdown.includes('Side-effect-free class import'), 'the per-row class import line is redundant with the header rule');
   assert.ok(!/bundle SHA-256 `[0-9a-f]/.test(markdown), 'a per-row digest is redundant with the JSON ledger');
 });

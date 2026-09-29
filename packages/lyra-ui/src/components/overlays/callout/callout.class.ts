@@ -28,7 +28,6 @@ import {
   contextualVariants,
 } from '../../../internal/contextual-vocabulary.styles.js';
 import { styles } from './callout.styles.js';
-import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import {
   literalSetConverter,
   presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter,
@@ -331,20 +330,8 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     converter: trueDefaultBooleanConverter,
   })
   open = true;
-  private legacyAccessibleLabel: string = '';
-
-  /** Compatibility fallback below the host aria-label, including an explicitly empty host value.
-   * @deprecated Use the host aria-label attribute or the native ariaLabel property. */
-  @property({ attribute: false })
-  get accessibleLabel(): string {
-    return this.legacyAccessibleLabel;
-  }
-  set accessibleLabel(value: string) {
-    warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
-    this.legacyAccessibleLabel = value;
-  }
   /** The host `aria-label`: names the grouped panel and prefixes announced updates, winning by
-   *  presence over `accessibleLabel`. */
+   *  presence. */
   @property({ attribute: 'aria-label' }) private hostAriaLabel: string | null = null;
   private readonly slotPresence = new SlotPresenceController(this);
   private liveActive = false;
@@ -441,7 +428,7 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     if (
       changed.has('open') ||
       changed.has('heading') ||
-      changed.has('accessibleLabel')
+      changed.has('hostAriaLabel')
     ) {
       this.announceCurrentContent(changed.has('open'));
       this.observeAnnouncementContent();
@@ -551,9 +538,7 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
 
   private resolvedAccessibleLabel(): string {
     const hostLabel = this.hostAriaLabel;
-    return this.normalizedText(
-      hostLabel !== null ? hostLabel : this.accessibleLabel
-    );
+    return this.normalizedText(hostLabel);
   }
 
   private announcementText(): string {
@@ -561,9 +546,7 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     this.announcementShadowRoots = roots;
     if (!isAccessibilityVisible(this)) return '';
     const hostLabel = this.hostAriaLabel;
-    const context = this.normalizedText(
-      hostLabel !== null ? hostLabel : this.accessibleLabel
-    );
+    const context = this.normalizedText(hostLabel);
     const heading = [
       this.heading,
       ...Array.from(this.childNodes)

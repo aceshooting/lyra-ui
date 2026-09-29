@@ -5,6 +5,7 @@ import type {
   ChatMessage,
   RetrievalChunk,
 } from "../../../ai/types.js";
+import type { LyraMarkdown } from "../markdown/markdown.class.js";
 import "../../forms/button/button.js";
 import "./agent-workspace.js";
 import type { LyraAgentWorkspace } from "./agent-workspace.class.js";
@@ -397,7 +398,7 @@ it("renders ordered message parts when present while preserving legacy text mess
   expect(el.shadowRoot!.querySelectorAll("lr-markdown")).to.have.lengthOf(1);
 });
 
-it('does not expose composed events from its owned legacy Markdown renderer', async () => {
+it("stops unrelated composed events from its owned Markdown renderer", async () => {
   const el = await fixture<LyraAgentWorkspace>(html`
     <lr-agent-workspace
       .messages=${[{ id: 'm1', role: 'assistant', text: '**Answer**' }]}
@@ -407,7 +408,6 @@ it('does not expose composed events from its owned legacy Markdown renderer', as
   const leaked: string[] = [];
   for (const name of [
     'lr-render-error',
-    'lr-link-click',
     'lr-highlight-activate',
     'lr-text-select',
     'lr-anchor-result',
@@ -422,6 +422,29 @@ it('does not expose composed events from its owned legacy Markdown renderer', as
     el.removeEventListener(name, listener);
   }
   expect(leaked).to.deep.equal([]);
+});
+
+it("forwards canonical Markdown link activation without the retired alias", async () => {
+  const el = await fixture<LyraAgentWorkspace>(html`
+    <lr-agent-workspace
+      .messages=${[{ id: 'm1', role: 'assistant', text: '[Setup](/docs/setup)' }]}
+    ></lr-agent-workspace>
+  `);
+  const markdown = el.shadowRoot!.querySelector('lr-markdown') as LyraMarkdown;
+  markdown.setAttribute('internal-link-prefix', '/docs/');
+  await markdown.updateComplete;
+  await waitUntil(() => markdown.shadowRoot!.querySelector('a') !== null);
+
+  let retiredAliasCount = 0;
+  el.addEventListener('lr-link-click', () => retiredAliasCount++);
+  const canonicalEvent = oneEvent(el, 'lr-link-activate');
+  markdown.shadowRoot!.querySelector('a')!.dispatchEvent(
+    new MouseEvent('click', { bubbles: true, cancelable: true, composed: true })
+  );
+
+  const event = await canonicalEvent;
+  expect(event.detail).to.deep.equal({ href: '/docs/setup' });
+  expect(retiredAliasCount).to.equal(0);
 });
 
 it("projects built-in messages as viewport rows so unread boundaries use message indices", async () => {

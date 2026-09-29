@@ -6,7 +6,8 @@ Lyra-specific events are `lr-`-prefixed `CustomEvent`s (`lr-change`, `lr-input`,
 dispatched through `LyraElement`'s `protected emit<T>(name, detail?, options?)`: **bubbling,
 composed, and non-cancelable by default**, with the payload on `event.detail`. A component that
 offers a genuine veto point opts into `{ cancelable: true }` and checks `defaultPrevented` before
-acting (as `lr-export` does) — that is called out per component. Native wrappers may additionally
+acting (as `lr-export-request` on `<lr-export-button>` does) — that is called out per component.
+Native wrappers may additionally
 relay unprefixed `Event`, `InputEvent`, or `FocusEvent` instances; each component section documents
 the exact native names, constructors, bubbling, and cancelability it supports.
 
@@ -22,6 +23,10 @@ Neither notification has a deprecation notice while the contract survives.
 Every one of those names is also typed — per component through its own event map, and globally
 through `@aceshooting/lyra-ui/events` for listeners on an ancestor, `document` or `window`. See
 "TypeScript" below.
+
+For the manually reviewed, retained event-detail compatibility fields in the v23-to-v24 upgrade,
+use step 7 of the [migration checklist](v23-to-v24-migration.md#migrate-a-project-in-reviewable-steps).
+Those nested detail fields are separate from deprecated event names and are not automatic renames.
 
 ## TypeScript
 
@@ -1586,34 +1591,30 @@ These named interfaces and helper signatures are available to typed integrations
   copy, so a glyph rendered anywhere else on the page can match it exactly by consuming the same
   export and attribute.
 
-- **`theme-presets-contracts`** — Shared utility contracts.
-  `applyLyraThemePreset(/* public names: presetOrName */): unknown`
-  `defineLyraThemePreset(/* public names: preset */): unknown`
-  `LyraThemePresetChangeDetail {
-  id: unknown;
-  theme: unknown;
-}`
-  `LyraThemePreset {
-  id: unknown;
-  theme: unknown;
-}`
-
 - **`theme-theme-contracts`** — Shared utility contracts.
-  `createLyraThemeBootstrap(/* public names: options */): unknown`
-  `getLyraTheme(): unknown`
+  `createLyraThemeBootstrap(options?: LyraThemeBootstrapOptions): string`
   `LyraThemeBootstrapOptions {
-  storageKey: unknown;
+  storageKey?: string;
 }`
-  `LyraTheme {
-  mode: unknown;
-  accent: unknown;
-  surface: unknown;
-  tokens: unknown;
-}`
-  `setLyraTheme(/* public names: theme */): unknown`
+  `LyraThemeSemanticRole = 'brand' | 'success' | 'warning' | 'danger' | 'neutral'`
+  `LyraThemeAccentValue = string | null | { light?: string | null; dark?: string | null }`
+  `LyraThemeAccent = string | null | Partial<Record<LyraThemeSemanticRole, LyraThemeAccentValue>>`
+  ``LyraThemeTokenName = `--lr-theme-${string}```
+  `LyraThemeTokenValue = string | { light?: string | null; dark?: string | null }`
+  `LyraThemeTokens = Readonly<Record<LyraThemeTokenName, LyraThemeTokenValue>>`
+  `LyraStyleAxis = 'look' | 'surface' | 'density' | 'mode' | 'accent'`
+  `LyraStyleField = LyraStyleAxis | 'accentBackground' | 'overrides'`
+  `LyraLookId = 'lyra' | 'shadcn' | 'material' | (string & {})`
+  `LyraSurface = 'solid' | 'glass'`
+  `LyraDensity = 'compact' | 'comfortable' | 'touch'`
+  `LyraMode = 'light' | 'dark' | 'system' | 'unset'`
+  `LyraAccentName = 'emerald' | 'peridot' | 'topaz' | 'ruby' | 'tourmaline' | 'amethyst' | 'aquamarine' | 'sapphire' | 'hematite'`
+  `LyraAccent = LyraAccentName | LyraThemeAccent`
+  `LyraAccentBackground = string | { light?: string | null; dark?: string | null } | null`
   `applyLyraStyleScope(element: Element, choices: LyraStyleScopeChoices | null): void`
   `defineLyraLook<const Look extends LyraLook>(look: Look): Readonly<Look>`
   `getLyraStyle(): Readonly<LyraStyle>`
+  `lyraThemeBootstrap: string`
   `LyraLook {
   readonly id: LyraLookId;
   readonly tokens: LyraThemeTokens;

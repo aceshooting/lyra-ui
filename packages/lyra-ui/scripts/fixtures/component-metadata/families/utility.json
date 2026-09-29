@@ -33,19 +33,6 @@
   },
   "deprecations": [
     {
-      "tag": "lr-export-button",
-      "kind": "event",
-      "name": "lr-export",
-      "since": "22.0.0",
-      "replacement": {
-        "kind": "event",
-        "name": "lr-export-request",
-        "usage": "addEventListener('lr-export-request', event => { /* Review the request detail and call preventDefault() to veto. */ })"
-      },
-      "removalNotBefore": "24.0.0",
-      "rationale": "The request event identifies the veto phase; the legacy event preserves its equal detail and cancellation behavior."
-    },
-    {
       "tag": "lr-icon",
       "kind": "property",
       "name": "autoWidth",

@@ -1,5 +1,5 @@
 /**
- * Standalone theme mode/accent runtime, published as the `@aceshooting/lyra-ui/theme.js`
+ * Standalone style runtime, published as the `@aceshooting/lyra-ui/theme.js`
  * subpath. Its only shared runtime helper is the dependency-free development diagnostic gate.
  * Applications persist and apply styles without importing Lit or the component graph.
  *
@@ -7,7 +7,7 @@
  * therefore carries no `package.json#sideEffects` entry, so bundlers may drop it when unused.
  */
 
-import { devWarnOnce, litDevWarnings, warnDeprecatedUsage } from '../internal/dev-warning.js';
+import { devWarnOnce, litDevWarnings } from '../internal/dev-warning.js';
 import { readStyleOwnership, type StyleOwnership } from './style-ownership.js';
 
 const STORAGE_KEY = 'lyra-theme';
@@ -16,14 +16,6 @@ export interface LyraThemeBootstrapOptions {
   /** The localStorage key holding a `{ mode, accent, surface, tokens? }` theme record. */
   storageKey?: string;
 }
-
-/**
- * Theme selection mode. `'light'` and `'dark'` are explicit overrides. `'auto'` resolves and
- * continues following `prefers-color-scheme`; `'unset'` removes Lyra's mode attributes so an
- * application-owned cascade can decide instead.
- * @deprecated Use LyraMode; migrate auto to system.
- */
-export type LyraThemeMode = 'light' | 'dark' | 'auto' | 'unset';
 
 /**
  * A semantic role the runtime can derive a contrast-checked quiet/normal/loud/on-* ramp for.
@@ -72,47 +64,10 @@ export type LyraThemeTokenValue = string | { readonly light?: string | null; rea
  */
 export type LyraThemeTokens = { readonly [name: LyraThemeTokenName]: LyraThemeTokenValue };
 
-/** Persisted theme selection, optional per-role accent, optional surface reference, and optional token map.
- * @deprecated Use LyraStyle for snapshots and LyraStyleChoices for updates; review surface and tokens semantics.
- */
-export interface LyraTheme {
-  /** Requested selection mode; `auto` remains distinct from its resolved light/dark value. */
-  mode: LyraThemeMode;
-  /**
-   * Absolute CSS brand color, a per-role `LyraThemeAccentValue` map (each role optionally
-   * per-mode via `{ light?, dark? }`), or `null` to use the active stylesheet palette.
-   */
-  accent: LyraThemeAccent;
-  /**
-   * Absolute CSS color used as the ramp mix base instead of the shipped light/dark surface
-   * defaults (`#1a1a1a` dark / `#ffffff` light). `null` keeps those defaults. An alpha channel in
-   * the supplied color is composited against the default surface for that mode before use.
-   */
-  surface: string | null;
-  /**
-   * Validated `--lr-theme-*` token map applied inline on the document root, or `null` to leave
-   * every input to the stylesheets. Absent from every snapshot and stored record while no map is
-   * applied; when present it is the normalized, deep-frozen map (trimmed strings, and per-mode
-   * entries always carrying both `light` and `dark`, `null` for a missing branch).
-   */
-  tokens?: LyraThemeTokens | null;
-}
-
-/** Snapshot carried by the global `lr-theme-change` event.
- * @deprecated Use LyraStyleChangeDetail with the lr-style-change event; its detail contains style and changed fields.
- */
-export type LyraThemeChangeDetail = Readonly<LyraTheme>;
-
-declare global {
-  interface WindowEventMap {
-    'lr-theme-change': CustomEvent<LyraThemeChangeDetail>;
-  }
-}
-
 type ResolvedThemeMode = 'light' | 'dark';
 type Rgb = readonly [red: number, green: number, blue: number];
 
-// The token-map grammar. scripts/fixtures/theme-token-grammar.json is the single source of these
+// The theme-token grammar. scripts/fixtures/theme-token-grammar.json is the single source of these
 // constants; this is one of its two literal copies in this file (the bootstrap carries the other,
 // because it must stay self-contained), and scripts/theme-token-grammar.test.mjs fails if either
 // drifts. The rule is DOM-free on purpose: CSS.supports() accepts every unclosed construct, which
@@ -200,7 +155,7 @@ function isBalancedCssValue(value: string): boolean {
 
 /**
  * @internal True for a settable `--lr-theme-*` input name: the token-name pattern, at most 80
- * characters, and never the reserved `--lr-theme-accent`. Shared with `presets.ts`.
+ * characters, and never the reserved `--lr-theme-accent`. Shared with the style-axis generator.
  */
 export function isLyraThemeTokenName(name: unknown): name is LyraThemeTokenName {
   return typeof name === 'string'
@@ -212,8 +167,7 @@ export function isLyraThemeTokenName(name: unknown): name is LyraThemeTokenName 
 /**
  * @internal The DOM-free token-value grammar: 1-256 characters after trimming, none of the
  * forbidden characters or comment delimiters, not a CSS-wide keyword, only allow-listed functions,
- * and balanced parentheses and quotes. Shared with `presets.ts`, so a map `defineLyraThemePreset()`
- * accepts is never dropped at run time.
+ * and balanced parentheses and quotes. The same grammar is used by the style-axis generator.
  */
 export function isSafeLyraThemeTokenValue(value: unknown): value is string {
   if (typeof value !== 'string') return false;
@@ -687,71 +641,6 @@ function readOwnershipList(): string[] {
   } catch {
     return [];
   }
-}
-
-/**
- * Sets the persisted theme mode/accent/surface/tokens, applies it to `document.documentElement`
- * (via `data-lr-theme`/`data-theme`, the token map's inline `--lr-theme-*` values, and a complete
- * `--lr-theme-color-<role>-*` ramp per role `accent` supplies), and dispatches `lr-theme-change`
- * on `window` with `detail: { mode, accent, surface, tokens? }`. Unspecified fields keep their
- * current value. Never throws -- a `localStorage` failure (private browsing, quota, sandboxed
- * iframe) degrades to apply-without-persist, and unspecified fields still keep their value across
- * calls in that state, because the merge falls back to the last applied theme rather than to the
- * default.
- *
- * `accent` is either an absolute CSS color (shorthand for `{ brand: <color> }`), a per-role
- * `{ brand?, success?, warning?, danger?, neutral? }` map, or `null`. Each role's value is in turn
- * either a bare CSS color/`null` (applied to both resolved modes) or a `{ light?, dark? }` map
- * deriving that role's ramp from a *different* base color per resolved mode -- e.g.
- * `{ brand: { light: '#2563eb', dark: '#60a5fa' } }`. `surface` is an absolute CSS color used as
- * every ramp's mix base instead of the shipped light/dark defaults, or `null` to keep those
- * defaults. Malformed (including an unclosed parenthesis or quote), CSS-wide, relative, and
- * unresolved `var()` values fail closed to `null` at the field (or, for a per-role/per-mode value,
- * the individual role/branch) they appear in. Each generated fill receives a black or white
- * foreground with at least 4.5:1 contrast; normal/loud borders and the brand focus color have at
- * least 3:1 contrast against the resolved surface.
- *
- * `tokens` is a map of `--lr-theme-*` inputs, each a CSS value or a `{ light?, dark? }` pair, that
- * replaces the previous map wholesale; `null`, `{}` or a map with no valid entry removes it.
- * Invalid names and values are dropped individually (see the package docs for the grammar), a
- * per-mode branch applies only while Lyra resolves that mode (so `mode: 'unset'` writes bare values
- * only), and colour families the static contrast gate checks are floored against the map's own
- * surfaces before they are written. An accent ramp overrides the map for the roles it paints.
- * @deprecated Use setLyraStyle; migrate auto to system, surface to accentBackground, and tokens to a look or overrides.
- */
-export function setLyraTheme(theme: Partial<LyraTheme>): void {
-  warnDeprecatedUsage('./theme.js', 'function', 'setLyraTheme', 'setLyraStyle; review surface and token semantics');
-  const before = readStyleState();
-  const next = { ...before };
-  if (theme.mode !== undefined) next.mode = theme.mode === 'auto' ? 'system' : theme.mode === 'light' || theme.mode === 'dark' || theme.mode === 'unset' ? theme.mode : 'system';
-  if (theme.accent !== undefined) {
-    next.accent = typeof document === 'undefined' ? styleAccent(theme.accent) : normalizeAccent(theme.accent);
-    next.accentName = null;
-  }
-  if (theme.surface !== undefined) next.accentBackground = typeof document === 'undefined' ? styleColor(theme.surface) : normalizeColor(theme.surface);
-  if (theme.tokens !== undefined) {
-    next.tokens = normalizeTokens(theme.tokens);
-    const stamp = theme.tokens && (theme.tokens as Record<symbol, unknown>)[LOOK_STAMP];
-    next.look = next.tokens ? styleId(stamp) ? stamp : 'custom' : 'lyra';
-    next.overrides = null;
-  }
-  commitStyle(before, next);
-}
-
-/**
- * Reads the current theme mode/accent/surface (plus `tokens` while a map is applied), defaulting
- * to `{ mode: 'auto', accent: null, surface: null }` when nothing has been set or the stored value
- * is malformed. Storage is re-read on every call -- there is no in-memory cache -- so a value
- * written by another tab or a previous session is picked up cold.
- *
- * When `localStorage` is unreadable or unwritable this reports the theme this module last
- * applied, not the default: the returned value always describes what the document is actually
- * showing, so a toggle UI bound to it stays in sync even where nothing can be persisted.
- * @deprecated Use getLyraStyle; the returned snapshot separates look, surface, density, mode and accent.
- */
-export function getLyraTheme(): LyraTheme {
-  warnDeprecatedUsage('./theme.js', 'function', 'getLyraTheme', 'getLyraStyle');
-  return legacyStyleSnapshot(readStyleState());
 }
 
 /**
@@ -1290,7 +1179,7 @@ function serializeInlineScriptData(value: string | readonly string[]): string {
  * does. Missing and malformed records use the runtime's automatic/no-accent default.
  * The serialized options escape HTML script terminators and JavaScript line separators.
  * Pass an application-owned `storageKey` to reuse the no-flash bootstrap independently of this
- * module's `setLyraTheme()`/`getLyraTheme()` persistence key.
+ * v1 theme records and the current style API's `lyra-theme` persistence key.
  *
  * The returned value is deliberately a plain string (not a function) so it can be inlined without
  * shipping or parsing this whole module in an unbundled `<script>` context. Whichever `<script>`
@@ -2079,12 +1968,6 @@ function diagnoseStyleSheets(element: Element, state: StyleState, fields?: Reado
 function emitStyleChange(state: StyleState, changed: readonly (LyraStyleField | 'resolvedMode')[]): void {
   const style = styleSnapshot(state, window);
   window.dispatchEvent(new CustomEvent('lr-style-change', { detail: Object.freeze({ style, changed: Object.freeze([...changed]) }) }));
-  window.dispatchEvent(new CustomEvent('lr-theme-change', { detail: legacyStyleSnapshot(state) }));
-}
-function legacyStyleSnapshot(state: StyleState): LyraTheme {
-  const surface = typeof state.accentBackground === 'string' ? state.accentBackground : state.accentBackground?.[styleResolvedMode(state.mode, typeof window === 'undefined' ? undefined : window) ?? 'light'] ?? null;
-  const tokens = state.tokens || state.overrides ? Object.freeze({ ...state.tokens, ...state.overrides }) : null;
-  return { mode: state.mode === 'system' ? 'auto' : state.mode, accent: state.accent, surface, ...(tokens ? { tokens } : {}) };
 }
 /** Selects independent axes on the document root. Omitted fields keep their choices; null resets. */
 export function setLyraStyle(choices: LyraStyleChoices): Readonly<LyraStyle> {
@@ -2105,7 +1988,6 @@ function commitStyle(before: StyleState, next: StyleState): Readonly<LyraStyle> 
       styleModeCleanup = undefined;
       styleModeRoot = undefined;
     }
-    root.removeAttribute('data-lr-theme-preset');
     adoptLegacyOwnership(root);
     const requestedAccent = next.accent;
     applyStyleState(root, next);

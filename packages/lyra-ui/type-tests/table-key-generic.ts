@@ -1,4 +1,8 @@
-import { LyraTable, type LyraTableEventMap, type TableColumn } from '../src/lyra.js';
+import { LyraTable } from '../src/components/data/table/table.class.js';
+import {
+  type LyraTableEventMap,
+  type TableColumn,
+} from '../src/lyra.js';
 
 interface Row {
   id: number;

@@ -24,8 +24,7 @@ facade is removed; `./components/charts/chart/chart-core-loader.js` and
 Non-breaking: `<lr-histogram>`'s `appendData()` is no longer marked deprecated; prefer the
 histogram-specific `appendSamples(values, maxSamples?)` for new code. `<lr-lite-chart>`'s legend is
 documented as a static color key with no interactive dataset-visibility toggle, matching its scope as
-the lightweight chart variant. Its `accessibleLabel` property and `accessible-label` attribute were
-unaffected by the v9 removal above; see the current naming contract below.
+the lightweight chart variant.
 
 ## Migrating removed chart aliases
 
@@ -36,10 +35,8 @@ Box and lite charts use `with-legend` instead of `legend` and continue to hide t
 Listen to `lr-point-activate` instead of `lr-point-click`, and theme canvas tooltip text with
 `--lr-chart-tooltip-color` instead of `--lr-chart-tooltip-text`.
 
-For `lr-lite-chart`, use the native host `aria-label` instead of `accessible-label`. The deprecated
-programmatic `accessibleLabel` property remains supported as a fallback below the native host name,
-including an explicitly empty host name. The removed attribute neither names the chart nor changes
-that property.
+For `lr-lite-chart`, use the native host `aria-label`; an explicitly empty host label remains
+authoritative. With no host label, `label` and then the generated chart name provide the fallback.
 
 ## `lr-chart` (core)
 
@@ -669,10 +666,6 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
   and description; host `aria-label` wins by presence, including an explicit empty string
 - `aria-label` (host attribute) — names the chart's `<svg>` ahead of every other source, by
   presence.
-- `accessibleLabel?: string` (attribute: false) — fallback below the host `aria-label` and `label`,
-  ahead of the locale-formatted dataset names and localized chart name.
-  Deprecated: use the native host `aria-label` or `ariaLabel` property. The programmatic fallback
-  remains supported; the old `accessible-label` attribute is inert. Unset keeps the auto-derived name.
 - `height: string = '280px'` — accepts a valid CSS `height` as a private fallback. A consumer-set
   `--lr-chart-height` always wins; invalid values, declaration-breaking input, and `url()` remove
   the fallback and leave the public token/default in control.

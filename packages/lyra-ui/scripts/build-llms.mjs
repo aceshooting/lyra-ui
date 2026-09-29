@@ -360,9 +360,9 @@ export function buildTokens() {
     '',
     'For a ready-made light/dark base, import `@aceshooting/lyra-ui/theme.css` once and put',
     '`class="lr-light"`/`class="lr-dark"` (or `data-lr-theme="light"`/`"dark"`) on an ancestor.',
-    'For the shadcn/ui look, also import `@aceshooting/lyra-ui/themes/shadcn.css`: it layers over',
-    '`theme.css` in any load order and answers to shadcn\'s `.dark`/`.light` classes too (see',
-    '[The shadcn look](./shared.md#the-shadcn-look--themesshadcncss)).',
+    'For the shadcn/ui look, also import `@aceshooting/lyra-ui/looks/shadcn.css` and select',
+    '`data-lr-look="shadcn"` on the root or a scoped ancestor; look and mode remain independent.',
+    'See [Styles and tokens](./shared/styles-and-tokens.md) for runtime and stylesheet options.',
     'Per-component `--lr-<component>-*` custom properties (listed in each component\'s own section)',
     'override a single element without touching the shared layer.',
     '',
@@ -1082,9 +1082,11 @@ function buildIndex(sectionsByFamily, tagFacts, exportDeprecations = []) {
     'their owning family path and do not register the tag.',
     '',
     '**Library-wide topics.** Focused guides cover imports and registration (`llms/shared/imports-and-registration.md`),',
+    'the v23-to-v24 upgrade path (`llms/shared/v23-to-v24-migration.md`),',
     'events and types (`llms/shared/events-and-types.md`), forms and accessibility',
     '(`llms/shared/forms-and-accessibility.md`), styles and tokens',
-    '(`llms/shared/styles-and-tokens.md`), localization and RTL',
+    '(`llms/shared/styles-and-tokens.md`), native styles and utilities',
+    '(`llms/shared/native-styles-and-utilities.md`), localization and RTL',
     '(`llms/shared/localization-and-rtl.md`), frameworks and SSR',
     '(`llms/shared/frameworks-and-ssr.md`), AI and optional peers (`llms/shared/ai-and-peers.md`),',
     'and testing and utilities (`llms/shared/testing-and-utilities.md`). The combined',
@@ -1203,6 +1205,18 @@ const ROOT_CHANGELOG_LINK = '[CHANGELOG.md](./CHANGELOG.md)';
 
 const SHARED_STYLE_CONTINUATION = '### Composing looks, surfaces and density';
 const SHARED_ACCESSIBILITY_CONTINUATION = '### Host accessible names and compatibility properties';
+const FOCUSED_NATIVE_STYLES_START = '<!-- focused-native-styles:start -->';
+const FOCUSED_NATIVE_STYLES_END = '<!-- focused-native-styles:end -->';
+
+function stripFocusedNativeStylesPointer(source, sourcePath) {
+  const start = source.indexOf(FOCUSED_NATIVE_STYLES_START);
+  const end = source.indexOf(FOCUSED_NATIVE_STYLES_END);
+  if (start < 0 || end < start || source.indexOf(FOCUSED_NATIVE_STYLES_START, start + 1) >= 0 ||
+    source.indexOf(FOCUSED_NATIVE_STYLES_END, end + 1) >= 0) {
+    throw new Error(`${sourcePath} must contain exactly one focused native-styles pointer block.`);
+  }
+  return source.slice(0, start) + source.slice(end + FOCUSED_NATIVE_STYLES_END.length);
+}
 
 function splitSharedSections(text, sourcePath) {
   const sections = new Map();
@@ -1238,9 +1252,13 @@ function replaceExactlyOnce(text, source, replacement, label) {
 /** Read focused shared sources and assemble the stable combined route and anchor order. */
 export function buildSharedReferences() {
   const sections = new Map();
-  for (const [name, title] of SHARED_TOPICS) {
+  for (const [name, title, routeMode] of SHARED_TOPICS) {
+    if (routeMode === 'index-only') continue;
     const sourcePath = `llms/shared/${name}.md`;
-    const source = read('llms', 'shared', `${name}.md`).trimEnd();
+    const authoredSource = read('llms', 'shared', `${name}.md`).trimEnd();
+    const source = name === 'styles-and-tokens'
+      ? stripFocusedNativeStylesPointer(authoredSource, sourcePath)
+      : authoredSource;
     const heading = `# ${title}`;
     if (!source.startsWith(`${heading}\n`)) {
       throw new Error(`${sourcePath} must start with "${heading}".`);
@@ -1269,14 +1287,14 @@ export function buildSharedReferences() {
     throw new Error(`${accessPath} must contain exactly one ${SHARED_ACCESSIBILITY_CONTINUATION}.`);
   }
 
-  const nativeStyles = sections.get('Optional native styles and CSS utilities');
+  const themeStyles = sections.get('Theming and design tokens');
   const accessibility = sections.get('Accessibility contract');
-  if (!nativeStyles?.includes(SHARED_STYLE_CONTINUATION) || !accessibility?.includes(SHARED_ACCESSIBILITY_CONTINUATION)) {
+  if (!themeStyles?.includes(SHARED_STYLE_CONTINUATION) || !accessibility?.includes(SHARED_ACCESSIBILITY_CONTINUATION)) {
     throw new Error('Shared topic continuation headings must remain after their source sections.');
   }
   sections.set(
-    'Optional native styles and CSS utilities',
-    nativeStyles.slice(0, nativeStyles.indexOf(SHARED_STYLE_CONTINUATION)).trimEnd() + '\n',
+    'Theming and design tokens',
+    themeStyles.slice(0, themeStyles.indexOf(SHARED_STYLE_CONTINUATION)).trimEnd() + '\n',
   );
   sections.set(
     'Accessibility contract',
@@ -1300,6 +1318,12 @@ export function buildSharedReferences() {
     '../../CHANGELOG.md',
     '../CHANGELOG.md',
     'shared topic changelog path',
+  );
+  assembled = replaceExactlyOnce(
+    assembled,
+    './styles-and-tokens.md#reading-the-resolved-tokens-from-your-own-components--tokens-rootcss',
+    '#reading-the-resolved-tokens-from-your-own-components--tokens-rootcss',
+    'native styles cross-topic anchor route',
   );
   assembled = replaceExactlyOnce(
     assembled,

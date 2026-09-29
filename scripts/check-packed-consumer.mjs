@@ -1,3 +1,5 @@
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
 import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { join, relative, resolve } from 'node:path';
@@ -5,8 +7,14 @@ import { tmpdir } from 'node:os';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { parsePackedConsumerArguments } from './packed-attw.mjs';
-import { readCurrentCompatibilityContext } from '../packages/lyra-ui/scripts/check-published-compatibility.mjs';
+import { checkPublishedCompatibilitySync, readCurrentCompatibilityContext } from '../packages/lyra-ui/scripts/check-published-compatibility.mjs';
+import { checkPublishedFieldHistorySync } from '../packages/lyra-ui/scripts/published-field-compatibility-io.mjs';
 import { preservePackedTarball, verifyPackedMigrationConsumers, writeResolvedMigrationEntry, verifyResolvedMigrationBrowser } from './packed-migration-consumer.mjs';
+import {
+  parsePerformanceQualificationOptions,
+  runPackedHydrationSmoke,
+  runPackedPerformanceQualification,
+} from './packed-performance.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const uiPackage = join(root, 'packages', 'lyra-ui');
@@ -261,17 +269,14 @@ const coreRawBudget = {
  */
 const SHADCN_THEME_RETENTION_MARKERS = Object.freeze({
   preset: Object.freeze([
-    // The preset's own layer block. theme.css only NAMES that layer in its ordering statement.
-    /@layer\s+lr-theme-preset\s*\{/u,
-    // The preset makes neutral primary actions follow the brand; the base uses a mode resolver.
-    /--lr-theme-color-neutral-fill-loud\s*:\s*var\(\s*--lr-theme-color-brand-fill-loud\s*\)\s*[;}]/u,
-    // The compatibility .dark selector belongs to the fixed shadcn preset.
-    /(?:^|[\s,{}])\.dark\s*[,{]/u,
+    // The portable look opens its own layer; the base theme only declares layer order.
+    /@layer\s+lr-theme-preset\.look\s*\{/u,
+    // The scoped selector and installation marker are unique to the shadcn look sheet.
+    /\[data-lr-look=['"]?shadcn['"]?\]/u,
+    /--_lr-look-installed\s*:\s*shadcn-1\s*[;}]/u,
   ]),
   baseTheme: Object.freeze([
-    // theme.css's own layer block, which the preset never opens.
-    /@layer\s+lr-theme\s*\{/u,
-    // The base installs the independent style-axis resolver; a fixed look does not.
+    // The base installs the independent style-axis resolver and motion inputs; the look does not.
     /--_lr-style-resolver\s*:\s*1\s*[;}]/u,
     // Shared motion inputs belong to the base rather than the fixed look.
     /--lr-theme-duration-fast\s*:/u,
@@ -610,7 +615,7 @@ async function verifyPackedMigrationCli(fixtureDir) {
     readFile(stylesheet, 'utf8'),
   ]);
   const expected = [
-    "import '@aceshooting/lyra-ui/components/layout/details/accordion-item.js';\n",
+    "import '@aceshooting/lyra-ui/components/lr-accordion-item.js';\n",
     '<lr-accordion-item>Panel</lr-accordion-item>\n',
     'lr-accordion-item::part(base) { color: currentColor; }\n',
   ];
@@ -625,11 +630,15 @@ async function writeFixture(
   flagsTarball,
   withOptionalPeers,
   maplibreVersion = '^6.0.0',
+  performanceBaselineTarball,
 ) {
   const dependencies = {
     '@aceshooting/lyra-ui': `file:${relative(fixtureDir, packageTarball)}`,
     lit: uiPackageJson.dependencies.lit,
   };
+  if (performanceBaselineTarball) {
+    dependencies['lyra-ui-v23'] = `file:${relative(fixtureDir, performanceBaselineTarball)}`;
+  }
   if (withOptionalPeers) dependencies['@aceshooting/lyra-flags'] = `file:${relative(fixtureDir, flagsTarball)}`;
 
   const devDependencies = {
@@ -678,43 +687,61 @@ async function writeFixture(
   throw new Error('plain Node unexpectedly exposes a document before the package import');
 }
 const root = await import('@aceshooting/lyra-ui');
-const ssrLoader = await import('@aceshooting/lyra-ui/ssr-loader.js');
+const ssr = await import('@aceshooting/lyra-ui/ssr.js');
+const hydration = await import('@aceshooting/lyra-ui/hydration.js');
+let retiredSsrRouteError;
+try {
+  // Keep this retired-route probe computed so check-script-paths continues treating it as a
+  // runtime-negative assertion instead of a consumer dependency on an unexported subpath.
+  const retiredSsrSpecifier = ['@aceshooting/lyra-ui', 'ssr-loader.js'].join('/');
+  await import(retiredSsrSpecifier);
+} catch (error) {
+  retiredSsrRouteError = error;
+}
 const granularClass = await import('@aceshooting/lyra-ui/components/overlays/empty/empty.class.js');
+const emptyRegistration = await import('@aceshooting/lyra-ui/components/lr-empty.js');
 await import('@aceshooting/lyra-ui/components/conversation/code-block/code-loader.js');
 await import('@aceshooting/lyra-ui/components/media/map/map-loader.js');
 await import('@aceshooting/lyra-ui/components/conversation/markdown/markdown-loader.js');
 await import('@aceshooting/lyra-ui/components/retrieval/graph/graph-loader.js');
-await import('@aceshooting/lyra-ui/components/overlays/empty/empty.js');
-await import('@aceshooting/lyra-ui/components/charts/chart/chart.js');
-await import('@aceshooting/lyra-ui/components/conversation/code-block/code-block.js');
-await import('@aceshooting/lyra-ui/components/retrieval/graph/graph.js');
-await import('@aceshooting/lyra-ui/components/media/map/map.js');
+await import('@aceshooting/lyra-ui/components/lr-chart.js');
+await import('@aceshooting/lyra-ui/components/lr-code-block.js');
+await import('@aceshooting/lyra-ui/components/lr-graph.js');
+await import('@aceshooting/lyra-ui/components/lr-map.js');
 // The curated './utilities/*' subpath, not './internal/*': 'internal/' is deliberately absent
 // from the package's "exports" map (only 'utilities/' is semver-covered), so importing it here
 // would assert a contract the package does not offer -- and Node fails it with
 // ERR_PACKAGE_PATH_NOT_EXPORTED.
 const prefix = await import('@aceshooting/lyra-ui/utilities/prefix.js');
 
-if (typeof root.LyraEmpty !== 'function' || typeof granularClass.LyraEmpty !== 'function') {
-  throw new Error('root and granular class imports did not expose LyraEmpty');
+if ('LyraEmpty' in root || typeof granularClass.LyraEmpty !== 'function') {
+  throw new Error('the root exposed a retired constructor or the canonical class import failed');
 }
-if (prefix.tag('empty') !== 'lr-empty' || customElements.get('lr-empty') !== root.LyraEmpty) {
-  throw new Error('registration and prefix helper imports did not expose the expected contract');
+if (
+  prefix.tag('empty') !== 'lr-empty' ||
+  emptyRegistration.LyraEmpty !== granularClass.LyraEmpty ||
+  customElements.get('lr-empty') !== granularClass.LyraEmpty
+) {
+  throw new Error('canonical registration, class, and prefix imports did not expose the expected contract');
 }
 if (typeof document !== 'undefined') {
   throw new Error('the package imports created a browser document in plain Node');
 }
 if (
-  typeof ssrLoader.LyraSsrFallbackRenderer !== 'function' ||
-  typeof ssrLoader.lyraSsrElementRenderers !== 'function' ||
-  typeof ssrLoader.getLyraSsrMode !== 'function' ||
-  typeof ssrLoader.diagnoseLyraHydration !== 'function' ||
-  ssrLoader.LYRA_SSR_SUPPORT_MATRIX.imports.root !== 'server-safe' ||
-  ssrLoader.getLyraSsrMode('lr-page') !== 'render-and-hydrate'
+  typeof ssr.LyraSsrFallbackRenderer !== 'function' ||
+  typeof ssr.lyraSsrElementRenderers !== 'function' ||
+  typeof ssr.getLyraSsrMode !== 'function' ||
+  typeof ssr.diagnoseLyraHydration !== 'function' ||
+  ssr.LYRA_SSR_SUPPORT_MATRIX.imports.root !== 'server-safe' ||
+  ssr.getLyraSsrMode('lr-page') !== 'render-and-hydrate' ||
+  typeof hydration !== 'object'
 ) {
-  throw new Error('the SSR loader did not expose its packed runtime contract');
+  throw new Error('the explicit SSR diagnostics and browser hydration entries did not expose their contracts');
 }
-if ((await ssrLoader.diagnoseLyraHydration()).length !== 0) {
+if (retiredSsrRouteError?.code !== 'ERR_PACKAGE_PATH_NOT_EXPORTED') {
+  throw new Error('the deprecated SSR loader route remained importable from the packed package');
+}
+if ((await ssr.diagnoseLyraHydration()).length !== 0) {
   throw new Error('SSR diagnostics should be an empty result without browser globals');
 }
 console.log('Node ESM package imports passed.');
@@ -734,10 +761,10 @@ const OPTIONAL_PEER_TAGS = ${JSON.stringify(optionalPeerFamilyTags)};
 const EVERY_TAG = [...ROOT_INCLUDED_TAGS, ...OPTIONAL_PEER_TAGS];
 const definedAmong = (tags) => tags.filter((tag) => customElements.get(tag) !== undefined);
 
-// 1. The root entry carries the named/type surface WITHOUT registering the library.
+// 1. The root entry carries the curated helper/type surface without component constructors or registrations.
 const root = await import('@aceshooting/lyra-ui');
-if (typeof root.LyraEmpty !== 'function' || typeof root.LyraElement !== 'function') {
-  throw new Error('the package root did not expose its named class surface');
+if ('LyraEmpty' in root || typeof root.LyraElement !== 'function') {
+  throw new Error('the package root exposed a component constructor or lost the LyraElement utility');
 }
 const afterRoot = definedAmong(EVERY_TAG).join(',');
 if (afterRoot !== ROOT_EXPECTED_TAGS.join(',')) {
@@ -748,11 +775,11 @@ if (afterRoot !== ROOT_EXPECTED_TAGS.join(',')) {
   );
 }
 
-// 2. A granular registration entry registers EXACTLY its own tag, and registers the very class the
-//    root re-exports (a duplicated class module would satisfy a typeof check but not this).
-await import('@aceshooting/lyra-ui/components/overlays/empty/empty.js');
-if (customElements.get('lr-empty') !== root.LyraEmpty) {
-  throw new Error('the granular registration entry did not register the root barrel class');
+// 2. The canonical tag-shaped registration entry registers exactly its tag and the nested class module.
+const emptyClass = await import('@aceshooting/lyra-ui/components/overlays/empty/empty.class.js');
+const emptyRegistration = await import('@aceshooting/lyra-ui/components/lr-empty.js');
+if (customElements.get('lr-empty') !== emptyClass.LyraEmpty || emptyRegistration.LyraEmpty !== emptyClass.LyraEmpty) {
+  throw new Error('the canonical registration and class routes did not preserve constructor identity');
 }
 const afterGranular = definedAmong(EVERY_TAG).join(',');
 const expectedAfterGranular = [...ROOT_EXPECTED_TAGS, 'lr-empty'].sort().join(',');
@@ -851,13 +878,12 @@ console.log('Lit-free gemstone data import passed.');
   await writeFile(
     join(fixtureDir, 'src', 'typecheck.ts'),
     `import {
-  LyraDialog,
-  LyraEmpty,
-  LyraTable,
   defineElement,
   tag,
 } from '@aceshooting/lyra-ui';
-import { LyraEmpty as GranularLyraEmpty } from '@aceshooting/lyra-ui/components/overlays/empty/empty.class.js';
+import { LyraEmpty } from '@aceshooting/lyra-ui/components/overlays/empty/empty.class.js';
+import { LyraDialog } from '@aceshooting/lyra-ui/components/overlays/dialog/dialog.class.js';
+import { LyraTable } from '@aceshooting/lyra-ui/components/data/table/table.class.js';
 import { loadChartAndZoom } from '@aceshooting/lyra-ui/components/charts/chart/chart-feature-loader.js';
 import { loadMaplibre } from '@aceshooting/lyra-ui/components/media/map/map-loader.js';
 import { loadMarkdownAndSanitizer } from '@aceshooting/lyra-ui/components/conversation/markdown/markdown-loader.js';
@@ -886,7 +912,7 @@ import {
   lyraSsrElementRenderers,
   type LyraHydrationDiagnostic,
   type LyraSsrMode,
-} from '@aceshooting/lyra-ui/ssr-loader.js';
+} from '@aceshooting/lyra-ui/ssr.js';
 import {
   AUTOLOADER_PENDING_ATTRIBUTE,
   discover,
@@ -916,7 +942,7 @@ import type {
   LyraMarkedParser as GranularMarkedParser,
   MarkdownHeadingItem as GranularHeadingItem,
   ShikiLanguageInput as GranularLanguageInput,
-} from '@aceshooting/lyra-ui/components/conversation/markdown/markdown.js';
+} from '@aceshooting/lyra-ui/components/lr-markdown.js';
 import type { LyraImageFit as LightboxImageFit } from '@aceshooting/lyra-ui/components/lr-lightbox.js';
 import type { LyraImageFit as PanZoomImageFit } from '@aceshooting/lyra-ui/components/lr-pan-zoom.js';
 import type { LyraImageFit as ImageViewerImageFit } from '@aceshooting/lyra-ui/components/lr-image-viewer.js';
@@ -931,7 +957,7 @@ type LightboxFitMatchesImageViewer = Assert<Equal<LightboxImageFit, ImageViewerI
 type PanZoomFitMatchesImageViewer = Assert<Equal<PanZoomImageFit, ImageViewerImageFit>>;
 
 const name: string = tag('empty');
-const Empty = GranularLyraEmpty satisfies typeof LyraEmpty;
+const Empty = LyraEmpty;
 const dialog = new LyraDialog();
 const table = new LyraTable();
 const events: [LyraChartEventMap, LyraGraphEventMap, LyraMapEventMap] | undefined = undefined;
@@ -1146,12 +1172,12 @@ export default defineConfig({
   const bundleSources = {
     core: `import '@aceshooting/lyra-ui/all.js';\nexport const loaded = true;\n`,
     rootBarrel: `import '@aceshooting/lyra-ui';\nexport const loaded = true;\n`,
-    button: `import '@aceshooting/lyra-ui/components/forms/button/button.js';\nexport const loaded = true;\n`,
-    formControlLabel: `import '@aceshooting/lyra-ui/components/forms/input/input.js';\nexport const loaded = true;\n`,
-    anchoredPopover: `import '@aceshooting/lyra-ui/components/overlays/overlay/popover.js';\nexport const loaded = true;\n`,
-    anchoredCombobox: `import '@aceshooting/lyra-ui/components/forms/combobox/combobox.js';\nexport const loaded = true;\n`,
+    button: `import '@aceshooting/lyra-ui/components/lr-button.js';\nexport const loaded = true;\n`,
+    formControlLabel: `import '@aceshooting/lyra-ui/components/lr-input.js';\nexport const loaded = true;\n`,
+    anchoredPopover: `import '@aceshooting/lyra-ui/components/lr-popover.js';\nexport const loaded = true;\n`,
+    anchoredCombobox: `import '@aceshooting/lyra-ui/components/lr-combobox.js';\nexport const loaded = true;\n`,
     theme: `import '@aceshooting/lyra-ui/theme.css';\nexport const loaded = true;\n`,
-    shadcnTheme: `import '@aceshooting/lyra-ui/themes/shadcn.css';\nimport '@aceshooting/lyra-ui/theme.css';\nexport const loaded = true;\n`,
+    shadcnTheme: `import '@aceshooting/lyra-ui/looks/shadcn.css';\nimport '@aceshooting/lyra-ui/theme.css';\nexport const loaded = true;\n`,
     nativeStyles: `import '@aceshooting/lyra-ui/native.css';\nexport const loaded = true;\n`,
     utilitiesStyles: `import '@aceshooting/lyra-ui/utilities.css';\nexport const loaded = true;\n`,
     reservationStyles: `import '@aceshooting/lyra-ui/reservations.css';\nexport const loaded = true;\n`,
@@ -1173,24 +1199,24 @@ export const loaded = true;
     autoloaderCdn: `import '@aceshooting/lyra-ui/autoloader-cdn.js';
 export const loaded = true;
 `,
-    ssrHydration: `import '@aceshooting/lyra-ui/ssr-loader.js';
+    ssrHydration: `import '@aceshooting/lyra-ui/hydration.js';
 export const loaded = true;
 `,
     flag: `import flagUrl from '@aceshooting/lyra-flags/flags/fr.svg';\nexport { flagUrl };\n`,
-    codeBlock: `import '@aceshooting/lyra-ui/components/conversation/code-block/code-block.js';\nexport const loaded = true;\n`,
-    chart: `import '@aceshooting/lyra-ui/components/charts/chart/chart.js';\nexport const loaded = true;\n`,
+    codeBlock: `import '@aceshooting/lyra-ui/components/lr-code-block.js';\nexport const loaded = true;\n`,
+    chart: `import '@aceshooting/lyra-ui/components/lr-chart.js';\nexport const loaded = true;\n`,
     map: maplibreVersion.startsWith('^5')
-      ? `import '@aceshooting/lyra-ui/components/media/map/map.js';
+      ? `import '@aceshooting/lyra-ui/components/lr-map.js';
 import 'maplibre-gl/dist/maplibre-gl.css';
 export const loaded = true;
 `
-      : `import '@aceshooting/lyra-ui/components/media/map/map.js';
+      : `import '@aceshooting/lyra-ui/components/lr-map.js';
 import { setWorkerUrl } from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 setWorkerUrl(workerUrl);
 export const loaded = true;
 `,
-    graph: `import '@aceshooting/lyra-ui/components/retrieval/graph/graph.js';\nexport const loaded = true;\n`,
+    graph: `import '@aceshooting/lyra-ui/components/lr-graph.js';\nexport const loaded = true;\n`,
   };
   await Promise.all(
     Object.entries(bundleSources).map(([name, source]) => writeFile(join(fixtureDir, 'src', `bundle-${name}.ts`), source)),
@@ -1212,7 +1238,7 @@ export const loaded = true;
   let registration;
   fallback.addEventListener('toggle', async () => {
     if (!fallback.open || !enhanced.hidden) return;
-    registration ??= import('@aceshooting/lyra-ui/components/overlays/overlay/popover.js')
+    registration ??= import('@aceshooting/lyra-ui/components/lr-popover.js')
       .catch((error) => { registration = undefined; throw error; });
     await registration;
     await customElements.whenDefined('lr-popover');
@@ -1239,7 +1265,7 @@ export const loaded = true;
   let registration;
   input.addEventListener('focus', async () => {
     if (!enhanced.hidden) return;
-    registration ??= import('@aceshooting/lyra-ui/components/forms/combobox/combobox.js')
+    registration ??= import('@aceshooting/lyra-ui/components/lr-combobox.js')
       .catch((error) => { registration = undefined; throw error; });
     await registration;
     await customElements.whenDefined('lr-combobox');
@@ -1402,7 +1428,7 @@ async function runBundle(fixtureDir, entry, config, noOptionalPeers, maplibreMaj
     violations.push('the bare CDN autoloader import lost its auto-start implementation');
   }
   if (entry === 'ssrHydration' && !javascript.includes('defer-hydration')) {
-    violations.push('the packed SSR loader lost its transitive Lit hydration hook');
+    violations.push('the packed hydration entry lost its transitive Lit hydration hook');
   }
   if (entry === 'button' && javascript.includes('data-lr-autoload-pending')) {
     violations.push('a granular component import unexpectedly pulled in the optional autoloader');
@@ -1487,8 +1513,8 @@ async function runBundle(fixtureDir, entry, config, noOptionalPeers, maplibreMaj
       );
     }
     const registrationSuffix = componentName === 'popover'
-      ? '/components/overlays/overlay/popover.js'
-      : '/components/forms/combobox/combobox.js';
+      ? '/components/lr-popover.js'
+      : '/components/lr-combobox.js';
     if (!bundledModuleIds.some((id) => id.endsWith(registrationSuffix))) {
       violations.push(
         `the first-interaction ${componentName} entry lost its deferred registration`,
@@ -1520,7 +1546,7 @@ async function runBundle(fixtureDir, entry, config, noOptionalPeers, maplibreMaj
     const missingBaseTheme = missing(SHADCN_THEME_RETENTION_MARKERS.baseTheme);
     if (cssFiles.length === 0 || missingPreset.length > 0) {
       violations.push(
-        `the bare themes/shadcn.css import emitted no retained preset (missing ${missingPreset.join(', ') || 'CSS output'})`,
+        `the bare looks/shadcn.css import emitted no retained look (missing ${missingPreset.join(', ') || 'CSS output'})`,
       );
     }
     if (cssFiles.length === 0 || missingBaseTheme.length > 0) {
@@ -1596,6 +1622,24 @@ async function runBundle(fixtureDir, entry, config, noOptionalPeers, maplibreMaj
 
 async function main() {
   const { runAttw } = parsePackedConsumerArguments(process.argv.slice(2));
+  const fieldMode = process.env.LYRA_PACKED_FIELD_MODE ?? 'retirement';
+  assert.ok(['retirement', 'pre-removal'].includes(fieldMode), 'Invalid installed field proof mode');
+  const performanceOptions = parsePerformanceQualificationOptions(process.env);
+  let performanceBaselineSha256;
+  if (performanceOptions) {
+    assert.ok(
+      process.execArgv.includes('--experimental-import-meta-resolve'),
+      'opt-in packed production performance requires --experimental-import-meta-resolve',
+    );
+    performanceBaselineSha256 = createHash('sha256')
+      .update(await readFile(performanceOptions.baselineTarballPath))
+      .digest('hex');
+    assert.equal(
+      performanceBaselineSha256,
+      'b2d8e4155e9d4265a95e28357c1ad3402505d150205203251d9f16a1a4bd88da',
+      'the baseline must be the exact archived public @aceshooting/lyra-ui@23.0.0 tarball',
+    );
+  }
   const migrationArtifactsDir = process.env.LYRA_PACKED_MIGRATION_ARTIFACTS
     ? resolve(process.env.LYRA_PACKED_MIGRATION_ARTIFACTS)
     : undefined;
@@ -1615,6 +1659,9 @@ async function main() {
 
     const uiTarball = await pack(uiPackage, tarballDir);
     if (migrationArtifactsDir) await preservePackedTarball({ tarballPath: uiTarball, artifactsDir: join(migrationArtifactsDir, 'packages') });
+    const candidateTarballSha256 = performanceOptions
+      ? createHash('sha256').update(await readFile(uiTarball)).digest('hex')
+      : undefined;
     const flagsTarball = await pack(flagsPackage, tarballDir);
     if (migrationArtifactsDir) await preservePackedTarball({ tarballPath: flagsTarball, artifactsDir: join(migrationArtifactsDir, 'packages') });
 
@@ -1635,7 +1682,14 @@ async function main() {
       console.log('Skipping only ATTW; packed install, runtime, declaration, and bundle contracts remain enabled.');
     }
 
-    await writeFixture(coreFixture, uiTarball, flagsTarball, false);
+    await writeFixture(
+      coreFixture,
+      uiTarball,
+      flagsTarball,
+      false,
+      '^6.0.0',
+      performanceOptions?.baselineTarballPath,
+    );
     await writeFixture(optionalFixture, uiTarball, flagsTarball, true);
     await writeFixture(maplibreV5Fixture, uiTarball, flagsTarball, true, '^5.24.0');
     await run(pnpm, ['install', '--ignore-scripts', '--config.auto-install-peers=false'], coreFixture, 'core fixture install');
@@ -1670,9 +1724,13 @@ async function main() {
     await verifyNoWorkspaceProtocolLeaked(maplibreV5Fixture);
 
     await verifyPackedMigrationCli(coreFixture);
+    const compatibilityHistoryDirectory = join(uiPackage, 'scripts/fixtures/compatibility-history');
+    const publishedHistory = checkPublishedCompatibilitySync(compatibilityHistoryDirectory);
     const migrationProof = await verifyPackedMigrationConsumers({
       fixtureDir: coreFixture,
       compatibilityContext: await readCurrentCompatibilityContext(uiPackage),
+      fieldAuthority: checkPublishedFieldHistorySync(compatibilityHistoryDirectory, { captures: publishedHistory.captures }),
+      fieldMode,
       tarballPath: uiTarball,
       artifactsDir: migrationArtifactsDir ? join(migrationArtifactsDir, 'cli') : undefined,
     });
@@ -1732,6 +1790,40 @@ async function main() {
       proof: migrationProof,
       artifactsDir: migrationArtifactsDir ? join(migrationArtifactsDir, 'browser') : undefined,
     });
+
+    if (performanceOptions) {
+      const installedPackages = [
+          {
+            key: 'baseline',
+            role: 'baseline',
+            installPath: 'lyra-ui-v23',
+            expectedVersion: '23.0.0',
+            tarballPath: performanceOptions.baselineTarballPath,
+            tarballSha256: performanceBaselineSha256,
+          },
+          {
+            key: 'candidate',
+            role: 'candidate',
+            installPath: '@aceshooting/lyra-ui',
+            expectedVersion: uiPackageJson.version,
+            tarballPath: uiTarball,
+            tarballSha256: candidateTarballSha256,
+          },
+        ];
+      if (performanceOptions.mode === 'hydration-smoke') {
+        await runPackedHydrationSmoke({
+          fixtureDir: coreFixture,
+          packages: installedPackages,
+          artifactsPath: join(performanceOptions.artifactsDir, 'packed-hydration-smoke.json'),
+        });
+      } else {
+        await runPackedPerformanceQualification({
+          fixtureDir: coreFixture,
+          packages: installedPackages,
+          artifactsDir: join(performanceOptions.artifactsDir, 'packed-performance.json'),
+        });
+      }
+    }
 
     console.log('Packed-consumer checks passed.');
   } finally {

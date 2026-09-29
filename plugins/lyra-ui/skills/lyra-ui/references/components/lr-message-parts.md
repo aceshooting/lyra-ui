@@ -7,8 +7,7 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
-- **Deprecated event** `lr-link-click` since `22.0.0`; use event `lr-link-activate`; removal not before `24.0.0` — Activation includes pointer and keyboard gestures. The old event remains available after the canonical event with equal detail throughout the compatibility window.
-- **Deprecated property** `accessibleLabel` since `22.0.0`; use attribute `element.setAttribute('aria-label', 'Message content');`; removal not before `24.0.0` — Use the native host accessible name. The legacy property remains an alias of the aria-label attribute throughout the compatibility window.
+- **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 24 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -114,7 +113,7 @@ original reference.
 `MessagePartRenderer = (part: MessagePart, index: number) => unknown`; `MessagePartsToolDisplay =
 'chip' | 'block'`; `MessagePart` and its discriminated part shapes come from the
 `@aceshooting/lyra-ui/ai` subpath. `MessagePartsToolDisplay` is exported from the component module
-(`@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.js`, or the side-effect-free
+(`@aceshooting/lyra-ui/components/lr-message-parts.js`, or the side-effect-free
 `message-parts.class.js`); it is not a package-root export. `MarkdownStreamingRenderMode = 'plain' | 'progressive'` is exported from the `lr-markdown` and
 `lr-markdown-core` component modules. Tool results are a strict
 success/error union: a success has `result` and cannot have `error`; an error has `error` and may
@@ -124,7 +123,7 @@ are ignored so each rendered identity and announcement remains unambiguous.
 
 **Events:** `lr-citation-select` (`{ citation }`), `lr-part-retry` (`{ part }`), `lr-part-resume` (`{ part }`). Composed child
 events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`, `lr-copy-error`,
-`lr-highlight-activate`, `lr-link-activate`, deprecated compatibility alias `lr-link-click` (same `{ href }` detail, emitted afterward), `lr-preview-request`, `lr-remove`, `lr-render-error`, `lr-retry`,
+`lr-highlight-activate`, `lr-link-activate`, `lr-preview-request`, `lr-remove`, `lr-render-error`, `lr-retry`,
 `lr-search-change`, `lr-text-select`, `lr-toggle` (from reasoning panels and tool-call blocks),
 `lr-tool-call-chip-select`, `lr-widget-action`,
 and `lr-widget-state-change`. The `lr-tool-chip-select` alias passthrough was removed in 9.0.0.
@@ -157,7 +156,7 @@ message or the localized fallback. Existing history and reconnect renders stay s
 error id and later adding it again creates a new announcement.
 
 ```ts
-import "@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.js";
+import "@aceshooting/lyra-ui/components/lr-message-parts.js";
 ```
 
 ```html

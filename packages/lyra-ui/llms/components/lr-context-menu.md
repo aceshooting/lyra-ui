@@ -31,8 +31,8 @@ The menu content is exactly what `lr-dropdown` takes, so every row type composes
 
 ```html
 <script type="module">
-  import '@aceshooting/lyra-ui/components/overlays/context-menu/context-menu.js';
-  import '@aceshooting/lyra-ui/components/layout/menu/menu-label.js';
+  import '@aceshooting/lyra-ui/components/lr-context-menu.js';
+  import '@aceshooting/lyra-ui/components/lr-menu-label.js';
 </script>
 
 <lr-context-menu label="File actions">

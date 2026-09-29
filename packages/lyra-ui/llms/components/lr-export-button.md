@@ -7,7 +7,7 @@
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [utility](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/utility.md)
-- **Deprecated event** `lr-export` since `22.0.0`; use event `addEventListener('lr-export-request', event => { /* Review the request detail and call preventDefault() to veto. */ })`; removal not before `24.0.0` — The request event identifies the veto phase; the legacy event preserves its equal detail and cancellation behavior.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 6 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -79,7 +79,7 @@ extension?: string }`. Descriptor labels/descriptions are consumer-supplied, alr
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the native trigger button.
 
-**Events:** `lr-export-request` and `lr-export` (`detail: { format: string }`, **cancelable** — call `preventDefault()` to
+**Events:** `lr-export-request` (`detail: { format: string }`, **cancelable** — call `preventDefault()` to
 substitute your own server-generated download instead of the built-in client-side one; the rows a
 non-prevented built-in download serializes are read **after** this dispatch, so `.rows` assigned from
 inside the listener still reaches it, and `getRows` is consulted at the same point),
@@ -90,9 +90,6 @@ also shown via the trigger's `trigger-error` part and announced through the shar
 region, so a listener is needed only for additional handling; activation does not throw into
 consumer code), `lr-show`, `lr-hide` (cancelable format-menu visibility transitions; self-imposed
 closes caused by disablement, loading, or an unusable format list emit neither event).
-`lr-export` is the deprecated cancelable alias, dispatched after `lr-export-request` with equal
-detail. Either event can veto the export; subscribe to one spelling. Removal of the alias is not
-before 24.0.0.
 
 **Slots:** none.
 
@@ -140,7 +137,7 @@ change every unset export button beneath it.
     { key: "value", label: "Value" },
   ];
   exp.formats = ["csv", "json"]; // shows a format-choice menu instead of exporting immediately
-  exp.addEventListener("lr-export", (e) =>
+  exp.addEventListener("lr-export-request", (e) =>
     console.log("exporting", e.detail.format)
   );
 
@@ -154,7 +151,7 @@ change every unset export button beneath it.
       extension: "xlsx",
     },
   ];
-  exp.addEventListener("lr-export", async (e) => {
+  exp.addEventListener("lr-export-request", async (e) => {
     if (e.detail.format !== "xlsx") return;
     e.preventDefault();
     exp.loading = true;

@@ -1,4 +1,3 @@
-import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './tool-timeline.js';
 import type { LyraToolTimeline, ToolTimelineEntry, ToolTimelineApprovalDetail } from './tool-timeline.js';
@@ -1153,45 +1152,4 @@ it('redacts a top-level error before rendering expanded details', async () => {
   const row = await openEntry(el);
 
   expect(row.querySelector('[part="entry-error"]')!.textContent).to.equal('Value hidden');
-});
-
-expectDeprecatedUsage('lr-tool-timeline', 'event', 'lr-tool-approval-decide');
-
-it('retains the deprecated lr-tool-approval-decide veto alias', async () => {
-  const entry = makeEntry({ needsApproval: true, approved: undefined, args: { path: '/workspace/draft.md' } });
-  const el = (await fixture(html`<lr-tool-timeline .entries=${[entry]}></lr-tool-timeline>`)) as LyraToolTimeline;
-  chipIn(entriesEl(el)[0]).dispatchEvent(
-    new CustomEvent('lr-tool-call-chip-select', { bubbles: true, composed: true }),
-  );
-  await el.updateComplete;
-  const approvalDialog = dialog(el);
-  approvalDialog.shadowRoot!.querySelector<HTMLButtonElement>('[part="edit-button"]')!.click();
-  await approvalDialog.updateComplete;
-  const editor = approvalDialog.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="args-editor"]')!;
-  const editedArgs = '{\n  "path": "/workspace/retry.md"\n}';
-  editor.value = editedArgs;
-  editor.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
-  await approvalDialog.updateComplete;
-  el.addEventListener('lr-tool-approval-decide', (event) => event.preventDefault(), { once: true });
-  approvalDialog.shadowRoot!.querySelector<HTMLElement>('[part="approve-button"]')!.click();
-  await el.updateComplete;
-  await approvalDialog.updateComplete;
-  expect(el.pendingApproval).to.equal('approve');
-  expect(approvalDialog.open).to.be.true;
-  expect(approvalDialog.pendingAction).to.equal('approve');
-
-  el.revertPendingApproval();
-  await el.updateComplete;
-  await approvalDialog.updateComplete;
-  expect(el.pendingApproval).to.equal(null);
-  expect(approvalDialog.open).to.be.true;
-  expect(approvalDialog.pendingAction).to.equal(null);
-  expect(editor.value).to.equal(editedArgs);
-
-  const retry = oneEvent(el, 'lr-tool-approval-decide');
-  approvalDialog.shadowRoot!.querySelector<HTMLElement>('[part="approve-button"]')!.click();
-  const event = (await retry) as CustomEvent<ToolTimelineApprovalDetail>;
-  expect(event.detail).to.deep.equal({ invocationId: 'call-1', approved: true, args: { path: '/workspace/retry.md' } });
-  await el.updateComplete;
-  expect(approvalDialog.open).to.be.false;
 });

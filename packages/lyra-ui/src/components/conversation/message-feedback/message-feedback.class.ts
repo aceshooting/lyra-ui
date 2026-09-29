@@ -1,4 +1,3 @@
-import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import {
@@ -63,8 +62,6 @@ export interface MessageFeedbackSubmitDetail {
 }
 
 export interface LyraMessageFeedbackEventMap {
-  /** @deprecated Use `lr-feedback-submit-request`. */
-  'lr-feedback-submit': LyraMessageFeedbackEventMap['lr-feedback-submit-request'];
   'lr-feedback-change': CustomEvent<{ rating: MessageFeedbackValue }>;
   'lr-feedback-submit-request': CustomEvent<LyraEventDetailSnapshot<MessageFeedbackSubmitDetail>>;
   'lr-toolbar-actions-change': Event;
@@ -229,7 +226,6 @@ interface PendingMessageFeedbackSubmission {
  * @customElement lr-message-feedback
  * @event lr-feedback-change - `detail: { rating }`. Fires whenever thumb interaction changes the
  *   provisional rating, including clearing it to `null`.
- * @event lr-feedback-submit - Deprecated cancelable compatibility alias of `lr-feedback-submit-request`.
  * @event lr-feedback-submit-request - Frozen `detail: { rating, reasonIds, comment, submissionId }`, fired
  *   immediately for a thumbs-only terminal choice or by the detail panel's submit button.
  *   `submissionId` is a nonblank, never-reused transaction identity. Cancelable:
@@ -288,11 +284,6 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
 
   private emitFeedbackSubmitRequest(detail: LyraMessageFeedbackEventMap['lr-feedback-submit-request']['detail']): CustomEvent {
     const request = this.emit('lr-feedback-submit-request', Object.freeze(detail), { cancelable: true });
-    const alias = this.emit('lr-feedback-submit', Object.freeze(detail), { cancelable: true });
-    if (alias.defaultPrevented) {
-      warnDeprecatedUsage(this, 'event', 'lr-feedback-submit', 'lr-feedback-submit-request');
-      request.preventDefault();
-    }
     return request;
   }
   protected static override collectionSupport = collectionSupport;
@@ -301,7 +292,6 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
-    'lr-feedback-submit',
     'lr-feedback-submit-request',
   ]);
 

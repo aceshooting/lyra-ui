@@ -55,6 +55,10 @@ and no runtime dependency on either project.
 | Languages | 66 optional complete message catalogs plus built-in English. The [`locales.json` manifest](./locales.json) lists canonical tags, authored source spellings, import paths and structural coverage. Import a [whole catalog](./llms/shared.md#ready-made-catalogs-aceshootinglyra-uitranslationslocalejs) (`@aceshooting/lyra-ui/translations/<locale>.js`) or only the [family slices](./llms/shared.md#smaller-catalogs-aceshootinglyra-uitranslationslocalefamilyjs) the application renders. |
 | Typography | [Typography utilities](./llms/shared.md#typography) apply a shared scale and reading styles to native content alongside custom elements. |
 
+The [release roadmap](../../docs/roadmap.md#roadmap-index-and-release-status) tracks v24 styling,
+localization, cleanup and qualification work, then the separate website and consumer rollout after
+v24 publication.
+
 Choose the original Lyra look by loading `theme.css`. To select shadcn through the runtime:
 
 ```js
@@ -84,6 +88,27 @@ textareas keep content scrollable when their allocated height shrinks.
 Cancelled agent-run steps now appear as neutral incomplete steps in the default task list, with
 a polite incomplete announcement instead of a failed-step announcement. The run itself keeps its
 cancelled status and retry behavior.
+
+## Upgrading to v24
+
+V24 removes eligible v22 compatibility APIs while retaining component tags and the eight mirrored
+upstream spellings. Import constructors from their registration-free family `.class.js` paths and
+register tags through `components/lr-<tag>.js`; the duplicate nested registration routes and
+`ssr-loader.js` are removed. For browser hydration import `hydration.js` before Lit, then chosen
+registrations. Server rendering uses `ssr.js` and, when needed, `ssr/all.js`; see the
+[SSR examples](#ssr--declarative-shadow-dom).
+
+The old theme and preset facade, `data-lr-theme-preset`, and fixed `themes/shadcn.css` are also
+removed. Use `setLyraStyle()` from `theme.js` with independent look, surface, density, mode and
+accent choices. Theme calls and saved data need semantic review: the former `surface` color maps to
+`accentBackground`, while the new `surface` selects a treatment. Saved v1 preferences remain
+readable. The [style guide](./llms/shared/styles-and-tokens.md#composing-looks-surfaces-and-density)
+documents the current API.
+
+Run the installed, version-matched CLI with `--origin=lyra-v22` and review its report. The
+[v23-to-v24 migration guide](./llms/shared/v23-to-v24-migration.md) gives the project sequence,
+import and SSR replacements, theme semantics, event-detail changes and historical profile rules.
+The generated [`llms/migration.md`](./llms/migration.md) has per-component `wa-*`/`sl-*` mappings.
 
 ## Install
 
@@ -132,9 +157,10 @@ import "@aceshooting/lyra-ui/components/lr-combobox.js";
 import "@aceshooting/lyra-ui/components/lr-option.js";
 ```
 
-The tag-shaped path is stable even if Lyra later reorganizes its internal family folders. Existing
-family-shaped paths remain supported, but new application code should prefer
-`components/<tag>.js`.
+The tag-shaped path is stable even if Lyra later reorganizes its internal family folders. Family
+barrel paths remain supported, while tag-shaped paths are the canonical per-component registration
+imports. Nested per-component registration routes have been retired; use the stable tag path or the
+registration-free family `.class.js` route.
 
 Application-shell and media components have the same granular shape:
 
@@ -187,8 +213,9 @@ import "@aceshooting/lyra-ui/all.js";
 ```
 
 > **Registration is explicit.** The package root is a side-effect-free export surface for
-> classes, helpers, and types; importing it does not define custom elements. Import each component's
-> registration entry, a family entry, or `@aceshooting/lyra-ui/all.js` for bulk registration.
+> library helpers and types; it does not export component classes or define custom elements.
+> Import a registration-free class from its tag's family path when subclassing, or import a
+> component registration entry, family entry, or `@aceshooting/lyra-ui/all.js` to define tags.
 > An unregistered tag remains inert even when the import and build succeed.
 
 `all.js` registers 288 tags — every component **except** the 15 inventory-designated
@@ -306,14 +333,14 @@ toast({ message: "Saved", variant: "success" });
 ## For AI agents / LLMs
 
 **Using this library from a consuming project?** The package ships a reference written for coding
-assistants, split so a lookup costs a few hundred tokens instead of the whole catalog:
+assistants, split by component and topic so a lookup can skip unrelated parts of the catalog:
 
 | Need                                                                                                 | Read                                                                     |
 | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
 | Which component to use, and its import path                                                          | [`llms/index.md`](./llms/index.md)                                       |
 | One component's full API                                                                             | `llms/components/<tag>.md` — path derived from the tag, no search needed |
-| Library-wide behavior (imports, events, forms, theming, i18n, TypeScript, frameworks, SSR, AI types) | [`llms/shared.md`](./llms/shared.md)                                     |
-| One shared-guide topic (imports, forms, styles, localization, frameworks, AI, or testing)        | `llms/shared/<topic>.md` — linked from [`llms.txt`](./llms.txt)           |
+| One shared-guide topic (imports, v23-to-v24 migration, forms, styles, localization, frameworks, AI, or testing) | `llms/shared/<topic>.md` — linked from [`llms.txt`](./llms.txt)           |
+| Combined shared reference for tools requiring one document | [`llms/shared.md`](./llms/shared.md)                                     |
 | Design tokens                                                                                        | [`llms/tokens.md`](./llms/tokens.md)                                     |
 | Which optional peer a component needs                                                                | [`llms/peers.md`](./llms/peers.md)                                       |
 | `wa-*`/`sl-*` migration classifications and safe codemod rules                                       | [`llms/migration.md`](./llms/migration.md)                               |
@@ -490,17 +517,25 @@ matching `data-lr-theme` attribute) on an ancestor:
 ring. It layers over `theme.css` whatever the load order, also answers to shadcn's `.dark`/`.light`
 classes, and keeps gemstone accents working. A few values deliberately differ from shadcn to keep
 WCAG contrast (control borders, focus colour, danger red, chart colours); see
-[The shadcn look](./llms/shared.md#the-shadcn-look--themesshadcncss).
+[The shadcn look](./llms/shared.md#the-shadcn-look--looksshadcncss).
 
 ```css
 @import "@aceshooting/lyra-ui/theme.css";
-@import "@aceshooting/lyra-ui/themes/shadcn.css";
+@import "@aceshooting/lyra-ui/looks/shadcn.css";
+@import "@aceshooting/lyra-ui/accents.css";
 ```
 
-The same look also ships as a runtime preset, `@aceshooting/lyra-ui/theme/presets/shadcn.js`
-(`applyLyraThemePreset(LYRA_SHADCN_THEME_PRESET)`), which persists, is restored before first paint
-by the no-flash bootstrap, and is written inline, so it beats unlayered `:root` overrides like the
-accent does; see [Theme presets](./llms/shared.md#theme-modeaccentsurface-runtime-aceshootinglyra-uithemejs).
+Select the same look through the canonical style API after importing its stylesheet:
+
+```js
+import { setLyraStyle } from '@aceshooting/lyra-ui/theme.js';
+
+setLyraStyle({ look: 'shadcn', mode: 'system', accent: 'sapphire' });
+```
+
+The style API persists the independent look, surface, density, mode and accent choices. See the
+[style API guide](./llms/shared/styles-and-tokens.md#composing-looks-surfaces-and-density) for
+scoped styling, reset and saved-preference behavior.
 
 Tooling can consume the canonical DTCG interchange document from
 `@aceshooting/lyra-ui/design-tokens.json`. The generated
@@ -536,7 +571,7 @@ Applications can override any `--lr-theme-*` input directly:
 `theme.css` declares `@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides` and
 puts its own tokens in `lr-theme`, so an _unlayered_ rule of yours — like the `:root` block above —
 wins over every Lyra declaration regardless of specificity or which stylesheet the bundler emitted
-first. The optional `themes/shadcn.css` preset uses `lr-theme-preset`, and the optional `native.css`
+first. The optional `looks/shadcn.css` stylesheet uses `lr-theme-preset`, and the optional `native.css`
 and `utilities.css` assets use `lr-base` and `lr-utilities`; `lr-overrides` remains available for
 application rules. If you declare Lyra's layer order yourself, name all five. See [`llms/tokens.md`](./llms/tokens.md) for the complete shared token list.
 Component-specific `--lr-*` custom properties remain available for local overrides.
@@ -596,9 +631,8 @@ setLyraLocale("fr"); // or just set <html lang="fr">/an ancestor `lang` — comp
 The dedicated `localization.js` entry is side-effect-free: it does not register the component
 graph. The package root continues to re-export the same runtime for compatibility, but importing
 the root remains registration-free. The same entry also carries `bridgeLyraLocale()`,
-`subscribeLyraLocale()` and `resolveLyraScopedString()`. Their former
-`@aceshooting/lyra-ui/utilities/localization.js` entry point was removed in 23.0.0;
-use the canonical `localization.js` route.
+`subscribeLyraLocale()` and `resolveLyraScopedString()`. Their former utility-scoped entry point was
+removed in 23.0.0; use the canonical `localization.js` route.
 
 ```html
 <!-- Per-instance: override specific keys on one element without a global registry. -->
@@ -638,13 +672,9 @@ remains available for the complete M+1 line and cannot be removed before M+2. Se
 
 ## SSR & Declarative Shadow DOM
 
-Every Lyra entry point is server-safe under Node 22+ — the package root, `all.js`, the family
-barrels, and every granular registration module alike. The `@aceshooting/lyra-ui/ssr-loader.js`
-entry installs Lit's hydration hook before registering Lyra (it still pulls the whole `all.js`
-closure independently of the package root) and exports the machine-readable
-`LYRA_SSR_SUPPORT_MATRIX`. New integrations that want granular registration can import
-`@aceshooting/lyra-ui/hydration.js` first instead, then their own component modules. The matrix has
-two explicit tiers:
+Lyra's package root, `all.js`, family entries and granular registration modules are server-safe
+under Node 22+. On the server, register the tags your page renders and use the SSR helpers from
+`@aceshooting/lyra-ui/ssr.js`. The matrix has two explicit tiers:
 
 - `render-and-hydrate` components emit Declarative Shadow DOM (DSD) and reuse that shadow root and
   its nodes during browser hydration.
@@ -653,13 +683,18 @@ two explicit tiers:
   components whose initial render needs light-DOM traversal, layout, canvas, observers, or media
   APIs that Lit's intentionally small server DOM does not emulate.
 
+For an application that intentionally registers the full inventory on the server,
+`@aceshooting/lyra-ui/ssr/all.js` provides that side effect plus the SSR helpers. Granular imports
+avoid loading unused optional-peer families.
+
 Configure Lit's server renderer with Lyra's fallback before `LitElementRenderer`:
 
 ```ts
+import '@aceshooting/lyra-ui/components/lr-page.js';
 import {
   lyraSsrElementRenderers,
   LYRA_SSR_SUPPORT_MATRIX,
-} from "@aceshooting/lyra-ui/ssr-loader.js";
+} from '@aceshooting/lyra-ui/ssr.js';
 import { render, LitElementRenderer } from "@lit-labs/ssr";
 import { collectResult } from "@lit-labs/ssr/lib/render-result.js";
 import { html } from "lit";
@@ -670,22 +705,24 @@ const result = render(html`<lr-page><main>Dashboard</main></lr-page>`, {
 const markup = await collectResult(result);
 ```
 
-On the client, make the loader the first import that can reach Lit; it installs
-`@lit-labs/ssr-client/lit-element-hydrate-support.js` before loading component definitions:
+In a browser bundle that hydrates server-rendered markup, make `hydration.js` the first import that
+can reach Lit. It installs `@lit-labs/ssr-client/lit-element-hydrate-support.js`; then register the
+tags the page uses:
 
 ```ts
+import '@aceshooting/lyra-ui/hydration.js';
+import '@aceshooting/lyra-ui/components/lr-page.js';
 import {
   diagnoseLyraHydration,
   getLyraSsrMode,
-} from "@aceshooting/lyra-ui/ssr-loader.js";
+} from '@aceshooting/lyra-ui/ssr.js';
 
 const diagnostics = await diagnoseLyraHydration(document);
 ```
 
-Root-excluded optional-peer families still use their granular registration import after the loader;
-the loader does not make optional peers eager. Property bindings cannot be serialized by a fallback
-renderer, so express initial fallback state as attributes/light DOM or assign properties on the
-client. A `render-and-hydrate` component whose rendering depends on something only a browser can
+Optional-peer families use their granular registration imports as needed. Property bindings cannot
+be serialized by a fallback renderer, so express initial fallback state as attributes/light DOM or
+assign properties on the client. A `render-and-hydrate` component whose rendering depends on something only a browser can
 answer — its own light-DOM children, or a browser global such as `EyeDropper` — reproduces the
 server's answer on the hydrating render and corrects itself on the very next update rather than
 contradicting the markup it is hydrating, so a slotted override or an eyedropper button appears one

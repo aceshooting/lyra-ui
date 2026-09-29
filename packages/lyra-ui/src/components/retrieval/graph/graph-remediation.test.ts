@@ -278,7 +278,7 @@ describe('graph rendered interaction contracts', () => {
       'Link from Alpha to Beta'
     );
     let clicks = 0;
-    graph.addEventListener('lr-link-click', () => clicks++);
+    graph.addEventListener('lr-edge-activate', () => clicks++);
     await hoverUntilMatched(canvas, 'Invisible link midpoint hovered', () =>
       canvasPoint(graph)
     );

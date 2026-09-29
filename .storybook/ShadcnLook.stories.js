@@ -1,12 +1,12 @@
 import { html } from 'lit';
-import { setLyraTheme } from '../packages/lyra-ui/src/theme/theme.js';
+import { setLyraStyle } from '../packages/lyra-ui/src/theme/theme.js';
 import { GEMSTONES } from '../packages/lyra-ui/src/theme/gemstones-data.js';
 
 /**
- * The opt-in shadcn/ui look (`@aceshooting/lyra-ui/themes/shadcn.css`) next to Lyra's own, on the
- * same controls. Each story renders a light and a dark panel side by side -- `data-lr-theme` on the
- * panel is honoured by both theme.css and the preset -- and pins the `look` toolbar global, so the
- * two stories are a direct comparison. Every other story can be switched with the `Look` toolbar.
+ * The opt-in shadcn look (`@aceshooting/lyra-ui/looks/shadcn.css`) next to Lyra's own, on the same
+ * controls. Each story renders a light and a dark panel side by side with explicit `data-lr-look`
+ * and `data-lr-mode` scopes, so each panel keeps its own style in one document. Every story can be
+ * switched with the `Look` toolbar.
  * `panel()` demonstrates at least one representative control per component family (not just
  * forms/overlays/layout) so the preset's reach past its most-tested primitives is directly visible.
  *
@@ -33,10 +33,10 @@ const panelStyle = [
 
 const rowStyle = 'display: flex; flex-wrap: wrap; gap: var(--lr-theme-space-s, 0.5rem); align-items: center';
 
-function panel(mode, label) {
+function panel(mode, label, look) {
   const id = `look-${label.toLowerCase().replace(/[^a-z]+/g, '-')}-${mode}`;
   return html`
-    <section data-lr-theme=${mode} style=${panelStyle} aria-labelledby=${id}>
+    <section data-lr-look=${look} data-lr-mode=${mode} style=${panelStyle} aria-labelledby=${id}>
       <h2 id=${id} style="margin: 0; font-size: var(--lr-theme-font-size-lg, 1.125rem)">${label}, ${mode}</h2>
       <div style=${rowStyle}>
         <lr-button>Primary</lr-button>
@@ -77,7 +77,7 @@ function panel(mode, label) {
       <lr-card>
         <strong>Card</strong>
         <p style="margin: 0; color: var(--lr-theme-color-text-quiet)">
-          A decorative edge: the preset draws it with the subtle hairline, not the control grey.
+          A decorative edge: the look draws it with the subtle hairline, not the control grey.
         </p>
       </lr-card>
       <lr-callout variant="danger" heading="Heads up">Destructive actions cannot be undone.</lr-callout>
@@ -131,7 +131,7 @@ function panel(mode, label) {
 
 /**
  * A third scenario alongside the light/dark side-by-side above: the shadcn look with a gemstone
- * accent layered on top (`setLyraTheme({ accent })`, the same runtime a consumer calls). The accent
+ * accent layered on top (`setLyraStyle({ accent })`, the same runtime a consumer calls). The accent
  * ramp is resolved for one mode at a time, so unlike `panel()` this cannot show light and dark
  * side by side -- toggle the `Theme` toolbar global to see both. Only primary/brand-driven fills
  * (button, checked checkbox/switch, a `variant="brand"` badge, a streaming chat message's border)
@@ -140,9 +140,9 @@ function panel(mode, label) {
  * verified against computed styles.
  */
 function accentPanel(gemstone) {
-  setLyraTheme({ accent: gemstone.fill });
+  setLyraStyle({ accent: gemstone.fill });
   return html`
-    <section style=${panelStyle}>
+    <section data-lr-look="shadcn" style=${panelStyle}>
       <h2 style="margin: 0; font-size: var(--lr-theme-font-size-lg, 1.125rem)">shadcn/ui, ${gemstone.key} accent</h2>
       <div style=${rowStyle}>
         <lr-button>Primary</lr-button>
@@ -160,10 +160,10 @@ function accentPanel(gemstone) {
   `;
 }
 
-function sideBySide(label) {
+function sideBySide(label, look) {
   return html`
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr))">
-      ${panel('light', label)} ${panel('dark', label)}
+      ${panel('light', label, look)} ${panel('dark', label, look)}
     </div>
   `;
 }
@@ -171,13 +171,13 @@ function sideBySide(label) {
 export const Shadcn = {
   name: 'shadcn/ui look',
   globals: { look: 'shadcn' },
-  render: () => sideBySide('shadcn/ui'),
+  render: () => sideBySide('shadcn/ui', 'shadcn'),
 };
 
 export const Lyra = {
   name: 'Lyra look (for comparison)',
   globals: { look: 'lyra' },
-  render: () => sideBySide('Lyra'),
+  render: () => sideBySide('Lyra', 'lyra'),
 };
 
 export const GemstoneAccent = {

@@ -52,11 +52,21 @@ const llmsIntroReference = readFileSync(
   new URL('../llms/00-llms-txt-intro.md', import.meta.url),
   'utf8',
 );
-for (const [topic] of SHARED_TOPICS) {
+for (const [topic, title, routeMode] of SHARED_TOPICS) {
   const route = `./llms/shared/${topic}.md`;
   assert.ok(llmsIntroReference.includes(route), `llms intro must route to ${route}`);
   const topicSource = readFileSync(new URL(`../llms/shared/${topic}.md`, import.meta.url), 'utf8');
-  assert.match(topicSource, /^# .+\n/u, `${topic} must be a focused authored guide`);
+  assert.ok(topicSource.startsWith(`# ${title}\n`), `${topic} must retain its indexed title`);
+  if (routeMode === 'index-only') {
+    const sectionHeadings = [...topicSource.matchAll(/^## (.+)$/gmu)].map((match) => match[1]);
+    assert.ok(sectionHeadings.length > 0, `${topic} needs a substantive focused route`);
+    for (const heading of sectionHeadings) {
+      assert.ok(
+        !sharedReference.includes(`## ${heading}\n`),
+        `${topic} section ${heading} must stay off the stable shared compatibility route`,
+      );
+    }
+  }
 }
 assert.deepEqual(
   unpublishedSourceReferenceProblems([['README.md', readmeReference]]),
@@ -805,6 +815,7 @@ for (const oldHeading of [
   '## Component status, versioning, and deprecation',
   '## Importing and registering components',
   '## Theming and design tokens',
+  '## Optional native styles and CSS utilities',
   '## Localization: `locale`, `strings`, and the locale runtime',
   '## When no component fits, file it',
   '## Exported TypeScript contracts',
@@ -812,6 +823,20 @@ for (const oldHeading of [
 ]) {
   assert.equal(sharedReference.split(oldHeading).length - 1, 1, `${oldHeading} must remain on the legacy route`);
 }
+const focusedStyles = readFileSync(new URL('../llms/shared/styles-and-tokens.md', import.meta.url), 'utf8');
+const nativeStyles = readFileSync(new URL('../llms/shared/native-styles-and-utilities.md', import.meta.url), 'utf8');
+assert.match(focusedStyles, /^### Optional native styles and CSS utilities$/mu,
+  'the old focused style-guide anchor must route to the new native guide');
+assert.match(focusedStyles, /\]\(\.\/native-styles-and-utilities\.md#optional-native-styles-and-css-utilities\)/u);
+assert.match(nativeStyles, /^## Optional native styles and CSS utilities$/mu);
+assert.ok(!sharedReference.includes('focused-native-styles:'),
+  'focused route pointers must not duplicate anchors in the combined guide');
+assert.ok(sharedReference.indexOf('## Theming and design tokens') <
+  sharedReference.indexOf('## Optional native styles and CSS utilities'));
+assert.ok(sharedReference.indexOf('## Optional native styles and CSS utilities') <
+  sharedReference.indexOf('## Localization: `locale`, `strings`, and the locale runtime'));
+assert.ok(sharedReference.includes('`native.css` places its rules in `lr-base`'),
+  'the combined guide must retain the native stylesheet contract');
 assert.ok(table, 'build({ write: false }) must produce per-tag component docs');
 assert.ok(streamingText, 'build({ write: false }) must produce lr-streaming-text docs');
 for (const [tag, reference] of Object.entries(compoundReferences)) {

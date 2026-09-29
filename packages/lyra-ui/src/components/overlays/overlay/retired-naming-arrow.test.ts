@@ -1,6 +1,7 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expect, fixture, html } from '@open-wc/testing';
 import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
+import type { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraDropdown } from './dropdown.class.js';
 import type { LyraPopover } from './popover.class.js';
 import '../dialog/dialog.js';
@@ -20,6 +21,7 @@ expectStaleAttribute('lr-carousel', 'accessible-label');
 expectStaleAttribute('lr-dialog', 'accessible-label');
 expectStaleAttribute('lr-drawer', 'accessible-label');
 expectStaleAttribute('lr-popover', 'arrow');
+expectStaleAttribute('lr-dropdown', 'arrow');
 expectStaleAttribute('lr-progress-bar', 'accessible-label');
 expectStaleAttribute('lr-progress-ring', 'accessible-label');
 expectStaleAttribute('lr-reorder-item', 'accessible-label');
@@ -32,25 +34,22 @@ for (const [name, selector, empty] of [
   ['callout', '[part~="base"]', null],
   ['carousel', '[part~="base"]', ''],
 ] as const) {
-  it(`${name} ignores the retired naming attribute while retaining property and host precedence`, async () => {
-    const el = document.createElement(`lr-${name}`) as HTMLElement & { accessibleLabel: string; updateComplete: Promise<unknown> };
-    const warnings = await captureDeprecationWarnings([], async () => {
-      el.setAttribute('accessible-label', 'Old attribute');
-      await fixture(el);
-      await el.updateComplete;
-      const role = el.shadowRoot!.querySelector(selector)!;
-      expect(role.getAttribute('aria-label')).not.to.equal('Old attribute');
-      el.accessibleLabel = 'Property name';
-      await el.updateComplete;
-      expect(role.getAttribute('aria-label')).to.equal('Property name');
-      el.setAttribute('aria-label', '');
-      await el.updateComplete;
-      expect(role.getAttribute('aria-label')).to.equal(empty);
-      el.setAttribute('aria-label', 'Host name');
-      await el.updateComplete;
-      expect(role.getAttribute('aria-label')).to.equal('Host name');
-    });
-    expect(warnings.map(({ key }) => key)).to.deep.equal([`lyra-deprecated:lr-${name}:property:accessibleLabel`]);
+  it(`${name} ignores removed naming aliases while retaining host aria-label`, async () => {
+    const el = document.createElement(`lr-${name}`) as LyraElement;
+    el.setAttribute('accessible-label', 'Old attribute');
+    await fixture(el);
+    await el.updateComplete;
+    const role = el.shadowRoot!.querySelector(selector)!;
+    expect(role.getAttribute('aria-label')).not.to.equal('Old attribute');
+    Reflect.set(el, 'accessibleLabel', 'Property name');
+    await el.updateComplete;
+    expect(role.getAttribute('aria-label')).not.to.equal('Property name');
+    el.setAttribute('aria-label', '');
+    await el.updateComplete;
+    expect(role.getAttribute('aria-label')).to.equal(empty);
+    el.setAttribute('aria-label', 'Host name');
+    await el.updateComplete;
+    expect(role.getAttribute('aria-label')).to.equal('Host name');
   });
 }
 
@@ -64,28 +63,22 @@ it('retires popover arrow while preserving canonical rendering', async () => {
   });
 });
 
-it('retains dropdown arrow default, explicit false and last-write precedence', async () => {
-  await captureDeprecationWarnings([{ tag: 'lr-dropdown', kind: 'property', name: 'arrow' }], async () => {
-    const el = await fixture<LyraDropdown>(html`<lr-dropdown><button slot="trigger">Open</button><button>Action</button></lr-dropdown>`);
-    const count = () => el.shadowRoot!.querySelectorAll('[part~="arrow"]').length;
-    expect(el.arrow).to.equal(true);
-    expect(count()).to.equal(1);
-    el.setAttribute('arrow', 'false');
-    await el.updateComplete;
-    expect(el.withoutArrow).to.equal(true);
-    expect(count()).to.equal(0);
-    el.arrow = true;
-    await el.updateComplete;
-    expect(count()).to.equal(1);
-    el.withoutArrow = true;
-    await el.updateComplete;
-    expect(el.arrow).to.equal(false);
-    expect(count()).to.equal(0);
-  });
+it('ignores the removed dropdown arrow alias and retains without-arrow control', async () => {
+  const el = await fixture<LyraDropdown>(html`<lr-dropdown><button slot="trigger">Open</button><button>Action</button></lr-dropdown>`);
+  const count = () => el.shadowRoot!.querySelectorAll('[part~="arrow"]').length;
+  expect(el.withoutArrow).to.equal(false);
+  expect(count()).to.equal(1);
+  el.setAttribute('arrow', 'false');
+  await el.updateComplete;
+  expect(el.withoutArrow).to.equal(false);
+  expect(count()).to.equal(1);
+  el.withoutArrow = true;
+  await el.updateComplete;
+  expect(count()).to.equal(0);
 });
 
-it('reorder-item keeps its programmatic row identity without binding accessible-label', async () => {
-  const el = document.createElement('lr-reorder-item') as HTMLElement & { accessibleLabel: string; updateComplete: Promise<unknown> };
+it('reorder-item ignores retired row naming and follows host aria-label', async () => {
+  const el = document.createElement('lr-reorder-item');
   el.textContent = 'Row';
   el.setAttribute('accessible-label', 'Old attribute');
   const label = () => {
@@ -96,9 +89,9 @@ it('reorder-item keeps its programmatic row identity without binding accessible-
   const warnings = await captureDeprecationWarnings([], async () => {
     await fixture(el);
     expect(label()).to.equal('Move up Row');
-    el.accessibleLabel = 'Invoices';
+    Reflect.set(el, 'accessibleLabel', 'Invoices');
     await el.updateComplete;
-    expect(label()).to.equal('Move up Invoices');
+    expect(label()).to.equal('Move up Row');
     el.setAttribute('aria-label', '');
     await el.updateComplete;
     expect(label()).to.equal('Move up');
@@ -106,5 +99,5 @@ it('reorder-item keeps its programmatic row identity without binding accessible-
     await el.updateComplete;
     expect(label()).to.equal('Move up Orders');
   });
-  expect(warnings.map(({ key }) => key)).to.deep.equal(['lyra-deprecated:lr-reorder-item:property:accessibleLabel']);
+  expect(warnings).to.have.length(0);
 });

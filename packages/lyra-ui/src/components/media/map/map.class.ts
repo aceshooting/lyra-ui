@@ -31,6 +31,18 @@ import {
   type MaplibreModule,
 } from './map-loader.js';
 import { styles } from './map.styles.js';
+import {
+  clusterColorExpression,
+  heatmapColorExpression,
+  heatmapWeightExpression,
+  heatmapZoomValue,
+  lineColorExpression,
+  mutedCategoryOpacityExpression,
+  pointColorExpression,
+  pointRadiusExpression,
+  stepExpression,
+  type MapDataLayerPointRadius,
+} from './map-data-layers.js';
 import '../../overlays/skeleton/skeleton.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -1094,17 +1106,6 @@ const isFiniteOutput = (candidate: unknown): candidate is number =>
 const isColorOutput = (candidate: unknown): candidate is string =>
   typeof candidate === 'string' && candidate.trim().length > 0;
 
-/**
- * `['step', input, base, threshold, output, …]` — the same shape `applyChoropleth()`'s `'step'`
- * interpolation emits, including the base defaulting to the first stop's own output so a break at
- * the data minimum needs no extra configuration.
- */
-function stepExpression<T>(input: unknown, stops: readonly (readonly [number, T])[]): unknown[] {
-  const expression: unknown[] = ['step', input, stops[0]![1]];
-  for (const [threshold, output] of stops) expression.push(threshold, output);
-  return expression;
-}
-
 /** MapLibre's own `clusterRadius` default. */
 const DEFAULT_CLUSTER_RADIUS = 50;
 /** MapLibre's own `clusterMaxZoom` default. */
@@ -1119,27 +1120,6 @@ const DEFAULT_CLUSTER_RADIUS_STEPS: readonly (readonly [number, number])[] = Obj
 const DEFAULT_HEATMAP_RADIUS = 30;
 /** MapLibre's own `heatmap-intensity` default. */
 const DEFAULT_HEATMAP_INTENSITY = 1;
-/**
- * The density-0 color of every heatmap ramp. Fully transparent black is required, not a design
- * choice: MapLibre paints the ramp across the whole layer, so any visible color at density 0 tints
- * the entire map. It is spelled as literal rgba rather than the `transparent` keyword because this
- * value is handed to the peer's own color parser, not to CSS.
- */
-const HEATMAP_TRANSPARENT = 'rgba(0, 0, 0, 0)';
-
-/**
- * Prepends the transparent density-0 stop to a heatmap ramp that starts above zero.
- *
- * A ramp whose lowest stop is above zero paints that color across every zero-density pixel, which
- * is the whole map -- so the floor is prepended rather than assumed. An empty ramp is returned
- * untouched; it has no lowest stop to compare and no gradient to protect.
- */
-function withTransparentFloor(
-  stops: readonly (readonly [number, string])[],
-): readonly (readonly [number, string])[] {
-  return stops.length && stops[0]![0] > 0 ? [[0, HEATMAP_TRANSPARENT] as const, ...stops] : stops;
-}
-
 /** Cap on the cluster count label's font stack; a stack is a fallback chain, not a list. */
 const MAX_CLUSTER_COUNT_FONTS = 8;
 
@@ -1312,12 +1292,7 @@ function projectIconPaint(row: object): CanonicalIconPaint | undefined {
   });
 }
 
-interface CanonicalPointRadius {
-  readonly field: string;
-  readonly stops: readonly (readonly [number, number])[];
-  readonly interpolation: LyraMapPointRadiusInterpolation;
-  readonly fallback: number;
-}
+type CanonicalPointRadius = MapDataLayerPointRadius;
 
 function projectPointRadius(value: unknown): number | CanonicalPointRadius {
   if (!isRuntimeRecord(value)) return finiteRange(typeof value === 'number' ? value : NaN, 5, 0, 200);
@@ -1330,25 +1305,6 @@ function projectPointRadius(value: unknown): number | CanonicalPointRadius {
   if (typeof field !== 'string' || !field.trim() || !stops.length) return fallback;
   return Object.freeze({ field: field.trim(), stops: Object.freeze(stops), fallback,
     interpolation: read('interpolation') === 'linear' ? 'linear' : 'step' });
-}
-
-function pointRadiusExpression(radius: number | CanonicalPointRadius): number | unknown[] {
-  if (typeof radius === 'number') return radius;
-  const input: unknown[] = ['number', ['get', radius.field], 0];
-  let domainInput: unknown[] = input;
-  let stops = radius.stops;
-  // Halving a finite overflow-spanning domain keeps the peer's interpolation subtraction finite.
-  // Reject a domain whose smallest distinct stops become indistinguishable during that projection.
-  if (radius.interpolation === 'linear' && !Number.isFinite(stops.at(-1)![0] - stops[0]![0])) {
-    stops = stops.map(([value, output]) => [value / 2, output] as const);
-    if (stops.some(([value], index) => index > 0 && value <= stops[index - 1]![0])) return radius.fallback;
-    domainInput = ['/', input, 2];
-  }
-  const output = stops.length === 1 ? stops[0]![1] : radius.interpolation === 'linear'
-    ? ['interpolate', ['linear'], domainInput, ...stops.flat()]
-    : stepExpression(input, stops);
-  return ['case', ['all', ['==', ['typeof', ['get', radius.field]], 'number'],
-    ['>=', input, -Number.MAX_VALUE], ['<=', input, Number.MAX_VALUE]], output, radius.fallback];
 }
 
 function projectPointOptions(value: unknown): CanonicalPointOptions | undefined {
@@ -1532,49 +1488,6 @@ function dataLayerShape(layer: CanonicalMapDataLayer): string {
   const cluster = layer.cluster;
   if (!cluster) return 'auto';
   return `cluster:${cluster.radius}:${cluster.maxZoom}:${cluster.countFont?.join(',') ?? ''}`;
-}
-
-/**
- * `heatmap-weight` for the authored weight field, or `undefined` to leave MapLibre's own default of
- * 1 per point in place.
- *
- * With a `weightRange` the property is mapped onto the 0–1 domain MapLibre expects; without one the
- * raw value is passed through, which is only right for data already in that range.
- */
-function heatmapWeightExpression(options: CanonicalHeatmapOptions | undefined): unknown[] | undefined {
-  const field = options?.weightField ?? '';
-  if (!field) return undefined;
-  const min = options?.weightRange?.[0] ?? Number.NaN;
-  const max = options?.weightRange?.[1] ?? Number.NaN;
-  // Deliberately a finiteness test rather than a `finiteRange` clamp: a half-specified or inverted
-  // range has no defensible substitute, and mapping the property onto the wrong domain would
-  // silently saturate or flatten the whole surface. Passing the raw value through is honest.
-  if (!Number.isFinite(min) || !Number.isFinite(max) || min >= max) return ['get', field];
-  return ['interpolate', ['linear'], ['get', field], min, 0, max, 1];
-}
-
-/**
- * Normalizes a heatmap's scalar-or-zoom-stop paint value without leaking MapLibre expression
- * types into the public API. A single usable stop is a constant; two or more become a linear zoom
- * interpolation. Invalid arrays fall back to the established scalar default.
- */
-function heatmapZoomValue(
-  value: number | readonly (readonly [number, number])[] | undefined,
-  fallback: number,
-  min: number,
-  max: number,
-): number | unknown[] {
-  if (!isRuntimeArray(value)) {
-    return finiteRange(typeof value === 'number' ? value : Number.NaN, fallback, min, max);
-  }
-  const stops = value.map(
-    ([zoom, output]) => [zoom, finiteRange(output, fallback, min, max)] as const,
-  );
-  if (stops.length === 0) return fallback;
-  if (stops.length === 1) return stops[0]![1];
-  const expression: unknown[] = ['interpolate', ['linear'], ['zoom']];
-  for (const [zoom, output] of stops) expression.push(zoom, output);
-  return expression;
 }
 
 /** The accepted, one-read subset of a caller-owned choropleth record. */
@@ -4310,14 +4223,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const fallback = resolvedLayerColor(this, layer.strokeColor ?? layer.color, layer.tone);
     const line = layer.line;
     if (!line?.field || line.stops.length < 2) return fallback;
-    // A guarded numeric assertion keeps absent/null/string properties on the authored fallback
-    // instead of coercing them into a meaningful domain value or producing peer evaluation errors.
-    return [
-      'case', ['==', ['typeof', ['get', line.field]], 'number'],
-      ['interpolate', ['linear'], ['number', ['get', line.field]],
-        ...line.stops.flatMap(([value, color]) => [value, resolvedLayerColor(this, color, layer.tone)])],
+    return lineColorExpression(
+      line.field,
+      line.stops.map(([value, color]) => [value, resolvedLayerColor(this, color, layer.tone)] as const),
       fallback,
-    ];
+    );
   }
 
   /**
@@ -4338,16 +4248,20 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     }
     this.appliedPointMuting.add(layerId);
     const dim = hiddenCategoryOpacity(this);
-    return ['match', ['get', field], ...muted.flatMap((value) => [value, dim]), 1];
+    return mutedCategoryOpacityExpression(field!, muted, dim);
   }
 
   private paintPoints(sourceId: string, layer: CanonicalMapDataLayer): void {
     if (!this._map) return;
     const point = layer.point;
     const fallback = resolvedLayerColor(this, layer.strokeColor ?? layer.color, layer.tone);
-    const color = point?.field && point.colors.length
-      ? ['match', ['get', point.field], ...point.colors.flatMap(([value, paint]) =>
-        [value, resolvedLayerColor(this, paint, layer.tone)]), fallback] : fallback;
+    const color = pointColorExpression(
+      point?.field,
+      point?.field && point.colors.length
+        ? point.colors.map(([value, paint]) => [value, resolvedLayerColor(this, paint, layer.tone)] as const)
+        : [],
+      fallback,
+    );
     const id = `${sourceId}-circle`;
     this._map.setPaintProperty(id, 'circle-color', color);
     // Before the early return below: an un-mute must still land on a layer whose `point` options
@@ -4463,12 +4377,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     cluster: NormalizedClusterOptions,
   ): unknown[] | string {
     const tone = layer.tone;
-    if (!cluster.colorSteps.length) return resolvedLayerColor(this, layer.color, tone);
-    return stepExpression(
-      ['get', 'point_count'],
-      cluster.colorSteps.map(
-        ([count, stepColor]) => [count, resolvedLayerColor(this, stepColor, tone)] as const,
-      ),
+    return clusterColorExpression(
+      cluster.colorSteps.map(([count, stepColor]) =>
+        [count, resolvedLayerColor(this, stepColor, tone)] as const),
+      () => resolvedLayerColor(this, layer.color, tone),
     );
   }
 
@@ -4639,19 +4551,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const authored = (layer.heatmap?.stops ?? []).map(
       ([density, color]) => [density, resolvedLayerColor(this, color, tone)] as const,
     );
-    const authoredRamp = withTransparentFloor(authored);
-    const ramp =
-      authoredRamp.length >= 2
-        ? authoredRamp
-        : withTransparentFloor(
-            HEATMAP_RAMP_TOKENS.map(
-              ([density, token]) =>
-                [density, resolvedLayerColor(this, `var(${token})`, tone)] as const,
-            ),
-          );
-    const expression: unknown[] = ['interpolate', ['linear'], ['heatmap-density']];
-    for (const [density, color] of ramp) expression.push(density, color);
-    return expression;
+    return heatmapColorExpression(
+      authored,
+      () => HEATMAP_RAMP_TOKENS.map(([density, token]) =>
+        [density, resolvedLayerColor(this, `var(${token})`, tone)] as const),
+    );
   }
 
   /**

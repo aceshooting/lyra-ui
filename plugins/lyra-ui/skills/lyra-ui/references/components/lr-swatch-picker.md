@@ -143,7 +143,7 @@ do not need to load Lit. The consumer still owns localized labels, display order
 value:
 
 ```ts
-import "@aceshooting/lyra-ui/components/forms/swatch-picker/swatch-picker.js";
+import "@aceshooting/lyra-ui/components/lr-swatch-picker.js";
 import { GEMSTONES } from "@aceshooting/lyra-ui/theme/gemstones-data.js";
 
 const order = ["emerald", "ruby", "sapphire", "hematite"] as const;
@@ -227,9 +227,9 @@ The consuming Lit component imports these granular entries and lists
 button in the application uses `icon` or `src`:
 
 ```ts
-import '@aceshooting/lyra-ui/components/forms/icon-button/icon-button.js';
-import '@aceshooting/lyra-ui/components/overlays/overlay/popover.js';
-import '@aceshooting/lyra-ui/components/forms/swatch-picker/swatch-picker.js';
+import '@aceshooting/lyra-ui/components/lr-icon-button.js';
+import '@aceshooting/lyra-ui/components/lr-popover.js';
+import '@aceshooting/lyra-ui/components/lr-swatch-picker.js';
 import {
   GEMSTONE_KEYS,
   GEMSTONES,

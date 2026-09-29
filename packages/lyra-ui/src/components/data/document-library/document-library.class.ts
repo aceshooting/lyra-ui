@@ -1,4 +1,3 @@
-import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
@@ -102,8 +101,6 @@ export interface LyraDocumentLibraryEventMap {
   'lr-open': CustomEvent<DocumentLibraryOpenDetail>;
   /** Cancelable retry proposal. The default action clears the parent and nested table error. */
   'lr-retry-request': CustomEvent<null>;
-  /** @deprecated Use `lr-retry-request`; removal not before 24.0.0. */
-  'lr-retry': CustomEvent<null>;
 }
 
 const FRESHNESS_RANK: Record<LibraryDocumentFreshness, number> = {
@@ -292,10 +289,9 @@ function projectLibraryDocument(candidate: unknown): LibraryDocument | undefined
  *   `lr-change` events do not escape the library.
  * @event lr-open - A document was activated (its name, or Enter/Space/click elsewhere on its
  *   row). Frozen readonly `detail: { documentId }`.
- * @event lr-retry-request - Cancelable retry proposal, `detail: null`. Emitted before the
- *   compatibility alias; either veto keeps both the parent and nested table in the error state.
- * @event lr-retry - Deprecated cancelable veto alias of `lr-retry-request`, `detail: null`;
- *   removal not before 24.0.0. Only vetoing this alias emits a deprecation warning.
+ * @event lr-retry-request - Cancelable retry proposal, `detail: null`, re-emitted by this
+ *   component from the nested table's retry action. Vetoing it keeps both the parent and nested
+ *   table in the error state.
  * @slot error - Replaces the nested table's built-in failed-load state, including its retry
  *   button, while `error` is set.
  * @csspart base - The root region.
@@ -457,9 +453,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
 
   private retryRequestActive = false;
 
-  /** Translate the nested table's canonical retry request into this component's own request
-   *  and compatibility alias. Either veto keeps both error states set. The child's legacy alias
-   *  is contained separately without invoking its deprecated veto contract. */
+  /** Forward the nested table's retry as this component's request; a veto keeps both error states. */
   private onTableRetry = (event: CustomEvent<null>): void => {
     event.stopPropagation();
     if (this.retryRequestActive) {
@@ -472,11 +466,6 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
         requestDetail: null,
         emitRequest: (detail, init: { cancelable: true }) => {
           const request = this.emit('lr-retry-request', detail, init);
-          const legacy = this.emit('lr-retry', detail, init);
-          if (legacy.defaultPrevented) {
-            warnDeprecatedUsage(this, 'event', 'lr-retry', 'lr-retry-request');
-            request.preventDefault();
-          }
           return request;
         },
         commit: () => {
@@ -487,11 +476,6 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     } finally {
       this.retryRequestActive = false;
     }
-  };
-
-  /** Contain the nested table's deprecated compatibility event without using its veto contract. */
-  private stopTableRetryAlias = (event: Event): void => {
-    event.stopPropagation();
   };
 
   private _size?: LyraSize;
@@ -1078,7 +1062,6 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
           @lr-priority-columns-visibility-change=${this.stopOwnedEvent}
           @lr-selection-change=${this.onTableSelectionChange}
           @lr-retry-request=${this.onTableRetry}
-          @lr-retry=${this.stopTableRetryAlias}
           @lr-row-activate=${(event: CustomEvent<{ row: LibraryDocument }>) => {
             event.stopPropagation();
             this.openDocument(event.detail.row);

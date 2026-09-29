@@ -6,7 +6,7 @@ import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAUL
 
 
 /**
- * Compatibility constructor retained by the root and viewers family barrels.
+ * Compatibility constructor retained by the viewers family barrel.
  * It is a distinct subclass of `LyraGeoJsonViewer` and does not register a custom element.
  * Use `LyraGeoJsonViewer` and the `lr-geojson-viewer` registration for new elements.
  */

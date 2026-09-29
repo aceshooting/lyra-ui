@@ -2,7 +2,6 @@ import { CustomElementUpgradeObserver } from '../../../internal/custom-element-u
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { bindAccessibleTextObserver } from '../../../internal/accessibility-visibility.js';
-import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraSize, LyraVariant } from '../../../internal/variants.js';
 import { variants } from '../../../internal/variants.styles.js';
@@ -93,18 +92,6 @@ export class LyraProgressBar extends LyraElement {
   @property({ reflect: true }) size: LyraSize = 'm';
   /** Mapped accessible-name property. */
   @property() label = '';
-  private legacyAccessibleLabel: string = '';
-
-  /** Compatibility fallback below the host aria-label, including an explicitly empty host value.
-   * @deprecated Use the host aria-label attribute or the native ariaLabel property. */
-  @property({ attribute: false })
-  get accessibleLabel(): string {
-    return this.legacyAccessibleLabel;
-  }
-  set accessibleLabel(value: string) {
-    warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
-    this.legacyAccessibleLabel = value;
-  }
   /** The host `aria-label`: names the progressbar ahead of every other source, by presence, so an
    *  explicitly empty value stays empty. */
   @property({ attribute: 'aria-label' }) private hostAriaLabel: string | null = null;
@@ -279,7 +266,6 @@ export class LyraProgressBar extends LyraElement {
     const label = resolveProgressLabel({
       hostAriaLabel: this.hostAriaLabel,
       label: this.label,
-      accessibleLabel: this.accessibleLabel,
       visibleText: this.cachedVisibleLabelText,
       localizedFallback: this.localize('progress'),
     });

@@ -1,4 +1,3 @@
-import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { html, nothing, svg, type PropertyValues, type SVGTemplateResult, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -59,10 +58,6 @@ export type ConfirmBarReturnFocusTarget = HTMLElement | null | (() => HTMLElemen
 export type ConfirmBarWaitUntil = (promise: Promise<unknown>) => void;
 
 export interface LyraConfirmBarEventMap {
-  /** @deprecated Use `lr-deny-request`. */
-  'lr-deny': LyraConfirmBarEventMap['lr-deny-request'];
-  /** @deprecated Use `lr-approve-request`. */
-  'lr-approve': LyraConfirmBarEventMap['lr-approve-request'];
   'lr-approve-request': CustomEvent<{ args: unknown; waitUntil: ConfirmBarWaitUntil }>;
   'lr-deny-request': CustomEvent<{ waitUntil: ConfirmBarWaitUntil }>;
   'lr-decision-settled': CustomEvent<{ decision: ApprovalDecision }>;
@@ -179,14 +174,12 @@ function deniedIcon(): SVGTemplateResult {
  *   the proposed change).
  * @slot footer - Extra content at the start of the action row (e.g. a "remember this choice"
  *   checkbox), mirroring `lr-tool-approval-dialog`'s own `footer` slot.
- * @event lr-approve - Deprecated cancelable compatibility alias of `lr-approve-request`.
  * @event lr-approve-request - `detail: { args, waitUntil }` — `args` is the `args` prop as-is (no editing in
  *   the bar), matching `lr-tool-approval-dialog`'s own `args` detail. Cancelable: a listener calling
  *   `preventDefault()` sets `pendingAction` to `'approve'` instead of finalizing synchronously; set
  *   `.decision` (or clear `.pendingAction` back to `null`) once your async work settles. `waitUntil(promise)`
  *   does the same thing declaratively and needs no `preventDefault()`: the bar stays pending until
  *   the promise settles, then finalizes on resolution or bounces back on rejection.
- * @event lr-deny - Deprecated cancelable compatibility alias of `lr-deny-request`.
  * @event lr-deny-request - `detail: { waitUntil }`, the same resolver `lr-approve-request` carries and no other data,
  *   matching the dialog's detail-free `lr-deny-request`. Cancelable, same `pendingAction` mechanism as `lr-approve-request`.
  * @event lr-decision-settled - `detail: { decision }`. Emitted after the decided `[part="status"]`
@@ -264,20 +257,10 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
 
   private emitApproveRequest(detail: LyraConfirmBarEventMap['lr-approve-request']['detail']): CustomEvent {
     const request = this.emit('lr-approve-request', Object.freeze(detail), { cancelable: true });
-    const alias = this.emit('lr-approve', Object.freeze(detail), { cancelable: true });
-    if (alias.defaultPrevented) {
-      warnDeprecatedUsage(this, 'event', 'lr-approve', 'lr-approve-request');
-      request.preventDefault();
-    }
     return request;
   }
   private emitDenyRequest(detail: LyraConfirmBarEventMap['lr-deny-request']['detail']): CustomEvent {
     const request = this.emit('lr-deny-request', Object.freeze(detail), { cancelable: true });
-    const alias = this.emit('lr-deny', Object.freeze(detail), { cancelable: true });
-    if (alias.defaultPrevented) {
-      warnDeprecatedUsage(this, 'event', 'lr-deny', 'lr-deny-request');
-      request.preventDefault();
-    }
     return request;
   }
 

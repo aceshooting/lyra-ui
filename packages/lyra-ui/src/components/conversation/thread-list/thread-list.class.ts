@@ -1,4 +1,3 @@
-import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import {
   html,
@@ -10,7 +9,6 @@ import {
 } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import type { LyraDeprecatedAliases } from '../../../internal/deprecated-aliases.js';
 import { closeIcon } from '../../../internal/icons.js';
 import type { LyraConversationItem } from '../conversation-item/conversation-item.class.js';
 import type {
@@ -23,7 +21,6 @@ import { contextualSizes } from '../../../internal/contextual-vocabulary.styles.
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { renderDataState } from '../../../internal/data-state-renderer.js';
 import {
-  normalizeSize,
   optionalSizeConverter,
   type LyraSize,
 } from '../../../internal/variants.js';
@@ -86,8 +83,6 @@ export interface LyraThreadListEventMap {
   /** The built-in `[part='retry-button']` was activated, only rendered while `error` is set.
    *  Cancelable: the default action clears `error`; `preventDefault()` leaves it set instead. */
   'lr-retry-request': CustomEvent<null>;
-  /** @deprecated Use `lr-retry-request`; removal not before 24.0.0. */
-  'lr-retry': CustomEvent<null>;
   blur: CustomEvent<null>;
   focus: CustomEvent<null>;
 }
@@ -339,7 +334,6 @@ function canonicalThreads(values: readonly unknown[]): readonly LyraChatThread[]
  * @event focus - `searchable`: re-dispatched from the internal search `<input>`'s own `focus`,
  *   for the same reason as `blur`.
  * @event lr-retry-request - Cancelable retry proposal before the default retry action. `detail: null`.
- * @event lr-retry - Deprecated veto alias of `lr-retry-request`; removal not before 24.0.0.
  *   The built-in `[part='retry-button']` was activated, only rendered while
  *   `error` is set. Cancelable: the default action clears `error`; `preventDefault()` leaves it
  *   set instead.
@@ -478,9 +472,6 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   protected static override readonly identityCollectionProperties = Object.freeze(['threads']);
 
   static override styles = [LyraElement.styles, contextualSizes, styles];
-  protected static override deprecatedAliases: LyraDeprecatedAliases = {
-    compact: ['size', (value) => value ? 's' : 'm', (value) => ['2xs', 'xs', 's'].includes(normalizeSize(value as LyraSize))],
-  };
 
   /** At least one valid thread ⇒ data mode (the default slot is ignored). No valid threads and no
    *  slotted content ⇒ data mode with zero rows (the built-in empty state). No valid threads with
@@ -610,11 +601,6 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   /** Forwarded to each data-mode row: turns off its inline rename. */
   @property({ type: Boolean, attribute: 'without-rename', reflect: true }) withoutRename = false;
-
-  /** Compatibility density alias: true selects `size="s"`, false selects `size="m"`. The shared
-   * size applies to the built-in search field and data-mode rows; slotted rows retain their own size.
-   * @deprecated Use `size="s"`; removal not before 24.0.0. */
-  @property({ type: Boolean, reflect: true }) compact = false;
 
   /** Data mode only: pins the current date/custom group's header to the top of the scroll viewport
    *  while its rows are in view, pushing it off as the next group's header arrives. Group headers
@@ -1621,14 +1607,9 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
                 errorDescription: this.errorDescription,
                 onRetry: this.onErrorRetry,
                 emitRetryRequest: (detail, init: { cancelable: true }) => this.emit('lr-retry-request', detail, init),
-                emitRetry: (detail, init: { cancelable: true }) => {
-                  const legacy = this.emit('lr-retry', detail, init);
-                  if (legacy.defaultPrevented) warnDeprecatedUsage(this, 'event', 'lr-retry', 'lr-retry-request');
-                  return legacy;
-                },
               },
               'error',
-              'lr-retry'
+              'lr-retry-request'
             )
           : showEmpty
           ? html`<div part="empty">

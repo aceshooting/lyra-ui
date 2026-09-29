@@ -82,9 +82,9 @@ documented WebKit guard first.
 | Proven by CI | Node 22 on primary and platform-contract jobs, including packed consumers |
 | Module format | ESM only. No CommonJS entry point, no `require()` path. |
 
-Node matters for two things: building/testing this repository, and server-side rendering. The SSR
-entry points (`@aceshooting/lyra-ui/ssr.js`, `ssr-loader.js`) are exercised on Node by
-`test:ssr` and `test:hydration` in the `build-and-coverage` job. Browser-only capabilities begin
+Node matters for building/testing this repository and for server-side rendering. The SSR
+entry points (`@aceshooting/lyra-ui/ssr.js` and `ssr/all.js`) are exercised on Node by
+`test:ssr`; `test:hydration` verifies the browser handoff. Browser-only capabilities begin
 after hydration.
 
 When a Node major reaches end-of-life upstream, dropping it here is a **semver-major** change for the

@@ -1,4 +1,3 @@
-import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import {
   html,
@@ -89,8 +88,6 @@ export interface LyraKnowledgeBaseEventMap {
   'lr-source-delete': CustomEvent<{ sourceId: string }>;
   /** Cancelable retry proposal. The default action clears the parent and nested table error. */
   'lr-retry-request': CustomEvent<null>;
-  /** @deprecated Use `lr-retry-request`; removal not before 24.0.0. */
-  'lr-retry': CustomEvent<null>;
 }
 
 const SYNC_STATUS_VARIANT: Record<KnowledgeSourceSyncStatus, BadgeVariant> = {
@@ -199,7 +196,7 @@ function normalizeTimestamp(
  * misfires the table's row-click handling), `<lr-badge>` for the sync-status/indexing-health/
  * permission indicators, `<lr-stat>` for the aggregate summary row above the table, and
  * `<lr-dropdown>` + `<lr-menu>` for the per-row action affordances. The table's own
- * `lr-row-activate` (and its deprecated `lr-row-click` alias) is intentionally stopped from
+ * `lr-row-activate` is intentionally stopped from
  * propagating further (this component doesn't expose row-click/selection semantics -- only the
  * per-row action menu is interactive).
  *
@@ -223,10 +220,9 @@ function normalizeTimestamp(
  * @event lr-source-sync - A row's "Sync now" action was activated. `detail: { sourceId }`.
  * @event lr-source-pause - A row's "Pause sync" action was activated. `detail: { sourceId }`.
  * @event lr-source-delete - A row's "Delete source" action was activated. `detail: { sourceId }`.
- * @event lr-retry-request - Cancelable retry proposal, `detail: null`. Emitted before the
- *   compatibility alias; either veto keeps both the parent and nested table in the error state.
- * @event lr-retry - Deprecated cancelable veto alias of `lr-retry-request`, `detail: null`;
- *   removal not before 24.0.0. Only vetoing this alias emits a deprecation warning.
+ * @event lr-retry-request - Cancelable retry proposal, `detail: null`, re-emitted by this
+ *   component from the nested table's retry action. Vetoing it keeps both the parent and nested
+ *   table in the error state.
  * @slot error - Replaces the nested table's built-in failed-load state, including its retry
  *   button, while `error` is set.
  * @csspart base - The root.
@@ -377,9 +373,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
 
   private retryRequestActive = false;
 
-  /** Translate the nested table's canonical retry request into this component's own request
-   *  and compatibility alias. Either veto keeps both error states set. The child's legacy alias
-   *  is contained separately without invoking its deprecated veto contract. */
+  /** Forward the nested table's retry as this component's request; a veto keeps both error states. */
   private onTableRetry = (event: CustomEvent<null>): void => {
     event.stopPropagation();
     if (this.retryRequestActive) {
@@ -392,11 +386,6 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
         requestDetail: null,
         emitRequest: (detail, init: { cancelable: true }) => {
           const request = this.emit('lr-retry-request', detail, init);
-          const legacy = this.emit('lr-retry', detail, init);
-          if (legacy.defaultPrevented) {
-            warnDeprecatedUsage(this, 'event', 'lr-retry', 'lr-retry-request');
-            request.preventDefault();
-          }
           return request;
         },
         commit: () => {
@@ -407,11 +396,6 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
     } finally {
       this.retryRequestActive = false;
     }
-  };
-
-  /** Contain the nested table's deprecated compatibility event without using its veto contract. */
-  private stopTableRetryAlias = (event: Event): void => {
-    event.stopPropagation();
   };
 
   private get normalizedSources(): KnowledgeSource[] {
@@ -695,7 +679,6 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
           @lr-row-activate=${(e: Event) => e.stopPropagation()}
           @lr-row-click=${(e: Event) => e.stopPropagation()}
           @lr-retry-request=${this.onTableRetry}
-          @lr-retry=${this.stopTableRetryAlias}
         >${this.hasErrorSlot
           ? html`<div slot="error"><slot name="error"></slot></div>`
           : nothing}</lr-table>

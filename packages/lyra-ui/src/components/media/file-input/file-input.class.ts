@@ -6,7 +6,6 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 installFormControlLabelSupport();
 import { srOnly } from '../../../internal/a11y.js';
-import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import { AggregateFileLimitTracker } from '../../../internal/aggregate-file-limits.js';
@@ -183,7 +182,7 @@ export interface LyraFileInputEventMap {
  * @customElement lr-file-input
  * @slot - Custom dropzone content; replaces the localized instruction (`fileInputDefaultLabel`).
  *   It does not name the control: the accessible name comes from a host
- *   `aria-label` (or the `accessibleLabel` property), then the form label (`label` or the `label`
+ *   `aria-label`, then the form label (`label` or the `label`
  *   slot), then the localized instruction -- so icon-only slot content still announces. Slotted
  *   text shown without a form label should carry a matching host `aria-label` so the name contains
  *   the visible text.
@@ -434,7 +433,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   /** Ignores files pasted from the clipboard into the dropzone, which are otherwise accepted. */
   @property({ type: Boolean, reflect: true, attribute: 'without-paste' }) withoutPaste = false;
   /** Form-control label, rendered in `form-control-label` and naming the dropzone button (unless
-   *  a host `aria-label` or `accessibleLabel` is set). It never replaces the dropzone instruction --
+   *  a host `aria-label` is set). It never replaces the dropzone instruction --
    *  customize that with the `dropzone` slot or the `fileInputDefaultLabel` string. Omitted, `''`
    *  and whitespace-only values render identically: no visible label, and the button is named by
    *  the instruction. */
@@ -459,18 +458,6 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
    * localized message. Barred (own or fieldset-cascaded `disabled`) exactly like the intrinsic
    * constraint. */
   @property({ attribute: false }) validators: LyraFileInputValidator[] = [];
-  private legacyAccessibleLabel: string = '';
-
-  /** Compatibility fallback below the host aria-label, including an explicitly empty host value.
-   * @deprecated Use the host aria-label attribute or the native ariaLabel property. */
-  @property({ attribute: false })
-  get accessibleLabel(): string {
-    return this.legacyAccessibleLabel;
-  }
-  set accessibleLabel(value: string) {
-    warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
-    this.legacyAccessibleLabel = value;
-  }
   /** The host `aria-label`: names the dropzone ahead of every other source, by presence, so an
    *  explicitly empty value stays empty. */
   @property({ attribute: 'aria-label' }) private hostAccessibleLabel: string | null = null;
@@ -1484,10 +1471,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   override render(): TemplateResult {
     const instruction = this.dropzoneInstruction;
     const hasLabel = this.withLabel || this.slotPresence.has('label') || (this.label ?? '').trim().length > 0;
-    const explicitAccessibleLabel = this.accessibleLabel
-      ? this.accessibleLabel
-      : null;
-    const accessibleLabel = this.hostAccessibleLabel ?? explicitAccessibleLabel;
+    const accessibleLabel = this.hostAccessibleLabel;
     const labelledBy = accessibleLabel == null && hasLabel ? 'file-input-label' : undefined;
     const fallbackAriaLabel = accessibleLabel ?? (hasLabel ? undefined : instruction);
     const hasHint = this.withHint || this.slotPresence.has('hint') || (this.hint ?? '').length > 0;

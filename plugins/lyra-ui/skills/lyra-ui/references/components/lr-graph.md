@@ -7,8 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecated event** `lr-link-click` since `22.0.0`; use event `lr-edge-activate`; removal not before `24.0.0` — Activation covers pointer and keyboard gestures. The old event remains available with its original detail; edge activation names its optional identifier edgeId.
-- **Deprecated event** `lr-node-click` since `22.0.0`; use event `lr-node-activate`; removal not before `24.0.0` — Activation covers pointer and keyboard gestures. The old event remains available with its original detail; edge activation names its optional identifier edgeId.
+- **Deprecations** none
 - **Optional peers** `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
 - **Themeable via** 19 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -153,10 +152,7 @@ edgeId? }`; the optional `edgeId` is the stable `LyraGraphEdge.id` supplied by t
 Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable`), `lr-community-activate`
 (`detail: { communityId }`, a hull was activated by pointer or keyboard), `lr-selection-change`
 (`detail: { selectedNodeIds, selectedEdgeIds }`, a controlled selection intent), and `lr-viewport-change`
-(`detail: { k, x, y }`, a frame-coalesced camera/layout signal). Deprecated aliases, each fired
-right after its canonical event: `lr-node-click` (use `lr-node-activate`, equal detail),
-`lr-link-click` (use `lr-edge-activate`, renaming detail.linkId to detail.edgeId); these aliases
-remain through v23.
+(`detail: { k, x, y }`, a frame-coalesced camera/layout signal).
 
 **Slots:** none.
 
@@ -217,7 +213,7 @@ localized `part="error"` alert. Install with
 ```html
 <lr-graph style="display:block;height:500px"></lr-graph>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/retrieval/graph/graph.js";
+  import "@aceshooting/lyra-ui/components/lr-graph.js";
 
   const g = document.querySelector("lr-graph");
   g.nodes = [

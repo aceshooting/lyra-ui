@@ -265,14 +265,6 @@ function sameIds(
 export interface LyraGraphEventMap {
   'lr-node-activate': CustomEvent<{ nodeId: string; x: number; y: number }>;
   'lr-edge-activate': CustomEvent<{ sourceNodeId: string; targetNodeId: string; edgeId?: string }>;
-  /** @deprecated Use lr-node-activate. */
-  'lr-node-click': CustomEvent<{ nodeId: string; x: number; y: number }>;
-  /** @deprecated Use lr-edge-activate and its edgeId detail field. */
-  'lr-link-click': CustomEvent<{
-    sourceNodeId: string;
-    targetNodeId: string;
-    linkId?: string;
-  }>;
   'lr-node-enter': CustomEvent<{ nodeId: string }>;
   'lr-node-leave': CustomEvent<{ nodeId: string }>;
   /** An edge was hovered. */
@@ -342,11 +334,10 @@ export interface LyraGraphEventMap {
  * effective identities are first-wins before layout, keyed DOM, selection, focus, or events.
  * Retained identity spelling is not rewritten.
  *
- * @event lr-node-activate - Pointer or keyboard node activation with `{ nodeId, x, y }` detail.
- * @event lr-edge-activate - Pointer or keyboard edge activation with `{ sourceNodeId, targetNodeId, edgeId? }` detail.
- * @event lr-node-click - Deprecated: use `lr-node-activate`. Compatibility detail remains unchanged. `detail: { nodeId, x, y }`, where `x` and `y` are the
- *   node's current coordinates in the graph's local drawing space.
- * @event lr-link-click - Deprecated: use `lr-edge-activate` and `edgeId`. Compatibility detail remains unchanged. `detail: { sourceNodeId, targetNodeId, linkId? }`.
+ * @event lr-node-activate - Pointer or keyboard node activation with `{ nodeId, x, y }` detail;
+ *   `x` and `y` are the node's current coordinates in the graph's local drawing space.
+ * @event lr-edge-activate - Pointer or keyboard edge activation with
+ *   `{ sourceNodeId, targetNodeId, edgeId? }` detail.
  * @event lr-node-enter - A node was hovered. `detail: { nodeId }`. Suppressed while dragging or
  *   panning. Canvas enter/leave events fire once per hit-identity transition or exit. In SVG,
  *   also toggles a `data-hovered` attribute on that node's `[part="node"]` element for
@@ -3438,7 +3429,6 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private onNodeClick(node: SimNode, e?: MouseEvent | KeyboardEvent): void {
     const detail = { nodeId: node.id, x: node.x ?? 0, y: node.y ?? 0 };
     this.emit('lr-node-activate', { ...detail });
-    this.emit('lr-node-click', { ...detail });
     this.emitSelectionIntent('node', node.id, !!(e?.ctrlKey || e?.metaKey));
   }
 
@@ -3463,11 +3453,6 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       sourceNodeId: source,
       targetNodeId: target,
       ...(link.id ? { edgeId: link.id } : {}),
-    });
-    this.emit('lr-link-click', {
-      sourceNodeId: source,
-      targetNodeId: target,
-      ...(link.id ? { linkId: link.id } : {}),
     });
     this.emitSelectionIntent(
       'link',

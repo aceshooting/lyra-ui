@@ -19,7 +19,7 @@
 Experimental inline native video player with custom controls, safe declarative sources/tracks,
 selectable captions, and bounded WebVTT thumbnail previews. It mirrors the public Web Awesome Video
 API under the `lr-` prefix. Import the granular registration entry with
-`import '@aceshooting/lyra-ui/components/media/video/video.js'`.
+`import '@aceshooting/lyra-ui/components/lr-video.js'`.
 
 When progress is unavailable, the disabled native range input and its visible timeline track retain
 resting paint under hover and press. Once media duration makes progress available, the track retains

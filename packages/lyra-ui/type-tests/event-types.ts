@@ -1,25 +1,23 @@
-import {
-  LyraAppRail,
-  LyraAttachmentChip,
-  LyraAttachmentTrigger,
-  LyraDialog,
-  LyraDockPanel,
-  LyraMenuItem,
-  LyraModelSettingsPanel,
-  LyraPromptStudio,
-  LyraResponsivePanel,
-  LyraSlider,
-  LyraSourceList,
-  LyraMultiSplit,
-  LyraSwitch,
-  LyraTable,
-  LyraThinkingPanel,
-  LyraToolApprovalDialog,
-  LyraToolParamForm,
-  LyraToolSelectDialog,
-  LyraTree,
-  LyraVirtualList,
-} from '../src/lyra.js';
+import { LyraPromptStudio } from '../src/components/agent-tools/prompt-studio/prompt-studio.class.js';
+import { LyraThinkingPanel } from '../src/components/agent-tools/thinking-panel/thinking-panel.class.js';
+import { LyraToolApprovalDialog } from '../src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.class.js';
+import { LyraToolParamForm } from '../src/components/agent-tools/tool-param-form/tool-param-form.class.js';
+import { LyraToolSelectDialog } from '../src/components/agent-tools/tool-select-dialog/tool-select-dialog.class.js';
+import { LyraModelSettingsPanel } from '../src/components/conversation/model-settings-panel/model-settings-panel.class.js';
+import { LyraTable } from '../src/components/data/table/table.class.js';
+import { LyraTree } from '../src/components/data/tree/tree.class.js';
+import { LyraSlider } from '../src/components/forms/slider/slider.class.js';
+import { LyraSwitch } from '../src/components/forms/switch/switch.class.js';
+import { LyraAppRail } from '../src/components/layout/app-rail/app-rail.class.js';
+import { LyraDockPanel } from '../src/components/layout/dock-panel/dock-panel.class.js';
+import { LyraMenuItem } from '../src/components/layout/menu/menu-item.class.js';
+import { LyraMultiSplit } from '../src/components/layout/multi-split/multi-split.class.js';
+import { LyraResponsivePanel } from '../src/components/layout/responsive-panel/responsive-panel.class.js';
+import { LyraVirtualList } from '../src/components/layout/virtual-list/virtual-list.class.js';
+import { LyraAttachmentChip } from '../src/components/media/attachment-chip/attachment-chip.class.js';
+import { LyraAttachmentTrigger } from '../src/components/media/attachment-trigger/attachment-trigger.class.js';
+import { LyraDialog } from '../src/components/overlays/dialog/dialog.class.js';
+import { LyraSourceList } from '../src/components/retrieval/source-list/source-list.class.js';
 import type {
   CalendarCellPos,
   FormAssociatedInterface,

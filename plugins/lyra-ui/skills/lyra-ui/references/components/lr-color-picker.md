@@ -317,7 +317,7 @@ of authoring `positioning-strategy`/`hoist` on each instance.
   swatches="#e11d48;#2563eb;#16a34a"
 ></lr-color-picker>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/forms/color-picker/color-picker.js";
+  import "@aceshooting/lyra-ui/components/lr-color-picker.js";
   const picker = document.querySelector("lr-color-picker");
   // Objects give each entry a real accessible name:
   picker.swatches = [

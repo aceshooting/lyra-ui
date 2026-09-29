@@ -2,7 +2,8 @@ import { createHash } from 'node:crypto';
 import { gzipSync, gunzipSync } from 'node:zlib';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { extractPublishedCompatibility } from './published-compatibility.mjs';
+import { assembleCompatibilityContext, compatibilityExportCandidates, extractPublishedCompatibility, policyKey } from './published-compatibility.mjs';
+import { inspectExportContract } from './component-metadata.mjs';
 import { projectRenameLedger } from './lyra-rename-ledger.mjs';
 
 export const SOURCE_INPUTS = Object.freeze({
@@ -29,6 +30,11 @@ export function encodeEvidence(value) { return gzipSync(jsonBytes(value), { leve
 export function decodeEvidence(bytes, maxBytes = MAX_EVIDENCE_BYTES) {
   ensure(bytes.length <= MAX_EVIDENCE_BYTES, 'Compressed evidence exceeds size limit');
   return JSON.parse(gunzipSync(bytes, { maxOutputLength: maxBytes }).toString('utf8'));
+}
+
+export function decodeCaptureEvidence(capture, bytes) {
+  ensure(sha256(bytes) === capture?.evidenceArchiveSha256, 'Evidence archive hash mismatch');
+  return decodeEvidence(bytes);
 }
 export function gitObjectId(type, bytes) {
   ensure(['blob', 'tree', 'commit', 'tag'].includes(type), 'Unsupported Git object type');
@@ -100,25 +106,79 @@ export function validatePublishedCapture(capture, facts, archive) {
     else ensure(input.gitBlob === null, 'Packed input unexpectedly has Git identity');
   }
   parsed.source.exportSources = Object.create(null);
+  const sourceHistory = new Map();
   for (const input of capture.inputs.slice(expected.length)) {
-    ensure(input.origin === 'source-export' && input.role === 'text' && /^packages\/lyra-ui\/src\/[A-Za-z0-9_./-]+\.(?:ts|css)$/u.test(input.path) && !input.path.split('/').includes('..'), 'Invalid extra source input');
-    const sourcePath = input.path.slice('packages/lyra-ui/'.length);
-    ensure(!Object.hasOwn(parsed.source.exportSources, sourcePath), 'Duplicate export source input');
     const data = archive.payloads[input.sha256]; const bytes = base64(data);
-    ensure(sha256(bytes) === input.sha256 && bytes.length === input.bytes, 'Export source evidence bytes disagree');
-    parsed.source.exportSources[sourcePath] = bytes.toString('utf8');
+    ensure(sha256(bytes) === input.sha256 && bytes.length === input.bytes, 'Extra evidence bytes disagree: ' + input.path);
+    if (input.origin === 'source-export') {
+      ensure(input.role === 'text' && /^packages\/lyra-ui\/src\/[A-Za-z0-9_./-]+\.(?:ts|css)$/u.test(input.path) && !input.path.split('/').includes('..'), 'Invalid extra source input');
+      const sourcePath = input.path.slice('packages/lyra-ui/'.length);
+      ensure(!Object.hasOwn(parsed.source.exportSources, sourcePath), 'Duplicate export source input');
+      parsed.source.exportSources[sourcePath] = bytes.toString('utf8');
+    } else if (input.origin === 'source-history') {
+      ensure(input.role === 'history' && /^packages\/lyra-ui\/scripts\/fixtures\/compatibility-history\/(?:index\.json|[0-9]+\.[0-9]+\.[0-9]+\/(?:capture|facts)\.json|[0-9]+\.[0-9]+\.[0-9]+\/evidence\.json\.gz)$/u.test(input.path) && !sourceHistory.has(input.path), 'Invalid or duplicate history evidence input');
+      sourceHistory.set(input.path, bytes);
+    } else throw new Error('Invalid extra evidence origin');
     usedPayloads.add(input.sha256); gitInputs.push({ ...input, data });
   }
   ensure(Object.keys(archive.payloads).length === usedPayloads.size, 'Evidence contains unrelated payloads');
   verifyGitEvidence({ pin: { ...capture.git, tag: capture.sourceRelease }, objects: archive.gitObjects, inputs: gitInputs });
   ensure(parsed.packed.packageJson.name === capture.package.name && parsed.packed.packageJson.version === capture.sourceVersion, 'Packed package identity mismatch');
   ensure(JSON.stringify(parsed.source.manifest) === JSON.stringify(parsed.packed.manifest), 'Published manifest differs from source manifest');
-  const projection = projectRenameLedger(parsed.source.renameLedger, parsed.source.inventory, { exportDeprecations: parsed.source.metadata.exportDeprecations });
-  ensure(JSON.stringify(projection) === JSON.stringify(parsed.packed.migrationContract.lyraRenames), 'Packed migration projection differs from published source');
   const usedSources = new Set();
   const sourceValues = parsed.source.exportSources;
   parsed.source.exportSources = new Proxy(sourceValues, { get(target, key) { if (Object.hasOwn(target, key)) usedSources.add(key); return target[key]; } });
   const extracted = extractPublishedCompatibility(parsed.source, capture.extractorVersion);
+  const historyPrefix = 'packages/lyra-ui/scripts/fixtures/compatibility-history/';
+  const historyIndexPath = historyPrefix + 'index.json';
+  let compatibilityContext = null;
+  if (sourceHistory.size) {
+    ensure(sourceHistory.has(historyIndexPath), 'Compatibility history evidence has no index');
+    const historyIndex = JSON.parse(sourceHistory.get(historyIndexPath).toString('utf8'));
+    ensure(historyIndex?.schemaVersion === 1 && Array.isArray(historyIndex.captures) && historyIndex.captures.length > 0 && Array.isArray(historyIndex.retirements), 'Unsupported source compatibility history');
+    ensure(historyIndex.captures.length <= 32, 'Source compatibility history exceeds the capture limit');
+    const expectedHistoryPaths = new Set([historyIndexPath]); const historicalFacts = [];
+    const compareVersions = (left, right) => {
+      const parts = value => { const match = /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/u.exec(value); ensure(match, 'Invalid compatibility history version'); return match.slice(1).map(Number); };
+      const a = parts(left); const b = parts(right); for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] - b[i]; return 0;
+    };
+    const seenVersions = new Set();
+    for (const entry of historyIndex.captures) {
+      ensure(entry && typeof entry.directory === 'string' && /^[0-9]+\.[0-9]+\.[0-9]+$/u.test(entry.directory) && /^[a-f0-9]{64}$/u.test(entry.captureSha256) && !seenVersions.has(entry.directory), 'Invalid or duplicate source history capture pin');
+      seenVersions.add(entry.directory);
+      ensure(compareVersions(entry.directory, capture.sourceVersion) < 0, 'Source history contains a current or future capture');
+      const dir = entry.directory;
+      const paths = Object.fromEntries(['capture.json', 'facts.json', 'evidence.json.gz'].map(file => [file, historyPrefix + dir + '/' + file]));
+      for (const path of Object.values(paths)) expectedHistoryPaths.add(path);
+      ensure(Object.values(paths).every(path => sourceHistory.has(path)), 'Source history capture is incomplete');
+      const descriptorBytes = sourceHistory.get(paths['capture.json']);
+      ensure(sha256(descriptorBytes) === entry.captureSha256, 'Source history capture differs from its index pin');
+      const priorCapture = JSON.parse(descriptorBytes.toString('utf8'));
+      ensure(priorCapture.sourceVersion === dir, 'Source history directory/version mismatch');
+      const priorFacts = JSON.parse(sourceHistory.get(paths['facts.json']).toString('utf8'));
+      const priorEvidence = decodeCaptureEvidence(priorCapture, sourceHistory.get(paths['evidence.json.gz']));
+      const prior = validatePublishedCapture(priorCapture, priorFacts, priorEvidence);
+      ensure(prior.facts.sourceVersion === dir, 'Validated source history version mismatch');
+      historicalFacts.push(prior.facts);
+    }
+    ensure(expectedHistoryPaths.size === sourceHistory.size && [...expectedHistoryPaths].every(path => sourceHistory.has(path)), 'Source history file inventory differs from its index');
+    const currentExportSurface = [];
+    for (const entry of compatibilityExportCandidates(parsed.source.metadata, historicalFacts)) {
+      const fact = inspectExportContract(entry, { packageJson: parsed.source.packageJson,
+        readSource: path => parsed.source.exportSources[path], exportDeprecations: parsed.source.metadata.exportDeprecations });
+      ensure(fact.status !== 'invalid', 'Cannot inspect historical export ' + entry.name + ': ' + (fact.findings?.join('; ') ?? 'invalid contract'));
+      if (fact.status === 'present') currentExportSurface.push({ key: policyKey(entry, 'export'), ...fact });
+    }
+    compatibilityContext = assembleCompatibilityContext({ packageVersion: capture.sourceVersion,
+      currentInventory: parsed.source.inventory, currentExportDeprecations: parsed.source.metadata.exportDeprecations,
+      currentExportSurface, captures: historicalFacts, retirementIndex: historyIndex.retirements });
+  } else {
+    const major = Number(capture.sourceVersion.split('.')[0]);
+    ensure(major < 23, 'Published capture requires pinned compatibility history evidence');
+  }
+  const projection = projectRenameLedger(parsed.source.renameLedger, parsed.source.inventory, {
+    exportDeprecations: parsed.source.metadata.exportDeprecations, compatibilityContext });
+  ensure(JSON.stringify(projection) === JSON.stringify(parsed.packed.migrationContract.lyraRenames), 'Packed migration projection differs from published source');
   ensure(usedSources.size === Object.keys(sourceValues).length, 'Unrelated export source input');
   ensure(JSON.stringify(extracted) === JSON.stringify(facts) && sha256(jsonBytes(facts)) === capture.factsSha256, 'Published facts differ from exact evidence extraction');
   // Return a detached view only after the manifest's source, packed and Git identities agree.
@@ -129,9 +189,8 @@ export function validatePublishedCapture(capture, facts, archive) {
 export function readPublishedCaptureSync(directory, { readBytes = readFileSync } = {}) {
   const capture = JSON.parse(readBytes(join(directory, 'capture.json')).toString('utf8'));
   const evidence = readBytes(join(directory, 'evidence.json.gz'));
-  ensure(sha256(evidence) === capture.evidenceArchiveSha256, 'Evidence archive hash mismatch');
   const facts = JSON.parse(readBytes(join(directory, 'facts.json')).toString('utf8'));
-  return { capture, ...validatePublishedCapture(capture, facts, decodeEvidence(evidence)) };
+  return { capture, ...validatePublishedCapture(capture, facts, decodeCaptureEvidence(capture, evidence)) };
 }
 
 export async function readPublishedCapture(directory) { return readPublishedCaptureSync(directory); }

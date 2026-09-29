@@ -295,6 +295,9 @@ function memberAction(section) {
 }
 
 function targetImport(component) {
+  if (typeof component.registrationRoute === 'string') {
+    return `@aceshooting/lyra-ui/${component.registrationRoute.slice(2)}`;
+  }
   return `@aceshooting/lyra-ui/${component.registrationModule
     .replace(/^src\//, '')
     .replace(/\.ts$/, '.js')}`;
@@ -1203,7 +1206,7 @@ export function migrateText(original, contract, options = {}) {
       upstreamMember: 'module',
       action: 'rewrite-import',
       target,
-      message: `Rewrite the ${upstreamTag} registration entry to its inventory module.`,
+      message: `Rewrite the ${upstreamTag} registration entry to its checked Lyra package route.`,
     });
   }
 

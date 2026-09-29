@@ -14,7 +14,6 @@ import {
 import { activeElementIn, deepActiveElementIn } from '../../../internal/active-element.js';
 import { composedAccessibilityText } from '../../../internal/announcement-text.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
-import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteDuration, finiteInteger } from '../../../internal/numbers.js';
@@ -241,18 +240,6 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
    * @default 0 */
   get slides(): number {
     return this._slides;
-  }
-  private legacyAccessibleLabel: string | undefined = undefined;
-
-  /** Compatibility fallback below the host aria-label, including an explicitly empty host value.
-   * @deprecated Use the host aria-label attribute or the native ariaLabel property. */
-  @property({ attribute: false })
-  get accessibleLabel(): string | undefined {
-    return this.legacyAccessibleLabel;
-  }
-  set accessibleLabel(value: string | undefined) {
-    warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
-    this.legacyAccessibleLabel = value;
   }
   @property({ attribute: 'aria-label' }) private hostAccessibleLabel:
     | string
@@ -1463,11 +1450,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     const hasNavigation =
       this.navigation && count > this.pageSize(count);
     const hasPagination = this.pagination && pageTargets.length > 1;
-    const label = this.hostAccessibleLabel !== null
-      ? this.hostAccessibleLabel
-      : this.accessibleLabel == null
-        ? this.localize('carouselLabel')
-        : this.accessibleLabel;
+    const label = this.hostAccessibleLabel ?? this.localize('carouselLabel');
     const numberFormat = getNumberFormat(this.effectiveLocale);
     const orientation = this.effectiveOrientation();
     const perPage = this.pageSize(count);

@@ -18,7 +18,6 @@ import {
   isAccessibilitySubtreeExcluded,
 } from '../../../internal/accessibility-visibility.js';
 import { closeIcon } from '../../../internal/icons.js';
-import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import {
   animateRegistered,
   type RegisteredAnimationSpec,
@@ -115,8 +114,8 @@ export interface LyraDialogEventMap {
  * over a page default, while keyframes-only overrides retain the dialog's token-derived timing.
  *
  * Accessible naming and visible-title precedence are independent. A host `aria-label` wins by
- * attribute presence, including an explicitly empty value, followed by `accessibleLabel`, then
- * the text of a direct light-DOM heading. Otherwise the visible title wrapper names the panel.
+ * attribute presence, including an explicitly empty value, followed by the text of a direct
+ * light-DOM heading. Otherwise the visible title wrapper names the panel.
  * Within that wrapper the rich `label` slot wins over the `label` property, which wins over the
  * legacy `heading` property. Explicit accessible-only naming never suppresses that visible title.
  *
@@ -344,23 +343,10 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
    *  `--lr-dialog-max-width` override still wins over any tier. */
   @property({ reflect: true }) size: LyraSize = 'm';
 
-  private legacyAccessibleLabel: string = '';
-
-  /** Compatibility fallback below the host aria-label, including an explicitly empty host value.
-   * @deprecated Use the host aria-label attribute or the native ariaLabel property. */
-  @property({ attribute: false })
-  get accessibleLabel(): string {
-    return this.legacyAccessibleLabel;
-  }
-  set accessibleLabel(value: string) {
-    warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
-    this.legacyAccessibleLabel = value;
-  }
-
   /** Host-level `aria-label` override for the panel's accessible name — wins by attribute
    *  presence, including an explicitly empty value, over every other naming source (a slotted
    *  heading, the `label` slot, `heading`, the `label` property) without suppressing visible
-   *  heading chrome, matching `<lr-date-input>`'s `accessibleLabel` pattern. See the class doc for
+   *  heading chrome. See the class doc for
    *  the full precedence order. Set as a plain `aria-label` attribute on `<lr-dialog>` itself, not
    *  a public JS property. */
   @property({ attribute: 'aria-label' }) private hostAriaLabel: string | null = null;
@@ -1024,13 +1010,13 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   }
 
   override render(): TemplateResult {
-    // Naming precedence (see class doc): host aria-label, accessibleLabel, a direct light-DOM
-    // heading, then the shadow-owned visible title. Only the final case uses aria-labelledby.
+    // Naming precedence (see class doc): host aria-label, a direct light-DOM heading, then the
+    // shadow-owned visible title. Only the final case uses aria-labelledby.
     const suppressHeader = this.withoutHeader || this.noHeader;
     const renderHeading =
       !suppressHeader && !this.headingText && (this.hasLabelSlot || (this.label ?? '').length > 0 || !!this.heading);
     const hasHostName = this.hostAriaLabel !== null;
-    const explicitName = hasHostName ? this.hostAriaLabel : this.accessibleLabel || this.headingText;
+    const explicitName = hasHostName ? this.hostAriaLabel : this.headingText;
     const hasExplicitName = hasHostName || Boolean(explicitName);
     const useHeadingForName = !hasExplicitName && renderHeading;
     const showHeader =

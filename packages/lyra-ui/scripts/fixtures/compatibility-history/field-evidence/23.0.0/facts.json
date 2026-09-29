@@ -1,0 +1,819 @@
+{
+  "schemaVersion": 1,
+  "sourceRelease": "lyra-ui@23.0.0",
+  "sourceVersion": "23.0.0",
+  "declarations": [
+    {
+      "key": {
+        "module": "layout/details/details.class.ts",
+        "detailType": "LyraDetailsToggleDetail",
+        "field": "open"
+      },
+      "notice": "@deprecated Use `expanded`, which carries the same value; removal not before 23.0.0.",
+      "noticeJSDoc": "/** @deprecated Use `expanded`, which carries the same value; removal not before 23.0.0. */",
+      "noticeFloor": "23.0.0",
+      "relation": "equal",
+      "deprecatedField": {
+        "type": "boolean",
+        "optional": false,
+        "readonly": false,
+        "notice": "/** @deprecated Use `expanded`, which carries the same value; removal not before 23.0.0. */"
+      },
+      "expandedField": {
+        "type": "boolean",
+        "optional": false,
+        "readonly": false,
+        "notice": "/** Whether the disclosure is now open. */"
+      },
+      "sourcePath": "packages/lyra-ui/src/components/layout/details/details.class.ts",
+      "packedDeclarationPath": "package/dist/components/layout/details/details.class.d.ts",
+      "sourceSha256": "7a84f18ebbcef8b6a400ae217ec3849302c1618627f3c6edd1bac152519af6dd",
+      "packedSha256": "8f74da60b6168a74e5ea63373a099142963c6c656567eb8ad392db83f52ae740"
+    },
+    {
+      "key": {
+        "module": "layout/multi-split/multi-split.class.ts",
+        "detailType": "LyraMultiSplitToggleDetail",
+        "field": "open"
+      },
+      "notice": "@deprecated Use `expanded`, which carries the same value; removal not before 23.0.0.",
+      "noticeJSDoc": "/** @deprecated Use `expanded`, which carries the same value; removal not before 23.0.0. */",
+      "noticeFloor": "23.0.0",
+      "relation": "equal",
+      "deprecatedField": {
+        "type": "boolean",
+        "optional": false,
+        "readonly": true,
+        "notice": "/** @deprecated Use `expanded`, which carries the same value; removal not before 23.0.0. */"
+      },
+      "expandedField": {
+        "type": "boolean",
+        "optional": false,
+        "readonly": true,
+        "notice": "/** Whether the floating drawer is (or, on a cancelable proposal, would be) open. */"
+      },
+      "sourcePath": "packages/lyra-ui/src/components/layout/multi-split/multi-split.class.ts",
+      "packedDeclarationPath": "package/dist/components/layout/multi-split/multi-split.class.d.ts",
+      "sourceSha256": "4625871a470fcbc240891669ed66ff8d55ea3ed4c15ead89854a9499ac607fe1",
+      "packedSha256": "ead4fa1120de817eac0802f479817aeee35566fca2af059851af8be2762a716c"
+    },
+    {
+      "key": {
+        "module": "layout/navigation-menu-item/navigation-menu-item.class.ts",
+        "detailType": "LyraNavigationMenuToggleDetail",
+        "field": "open"
+      },
+      "notice": "@deprecated Use `expanded`, which carries the same value; removal not before 23.0.0.",
+      "noticeJSDoc": "/** @deprecated Use `expanded`, which carries the same value; removal not before 23.0.0. */",
+      "noticeFloor": "23.0.0",
+      "relation": "equal",
+      "deprecatedField": {
+        "type": "boolean",
+        "optional": false,
+        "readonly": false,
+        "notice": "/** @deprecated Use `expanded`, which carries the same value; removal not before 23.0.0. */"
+      },
+      "expandedField": {
+        "type": "boolean",
+        "optional": false,
+        "readonly": false,
+        "notice": "/** Whether the item's panel is now open. */"
+      },
+      "sourcePath": "packages/lyra-ui/src/components/layout/navigation-menu-item/navigation-menu-item.class.ts",
+      "packedDeclarationPath": "package/dist/components/layout/navigation-menu-item/navigation-menu-item.class.d.ts",
+      "sourceSha256": "fd8674ed000cd90e67d61a7ba7532b53a70de24f077330ada782a802417836ce",
+      "packedSha256": "5bcf5fcc9257da1d9e98cb3f2f17fbe0627e600a91eaafc78b378d559a47feb7"
+    },
+    {
+      "key": {
+        "module": "layout/dock-panel/dock-panel.class.ts",
+        "detailType": "LyraDockPanelCollapseChangeDetail",
+        "field": "collapsed"
+      },
+      "notice": "@deprecated Use `expanded`, its inverse; removal not before 23.0.0.",
+      "noticeJSDoc": "/** @deprecated Use `expanded`, its inverse; removal not before 23.0.0. */",
+      "noticeFloor": "23.0.0",
+      "relation": "inverse",
+      "deprecatedField": {
+        "type": "boolean",
+        "optional": false,
+        "readonly": true,
+        "notice": "/** @deprecated Use `expanded`, its inverse; removal not before 23.0.0. */"
+      },
+      "expandedField": {
+        "type": "boolean",
+        "optional": false,
+        "readonly": true,
+        "notice": "/** Whether the panel's content is (or, on the request, would be) shown: `!collapsed`. */"
+      },
+      "sourcePath": "packages/lyra-ui/src/components/layout/dock-panel/dock-panel.class.ts",
+      "packedDeclarationPath": "package/dist/components/layout/dock-panel/dock-panel.class.d.ts",
+      "sourceSha256": "28afbe99a5bb54c53b7b9977a34665a0b56c5a987e9d935fe1880c1ac9c60580",
+      "packedSha256": "0a18ac9f504014ae7ae458ab52b2a8b34f4d85201c0f53064fbd97f2ce688d35"
+    },
+    {
+      "key": {
+        "module": "layout/app-rail/app-rail-item.class.ts",
+        "detailType": "LyraAppRailItemToggleDetail",
+        "field": "open"
+      },
+      "notice": "@deprecated Use `expanded`, which carries the same value; removal not before 23.0.0.",
+      "noticeJSDoc": "/** @deprecated Use `expanded`, which carries the same value; removal not before 23.0.0. */",
+      "noticeFloor": "23.0.0",
+      "relation": "equal",
+      "deprecatedField": {
+        "type": "boolean",
+        "optional": false,
+        "readonly": false,
+        "notice": "/** @deprecated Use `expanded`, which carries the same value; removal not before 23.0.0. */"
+      },
+      "expandedField": {
+        "type": "boolean",
+        "optional": false,
+        "readonly": false,
+        "notice": "/** Whether the item's `children` are (or, on the request, would be) shown. */"
+      },
+      "sourcePath": "packages/lyra-ui/src/components/layout/app-rail/app-rail-item.class.ts",
+      "packedDeclarationPath": "package/dist/components/layout/app-rail/app-rail-item.class.d.ts",
+      "sourceSha256": "ddacaadeb00c1cdf826bea5aca0833b4fad5956f32e763d021bc91963d17bebb",
+      "packedSha256": "923d945277949f9e2337d886d29f6cd05710e4af6afa34cc4f6fc31e44d7dbaa"
+    },
+    {
+      "key": {
+        "module": "layout/app-rail/app-rail.class.ts",
+        "detailType": "LyraAppRailToggleDetail",
+        "field": "open"
+      },
+      "notice": "@deprecated Use `expanded`, which carries the same value; removal not before 23.0.0.",
+      "noticeJSDoc": "/** @deprecated Use `expanded`, which carries the same value; removal not before 23.0.0. */",
+      "noticeFloor": "23.0.0",
+      "relation": "equal",
+      "deprecatedField": {
+        "type": "boolean",
+        "optional": false,
+        "readonly": false,
+        "notice": "/** @deprecated Use `expanded`, which carries the same value; removal not before 23.0.0. */"
+      },
+      "expandedField": {
+        "type": "boolean",
+        "optional": false,
+        "readonly": false,
+        "notice": "/** Whether the mobile overlay is (or, on a cancelable proposal, would be) open. */"
+      },
+      "sourcePath": "packages/lyra-ui/src/components/layout/app-rail/app-rail.class.ts",
+      "packedDeclarationPath": "package/dist/components/layout/app-rail/app-rail.class.d.ts",
+      "sourceSha256": "4395525f8cff90adef7c4978f4a819d18897568aa3974e542b46f09f22e3d4d5",
+      "packedSha256": "02f499e62b6dddfa89b0979216cd3afb91ed6cc5d6dd0d6b400403531a80b7c8"
+    },
+    {
+      "key": {
+        "module": "layout/app-rail-group/app-rail-group.class.ts",
+        "detailType": "LyraAppRailGroupToggleDetail",
+        "field": "open"
+      },
+      "notice": "@deprecated Use `expanded`, which carries the same value; removal not before 23.0.0.",
+      "noticeJSDoc": "/** @deprecated Use `expanded`, which carries the same value; removal not before 23.0.0. */",
+      "noticeFloor": "23.0.0",
+      "relation": "equal",
+      "deprecatedField": {
+        "type": "boolean",
+        "optional": false,
+        "readonly": false,
+        "notice": "/** @deprecated Use `expanded`, which carries the same value; removal not before 23.0.0. */"
+      },
+      "expandedField": {
+        "type": "boolean",
+        "optional": false,
+        "readonly": false,
+        "notice": "/** Whether the group's content is (or, on the request, would be) shown. */"
+      },
+      "sourcePath": "packages/lyra-ui/src/components/layout/app-rail-group/app-rail-group.class.ts",
+      "packedDeclarationPath": "package/dist/components/layout/app-rail-group/app-rail-group.class.d.ts",
+      "sourceSha256": "dc84077d2641bb0822b6f7ec604436d66df61ba8452edb1afc1091ce6c26c5bd",
+      "packedSha256": "132232fea99428cf8c529124a4e741058a7894d1faca813b82501db4c3e86291"
+    },
+    {
+      "key": {
+        "module": "conversation/thread-list/thread-list.class.ts",
+        "detailType": "ThreadGroupToggleDetail",
+        "field": "collapsed"
+      },
+      "notice": "The inverse of `expanded`. @deprecated Read `expanded` instead; removal not before 23.0.0.",
+      "noticeJSDoc": "/** The inverse of `expanded`.\n   *  @deprecated Read `expanded` instead; removal not before 23.0.0. */",
+      "noticeFloor": "23.0.0",
+      "relation": "inverse",
+      "deprecatedField": {
+        "type": "boolean",
+        "optional": false,
+        "readonly": false,
+        "notice": "/** The inverse of `expanded`.\n   *  @deprecated Read `expanded` instead; removal not before 23.0.0. */"
+      },
+      "expandedField": {
+        "type": "boolean",
+        "optional": true,
+        "readonly": false,
+        "notice": "/** Whether the group is shown in the resulting (on `lr-group-toggle-request`, the proposed)\n   *  state. Always present on events this component dispatches. */"
+      },
+      "sourcePath": "packages/lyra-ui/src/components/conversation/thread-list/thread-list.class.ts",
+      "packedDeclarationPath": "package/dist/components/conversation/thread-list/thread-list.class.d.ts",
+      "sourceSha256": "4d5b562dbefe6d6f8979de9e8c20260f5309f69ca4c4f2f9bce59da07ca6f081",
+      "packedSha256": "bc7ad06a27b6a7117f710e5e6df8e7b3a21a0942adea9949a38b7bd1bab850b2"
+    },
+    {
+      "key": {
+        "module": "conversation/chat-message/chat-message.class.ts",
+        "detailType": "ChatMessageToggleDetail",
+        "field": "collapsed"
+      },
+      "notice": "The inverse of `expanded`. @deprecated Read `expanded` instead; removal not before 23.0.0.",
+      "noticeJSDoc": "/** The inverse of `expanded`.\n   *  @deprecated Read `expanded` instead; removal not before 23.0.0. */",
+      "noticeFloor": "23.0.0",
+      "relation": "inverse",
+      "deprecatedField": {
+        "type": "boolean",
+        "optional": false,
+        "readonly": false,
+        "notice": "/** The inverse of `expanded`.\n   *  @deprecated Read `expanded` instead; removal not before 23.0.0. */"
+      },
+      "expandedField": {
+        "type": "boolean",
+        "optional": false,
+        "readonly": false,
+        "notice": "/** Whether the message body is shown in the resulting (on `lr-toggle-request`, the proposed)\n   *  state. */"
+      },
+      "sourcePath": "packages/lyra-ui/src/components/conversation/chat-message/chat-message.class.ts",
+      "packedDeclarationPath": "package/dist/components/conversation/chat-message/chat-message.class.d.ts",
+      "sourceSha256": "ca2e66c5300c7b2d4901943d489301d80dadd088878bac021f456c7c47fb8fb3",
+      "packedSha256": "b2b8207f24ca53d68f3de040683480c7dbc7ac3ad86460a92f755bb31dd94417"
+    },
+    {
+      "key": {
+        "module": "conversation/code-block/code-block-shared.ts",
+        "detailType": "LyraCodeBlockToggleDetail",
+        "field": "collapsed"
+      },
+      "notice": "The inverse of `expanded`. @deprecated Read `expanded` instead; removal not before 23.0.0.",
+      "noticeJSDoc": "/** The inverse of `expanded`.\n   *  @deprecated Read `expanded` instead; removal not before 23.0.0. */",
+      "noticeFloor": "23.0.0",
+      "relation": "inverse",
+      "deprecatedField": {
+        "type": "boolean",
+        "optional": false,
+        "readonly": false,
+        "notice": "/** The inverse of `expanded`.\n   *  @deprecated Read `expanded` instead; removal not before 23.0.0. */"
+      },
+      "expandedField": {
+        "type": "boolean",
+        "optional": false,
+        "readonly": false,
+        "notice": "/** Whether the code region is shown in the resulting (on `lr-toggle-request`, the proposed)\n   *  state. */"
+      },
+      "sourcePath": "packages/lyra-ui/src/components/conversation/code-block/code-block-shared.ts",
+      "packedDeclarationPath": "package/dist/components/conversation/code-block/code-block-shared.d.ts",
+      "sourceSha256": "2fa0cee63434fda51e32f207b459e3cb8aacdb4bada705e0e952921f760490d8",
+      "packedSha256": "e9d10866859527bd3481c4c71690b18cae9fa16f65c33d7556e61abb1f917782"
+    }
+  ],
+  "exposures": [
+    {
+      "key": {
+        "tag": "lr-details",
+        "event": "lr-toggle",
+        "declaration": {
+          "module": "layout/details/details.class.ts",
+          "detailType": "LyraDetailsToggleDetail",
+          "field": "open"
+        }
+      },
+      "role": "settled",
+      "emitterPath": "layout/details/details.class.ts",
+      "emitterPackedPath": "package/dist/components/layout/details/details.class.js",
+      "registrationPath": "packages/lyra-ui/src/components/layout/details/details.ts",
+      "tagEntryPath": "packages/lyra-ui/src/components/lr-details.ts",
+      "publicRuntimePath": "package/dist/components/lr-details.js",
+      "publicDeclarationPath": "package/dist/components/layout/details/details.d.ts",
+      "relation": "equal",
+      "staticBehaviorEvidence": "source-and-packed-emitter-bytes-only",
+      "sourceSha256": "7a84f18ebbcef8b6a400ae217ec3849302c1618627f3c6edd1bac152519af6dd",
+      "packedSha256": "5b0f70f186b8e0aed2de943f1036be77a234549e2317fb1105407c48a782490f",
+      "tagEntrySha256": "cc3395eb9ced80d2f6c96da410b69fdc71dd98f68857163b95f49ce0a39f1860",
+      "registrationSourceSha256": "8e463b08250d2ea9d226d50b604e8fae75be1cb30e41ff021e02f69a679a665a",
+      "packedRegistrationSha256": "26ed1f28968fb36148a85b211e690f1cf512e31539b9d3d386e05d804620be9a",
+      "publicRuntimeSha256": "f13455a9d3eb0032b633d47da32d6edb56228561f346d681283458d94876ca1a",
+      "publicDeclarationSha256": "6292ddd5df875f35aa6d1d76f0061f287dcbc1a296c6d53ec0bd36a5428b39c6"
+    },
+    {
+      "key": {
+        "tag": "lr-multi-split",
+        "event": "lr-toggle-request",
+        "declaration": {
+          "module": "layout/multi-split/multi-split.class.ts",
+          "detailType": "LyraMultiSplitToggleDetail",
+          "field": "open"
+        }
+      },
+      "role": "request",
+      "emitterPath": "layout/multi-split/multi-split.class.ts",
+      "emitterPackedPath": "package/dist/components/layout/multi-split/multi-split.class.js",
+      "registrationPath": "packages/lyra-ui/src/components/layout/multi-split/multi-split.ts",
+      "tagEntryPath": "packages/lyra-ui/src/components/lr-multi-split.ts",
+      "publicRuntimePath": "package/dist/components/lr-multi-split.js",
+      "publicDeclarationPath": "package/dist/components/layout/multi-split/multi-split.d.ts",
+      "relation": "equal",
+      "staticBehaviorEvidence": "source-and-packed-emitter-bytes-only",
+      "sourceSha256": "4625871a470fcbc240891669ed66ff8d55ea3ed4c15ead89854a9499ac607fe1",
+      "packedSha256": "de57ab8d50f803b7379cef547530a65d643ebedb6d5aa3ac694e691bfb56b962",
+      "tagEntrySha256": "4d69d97b092ebf9dac04def4b778e066a3b8d277821c5316a5c82ab55778e4e1",
+      "registrationSourceSha256": "4cd0f59444ffd747a110abc2c2f9ee951ec23514badb012713009f2ec48f210a",
+      "packedRegistrationSha256": "318e11a2b61fe76def72974022defb611866e73152b98dd8e3be51509e9934fc",
+      "publicRuntimeSha256": "0f8987dc20713b889b4d26ba809e10aab2489e54ae80672125a467d030b937b6",
+      "publicDeclarationSha256": "d88980ff295d12d1d58078b5c0e4c3dad813f5f204456dcc7cebbd31aeb6074c"
+    },
+    {
+      "key": {
+        "tag": "lr-multi-split",
+        "event": "lr-toggle",
+        "declaration": {
+          "module": "layout/multi-split/multi-split.class.ts",
+          "detailType": "LyraMultiSplitToggleDetail",
+          "field": "open"
+        }
+      },
+      "role": "settled",
+      "emitterPath": "layout/multi-split/multi-split.class.ts",
+      "emitterPackedPath": "package/dist/components/layout/multi-split/multi-split.class.js",
+      "registrationPath": "packages/lyra-ui/src/components/layout/multi-split/multi-split.ts",
+      "tagEntryPath": "packages/lyra-ui/src/components/lr-multi-split.ts",
+      "publicRuntimePath": "package/dist/components/lr-multi-split.js",
+      "publicDeclarationPath": "package/dist/components/layout/multi-split/multi-split.d.ts",
+      "relation": "equal",
+      "staticBehaviorEvidence": "source-and-packed-emitter-bytes-only",
+      "sourceSha256": "4625871a470fcbc240891669ed66ff8d55ea3ed4c15ead89854a9499ac607fe1",
+      "packedSha256": "de57ab8d50f803b7379cef547530a65d643ebedb6d5aa3ac694e691bfb56b962",
+      "tagEntrySha256": "4d69d97b092ebf9dac04def4b778e066a3b8d277821c5316a5c82ab55778e4e1",
+      "registrationSourceSha256": "4cd0f59444ffd747a110abc2c2f9ee951ec23514badb012713009f2ec48f210a",
+      "packedRegistrationSha256": "318e11a2b61fe76def72974022defb611866e73152b98dd8e3be51509e9934fc",
+      "publicRuntimeSha256": "0f8987dc20713b889b4d26ba809e10aab2489e54ae80672125a467d030b937b6",
+      "publicDeclarationSha256": "d88980ff295d12d1d58078b5c0e4c3dad813f5f204456dcc7cebbd31aeb6074c"
+    },
+    {
+      "key": {
+        "tag": "lr-navigation-menu-item",
+        "event": "lr-toggle",
+        "declaration": {
+          "module": "layout/navigation-menu-item/navigation-menu-item.class.ts",
+          "detailType": "LyraNavigationMenuToggleDetail",
+          "field": "open"
+        }
+      },
+      "role": "settled",
+      "emitterPath": "layout/navigation-menu-item/navigation-menu-item.class.ts",
+      "emitterPackedPath": "package/dist/components/layout/navigation-menu-item/navigation-menu-item.class.js",
+      "registrationPath": "packages/lyra-ui/src/components/layout/navigation-menu-item/navigation-menu-item.ts",
+      "tagEntryPath": "packages/lyra-ui/src/components/lr-navigation-menu-item.ts",
+      "publicRuntimePath": "package/dist/components/lr-navigation-menu-item.js",
+      "publicDeclarationPath": "package/dist/components/layout/navigation-menu-item/navigation-menu-item.d.ts",
+      "relation": "equal",
+      "staticBehaviorEvidence": "source-and-packed-emitter-bytes-only",
+      "sourceSha256": "fd8674ed000cd90e67d61a7ba7532b53a70de24f077330ada782a802417836ce",
+      "packedSha256": "fe7daa0a848e31288c1b33402d2036cd4551c2c1de0fef0cf5c81d4efabd67cf",
+      "tagEntrySha256": "eefa22f0b94ead7cd8b2c55ac49a8ab3f9417e9a7542c48174e3a57691bc240f",
+      "registrationSourceSha256": "cf3b2c9fa48e65e53525ad4a59a2103665f1a7096e7c5f5f116066ee2f77b773",
+      "packedRegistrationSha256": "c6ae5a560c79c58beda4c26fbef33eaa6e955d78f7f04181a2950bb30a7d4e0f",
+      "publicRuntimeSha256": "c07dd74364b6fa612f33cef96dd81417fdf273991c382e9e1f30e546187aa361",
+      "publicDeclarationSha256": "728c8e4ecf9422fe5f4740610cdfc9ef3f636835e4be322dd2f9e2fcedb7a64b"
+    },
+    {
+      "key": {
+        "tag": "lr-dock-panel",
+        "event": "lr-collapse-request",
+        "declaration": {
+          "module": "layout/dock-panel/dock-panel.class.ts",
+          "detailType": "LyraDockPanelCollapseChangeDetail",
+          "field": "collapsed"
+        }
+      },
+      "role": "request",
+      "emitterPath": "layout/dock-panel/dock-panel.class.ts",
+      "emitterPackedPath": "package/dist/components/layout/dock-panel/dock-panel.class.js",
+      "registrationPath": "packages/lyra-ui/src/components/layout/dock-panel/dock-panel.ts",
+      "tagEntryPath": "packages/lyra-ui/src/components/lr-dock-panel.ts",
+      "publicRuntimePath": "package/dist/components/lr-dock-panel.js",
+      "publicDeclarationPath": "package/dist/components/layout/dock-panel/dock-panel.d.ts",
+      "relation": "inverse",
+      "staticBehaviorEvidence": "source-and-packed-emitter-bytes-only",
+      "sourceSha256": "28afbe99a5bb54c53b7b9977a34665a0b56c5a987e9d935fe1880c1ac9c60580",
+      "packedSha256": "31c12c0b11f80d3c94fe6881081b2ebc3741eb469d9792e893a14a95d025486b",
+      "tagEntrySha256": "19625a7ffd9282124da1dcc3fae098a60b1097ffd4d46438ecdfb5f78312b6f4",
+      "registrationSourceSha256": "da9e2d14dea533c9bac21fcc609888f26aebfb6e7ea6ae52de84f61355cb1c48",
+      "packedRegistrationSha256": "0184c83c994dd65bed391b09ae1ce4fa0efd6aa9b45b69ebd7d96cef46d32b17",
+      "publicRuntimeSha256": "62633fdd93f5d15af4da1e104437cefc32249439d6de48e49b8259fee1be7b1a",
+      "publicDeclarationSha256": "179a9956cfe33435354b81416e47b6e6a27ee04681a634945756b495ecd6f902"
+    },
+    {
+      "key": {
+        "tag": "lr-dock-panel",
+        "event": "lr-collapse-change",
+        "declaration": {
+          "module": "layout/dock-panel/dock-panel.class.ts",
+          "detailType": "LyraDockPanelCollapseChangeDetail",
+          "field": "collapsed"
+        }
+      },
+      "role": "settled",
+      "emitterPath": "layout/dock-panel/dock-panel.class.ts",
+      "emitterPackedPath": "package/dist/components/layout/dock-panel/dock-panel.class.js",
+      "registrationPath": "packages/lyra-ui/src/components/layout/dock-panel/dock-panel.ts",
+      "tagEntryPath": "packages/lyra-ui/src/components/lr-dock-panel.ts",
+      "publicRuntimePath": "package/dist/components/lr-dock-panel.js",
+      "publicDeclarationPath": "package/dist/components/layout/dock-panel/dock-panel.d.ts",
+      "relation": "inverse",
+      "staticBehaviorEvidence": "source-and-packed-emitter-bytes-only",
+      "sourceSha256": "28afbe99a5bb54c53b7b9977a34665a0b56c5a987e9d935fe1880c1ac9c60580",
+      "packedSha256": "31c12c0b11f80d3c94fe6881081b2ebc3741eb469d9792e893a14a95d025486b",
+      "tagEntrySha256": "19625a7ffd9282124da1dcc3fae098a60b1097ffd4d46438ecdfb5f78312b6f4",
+      "registrationSourceSha256": "da9e2d14dea533c9bac21fcc609888f26aebfb6e7ea6ae52de84f61355cb1c48",
+      "packedRegistrationSha256": "0184c83c994dd65bed391b09ae1ce4fa0efd6aa9b45b69ebd7d96cef46d32b17",
+      "publicRuntimeSha256": "62633fdd93f5d15af4da1e104437cefc32249439d6de48e49b8259fee1be7b1a",
+      "publicDeclarationSha256": "179a9956cfe33435354b81416e47b6e6a27ee04681a634945756b495ecd6f902"
+    },
+    {
+      "key": {
+        "tag": "lr-app-rail-item",
+        "event": "lr-toggle-request",
+        "declaration": {
+          "module": "layout/app-rail/app-rail-item.class.ts",
+          "detailType": "LyraAppRailItemToggleDetail",
+          "field": "open"
+        }
+      },
+      "role": "request",
+      "emitterPath": "layout/app-rail/app-rail-item.class.ts",
+      "emitterPackedPath": "package/dist/components/layout/app-rail/app-rail-item.class.js",
+      "registrationPath": "packages/lyra-ui/src/components/layout/app-rail/app-rail-item.ts",
+      "tagEntryPath": "packages/lyra-ui/src/components/lr-app-rail-item.ts",
+      "publicRuntimePath": "package/dist/components/lr-app-rail-item.js",
+      "publicDeclarationPath": "package/dist/components/layout/app-rail/app-rail-item.d.ts",
+      "relation": "equal",
+      "staticBehaviorEvidence": "source-and-packed-emitter-bytes-only",
+      "sourceSha256": "ddacaadeb00c1cdf826bea5aca0833b4fad5956f32e763d021bc91963d17bebb",
+      "packedSha256": "d1341f75ce50472beb8931e3a19d8547d3058512bd5a3e635d6dd7129d00d364",
+      "tagEntrySha256": "81a5840a42988782402d29aef1ae908203c83fba5aa1b6fb40dac32c095bb359",
+      "registrationSourceSha256": "27fadc0aa5c13774c331ce2e7078eddf74f287ecfc87725d58fd8b95cda256a9",
+      "packedRegistrationSha256": "147a75d6cbe3c71d3d3fd00e7d7029d917e7bdfba4b143921f310705607cd517",
+      "publicRuntimeSha256": "75ee51b4744d5982fcea008272482a6afc579ee3144f6b8fb80e00297d92780d",
+      "publicDeclarationSha256": "b4dc992eddd9528d5f2caf822da42bc809f82a486e1b255ddfadc612ebeabd5c"
+    },
+    {
+      "key": {
+        "tag": "lr-app-rail-item",
+        "event": "lr-toggle",
+        "declaration": {
+          "module": "layout/app-rail/app-rail-item.class.ts",
+          "detailType": "LyraAppRailItemToggleDetail",
+          "field": "open"
+        }
+      },
+      "role": "settled",
+      "emitterPath": "layout/app-rail/app-rail-item.class.ts",
+      "emitterPackedPath": "package/dist/components/layout/app-rail/app-rail-item.class.js",
+      "registrationPath": "packages/lyra-ui/src/components/layout/app-rail/app-rail-item.ts",
+      "tagEntryPath": "packages/lyra-ui/src/components/lr-app-rail-item.ts",
+      "publicRuntimePath": "package/dist/components/lr-app-rail-item.js",
+      "publicDeclarationPath": "package/dist/components/layout/app-rail/app-rail-item.d.ts",
+      "relation": "equal",
+      "staticBehaviorEvidence": "source-and-packed-emitter-bytes-only",
+      "sourceSha256": "ddacaadeb00c1cdf826bea5aca0833b4fad5956f32e763d021bc91963d17bebb",
+      "packedSha256": "d1341f75ce50472beb8931e3a19d8547d3058512bd5a3e635d6dd7129d00d364",
+      "tagEntrySha256": "81a5840a42988782402d29aef1ae908203c83fba5aa1b6fb40dac32c095bb359",
+      "registrationSourceSha256": "27fadc0aa5c13774c331ce2e7078eddf74f287ecfc87725d58fd8b95cda256a9",
+      "packedRegistrationSha256": "147a75d6cbe3c71d3d3fd00e7d7029d917e7bdfba4b143921f310705607cd517",
+      "publicRuntimeSha256": "75ee51b4744d5982fcea008272482a6afc579ee3144f6b8fb80e00297d92780d",
+      "publicDeclarationSha256": "b4dc992eddd9528d5f2caf822da42bc809f82a486e1b255ddfadc612ebeabd5c"
+    },
+    {
+      "key": {
+        "tag": "lr-app-rail",
+        "event": "lr-toggle-request",
+        "declaration": {
+          "module": "layout/app-rail/app-rail.class.ts",
+          "detailType": "LyraAppRailToggleDetail",
+          "field": "open"
+        }
+      },
+      "role": "request",
+      "emitterPath": "layout/app-rail/app-rail.class.ts",
+      "emitterPackedPath": "package/dist/components/layout/app-rail/app-rail.class.js",
+      "registrationPath": "packages/lyra-ui/src/components/layout/app-rail/app-rail.ts",
+      "tagEntryPath": "packages/lyra-ui/src/components/lr-app-rail.ts",
+      "publicRuntimePath": "package/dist/components/lr-app-rail.js",
+      "publicDeclarationPath": "package/dist/components/layout/app-rail/app-rail.d.ts",
+      "relation": "equal",
+      "staticBehaviorEvidence": "source-and-packed-emitter-bytes-only",
+      "sourceSha256": "4395525f8cff90adef7c4978f4a819d18897568aa3974e542b46f09f22e3d4d5",
+      "packedSha256": "2838c8eaaea59757f6e3c2c9d484f1b4a0aefdcdcb2c4cc98a29ae5c7a295523",
+      "tagEntrySha256": "300772a61b1129abca234913fa8d57d7f17291353df4c0beb195db1704030622",
+      "registrationSourceSha256": "aa9f610132785e9ab44dcc3404a1a9e60dc288ad678b7e7a9258bbe2d19a026f",
+      "packedRegistrationSha256": "8fec5d46da93cde07cecd241a5739d0960ccd7e08c81de9141ff98f4adc6d05d",
+      "publicRuntimeSha256": "518ee75db1c53a3c2ec100688ee1dc690064d07e2b9b8bcba56dbeaffea79611",
+      "publicDeclarationSha256": "324fccddf3303d25afc7055d8f3210c4efd5c15b9e253f1a958e9dd63a717027"
+    },
+    {
+      "key": {
+        "tag": "lr-app-rail",
+        "event": "lr-toggle",
+        "declaration": {
+          "module": "layout/app-rail/app-rail.class.ts",
+          "detailType": "LyraAppRailToggleDetail",
+          "field": "open"
+        }
+      },
+      "role": "settled",
+      "emitterPath": "layout/app-rail/app-rail.class.ts",
+      "emitterPackedPath": "package/dist/components/layout/app-rail/app-rail.class.js",
+      "registrationPath": "packages/lyra-ui/src/components/layout/app-rail/app-rail.ts",
+      "tagEntryPath": "packages/lyra-ui/src/components/lr-app-rail.ts",
+      "publicRuntimePath": "package/dist/components/lr-app-rail.js",
+      "publicDeclarationPath": "package/dist/components/layout/app-rail/app-rail.d.ts",
+      "relation": "equal",
+      "staticBehaviorEvidence": "source-and-packed-emitter-bytes-only",
+      "sourceSha256": "4395525f8cff90adef7c4978f4a819d18897568aa3974e542b46f09f22e3d4d5",
+      "packedSha256": "2838c8eaaea59757f6e3c2c9d484f1b4a0aefdcdcb2c4cc98a29ae5c7a295523",
+      "tagEntrySha256": "300772a61b1129abca234913fa8d57d7f17291353df4c0beb195db1704030622",
+      "registrationSourceSha256": "aa9f610132785e9ab44dcc3404a1a9e60dc288ad678b7e7a9258bbe2d19a026f",
+      "packedRegistrationSha256": "8fec5d46da93cde07cecd241a5739d0960ccd7e08c81de9141ff98f4adc6d05d",
+      "publicRuntimeSha256": "518ee75db1c53a3c2ec100688ee1dc690064d07e2b9b8bcba56dbeaffea79611",
+      "publicDeclarationSha256": "324fccddf3303d25afc7055d8f3210c4efd5c15b9e253f1a958e9dd63a717027"
+    },
+    {
+      "key": {
+        "tag": "lr-app-rail-group",
+        "event": "lr-toggle-request",
+        "declaration": {
+          "module": "layout/app-rail-group/app-rail-group.class.ts",
+          "detailType": "LyraAppRailGroupToggleDetail",
+          "field": "open"
+        }
+      },
+      "role": "request",
+      "emitterPath": "layout/app-rail-group/app-rail-group.class.ts",
+      "emitterPackedPath": "package/dist/components/layout/app-rail-group/app-rail-group.class.js",
+      "registrationPath": "packages/lyra-ui/src/components/layout/app-rail-group/app-rail-group.ts",
+      "tagEntryPath": "packages/lyra-ui/src/components/lr-app-rail-group.ts",
+      "publicRuntimePath": "package/dist/components/lr-app-rail-group.js",
+      "publicDeclarationPath": "package/dist/components/layout/app-rail-group/app-rail-group.d.ts",
+      "relation": "equal",
+      "staticBehaviorEvidence": "source-and-packed-emitter-bytes-only",
+      "sourceSha256": "dc84077d2641bb0822b6f7ec604436d66df61ba8452edb1afc1091ce6c26c5bd",
+      "packedSha256": "1efecdbb2956b1306690e0dee8f3cfa9ce1bec85683760aad0f3191c3a5d93a2",
+      "tagEntrySha256": "c9034535972b4f5b4eae1a2acc4dd1487b008a457f11ed9be4f51e3cad138458",
+      "registrationSourceSha256": "0e315a7feef607b8593cf005c3e67e98828ff877722f66dcfa751c93b5ed8d36",
+      "packedRegistrationSha256": "cabafb41f6b62d4e2eebdf911dad45aa6f847d536d9ffac24a47b867d490f0ae",
+      "publicRuntimeSha256": "7cb6ebb972080cc533aa77d38d0d27087dce8a4e86586045191d8fc07ee8bb7b",
+      "publicDeclarationSha256": "e22c05593d7cdc1ed0cb6b04e6d67639737750a555dd79c80b22845e567a383c"
+    },
+    {
+      "key": {
+        "tag": "lr-app-rail-group",
+        "event": "lr-toggle",
+        "declaration": {
+          "module": "layout/app-rail-group/app-rail-group.class.ts",
+          "detailType": "LyraAppRailGroupToggleDetail",
+          "field": "open"
+        }
+      },
+      "role": "settled",
+      "emitterPath": "layout/app-rail-group/app-rail-group.class.ts",
+      "emitterPackedPath": "package/dist/components/layout/app-rail-group/app-rail-group.class.js",
+      "registrationPath": "packages/lyra-ui/src/components/layout/app-rail-group/app-rail-group.ts",
+      "tagEntryPath": "packages/lyra-ui/src/components/lr-app-rail-group.ts",
+      "publicRuntimePath": "package/dist/components/lr-app-rail-group.js",
+      "publicDeclarationPath": "package/dist/components/layout/app-rail-group/app-rail-group.d.ts",
+      "relation": "equal",
+      "staticBehaviorEvidence": "source-and-packed-emitter-bytes-only",
+      "sourceSha256": "dc84077d2641bb0822b6f7ec604436d66df61ba8452edb1afc1091ce6c26c5bd",
+      "packedSha256": "1efecdbb2956b1306690e0dee8f3cfa9ce1bec85683760aad0f3191c3a5d93a2",
+      "tagEntrySha256": "c9034535972b4f5b4eae1a2acc4dd1487b008a457f11ed9be4f51e3cad138458",
+      "registrationSourceSha256": "0e315a7feef607b8593cf005c3e67e98828ff877722f66dcfa751c93b5ed8d36",
+      "packedRegistrationSha256": "cabafb41f6b62d4e2eebdf911dad45aa6f847d536d9ffac24a47b867d490f0ae",
+      "publicRuntimeSha256": "7cb6ebb972080cc533aa77d38d0d27087dce8a4e86586045191d8fc07ee8bb7b",
+      "publicDeclarationSha256": "e22c05593d7cdc1ed0cb6b04e6d67639737750a555dd79c80b22845e567a383c"
+    },
+    {
+      "key": {
+        "tag": "lr-thread-list",
+        "event": "lr-group-toggle-request",
+        "declaration": {
+          "module": "conversation/thread-list/thread-list.class.ts",
+          "detailType": "ThreadGroupToggleDetail",
+          "field": "collapsed"
+        }
+      },
+      "role": "request",
+      "emitterPath": "conversation/thread-list/thread-list.class.ts",
+      "emitterPackedPath": "package/dist/components/conversation/thread-list/thread-list.class.js",
+      "registrationPath": "packages/lyra-ui/src/components/conversation/thread-list/thread-list.ts",
+      "tagEntryPath": "packages/lyra-ui/src/components/lr-thread-list.ts",
+      "publicRuntimePath": "package/dist/components/lr-thread-list.js",
+      "publicDeclarationPath": "package/dist/components/conversation/thread-list/thread-list.d.ts",
+      "relation": "inverse",
+      "staticBehaviorEvidence": "source-and-packed-emitter-bytes-only",
+      "sourceSha256": "4d5b562dbefe6d6f8979de9e8c20260f5309f69ca4c4f2f9bce59da07ca6f081",
+      "packedSha256": "7d01f0f326bf632a8b919a799ab39b6f07f0db15b6319bb3ca77da94e5774515",
+      "tagEntrySha256": "347fc651234916b7a14e7b8225219678baeeaf9ec4d6694dab83d63fff23f2b1",
+      "registrationSourceSha256": "b42a39e9c31017b91a3dd35c44746d399c676c100e16865964f46c5781d7d056",
+      "packedRegistrationSha256": "e57d830b99002a92998c2d0fbf0fd1e4834e3420f13fc0ec03ab56cdf5a189a6",
+      "publicRuntimeSha256": "7d0d1b1c59c4a574c2df19ecc300e8bb11fefcb4f9622b9e8aac5c8193a5e9f1",
+      "publicDeclarationSha256": "8883d55acf6b644c3cdc35df6d69273376280d79ad89d35d43bd97e836eadf18"
+    },
+    {
+      "key": {
+        "tag": "lr-thread-list",
+        "event": "lr-group-toggle",
+        "declaration": {
+          "module": "conversation/thread-list/thread-list.class.ts",
+          "detailType": "ThreadGroupToggleDetail",
+          "field": "collapsed"
+        }
+      },
+      "role": "settled",
+      "emitterPath": "conversation/thread-list/thread-list.class.ts",
+      "emitterPackedPath": "package/dist/components/conversation/thread-list/thread-list.class.js",
+      "registrationPath": "packages/lyra-ui/src/components/conversation/thread-list/thread-list.ts",
+      "tagEntryPath": "packages/lyra-ui/src/components/lr-thread-list.ts",
+      "publicRuntimePath": "package/dist/components/lr-thread-list.js",
+      "publicDeclarationPath": "package/dist/components/conversation/thread-list/thread-list.d.ts",
+      "relation": "inverse",
+      "staticBehaviorEvidence": "source-and-packed-emitter-bytes-only",
+      "sourceSha256": "4d5b562dbefe6d6f8979de9e8c20260f5309f69ca4c4f2f9bce59da07ca6f081",
+      "packedSha256": "7d01f0f326bf632a8b919a799ab39b6f07f0db15b6319bb3ca77da94e5774515",
+      "tagEntrySha256": "347fc651234916b7a14e7b8225219678baeeaf9ec4d6694dab83d63fff23f2b1",
+      "registrationSourceSha256": "b42a39e9c31017b91a3dd35c44746d399c676c100e16865964f46c5781d7d056",
+      "packedRegistrationSha256": "e57d830b99002a92998c2d0fbf0fd1e4834e3420f13fc0ec03ab56cdf5a189a6",
+      "publicRuntimeSha256": "7d0d1b1c59c4a574c2df19ecc300e8bb11fefcb4f9622b9e8aac5c8193a5e9f1",
+      "publicDeclarationSha256": "8883d55acf6b644c3cdc35df6d69273376280d79ad89d35d43bd97e836eadf18"
+    },
+    {
+      "key": {
+        "tag": "lr-chat-message",
+        "event": "lr-toggle-request",
+        "declaration": {
+          "module": "conversation/chat-message/chat-message.class.ts",
+          "detailType": "ChatMessageToggleDetail",
+          "field": "collapsed"
+        }
+      },
+      "role": "request",
+      "emitterPath": "conversation/chat-message/chat-message.class.ts",
+      "emitterPackedPath": "package/dist/components/conversation/chat-message/chat-message.class.js",
+      "registrationPath": "packages/lyra-ui/src/components/conversation/chat-message/chat-message.ts",
+      "tagEntryPath": "packages/lyra-ui/src/components/lr-chat-message.ts",
+      "publicRuntimePath": "package/dist/components/lr-chat-message.js",
+      "publicDeclarationPath": "package/dist/components/conversation/chat-message/chat-message.d.ts",
+      "relation": "inverse",
+      "staticBehaviorEvidence": "source-and-packed-emitter-bytes-only",
+      "sourceSha256": "ca2e66c5300c7b2d4901943d489301d80dadd088878bac021f456c7c47fb8fb3",
+      "packedSha256": "82b6bf2f131fc01b63f29e186352b2da5a16cdc01ad801d2e9848d46b5e285b9",
+      "tagEntrySha256": "2937b1d6385babab6e45b2f4936f3e17ed040be847c4caee9ab97a63a5a39064",
+      "registrationSourceSha256": "94712e78dcb08986b32efe14368e9d682a7d11e9971e55c032ae738c50a7c121",
+      "packedRegistrationSha256": "ec3da56b0f1710df51b2e9a8f7853f6579bd90e0d8e773a8fd994bf15cf5e7e1",
+      "publicRuntimeSha256": "250ec29bd071305f3e7af668db0bff4b7bff581e8d77cbe5d2178300328338de",
+      "publicDeclarationSha256": "cdd1f2e79ac6eb50c757f3e68ce4ef54d82d8098120926496439fe12905fe658"
+    },
+    {
+      "key": {
+        "tag": "lr-chat-message",
+        "event": "lr-toggle",
+        "declaration": {
+          "module": "conversation/chat-message/chat-message.class.ts",
+          "detailType": "ChatMessageToggleDetail",
+          "field": "collapsed"
+        }
+      },
+      "role": "settled",
+      "emitterPath": "conversation/chat-message/chat-message.class.ts",
+      "emitterPackedPath": "package/dist/components/conversation/chat-message/chat-message.class.js",
+      "registrationPath": "packages/lyra-ui/src/components/conversation/chat-message/chat-message.ts",
+      "tagEntryPath": "packages/lyra-ui/src/components/lr-chat-message.ts",
+      "publicRuntimePath": "package/dist/components/lr-chat-message.js",
+      "publicDeclarationPath": "package/dist/components/conversation/chat-message/chat-message.d.ts",
+      "relation": "inverse",
+      "staticBehaviorEvidence": "source-and-packed-emitter-bytes-only",
+      "sourceSha256": "ca2e66c5300c7b2d4901943d489301d80dadd088878bac021f456c7c47fb8fb3",
+      "packedSha256": "82b6bf2f131fc01b63f29e186352b2da5a16cdc01ad801d2e9848d46b5e285b9",
+      "tagEntrySha256": "2937b1d6385babab6e45b2f4936f3e17ed040be847c4caee9ab97a63a5a39064",
+      "registrationSourceSha256": "94712e78dcb08986b32efe14368e9d682a7d11e9971e55c032ae738c50a7c121",
+      "packedRegistrationSha256": "ec3da56b0f1710df51b2e9a8f7853f6579bd90e0d8e773a8fd994bf15cf5e7e1",
+      "publicRuntimeSha256": "250ec29bd071305f3e7af668db0bff4b7bff581e8d77cbe5d2178300328338de",
+      "publicDeclarationSha256": "cdd1f2e79ac6eb50c757f3e68ce4ef54d82d8098120926496439fe12905fe658"
+    },
+    {
+      "key": {
+        "tag": "lr-code-block",
+        "event": "lr-toggle-request",
+        "declaration": {
+          "module": "conversation/code-block/code-block-shared.ts",
+          "detailType": "LyraCodeBlockToggleDetail",
+          "field": "collapsed"
+        }
+      },
+      "role": "request",
+      "emitterPath": "conversation/code-block/code-block-base.class.ts",
+      "emitterPackedPath": "package/dist/components/conversation/code-block/code-block-base.class.js",
+      "registrationPath": "packages/lyra-ui/src/components/conversation/code-block/code-block.ts",
+      "tagEntryPath": "packages/lyra-ui/src/components/lr-code-block.ts",
+      "publicRuntimePath": "package/dist/components/lr-code-block.js",
+      "publicDeclarationPath": "package/dist/components/conversation/code-block/code-block.d.ts",
+      "relation": "inverse",
+      "staticBehaviorEvidence": "source-and-packed-emitter-bytes-only",
+      "sourceSha256": "4e5c23878ecc77feb4893f960b65bd9210430d18c98cc3edcee0861005747366",
+      "packedSha256": "19f49dcf89f9949c763cc0a66312c0b11b03ce2dafd448298b64197e14f37212",
+      "tagEntrySha256": "94ac24d69b6413f90f3c40beb09f150863a482a51910047095d12a31655f2da7",
+      "registrationSourceSha256": "e276713fcbffa2d2033a5d25fd7e3c19f4cf3564cce5f5ae6ac78385b46cce09",
+      "packedRegistrationSha256": "b6aaf6079c8328ba663335eb3137869ca27cbcfc98bc6de65483d35847236ca2",
+      "publicRuntimeSha256": "556e0db9d3fcd356db8ef578fb0f2c68e5a52024d3d43992392bd1404cad9714",
+      "publicDeclarationSha256": "6d26f7a8b9000e80786b8147248f5b502d8dda451bfec57f9930c2bf3e50bd5e"
+    },
+    {
+      "key": {
+        "tag": "lr-code-block",
+        "event": "lr-toggle",
+        "declaration": {
+          "module": "conversation/code-block/code-block-shared.ts",
+          "detailType": "LyraCodeBlockToggleDetail",
+          "field": "collapsed"
+        }
+      },
+      "role": "settled",
+      "emitterPath": "conversation/code-block/code-block-base.class.ts",
+      "emitterPackedPath": "package/dist/components/conversation/code-block/code-block-base.class.js",
+      "registrationPath": "packages/lyra-ui/src/components/conversation/code-block/code-block.ts",
+      "tagEntryPath": "packages/lyra-ui/src/components/lr-code-block.ts",
+      "publicRuntimePath": "package/dist/components/lr-code-block.js",
+      "publicDeclarationPath": "package/dist/components/conversation/code-block/code-block.d.ts",
+      "relation": "inverse",
+      "staticBehaviorEvidence": "source-and-packed-emitter-bytes-only",
+      "sourceSha256": "4e5c23878ecc77feb4893f960b65bd9210430d18c98cc3edcee0861005747366",
+      "packedSha256": "19f49dcf89f9949c763cc0a66312c0b11b03ce2dafd448298b64197e14f37212",
+      "tagEntrySha256": "94ac24d69b6413f90f3c40beb09f150863a482a51910047095d12a31655f2da7",
+      "registrationSourceSha256": "e276713fcbffa2d2033a5d25fd7e3c19f4cf3564cce5f5ae6ac78385b46cce09",
+      "packedRegistrationSha256": "b6aaf6079c8328ba663335eb3137869ca27cbcfc98bc6de65483d35847236ca2",
+      "publicRuntimeSha256": "556e0db9d3fcd356db8ef578fb0f2c68e5a52024d3d43992392bd1404cad9714",
+      "publicDeclarationSha256": "6d26f7a8b9000e80786b8147248f5b502d8dda451bfec57f9930c2bf3e50bd5e"
+    },
+    {
+      "key": {
+        "tag": "lr-code-block-core",
+        "event": "lr-toggle-request",
+        "declaration": {
+          "module": "conversation/code-block/code-block-shared.ts",
+          "detailType": "LyraCodeBlockToggleDetail",
+          "field": "collapsed"
+        }
+      },
+      "role": "request",
+      "emitterPath": "conversation/code-block/code-block-base.class.ts",
+      "emitterPackedPath": "package/dist/components/conversation/code-block/code-block-base.class.js",
+      "registrationPath": "packages/lyra-ui/src/components/conversation/code-block/code-block-core.ts",
+      "tagEntryPath": "packages/lyra-ui/src/components/lr-code-block-core.ts",
+      "publicRuntimePath": "package/dist/components/lr-code-block-core.js",
+      "publicDeclarationPath": "package/dist/components/conversation/code-block/code-block-core.d.ts",
+      "relation": "inverse",
+      "staticBehaviorEvidence": "source-and-packed-emitter-bytes-only",
+      "sourceSha256": "4e5c23878ecc77feb4893f960b65bd9210430d18c98cc3edcee0861005747366",
+      "packedSha256": "19f49dcf89f9949c763cc0a66312c0b11b03ce2dafd448298b64197e14f37212",
+      "tagEntrySha256": "b3a25b219d8923cabfa43866eda255975a7a2ae35379f4e09ad836202fd7fc04",
+      "registrationSourceSha256": "ee176d878c47acbe212b96a38620a332d85ac221d0423cc42b85eb931e186308",
+      "packedRegistrationSha256": "ae52e736d5fcf49a7373f53bd415f88e55897cc9b76297c4f384ade99f869b9c",
+      "publicRuntimeSha256": "8159fa0fbca78246191d16d7aa73f4b57bd5fb96b3688e2c209e92fb8dfaa9c1",
+      "publicDeclarationSha256": "236a357e7ce981f6da610ddc5a0a5ec48da01eb100363b0e6804be9108d378c9"
+    },
+    {
+      "key": {
+        "tag": "lr-code-block-core",
+        "event": "lr-toggle",
+        "declaration": {
+          "module": "conversation/code-block/code-block-shared.ts",
+          "detailType": "LyraCodeBlockToggleDetail",
+          "field": "collapsed"
+        }
+      },
+      "role": "settled",
+      "emitterPath": "conversation/code-block/code-block-base.class.ts",
+      "emitterPackedPath": "package/dist/components/conversation/code-block/code-block-base.class.js",
+      "registrationPath": "packages/lyra-ui/src/components/conversation/code-block/code-block-core.ts",
+      "tagEntryPath": "packages/lyra-ui/src/components/lr-code-block-core.ts",
+      "publicRuntimePath": "package/dist/components/lr-code-block-core.js",
+      "publicDeclarationPath": "package/dist/components/conversation/code-block/code-block-core.d.ts",
+      "relation": "inverse",
+      "staticBehaviorEvidence": "source-and-packed-emitter-bytes-only",
+      "sourceSha256": "4e5c23878ecc77feb4893f960b65bd9210430d18c98cc3edcee0861005747366",
+      "packedSha256": "19f49dcf89f9949c763cc0a66312c0b11b03ce2dafd448298b64197e14f37212",
+      "tagEntrySha256": "b3a25b219d8923cabfa43866eda255975a7a2ae35379f4e09ad836202fd7fc04",
+      "registrationSourceSha256": "ee176d878c47acbe212b96a38620a332d85ac221d0423cc42b85eb931e186308",
+      "packedRegistrationSha256": "ae52e736d5fcf49a7373f53bd415f88e55897cc9b76297c4f384ade99f869b9c",
+      "publicRuntimeSha256": "8159fa0fbca78246191d16d7aa73f4b57bd5fb96b3688e2c209e92fb8dfaa9c1",
+      "publicDeclarationSha256": "236a357e7ce981f6da610ddc5a0a5ec48da01eb100363b0e6804be9108d378c9"
+    }
+  ]
+}

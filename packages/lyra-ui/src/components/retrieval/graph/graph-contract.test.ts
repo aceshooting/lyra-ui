@@ -11,7 +11,7 @@ async function graph() {
   return element;
 }
 
-it('reports canonical node activation before its compatibility event and uses property-named selection', async () => {
+it('emits canonical node activation and leaves the retired click event silent', async () => {
   const element = await graph();
   const order: string[] = [];
   let selection: unknown;
@@ -20,21 +20,21 @@ it('reports canonical node activation before its compatibility event and uses pr
     expect((event as CustomEvent).detail.nodeId).to.equal('a');
     expect(event.cancelable).to.equal(false);
   });
-  element.addEventListener('lr-node-click', () => order.push('click'));
+  element.addEventListener('lr-node-click', () => order.push('retired'));
   element.addEventListener('lr-selection-change', (event) => { selection = event.detail; });
   element.shadowRoot!.querySelector('[part="node"]')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-  expect(order).to.deep.equal(['activate', 'click']);
+  expect(order).to.deep.equal(['activate']);
   expect(selection).to.deep.equal({ selectedNodeIds: ['a'], selectedEdgeIds: [] });
   expect(element.selectedNodeIds).to.deep.equal([]);
 });
 
-it('gives edge activation an edgeId while retaining the old event detail unchanged', async () => {
+it('emits the canonical edge detail and leaves the retired link event silent', async () => {
   const element = await graph();
   let canonical: unknown;
-  let legacy: unknown;
+  let retired = 0;
   element.addEventListener('lr-edge-activate', (event) => { canonical = (event as CustomEvent).detail; });
-  element.addEventListener('lr-link-click', (event) => { legacy = event.detail; });
+  element.addEventListener('lr-link-click', () => { retired++; });
   element.shadowRoot!.querySelector('[part="link"]')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   expect(canonical).to.deep.equal({ sourceNodeId: 'a', targetNodeId: 'b', edgeId: 'ab' });
-  expect(legacy).to.deep.equal({ sourceNodeId: 'a', targetNodeId: 'b', linkId: 'ab' });
+  expect(retired).to.equal(0);
 });

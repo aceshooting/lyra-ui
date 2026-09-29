@@ -4,7 +4,8 @@ import { readFileSync, mkdirSync, writeFileSync, existsSync, renameSync, rmSync 
 import { dirname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { isMainModule } from './is-main-module.mjs';
-import { extractPublishedCompatibility, publishedExportSurface } from './published-compatibility.mjs';
+import { compatibilityExportCandidates, extractPublishedCompatibility, publishedExportSurface } from './published-compatibility.mjs';
+import { inspectExportContract } from './component-metadata.mjs';
 import { SOURCE_INPUTS, PACKED_INPUTS, sha256, jsonBytes, encodeEvidence, parseGitTree, validatePublishedCapture } from './published-compatibility-io.mjs';
 
 /** Explicit read-only capture of already verified immutable publication inputs. Never fetches. */
@@ -45,15 +46,37 @@ export function capturePublishedCompatibility({ repository, tag, tagObject, comm
     if (members.filter(member => member === path).length !== 1) throw new Error(`Missing or duplicate packed input ${path}`);
     save('packed', role, path, execFileSync('tar', ['-xOzf', resolve(tarball), '--', path], { maxBuffer: 32 * 1024 * 1024 }));
   }
+  const historyFacts = [];
+  if (Number(parsed.packageJson.version.split('.')[0]) >= 23) {
+    const historyPrefix = 'packages/lyra-ui/scripts/fixtures/compatibility-history/';
+    const indexPath = historyPrefix + 'index.json'; const indexBlob = sourceBlob(indexPath);
+    const historyIndex = JSON.parse(indexBlob.bytes.toString('utf8'));
+    save('source-history', 'history', indexPath, indexBlob.bytes, indexBlob.oid);
+    if (!Array.isArray(historyIndex.captures) || historyIndex.captures.length === 0) throw new Error('Published compatibility history is empty');
+    for (const entry of historyIndex.captures) {
+      if (!/^\d+\.\d+\.\d+$/u.test(entry.directory) || !/^[a-f0-9]{64}$/u.test(entry.captureSha256)) throw new Error('Invalid source compatibility capture pin');
+      for (const name of ['capture.json', 'facts.json', 'evidence.json.gz']) {
+        const path = historyPrefix + entry.directory + '/' + name; const blob = sourceBlob(path);
+        save('source-history', 'history', path, blob.bytes, blob.oid);
+        if (name === 'facts.json') historyFacts.push(JSON.parse(blob.bytes.toString('utf8')));
+      }
+    }
+  }
   parsed.exportSources = Object.create(null);
-  publishedExportSurface({ metadata: parsed.metadata, packageJson: parsed.packageJson, readSource: path => {
+  const readExportSource = path => {
     if (!Object.hasOwn(parsed.exportSources, path)) {
       const sourcePath = `packages/lyra-ui/${path}`; const blob = sourceBlob(sourcePath);
       save('source-export', 'text', sourcePath, blob.bytes, blob.oid);
       parsed.exportSources[path] = blob.bytes.toString('utf8');
     }
     return parsed.exportSources[path];
-  } });
+  };
+  publishedExportSurface({ metadata: parsed.metadata, packageJson: parsed.packageJson, readSource: readExportSource });
+  for (const entry of compatibilityExportCandidates(parsed.metadata, historyFacts)) {
+    const fact = inspectExportContract(entry, { packageJson: parsed.packageJson, readSource: readExportSource,
+      exportDeprecations: parsed.metadata.exportDeprecations });
+    if (fact.status === 'invalid') throw new Error(`Cannot inspect historical export ${entry.name}: ${fact.findings.join('; ')}`);
+  }
   const facts = extractPublishedCompatibility(parsed);
   const evidence = { schemaVersion: 1, payloads, gitObjects: [...objects.values()] };
   const archive = encodeEvidence(evidence);

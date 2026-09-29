@@ -45,19 +45,5 @@
       "lr-radio-button"
     ]
   },
-  "deprecations": [
-    {
-      "tag": "lr-combobox",
-      "kind": "event",
-      "name": "lr-retry",
-      "since": "22.0.0",
-      "replacement": {
-        "kind": "event",
-        "name": "lr-retry-request",
-        "usage": "addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })"
-      },
-      "removalNotBefore": "24.0.0",
-      "rationale": "Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window."
-    }
-  ]
+  "deprecations": []
 }

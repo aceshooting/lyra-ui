@@ -1,4 +1,3 @@
-import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './table.js';
 import '../../forms/select/select.js';
@@ -12,8 +11,6 @@ import { installTableTestHooks, sinkTexts, type Row, columns, rows, priorityColu
 installTableTestHooks();
 
 
-expectDeprecatedUsage('lr-table', 'attribute', 'accessible-label');
-expectDeprecatedUsage('lr-table', 'property', 'accessibleLabel');
 
 
 it('renders header labels and a row per item, keyed by rowKey', async () => {
@@ -969,7 +966,7 @@ it("lets a consumer's own ::part(header-cell):hover override win over the intern
     const el = (await fixture(html`
       <lr-table
         style="--lr-transition-fast: 0s"
-        accessible-label="Scores"
+        aria-label="Scores"
         .columns=${[{ key: 'name', label: 'Name', sortable: true, sticky: 'start', cell: (r: Row) => r.name }] as TableColumn<Row>[]}
         .rows=${rows}
       ></lr-table>
@@ -1111,7 +1108,7 @@ describe('ResizeObserver callback batching (perf)', () => {
 it('renders grouped rows with per-group and grand totals', async () => {
   const el = (await fixture(html`
     <lr-table
-      accessible-label="Scores"
+      aria-label="Scores"
       .columns=${[
         {
           key: 'name',

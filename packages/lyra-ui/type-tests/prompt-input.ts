@@ -1,7 +1,7 @@
+import type { LyraPromptInput } from '../src/components/conversation/prompt-input/prompt-input.class.js';
 import type {
   ChatComposerSelectionDirection,
   ChatComposerWrap,
-  LyraPromptInput,
   LyraPromptInputAttachment,
 } from '../src/lyra.js';
 

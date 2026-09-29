@@ -15,7 +15,6 @@ const defaultPackageDir = fileURLToPath(new URL('..', import.meta.url));
 export const CURATED_PUBLIC_SIDE_EFFECT_ENTRIES = Object.freeze([
   { source: 'src/autoloader-cdn.ts', exportPath: './autoloader-cdn.js' },
   { source: 'src/hydration.ts', exportPath: './hydration.js' },
-  { source: 'src/ssr-loader.ts', exportPath: './ssr-loader.js' },
 ]);
 
 function walk(directory) {

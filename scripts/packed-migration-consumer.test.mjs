@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { X_CASES, RETAINED_ROOT } from '../packages/lyra-ui/scripts/fixtures/lyra-renames/consumer/x-cases.mjs';
 import { compatibilityKey } from '../packages/lyra-ui/scripts/published-compatibility.mjs';
-import { selectMigrationCases, assertMigrationReport, runMigrationProcess, writeResolvedMigrationEntry } from './packed-migration-consumer.mjs';
+import { assertInstalledRetainedField, createV24SemanticMigrationCases, selectMigrationCases, assertMigrationReport, assertBrowserProof, runMigrationProcess, writeResolvedMigrationEntry } from './packed-migration-consumer.mjs';
 
 function context() {
   const records = Object.fromEntries(X_CASES.map(item => [compatibilityKey(item.key), {
@@ -59,6 +59,170 @@ test('retained root review keeps floor24 tense and resolved checks reject orphan
   result.warnings[0].message = 'was removed in 23.0.0';
   assert.throws(() => assertMigrationReport(result, [item], 'lyra-v22'));
   assert.throws(() => assertMigrationReport(result, [], 'lyra-v22'));
+});
+test('actual v24 module diagnostics require exact removed-in-24 wording', () => {
+  const item = { id: 'removed-theme-function', key: { scope: 'export', kind: 'function', module: './theme.js', name: 'setLyraTheme' },
+    file: 'migration-v24/p22-input/removed-theme-function.ts', column: 15,
+    record: { state: 'retired', removedIn: '24.0.0', policy: { replacement: { usage: 'setLyraStyle with independent choices' } } } };
+  const result = { schemaVersion: 1, origin: 'lyra-v22', changes: [], filesChanged: 0,
+    summary: { rewrites: 0, warnings: 1, acknowledged: 0 }, warnings: [{
+      file: item.file, line: 1, column: item.column, origin: 'lyra-v22', upstreamTag: null,
+      upstreamMember: item.key.name, action: 'manual-review', warningCode: 'DEPRECATED_MODULE_REVIEW',
+      target: item.record.policy.replacement.usage, message: 'function ./theme.js#setLyraTheme was removed in 24.0.0; review it.',
+    }] };
+  assertMigrationReport(result, [item], 'lyra-v22');
+  result.warnings[0].message = 'function ./theme.js#setLyraTheme was removed in 23.0.0; review it.';
+  assert.throws(() => assertMigrationReport(result, [item], 'lyra-v22'));
+});
+test('actual v24 selection requires the installed version and retires the formerly retained root class', async () => {
+  const { createV24ExportMigrationCases, createV24MemberMigrationCases } = await import('./packed-migration-consumer-cases.mjs');
+  const source = context();
+  source.packageVersion = '24.0.0';
+  const root = source.records[compatibilityKey(RETAINED_ROOT.key)];
+  root.state = 'retired'; root.removedIn = '24.0.0';
+  for (let index = 0; index < 609; index += 1) {
+    const key = { scope: 'export', kind: 'entry-point', name: `./fixture/${index}.js` };
+    source.records[compatibilityKey(key)] = { key, state: 'retired', removedIn: '24.0.0', policy: { removalNotBefore: '24.0.0', replacement: { name: './components/lr-fixture.js', usage: "import '@aceshooting/lyra-ui/components/lr-fixture.js';" } } };
+  }
+  for (let index = 0; index < 44; index += 1) {
+    const tag = `lr-fixture-${index}`;
+    const key = { scope: 'member', tag, kind: 'event', name: `lr-old-${index}` };
+    source.records[compatibilityKey(key)] = { key, state: 'retired', removedIn: '24.0.0', policy: { removalNotBefore: '24.0.0', replacement: { name: `lr-new-${index}`, usage: `Use ${tag}.${`lr-new-${index}`} after review.` } } };
+  }
+  assert.equal(selectMigrationCases(source, '24.0.0').length, 9);
+  assert.equal(createV24ExportMigrationCases(source).length, 610);
+  const syntheticLedger = { profiles: [{ origin: 'lyra-v22', renames: [], reviews: Object.values(source.records)
+    .filter(record => record.key.scope === 'member' && record.policy.removalNotBefore === '24.0.0')
+    .map(record => ({ tag: record.key.tag, kind: record.key.kind, name: record.key.name })) }] };
+  assert.equal(createV24MemberMigrationCases(source, syntheticLedger).length, 44);
+  assert.throws(() => selectMigrationCases(source, '23.0.0'));
+  assert.throws(() => createV24ExportMigrationCases({ ...source, packageVersion: '23.0.0' }), /installed v24/u);
+  assert.throws(() => createV24ExportMigrationCases({ ...source, records: Object.fromEntries(Object.entries(source.records).filter(([, item]) => item.policy.removalNotBefore !== '24.0.0')) }), /exactly654/u);
+});
+test('the real v24 ledger identifies exactly five automatic member rewrites and checks their report witnesses', async () => {
+  const { readCurrentCompatibilityContextSync } = await import('../packages/lyra-ui/scripts/check-published-compatibility.mjs');
+  const { createV24ExportMigrationCases, createV24MemberMigrationCases } = await import('./packed-migration-consumer-cases.mjs');
+  const context = readCurrentCompatibilityContextSync();
+  const ledger = JSON.parse(await readFile(new URL('../packages/lyra-ui/scripts/fixtures/lyra-renames.json', import.meta.url), 'utf8'));
+  const cases = createV24MemberMigrationCases(context, ledger);
+  const automatic = cases.filter(item => item.automatic);
+  assert.equal(cases.length, 44);
+  assert.equal(automatic.length, 5);
+  assert.deepEqual(cases.filter(item => item.sharedTargetReview).map(item => item.key.tag).sort(), ['lr-graph', 'lr-knowledge-graph-explorer']);
+  assert.deepEqual(automatic.map(item => [item.key.tag, item.key.kind, item.key.name]).sort(), [
+    ['lr-markdown', 'event', 'lr-link-click'],
+    ['lr-markdown-core', 'event', 'lr-link-click'],
+    ['lr-message-parts', 'event', 'lr-link-click'],
+    ['lr-sequence-strip', 'attribute', 'accessible-label'],
+    ['lr-table', 'attribute', 'accessible-label'],
+  ].sort());
+  const secondaryRoutes = createV24ExportMigrationCases(context).flatMap(item => item.additionalReviews.map(site => site.key.name));
+  assert.deepEqual(secondaryRoutes.sort(), [
+    './theme/presets.js', './theme/presets.js', './theme/presets.js',
+    './theme/presets.js', './theme/presets.js', './theme/presets.js',
+    './theme/presets/shadcn.js',
+  ].sort());
+  for (const item of automatic) assert.equal(item.applied, item.input.replace(item.key.name, item.rule.to));
+  const auto = { ...automatic[0], file: 'input/automatic.ts' };
+  const manual = { ...cases.find(item => !item.automatic && !item.rule), file: 'input/manual.ts' };
+  const change = { file: auto.file, line: 1, column: auto.column, origin: 'lyra-v22', upstreamTag: auto.key.tag,
+    upstreamMember: auto.key.name, action: `rewrite-${auto.key.kind}`, target: auto.rule.to, warningCode: null, message: 'canonical rewrite' };
+  const warning = { file: manual.file, line: 1, column: manual.column, origin: 'lyra-v22', upstreamTag: manual.key.tag,
+    upstreamMember: manual.key.name, action: 'manual-review', target: manual.record.policy.replacement.usage ?? manual.record.policy.replacement.name,
+    warningCode: 'DEPRECATED_MEMBER_REVIEW', message: 'This member was removed in 24.0.0; review it.' };
+  const report = { schemaVersion: 1, origin: 'lyra-v22', changes: [change], warnings: [warning], filesChanged: 1,
+    summary: { rewrites: 1, warnings: 1, acknowledged: 0 } };
+  assertMigrationReport(report, [auto, manual], 'lyra-v22');
+  assert.throws(() => assertMigrationReport({ ...report, changes: [{ ...change, target: 'wrong' }] }, [auto, manual], 'lyra-v22'), /Expected values to be strictly equal/u);
+  assert.throws(() => assertMigrationReport({ ...report, changes: [change, { ...change }] }, [auto, manual], 'lyra-v22'), /Missing or orphan automatic/u);
+  assert.throws(() => assertMigrationReport({ ...report, warnings: [{ ...warning, action: 'rewrite-event' }] }, [auto, manual], 'lyra-v22'), /Expected values to be strictly equal/u);
+});
+test('all654 v24 sites and multiline semantics match the real scanner including acknowledgments', async () => {
+  const { readCurrentCompatibilityContextSync } = await import('../packages/lyra-ui/scripts/check-published-compatibility.mjs');
+  const { buildMigrationContract, migrateText } = await import('../packages/lyra-ui/scripts/migrate-wa.mjs');
+  const { createV24ExportMigrationCases, createV24MemberMigrationCases } = await import('./packed-migration-consumer-cases.mjs');
+  const context = readCurrentCompatibilityContextSync();
+  const ledger = JSON.parse(await readFile(new URL('../packages/lyra-ui/scripts/fixtures/lyra-renames.json', import.meta.url), 'utf8'));
+  const inventory = JSON.parse(await readFile(new URL('../packages/lyra-ui/scripts/fixtures/component-inventory.json', import.meta.url), 'utf8'));
+  const metadata = JSON.parse(await readFile(new URL('../packages/lyra-ui/scripts/fixtures/component-metadata.json', import.meta.url), 'utf8'));
+  const contract = buildMigrationContract(inventory, { renameLedger: ledger, exportDeprecations: metadata.exportDeprecations,
+    lyraVersion: '24.0.0', compatibilityContext: context });
+  const cases = [...createV24ExportMigrationCases(context), ...createV24MemberMigrationCases(context, ledger)];
+  assert.equal(cases.length, 654);
+  let rewrites = 0; let warnings = 0; let acknowledged = 0;
+  for (const item of cases) {
+    const file = `input/${item.id}.${item.extension}`;
+    const bound = { ...item, file };
+    const result = migrateText(item.input, contract, { file, origin: 'lyra-v22' });
+    const report = { schemaVersion: 1, origin: 'lyra-v22', changes: result.changes, warnings: result.warnings,
+      filesChanged: Number(result.content !== item.input), summary: { rewrites: result.changes.length,
+        warnings: result.warnings.length, acknowledged: result.acknowledged } };
+    assert.equal(result.warnings.length, Number(!item.automatic) + (item.additionalReviews?.length ?? 0), item.id);
+    assertMigrationReport(report, [bound], 'lyra-v22');
+    assert.equal(result.content, item.applied ?? item.input, item.id);
+    rewrites += result.changes.length; warnings += result.warnings.length;
+    if (item.automatic) {
+      const rerun = migrateText(result.content, contract, { file, origin: 'lyra-v22' });
+      assert.deepEqual(rerun.changes, [], item.id);
+      assert.deepEqual(rerun.warnings, [], item.id);
+      continue;
+    }
+    const tokens = [item, ...(item.additionalReviews ?? [])].map(site => `${site.sharedTargetReview ? 'RENAME_TARGET_SHARED_REVIEW'
+      : site.rule?.polarity === 'inverted' ? 'POLARITY_REVIEW'
+        : site.key.scope === 'member' ? 'DEPRECATED_MEMBER_REVIEW' : 'DEPRECATED_MODULE_REVIEW'}:${site.key.name}`).join(' ');
+    const comment = item.extension === 'html' ? `<!-- lyra-migrate-reviewed: ${tokens} -->\n`
+      : item.extension === 'css' ? `/* lyra-migrate-reviewed: ${tokens} */\n`
+        : `// lyra-migrate-reviewed: ${tokens}\n`;
+    const reviewed = migrateText(`${comment}${item.input}`, contract, { file, origin: 'lyra-v22' });
+    assert.deepEqual(reviewed.changes, [], item.id);
+    assert.deepEqual(reviewed.warnings, [], item.id);
+    assert.equal(reviewed.acknowledged, 1 + (item.additionalReviews?.length ?? 0), item.id);
+    acknowledged += reviewed.acknowledged;
+  }
+  assert.deepEqual({ rewrites, warnings, acknowledged }, { rewrites: 5, warnings: 656, acknowledged: 656 });
+  const source = await readFile(new URL('../packages/lyra-ui/scripts/fixtures/lyra-renames/consumer/v24-semantics.input.ts', import.meta.url), 'utf8');
+  const file = 'semantic-input/v24-semantics.input.ts';
+  const semanticCases = createV24SemanticMigrationCases(cases, source, file);
+  const semantic = migrateText(source, contract, { file, origin: 'lyra-v22' });
+  assertMigrationReport({ schemaVersion: 1, origin: 'lyra-v22', changes: semantic.changes, warnings: semantic.warnings,
+    filesChanged: Number(semantic.content !== source), summary: { rewrites: semantic.changes.length,
+      warnings: semantic.warnings.length, acknowledged: semantic.acknowledged } }, semanticCases, 'lyra-v22');
+});
+test('field authority binds verified attachment facts, index pins and cross-release continuity', async () => {
+  const { checkPublishedCompatibility } = await import('../packages/lyra-ui/scripts/check-published-compatibility.mjs');
+  const { readPublishedFieldAttachmentSync } = await import('../packages/lyra-ui/scripts/published-field-compatibility-io.mjs');
+  const { verifyPublishedFieldContinuity, REQUIRED_FIELD_RELEASES } = await import('../packages/lyra-ui/scripts/published-field-compatibility.mjs');
+  const { verifyPublishedFieldAuthority } = await import('./packed-migration-consumer.mjs');
+  const history = new URL('../packages/lyra-ui/scripts/fixtures/compatibility-history/', import.meta.url);
+  const fieldDir = new URL('field-evidence/', history);
+  const { captures } = await checkPublishedCompatibility();
+  const attachments = REQUIRED_FIELD_RELEASES.map(release => {
+    const version = release.slice('lyra-ui@'.length);
+    return readPublishedFieldAttachmentSync(new URL(`${version}/`, fieldDir).pathname, new URL(`${version}/`, history).pathname);
+  });
+  const index = JSON.parse(await readFile(new URL('index.json', fieldDir), 'utf8'));
+  const continuity = verifyPublishedFieldContinuity({ captures, attachments });
+  const authority = { captures, attachments, index, continuity };
+  const facts = verifyPublishedFieldAuthority(authority);
+  assert.equal(facts.sourceRelease, 'lyra-ui@23.0.0');
+  assert.equal(facts.declarations.length, 10); assert.equal(facts.exposures.length, 20);
+  const tampered = structuredClone(authority);
+  tampered.attachments.find(item => item.attachment.sourceRelease === 'lyra-ui@23.0.0').facts.declarations[0].notice += ' changed';
+  assert.throws(() => verifyPublishedFieldAuthority(tampered), /facts bytes changed/u);
+});
+test('pre-removal candidate fields preserve the published shape and notice as separate facts', async () => {
+  const published = JSON.parse(await readFile(new URL('../packages/lyra-ui/scripts/fixtures/compatibility-history/field-evidence/23.0.0/facts.json', import.meta.url), 'utf8'));
+  assert.equal(published.declarations.length, 10);
+  const body = (declaration) => {
+    const { type, optional, readonly, notice } = declaration.deprecatedField;
+    return `\n${notice}\n${readonly ? 'readonly ' : ''}${declaration.key.field}${optional ? '?' : ''}: ${type};\n`;
+  };
+  for (const declaration of published.declarations) {
+    assert.doesNotThrow(() => assertInstalledRetainedField(body(declaration), declaration));
+  }
+  const sample = published.declarations[0];
+  assert.throws(() => assertInstalledRetainedField(body(sample).replace('open:', 'open?:'), sample), /field shape changed/u);
+  assert.throws(() => assertInstalledRetainedField(body(sample).replace('@deprecated', '@ordinary'), sample), /notice changed/u);
 });
 test('expected process status is checked rather than treating every failure as a negative proof', async () => {
   const ok = await runMigrationProcess(process.execPath, ['-e', "process.stdout.write('checked'); process.exit(1)"], process.cwd(), 1);
@@ -178,7 +342,8 @@ test('full member stage remains off until all390 are retired and rejects changed
 test('member action witness rejects orphan diagnostics, changed source spans and false automatic success', async () => {
   const { assertMemberMigrationReport } = await import('./packed-migration-consumer-cases.mjs');
   const item = { id: 'input', file: 'input.ts', column: 42, automatic: true, reportedTag: 'lr-agent-run',
-    key: { scope: 'member', tag: 'lr-agent-run', kind: 'property', name: 'old' }, rule: { to: 'canonical' } };
+    key: { scope: 'member', tag: 'lr-agent-run', kind: 'property', name: 'old' }, rule: { to: 'canonical' },
+    record: { policy: { removalNotBefore: '23.0.0' } } };
   const baseline = { schemaVersion: 1, origin: 'lyra-v21', filesChanged: 1,
     summary: { rewrites: 1, warnings: 0, acknowledged: 0 }, warnings: [], changes: [{ file: item.file,
       line: 1, column: 42, origin: 'lyra-v21', upstreamTag: 'lr-agent-run', upstreamMember: 'old',
@@ -193,12 +358,12 @@ test('member action witness rejects orphan diagnostics, changed source spans and
 });
 
 test('browser proof rejects incomplete, duplicate or unknown stages', async () => {
-  const { assertBrowserProof } = await import('./packed-migration-consumer.mjs');
   const keys = X_CASES.map(item => item.key);
   assertBrowserProof({ stage: 'exports-and-geojson', coveredKeys: keys });
   assert.throws(() => assertBrowserProof({ stage: 'all-retirements', coveredKeys: keys }));
   assert.throws(() => assertBrowserProof({ stage: 'exports-and-geojson', coveredKeys: [...keys.slice(1), keys[1]] }));
   assert.throws(() => assertBrowserProof({ stage: 'complete', coveredKeys: keys }));
+  assertBrowserProof({ stage: 'actual24', coveredKeys: Array.from({ length: 1053 }, (_value, index) => ({ scope: 'export', kind: 'type', module: '.', name: `M${index}` })) });
 });
 
 test('typed recipes preserve non-boolean data and use dimensionally valid CSS values', async () => {

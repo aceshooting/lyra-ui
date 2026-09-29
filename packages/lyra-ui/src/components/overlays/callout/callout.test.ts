@@ -1,6 +1,5 @@
 import { LitElement } from 'lit';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
-import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
@@ -784,7 +783,7 @@ it('repairs direct close state writes but preserves newer listener focus', async
   expect(el.ownerDocument.activeElement === explicit).to.equal(true);
 });
 
-it('forwards a host-level aria-label to the base region when accessibleLabel is unset', async () => {
+it('forwards a host-level aria-label to the base region', async () => {
   const el = (await fixture(html`<lr-callout aria-label="Storage warning">Disk is nearly full</lr-callout>`)) as LyraCallout;
   const base = el.shadowRoot!.querySelector('[part="base"]')!;
   expect(base.getAttribute('aria-label')).to.equal('Storage warning');
@@ -792,9 +791,9 @@ it('forwards a host-level aria-label to the base region when accessibleLabel is 
   expect(base.hasAttribute('aria-live')).to.be.false;
 });
 
-it('lets a host-level aria-label take precedence over accessibleLabel on the status owner', async () => {
+it('uses the host-level aria-label as the status owner name', async () => {
   const el = (await fixture(
-    html`<lr-callout .accessibleLabel=${'Explicit label'} aria-label="Host label">Message</lr-callout>`
+    html`<lr-callout aria-label="Host label">Message</lr-callout>`
   )) as LyraCallout;
   const base = el.shadowRoot!.querySelector('[part="base"]')!;
   expect(base.getAttribute('aria-label')).to.equal('Host label');
@@ -802,9 +801,9 @@ it('lets a host-level aria-label take precedence over accessibleLabel on the sta
   expect(base.hasAttribute('aria-live')).to.be.false;
 });
 
-it('lets an explicitly empty host aria-label suppress accessibleLabel semantics but preserves visible announcements', async () => {
+it('lets an explicitly empty host aria-label suppress a status name but preserves visible announcements', async () => {
   const el = (await fixture(html`
-    <lr-callout aria-label="" .accessibleLabel=${'Fallback label'}>Message</lr-callout>
+    <lr-callout aria-label="">Message</lr-callout>
   `)) as LyraCallout;
   await settleLiveRegion(el);
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -821,7 +820,7 @@ it('lets an explicitly empty host aria-label suppress accessibleLabel semantics 
 
 it('uses a nonempty host label as announcement context without replacing visible status text', async () => {
   const el = (await fixture(html`
-    <lr-callout aria-label="Storage warning" .accessibleLabel=${'Fallback label'}>
+    <lr-callout aria-label="Storage warning">
       Initial message
     </lr-callout>
   `)) as LyraCallout;
@@ -1334,7 +1333,6 @@ describe('renamed callout members', () => {
     });
     const base = el.shadowRoot!.querySelector('[part="base"]')!;
     expect(base.hasAttribute('aria-label')).to.equal(false);
-    expect(el.accessibleLabel).to.equal('');
     expect(warnings).to.have.length(0);
   });
 
@@ -1392,7 +1390,6 @@ describe('renamed callout members', () => {
   });
 });
 
-expectDeprecatedUsage('lr-callout', 'property', 'accessibleLabel');
 
 describe('late-rendering child announcements', () => {
   it('announces a newly appended custom element once its shadow content renders', async () => {

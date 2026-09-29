@@ -1,5 +1,4 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
-import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { sendKeys } from "@web/test-runner-commands";
 import "./drawer.js";
@@ -932,11 +931,9 @@ describe('lr-drawer renamed members', () => {
     let aliased!: LyraDrawer;
     const warnings = await captureDeprecationWarnings(ACCESSIBLE_LABEL, async () => {
       aliased = await mount('<lr-drawer open accessible-label="Announced">Body</lr-drawer>');
-      const second = await mount('<lr-drawer accessible-label="Other">Body</lr-drawer>');
-      expect(second.accessibleLabel).to.equal('');
+      await mount('<lr-drawer accessible-label="Other">Body</lr-drawer>');
     });
     expect(panelName(aliased)).to.equal(null);
-    expect(aliased.accessibleLabel).to.equal('');
     expect(warnings).to.have.length(0);
     aliased.close('api');
   });
@@ -977,5 +974,3 @@ describe('lr-drawer renamed members', () => {
     await alias!.close('api');
   });
 });
-
-expectDeprecatedUsage('lr-drawer', 'property', 'accessibleLabel');

@@ -8,7 +8,11 @@ import type {
   LyraIncludeEventMap,
   LyraIncludeMode,
 } from '../src/lyra.js';
-import { LyraIcon, LyraInclude, registerIconLibrary } from '../src/lyra.js';
+import { LyraIcon } from '../src/components/utility/icon/icon.class.js';
+import { LyraInclude } from '../src/components/viewers/include/include.class.js';
+import {
+  registerIconLibrary,
+} from '../src/lyra.js';
 
 declare const icon: LyraIcon;
 icon.family = 'sharp';

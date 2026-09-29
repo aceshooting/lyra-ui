@@ -1,4 +1,3 @@
-import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './table.js';
 import '../../forms/select/select.js';
@@ -12,12 +11,10 @@ import { installTableTestHooks, TableOpaqueControlElement, type Row, columns, ro
 installTableTestHooks();
 
 
-expectDeprecatedUsage('lr-table', 'attribute', 'accessible-label');
-expectDeprecatedUsage('lr-table', 'property', 'accessibleLabel');
 
 
 it('uses the first unique nonempty column and row keys before counts, focus, actions, and events', async () => {
-  const el = (await fixture(html`<lr-table accessible-label="Identity-safe scores" pagination-mode="client" page-size="1"></lr-table>`)) as LyraTable<Row>;
+  const el = (await fixture(html`<lr-table aria-label="Identity-safe scores" pagination-mode="client" page-size="1"></lr-table>`)) as LyraTable<Row>;
   const first = { id: 'shared', name: 'First shared row', score: 10 };
   const duplicate = { id: 'shared', name: 'Later duplicate row', score: 99 };
   const other = { id: 'other', name: 'Other row', score: 20 };
@@ -274,7 +271,7 @@ describe('v9 bounded and transactional contracts', () => {
     const inputRows = [...rows];
     const inputSelected = new Set<string | number>(['a']);
     const inputExpanded = new Set<string | number>(['a']);
-    const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<Row>;
+    const el = (await fixture(html`<lr-table aria-label="Scores"></lr-table>`)) as LyraTable<Row>;
     el.columns = inputColumns;
     el.rows = inputRows;
     el.rowKey = (row) => row.id;
@@ -306,7 +303,7 @@ describe('v9 bounded and transactional contracts', () => {
   });
 
   it('contains native filter input/change events and emits only the table filter contract', async () => {
-    const el = (await fixture(html`<lr-table filterable accessible-label="Scores"></lr-table>`)) as LyraTable<Row>;
+    const el = (await fixture(html`<lr-table filterable aria-label="Scores"></lr-table>`)) as LyraTable<Row>;
     el.columns = columns;
     el.rows = rows;
     await el.updateComplete;
@@ -328,7 +325,7 @@ describe('v9 bounded and transactional contracts', () => {
   });
 
   it('contains native cell-editor input/change events while publishing the committed edit', async () => {
-    const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<Row>;
+    const el = (await fixture(html`<lr-table aria-label="Scores"></lr-table>`)) as LyraTable<Row>;
     el.columns = [{ key: 'name', label: 'Name', sortable: true, cell: (r: Row) => r.name, editTrigger: 'double-click' }];
     el.rows = rows;
     el.rowKey = (row) => row.id;
@@ -355,7 +352,7 @@ describe('v9 bounded and transactional contracts', () => {
   });
 
   it('emits a cancelable sort request followed by one readonly committed sort detail', async () => {
-    const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<Row>;
+    const el = (await fixture(html`<lr-table aria-label="Scores"></lr-table>`)) as LyraTable<Row>;
     el.columns = columns;
     el.rows = rows;
     await el.updateComplete;
@@ -373,7 +370,7 @@ describe('v9 bounded and transactional contracts', () => {
   });
 
   it('honors a vetoed sort request without mutating sort state or emitting a commit', async () => {
-    const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<Row>;
+    const el = (await fixture(html`<lr-table aria-label="Scores"></lr-table>`)) as LyraTable<Row>;
     el.columns = columns;
     el.rows = rows;
     await el.updateComplete;
@@ -389,7 +386,7 @@ describe('v9 bounded and transactional contracts', () => {
   });
 
   it('uses one selectedRowKeys store in single mode and publishes a frozen snapshot', async () => {
-    const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<Row>;
+    const el = (await fixture(html`<lr-table aria-label="Scores"></lr-table>`)) as LyraTable<Row>;
     el.columns = columns;
     el.rows = rows;
     el.rowKey = (row) => row.id;
@@ -415,7 +412,7 @@ describe('v9 bounded and transactional contracts', () => {
       name: `Row ${index}`,
       score: index,
     }));
-    const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<Row>;
+    const el = (await fixture(html`<lr-table aria-label="Scores"></lr-table>`)) as LyraTable<Row>;
     el.columns = columns;
     el.rows = manyRows;
     el.rowKey = (row) => row.id;
@@ -435,7 +432,7 @@ describe('v9 bounded and transactional contracts', () => {
   });
 
   it('gives an unbounded resize separator an explicit finite ARIA maximum', async () => {
-    const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<Row>;
+    const el = (await fixture(html`<lr-table aria-label="Scores"></lr-table>`)) as LyraTable<Row>;
     el.columns = [{ ...columns[0]!, resizable: true, width: '240px' }];
     el.rows = rows;
     await el.updateComplete;
@@ -447,7 +444,7 @@ describe('v9 bounded and transactional contracts', () => {
   it('uses the explicit priority visibility axis and its single event', async () => {
     const container = document.createElement('div');
     container.style.inlineSize = '300px';
-    const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`, {
+    const el = (await fixture(html`<lr-table aria-label="Scores"></lr-table>`, {
       parentNode: container,
     })) as LyraTable<Row>;
     el.columns = [
@@ -470,7 +467,7 @@ describe('v9 bounded and transactional contracts', () => {
   });
 
   it('accepts only explicit sticky and edit-trigger string axes', async () => {
-    const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<Row>;
+    const el = (await fixture(html`<lr-table aria-label="Scores"></lr-table>`)) as LyraTable<Row>;
     el.columns = [
       {
         ...columns[0]!,
@@ -696,8 +693,6 @@ describe('a column missing its cell renderer', () => {
     const originalWarn = console.warn;
     const messages: string[] = [];
     runtime.litIssuedWarnings = new Set();
-    expectDeprecatedUsage('lr-table', 'attribute', 'accessible-label');
-    expectDeprecatedUsage('lr-table', 'property', 'accessibleLabel');
     console.error = () => {};
     console.warn = (...args: unknown[]) => messages.push(args.map(String).join(' '));
     try {

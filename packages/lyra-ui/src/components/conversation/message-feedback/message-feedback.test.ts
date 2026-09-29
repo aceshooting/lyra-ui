@@ -1,4 +1,3 @@
-import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import {
   fixture,
   expect,
@@ -1657,47 +1656,4 @@ it("stops the submit button reacting to a real hover the moment it becomes disab
   } finally {
     await resetMouse();
   }
-});
-
-expectDeprecatedUsage('lr-message-feedback', 'event', 'lr-feedback-submit');
-
-it('retains the deprecated lr-feedback-submit veto alias', async () => {
-  const el = (await fixture(
-    html`<lr-message-feedback></lr-message-feedback>`
-  )) as LyraMessageFeedback;
-  const up = el.shadowRoot!.querySelector(
-    '[part="up-button"]'
-  ) as HTMLButtonElement;
-  const down = el.shadowRoot!.querySelector(
-    '[part="down-button"]'
-  ) as HTMLButtonElement;
-  const details: Array<{
-    readonly submissionId?: unknown;
-    readonly reasonIds: readonly string[];
-  }> = [];
-  let firstFinalize = false;
-  let secondSettlement = true;
-  el.addEventListener('lr-feedback-submit', (event) => {
-    const detail = (event as CustomEvent<{
-      readonly submissionId?: unknown;
-      readonly reasonIds: readonly string[];
-    }>).detail;
-    details.push(detail);
-    event.preventDefault();
-    firstFinalize = el.finalizePendingSubmit(detail.submissionId as string);
-    secondSettlement = el.revertPendingSubmit(detail.submissionId as string);
-  });
-
-  up.click();
-  down.click();
-
-  expect(details).to.have.length(2);
-  expect(typeof details[0]!.submissionId).to.equal('string');
-  expect((details[0]!.submissionId as string).trim().length).to.be.greaterThan(0);
-  expect(details[1]!.submissionId).to.not.equal(details[0]!.submissionId);
-  expect(Object.isFrozen(details[0])).to.be.true;
-  expect(Object.isFrozen(details[0]!.reasonIds)).to.be.true;
-  expect(firstFinalize).to.be.true;
-  expect(secondSettlement).to.be.false;
-  expect(el.pending).to.be.false;
 });

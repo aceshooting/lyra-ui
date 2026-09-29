@@ -50,8 +50,8 @@ assertIsolatedNodeImport(
   `${noBrowserGlobals} await import('@aceshooting/lyra-ui'); ${noBrowserGlobals}`
 );
 assertIsolatedNodeImport(
-  'SSR loader import',
-  `${noBrowserGlobals} await import('@aceshooting/lyra-ui/ssr-loader.js'); ${noBrowserGlobals}`
+  'SSR diagnostics import',
+  `${noBrowserGlobals} await import('@aceshooting/lyra-ui/ssr.js'); ${noBrowserGlobals}`
 );
 assertIsolatedNodeImport(
   'granular registration imports',

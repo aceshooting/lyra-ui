@@ -143,7 +143,7 @@ item hosts, keeps only the first `open` item, and reveals and positions its pane
 
 ```html
 <script type="module">
-  import '@aceshooting/lyra-ui/components/layout/navigation-menu/navigation-menu.js';
+  import '@aceshooting/lyra-ui/components/lr-navigation-menu.js';
 </script>
 
 <header style="display: flex; align-items: center; justify-content: space-between">
@@ -242,7 +242,7 @@ The item does not take the `size` ladder.
 
 ```html
 <script type="module">
-  import '@aceshooting/lyra-ui/components/layout/navigation-menu-item/navigation-menu-item.js';
+  import '@aceshooting/lyra-ui/components/lr-navigation-menu-item.js';
 </script>
 
 <lr-navigation-menu-item>

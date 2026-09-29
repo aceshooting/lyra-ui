@@ -1,4 +1,3 @@
-import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { nativeSvgTitle } from '../../../internal/svg-title.js';
 import { html, svg, nothing, type TemplateResult, type SVGTemplateResult } from 'lit';
@@ -64,8 +63,6 @@ export interface LyraContextMeterSegmentActivateDetail {
 
 export interface LyraContextMeterEventMap {
   'lr-segment-activate-request': CustomEvent<LyraContextMeterSegmentActivateDetail>;
-  /** @deprecated Use lr-segment-activate-request for selection vetoes. */
-  'lr-segment-activate': CustomEvent<LyraContextMeterSegmentActivateDetail>;
 }
 
 export interface ContextMeterSegment {
@@ -238,9 +235,6 @@ function formatCount(n: number, locale: string): string {
  *   `index` in its own `selectedIndices`, so `preventDefault()` hands that state entirely to the
  *   consumer. Never emitted in the default presentational mode. Synchronous reentry is ignored;
  *   replacing the segments, disabling interaction, or disconnecting during dispatch cancels the write.
- * @event lr-segment-activate - Deprecated cancelable veto alias for `lr-segment-activate-request`.
- *   Fires after the canonical request and before selection changes, with the same `detail: { index, label, value }`.
- *   Either event can veto; only vetoing this legacy alias issues a development warning.
  * @status stable
  * @since 4.0.0
  */
@@ -264,7 +258,6 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-segment-activate-request',
-    'lr-segment-activate',
   ]);
 
   static override styles = [LyraElement.styles, srOnly, styles];
@@ -487,11 +480,6 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
         },
         emitRequest: (detail, init: { cancelable: true }) => {
           const request = this.emit('lr-segment-activate-request', detail, init);
-          const alias = this.emit('lr-segment-activate', detail, init);
-          if (alias.defaultPrevented) {
-            warnDeprecatedUsage(this, 'event', 'lr-segment-activate', 'lr-segment-activate-request');
-            request.preventDefault();
-          }
           return request;
         },
         commit: () => {

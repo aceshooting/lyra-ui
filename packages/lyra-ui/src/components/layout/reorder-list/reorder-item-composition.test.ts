@@ -1,5 +1,4 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
-import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './reorder-item.js';
@@ -196,15 +195,10 @@ describe('lr-reorder-item: host aria-label and the deprecated accessible-label a
     expect(labelledText(el, 'move-up-button')).to.equal('Move up Row');
   });
 
-  it('does not warn for a property-only accessibleLabel assignment', async () => {
+  it('ignores a property-only accessibleLabel assignment', async () => {
     const el = (await fixture(html`<lr-reorder-item value="a">Row</lr-reorder-item>`)) as LyraReorderItem;
-    const warnings = await captureDeprecationWarnings(aliasUsage, async () => {
-      el.accessibleLabel = 'Assigned';
-      await el.updateComplete;
-    });
-    expect(warnings).to.have.length(0);
-    expect(labelledText(el, 'move-up-button')).to.equal('Move up Assigned');
+    (el as LyraReorderItem & { accessibleLabel?: string }).accessibleLabel = 'Assigned';
+    await el.updateComplete;
+    expect(labelledText(el, 'move-up-button')).to.equal('Move up Row');
   });
 });
-
-expectDeprecatedUsage('lr-reorder-item', 'property', 'accessibleLabel');

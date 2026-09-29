@@ -100,9 +100,10 @@ or fixed value for derived tokens. Read it rather than guessing a token name.
 @import '@aceshooting/lyra-ui/theme.css';
 ```
 
-With `theme.css` imported, switch modes by putting `class="lr-light"` / `class="lr-dark"` (or
-`data-lr-theme="light"` / `"dark"`) on any ancestor. Each block also sets `color-scheme`, so native
-form controls, scrollbars and the canvas background follow.
+With `theme.css` imported, switch modes by putting `data-lr-mode="light"` or `data-lr-mode="dark"`
+on any ancestor. Each block also sets `color-scheme`, so native form controls, scrollbars and the
+canvas background follow. The older `lr-light` / `lr-dark` classes and `data-lr-theme` marker remain
+accepted for existing applications.
 
 Without `theme.css`, no real `--lr-theme-*` value is set and the token layer's own
 `prefers-color-scheme: dark` fallback applies instead, re-pointing the built-in defaults at a dark
@@ -111,84 +112,37 @@ you supplied.
 
 ### Flipping the mode from JavaScript
 
-`@aceshooting/lyra-ui/theme.js` is a zero-dependency runtime for persisting and applying the choice.
-It imports no components and has no side effects on import, so it can run before the component graph
-loads:
+`@aceshooting/lyra-ui/theme.js` is a zero-dependency runtime for persisting and applying the style
+choices. It imports no components and has no side effects on import, so it can run before the
+component graph loads:
 
 ```ts
-import { setLyraTheme, getLyraTheme } from '@aceshooting/lyra-ui/theme.js';
+import { getLyraStyle, resetLyraStyle, setLyraStyle } from '@aceshooting/lyra-ui/theme.js';
 
-setLyraTheme({ mode: 'dark' });               // omitted fields keep their current value
-setLyraTheme({ accent: '#7c3aed' });          // mode stays 'dark'
-getLyraTheme();                               // → { mode: 'dark', accent: '#7c3aed' }
-setLyraTheme({ mode: 'auto' });               // follows the OS, including later changes
-setLyraTheme({ mode: 'unset', accent: null }); // removes Lyra's override and accent
+setLyraStyle({ mode: 'system' }); // follows prefers-color-scheme; omitted fields are unchanged
+setLyraStyle({ look: 'shadcn', surface: 'glass', density: 'compact', accent: 'sapphire' });
+setLyraStyle({ accent: 'ruby' }); // keeps look, surface, density and mode
+getLyraStyle(); // requested choices plus the currently resolved mode
+resetLyraStyle(['surface', 'density']); // reset only those axes
 ```
 
-`setLyraTheme()` persists to `localStorage['lyra-theme']`, applies to `document.documentElement`,
-and dispatches `lr-theme-change` on `window`. It never throws: where `localStorage` is unavailable
-it degrades to apply-without-persist.
-
-`mode: 'auto'` resolves `prefers-color-scheme` and keeps a media-query listener active;
-`mode: 'unset'` is the distinct no-override state for application-owned cascades. A valid absolute
-CSS `accent` is expanded into the complete brand fill/border/on-color and focus ramp. Generated
-foregrounds meet 4.5:1 contrast against their fills; normal/loud borders and the focus color meet
-3:1 against the shipped mode surface. If an application also replaces the surface input, it must
-recheck or override those paired ramp inputs. Malformed, CSS-wide, environment-relative, and
-unresolved `var()` colors fail closed to `accent: null` instead of leaving an inert hook behind.
-
-Reusable application choices can use the first-class preset entry:
-
-```ts
-import {
-  applyLyraThemePreset,
-  defineLyraThemePreset,
-} from '@aceshooting/lyra-ui/theme/presets.js';
-
-applyLyraThemePreset('sapphire'); // system mode plus the built-in sapphire accent
-applyLyraThemePreset(defineLyraThemePreset({
-  id: 'application-ocean',
-  theme: { mode: 'dark', accent: '#22d3ee' },
-}));
-```
-
-Built-ins cover `system`, explicit `light`/`dark`, `unset`, and four contrast-checked gemstone accents.
-Applying one reflects its stable id to `data-lr-theme-preset` and emits
-`lr-theme-preset-change` with the complete applied snapshot when every requested field survives
-runtime validation. If a field is normalized (an invalid accent fails closed to `null`), only
-`lr-theme-change` fires and no exact preset marker is claimed. Direct `setLyraTheme()` calls clear
-the marker too.
-`defineLyraThemePreset()` validates the lowercase kebab-case id and field shapes, then freezes the
-preset; CSS color syntax is checked by the production runtime when it is applied.
-
-**Runtime token presets.** A preset can also carry a validated `tokens` map of `--lr-theme-*`
-inputs, each a CSS value or a `{ light, dark }` pair. The map is persisted, restored before first
-paint by the no-flash bootstrap, written inline on `<html>`, and contrast-floored against the same
-token families the static contrast gate checks. The [shadcn look](#the-shadcn-look) ships this way
-too, generated from `themes/shadcn.css`:
-
-```ts
-import { applyLyraThemePreset } from '@aceshooting/lyra-ui/theme/presets.js';
-import { LYRA_SHADCN_THEME_PRESET } from '@aceshooting/lyra-ui/theme/presets/shadcn.js';
-
-applyLyraThemePreset(LYRA_SHADCN_THEME_PRESET); // the look; mode, accent and surface are kept
-applyLyraThemePreset('sapphire'); // an accent on top of the look
-```
-
-A look is its own axis: the token preset never changes the mode, accent or surface, and the
-built-in presets never change the look, so applying `'sapphire'` then shadcn or shadcn then
-`'sapphire'` reaches the same state (only the `data-lr-theme-preset` marker, the last applied id,
-differs). Use the stylesheet instead for light/dark islands or an application-owned `.dark` class.
+Look, surface, density, mode and accent are independent choices. `system` follows
+`prefers-color-scheme`; `unset` leaves mode selection to the surrounding application. `null` resets
+the named field to its default, and omitted fields remain unchanged. `setLyraStyle()` persists the
+whole-page selection and emits `lr-style-change`; `getLyraStyle()` reports the requested choices and
+resolved mode. A custom look can be validated with `defineLyraLook({ id, tokens })`, then selected
+through the same `look` field. Optional look, surface and accent stylesheets must be imported when
+their CSS forms are used.
 
 For a no-flash boot, `lyraThemeBootstrap` is a self-contained IIFE **string** meant to be inlined
-into a `<script>` in `<head>` before any stylesheet, so the persisted theme lands on the root
-element before first paint.
+into a `<script>` in `<head>` before any stylesheet, so the persisted style lands on the root element
+before first paint.
 
 `createLyraThemeBootstrap({ storageKey })` produces the same pre-paint script for an
 application-owned storage key. Generated option literals escape HTML script terminators; under a
 Content Security Policy, give the inline script the nonce or hash required by the application.
-An empty or malformed record receives the runtime's `auto`/no-accent default; blocked storage is a
-safe no-op.
+An empty or malformed record receives the runtime's system/no-accent default; blocked storage is a
+safe no-op. The reader also preserves supported saved preferences from the earlier record format.
 
 ### Invalidating canvas theme values
 
@@ -242,71 +196,36 @@ from the first statement the browser sees is appended at the end, after `lr-over
 
 ## The shadcn look
 
-One more import restyles every component after [shadcn/ui](https://ui.shadcn.com)'s
-"new-york" style on its Neutral base colour:
+The optional shadcn look is an original Lyra style informed by shadcn/ui's "new-york" Neutral
+palette. Import the base and look stylesheets, then select the look with the independent style API:
 
 ```css
 @import '@aceshooting/lyra-ui/theme.css';
-@import '@aceshooting/lyra-ui/themes/shadcn.css';
+@import '@aceshooting/lyra-ui/looks/shadcn.css';
+@import '@aceshooting/lyra-ui/surfaces/glass.css';
+@import '@aceshooting/lyra-ui/density.css';
+@import '@aceshooting/lyra-ui/accents.css';
 ```
 
-The preset only sets `--lr-theme-*` inputs, inside the `lr-theme-preset` layer: it beats
-`theme.css` whichever loads first, and any unlayered rule of yours still beats both. Its light block
-also answers to `.light` and its dark block to `.dark`, so an application that toggles `.dark` on
-`<html>` the shadcn way gets Lyra's dark mode with no extra wiring. `.lr-light`/`.lr-dark` and
-`data-lr-theme` keep working, and a nested `.dark` region inside a light page is dark on its own.
-(`theme.css` itself never learns `.dark`/`.light`; those class names may already mean something else
-in your application. So each preset block also repeats `theme.css`'s own value, for that mode, of the
-inputs the preset leaves alone — status colours, scrims, chart and terminal colours — and `.dark`
-switches those too.)
+```ts
+import { setLyraStyle } from '@aceshooting/lyra-ui/theme.js';
 
-What changes: a white/near-black neutral surface family, monochrome primary (the default
-`<lr-button>` renders shadcn's black primary in light, near-white in dark), `0.5rem` radii, `text-sm`
-body text, `h-9` controls, a 3px focus ring with no offset, and Tailwind's shadow geometry. Fonts are
-named, not shipped: `Geist`, then `Inter`, then the system stack.
-
-**Deliberate deviations, each keeping a contrast guarantee shadcn does not make:**
-
-- **Control borders** are `#919191` / `#646464`, the lightest greys at 3:1 against both the page and
-  the raised surface. shadcn's own hairline (`#e5e5e5`, white at 10% in dark) is kept for decorative
-  edges only, through `--lr-color-border-subtle` (below).
-- **Focus** is an opaque grey (`#8b8b8b` / `#787878`, 3.41:1 / 4.48:1). shadcn's half-transparent
-  ring measures about 1.5:1 / 1.9:1.
-- **Danger** is `#d6000a` in light, shadcn's red a notch darker, because components also set text in
-  the loud danger colour — on the page and on the quiet danger tint of a callout, where `#e7000b`
-  measures 4.10:1. In dark it is a light red (`#ff6467`) under near-black text rather than white on a
-  dark red.
-- **Charts** keep Lyra's validated series colours; two of shadcn's chart colours fall below 3:1 on
-  white.
-- **Hover and press** mix toward a mid grey rather than toward the text colour. shadcn's primary *is*
-  the text colour, so the default mix would not move the default button at all.
-- **Code-fence syntax colouring** (`<lr-code-block>`/`<lr-markdown>`'s keyword/string/comment tokens)
-  is the one surface this preset does not repaint: it stays GitHub's light/dark Shiki palette in
-  both modes. Only which of the two fixed themes paints tracks the preset (through the same
-  light/dark switch every other surface here reads); there is no property yet to substitute a
-  different Shiki theme pair. Unlike charts, this one carries no `--lr-theme-*` input at all — a
-  deliberate scope line, not an oversight.
-
-**Accents still work.** `setLyraTheme({ accent })` writes its ramp inline on `<html>`, which beats
-every layer, and the preset aliases the neutral role's loud slots to the brand role's — so a gemstone
-accent recolours the default button, checked controls and the focus ring, while the quiet greys
-(shadcn's secondary and muted) stay grey. One caveat: the runtime derives an accent's ramp for the
-mode *it* resolved, so an application that uses accents should switch modes with
-`setLyraTheme({ mode })` (which writes `data-lr-theme`, honoured by the preset), not by toggling
-`.dark` alone. Tailwind users can point their `dark:` variant at `[data-lr-theme=dark]`.
-
-**`--lr-color-border-subtle`** is the decorative border tier the preset uses for its hairlines.
-Components draw dividers, card, table and section edges with it — never the only visible boundary of
-a control. Unset (Lyra's own look), it resolves to `--lr-color-border`, so nothing changes; set
-`--lr-theme-color-surface-border-subtle` to give decoration its own lighter tone. Form controls never
-read it.
-
-The preset sets theme inputs only, never a component hook. For shadcn's raised sidebar tone, opt
-`<lr-app-rail>` in with one line:
-
-```css
-lr-app-rail { --lr-app-rail-bg: var(--lr-color-surface-raised); }
+setLyraStyle({ look: 'shadcn', mode: 'system', surface: 'glass', density: 'comfortable', accent: 'sapphire' });
 ```
+
+The look stylesheet provides the CSS form; the `look` choice is reflected through
+`data-lr-look="shadcn"`. Keep mode, surface, density and accent as independent choices. For a scoped
+preview, load the same sheets in the owning shadow root and pass a `LyraStyleScopeChoices` object to
+`applyLyraStyleScope(element, styleChoices)`.
+
+The look uses a neutral surface family, monochrome primary controls, rounded geometry and compact
+control sizing. Lyra retains contrast-checked control borders, focus indicators, danger colors and
+chart palettes; these deliberate differences keep boundaries and text usable across modes. Fonts
+such as Geist and Inter are named fallback preferences, not bundled files. Code highlighting keeps
+its selected Shiki palette independently of the component look.
+
+A named accent still applies independently and recolors the brand-linked controls and focus color.
+Use `accentBackground` for a literal surface color; `accent` selects a named or custom brand ramp.
 
 Try it in the `Look` toolbar menu on any story, or compare both looks side by side in
 [Theming/shadcn](?path=/story/theming-shadcn--shadcn).

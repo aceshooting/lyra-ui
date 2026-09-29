@@ -38,6 +38,11 @@ import {
   validateBundleBudgetPolicy,
 } from "./bundle-budget-policy.mjs";
 import { positiveInitialMarginalGzipBytes } from "./bundle-metrics.mjs";
+import { bundleCssMeasurement } from "./bundle-css-entry.mjs";
+import {
+  cssBudgetFinding,
+  validateCssBundleConfig,
+} from "./bundle-css-policy.mjs";
 
 const packageDir = fileURLToPath(new URL("..", import.meta.url));
 const budgetsPath = join(packageDir, "scripts", "bundle-budgets.json");
@@ -54,16 +59,35 @@ const exclusionClaimsPath = join(
 const statsPath = join(packageDir, "scripts", "bundle-stats.json");
 const manifestPath = join(packageDir, "custom-elements.json");
 const taxonomyPath = join(packageDir, "scripts", "component-taxonomy.json");
+const cssBudgetsPath = join(packageDir, "scripts", "bundle-css-budgets.json");
 const arguments_ = process.argv.slice(2);
+const cssReview = arguments_.includes("--css-review");
+const cssSourceArguments = arguments_.filter((argument) =>
+  argument.startsWith("--css-source-root=")
+);
 const unknownArguments = arguments_.filter(
   (argument) =>
     argument !== "--write-stats" &&
     argument !== "--print-budget-review" &&
     argument !== "--exclusion-claims-only" &&
+    argument !== "--css-review" &&
+    !argument.startsWith("--css-source-root=") &&
     !argument.startsWith("--emit=")
 );
 if (unknownArguments.length > 0)
   throw new Error(`Unknown argument: ${unknownArguments[0]}`);
+if (cssSourceArguments.length > 1) throw new Error("Only one --css-source-root=<dir> argument is allowed");
+if (cssSourceArguments.length > 0 && !cssReview) {
+  throw new Error("--css-source-root is allowed only with the CSS-only --css-review mode");
+}
+if (cssReview && arguments_.some((argument) =>
+  argument !== "--css-review" && !argument.startsWith("--css-source-root=")
+)) {
+  throw new Error("--css-review is a CSS-only mode and cannot be combined with other flags");
+}
+const cssSourceRoot = cssSourceArguments.length > 0
+  ? resolve(cssSourceArguments[0].slice("--css-source-root=".length))
+  : packageDir;
 const writeStats = arguments_.includes("--write-stats");
 const printBudgetReview = arguments_.includes("--print-budget-review");
 const exclusionClaimsOnly = arguments_.includes("--exclusion-claims-only");
@@ -122,7 +146,6 @@ const requiredBudgetCategories = [
   "dist/hydration.js",
   "dist/ssr.js",
   "dist/ssr/all.js",
-  "dist/ssr-loader.js",
   "dist/autoloader.js",
   "dist/autoloader-cdn.js",
   ...[
@@ -149,6 +172,10 @@ for (const aggregate of ["$componentP95GzipKb", "$componentMaxGzipKb"]) {
 }
 
 const pkg = JSON.parse(readFileSync(join(packageDir, "package.json"), "utf8"));
+const cssBudgets = JSON.parse(readFileSync(cssBudgetsPath, "utf8"));
+const cssMeasurements = validateCssBundleConfig(cssBudgets, pkg.exports, {
+  allowUnreviewed: cssReview,
+});
 const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
 const taxonomy = JSON.parse(readFileSync(taxonomyPath, "utf8"));
 const publicTags = new Set(
@@ -342,6 +369,39 @@ const bundleInitialRoute = async (name, imports) => {
 // by component-integration.mjs.
 const gzipBytesOf = (contents) => gzipSync(contents, { level: 9 }).length;
 
+const measureCssEntries = async (sourceRoot) => {
+  for (const measurement of cssMeasurements.values()) {
+    for (const entry of measurement.imports) {
+      const file = join(sourceRoot, entry);
+      if (!existsSync(file)) {
+        throw new Error(`${measurement.id}: missing CSS input ${file}`);
+      }
+    }
+  }
+  const measurements = [];
+  for (const measurement of cssMeasurements.values()) {
+    measurements.push(await bundleCssMeasurement(esbuild, sourceRoot, measurement));
+  }
+  return measurements;
+};
+
+if (cssReview) {
+  const review = await measureCssEntries(cssSourceRoot);
+  const measurementPackageJson = JSON.parse(readFileSync(join(cssSourceRoot, "package.json"), "utf8"));
+  if (measurementPackageJson.name !== pkg.name) {
+    throw new Error(`CSS review source package must be ${pkg.name}`);
+  }
+  console.log(JSON.stringify({
+    packageName: measurementPackageJson.name,
+    packageVersion: measurementPackageJson.version,
+    nodeVersion: process.version,
+    esbuildVersion: esbuild.version,
+    sourceRoot: cssSourceRoot,
+    measurements: review,
+  }, null, 2));
+  process.exit(0);
+}
+
 const toKb = (bytes) => (bytes / 1024).toFixed(1);
 
 const errors = [];
@@ -361,6 +421,7 @@ if (exclusionClaimsOnly) {
     ...entries,
     ...initialBaselineEntries,
     ...Object.keys(initialMarginalBudgets),
+    ...[...cssMeasurements.values()].flatMap((measurement) => measurement.imports),
   ])].filter(
     (entry) => !existsSync(join(packageDir, entry))
   );
@@ -372,6 +433,15 @@ if (exclusionClaimsOnly) {
     );
     process.exitCode = 1;
   } else {
+    const cssMeasured = await measureCssEntries(packageDir);
+    for (const { id, kind, imports, minBytes, gzipBytes } of cssMeasured) {
+      const budgetKb = cssBudgets.$maximumAllowedGzipKb[id];
+      const line = `css/${id}: min ${toKb(minBytes)} KB, gzip ${toKb(gzipBytes)} KB ` +
+        `(budget ${budgetKb} KB; ${kind}; ${imports.join(" + ")})`;
+      const finding = cssBudgetFinding(id, gzipBytes, cssBudgets.$maximumAllowedGzipKb);
+      if (finding) errors.push(`${line} -- ${finding}`);
+      else console.log(line);
+    }
     const initialBaseline = await bundleInitialRoute("baseline", initialBaselineEntries);
     const initialMeasurements = [];
     for (const entry of Object.keys(initialMarginalBudgets).sort()) {
@@ -644,7 +714,8 @@ if (exclusionClaimsOnly) {
     } else {
       console.log(
         `bundle-size budgets verified: ${measured.length} entries within scripts/bundle-budgets.json ` +
-          `and ${initialMeasurements.length} splitting-aware initial routes ` +
+          `${cssMeasured.length} CSS measurements within scripts/bundle-css-budgets.json, ` +
+          `${initialMeasurements.length} splitting-aware initial routes ` +
           `(${optionalPeers.length} optional peers externalized)`
       );
     }

@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecated event** `lr-retry` since `22.0.0`; use event `addEventListener('lr-retry-request', event => { /* Call preventDefault() to veto the proposed action. */ })`; removal not before `24.0.0` — Cancelable proposals use request event names. The historical event remains a veto alias during its compatibility window.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 29 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -62,11 +62,9 @@ before 9.0.0 — the library's only abbreviated event prefix. `<lr-knowledge-bas
 re-emitted them under the `lr-source-*` names, so a host listening on the admin shell needs no
 change; a host listening directly on `<lr-knowledge-base>` renames its four listeners.
 `lr-retry-request` (`detail: null`, cancelable) proposes a retry when the nested table's built-in
-retry button is activated. It fires before the deprecated cancelable `lr-retry` alias (also
-`detail: null`); preventing either event keeps both the parent and table in the error state.
-Without a veto, the default action clears `error`. The alias remains supported until removal no
-earlier than 24.0.0 and warns only when vetoed. This component contains both nested table retry
-events and re-proposes its own pair, so hosts receive each parent event once.
+retry button is activated. Preventing it keeps both the parent and table in the error state.
+Without a veto, the default action clears `error`. This component contains the nested table request
+and re-proposes its own canonical request, so hosts receive the parent event once.
 
 **Slots:** `error` — replaces the nested table's built-in failed-load state, including its retry
 button, while `error` is set.

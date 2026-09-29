@@ -121,7 +121,7 @@ retried; a stale response never paints over a newer `src`.
   Loading navigation…
 </lr-include>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/viewers/include/include.js";
+  import "@aceshooting/lyra-ui/components/lr-include.js";
 
   const include = document.querySelector("#navigation");
   include.addEventListener("lr-include-error", (event) => {

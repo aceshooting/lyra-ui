@@ -14,7 +14,7 @@
       "dark": "#202e39"
     },
     "--lr-theme-color-text-normal": {
-      "light": "#172b3a",
+        "light": "#10202c",
       "dark": "#eef5fa"
     },
     "--lr-theme-color-text-quiet": {
@@ -280,7 +280,7 @@
     },
     "--lr-theme-color-chart-diverging-2": {
       "light": "#f2f5f8",
-      "dark": "#283d4c"
+        "dark": "#1f2931"
     },
     "--lr-theme-color-chart-diverging-3": {
       "light": "#164fa3",

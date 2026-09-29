@@ -34,7 +34,7 @@ import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_filterBarActiveFilters, LYRA_D
 // lean: registering only `<lr-filter-bar>` and leaving every composed control's own registration
 // to whichever entry, default or per-control, the consumer separately imports. `filter-bar.ts`
 // (the default entry) keeps importing every composed control's own registration module directly,
-// so an existing `import '@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.js'`
+// so an existing `import '@aceshooting/lyra-ui/components/lr-filter-bar.js'`
 // keeps registering everything it always has.
 
 /** Which existing Lyra input family renders a given filter -- this component composes these,

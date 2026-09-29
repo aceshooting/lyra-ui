@@ -1255,24 +1255,17 @@ test('the final analyzer plugin projects central metadata into generated CEM', (
   assert.equal(manifest.modules[0].declarations[0].since, '4.0.0');
 });
 
-test('a deprecated message-parts property leaves its native aria-label current', () => {
-  const plugin = cemConfig.plugins.find((entry) => entry.name === 'lr-current-native-attribute-of-deprecated-property');
-  const declaration = {
-    tagName: 'lr-message-parts',
-    members: [{ name: 'accessibleLabel', attribute: 'aria-label', deprecated: 'Use native aria-label.' }],
-    attributes: [
-      { name: 'aria-label', fieldName: 'accessibleLabel', deprecated: 'Use native aria-label.' },
-      { name: 'accessible-label', deprecated: 'Use native aria-label.' },
-    ],
-  };
-  const other = { tagName: 'lr-other', attributes: [{ name: 'aria-label', deprecated: 'Unrelated notice.' }] };
-  const manifest = { modules: [{ declarations: [declaration, other] }] };
-  plugin.packageLinkPhase({ customElementsManifest: manifest });
-  assert.ok(declaration.members[0].deprecated);
-  assert.equal(declaration.attributes[0].deprecated, false);
-  assert.ok(declaration.attributes[1].deprecated);
-  assert.ok(other.attributes[0].deprecated);
-  assert.throws(() => plugin.packageLinkPhase({ customElementsManifest: manifest }), /requires the deprecated accessibleLabel mapping/);
+test('message-parts exposes native aria-label without a retired property mapping', () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(packageDir, 'custom-elements.json'), 'utf8'));
+  const declaration = manifest.modules.flatMap((module) => module.declarations ?? [])
+    .find((entry) => entry.tagName === 'lr-message-parts');
+  assert.ok(declaration);
+  const attribute = declaration.attributes?.find((entry) => entry.name === 'aria-label');
+  assert.ok(attribute);
+  assert.equal(attribute.type.text, 'string | null');
+  assert.equal(Boolean(attribute.deprecated), false);
+  assert.equal(attribute.fieldName, undefined);
+  assert.equal(declaration.members?.some((entry) => entry.name === 'accessibleLabel'), false);
 });
 
 test('the registration analyzer records module-evaluation definitions but ignores lazy helper calls', () => {

@@ -57,7 +57,7 @@ filtered run order; the host computes every metric and owns evaluation execution
 **Slots:** none. **Optional peer deps:** none.
 
 ```ts
-import "@aceshooting/lyra-ui/components/retrieval/rag-eval-dashboard/rag-eval-dashboard.js";
+import "@aceshooting/lyra-ui/components/lr-rag-eval-dashboard.js";
 ```
 
 `lr-grounding-summary` and `lr-rag-answer` now accept `GroundingAssessment.claims` and expose

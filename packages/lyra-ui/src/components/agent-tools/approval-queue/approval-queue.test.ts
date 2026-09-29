@@ -1,5 +1,4 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
-import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import './approval-queue.js';
@@ -619,30 +618,3 @@ it('renders no limit notice when requests stays within the render ceiling', asyn
   const el = (await fixture(html`<lr-approval-queue .requests=${requests}></lr-approval-queue>`)) as LyraApprovalQueue;
   expect((el.shadowRoot!.querySelector('[part="limit"]')) == null).to.be.true;
 });
-
-expectDeprecatedUsage('lr-approval-queue', 'event', 'lr-approval-decision');
-
-it('retains the deprecated lr-approval-decision veto alias', async () => {
-    const el = (await fixture(html`
-      <lr-approval-queue selected-invocation-id="call-1" open .requests=${requests}></lr-approval-queue>
-    `)) as LyraApprovalQueue;
-    const dialog = el.shadowRoot!.querySelector('lr-tool-approval-dialog')!;
-    el.addEventListener('lr-approval-decision', (event) => event.preventDefault());
-
-    const approve = new CustomEvent('lr-approve-request', {
-      bubbles: true,
-      composed: true,
-      cancelable: true,
-      detail: { args: requests[0]!.args },
-    });
-    dialog.dispatchEvent(approve);
-    expect(approve.defaultPrevented).to.be.true;
-
-    const deny = new CustomEvent('lr-deny-request', {
-      bubbles: true,
-      composed: true,
-      cancelable: true,
-    });
-    dialog.dispatchEvent(deny);
-    expect(deny.defaultPrevented).to.be.true;
-  });

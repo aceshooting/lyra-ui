@@ -1,4 +1,3 @@
-import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './table.js';
 import '../../forms/select/select.js';
@@ -11,8 +10,6 @@ import { installTableTestHooks, TableOpenShellElement, sinkElement, sinkTexts, t
 installTableTestHooks();
 
 
-expectDeprecatedUsage('lr-table', 'attribute', 'accessible-label');
-expectDeprecatedUsage('lr-table', 'property', 'accessibleLabel');
 
 
 it('renders grouped row sections without making group headers focus stops', async () => {
@@ -290,7 +287,7 @@ it('rehomes the active column through the public reveal-columns state when a pri
   ];
   const wrapper = (await fixture(html`
     <div dir="rtl">
-      <lr-table accessible-label="Scores" priority-columns-visible style="display:block;width:300px"></lr-table>
+      <lr-table aria-label="Scores" priority-columns-visible style="display:block;width:300px"></lr-table>
     </div>
   `)) as HTMLElement;
   const el = wrapper.querySelector('lr-table') as LyraTable<Row>;
@@ -477,7 +474,7 @@ it('omits aria-label on the shadow-DOM grid element when the host has none', asy
   expect(grid.hasAttribute('aria-label')).to.be.false;
 });
 
-describe('accessible name (accessibleLabel / caption / dev warning)', () => {
+describe('accessible name (native aria-label / caption / dev warning)', () => {
   let originalWarn: typeof console.warn;
   let originalIssuedWarnings: Set<string> | undefined;
   let warnings: unknown[][];
@@ -488,8 +485,6 @@ describe('accessible name (accessibleLabel / caption / dev warning)', () => {
     const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
     originalIssuedWarnings = runtime.litIssuedWarnings;
     runtime.litIssuedWarnings = new Set();
-    expectDeprecatedUsage('lr-table', 'attribute', 'accessible-label');
-    expectDeprecatedUsage('lr-table', 'property', 'accessibleLabel');
   });
   afterEach(() => {
     console.warn = originalWarn;
@@ -498,8 +493,8 @@ describe('accessible name (accessibleLabel / caption / dev warning)', () => {
     else runtime.litIssuedWarnings = originalIssuedWarnings;
   });
 
-  it('names the grid from accessibleLabel and only warns about the deprecated spelling', async () => {
-    const el = (await fixture(html`<lr-table accessible-label="Match scores"></lr-table>`)) as LyraTable<Row>;
+  it('names the grid from the host aria-label', async () => {
+    const el = (await fixture(html`<lr-table aria-label="Match scores"></lr-table>`)) as LyraTable<Row>;
     el.columns = columns;
     el.rows = rows;
     await el.updateComplete;
@@ -509,8 +504,6 @@ describe('accessible name (accessibleLabel / caption / dev warning)', () => {
   });
 
   it('renders a caption and points the grid at it via aria-labelledby when no other name exists', async () => {
-    // Set at construction so the caption is present on the first render (firstUpdated's warning
-    // check runs then); a property assigned after fixture() would arrive too late.
     const el = (await fixture(html`<lr-table caption="Quarterly results"></lr-table>`)) as LyraTable<Row>;
     el.columns = columns;
     el.rows = rows;
@@ -532,7 +525,6 @@ describe('accessible name (accessibleLabel / caption / dev warning)', () => {
     second.columns = columns;
     second.rows = rows;
     await second.updateComplete;
-    // Force another render — the shared diagnostic must not repeat.
     first.rows = [...rows];
     await first.updateComplete;
     expect(warnings.length).to.equal(1);
@@ -549,23 +541,9 @@ describe('accessible name (accessibleLabel / caption / dev warning)', () => {
     expect(warnings.filter(args => !String(args[0]).includes('deprecated')).length).to.equal(0);
   });
 
-  it('prefers accessibleLabel over caption for the name (no aria-labelledby)', async () => {
-    const el = (await fixture(html`<lr-table accessible-label="Primary"></lr-table>`)) as LyraTable<Row>;
-    el.caption = 'Secondary';
-    el.columns = columns;
-    el.rows = rows;
-    await el.updateComplete;
-    const grid = el.shadowRoot!.querySelector('[part="table"]') as HTMLElement;
-    expect(grid.getAttribute('aria-label')).to.equal('Primary');
-    expect(grid.hasAttribute('aria-labelledby')).to.be.false;
-  });
-
-  it('treats an explicitly empty accessibleLabel as a real override, distinct from an omitted one', async () => {
-    // An explicit empty override renders a genuinely blank aria-label and still suppresses the
-    // caption aria-labelledby fallback -- unlike an omitted accessibleLabel, which lets caption
-    // name the grid instead.
+  it('preserves an explicitly empty host aria-label over the caption fallback', async () => {
     const el = (await fixture(
-      html`<lr-table accessible-label="" caption="Quarterly results"></lr-table>`,
+      html`<lr-table aria-label="" caption="Quarterly results"></lr-table>`,
     )) as LyraTable<Row>;
     el.columns = columns;
     el.rows = rows;
@@ -575,27 +553,19 @@ describe('accessible name (accessibleLabel / caption / dev warning)', () => {
     expect(grid.hasAttribute('aria-labelledby')).to.be.false;
   });
 
-  it('keeps the host aria-label ahead of the compatibility property, including after attribute changes', async () => {
+  it('keeps the host aria-label ahead of the caption, including after attribute changes', async () => {
     const el = (await fixture(
-      html`<lr-table accessible-label="Primary" aria-label="Host"></lr-table>`,
+      html`<lr-table aria-label="Host" caption="Caption"></lr-table>`,
     )) as LyraTable<Row>;
     el.columns = columns;
     el.rows = rows;
     await el.updateComplete;
     const grid = el.shadowRoot!.querySelector('[part="table"]') as HTMLElement;
     expect(grid.getAttribute('aria-label')).to.equal('Host');
-
-    el.accessibleLabel = 'Typed';
-    await el.updateComplete;
     el.setAttribute('aria-label', 'Changed host');
     await el.updateComplete;
-    expect(el.accessibleLabel).to.equal('Typed');
     expect(grid.getAttribute('aria-label')).to.equal('Changed host');
-
-    el.accessibleLabel = undefined;
-    await el.updateComplete;
-    expect(grid.getAttribute('aria-label')).to.equal('Changed host');
-    expect(warnings.filter(args => !String(args[0]).includes('deprecated')).length).to.equal(0);
+    expect(grid.hasAttribute('aria-labelledby')).to.be.false;
   });
 });
 
@@ -655,7 +625,7 @@ describe('localization', () => {
     expect(spinner.getAttribute("aria-label")).to.equal(
       "Chargement des lignes"
     );
-    expect(spinner.hasAttribute("accessible-label")).to.be.false;
+    expect(spinner.hasAttribute("aria-label")).to.be.false;
     expect(spinner.textContent).to.contain("Chargement des lignes");
   });
 
@@ -959,7 +929,7 @@ describe('grid keyboard navigation edges', () => {
   const grid = async (dir = 'ltr'): Promise<LyraTable<Row>> => {
     const wrapper = (await fixture(html`
       <div dir=${dir}>
-        <lr-table accessible-label="Scores" .columns=${columns} .rows=${rows}></lr-table>
+        <lr-table aria-label="Scores" .columns=${columns} .rows=${rows}></lr-table>
       </div>
     `)) as HTMLElement;
     const el = wrapper.querySelector('lr-table') as LyraTable<Row>;
@@ -984,7 +954,7 @@ describe('grid keyboard navigation edges', () => {
   };
 
   it('clamps a lost roving row stop to the same list position, then to null once rows are fully empty', async () => {
-    const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<Row>;
+    const el = (await fixture(html`<lr-table aria-label="Scores"></lr-table>`)) as LyraTable<Row>;
     el.columns = columns;
     el.rows = [
       { id: 'a', name: 'Alpha', score: 1 },
@@ -1052,7 +1022,7 @@ describe('grid keyboard navigation edges', () => {
     ];
     const wrapper = (await fixture(html`
       <div dir="rtl">
-        <lr-table accessible-label="Scores" .columns=${threeColumns} .rows=${rows}></lr-table>
+        <lr-table aria-label="Scores" .columns=${threeColumns} .rows=${rows}></lr-table>
       </div>
     `)) as HTMLElement;
     const el = wrapper.querySelector('lr-table') as LyraTable<Row>;
@@ -1107,7 +1077,7 @@ describe('grid keyboard navigation edges', () => {
     ];
     const wrapper = (await fixture(html`
       <div dir="rtl">
-        <lr-table accessible-label="Scores" page-size="2" page="2"></lr-table>
+        <lr-table aria-label="Scores" page-size="2" page="2"></lr-table>
       </div>
     `)) as HTMLElement;
     const el = wrapper.querySelector('lr-table') as LyraTable<Row>;
@@ -1130,7 +1100,7 @@ describe('grid keyboard navigation edges', () => {
 
   it('clears an RTL roving row stop when a controlled filter removes every match', async () => {
     const wrapper = (await fixture(html`
-      <div dir="rtl"><lr-table accessible-label="Scores" filterable></lr-table></div>
+      <div dir="rtl"><lr-table aria-label="Scores" filterable></lr-table></div>
     `)) as HTMLElement;
     const el = wrapper.querySelector('lr-table') as LyraTable<Row>;
     el.columns = columns;
@@ -1198,7 +1168,7 @@ describe('grid keyboard navigation edges', () => {
   });
 
   it('excludes a row whose rowKey callback throws instead of failing the whole render', async () => {
-    const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<Row>;
+    const el = (await fixture(html`<lr-table aria-label="Scores"></lr-table>`)) as LyraTable<Row>;
     el.columns = columns;
     el.rows = [
       { id: 'a', name: 'Alpha', score: 1 },
@@ -1220,7 +1190,7 @@ describe('grid keyboard navigation edges', () => {
     const wrapper = (await fixture(html`
       <div>
         <lr-table
-          accessible-label="Scores"
+          aria-label="Scores"
           loading
           loading-appearance="skeleton"
           .columns=${columns}
@@ -1246,7 +1216,7 @@ describe('grid keyboard navigation edges', () => {
 
   it('does not move focus (no crash) on ArrowUp from the first row when every column is priority-hidden', async () => {
     const el = (await fixture(
-      html`<lr-table accessible-label="Scores" style="display:block;width:300px;"></lr-table>`
+      html`<lr-table aria-label="Scores" style="display:block;width:300px;"></lr-table>`
     )) as LyraTable<Row>;
     el.columns = [
       {
@@ -1305,7 +1275,7 @@ it('activates the focused row from Enter and Space', async () => {
 });
 
 it('gives host aria-label precedence over the compatibility name and caption', async () => {
-  const el = await fixture<LyraTable<Row>>(html`<lr-table aria-label="Host name" accessible-label="Old name" caption="Caption" .columns=${columns} .rows=${rows}></lr-table>`);
+  const el = await fixture<LyraTable<Row>>(html`<lr-table aria-label="Host name" aria-label="Old name" caption="Caption" .columns=${columns} .rows=${rows}></lr-table>`);
   const owner = () => el.shadowRoot!.querySelector('[role="grid"]')!;
   expect(owner().getAttribute('aria-label')).to.equal('Host name');
   el.ariaLabel = '';

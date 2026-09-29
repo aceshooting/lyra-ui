@@ -1,3 +1,4 @@
+import { maxCssTime } from '../../../internal/css-motion-time.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import type { Placement } from '@floating-ui/dom';
@@ -58,19 +59,6 @@ const PLACEMENTS: ReadonlySet<string> = new Set([
  *  directly to the popup's box, so guessing at a typo would resize it for the wrong reason. */
 const AUTO_SIZE_AXES: ReadonlySet<string> = new Set(['horizontal', 'vertical', 'both']);
 const SYNC_AXES: ReadonlySet<string> = new Set(['width', 'height', 'both']);
-
-function parseCssTime(value: string): number {
-  const trimmed = value.trim();
-  if (trimmed.endsWith('ms')) return Number.parseFloat(trimmed);
-  if (trimmed.endsWith('s')) return Number.parseFloat(trimmed) * 1000;
-  return 0;
-}
-
-/** The longest of a possibly comma-separated `transition-duration`/`-delay` list, mirroring
- *  `<lr-toast>`'s own `maxCssTime`. */
-function maxCssTransitionTime(value: string): number {
-  return Math.max(0, ...value.split(',').map(parseCssTime).filter(Number.isFinite));
-}
 
 interface ResolvedPopupAnchor {
   /** The reference passed to Floating UI. Plain rects are normalized into a virtual element. */
@@ -349,8 +337,8 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
     if (popup && view && !prefersReducedMotion(this)) {
       const computed = view.getComputedStyle(popup);
       const durationMs =
-        maxCssTransitionTime(computed.transitionDuration) +
-        maxCssTransitionTime(computed.transitionDelay);
+        maxCssTime(computed.transitionDuration) +
+        maxCssTime(computed.transitionDelay);
       if (durationMs > 0) {
         await new Promise<void>((resolve) => {
           let settled = false;

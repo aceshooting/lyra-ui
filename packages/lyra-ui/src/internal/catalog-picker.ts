@@ -1,3 +1,4 @@
+import { maxCssTime } from './css-motion-time.js';
 import { AnchoredPopoverController } from './anchored-popover-controller.js';
 import { deferredPlace } from './anchored-overlay-runtime.js';
 import { resolveIntlLocale } from './intl-cache.js';
@@ -5,20 +6,6 @@ import { prefersReducedMotion } from './motion.js';
 import { dispatchNativeEvent, relayNativeEvent } from './native-event-relay.js';
 import { activateNonmodalOverlay, type OverlayHandle } from './nonmodal-overlay-manager.js';
 import { resolveEffectivePositioningStrategy } from './positioning-strategy.js';
-
-function parseCssTime(value: string): number {
-  const trimmed = value.trim();
-  if (trimmed.endsWith('ms')) return Number.parseFloat(trimmed);
-  if (trimmed.endsWith('s')) return Number.parseFloat(trimmed) * 1000;
-  return 0;
-}
-
-/** The longest comma-separated transition time in a `transitionDuration`/`transitionDelay`
- *  computed-style pair -- mirrors `toast-item.class.ts`'s identical helper for its own exit
- *  transition wait. */
-function maxCssTime(value: string): number {
-  return Math.max(0, ...value.split(',').map(parseCssTime).filter(Number.isFinite));
-}
 
 /** The common public row vocabulary for catalog-backed controls. */
 export interface LyraCatalogEntry {

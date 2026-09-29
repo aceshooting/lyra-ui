@@ -1,6 +1,5 @@
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
 import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
-import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -55,10 +54,6 @@ export interface LyraToolApprovalDialogCloseDetail {
 }
 
 export interface LyraToolApprovalDialogEventMap {
-  /** @deprecated Use `lr-deny-request`. */
-  'lr-deny': LyraToolApprovalDialogEventMap['lr-deny-request'];
-  /** @deprecated Use `lr-approve-request`. */
-  'lr-approve': LyraToolApprovalDialogEventMap['lr-approve-request'];
   'lr-approve-request': CustomEvent<{ args: unknown }>;
   'lr-deny-request': CustomEvent<null>;
   'lr-close': CustomEvent<LyraToolApprovalDialogCloseDetail>;
@@ -148,13 +143,11 @@ export interface LyraToolApprovalDialogEventMap {
  * @customElement lr-tool-approval-dialog
  * @slot footer - Optional supplementary content (e.g. a "remember this
  * choice" checkbox), rendered before the built-in Deny/Edit/Approve buttons.
- * @event lr-approve - Deprecated cancelable compatibility alias of `lr-approve-request`.
  * @event lr-approve-request - The call was approved. `detail: { args }` — the
  * current, already-parsed arguments object: the original `args` prop, or (if
  * an edit was in progress) the user's edited-and-validated version. Cancelable: a listener
  * calling `preventDefault()` sets `pendingAction` to `'approve'` instead of closing. Otherwise always
  * followed by `lr-close` with reason `'approve'`.
- * @event lr-deny - Deprecated cancelable compatibility alias of `lr-deny-request`.
  * @event lr-deny-request - The call was denied (no detail). Cancelable, same `pendingAction` mechanism as
  * `lr-approve-request` (`pendingAction` is set to `'deny'`). Otherwise always followed by `lr-close` with
  * reason `'deny'`.
@@ -218,20 +211,10 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
 
   private emitApproveRequest(detail: LyraToolApprovalDialogEventMap['lr-approve-request']['detail']): CustomEvent {
     const request = this.emit('lr-approve-request', Object.freeze(detail), { cancelable: true });
-    const alias = this.emit('lr-approve', Object.freeze(detail), { cancelable: true });
-    if (alias.defaultPrevented) {
-      warnDeprecatedUsage(this, 'event', 'lr-approve', 'lr-approve-request');
-      request.preventDefault();
-    }
     return request;
   }
   private emitDenyRequest(detail: LyraToolApprovalDialogEventMap['lr-deny-request']['detail']): CustomEvent {
     const request = this.emit('lr-deny-request', Object.freeze(detail), { cancelable: true });
-    const alias = this.emit('lr-deny', Object.freeze(detail), { cancelable: true });
-    if (alias.defaultPrevented) {
-      warnDeprecatedUsage(this, 'event', 'lr-deny', 'lr-deny-request');
-      request.preventDefault();
-    }
     return request;
   }
 

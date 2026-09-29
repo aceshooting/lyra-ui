@@ -116,8 +116,8 @@ toggles join, and `var(--lr-space-2xs)` when vertical) and `--lr-toggle-group-wr
 
 ```html
 <script type="module">
-  import '@aceshooting/lyra-ui/components/forms/toggle-group/toggle-group.js';
-  import '@aceshooting/lyra-ui/components/forms/toggle/toggle.js';
+  import '@aceshooting/lyra-ui/components/lr-toggle-group.js';
+  import '@aceshooting/lyra-ui/components/lr-toggle.js';
 </script>
 
 <lr-toggle-group label="Text formatting" appearance="outlined">

@@ -212,7 +212,7 @@ it('surfaces one lr-toolbar-actions-change event from the embedded copy button u
   expect(count).to.equal(1);
 });
 
-it('builds one export row per segment and bubbles lr-export / lr-export-complete from the embedded lr-export-button', async () => {
+it('builds one export row per segment and bubbles canonical export events from the embedded lr-export-button', async () => {
   const el = (await fixture(html`<lr-context-inspector></lr-context-inspector>`)) as LyraContextInspector;
   el.segments = [
     {
@@ -240,12 +240,34 @@ it('builds one export row per segment and bubbles lr-export / lr-export-complete
       text: 'a',
     },
   ]);
-  const exportEvent = oneEvent(el, 'lr-export');
+  let retiredAliasCount = 0;
+  el.addEventListener('lr-export', () => retiredAliasCount++);
+  const exportEvent = oneEvent(el, 'lr-export-request');
   const completeEvent = oneEvent(el, 'lr-export-complete');
   (exportButton.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement).click();
   const event = await exportEvent;
   expect(event.detail.format).to.equal('json');
+  expect(event.cancelable).to.equal(true);
+  expect(event.bubbles).to.equal(true);
+  expect(event.composed).to.equal(true);
+  expect(retiredAliasCount).to.equal(0);
   await completeEvent;
+});
+
+it('lets a host veto the embedded canonical export request before completion', async () => {
+  const el = (await fixture(html`<lr-context-inspector></lr-context-inspector>`)) as LyraContextInspector;
+  el.segments = [{ id: 's1', label: 'A', text: 'a', tokens: 1 }];
+  await el.updateComplete;
+  const exportButton = el.shadowRoot!.querySelector('lr-export-button') as LyraExportButton;
+  let completed = 0;
+  el.addEventListener('lr-export-request', (event) => event.preventDefault(), { once: true });
+  el.addEventListener('lr-export-complete', () => completed++);
+  const request = oneEvent(el, 'lr-export-request');
+  (exportButton.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement).click();
+  const event = await request;
+  await exportButton.updateComplete;
+  expect(event.defaultPrevented).to.equal(true);
+  expect(completed).to.equal(0);
 });
 
 it('forwards the explicit exportFormats/exportFilename vocabulary to the export control', async () => {

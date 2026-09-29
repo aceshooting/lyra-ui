@@ -1,4 +1,3 @@
-import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import './lite-chart.js';
 import { LyraLiteChart } from './lite-chart.js';
@@ -2787,7 +2786,7 @@ describe('accessibleLabel', () => {
   it('overrides the auto-derived <svg> aria-label when set', async () => {
     const el = (await fixture(html`
       <lr-lite-chart
-        .accessibleLabel=${'Custom chart description'}
+        aria-label="Custom chart description"
         .labels=${['a']}
         .datasets=${[{ label: 'A', data: [1] }]}
       ></lr-lite-chart>
@@ -2808,7 +2807,7 @@ describe('accessibleLabel', () => {
     const el = (await fixture(html`
       <lr-lite-chart
         aria-label="Quarterly revenue"
-        .accessibleLabel=${'Legacy chart label'}
+        aria-label="Legacy chart label"
         .labels=${['a']}
         .datasets=${[{ label: 'A', data: [1] }]}
       ></lr-lite-chart>
@@ -4527,7 +4526,7 @@ it('preserves an explicitly empty host aria-label on the semantic SVG instead of
   const explicit = (await fixture(html`
     <lr-lite-chart
       aria-label=""
-      .accessibleLabel=${'Legacy chart label'}
+      aria-label="Legacy chart label"
       .labels=${['a']}
       .datasets=${[{ label: 'A', data: [1] }]}
     ></lr-lite-chart>
@@ -4539,13 +4538,12 @@ it('preserves an explicitly empty host aria-label on the semantic SVG instead of
 
   const omitted = (await fixture(html`
     <lr-lite-chart
-      .accessibleLabel=${'Legacy chart label'}
       .labels=${['a']}
       .datasets=${[{ label: 'A', data: [1] }]}
     ></lr-lite-chart>
   `)) as LyraLiteChart;
   await omitted.updateComplete;
-  expect(omitted.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')).to.equal('Legacy chart label');
+  expect(omitted.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')).to.equal('A');
 });
 
 // 11.0.0 gave lr-chart and lr-box-plot the dataTableToggle disclosure but not lr-lite-chart, which
@@ -4982,5 +4980,3 @@ describe('bidi isolation of formatted labels', () => {
     }
   });
 });
-
-expectDeprecatedUsage('lr-lite-chart', 'property', 'accessibleLabel');

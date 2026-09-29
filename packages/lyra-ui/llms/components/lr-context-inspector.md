@@ -49,8 +49,9 @@ end: number; reason?: string }` marks character ranges within `text` that are re
 **Events:** `lr-citation-activate` (`detail: { sourceId: string; index: number }`, surfaced by a
 segment's embedded `lr-citation-badge`), `lr-citation-open` (`detail: { sourceId: string; index:
 number; href?: string }`, the "full preview" signal), `lr-copy` (`detail: { ok: true; text: string }`, from the
-embedded `lr-copy-button`), `lr-export` (`detail: { format: string }`, from the embedded
-`lr-export-button`), `lr-export-complete` (`detail: { format: string }`, after a non-cancelled export
+embedded `lr-copy-button`), cancelable `lr-export-request` (`detail: { format: string }`, surfaced by
+the embedded `lr-export-button`; call `preventDefault()` to handle the request without its built-in
+download), `lr-export-complete` (`detail: { format: 'csv' | 'json' }`, after a non-cancelled export
 finishes), `lr-error` (the embedded clipboard write failed), `lr-copy-error` (`detail: { ok: false;
 text: string; reason: string; error: unknown }`, the detailed clipboard failure),
 `lr-toolbar-actions-change` (no detail, surfaced unchanged when the embedded copy button's logical

@@ -38,11 +38,11 @@ type LyraFactoryDetail<Event> = Event extends CustomEvent<infer Detail> ? Detail
  *
  * @example
  * ```ts
- * const event = createLyraEvent('lr-confirm-bar', 'lr-approve', {
+ * const event = createLyraEvent('lr-confirm-bar', 'lr-approve-request', {
  *   args: null,
  *   waitUntil: () => {},
  * });
- * event.cancelable; // true -- lr-confirm-bar's own lr-approve call site passes { cancelable: true }
+ * event.cancelable; // true -- lr-confirm-bar's own lr-approve-request call site passes { cancelable: true }
  * confirmBar.dispatchEvent(event);
  * ```
  */

@@ -8,10 +8,8 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import {
   captureDeprecationWarnings,
-  expectDeprecatedUsage,
   type DeprecatedUsage,
 } from '../../../../test/expected-deprecations.js';
-expectDeprecatedUsage('lr-lightbox', 'event', 'lr-lightbox-close');
 
 // Registers the real 'ar' catalog so the lang="ar-EG" counter/live-region digit-formatting test
 // below resolves every key it incidentally touches (lightboxImagePosition, lightboxLabel, close,
@@ -196,7 +194,7 @@ it('runs one promise-based show/hide lifecycle in order and keeps vetoed state r
     lifecycle.push('hide');
     hideSource = (event as CustomEvent<{ source: Element }>).detail.source;
   });
-  el.addEventListener('lr-lightbox-close', () => lifecycle.push('close'));
+  el.addEventListener('lr-close', () => lifecycle.push('close'));
   el.addEventListener('lr-after-hide', (event) => {
     lifecycle.push('after-hide');
     phaseDetails.push((event as CustomEvent).detail);
@@ -246,7 +244,7 @@ it('routes post-render open writes through the lifecycle but treats initial open
   el.addEventListener('lr-show', () => lifecycle.push('show'));
   el.addEventListener('lr-after-show', () => lifecycle.push('after-show'));
   el.addEventListener('lr-hide', () => lifecycle.push('hide'));
-  el.addEventListener('lr-lightbox-close', () => lifecycle.push('close'));
+  el.addEventListener('lr-close', () => lifecycle.push('close'));
   el.addEventListener('lr-after-hide', () => lifecycle.push('after-hide'));
 
   el.open = true;
@@ -292,10 +290,10 @@ it('inherits a 20px host font into the close and navigation controls and their o
   el.open = false;
 });
 
-it('closes on Escape and emits lr-lightbox-close with reason "escape"', async () => {
+it('closes on Escape and emits lr-close with the escape reason', async () => {
   const el = (await fixture(html`<lr-lightbox .images=${[image]} open></lr-lightbox>`)) as LyraLightbox;
   let detail: unknown;
-  el.addEventListener('lr-lightbox-close', (e) => (detail = (e as CustomEvent).detail));
+  el.addEventListener('lr-close', (e) => (detail = (e as CustomEvent<{ reason: string }>).detail.reason));
 
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
   await el.updateComplete;
@@ -307,7 +305,7 @@ it('closes on Escape and emits lr-lightbox-close with reason "escape"', async ()
 it('does not respond to Escape while closed', async () => {
   const el = (await fixture(html`<lr-lightbox .images=${[image]}></lr-lightbox>`)) as LyraLightbox;
   let fired = false;
-  el.addEventListener('lr-lightbox-close', () => (fired = true));
+  el.addEventListener('lr-close', () => (fired = true));
 
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
   await el.updateComplete;
@@ -315,12 +313,12 @@ it('does not respond to Escape while closed', async () => {
   expect(fired).to.be.false;
 });
 
-it('closes on backdrop click and emits lr-lightbox-close with reason "backdrop" when light-dismiss is set', async () => {
+it('closes on backdrop click and emits lr-close with the backdrop reason when light-dismiss is set', async () => {
   const el = (await fixture(
     html`<lr-lightbox .images=${[image]} open light-dismiss></lr-lightbox>`,
   )) as LyraLightbox;
   let detail: unknown;
-  el.addEventListener('lr-lightbox-close', (e) => (detail = (e as CustomEvent).detail));
+  el.addEventListener('lr-close', (e) => (detail = (e as CustomEvent<{ reason: string }>).detail.reason));
 
   (el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement).click();
   await el.updateComplete;
@@ -342,10 +340,10 @@ it('ignores a backdrop click by default', async () => {
   expect(el.open).to.be.true;
 });
 
-it('closes via the close button and emits lr-lightbox-close with reason "close-button"', async () => {
+it('closes via the close button and emits lr-close with the close-button reason', async () => {
   const el = (await fixture(html`<lr-lightbox .images=${[image]} open></lr-lightbox>`)) as LyraLightbox;
   let detail: unknown;
-  el.addEventListener('lr-lightbox-close', (e) => (detail = (e as CustomEvent).detail));
+  el.addEventListener('lr-close', (e) => (detail = (e as CustomEvent<{ reason: string }>).detail.reason));
 
   (el.shadowRoot!.querySelector('[part="close-button"]') as HTMLElement).click();
   await el.updateComplete;
@@ -354,9 +352,9 @@ it('closes via the close button and emits lr-lightbox-close with reason "close-b
   expect(detail).to.equal('close-button');
 });
 
-it('stays open when a lr-lightbox-close listener calls preventDefault()', async () => {
+it('stays open when an lr-close-request listener calls preventDefault()', async () => {
   const el = (await fixture(html`<lr-lightbox .images=${[image]} open></lr-lightbox>`)) as LyraLightbox;
-  el.addEventListener('lr-lightbox-close', (e) => e.preventDefault());
+  el.addEventListener('lr-close-request', (e) => e.preventDefault());
 
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
   await el.updateComplete;
@@ -365,10 +363,10 @@ it('stays open when a lr-lightbox-close listener calls preventDefault()', async 
   el.open = false;
 });
 
-it('emits lr-lightbox-close with reason "unmount" when removed from the DOM while open', async () => {
+it('emits lr-close with the unmount reason when removed from the DOM while open', async () => {
   const el = (await fixture(html`<lr-lightbox .images=${[image]} open></lr-lightbox>`)) as LyraLightbox;
   let detail: unknown;
-  el.addEventListener('lr-lightbox-close', (e) => (detail = (e as CustomEvent).detail));
+  el.addEventListener('lr-close', (e) => (detail = (e as CustomEvent<{ reason: string }>).detail.reason));
 
   el.remove();
   await Promise.resolve();
@@ -380,7 +378,7 @@ it('emits lr-lightbox-close with reason "unmount" when removed from the DOM whil
 it('does not treat a synchronous reparent as an unmount', async () => {
   const el = (await fixture(html`<lr-lightbox .images=${[image]} open></lr-lightbox>`)) as LyraLightbox;
   let fired = false;
-  el.addEventListener('lr-lightbox-close', () => (fired = true));
+  el.addEventListener('lr-close', () => (fired = true));
 
   const destination = document.createElement('div');
   document.body.append(destination);
@@ -471,8 +469,8 @@ it('schedules lasting-disconnect cleanup in the owner realm and ignores it after
     await el.updateComplete;
     scheduled.length = 0;
     let unmounted = false;
-    el.addEventListener('lr-lightbox-close', (event) => {
-      if ((event as CustomEvent).detail === 'unmount') unmounted = true;
+    el.addEventListener('lr-close', (event) => {
+      if ((event as CustomEvent<{ reason: string }>).detail.reason === 'unmount') unmounted = true;
     });
 
     el.remove();
@@ -1165,7 +1163,7 @@ it('does not trigger a Lit "scheduled an update after an update completed" dev w
   expect(calls.flat().map(String).some((message) => message.includes('scheduled an update'))).to.be.false;
 });
 
-it('keeps the string-detail close alias while the canonical notification carries a reason object', async () => {
+it('emits the canonical request before the settled close notification and ignores the retired alias', async () => {
   const el = await fixture<LyraLightbox>(html`<lr-lightbox open .images=${[image]}></lr-lightbox>`);
   const reports: Array<{ type: string; detail: unknown; open: boolean; cancelable: boolean }> = [];
   for (const name of ['lr-close-request', 'lr-lightbox-close', 'lr-close']) {
@@ -1176,32 +1174,20 @@ it('keeps the string-detail close alias while the canonical notification carries
   await el.close('api');
   expect(reports).to.deep.equal([
     { type: 'lr-close-request', detail: { reason: 'api' }, open: true, cancelable: true },
-    { type: 'lr-lightbox-close', detail: 'api', open: true, cancelable: true },
     { type: 'lr-close', detail: { reason: 'api' }, open: false, cancelable: false },
   ]);
 });
 
-it('warns when the legacy close alias vetoes and keeps the canonical veto quiet', async () => {
-  const warnings = await captureDeprecationWarnings([
-    { tag: 'lr-lightbox', kind: 'event', name: 'lr-lightbox-close' },
-  ], async () => {
-    const el = await fixture<LyraLightbox>(html`<lr-lightbox open .images=${[image]}></lr-lightbox>`);
-    el.addEventListener('lr-lightbox-close', (event) => event.preventDefault());
-    await el.close('api');
-    await el.close('api');
-    expect(el.open).to.equal(true);
-  });
-  expect(warnings).to.have.length(1);
-  const canonicalWarnings = await captureDeprecationWarnings([
-    { tag: 'lr-lightbox', kind: 'event', name: 'lr-lightbox-close' },
-  ], async () => {
-    const el = await fixture<LyraLightbox>(html`<lr-lightbox open .images=${[image]}></lr-lightbox>`);
-    el.addEventListener('lr-close-request', (event) => event.preventDefault());
-    await el.close('api');
-    expect(el.open).to.equal(true);
-  });
-  expect(canonicalWarnings).to.have.length(0);
+it('keeps the canonical close veto and emits no compatibility event', async () => {
+  const el = await fixture<LyraLightbox>(html`<lr-lightbox open .images=${[image]}></lr-lightbox>`);
+  let retired = 0;
+  el.addEventListener('lr-lightbox-close', () => retired++);
+  el.addEventListener('lr-close-request', (event) => event.preventDefault());
+  await el.close('api');
+  expect(el.open).to.equal(true);
+  expect(retired).to.equal(0);
 });
+
 
 it('returns focus to an opener the host re-shows only after lr-close', async () => {
   const el = (await fixture(html`<lr-lightbox .images=${[image]}></lr-lightbox>`)) as LyraLightbox;

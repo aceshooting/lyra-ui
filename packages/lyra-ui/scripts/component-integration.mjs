@@ -12,6 +12,10 @@ function packageImport(module) {
   return `@aceshooting/lyra-ui/${module.replace(/^src\//, '').replace(/\.ts$/, '.js')}`;
 }
 
+function registrationImport(tag) {
+  return `@aceshooting/lyra-ui/components/${tag}.js`;
+}
+
 function distEntry(packageDir, module) {
   return path.join(packageDir, module.replace(/^src\//, 'dist/').replace(/\.ts$/, '.js'));
 }
@@ -145,7 +149,7 @@ export async function buildComponentIntegration({
       tag: component.tag,
       family: component.family,
       imports: {
-        registration: packageImport(component.registrationModule),
+        registration: registrationImport(component.tag),
         class: packageImport(component.classModule),
       },
       peers: [...(component.optionalPeers ?? [])].sort(),
@@ -159,7 +163,7 @@ export async function buildComponentIntegration({
 
   const measuredComponents = components.filter((component) => component.gzip.status === 'measured');
   return {
-    $comment: 'Generated integration cards for every public tag. Dependency edges are component-registration edges; gzip is a standalone bundled registration import with optional peers externalized.',
+    $comment: 'Generated integration cards for every public tag. Dependency edges are component-registration edges; gzip bundles each source registration entry with optional peers externalized.',
     schemaVersion: COMPONENT_INTEGRATION_SCHEMA_VERSION,
     methodology: {
       dependencies: 'Direct edges are exact rendered-component or direct registration imports; transitive edges are the remaining reachable registrations.',
@@ -189,7 +193,7 @@ export function validateComponentIntegration(ledger, inventory, analysis) {
   for (const component of components) {
     const inventoryEntry = inventoryByTag.get(component.tag);
     if (!inventoryEntry) continue;
-    const expectedRegistration = packageImport(inventoryEntry.registrationModule);
+    const expectedRegistration = registrationImport(component.tag);
     const expectedClass = packageImport(inventoryEntry.classModule);
     if (component.imports?.registration !== expectedRegistration) findings.push(`${component.tag}: stale registration import`);
     if (component.imports?.class !== expectedClass) findings.push(`${component.tag}: stale class import`);
@@ -243,9 +247,9 @@ export function renderIntegrationCards(ledger) {
     '',
     'One row per public tag: stable registration import, optional peers, direct and transitive Lyra',
     'component dependencies, and standalone gzip size. “None” is an actual empty set; “not measured”',
-    'is an explicit evidence gap, not a zero-byte claim. A tag’s side-effect-free class import is',
-    'always its registration import with `.class` inserted before `.js` (`accordion.js` ->',
-    '`accordion.class.js`); raw byte counts and bundle SHA-256 digests are in',
+    'is an explicit evidence gap, not a zero-byte claim. Each tag’s stable registration route is',
+    '`components/<tag>.js`; its side-effect-free class import is recorded in the JSON ledger.',
+    'Raw byte counts and bundle SHA-256 digests are in',
     '`packages/lyra-ui/scripts/fixtures/component-integration.json`, keyed by tag, not repeated below.',
     '',
     `Coverage: **${ledger.summary.componentCount} tags**, **${ledger.summary.measuredGzipCount} measured gzip entries**, ` +

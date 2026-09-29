@@ -55,6 +55,26 @@ function syntheticInventory() {
 function syntheticLedger() {
   return readJson(path.join(fixtureDir, 'ledger.json'));
 }
+function sampleDetailFields() {
+  return [
+    { tag: 'lr-details', event: 'lr-toggle', module: 'layout/details/details.class.ts', detailType: 'LyraDetailsToggleDetail', field: 'open',
+      relation: 'equal', replacement: 'expanded', role: 'settled', notice: '/** @deprecated Use `expanded`, which carries the same value; removal not before 23.0.0. */',
+      removalNotBefore: '23.0.0', observedIn: '22.0.0' },
+    { tag: 'lr-dock-panel', event: 'lr-collapse-request', module: 'layout/dock-panel/dock-panel.class.ts', detailType: 'LyraDockPanelCollapseChangeDetail', field: 'collapsed',
+      relation: 'inverse', replacement: 'expanded', role: 'request', notice: '/** @deprecated Use `expanded`, its inverse; removal not before 23.0.0. */',
+      removalNotBefore: '23.0.0', observedIn: '22.0.0' },
+  ];
+}
+function fieldInventory() {
+  const value = structuredClone(inventory);
+  const component = (tag, event) => ({
+    tag, registrationModule: `src/components/utility/${tag.slice(3)}/${tag.slice(3)}.ts`,
+    rootIncluded: true, optionalPeers: [],
+    surface: { attributes: [], properties: [], slots: [], events: [{ name: event }], parts: [], cssProperties: [], methods: [] },
+  });
+  value.components.push(component('lr-details', 'lr-toggle'), component('lr-dock-panel', 'lr-collapse-request'), component('lr-app-rail', 'lr-toggle'));
+  return value;
+}
 const inventory = syntheticInventory();
 const ledger = syntheticLedger();
 const contract = buildMigrationContract(inventory, { renameLedger: ledger });
@@ -74,7 +94,16 @@ const rename = (profile, kind, from) => profile.renames.find((entry) => entry.ki
 const panelOf = (target) => target.components.find((component) => component.tag === 'lr-sample-panel');
 
 function moduleMigrationFixture() {
-  const records = readExportDeprecations().filter((record) => record.removalNotBefore === '24.0.0');
+  // v24 removes several export surfaces. The installed migration profile must still be exercised
+  // from each member's verified published retirement record, not only the current metadata list.
+  const records = Object.values(checkedCompatibilityContext.records)
+    .filter((entry) => entry.key.scope === 'export' && entry.policy?.removalNotBefore === '24.0.0')
+    .map((entry) => entry.policy)
+    .sort((left, right) => {
+      const a = [left.kind, left.module ?? '', left.name].join('\0');
+      const b = [right.kind, right.module ?? '', right.name].join('\0');
+      return a < b ? -1 : a > b ? 1 : 0;
+    });
   const renameLedger = emptyRenameLedger();
   renameLedger.profiles[1].moduleReviews = records.map(({ kind, module, name }) => ({ kind, ...(module ? { module } : {}), name }))
     .sort((left, right) => {
@@ -86,7 +115,7 @@ function moduleMigrationFixture() {
 }
 
 test('module reviews derive canonical guidance, cover both cohorts, and retain the whole v23 compatibility window', () => {
-  const records = readExportDeprecations();
+  const records = moduleMigrationFixture().records;
   const checked = readRenameLedger();
   const publishedRecords = Object.values(checkedCompatibilityContext.records).filter(entry => entry.key.scope === 'export').map(entry => entry.policy);
   assert.equal(checked.profiles[0].moduleReviews.length, publishedRecords.filter((record) => record.removalNotBefore === '23.0.0').length);
@@ -112,6 +141,40 @@ test('module reviews derive canonical guidance, cover both cohorts, and retain t
   const duplicate = structuredClone(checked);
   duplicate.profiles[1].moduleReviews.push(duplicate.profiles[1].moduleReviews[0]);
   assertFinding(validateRenameLedgerShape(duplicate), /duplicate entry/);
+});
+
+test('retired rename and property checks use the exact source component pinned to each member', () => {
+  const authored = readRenameLedger();
+  const retired = (tag, kind, name) => checkedCompatibilityContext.records[JSON.stringify(['member', tag, kind, name])];
+  const renameEntry = authored.profiles.flatMap(profile => profile.renames).find(entry => retired(entry.tag, entry.kind, entry.from)?.state === 'retired');
+  const propertyEntry = authored.profiles.flatMap(profile => profile.propertyChanges ?? []).find(entry => retired(entry.tag, 'property', entry.property)?.state === 'retired');
+  assert.ok(renameEntry, 'The historical ledger has no retired rename witness');
+  assert.ok(propertyEntry, 'The historical ledger has no retired property witness');
+  for (const [tag, kind, name] of [[renameEntry.tag, renameEntry.kind, renameEntry.from], [propertyEntry.tag, 'property', propertyEntry.property]]) {
+    const record = retired(tag, kind, name);
+    assert.ok(record?.sourceComponent, `Missing exact retirement-source component for ${tag}.${name}`);
+    assert.ok(Object.values(record.sourceComponent.surface ?? {}).some(entries => Array.isArray(entries) && entries.some(entry => entry.name === name)), `Pinned source component lacks ${tag}.${name}`);
+  }
+  const contextWithStaleFallback = structuredClone(checkedCompatibilityContext);
+  for (const entry of [renameEntry, propertyEntry]) {
+    const component = contextWithStaleFallback.sourceComponents[entry.tag];
+    if (!component) continue;
+    // structuredClone preserves shared capture object identities. Replace the fallback with an
+    // independent copy so this simulates stale latest-by-tag state without mutating the exact
+    // per-retirement component snapshot.
+    contextWithStaleFallback.sourceComponents[entry.tag] = structuredClone(component);
+    const staleComponent = contextWithStaleFallback.sourceComponents[entry.tag];
+    const name = entry.property ?? entry.from;
+    for (const [key, members] of Object.entries(staleComponent.surface ?? {})) {
+      if (Array.isArray(members)) staleComponent.surface[key] = members.filter(member => member.name !== name);
+    }
+  }
+  assert.deepEqual(validateRenameLedger(authored, {
+    inventory: checkedInventory,
+    exportDeprecations: readExportDeprecations(),
+    compatibilityContext: contextWithStaleFallback,
+    sharedTokens,
+  }), []);
 });
 
 test('module-only profiles remain active and the packaged contract withholds unreleased records for known installed versions', () => {
@@ -314,6 +377,13 @@ test('the ledger schema fails closed on malformed entries', () => {
     [(profile) => { profile.renames.reverse(); }, /renames must be sorted/],
     [(profile) => { profile.renames.push(structuredClone(profile.renames.at(-1))); }, /duplicate entry/],
     [(profile) => { profile.detailChanges[0].summary = 'short'; }, /summary must be a single-line description/],
+    [(profile) => { profile.detailFields = sampleDetailFields(); profile.detailFields[1].role = 'settled'; }, /role must match whether the event is a request event/],
+    [(profile) => { profile.detailFields = sampleDetailFields(); profile.detailFields[0].relation = 'universal'; }, /relation must be equal or inverse/],
+    [(profile) => { profile.detailFields = sampleDetailFields(); profile.detailFields[1].notice = '/** inverse wording without a deprecated tag */'; }, /exact deprecation JSDoc/],
+    [(profile) => { profile.detailFields = sampleDetailFields(); profile.detailFields[0].observedIn = '21.2.0'; }, /earliest verified packed observation, 22.0.0/],
+    [(profile) => { profile.detailFields = sampleDetailFields(); profile.detailFields[0].removedIn = '23.0.0'; }, /separately authorized actual 24.0.0 retirement/],
+    [(profile) => { profile.detailFields = sampleDetailFields(); profile.detailFields.reverse(); }, /detailFields must be sorted/],
+    [(_profile, root) => { root.profiles[0].detailFields = sampleDetailFields(); root.profiles[1].detailFields = sampleDetailFields().slice(0, 1); }, /must preserve the same verified field exposures/],
     [(profile) => { profile.defaults[0].value = false; }, /value must be a string, a finite number, or true/],
     [(profile) => { profile.slotContent[0].allow = ['lr-sample-item']; }, /needs exactly one of report/],
     [(profile) => { profile.slotContent[0].report = ['lr-icon', 'img']; }, /must be a sorted, unique list/],
@@ -785,6 +855,114 @@ test('a detail change is reported on every listener that may receive it, never o
       '6 DETAIL_SHAPE_REVIEW',
     ],
   );
+});
+
+test('deprecated event-detail fields produce owner-aware manual guidance without changing source', () => {
+  const fieldLedger = structuredClone(ledger);
+  for (const profile of fieldLedger.profiles) profile.detailFields = sampleDetailFields();
+  const fieldContract = buildMigrationContract(fieldInventory(), { renameLedger: fieldLedger });
+  const input = [
+    "document.querySelector('lr-details')!.addEventListener('lr-toggle', (event) => event.detail.open);",
+    "document.querySelector('lr-dock-panel')!.addEventListener('lr-collapse-request', (event) => { if (event.detail.collapsed) return; });",
+    "host.addEventListener('lr-toggle', (event) => event.detail.open);",
+    'const value = event.detail.collapsed;',
+    '',
+  ].join('\n');
+  const result = migrateText(input, fieldContract, { file: 'detail-fields.ts', origin: 'lyra-v21' });
+  assert.equal(result.content, input, 'detail fields are always resolved by a person');
+  const warnings = result.warnings.filter((warning) => warning.warningCode === 'DETAIL_FIELD_REVIEW');
+  assert.equal(warnings.length, 4, JSON.stringify(warnings.map(({ upstreamTag, upstreamMember, target }) => [upstreamTag, upstreamMember, target])));
+  assert.deepEqual(warnings.map((warning) => [warning.upstreamTag, warning.upstreamMember, warning.target]), [
+    ['lr-details', 'open', 'detail.expanded'],
+    ['lr-dock-panel', 'collapsed', '!detail.expanded'],
+    [null, 'open', null],
+    [null, 'collapsed', null],
+  ]);
+  assert.match(warnings[0].message, /same value as detail\.expanded/u);
+  assert.match(warnings[1].message, /inverse of detail\.expanded/u);
+  assert.match(warnings[2].message, /no proven Lyra tag and event/u);
+  assert.match(warnings[3].message, /No field rewrite was applied/u);
+});
+
+test('a known detail field under an unverified owner/event pair remains an ambiguity report', () => {
+  const fieldLedger = structuredClone(ledger);
+  for (const profile of fieldLedger.profiles) profile.detailFields = sampleDetailFields();
+  const fieldContract = buildMigrationContract(fieldInventory(), { renameLedger: fieldLedger });
+  const input = "document.querySelector('lr-app-rail')!.addEventListener('lr-toggle', (event) => event.detail.open);";
+  const result = migrateText(input, fieldContract, { file: 'unknown-detail-owner.ts', origin: 'lyra-v21' });
+  const warning = result.warnings.find(entry => entry.warningCode === 'DETAIL_FIELD_REVIEW');
+  assert.ok(warning);
+  assert.equal(warning.upstreamTag, null);
+  assert.equal(warning.target, null);
+  assert.match(warning.message, /no proven Lyra tag and event/u);
+  assert.match(warning.message, /lr-details\/lr-toggle/u);
+  assert.equal(result.content, input);
+});
+
+test('field authority preserves valid multiline deprecation JSDoc notices', () => {
+  const fieldLedger = structuredClone(ledger);
+  const notice = '/** The inverse of `expanded`.\n   *  @deprecated Read `expanded` instead; removal not before 23.0.0. */';
+  for (const profile of fieldLedger.profiles) {
+    profile.detailFields = sampleDetailFields();
+    profile.detailFields[1].notice = notice;
+  }
+  assert.deepEqual(validateRenameLedgerShape(fieldLedger), []);
+  const malformed = structuredClone(fieldLedger);
+  malformed.profiles[0].detailFields[1].notice = notice.replace(' */', '');
+  assert.ok(validateRenameLedgerShape(malformed).some(finding => finding.includes('exact deprecation JSDoc')));
+});
+
+test('detail-field diagnostics are version-gated and the optional projection stays backward-compatible', () => {
+  const fieldLedger = structuredClone(ledger);
+  for (const profile of fieldLedger.profiles) profile.detailFields = [sampleDetailFields()[0]];
+  const observedInventory = fieldInventory();
+  const beforeObservation = buildMigrationContract(observedInventory, { renameLedger: fieldLedger, lyraVersion: '21.2.0' });
+  assert.equal(beforeObservation.renameProfiles.get('lyra-v21').data.detailFields.length, 0);
+  assert.equal(beforeObservation.renameProfiles.get('lyra-v21').skipped.filter((entry) => entry.list === 'detailFields').length, 1);
+  const observed = buildMigrationContract(observedInventory, { renameLedger: fieldLedger, lyraVersion: '22.0.0' });
+  assert.equal(observed.renameProfiles.get('lyra-v21').data.detailFields.length, 1);
+  const legacy = structuredClone(projectRenameLedger(emptyRenameLedger(), inventory));
+  for (const profile of legacy.profiles) delete profile.detailFields;
+  assert.deepEqual(createRenameProfiles(legacy).get('lyra-v21').data.detailFields, []);
+  assert.deepEqual(createRenameProfiles(legacy).get('lyra-v21').detailFieldsNamed('lr-toggle'), []);
+});
+
+test('removed detail fields use past tense only from their authorized release and never rewrite', () => {
+  const fieldLedger = structuredClone(ledger);
+  for (const profile of fieldLedger.profiles) {
+    profile.detailFields = [sampleDetailFields()[0]];
+    profile.detailFields[0].removedIn = '24.0.0';
+  }
+  const input = "document.querySelector('lr-details')!.addEventListener('lr-toggle', (event) => event.detail.open);\n";
+  const beforeRemoval = migrateText(input, buildMigrationContract(fieldInventory(), { renameLedger: fieldLedger, lyraVersion: '23.0.0' }), { file: 'detail-fields.ts', origin: 'lyra-v21' });
+  assert.equal(beforeRemoval.content, input);
+  assert.equal(beforeRemoval.changes.length, 0);
+  assert.match(beforeRemoval.warnings[0].message, /does not assert that the field was removed/u);
+  assert.doesNotMatch(beforeRemoval.warnings[0].message, /was removed in 24/u);
+  const afterRemoval = migrateText(input, buildMigrationContract(fieldInventory(), { renameLedger: fieldLedger, lyraVersion: '24.0.0' }), { file: 'detail-fields.ts', origin: 'lyra-v21' });
+  assert.equal(afterRemoval.content, input);
+  assert.equal(afterRemoval.changes.length, 0);
+  assert.match(afterRemoval.warnings[0].message, /was removed in 24\.0\.0/u);
+});
+
+test('historical authored profiles project without a new detailFields key', () => {
+  const emptyProjection = projectRenameLedger(emptyRenameLedger(), checkedInventory);
+  for (const profile of emptyProjection.profiles) assert.equal(Object.hasOwn(profile, 'detailFields'), false);
+
+  const historical = structuredClone(readRenameLedger());
+  for (const profile of historical.profiles) delete profile.detailFields;
+  const projected = projectRenameLedger(historical, checkedInventory, {
+    exportDeprecations: readExportDeprecations(),
+    compatibilityContext: checkedCompatibilityContext,
+  });
+  assert.equal(projected.profiles.length, historical.profiles.length);
+  for (let index = 0; index < historical.profiles.length; index += 1) {
+    assert.equal(Object.hasOwn(projected.profiles[index], 'detailFields'), false);
+    assert.deepEqual(projected.profiles[index].detailChanges, historical.profiles[index].detailChanges.map((entry) => ({
+      ...structuredClone(entry),
+      since: `${historical.profiles[index].toMajor}.0.0`,
+    })));
+  }
 });
 
 test('event names in strings: listener calls may move, other strings are reported, tag APIs are skipped', () => {

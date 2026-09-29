@@ -179,8 +179,8 @@ the remove button's `:hover` fill).
 
 <lr-tag variant="brand" appearance="outlined" with-remove>Design</lr-tag>
 <script type="module">
-  import "@aceshooting/lyra-ui/components/overlays/badge/badge.js";
-  import "@aceshooting/lyra-ui/components/overlays/badge/tag.js";
+  import "@aceshooting/lyra-ui/components/lr-badge.js";
+  import "@aceshooting/lyra-ui/components/lr-tag.js";
 
   document.querySelector("lr-tag").addEventListener("lr-remove", (e) => {
     e.target.remove(); // in an app, update the backing collection instead

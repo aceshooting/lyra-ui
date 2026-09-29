@@ -19,7 +19,7 @@
 Experimental direct-child `<lr-video>` playlist with a visible current-video stage and
 keyboard-navigable item list. It mirrors the public Web Awesome Video Playlist API under the `lr-`
 prefix. Import the granular registration entry with
-`import '@aceshooting/lyra-ui/components/media/video-playlist/video-playlist.js'`.
+`import '@aceshooting/lyra-ui/components/lr-video-playlist.js'`.
 
 **Properties:** `controls: 'none' | 'standard' | 'full' = 'full'` (reflected and forwarded to every
 direct child), and `iconLibrary: string = 'system'` (attribute `icon-library`, non-reflected and

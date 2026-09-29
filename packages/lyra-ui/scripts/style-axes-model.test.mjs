@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { readStyleModel, renderFixedLook, renderRuntimeLook, renderTheme, concreteThemeCss, referenceSurfaces, renderAccents, contrastSurfaces, validateLook, renderGlass } from './style-axes-model.mjs';
+import { readStyleModel, renderRuntimeLook, renderTheme, concreteThemeCss, referenceSurfaces, renderAccents, contrastSurfaces, validateLook, renderGlass } from './style-axes-model.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 
@@ -54,15 +54,6 @@ test('concrete theme extraction fails closed for missing generated rules and dar
   const wrongFallback = generated.replace(/(--_lr-ld-[a-z0-9-]+):[^;]+; \/\* mode-independent fallback \*\//, '$1: 999px; /* mode-independent fallback */');
   assert.notEqual(wrongFallback, generated);
   assert.throws(() => concreteThemeCss(wrongFallback), /fallback differs from light input/);
-});
-
-test('fixed compatibility looks retain new authored inputs alongside their frozen legacy inventory', () => {
-  const model = readStyleModel(packageDir);
-  const look = model.looks.find(look => look.id === 'shadcn');
-  const fixed = renderFixedLook(model, look);
-  for (const [name, values] of Object.entries(look.tokens)) {
-    for (const mode of ['light', 'dark']) assert.ok(fixed.includes(`${name}: ${typeof values === 'string' ? values : values[mode]};`), name);
-  }
 });
 
 test('authored look validation rejects shapes the runtime cannot accept', () => {
@@ -122,20 +113,6 @@ test('glass compiler rejects an unqualified transparency or foreground bound', (
   assert.throws(() => renderGlass({ ...glass, maximumBlur: '1px; color: red' }), /Invalid glass maximumBlur/);
 });
 
-test('legacy shadcn preserves its owned inputs without claiming spacing or motion', () => {
-  const model = readStyleModel(packageDir);
-  const look = model.looks.find(candidate => candidate.id === 'shadcn');
-  const css = renderFixedLook(model, look);
-  const inputs = new Set([...css.matchAll(/(--lr-theme-[a-z0-9-]+):/g)].map(match => match[1]));
-  assert.deepEqual([...inputs].sort(), [...new Set([...look.legacyInputs, ...Object.keys(look.tokens)])].sort());
-  assert.equal(look.legacyInputs.length, 124, 'the original fixed-input inventory remains intact');
-  for (const name of ['space-m', 'transition-fast', 'border-width-medium']) {
-    assert.equal(css.includes(`--lr-theme-${name}:`), false, name);
-  }
-  assert.match(css, /BEGIN REPEATED BASE THEME VALUES/);
-  assert.match(css, /--lr-theme-color-neutral-fill-loud: var\(--lr-theme-color-brand-fill-loud\)/);
-});
-
 test('emerald retains its seed while loud text is readable on light, dark and quiet surfaces', () => {
   const model = readStyleModel(packageDir);
   const css = renderAccents(model, { emerald: '#34d399' });
@@ -167,15 +144,6 @@ test('sparse runtime look branches retain null without fabricating string values
   assert.match(source, /\{ light: null, dark: '#eeeeee' \}/);
   assert.equal(source.includes("'null'"), false);
   assert.equal(source.includes('undefined'), false);
-});
-
-test('fixed projections resolve sparse branches against the canonical mode', () => {
-  const model = readStyleModel(packageDir);
-  const name = '--lr-theme-color-text-normal';
-  const css = renderFixedLook(model, { id: 'sparse', legacyInputs: [name], tokens: { [name]: { light: null, dark: '#eeeeee' } } });
-  assert.match(css, new RegExp(`${name}: ${model.base[name].light};`));
-  assert.match(css, new RegExp(`${name}: #eeeeee;`));
-  assert.equal(css.includes(': null;'), false);
 });
 
 test('reference surfaces accept one value or sparse mode pairs', () => {

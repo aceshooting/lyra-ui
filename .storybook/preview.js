@@ -6,14 +6,12 @@ import { LyraDocsPage } from './docs-page.js';
 import { publicStorybookManifest } from './storybook-manifest.js';
 import { normalizeStoryThemeName } from './theme-contract.js';
 import { installDocsPreloadRecovery } from './docs-load-boundaries.js';
-import { setLyraTheme } from '../packages/lyra-ui/src/theme/theme.js';
+import { setLyraStyle } from '../packages/lyra-ui/src/theme/theme.js';
 // The preview uses the exact stylesheet consumers import. Storybook-specific colors stay in the
 // manager theme; component previews never maintain a second, partial token palette.
 import '../packages/lyra-ui/src/theme.css';
-// The opt-in shadcn/ui look preset, imported as a string rather than as a side effect so the `look`
-// toolbar can add AND remove it; a bare CSS import could only ever add it. Its cascade layer sits
-// above theme.css whatever the order the two reach the document in.
-import shadcnLookCss from '../packages/lyra-ui/src/themes/shadcn.css?inline';
+// Import the optional shadcn look as text so the `look` toolbar can add or remove it.
+import shadcnLookCss from '../packages/lyra-ui/src/looks/shadcn.css?inline';
 // Docs/story authoring only — lr-* components' shadow DOM never sees this.
 import './tailwind.css';
 // Registers the root-included lr-* custom elements once, for every story — no per-story imports
@@ -64,7 +62,7 @@ function normalizeStoryLook(look) {
   return LYRA_STORY_LOOKS.includes(look) ? look : 'lyra';
 }
 
-/** Adds or removes the shadcn preset. The theme mode (`theme` global) is independent of it. */
+/** Adds or removes the shadcn stylesheet required by the selected look. */
 function applyLyraLook(look) {
   const existing = document.getElementById(LOOK_STYLE_ID);
   if (normalizeStoryLook(look) !== 'shadcn') {
@@ -79,9 +77,19 @@ function applyLyraLook(look) {
 }
 
 function applyLyraPresentation(globals) {
+  const theme = normalizeStoryThemeName(globals.theme);
+  const look = normalizeStoryLook(globals.look);
   const direction = globals.direction === 'rtl' ? 'rtl' : 'ltr';
   const root = document.documentElement;
 
+  applyLyraLook(look);
+  setLyraStyle({
+    look,
+    surface: 'solid',
+    density: 'comfortable',
+    mode: theme,
+    accent: null,
+  });
   root.dir = direction;
   root.dataset.lyraDirection = direction;
 }
@@ -94,10 +102,7 @@ function bootstrapLyraPresentationFromUrl() {
       .map((entry) => entry.split(':', 2))
       .filter(([name, value]) => name && value),
   );
-  const theme = normalizeStoryThemeName(globals.theme);
-  setLyraTheme({ mode: theme, accent: null });
-  applyLyraLook(globals.look);
-  applyLyraPresentation({ direction: globals.direction });
+  applyLyraPresentation(globals);
 }
 
 // Story modules can evaluate top-level fixture data before decorators run. Apply URL-selected
@@ -105,9 +110,6 @@ function bootstrapLyraPresentationFromUrl() {
 bootstrapLyraPresentationFromUrl();
 
 const withLyraTheme = (story, context) => {
-  const theme = normalizeStoryThemeName(context.globals.theme);
-  setLyraTheme({ mode: theme, accent: null });
-  applyLyraLook(context.globals.look);
   applyLyraPresentation(context.globals);
   return story();
 };
@@ -133,7 +135,7 @@ const preview = {
     },
     look: {
       name: 'Look',
-      description: 'Lyra\'s own look, or the opt-in shadcn/ui preset (themes/shadcn.css) layered over it.',
+      description: 'Lyra\'s own look or the optional shadcn look stylesheet.',
       toolbar: {
         title: 'Look',
         icon: 'component',

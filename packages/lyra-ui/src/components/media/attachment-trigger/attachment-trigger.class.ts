@@ -3,7 +3,6 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import { html, nothing, svg, type PropertyValues, type TemplateResult, type SVGTemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { warnDeprecatedUsage } from '../../../internal/dev-mode-attribute-warning.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-controls.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
@@ -224,8 +223,7 @@ export interface LyraAttachmentTriggerEventMap {
  *   picker. Hidden (`display: none`) by default; exposed as a part only so a consumer can override
  *   that with `::part(hidden-input)` in the unlikely case their integration needs to.
  *
- * The host `aria-label` names either trigger shape; an explicit empty value is kept as-is. The
- * `accessibleLabel` property is a programmatic fallback that the host `aria-label` wins over.
+ * The host `aria-label` names either trigger shape; an explicit empty value is kept as-is.
  * @status stable
  * @since 4.0.0
  */
@@ -275,25 +273,12 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
    *  `files`/`image` capabilities — see the class doc for how each uses it. */
   @property() accept = '';
 
-  private legacyAccessibleLabel: string | undefined = undefined;
-
-  /** Compatibility fallback below the host aria-label, including an explicitly empty host value.
-   * @deprecated Use the host aria-label attribute or the native ariaLabel property. */
-  @property({ attribute: false })
-  get accessibleLabel(): string | undefined {
-    return this.legacyAccessibleLabel;
-  }
-  set accessibleLabel(value: string | undefined) {
-    warnDeprecatedUsage(this, 'property', 'accessibleLabel', 'aria-label');
-    this.legacyAccessibleLabel = value;
-  }
-
-  /** The host `aria-label`: names either trigger shape ahead of `accessibleLabel`, by presence, so
-   *  an explicitly empty value stays empty. */
+  /** The host `aria-label`: names either trigger shape, by presence, so an explicitly empty value
+   *  stays empty. */
   @property({ attribute: 'aria-label' }) private hostAccessibleLabel: string | null = null;
 
   /** Forwards to the internal trigger button(s)' native `title` attribute — a sighted mouse
-   *  user's hover tooltip, distinct from `accessibleLabel`'s accessible-name (`aria-label`) role.
+   *  user's hover tooltip, distinct from the accessible-name (`aria-label`) role.
    *  Applies to both the single-capability `[part=trigger]` button and the multi-capability
    *  `[part=menu-trigger]` button. Unset (the default): no `title` attribute, unchanged from
    *  before this property existed. */
@@ -502,7 +487,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
 
   private renderSingleTrigger(capability: LyraAttachmentCapability): TemplateResult {
     const meta = CAPABILITY_META[capability];
-    const label = this.hostAccessibleLabel ?? this.accessibleLabel ?? this.localize(meta.triggerKey);
+    const label = this.hostAccessibleLabel ?? this.localize(meta.triggerKey);
     return html`
       <lr-icon-button
         part="trigger"
@@ -522,7 +507,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
 
   private renderMenu(): TemplateResult {
     const addLabel = this.localize('attachmentAdd');
-    const accessibleLabel = this.hostAccessibleLabel ?? this.accessibleLabel ?? addLabel;
+    const accessibleLabel = this.hostAccessibleLabel ?? addLabel;
     return html`
       <lr-dropdown without-arrow
         part="menu"

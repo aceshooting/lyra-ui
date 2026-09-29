@@ -67,7 +67,7 @@ export interface LyraAgentWorkspaceEventMap {
   'lr-follow-change': CustomEvent<{ following: boolean }>;
   'lr-retrieval-select': CustomEvent<LyraEventDetailSnapshot<RetrievalResultsSelectDetail>>;
   'lr-citation-select': CustomEvent<LyraEventDetailSnapshot<CitationSelectEventDetail>>;
-  'lr-tool-approval-decide': CustomEvent<ToolTimelineApprovalDetail>;
+  'lr-tool-approval-decide-request': CustomEvent<ToolTimelineApprovalDetail>;
   // Both of these bubble up unchanged from the composed `<lr-agent-run>`, so each has to carry
   // that element's own detail type -- `lr-cancel` is emitted there as `emit('lr-cancel', {})`,
   // i.e. always a real `CancelEventDetail` object, never `undefined`.
@@ -120,7 +120,7 @@ export interface LyraAgentWorkspaceEventMap {
  * @event lr-follow-change - Forwarded from the transcript viewport. `detail: { following }`.
  * @event lr-retrieval-select - Forwarded from the built-in retrieval results. `detail: { chunkIds, chunks }`.
  * @event lr-citation-select - Forwarded from the built-in grounding summary. `detail: { citation }`.
- * @event lr-tool-approval-decide - Forwarded from the built-in tool timeline.
+ * @event lr-tool-approval-decide-request - Forwarded from the built-in tool timeline.
  * @event lr-cancel - Forwarded from the built-in agent run.
  * @event lr-run-retry - Forwarded from the built-in agent run.
  * @csspart base - The root workspace wrapper.
@@ -358,7 +358,6 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
           : html`<lr-markdown
               .content=${message.text ?? ''}
               @lr-render-error=${this.stopOwnedEvent}
-              @lr-link-click=${this.stopOwnedEvent}
               @lr-highlight-activate=${this.stopOwnedEvent}
               @lr-text-select=${this.stopOwnedEvent}
               @lr-anchor-result=${this.stopOwnedEvent}

@@ -1,5 +1,4 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
-import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { nothing } from "lit";
 import { sendKeys } from "@web/test-runner-commands";
@@ -4145,84 +4144,21 @@ describe("sticky group headers", () => {
   });
 });
 
-describe("compact forwarding", () => {
-  it("forwards compact as canonical small size onto every data-mode row", async () => {
+describe("retired compact input and unset density", () => {
+  it("keeps internal rows at their default size when size is unset", async () => {
     const el = (await fixture(
-      html`<lr-thread-list
-        style="block-size:400px"
-        compact
-        .threads=${threads}
-      ></lr-thread-list>`
+      html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`
     )) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();
-    const rows = dataRows(el);
-    expect(rows.length).to.be.greaterThan(0);
-    expect(rows.filter((r) => r.getAttribute("size") === "s").length).to.equal(
-      rows.length
-    );
-  });
+    expect(el.size).to.equal("m");
+    expect(dataRows(el).every((row) => row.getAttribute("size") === "m")).to.equal(true);
 
-  it("leaves data-mode rows at the default size while unset, and toggles them live", async () => {
-    const el = (await fixture(
-      html`<lr-thread-list
-        style="block-size:400px"
-        .threads=${threads}
-      ></lr-thread-list>`
-    )) as LyraThreadList;
+    el.setAttribute("compact", "");
+    Reflect.set(el, "compact", true);
     await el.updateComplete;
     await nextFrame();
-    expect(el.compact).to.be.false;
-    expect(el.hasAttribute("compact")).to.be.false;
-    expect(
-      dataRows(el).filter((r) => r.getAttribute("size") !== "m").length
-    ).to.equal(0);
-
-    el.compact = true;
-    await el.updateComplete;
-    await nextFrame();
-    const rows = dataRows(el);
-    expect(rows.filter((r) => r.getAttribute("size") === "s").length).to.equal(
-      rows.length
-    );
-
-    el.compact = false;
-    await el.updateComplete;
-    await nextFrame();
-    expect(
-      dataRows(el).filter((r) => r.getAttribute("size") !== "m").length
-    ).to.equal(0);
-  });
-
-  it("does not touch host-supplied items in slotted mode (documented no-op)", async () => {
-    const el = (await fixture(html`
-      <lr-thread-list compact>
-        <lr-conversation-item
-          conversation-id="s1"
-          label="Manual row"
-        ></lr-conversation-item>
-        <lr-conversation-item
-          conversation-id="s2"
-          label="Another manual row"
-          size="s"
-        ></lr-conversation-item>
-      </lr-thread-list>
-    `)) as LyraThreadList;
-    await el.updateComplete;
-    await nextFrame();
-    // Slotted mode: no internal virtual list at all, so nothing forwards anything.
-    expect(el.shadowRoot!.querySelectorAll("lr-virtual-list").length).to.equal(
-      0
-    );
-    expect(el.compact).to.be.true;
-
-    const slotted = [
-      ...el.querySelectorAll<LyraConversationItem>("lr-conversation-item"),
-    ];
-    expect(slotted.length).to.equal(2);
-    // The host owns its own items' density here, exactly as it owns every other row property.
-    expect(slotted[0]!.size).to.equal("m");
-    expect(slotted[1]!.size).to.equal("s");
+    expect(dataRows(el).every((row) => row.getAttribute("size") === "m")).to.equal(true);
   });
 });
 
@@ -4749,13 +4685,4 @@ it('uses size m by default and forwards explicit size tiers to data rows', async
   const rows = dataRows(el);
   expect(rows.length).to.be.greaterThan(0);
   expect(rows.map(row => row.size)).to.deep.equal(rows.map(() => 'l'));
-  el.compact = true;
-  await el.updateComplete;
-  expect(el.size).to.equal('s');
-  el.size = 'm';
-  await el.updateComplete;
-  expect(el.compact).to.equal(false);
 });
-
-expectDeprecatedUsage('lr-thread-list', 'attribute', 'compact');
-expectDeprecatedUsage('lr-thread-list', 'property', 'compact');

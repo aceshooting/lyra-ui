@@ -613,6 +613,96 @@ it("virtualizes a 5,000-command catalog while keeping the active descendant moun
   expect((el.shadowRoot!.getElementById(input.getAttribute("aria-activedescendant")!)) != null).to.equal(true);
 });
 
+it('projects only visible groups in source order while retaining an off-window active option', async () => {
+  const commands = Array.from({ length: 45 }, (_, index) => ({
+    commandId: `command-${index}`,
+    label: `Command ${index}`,
+    group: index < 10 ? 'First' : index < 30 ? 'Middle' : 'Last',
+  }));
+  const el = await fixture<LyraCommandPalette>(html`<lr-command-palette .commands=${commands}></lr-command-palette>`);
+  el.openPalette();
+  await el.updateComplete;
+  type Row = { index: number; top: number; groupIndex: number };
+  type Group = { index: number; rows: Row[] };
+  const internals = el as unknown as {
+    readonly resultModel: { rows: Row[]; groups: Group[] };
+    visibleGroups(model: { rows: Row[]; groups: Group[] }): Group[];
+    listScrollTop: number;
+    listViewportHeight: number;
+    rowPitch: number;
+    activeIndex: number;
+  };
+  const model = internals.resultModel;
+  internals.listViewportHeight = internals.rowPitch * 2;
+  for (const [scrollTop, activeIndex] of [
+    [0, 0],
+    [internals.rowPitch * 20, 0],
+    [internals.rowPitch * 20, 44],
+    [model.rows[44]!.top, -1],
+  ] as const) {
+    internals.listScrollTop = scrollTop;
+    internals.activeIndex = activeIndex;
+    const minimum = Math.max(0, scrollTop - internals.rowPitch * 6);
+    const maximum = scrollTop + internals.listViewportHeight + internals.rowPitch * 6;
+    const expectedIndexes = new Set(model.rows
+      .filter((row) => row.top + internals.rowPitch >= minimum && row.top <= maximum)
+      .map((row) => row.index));
+    if (activeIndex >= 0) expectedIndexes.add(activeIndex);
+    const expected = model.groups
+      .map((group) => ({ index: group.index, rows: group.rows.filter((row) => expectedIndexes.has(row.index)).map((row) => row.index) }))
+      .filter((group) => group.rows.length > 0);
+    const actual = internals.visibleGroups(model)
+      .map((group) => ({ index: group.index, rows: group.rows.map((row) => row.index) }));
+    expect(actual).to.deep.equal(expected);
+  }
+
+  el.commands = [];
+  await el.updateComplete;
+  expect(internals.visibleGroups(internals.resultModel)).to.deep.equal([]);
+
+  el.commands = [{ commandId: 'only', label: 'Only', group: 'Single' }];
+  await el.updateComplete;
+  internals.activeIndex = 0;
+  internals.listScrollTop = internals.rowPitch * 100;
+  expect(internals.visibleGroups(internals.resultModel)
+    .map((group) => ({ index: group.index, rows: group.rows.map((row) => row.index) })))
+    .to.deep.equal([{ index: 0, rows: [0] }]);
+});
+
+it('reads group metadata only for the visible window and active option', async () => {
+  const commands = Array.from({ length: 200 }, (_, index) => ({
+    commandId: `command-${index}`,
+    label: `Command ${index}`,
+    group: `Group ${index}`,
+  }));
+  const el = await fixture<LyraCommandPalette>(html`<lr-command-palette .commands=${commands}></lr-command-palette>`);
+  el.openPalette();
+  await el.updateComplete;
+  type Group = { index: number; rows: Array<{ index: number; top: number; groupIndex: number }> };
+  const internals = el as unknown as {
+    readonly resultModel: { rows: Group['rows']; groups: Group[] };
+    visibleGroups(model: { rows: Group['rows']; groups: Group[] }): Group[];
+    listScrollTop: number;
+    listViewportHeight: number;
+    rowPitch: number;
+    activeIndex: number;
+  };
+  const model = internals.resultModel;
+  const accessed = new Set<number>();
+  const groups = new Proxy(model.groups, {
+    get(target, property, receiver) {
+      if (typeof property === 'string' && /^(0|[1-9]\d*)$/.test(property)) accessed.add(Number(property));
+      return Reflect.get(target, property, receiver);
+    },
+  });
+  internals.listScrollTop = 0;
+  internals.listViewportHeight = internals.rowPitch;
+  internals.activeIndex = 199;
+  const projected = internals.visibleGroups({ ...model, groups });
+  expect(projected.at(-1)?.rows[0]?.index).to.equal(199);
+  expect(accessed.size).to.be.lessThan(20);
+});
+
 it("renders a visible focus indicator on the auto-focused search input", async () => {
   const el = (await fixture(
     html`<lr-command-palette

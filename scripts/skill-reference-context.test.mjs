@@ -338,6 +338,10 @@ test('staged standalone references preserve package truth in their own link cont
     const stagedTopic = readFileSync(path.join(stagedSharedTopics, `${topic}.md`), 'utf8');
     assert.equal(stagedTopic, packageTopic, `${topic} must keep its package-relative route in the skill copy`);
   }
+  const nativeTopic = readFileSync(path.join(stagedSharedTopics, 'native-styles-and-utilities.md'), 'utf8');
+  assert.match(nativeTopic, /^## Optional native styles and CSS utilities$/mu);
+  assert.match(nativeTopic, /\]\(\.\/styles-and-tokens\.md#reading-the-resolved-tokens-from-your-own-components--tokens-rootcss\)/u,
+    'native CSS should keep its cross-topic token route in the standalone skill');
   assert.match(
     readFileSync(path.join(stagedSharedTopics, 'imports-and-registration.md'), 'utf8'),
     /\]\(\.\/styles-and-tokens\.md#the-shadcn-look--themesshadcncss\)/u,
