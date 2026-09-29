@@ -277,9 +277,9 @@ An async `source` row can carry the same two fields (`start`, `end`) alongside i
 - `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-popover>`:
   always shows the open listbox in the browser top layer, placed `fixed` whatever the positioning
   strategy resolves to, so it paints above a sibling surface stacked higher than a `z-index`ed fixed
-  or sticky header, toolbar or rail it sits in (see **Anchored overlays and the top layer** in
-  `llms/overlays.md`). Anchoring, RTL placement, focus, Escape and the transitions are unchanged and
-  no DOM node moves; it leaves the top layer once it settles closed. Unset, promotion happens only
+  or sticky header, toolbar or rail it sits in (see the `<lr-popover>` `topLayer` documentation in
+  `llms/components/lr-popover.md`). Anchoring, RTL placement, focus, Escape and the transitions are
+  unchanged and no DOM node moves; it leaves the top layer once it settles closed. Unset, promotion happens only
   when a trapping ancestor forces it.
 - `positioningStrategy: PlaceStrategy = 'fixed'` (attribute `positioning-strategy`, reflected) —
   the CSS positioning scheme the listbox is laid out with, spelled the same as on `lr-select`,
@@ -946,9 +946,9 @@ exactly like the multi-option case, until the trigger is actually activated.
 - `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-popover>`:
   always shows the open listbox in the browser top layer, placed `fixed` whatever the positioning
   strategy resolves to, so it paints above a sibling surface stacked higher than a `z-index`ed fixed
-  or sticky header, toolbar or rail it sits in (see **Anchored overlays and the top layer** in
-  `llms/overlays.md`). Anchoring, RTL placement, focus, Escape and the transitions are unchanged and
-  no DOM node moves; it leaves the top layer once it settles closed. Unset, promotion happens only
+  or sticky header, toolbar or rail it sits in (see the `<lr-popover>` `topLayer` documentation in
+  `llms/components/lr-popover.md`). Anchoring, RTL placement, focus, Escape and the transitions are
+  unchanged and no DOM node moves; it leaves the top layer once it settles closed. Unset, promotion happens only
   when a trapping ancestor forces it.
 - `positioningStrategy: PlaceStrategy = 'absolute'` (attribute `positioning-strategy`, reflected) —
   see `<lr-popover>` (`llms/components/lr-popover.md`). `hoist: boolean = false` is its retained
@@ -6619,9 +6619,9 @@ readonly LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; cou
 - `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-popover>`:
   always shows the open listbox in the browser top layer, placed `fixed` whatever the positioning
   strategy resolves to, so it paints above a sibling surface stacked higher than a `z-index`ed fixed
-  or sticky header, toolbar or rail it sits in (see **Anchored overlays and the top layer** in
-  `llms/overlays.md`). Anchoring, RTL placement, focus, Escape and the transitions are unchanged and
-  no DOM node moves; it leaves the top layer once it settles closed. Unset, promotion happens only
+  or sticky header, toolbar or rail it sits in (see the `<lr-popover>` `topLayer` documentation in
+  `llms/components/lr-popover.md`). Anchoring, RTL placement, focus, Escape and the transitions are
+  unchanged and no DOM node moves; it leaves the top layer once it settles closed. Unset, promotion happens only
   when a trapping ancestor forces it.
 - `withoutFlags: boolean = false` (attribute `without-flags`) — omits each row's leading
   `<lr-flag language={tag} variant="compact">` (or `<lr-flag country={country} variant="compact">`

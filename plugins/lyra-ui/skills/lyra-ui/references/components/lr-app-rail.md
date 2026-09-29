@@ -99,9 +99,9 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   `'auto'` or unset (see above); an explicit `forceMode` value takes full priority.
   Unset (the default, `null`) reproduces the original breakpoint-only behavior exactly.
 - `topLayer: boolean = false` (attribute `top-layer`, reflected) — forwards `top-layer` to every
-  descendant `<lr-app-rail-item>` (its icon-only label flyout; see **Anchored overlays and the top
-  layer** in `llms/overlays.md`) so one attribute covers the rail. An item's own `top-layer` is
-  never overwritten; either one promotes.
+  descendant `<lr-app-rail-item>` (its icon-only label flyout; see the `<lr-popover>` `topLayer`
+  documentation in `llms/components/lr-popover.md`) so one attribute covers the rail. An item's
+  own `top-layer` is never overwritten; either one promotes.
 - `collapsible: boolean = false` (reflected) — opts in a desktop collapse control rendered inside
   `[part="header"]`. It flips the rail between its `'full'` and `'icon-only'` presentations by
   writing `preferredMode`, so the `mobile-breakpoint` keeps being tracked automatically and a
@@ -547,9 +547,9 @@ out of default-width compact rails, or use a rail that never collapses.
 - `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-popover>`:
   always shows the open icon-only label flyout in the browser top layer, placed `fixed` whatever the
   positioning strategy resolves to, so it paints above a sibling surface stacked higher than a
-  `z-index`ed fixed or sticky header, toolbar or rail it sits in (see **Anchored overlays and the
-  top layer** in `llms/overlays.md`). Anchoring, RTL placement, focus, Escape and the transitions
-  are unchanged and no DOM node moves; it leaves the top layer once it settles closed. Unset,
+  `z-index`ed fixed or sticky header, toolbar or rail it sits in (see the `<lr-popover>` `topLayer`
+  documentation in `llms/components/lr-popover.md`). Anchoring, RTL placement, focus, Escape and the
+  transitions are unchanged and no DOM node moves; it leaves the top layer once it settles closed. Unset,
   promotion happens only when a trapping ancestor forces it. `<lr-app-rail top-layer>` applies it to
   every descendant item without overwriting an item's own value.
 - `tooltip: boolean = false` (reflected) — opt-in hover or keyboard-focus flyout (the focused control matches `:focus-visible` and no pointer press preceded it)
