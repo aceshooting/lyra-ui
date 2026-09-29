@@ -656,7 +656,7 @@ named review; no such approval is active. Raising a ceiling merely to clear a fa
 
 The file ceiling is 4,095: 2,500 base artifacts, one emitted JavaScript file for each of the 304 stable
 tag aliases, a measured 1,284-file remainder, and the existing seven-file reserve for the next
-component scaffold. The remainder was measured at 1,268 in the 1c686490d package review; since then,
+component scaffold. The remainder was measured at 1,268 in the previous package review; since then,
 nine required runtime modules add 18 emitted files (JavaScript and declarations): `input-shared`,
 `custom-element-upgrade-observer`, `icon-only-content`, `native-modal-carrier` and its styles,
 `native-modal-context`, and the `data`, `high-contrast`, and `terminal` theme looks. Retiring
