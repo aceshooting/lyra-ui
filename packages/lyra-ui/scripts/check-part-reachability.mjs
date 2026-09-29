@@ -1,4 +1,5 @@
 import { isMainModule } from './is-main-module.mjs';
+import { maskHtmlComments } from './html-comments.mjs';
 
 // Part-reachability checker: three static rules over src/components that catch `::part()`-related
 // CSS which parses fine, ships fine, and never matches anything. All three bug classes are invisible
@@ -157,23 +158,39 @@ function htmlTemplateSurface(source) {
 
   let scanCode;
   const scanTemplate = (start, keep) => {
+    const owned = [];
+    const finish = (end) => {
+      if (keep) {
+        // Nested templates have their own comment scope; only mask this template's literals.
+        const literal = Array(end - start - 1).fill(' ');
+        for (const index of owned) literal[index - start - 1] = out[index];
+        const masked = maskHtmlComments(literal.join(''));
+        for (const index of owned) out[index] = masked[index - start - 1];
+      }
+      return end < source.length ? end + 1 : end;
+    };
     for (let i = start + 1; i < source.length; i++) {
       const pair = source.slice(i, i + 2);
       if (source[i] === '\\') {
         if (keep) {
           out[i] = source[i];
-          if (i + 1 < source.length) out[i + 1] = source[i + 1];
+          owned.push(i);
+          if (i + 1 < source.length) {
+            out[i + 1] = source[i + 1];
+            owned.push(i + 1);
+          }
         }
         i++;
       } else if (pair === '${') {
         i = scanCode(i + 2, true) - 1;
       } else if (source[i] === '`') {
-        return i + 1;
+        return finish(i);
       } else if (keep) {
         out[i] = source[i];
+        owned.push(i);
       }
     }
-    return source.length;
+    return finish(source.length);
   };
 
   scanCode = (start, stopAtBrace = false) => {
@@ -201,8 +218,7 @@ function htmlTemplateSurface(source) {
   };
 
   scanCode(0);
-  const surface = out.join('');
-  return surface.replace(/<!--[\s\S]*?-->/g, (comment) => comment.replace(/[^\n]/g, ' '));
+  return out.join('');
 }
 
 const lineOf = (source, index) => source.slice(0, index).split('\n').length;

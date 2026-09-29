@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { isMainModule } from './is-main-module.mjs';
+import { htmlCommentEnd } from './html-comments.mjs';
 
 // Prevent silent no-op composition bugs. Every statically named `<lr-*>` child in a Lit template
 // must receive only public attributes/properties from the package's custom-elements manifest.
@@ -219,8 +220,7 @@ function tagsInMarkup(markup, line) {
     const open = markup.indexOf('<', index);
     if (open < 0) break;
     if (markup.startsWith('<!--', open)) {
-      const close = markup.indexOf('-->', open + 4);
-      index = close < 0 ? markup.length : close + 3;
+      index = htmlCommentEnd(markup, open);
       continue;
     }
     if (markup[open + 1] === '/' || markup[open + 1] === '!' || markup[open + 1] === '?') {

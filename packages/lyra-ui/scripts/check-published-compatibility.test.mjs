@@ -193,8 +193,8 @@ test('ordinary verification works outside a checkout with no Git executable or f
   const temp = await mkdtemp(join(tmpdir(), 'lyra-offline-history-'));
   try {
     const moduleUrl = new URL('./check-published-compatibility.mjs', import.meta.url).href;
-    const code = `globalThis.fetch = () => { throw new Error('network forbidden'); }; const { checkPublishedCompatibility } = await import(${JSON.stringify(moduleUrl)}); await checkPublishedCompatibility();`;
-    const result = spawnSync(process.execPath, ['--input-type=module', '-e', code], { cwd: temp, env: { ...process.env, PATH: '' }, encoding: 'utf8' });
+    const code = `globalThis.fetch = () => { throw new Error('network forbidden'); }; const { checkPublishedCompatibility } = await import(process.argv[1]); await checkPublishedCompatibility();`;
+    const result = spawnSync(process.execPath, ['--input-type=module', '-e', code, moduleUrl], { cwd: temp, env: { ...process.env, PATH: '' }, encoding: 'utf8' });
     assert.equal(result.status, 0, result.stderr);
   } finally { await rm(temp, { recursive: true, force: true }); }
 });

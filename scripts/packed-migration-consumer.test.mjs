@@ -128,6 +128,8 @@ test('member recipes cover exactly390 immutable identities and resolve every sup
   assert.equal(cases.length, 390);
   assert.equal(new Set(cases.map(item => compatibilityKey(item.key))).size, 390);
   for (const item of cases) { assert.notEqual(item.input, item.resolved); assert.ok(item.column > 0); }
+  const avatarEvent = cases.find(item => item.key.tag === 'lr-avatar-group' && item.key.kind === 'event');
+  assert.ok(avatarEvent?.input.includes('=${handler}>'), 'Lit event recipe keeps its handler placeholder literal');
   const polarity = cases.find(item => item.key.tag === 'lr-agent-run' && item.key.name === 'showCancel');
   assert.equal(polarity.automatic, false);
   assert.equal(polarity.resolved, "document.querySelector('lr-agent-run')!.withoutCancel = false;\n");

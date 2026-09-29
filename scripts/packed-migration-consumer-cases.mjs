@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { compatibilityKey } from '../packages/lyra-ui/scripts/published-compatibility.mjs';
 
+const templateHandlerExpression = '${handler}';
+
 const manualProperties = {
   compact: ['size', "'s'"], emptyCompact: ['emptySize', "'s'"],
   hideColumnsLabel: ['columnsHideLabel', "'Consumer value'"],
@@ -61,7 +63,7 @@ export function createMemberMigrationCases(context, ledger) {
       input = `${anchor}.addEventListener('${name}', event => console.log(event));\n`;
       resolved = `${anchor}.addEventListener('${target}', event => console.log(event));\n`;
       if (tag === 'lr-avatar-group') {
-        input = `const view = html\`<${tag} size="medium" @${name}=\${handler}></${tag}>\`;\n`;
+        input = `const view = html\`<${tag} size="medium" @${name}=${templateHandlerExpression}></${tag}>\`;\n`;
         resolved = input.replace(name, target);
       }
       if (tag === 'lr-graph' && review) {

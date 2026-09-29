@@ -1687,6 +1687,14 @@ test('comments, prose, class names, unrelated packages, and partial strings are 
   assert.deepEqual(result.warnings, []);
 });
 
+test('HTML comment endings do not hide following live migration sites', () => {
+  for (const comment of ['<!-- hidden -->', '<!-- hidden --!>', '<!-->', '<!--->']) {
+    const input = comment + '<wa-widget></wa-widget>';
+    const result = migrateText(input, contract, { file: 'comments.html' });
+    assert.equal(result.content, comment + '<lr-widget placement="start"></lr-widget>', comment);
+  }
+});
+
 test('CSS rewrites never alter comments inside an otherwise migrated component rule', () => {
   const input = [
     'wa-widget {',

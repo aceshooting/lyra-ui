@@ -1,6 +1,7 @@
 // Source scanning, lexical ownership, and location-aware migration analysis.
 import path from 'node:path';
 import { invariant } from './migration-contract.mjs';
+import { htmlCommentEnd } from './html-comments.mjs';
 
 
 export function ecosystemForTag(tag) {
@@ -61,8 +62,7 @@ export function commentRanges(text) {
   let index = 0;
   while (index < text.length) {
     if (text.startsWith('<!--', index)) {
-      const end = text.indexOf('-->', index + 4);
-      const finish = end < 0 ? text.length : end + 3;
+      const finish = htmlCommentEnd(text, index);
       ranges.push([index, finish]);
       index = finish;
       continue;

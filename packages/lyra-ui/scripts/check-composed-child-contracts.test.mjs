@@ -100,6 +100,13 @@ function analyzeFixture(sources) {
   }
 }
 
+for (const comment of ['<!-- hidden -->', '<!-- hidden --!>', '<!-->', '<!--->']) {
+  const source = 'import { html } from \'lit\'; const view = html`' + comment
+    + '<lr-fixture-child .unknown=${1}></lr-fixture-child><!-- trailing -->`;';
+  const result = analyzeFixture({ componentSource: source });
+  assert.ok(result.findings.some((finding) => finding.includes('unknown')), comment);
+}
+
 const positive = analyzeFixture({
   componentSource: `
     import { html } from 'lit';

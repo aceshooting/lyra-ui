@@ -539,7 +539,9 @@ async function strictConsoleHarness(strict = true) {
       error: (...args) => logs.push(['error', ...args]),
     },
   };
-  const script = configModule.default.testRunnerHtml('/runner.js').match(/<script>([\s\S]*?)<\/script>/u)[1];
+  const runnerHtml = configModule.default.testRunnerHtml('/runner.js')
+    .replace(/<\/?script/giu, (tag) => tag.toUpperCase());
+  const script = runnerHtml.match(/<script>([\s\S]*?)<\/script>/iu)[1];
   runInNewContext(script, context);
   const calls = [];
   const existingError = { message: 'existing session failure' };

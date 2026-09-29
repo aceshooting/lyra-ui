@@ -36,6 +36,24 @@ test('stripNonRenderedText blanks an HTML comment reachable inside an html`` tem
   assert.ok(stripped.includes('<div>real</div>'));
 });
 
+test('HTML comment endings preserve following live sr-only usage and line offsets', () => {
+  for (const comment of ['<!-- hidden -->', '<!-- hidden --!>', '<!-->', '<!--->']) {
+    const source = 'html`' + comment + '\n<span class="sr-only">real</span><!-- trailing -->`';
+    const stripped = stripNonRenderedText(source);
+    assert.equal(stripped.length, source.length, comment);
+    assert.equal(stripped.indexOf('\n'), source.indexOf('\n'), comment);
+    assert.equal(rendersSrOnlyClass(source), true, comment);
+  }
+});
+
+test('an unfinished comment cannot hide sr-only usage in a later source template', () => {
+  for (const laterComment of ['', '<!-- trailing -->']) {
+    assert.equal(rendersSrOnlyClass('html`<!-- unclosed`; html`<span class="sr-only">live</span>' + laterComment + '`;'), true);
+  }
+  assert.equal(rendersSrOnlyClass('html`<!-- <span class="sr-only">hidden</span>`;'), false);
+  assert.equal(rendersSrOnlyClass('html`<!-- \\` <span class="sr-only">hidden</span> -->`;'), false);
+});
+
 test('stripNonRenderedText leaves a backtick-quoted mention (this codebase\'s own JSDoc convention) untouched either way', () => {
   // button.class.ts's real shape: a `.sr-only` markdown code-span in a `//` line comment. Line
   // comments are deliberately NOT stripped (see the script's own header comment), so this must

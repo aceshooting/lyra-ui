@@ -3,9 +3,11 @@ import { spawnSync } from 'node:child_process';
 import {
   existsSync,
   mkdtempSync,
+  mkdirSync,
   readFileSync,
   readdirSync,
   rmSync,
+  writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -146,6 +148,25 @@ function validateStandaloneTree(treeRoot) {
   );
   return { componentFiles, referenceFiles, skillMarkdownFiles };
 }
+
+test('heading anchors retain text, Unicode and duplicate suffixes without markup characters', () => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'lyra-heading-anchors-'));
+  try {
+    mkdirSync(path.join(directory, 'shared'));
+    for (const [topic] of SHARED_TOPICS) {
+      writeFileSync(path.join(directory, 'shared', `${topic}.md`), [
+        '# <b>Safe</b> `Code`',
+        '# <b>Safe</b> `Code`',
+        '# Éléments 中文',
+        '# <scr<script>ipt>',
+        '[first](#safe-code) [duplicate](#safe-code-1) [unicode](#éléments-中文) [malformed](#ipt)',
+      ].join('\n'));
+    }
+    assert.equal(validateSharedTopicLinks(path.join(directory, 'shared')), true);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
 
 test('context rewrites are exact and fail closed on drift', () => {
   const packageShared = readFileSync(path.join(packageRoot, 'llms', 'shared.md'), 'utf8');

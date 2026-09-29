@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { isMainModule } from './is-main-module.mjs';
+import { maskHtmlComments } from './html-comments.mjs';
 
 // `src/internal/a11y.ts` exports a shared `srOnly` css block that defines the `.sr-only`
 // visually-hidden class (position: absolute, clip-path: inset(50%), a hairline box). A component
@@ -51,9 +52,11 @@ export function classFiles(directory) {
  *  reported line number stays accurate), leaving every other character -- including real template
  *  text -- untouched. */
 export function stripNonRenderedText(source) {
+  // Keep template delimiters intact so an unfinished HTML comment cannot reach a later template.
+  // Escaped backticks belong to their source chunk and cannot prematurely end that comment.
   return source
     .replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, ' '))
-    .replace(/<!--[\s\S]*?-->/g, (comment) => comment.replace(/[^\n]/g, ' '));
+    .replace(/(?:\\[\s\S]|[^`\\])+/g, (chunk) => maskHtmlComments(chunk));
 }
 
 /** Every `${...}` expression bound to `attrName=`, extracted by brace-depth counting (mirrors

@@ -29,10 +29,10 @@ export const GENERATED_LLMS_FILES = Object.freeze(['index.md', 'tokens.md', 'pee
 
 /**
  * Opt out one line with `<!-- llms-default-exempt: why -->` on it or on the line before. The
- * `(?!-->)` is load-bearing: without it `\S` matches the `-` of the comment's own terminator, so a
+ * `(?!--!?>)` is load-bearing: without it `\S` matches the `-` of the comment's own terminator, so a
  * reasonless `<!-- llms-default-exempt: -->` would silence the line while explaining nothing.
  */
-export const EXEMPTION_MARKER = /<!--\s*llms-default-exempt:\s*(?!-->)\S/;
+export const EXEMPTION_MARKER = /<!--\s*llms-default-exempt:\s*(?!--!?>)\S/;
 
 // `=(?!>)` keeps a documented function type -- `(option: LyraOption) => unknown` -- from reading as
 // a default of `> unknown`, which is what a naive `=` split produces.

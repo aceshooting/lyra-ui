@@ -3,6 +3,7 @@ import path from 'node:path';
 import { parseSync } from 'oxc-parser';
 import { packageDir } from './paths.mjs';
 import { familyFromModule, normalizeManifest } from '../component-inventory.mjs';
+import { htmlCommentEnd } from '../html-comments.mjs';
 
 function resolveTypeScriptImport(importer, specifier) {
   const target = path.resolve(path.dirname(importer), specifier);
@@ -169,14 +170,6 @@ function currentLiveStaticStartTag(prefix) {
   for (let index = 0; index < prefix.length; index += 1) {
     const character = prefix[index];
 
-    if (mode === 'comment') {
-      if (prefix.startsWith('-->', index)) {
-        mode = 'data';
-        index += 2;
-      }
-      continue;
-    }
-
     if (mode === 'raw-text') {
       if (
         rawTextTag !== 'plaintext' &&
@@ -198,8 +191,7 @@ function currentLiveStaticStartTag(prefix) {
 
     if (mode === 'data') {
       if (prefix.startsWith('<!--', index)) {
-        mode = 'comment';
-        index += 3;
+        index = htmlCommentEnd(prefix, index) - 1;
       } else if (character === '<') {
         if (/[A-Za-z]/.test(prefix[index + 1] ?? '')) {
           mode = 'start-tag';

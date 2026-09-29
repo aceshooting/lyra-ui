@@ -140,6 +140,8 @@ test('a deliberate exception opts out on its own line or the line before', () =>
   );
   assert.ok(EXEMPTION_MARKER.test('<!-- llms-default-exempt: because -->'));
   assert.ok(!EXEMPTION_MARKER.test('<!-- llms-default-exempt: -->'), 'a bare marker needs a reason');
+  assert.ok(EXEMPTION_MARKER.test('<!-- llms-default-exempt: because --!>'));
+  assert.ok(!EXEMPTION_MARKER.test('<!-- llms-default-exempt: --!>'), 'a bang-ending marker also needs a reason');
 });
 
 test('a claim in a section naming no tag is ignored', () => {

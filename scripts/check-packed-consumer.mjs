@@ -563,6 +563,7 @@ async function verifyPackedMigrationCli(fixtureDir) {
   const cliFiles = (await readdir(join(packageRoot, 'dist', 'cli'))).sort();
   const expectedCliFiles = [
     'component-inventory.mjs',
+    'html-comments.mjs',
     'lyra-rename-ledger.mjs',
     'migrate-wa.mjs',
     'migration-analysis.mjs',

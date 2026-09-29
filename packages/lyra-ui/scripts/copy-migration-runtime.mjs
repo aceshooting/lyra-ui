@@ -3,6 +3,7 @@ import { join } from 'node:path';
 
 const runtimeModules = Object.freeze([
   'migrate-wa.mjs',
+  'html-comments.mjs',
   'migration-contract.mjs',
   'migration-analysis.mjs',
   'migration-renames.mjs',

@@ -1707,6 +1707,14 @@ test('optional-peer parsing ignores imports written only in comments, examples, 
   );
 });
 
+test('HTML comment endings do not hide following composed-icon capabilities', () => {
+  for (const comment of ['<!-- hidden -->', '<!-- hidden --!>', '<!-->', '<!--->']) {
+    const source = 'class View { render() { return html`' + comment
+      + '<lr-icon .src=${this.src}></lr-icon>`; } }';
+    assert.equal(sourceForwardsRemoteIconCapability(source, new Set(['src']), 'icon.ts'), true, comment);
+  }
+});
+
 test('composed-icon capability evidence requires an actual author-settable remote binding', () => {
   assert.equal(
     sourceForwardsRemoteIconCapability(

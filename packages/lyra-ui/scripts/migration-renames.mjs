@@ -22,6 +22,7 @@ import {
   skipBalanced,
 } from './migration-analysis.mjs';
 import { invariant } from './migration-contract.mjs';
+import { htmlCommentEnd } from './html-comments.mjs';
 
 
 // ---------------------------------------------------------------------------------------------
@@ -191,8 +192,7 @@ function renameIgnoredRanges(text, file) {
   const addHtmlComments = (start, end) => {
     let index = text.indexOf('<!--', start);
     while (index >= 0 && index < end) {
-      const close = text.indexOf('-->', index + 4);
-      const finish = close < 0 || close + 3 > end ? end : close + 3;
+      const finish = htmlCommentEnd(text, index, end);
       if (!inBase(index)) extra.push([index, finish]);
       index = text.indexOf('<!--', finish);
     }
@@ -227,7 +227,7 @@ function scanReviewAcknowledgements(text, ignoredRanges, starts, openingTokens) 
     const followingTag = tokenAt.get(next);
     const standalone = /^\s*\{?\s*$/.test(text.slice(starts[firstLine - 1], start));
     for (const match of body.matchAll(REVIEW_ACKNOWLEDGEMENT)) {
-      const tokens = match[1].replace(/(?:\*\/|-->|\*\/\s*\})[\s\S]*$/, '').split(/[\s,]+/).filter(Boolean);
+      const tokens = match[1].replace(/(?:\*\/|--!?>)[\s\S]*$/, '').split(/[\s,]+/).filter(Boolean);
       const record = {
         offset: start + match.index,
         entries: tokens.map((token) => {

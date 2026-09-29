@@ -133,11 +133,10 @@ function headingAnchors(text) {
   const anchors = new Set();
   const used = new Map();
   for (const match of text.matchAll(/^#{1,6}\s+(.+?)\s*#*$/gmu)) {
+    // Heading identifiers omit tags and retain only identifier characters in the same pass.
     const base = match[1]
-      .replace(/<[^>]*>/gu, '')
-      .replace(/`/gu, '')
       .toLowerCase()
-      .replace(/[^\p{L}\p{N}_ -]/gu, '')
+      .replace(/<[^>]*>|[^\p{L}\p{N}_ -]/gu, '')
       .trim()
       .replace(/\s/gu, '-');
     const count = used.get(base) ?? 0;

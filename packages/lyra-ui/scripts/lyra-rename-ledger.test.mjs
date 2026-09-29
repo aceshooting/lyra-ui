@@ -976,6 +976,29 @@ test('acknowledgements name the code, cover a whole opening tag, work in Lit tem
   ]);
 });
 
+test('HTML comment boundaries keep following live markup and review acknowledgements visible', () => {
+  for (const file of ['comments.html', 'comments.ts']) {
+    for (const close of ['-->', '--!>']) {
+      const markup = `<!-- <lr-sample-panel heading-text="hidden"></lr-sample-panel> ${close}\n`
+        + `<!-- lyra-migrate-reviewed: DETAIL_SHAPE_REVIEW:lr-close${close}\n`
+        + '<section @lr-close=${this.onClose}></section>\n'
+        + '<lr-sample-panel heading-text="visible"></lr-sample-panel>';
+      const input = file.endsWith('.ts') ? 'const view = html`' + markup + '`;' : markup;
+      const result = run(input, file);
+      assert.ok(result.content.includes('heading-text="hidden"'), `${file} ${close}: comment content`);
+      assert.ok(!result.content.includes('heading-text="visible"'), `${file} ${close}: live attribute`);
+      assert.equal(result.acknowledged, 1, `${file} ${close}: acknowledgement`);
+      assert.deepEqual(codesOf(result.warnings), ['3 NAME_GAINED_OWNER_REVIEW']);
+    }
+    for (const comment of ['<!-->', '<!--->']) {
+      const markup = comment + '<lr-sample-panel heading-text="visible"></lr-sample-panel>';
+      const input = file.endsWith('.ts') ? 'const view = html`' + markup + '`;' : markup;
+      const result = run(input, file);
+      assert.ok(!result.content.includes('heading-text="visible"'), `${file} ${comment}: live attribute`);
+    }
+  }
+});
+
 test('scanning stays linear in the size of the input', () => {
   const unit = fixture('component.input.html');
   const text = unit.repeat(Math.ceil(400_000 / unit.length));
@@ -1427,11 +1450,13 @@ test('property changes are optional, versioned, validated and reported without r
   assert.equal(createRenameProfiles(projection, { lyraVersion: '21.2.0' }).get('lyra-v21').data.propertyChanges.length, 0);
   assert.equal(createRenameProfiles(projection, { lyraVersion: '22.0.0' }).get('lyra-v21').data.propertyChanges.length, 1);
   const runtime = buildMigrationContract(target, { renameLedger: inputLedger });
+  const numericLevelExpression = '${numericLevel}';
   const source = `document.querySelector('lr-sample-panel').heading = numericLevel;
 const panel = document.querySelector('lr-sample-panel');
 panel.heading = 3;
-html\`<lr-sample-panel .heading=\${numericLevel}></lr-sample-panel>\`;
+html\`<lr-sample-panel .heading=${numericLevelExpression}></lr-sample-panel>\`;
 `;
+  assert.ok(source.includes('.heading=${numericLevel}>'), 'Lit property fixture keeps its expression literal');
   const result = run(source, 'property.ts', runtime);
   assert.equal(result.content, source);
   assert.equal(result.warnings.filter((entry) => entry.warningCode === 'PROPERTY_CHANGE_REVIEW').length, 3);
@@ -1564,8 +1589,9 @@ test('all nine published retired aliases have policy-backed reports and replacem
   wrong.profiles[0].retiredEvents[0].replacement = 'lr-unrelated';
   assertFinding(analyzeRetiredEventHistory(wrong, history), /replacement differs from published policy/);
   const contract = buildMigrationContract(checkedInventory, { renameLedger: current, exportDeprecations: readExportDeprecations(), compatibilityContext: checkedCompatibilityContext });
+  const templateHandlerExpression = '${handler}';
   for (const entry of current.profiles[0].retiredEvents) {
-    const input = `<${entry.tag} @${entry.event}=\${handler}></${entry.tag}>`;
+    const input = `<${entry.tag} @${entry.event}=${templateHandlerExpression}></${entry.tag}>`;
     const result = run(input, 'retired.html', contract);
     const reports = result.warnings.filter((warning) => warning.warningCode === 'RETIRED_EVENT_REVIEW');
     assert.equal(reports.length, 1, entry.tag + ' ' + entry.event);

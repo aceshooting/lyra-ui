@@ -236,6 +236,27 @@ test('a suppression comment does not leak past an intervening code line', () => 
 
 const recursiveParts = (source) => checkRecursivePartForwarding('fixture.class.ts', source);
 
+test('HTML comment endings keep following recursive tags visible', () => {
+  for (const comment of ['<!-- hidden -->', '<!-- hidden --!>', '<!-->', '<!--->']) {
+    const source = '/**\n * @customElement lr-branch\n * @csspart row - One row.\n */\n'
+      + 'export class Fixture extends LyraElement { render() { return html`' + comment
+      + '<lr-branch></lr-branch><!-- trailing -->`; } }';
+    assert.equal(recursiveParts(source).length, 1, comment);
+  }
+});
+
+test('an unfinished comment is confined to its own markup template', () => {
+  for (const laterComment of ['', '<!-- trailing -->']) {
+    const source = '/**\n * @customElement lr-branch\n * @csspart row - One row.\n */\n'
+      + 'export class Fixture { first() { return html`<!-- unclosed`; } '
+      + 'render() { return html`<lr-branch></lr-branch>' + laterComment + '`; } }';
+    assert.equal(recursiveParts(source).length, 1);
+  }
+  const nested = '/**\n * @customElement lr-branch\n * @csspart row - One row.\n */\n'
+    + 'export class Fixture { render() { return html`${html`<!-- unclosed`}<lr-branch></lr-branch>`; } }';
+  assert.equal(recursiveParts(nested).length, 1, 'nested comment scope');
+});
+
 test('flags a documented part surface recursively rendered without exportparts', () => {
   const source = `
     /**
