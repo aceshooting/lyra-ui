@@ -8,6 +8,8 @@ export default {
         '.storybook/**/*.mdx',
       ],
       project: ['scripts/**/*.mjs', '.storybook/**/*.{js,mdx,css}'],
+      // The hosted regression helper invokes wtr in packages/lyra-ui, which declares it.
+      ignoreBinaries: ['wtr'],
       ignoreDependencies: [
         // Spawned by name or referenced as string data in packed-consumer checks.
         'publint',
