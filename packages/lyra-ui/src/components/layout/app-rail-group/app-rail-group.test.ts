@@ -1,3 +1,4 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './app-rail-group.js';
@@ -9,6 +10,9 @@ import {
   captureDeprecationWarnings,
   type DeprecatedUsage,
 } from '../../../../test/expected-deprecations.js';
+
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-app-rail-group', 'open');
 
 function populated(): ReturnType<typeof html> {
   return html`

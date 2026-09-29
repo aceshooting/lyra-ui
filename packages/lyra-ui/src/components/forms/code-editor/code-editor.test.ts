@@ -1,3 +1,4 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './code-editor.js';
 import type { LyraCodeEditor } from './code-editor.js';
@@ -14,6 +15,9 @@ import {
   expectDeprecatedUsage,
   type DeprecatedUsage,
 } from '../../../../test/expected-deprecations.js';
+
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-code-editor', 'line-numbers');
 
 // The compatibility tests below deliberately use the deprecated line-numbers alias, which keeps
 // working until its removal.

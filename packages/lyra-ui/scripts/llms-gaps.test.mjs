@@ -189,7 +189,7 @@ test('an inheritance declaration only covers the exact named base tag', () => {
   assert.equal(inheritsAllPublicSurface(text, 'lr-select'), false);
 });
 
-test('gap collection honors the exact Native Time inheritance declaration for inherited entries', () => {
+test('gap collection honors the exact Number Input inheritance declaration for inherited entries', () => {
   const manifest = {
     modules: [
       {
@@ -199,13 +199,13 @@ test('gap collection honors the exact Native Time inheritance declaration for in
         ],
       },
       {
-        path: 'src/components/forms/input/native-time-input.class.ts',
+        path: 'src/components/forms/input/number-input.class.ts',
         declarations: [
           {
             kind: 'class',
-            name: 'LyraNativeTimeInput',
+            name: 'LyraNumberInput',
             customElement: true,
-            tagName: 'lr-native-time-input',
+            tagName: 'lr-number-input',
             attributes: [
               {
                 name: 'inherited-only-fixture',
@@ -219,14 +219,14 @@ test('gap collection honors the exact Native Time inheritance declaration for in
   };
   assert.equal(
     collectGaps(['forms'], manifest).some(({ tag, names }) =>
-      tag === 'lr-native-time-input' && names.includes('inherited-only-fixture')),
+      tag === 'lr-number-input' && names.includes('inherited-only-fixture')),
     false,
   );
 
   manifest.modules[1].declarations[0].attributes[0].inheritedFrom.name = 'DifferentBase';
   assert.equal(
     collectGaps(['forms'], manifest).some(({ tag, names }) =>
-      tag === 'lr-native-time-input' && names.includes('inherited-only-fixture')),
+      tag === 'lr-number-input' && names.includes('inherited-only-fixture')),
     true,
     'an unresolvable or different base is not hidden by the lr-input declaration',
   );

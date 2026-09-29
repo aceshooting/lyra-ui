@@ -77,8 +77,9 @@ unchanged), and `lr-token-edit-request`
 cancelable; `preventDefault()` keeps the token in `value` unchanged and leaves the inline editor
 open with the user's edited text intact, rather than closing and discarding it).
 All three mutators share one veto contract.
-
-`lr-invalid` (no detail) is emitted once as a bubbling/composed alias when native validity fails.
+`lr-invalid` (`detail: null`) is emitted once as a bubbling/composed, cancelable alias when native
+validity fails. Calling `preventDefault()` also cancels the native `invalid` event and suppresses
+the browser’s validation bubble.
 **CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `token`, `token-label` (the
 token's text, doubling as the roving-focus edit trigger — rendered only while `editable`),
 `token-editor` (the inline text field that replaces a token's text while it is open for editing —

@@ -1,3 +1,4 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
@@ -8,6 +9,9 @@ import {
   captureDeprecationWarnings,
   type DeprecatedUsage,
 } from '../../../../test/expected-deprecations.js';
+
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-reorder-item', 'accessible-label');
 
 const ANCESTOR_TOKENS =
   '--lr-icon-button-bg: rgb(1, 2, 3); --lr-icon-button-radius: 11px; --lr-icon-button-border: 2px solid rgb(9, 8, 7);';

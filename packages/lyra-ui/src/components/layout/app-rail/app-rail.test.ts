@@ -1,3 +1,4 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { toRgba } from '../../../../test/color-contrast.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
@@ -14,6 +15,9 @@ import {
   type DeprecatedUsage,
 } from "../../../../test/expected-deprecations.js";
 import { sendKeys } from '@web/test-runner-commands';
+
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-app-rail', 'hide-toggle');
 
 // Deterministic matchMedia stand-in -- avoids depending on the real test
 // browser's viewport width (which @web/test-runner gives no control over)

@@ -687,29 +687,57 @@ async function main() {
     });
     await dropdownDocs.locator('button[slot="trigger"]').click();
     await dropdownDocsFrame.waitForTimeout(150);
-    const dropdownDocsLayout = await dropdownDocs.evaluate((element) => {
+    const dropdownDocsLayout = await dropdownDocs.evaluate(async (element) => {
       // `popup` is one token in the mapped multi-alias part list (`popup base base__popup panel`).
       // Match the token rather than requiring it to be the part attribute's only value; every
       // clipping, available-size, overflow, transform, and hit-test assertion below stays intact.
       const popup = element.shadowRoot?.querySelector('[part~="popup"]');
+      const content = popup?.querySelector('[part~="content"]');
+      const menuList = element.getMenu()?.shadowRoot?.querySelector('[part~="list"]');
+      const lastAction = element.lastElementChild;
       const canvas = element.closest('.docs-story');
       const preview = element.closest('.sbdocs-preview');
       const zoomWrapper = canvas?.querySelector(':scope > div:has(> .innerZoomElementWrapper)');
-      if (!(popup instanceof HTMLElement) || !(canvas instanceof HTMLElement) || !(preview instanceof HTMLElement)) {
+      if (!(popup instanceof HTMLElement) || !(content instanceof HTMLElement) ||
+          !(menuList instanceof HTMLElement) || !(lastAction instanceof HTMLElement) ||
+          !(canvas instanceof HTMLElement) || !(preview instanceof HTMLElement)) {
         return { error: 'Dropdown Docs did not render its expected popup/canvas structure' };
       }
       const rect = popup.getBoundingClientRect();
+      const containsRect = (outer, inner) => inner.width > 0 && inner.height > 0 &&
+        inner.top >= outer.top && inner.bottom <= outer.bottom &&
+        inner.left >= outer.left && inner.right <= outer.right;
+      const contentRect = content.getBoundingClientRect();
       const sampleYs = [rect.top + 4, rect.top + rect.height / 2, rect.bottom - 4];
       const samplesBelongToDropdown = sampleYs.map((y) => {
         const hit = document.elementFromPoint(rect.left + 8, y);
         return hit === element || (hit instanceof Node && element.contains(hit));
       });
+      // The outward arrow contributes to the shell's scrollHeight on top placement. Measure the
+      // actual content instead, and exercise the contained menu's intentional scrolling separately.
+      const previousScrollTop = menuList.scrollTop;
+      let lastActionReachable;
+      try {
+        menuList.scrollTop = menuList.scrollHeight;
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        const lastRect = lastAction.getBoundingClientRect();
+        const hit = document.elementFromPoint(lastRect.left + lastRect.width / 2, lastRect.top + lastRect.height / 2);
+        lastActionReachable = containsRect(menuList.getBoundingClientRect(), lastRect) &&
+          containsRect(content.getBoundingClientRect(), lastRect) &&
+          containsRect(popup.getBoundingClientRect(), lastRect) &&
+          (hit === lastAction || (hit instanceof Node && lastAction.contains(hit)));
+      } finally {
+        menuList.scrollTop = previousScrollTop;
+      }
       return {
         availableBlockSize: Number.parseFloat(
           getComputedStyle(popup).getPropertyValue('--lr-positioner-available-block-size'),
         ),
-        clientHeight: popup.clientHeight,
-        scrollHeight: popup.scrollHeight,
+        clientHeight: content.clientHeight,
+        scrollHeight: content.scrollHeight,
+        contentContained: containsRect(rect, contentRect),
+        menuOverflowY: getComputedStyle(menuList).overflowY,
+        lastActionReachable,
         canvasOverflow: getComputedStyle(canvas).overflow,
         previewOverflow: getComputedStyle(preview).overflow,
         zoomTransform: zoomWrapper ? getComputedStyle(zoomWrapper).transform : '',
@@ -719,6 +747,9 @@ async function main() {
     if (
       dropdownDocsLayout.error ||
       dropdownDocsLayout.clientHeight !== dropdownDocsLayout.scrollHeight ||
+      !dropdownDocsLayout.contentContained ||
+      !['auto', 'scroll'].includes(dropdownDocsLayout.menuOverflowY) ||
+      !dropdownDocsLayout.lastActionReachable ||
       dropdownDocsLayout.availableBlockSize < 200 ||
       dropdownDocsLayout.canvasOverflow !== 'visible' ||
       dropdownDocsLayout.previewOverflow !== 'visible' ||

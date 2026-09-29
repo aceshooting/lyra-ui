@@ -1,3 +1,4 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import {
   aTimeout,
   fixture,
@@ -25,6 +26,9 @@ expectDeprecatedUsage("lr-slider", "property", "showValue");
 // below can render without tripping the dev-mode locale-fallback warning that strict-console
 // platform lanes treat as fatal.
 import "../../../translations/ar/forms.js";
+
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-slider', 'show-value');
 
 function mockTrackWidth(el: LyraSlider, width: number): void {
   const track = el.shadowRoot!.querySelector('[part="track"]') as HTMLElement;

@@ -1,3 +1,4 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './xml-viewer.js';
 import type { LyraXmlViewer } from './xml-viewer.js';
@@ -5,6 +6,9 @@ import { LYRA_DEFAULT_STRINGS, registerLyraLocale } from '../../../internal/loca
 import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { forceCoarsePointer } from '../../../../test/coarse-pointer-media.js';
+
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-xml-viewer', 'collapsed-depth');
 
 // Search locale changes use explicit UI messages rather than triggering fallback warnings.
 registerLyraLocale('fr', LYRA_DEFAULT_STRINGS);

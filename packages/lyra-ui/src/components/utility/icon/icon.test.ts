@@ -1,3 +1,4 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { fixture, expect, html, aTimeout, oneEvent, waitUntil } from '@open-wc/testing';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import './icon.js';
@@ -10,6 +11,9 @@ import {
 } from './icon-library.js';
 import { clearIconSanitizerCache, loadIconSanitizer } from './dompurify-loader.js';
 import { __clearIconResourceCacheForTesting } from './icon-resource.js';
+
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-icon', 'fixed-width');
 
 it('uses mapped defaults and reflects name changes', async () => {
   const el = (await fixture(html`<lr-icon></lr-icon>`)) as LyraIcon;

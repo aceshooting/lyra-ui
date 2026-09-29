@@ -63,7 +63,7 @@ function region(name: string) {
   dropdown.arrow = false; await settled(dropdown);
   check(dropdown.withoutArrow && dropdown.shadowRoot!.querySelectorAll('[part~="arrow"]').length === 0, 'Retained dropdown alias lost polarity');
   dropdown.withoutArrow = false; await settled(dropdown);
-  check(dropdown.arrow === true, 'Dropdown canonical last-write precedence lost');
+  check(dropdown.arrow, 'Dropdown canonical last-write precedence lost');
   const time = document.createElement('lr-native-time-input'); time.setAttribute('no-spin-buttons', '');
   container.append(time); await settled(time);
   check(!('noSpinButtons' in time), 'Retired time input alias remains inherited');
@@ -173,10 +173,14 @@ function region(name: string) {
   check(!chart.withoutZeroBaseline && !chart.withDataTable && chart.size === 'm', 'Shared chart canonical defaults changed');
   chart.withDataTable = true; await settled(chart);
   await until(() => Boolean(chart.shadowRoot!.querySelector('table')?.textContent?.includes('Revenue')), 'Populated canonical chart table missing');
-  const lite = document.createElement('lr-lite-chart'); lite.labels = ['Q1', 'Q2']; lite.datasets = [{ label: 'Revenue', data: [90, 100] }];
+  const lite = document.createElement('lr-lite-chart'); lite.labels = ['Q1', 'Q2'];
+  lite.datasets = [{ label: 'Revenue', data: [90, 100] }, { label: 'Costs', data: [30, 40] }];
   lite.withDataTable = true; lite.withLegend = true; container.append(lite); await settled(lite);
   check(lite.shadowRoot!.querySelector('svg'), 'Lite chart did not paint');
-  check(lite.shadowRoot!.querySelector('table')?.textContent?.includes('Revenue'), 'Lite chart canonical table missing');
+  const liteTable = lite.shadowRoot!.querySelector('table');
+  check(liteTable, 'Lite chart canonical table missing');
+  check(JSON.stringify([...liteTable!.querySelectorAll('thead th')].slice(1).map(cell => cell.textContent?.trim())) === JSON.stringify(['Revenue', 'Costs']), 'Lite chart series headers are incorrect');
+  check(JSON.stringify([...liteTable!.querySelectorAll('tbody td')].map(cell => cell.textContent?.trim())) === JSON.stringify(['90', '30', '100', '40']), 'Lite chart canonical values are incorrect');
   results.push('populated-charts');
 }
 

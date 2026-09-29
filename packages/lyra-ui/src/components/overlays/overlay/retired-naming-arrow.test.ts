@@ -1,3 +1,4 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expect, fixture, html } from '@open-wc/testing';
 import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 import type { LyraDropdown } from './dropdown.class.js';
@@ -12,6 +13,16 @@ import '../progress/progress-ring.js';
 import './popover.js';
 import './tooltip.js';
 import './dropdown.js';
+
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-callout', 'accessible-label');
+expectStaleAttribute('lr-carousel', 'accessible-label');
+expectStaleAttribute('lr-dialog', 'accessible-label');
+expectStaleAttribute('lr-drawer', 'accessible-label');
+expectStaleAttribute('lr-popover', 'arrow');
+expectStaleAttribute('lr-progress-bar', 'accessible-label');
+expectStaleAttribute('lr-progress-ring', 'accessible-label');
+expectStaleAttribute('lr-reorder-item', 'accessible-label');
 
 for (const [name, selector, empty] of [
   ['progress-bar', '[role="progressbar"]', ''],

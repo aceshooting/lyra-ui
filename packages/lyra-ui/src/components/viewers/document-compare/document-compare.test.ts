@@ -1,3 +1,4 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import jsGrammar from 'shiki/langs/javascript.mjs';
 import './document-compare.js';
@@ -5,6 +6,9 @@ import type { LyraDocumentCompare } from './document-compare.js';
 import type { LyraDocumentPreview } from '../document-preview/document-preview.class.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
+
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-document-compare', 'sync-scroll');
 
 function stubClipboard(target: Navigator, value: unknown): () => void {
   const descriptor = Object.getOwnPropertyDescriptor(target, 'clipboard');

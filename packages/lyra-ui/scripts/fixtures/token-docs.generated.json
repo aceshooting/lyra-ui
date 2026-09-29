@@ -3146,7 +3146,6 @@
         "src/components/data/gauge/gauge.styles.ts",
         "src/components/media/image-viewer/image-viewer.styles.ts",
         "src/components/overlays/kbd/kbd.styles.ts",
-        "src/components/utility/icon/icon.class.ts",
         "src/components/utility/icon/icon.styles.ts"
       ]
     },

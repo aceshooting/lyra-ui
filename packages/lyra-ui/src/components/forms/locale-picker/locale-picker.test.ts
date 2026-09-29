@@ -1,3 +1,4 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { fixture, expect, oneEvent, html, aTimeout, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
@@ -16,6 +17,9 @@ import {
   expectDeprecatedUsage,
   type DeprecatedUsage,
 } from '../../../../test/expected-deprecations.js';
+
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-locale-picker', 'show-flags');
 
 // The compatibility tests below deliberately use the deprecated show-flags alias, which keeps
 // working until its removal.

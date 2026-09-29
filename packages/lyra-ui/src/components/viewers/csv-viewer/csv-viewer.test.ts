@@ -1,3 +1,4 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import {
   aTimeout,
@@ -11,6 +12,9 @@ import './csv-viewer.js';
 import type { LyraCsvViewer } from './csv-viewer.js';
 import { LyraResourceLimitError } from '../../../internal/resource-loader.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-csv-viewer', 'has-header-row');
 
 const CSV =
   'Name,Role\nAda Lovelace,Mathematician\nGrace Hopper,Computer scientist';

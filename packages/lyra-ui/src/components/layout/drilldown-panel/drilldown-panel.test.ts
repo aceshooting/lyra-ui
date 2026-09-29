@@ -1,3 +1,4 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./drilldown-panel.js";
 import type {
@@ -14,6 +15,9 @@ import {
   captureDeprecationWarnings,
   type DeprecatedUsage,
 } from "../../../../test/expected-deprecations.js";
+
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-drilldown-panel', 'show-focus-button');
 
 const entity: LyraDrilldownEntity = {
   entityId: "entity-1",

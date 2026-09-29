@@ -1,3 +1,4 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { sendKeys } from "@web/test-runner-commands";
@@ -5,6 +6,9 @@ import "./drawer.js";
 import type { LyraDrawer } from "./drawer.js";
 import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { setAnimation } from "../../../utilities/animation-registry.js";
+
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-drawer', 'accessible-label');
 
 // Importing this file's other modules is enough to trip it: with them present, WebKit never
 // recomputes a shadow descendant's inherited custom property after only the host's inline style

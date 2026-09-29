@@ -1,3 +1,4 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html } from "@open-wc/testing";
 import { sendKeys } from "@web/test-runner-commands";
@@ -12,6 +13,9 @@ import {
   captureDeprecationWarnings,
   type DeprecatedUsage,
 } from "../../../../test/expected-deprecations.js";
+
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-dashboard-grid', 'locked');
 
 function twoCells(): LyraDashboardCell[] {
   return [

@@ -20,6 +20,10 @@ import {
   type DeprecatedUsage,
 } from "../../../../test/expected-deprecations.js";
 
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-dock-panel', 'edge');
+expectStaleAttribute('lr-dock-panel', 'resizable');
+
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-dock-panel', 'size');
 expectStaleAttribute('lr-dock-panel', 'min-size');

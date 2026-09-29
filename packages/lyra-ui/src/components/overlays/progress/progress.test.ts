@@ -1,3 +1,4 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, nextFrame, oneEvent } from '@open-wc/testing';
@@ -7,6 +8,10 @@ import type { LyraProgressBar, LyraProgressVariant } from './progress-bar.js';
 import type { LyraProgressRing } from './progress-ring.js';
 import { formatProgressPercent } from './progress-shared.js';
 import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
+
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-progress-bar', 'accessible-label');
+expectStaleAttribute('lr-progress-ring', 'accessible-label');
 
 class ProgressBarLabelForwardWrapper extends HTMLElement {
   constructor() {

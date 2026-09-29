@@ -1,3 +1,4 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
@@ -6,6 +7,9 @@ import '../../forms/input/input.js';
 import type { LyraDialog } from './dialog.js';
 import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { setAnimation } from '../../../utilities/animation-registry.js';
+
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-dialog', 'accessible-label');
 
 it('inherits heading fonts across a component boundary without changing body fonts or explicit part styling', async () => {
   const wrapper = await fixture<HTMLElement>(html`

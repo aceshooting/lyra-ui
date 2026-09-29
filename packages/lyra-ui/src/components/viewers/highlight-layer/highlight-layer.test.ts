@@ -1,8 +1,12 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './highlight-layer.js';
 import type { LyraHighlightLayer, HighlightLayerItem } from './highlight-layer.js';
 import { maxPairedAnimationEndMs } from './highlight-layer-timing.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-highlight-layer', 'interactive');
 
 const ITEMS: HighlightLayerItem[] = [
   { id: 'a', rects: [{ x: 10, y: 10, width: 20, height: 5 }], label: 'Zone A', tone: 'accent' },

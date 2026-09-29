@@ -1,3 +1,4 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import {
   fixture,
   expect,
@@ -14,6 +15,9 @@ import {
   captureDeprecationWarnings,
   type DeprecatedUsage,
 } from "../../../../test/expected-deprecations.js";
+
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-widget', 'compact');
 
 // A stand-in for a slotted component (e.g. lr-combobox) whose real
 // focusable target lives inside its own shadow root rather than the host

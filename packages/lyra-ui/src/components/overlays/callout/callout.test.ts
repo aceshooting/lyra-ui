@@ -1,3 +1,4 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectDeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
@@ -5,6 +6,9 @@ import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import './callout.js';
 import type { LyraCallout } from './callout.js';
 import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
+
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-callout', 'accessible-label');
 
 /** The close control's own native button, one shadow boundary deeper than `[part="close-button"]`
  *  since 16.0.0 composed it from `<lr-icon-button>`. Every painted surface lives here. */

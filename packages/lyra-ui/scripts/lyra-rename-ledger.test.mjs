@@ -1274,7 +1274,7 @@ test('the checked-in lyra-v21 entries rewrite exact aliases and report every oth
   // would replace an attributeFilter, and a fixed-width box or stroke keeps the author's value.
   assert.match(
     messageOf('attributes'),
-    /The lr-mutation-observer attribute attributes is deprecated and scheduled for removal in 23\.0\.0; migrate to attr="\*" \(or just remove it where attr, attr-old-value or a non-empty attributeFilter is also set\) by hand\./,
+    /The lr-mutation-observer attribute attributes was removed in 23\.0\.0; migrate to attr="\*" \(or just remove it where attr, attr-old-value or a non-empty attributeFilter is also set\) by hand\./,
   );
   assert.match(messageOf('fixed-width'), /migrate to inline-size: var\(--lr-size-1-5em\) on that icon \(or the --lr-icon-fixed-width value it used\) by hand/);
   assert.match(messageOf('--lr-icon-fixed-width'), /migrate to inline-size \(the same value, on the fixed-width icons only\) by hand/);

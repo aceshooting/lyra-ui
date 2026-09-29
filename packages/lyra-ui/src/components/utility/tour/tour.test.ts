@@ -1,3 +1,4 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
@@ -15,6 +16,9 @@ import {
   type AnchoredOverlayRuntime,
 } from '../../../internal/anchored-overlay-runtime.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-tour', 'show-progress');
 
 class TourComposedFocusTarget extends HTMLElement {
   constructor() {

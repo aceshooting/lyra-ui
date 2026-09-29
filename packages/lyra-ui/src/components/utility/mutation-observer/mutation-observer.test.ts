@@ -1,6 +1,12 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { aTimeout, expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './mutation-observer.js';
 import type { LyraMutationObserver } from './mutation-observer.class.js';
+
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-mutation-observer', 'attributes');
+expectStaleAttribute('lr-mutation-observer', 'character-data');
+expectStaleAttribute('lr-mutation-observer', 'subtree');
 describe('<lr-mutation-observer> retired option aliases', () => {
   it('ignores attributes and observeAttributes while preserving narrow canonical filters', async () => {
     const legacy = await fixture<LyraMutationObserver>(

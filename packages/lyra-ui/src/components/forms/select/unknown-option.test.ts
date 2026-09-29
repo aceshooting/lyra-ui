@@ -1,3 +1,4 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './select.js';
 import '../combobox/combobox.js';
@@ -8,6 +9,10 @@ import {
   expectDeprecatedUsage,
   type DeprecatedUsage,
 } from '../../../../test/expected-deprecations.js';
+
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-combobox', 'show-unknown-option');
+expectStaleAttribute('lr-select', 'show-unknown-option');
 
 // The compatibility tests below deliberately use the deprecated show-unknown-option alias, which
 // keeps working until its removal.

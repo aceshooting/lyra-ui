@@ -1,3 +1,4 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expect, fixture, html } from '@open-wc/testing';
 import '../callout/callout.js';
 import '../empty/empty.js';
@@ -5,6 +6,9 @@ import '../../forms/icon-button/icon-button.js';
 import '../../forms/button/button.js';
 import './dropdown.js';
 import type { LyraDropdown } from './dropdown.class.js';
+
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-empty', 'compact');
 
 for (const [tagName, selector, retired, canonical] of [
   ['lr-callout', ':host', '--lr-callout-background', '--lr-callout-bg'],

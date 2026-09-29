@@ -1,3 +1,4 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import {
   fixture,
   expect,
@@ -19,6 +20,10 @@ import { resolveLyraLocale } from "../../../internal/localization-runtime.js";
 // incidentally touch (jsonObject, jsonExpandLabel, jsonKeyCount, jsonCollapseLabel) instead of
 // tripping the partial-catalog fallback warning. 'ar-EG' chains down to the registered base 'ar'.
 import "../../../translations/ar.js";
+
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-json-viewer', 'collapsed-depth');
+expectStaleAttribute('lr-json-viewer', 'search');
 
 const sample = {
   name: "Ada Lovelace",

@@ -1,3 +1,4 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./carousel.js";
 import "./carousel-item.js";
@@ -22,6 +23,9 @@ import {
 // below can render `locale="ar-EG"` without tripping the dev-mode locale-fallback warning that
 // strict-console platform lanes treat as fatal -- see that test for detail.
 import "../../../translations/ar/layout.js";
+
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-carousel', 'accessible-label');
 
 async function carousel(
   template = html`

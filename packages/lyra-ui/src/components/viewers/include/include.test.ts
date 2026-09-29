@@ -1,3 +1,4 @@
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './include.js';
 import type { LyraInclude } from './include.js';
@@ -7,6 +8,9 @@ import {
   __clearIncludeResourceCacheForTesting,
   MAX_INCLUDE_BYTES,
 } from './include-resource.js';
+
+// These fixtures deliberately verify that retired attributes remain inert.
+expectStaleAttribute('lr-include', 'cache');
 
 interface MockResponseOptions {
   ok?: boolean;

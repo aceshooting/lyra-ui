@@ -2,6 +2,7 @@ import { LyraInput } from '../../forms/input/input.class.js';
 import '../../forms/input/input.js';
 import { expect, fixture, elementUpdated } from '@open-wc/testing';
 import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
+import { setFlagUrlResolver } from '../../media/flag/flag.class.js';
 import '../../forms/code-editor/code-editor.js';
 import '../../forms/combobox/combobox.js';
 import '../../forms/input/native-time-input.js';
@@ -22,6 +23,10 @@ import './popover.js';
 import './tooltip.js';
 import '../progress/progress-bar.js';
 import '../progress/progress-ring.js';
+
+const TEST_FLAG_SRC = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3C/svg%3E';
+before(() => setFlagUrlResolver(async () => TEST_FLAG_SRC));
+after(() => setFlagUrlResolver(null));
 
 const cases = [
   [

@@ -1,6 +1,10 @@
+/// <reference types="vite/client" />
+import { setWorkerUrl } from 'maplibre-gl';
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { LyraGeojsonView } from '@aceshooting/lyra-ui';
 import { LyraGeoJsonViewer } from '@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-viewer.class.js';
 
+setWorkerUrl(workerUrl);
 if (customElements.get('lr-geojson-view')) throw new Error('Root/class import restored the retired tag');
 if (LyraGeojsonView === LyraGeoJsonViewer || !(LyraGeojsonView.prototype instanceof LyraGeoJsonViewer)) {
   throw new Error('The retained root export lost its distinct subclass identity');
