@@ -1603,12 +1603,14 @@ export type LyraLevelEvent = LyraPushToTalkEventMap['lr-level'];
 export type LyraLineActivateEvent = LyraCodeBlockBaseEventMap['lr-line-activate'];
 
 /**
- * `lr-link-activate` — dispatched by 3 components: `<lr-markdown-core>`, `<lr-markdown>`,
- * `<lr-message-parts>`; detail union of 2, e.g. `LyraMarkdownCoreEventMap['lr-link-activate']`.
+ * `lr-link-activate` — dispatched by 5 components: `<lr-markdown-core>`, `<lr-markdown>`,
+ * `<lr-message-parts>`, `<lr-streaming-text-core>`, `<lr-streaming-text>`; detail union of 3, e.g.
+ * `LyraMarkdownCoreEventMap['lr-link-activate']`.
  */
 export type LyraLinkActivateEvent =
   | LyraMarkdownCoreEventMap['lr-link-activate']
-  | LyraMarkdownEventMap['lr-link-activate'];
+  | LyraMarkdownEventMap['lr-link-activate']
+  | LyraStreamingTextEventMap['lr-link-activate'];
 
 /**
  * `lr-load` — dispatched by 8 components: `<lr-animated-image>`, `<lr-av-player>`, `<lr-icon>`,

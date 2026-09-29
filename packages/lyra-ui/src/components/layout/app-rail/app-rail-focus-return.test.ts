@@ -61,8 +61,8 @@ async function hostWithHidingTrigger(options: { reShow: boolean; withoutToggle?:
   mobile(rail);
   await rail.updateComplete;
   const onToggle = (event: Event): void => {
-    const { open } = (event as CustomEvent<LyraAppRailToggleDetail>).detail;
-    if (open) {
+    const { expanded } = (event as CustomEvent<LyraAppRailToggleDetail>).detail;
+    if (expanded) {
       trigger.style.visibility = 'hidden';
       return;
     }
@@ -404,7 +404,7 @@ type HostLoss = 'hidden' | 'inert ancestor';
 function loseHostOnClose(rail: LyraAppRail, loss: HostLoss): () => void {
   const parent = rail.parentElement!;
   const onToggle = (event: Event): void => {
-    if ((event as CustomEvent<LyraAppRailToggleDetail>).detail.open) {
+    if ((event as CustomEvent<LyraAppRailToggleDetail>).detail.expanded) {
       rail.hidden = false;
       parent.inert = false;
       return;
@@ -508,7 +508,7 @@ describe('app rail focus fallback', () => {
     const trigger = root.querySelector<HTMLButtonElement>('#scoped-trigger')!;
     const scopedMain = root.querySelector<HTMLElement>('#scoped-main')!;
     const onToggle = (event: Event): void => {
-      if ((event as CustomEvent<LyraAppRailToggleDetail>).detail.open) trigger.style.visibility = 'hidden';
+      if ((event as CustomEvent<LyraAppRailToggleDetail>).detail.expanded) trigger.style.visibility = 'hidden';
       else rail.hidden = true;
     };
     try {
@@ -703,7 +703,7 @@ describe('app rail focus fallback', () => {
     let current = fallbackTarget('re-main');
     const release = loseHostOnClose(rail, 'hidden');
     const recreate = (event: Event): void => {
-      if ((event as CustomEvent<LyraAppRailToggleDetail>).detail.open) return;
+      if ((event as CustomEvent<LyraAppRailToggleDetail>).detail.expanded) return;
       requestAnimationFrame(() => {
         current.remove();
         current = fallbackTarget('re-main');

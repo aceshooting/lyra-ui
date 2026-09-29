@@ -885,7 +885,7 @@ it("force-closes an open overlay and emits lr-toggle when mode leaves mobile, ig
   const ev = await promise;
 
   expect(el.open).to.be.false;
-  expect((ev.detail as LyraAppRailToggleDetail).open).to.be.false;
+  expect((ev.detail as LyraAppRailToggleDetail).expanded).to.be.false;
   expect(ev.cancelable, "a forced mode-change close cannot be vetoed").to.be
     .false;
 });
@@ -1078,7 +1078,7 @@ it("toggling emits lr-toggle with the new open state", async () => {
   toggle.click();
   const ev = await promise;
 
-  expect((ev.detail as LyraAppRailToggleDetail).open).to.be.true;
+  expect((ev.detail as LyraAppRailToggleDetail).expanded).to.be.true;
 });
 
 it("fires lr-toggle-request as cancelable and keeps the overlay open when a host calls preventDefault()", async () => {
@@ -3786,7 +3786,7 @@ describe("app-rail canonical names and their deprecated aliases", () => {
     expect(normalizeColor(getComputedStyle(panel).backgroundColor)).to.not.equal("rgb(40, 50, 60)");
   });
 
-  it("reports the overlay state as expanded beside the deprecated open key", async () => {
+  it("reports the overlay state as expanded", async () => {
     const el = (await fixture(html`<lr-app-rail><button>a</button></lr-app-rail>`)) as LyraAppRail;
     fireMobileChange(el, true);
     await el.updateComplete;
@@ -3795,9 +3795,9 @@ describe("app-rail canonical names and their deprecated aliases", () => {
     const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
     toggle.click();
     await el.updateComplete;
-    expect(details).to.deep.equal([JSON.stringify({ open: true, expanded: true })]);
+    expect(details).to.deep.equal([JSON.stringify({ expanded: true })]);
     fireMobileChange(el, false);
     await el.updateComplete;
-    expect(details.at(-1)).to.equal(JSON.stringify({ open: false, expanded: false }));
+    expect(details.at(-1)).to.equal(JSON.stringify({ expanded: false }));
   });
 });

@@ -1,3 +1,4 @@
+import { migrationFamilyVersion } from './migration-family-version.js';
 import '@aceshooting/lyra-ui/components/lr-progress-bar.js';
 import '@aceshooting/lyra-ui/components/lr-input.js';
 import '@aceshooting/lyra-ui/components/lr-number-input.js';
@@ -46,8 +47,11 @@ function region(name: string) {
   container.append(progress); await settled(progress);
   const role = progress.shadowRoot!.querySelector('[role="progressbar"]')!;
   check(role.getAttribute('aria-label') !== 'Retired attribute', 'Retired naming attribute still controls the rendered name');
-  progress.accessibleLabel = 'Retained property'; await settled(progress);
-  check(role.getAttribute('aria-label') === 'Retained property', 'Floor24 property lost its rendered effect');
+  if (migrationFamilyVersion === 23) {
+    check('accessibleLabel' in progress, 'Published v23 naming property is missing');
+    (progress as typeof progress & { accessibleLabel: string }).accessibleLabel = 'Retained property'; await settled(progress);
+    check(role.getAttribute('aria-label') === 'Retained property', 'Published v23 property lost its rendered effect');
+  } else check(!('accessibleLabel' in progress), 'Retired v24 naming property remains available');
   progress.setAttribute('aria-label', ''); await settled(progress);
   check(role.getAttribute('aria-label') === '', 'Explicit empty native name must win');
   progress.setAttribute('aria-label', 'Canonical name'); await settled(progress);
@@ -59,11 +63,22 @@ function region(name: string) {
   check(popover.shadowRoot!.querySelectorAll('[part~="arrow"]').length === 0, 'Canonical popover polarity is wrong');
   const dropdown = document.createElement('lr-dropdown'); dropdown.innerHTML = '<button slot="trigger">Actions</button><button>Save</button>';
   container.append(dropdown); await settled(dropdown);
-  check(dropdown.arrow === true && dropdown.shadowRoot!.querySelectorAll('[part~="arrow"]').length === 1, 'Dropdown inherited alias/default lost');
-  dropdown.arrow = false; await settled(dropdown);
-  check(dropdown.withoutArrow && dropdown.shadowRoot!.querySelectorAll('[part~="arrow"]').length === 0, 'Retained dropdown alias lost polarity');
-  dropdown.withoutArrow = false; await settled(dropdown);
-  check(dropdown.arrow, 'Dropdown canonical last-write precedence lost');
+  check(dropdown.shadowRoot!.querySelectorAll('[part~="arrow"]').length === 1, 'Dropdown default arrow lost');
+  if (migrationFamilyVersion === 23) {
+    check('arrow' in dropdown, 'Published v23 dropdown alias is missing');
+    const legacyDropdown = dropdown as typeof dropdown & { arrow: boolean };
+    check(legacyDropdown.arrow, 'Published v23 dropdown arrow default lost');
+    legacyDropdown.arrow = false; await settled(dropdown);
+    check(dropdown.withoutArrow && dropdown.shadowRoot!.querySelectorAll('[part~="arrow"]').length === 0, 'Published v23 dropdown alias lost polarity');
+    dropdown.withoutArrow = false; await settled(dropdown);
+    check(legacyDropdown.arrow, 'Dropdown canonical last-write precedence lost');
+  } else {
+    check(!('arrow' in dropdown), 'Retired v24 dropdown alias remains available');
+    dropdown.withoutArrow = true; await settled(dropdown);
+    check(dropdown.shadowRoot!.querySelectorAll('[part~="arrow"]').length === 0, 'Canonical dropdown polarity changed');
+    dropdown.withoutArrow = false; await settled(dropdown);
+    check(dropdown.shadowRoot!.querySelectorAll('[part~="arrow"]').length === 1, 'Canonical dropdown arrow did not return');
+  }
   const time = document.createElement('lr-native-time-input'); time.setAttribute('no-spin-buttons', '');
   container.append(time); await settled(time);
   check(!('noSpinButtons' in time), 'Retired time input alias remains inherited');

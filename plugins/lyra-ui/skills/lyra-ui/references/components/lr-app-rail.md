@@ -232,10 +232,10 @@ persisted `preferred-mode` restored on mount (`storage-key` + `persist="preferre
 restored-on-mount case fires once, from the first `updated()` after that mount's render and
 attribute reflection have both landed, rather than synchronously during the mount itself; it is
 not fired for a redundant reassignment to the mode already in effect, nor when no preferred mode
-was persisted), `lr-toggle-request` (`detail: LyraAppRailToggleDetail` = `{ expanded: boolean, open: boolean }`;
+was persisted), `lr-toggle-request` (`detail: LyraAppRailToggleDetail` = `{ expanded: boolean }`;
 cancelable proposal before a user-triggered overlay change), and non-cancelable `lr-toggle` with
 the same detail after the accepted state change. Forced responsive closes emit only `lr-toggle`;
-direct property writes remain silent. The `open` detail key remains a compatibility alias.
+direct property writes remain silent.
 `lr-rail-resize-request` (`detail: LyraAppRailResizeDetail` = `{ widthPx: number }`; a cancelable
 proposed width from drag or keyboard stepping, emitted before the component assigns
 `railWidth` — call `preventDefault()` to keep the current width. A synchronous request listener
@@ -569,13 +569,12 @@ same precedence supplies the tooltip text when that opt-in flyout is visible, an
 interpolated `{label}` (see Events below).
 
 **Events:** `lr-toggle-request` — cancelable, emitted before `expanded` changes from the built-in
-disclosure (`detail: { expanded, open }` — `expanded` is the proposed state and the deprecated
-`open` key remains emitted and carries the same value, matching `<lr-app-rail-group>`'s identical
-event name and detail shape exactly). Call `preventDefault()` to keep the current state, or assign
+disclosure (`detail: { expanded }` is the proposed state, matching `<lr-app-rail-group>`'s
+event name and detail shape). Call `preventDefault()` to keep the current state, or assign
 `expanded` from the listener to resolve it yourself; a write during the dispatch suppresses the
 default commit even when it assigns the value the property already held. Not emitted for a direct
 `expanded` write. `lr-toggle` — non-cancelable, emitted after `expanded` is written, never for a
-vetoed or listener-resolved request (`detail: { expanded, open }`).
+vetoed or listener-resolved request (`detail: { expanded }`).
 
 **Methods:** `click(): void` activates the internal native link or button; it is a no-op while
 `disabled`.
@@ -737,12 +736,11 @@ never disagree with what is rendered inside it.
   own chrome.
 
 **Events:** `lr-toggle-request` — cancelable, emitted before `collapsed` changes from the built-in
-control (`detail: { expanded, open }` — `expanded` is the proposed state and the deprecated `open`
-key remains emitted and carries the same value). Call `preventDefault()` to keep the current state,
+control (`detail: { expanded }` is the proposed state). Call `preventDefault()` to keep the current state,
 or assign `collapsed` from the listener to resolve it yourself; a write during the dispatch
 suppresses the default commit even when it assigns the value the property already held. Not
 emitted for a direct `collapsed` write. `lr-toggle` — non-cancelable, emitted after `collapsed` is
-written, never for a vetoed or listener-resolved request (`detail: { expanded, open }`).
+written, never for a vetoed or listener-resolved request (`detail: { expanded }`).
 
 **Slots:** default — the group's items, and any nested `<lr-app-rail-group>`s; `heading` — rich
 heading content; `header-actions` — controls beside the heading, rendered as a sibling of the

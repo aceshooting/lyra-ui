@@ -22,9 +22,7 @@ export interface LyraDockPanelResizeDetail {
   readonly extent: string;
 }
 export interface LyraDockPanelCollapseChangeDetail {
-  /** @deprecated Use `expanded`, its inverse; removal not before 23.0.0. */
-  readonly collapsed: boolean;
-  /** Whether the panel's content is (or, on the request, would be) shown: `!collapsed`. */
+  /** Whether the panel's content is (or, on the request, would be) shown. */
   readonly expanded: boolean;
 }
 
@@ -114,11 +112,9 @@ interface DragState {
  *   `lr-resize-request` all emit nothing.
  * @event lr-collapse-request - A cancelable proposed `collapsed` state from the built-in collapse
  *   toggle. Call `preventDefault()` to keep `collapsed` unchanged. Not fired when a consumer sets
- *   `collapsed` directly. `detail: { expanded, collapsed }` — `expanded` is the proposed state and
- *   the deprecated `collapsed` key its inverse.
+ *   `collapsed` directly. `detail: { expanded }` carries the proposed state.
  * @event lr-collapse-change - Non-cancelable post-commit notification from the built-in collapse
- *   toggle. Not fired when a consumer sets `collapsed` directly. `detail: { expanded, collapsed }`
- *   (the new state; the deprecated `collapsed` key is its inverse).
+ *   toggle. Not fired when a consumer sets `collapsed` directly. `detail: { expanded }` carries the new state.
  * @csspart base - The panel root.
  * @csspart content - The wrapper around the default slot; hidden while `collapsed`.
  * @csspart handle - The draggable resize handle on the panel's inner edge. Its numeric ARIA range
@@ -558,12 +554,12 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     const next = !this.collapsed;
     const request = this.emit(
       'lr-collapse-request',
-      Object.freeze({ collapsed: next, expanded: !next }),
+      Object.freeze({ expanded: !next }),
       { cancelable: true }
     );
     if (request.defaultPrevented) return;
     this.collapsed = next;
-    this.emit('lr-collapse-change', Object.freeze({ collapsed: next, expanded: !next }));
+    this.emit('lr-collapse-change', Object.freeze({ expanded: !next }));
   };
 
   /** Rotation (deg) for the collapse-toggle's chevron on the `top`/`bottom` edges: it points

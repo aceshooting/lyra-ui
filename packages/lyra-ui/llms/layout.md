@@ -288,15 +288,16 @@ synchronously inside its own handler instead of deferring past `updateComplete`.
 out of a pane the new state hides (`'floating'` while closed) or clamps (`'rail'`) before the event
 fires, landing on the first surviving pane that can take it, otherwise on one of the split's own
 dividers, preferring one that stays enabled; focus anywhere other than the collapsing pane is untouched),
-`lr-toggle` (`detail: LyraMultiSplitToggleDetail = { expanded: boolean, open: boolean }`, where
-`expanded` is the proposed or forced drawer state; the deprecated `open` key carries the same value; use `expanded` in new code) — Escape/backdrop close proposals are cancelable and fire before `open`
-changes; preventing the event or making a synchronous
-reentrant mutation aborts the proposal. A forced close when a responsive collapse transition leaves
-`floating` fires noncancelably after `open` is false. Direct `open` writes and no-op dismissals are silent,
+`lr-toggle-request` (cancelable; `detail: LyraMultiSplitToggleDetail = { expanded: boolean }`
+contains the proposed drawer state). Escape/backdrop close proposals fire before `open` changes;
+preventing the event or making a synchronous reentrant mutation aborts the proposal.
+`lr-toggle` (non-cancelable; the same detail contains the resulting drawer state) fires after an
+accepted change, or after a responsive transition leaves `floating` and forces `open` to false.
+Forced closes emit no request. Direct `open` writes and no-op dismissals emit neither event,
 `lr-multi-split-constraints-invalid` (`detail: LyraMultiSplitConstraintIssueDetail`, fired once when the configured
 panel minimums/maximums cannot fit the track; the infeasible set is rejected for interaction and a
 normalized percent minimum is used instead), `lr-multi-split-orientation-change` (`detail: { orientation }`,
-fired only when an enabled `orientationBreakpoint` actually changes `effectiveOrientation`); `lr-toggle-request` (cancelable proposal before interactive overlay state changes, with `expanded` and compatibility `open`; direct writes and forced responsive closes do not emit it)
+fired only when an enabled `orientationBreakpoint` actually changes `effectiveOrientation`)
 
 **Slots:** default (each direct child element is one panel; set a unique `panel-id` on every child
 when `storage-key` is used).
@@ -2549,10 +2550,10 @@ persisted `preferred-mode` restored on mount (`storage-key` + `persist="preferre
 restored-on-mount case fires once, from the first `updated()` after that mount's render and
 attribute reflection have both landed, rather than synchronously during the mount itself; it is
 not fired for a redundant reassignment to the mode already in effect, nor when no preferred mode
-was persisted), `lr-toggle-request` (`detail: LyraAppRailToggleDetail` = `{ expanded: boolean, open: boolean }`;
+was persisted), `lr-toggle-request` (`detail: LyraAppRailToggleDetail` = `{ expanded: boolean }`;
 cancelable proposal before a user-triggered overlay change), and non-cancelable `lr-toggle` with
 the same detail after the accepted state change. Forced responsive closes emit only `lr-toggle`;
-direct property writes remain silent. The `open` detail key remains a compatibility alias.
+direct property writes remain silent.
 `lr-rail-resize-request` (`detail: LyraAppRailResizeDetail` = `{ widthPx: number }`; a cancelable
 proposed width from drag or keyboard stepping, emitted before the component assigns
 `railWidth` — call `preventDefault()` to keep the current width. A synchronous request listener
@@ -2886,13 +2887,12 @@ same precedence supplies the tooltip text when that opt-in flyout is visible, an
 interpolated `{label}` (see Events below).
 
 **Events:** `lr-toggle-request` — cancelable, emitted before `expanded` changes from the built-in
-disclosure (`detail: { expanded, open }` — `expanded` is the proposed state and the deprecated
-`open` key remains emitted and carries the same value, matching `<lr-app-rail-group>`'s identical
-event name and detail shape exactly). Call `preventDefault()` to keep the current state, or assign
+disclosure (`detail: { expanded }` is the proposed state, matching `<lr-app-rail-group>`'s
+event name and detail shape). Call `preventDefault()` to keep the current state, or assign
 `expanded` from the listener to resolve it yourself; a write during the dispatch suppresses the
 default commit even when it assigns the value the property already held. Not emitted for a direct
 `expanded` write. `lr-toggle` — non-cancelable, emitted after `expanded` is written, never for a
-vetoed or listener-resolved request (`detail: { expanded, open }`).
+vetoed or listener-resolved request (`detail: { expanded }`).
 
 **Methods:** `click(): void` activates the internal native link or button; it is a no-op while
 `disabled`.
@@ -3054,12 +3054,11 @@ never disagree with what is rendered inside it.
   own chrome.
 
 **Events:** `lr-toggle-request` — cancelable, emitted before `collapsed` changes from the built-in
-control (`detail: { expanded, open }` — `expanded` is the proposed state and the deprecated `open`
-key remains emitted and carries the same value). Call `preventDefault()` to keep the current state,
+control (`detail: { expanded }` is the proposed state). Call `preventDefault()` to keep the current state,
 or assign `collapsed` from the listener to resolve it yourself; a write during the dispatch
 suppresses the default commit even when it assigns the value the property already held. Not
 emitted for a direct `collapsed` write. `lr-toggle` — non-cancelable, emitted after `collapsed` is
-written, never for a vetoed or listener-resolved request (`detail: { expanded, open }`).
+written, never for a vetoed or listener-resolved request (`detail: { expanded }`).
 
 **Slots:** default — the group's items, and any nested `<lr-app-rail-group>`s; `heading` — rich
 heading content; `header-actions` — controls beside the heading, rendered as a sibling of the
@@ -3734,8 +3733,7 @@ renders at the `280px` default, and `event.detail.size` reads `undefined`.
 
 **Exported types:** `LyraDockPanelEdge = 'start' | 'end' | 'top' | 'bottom'`, readonly
 `LyraDockPanelResizeDetail = { extent: string }`, readonly
-`LyraDockPanelCollapseChangeDetail = { expanded: boolean, collapsed: boolean }` (the `collapsed`
-key remains emitted but is deprecated; use its inverse, `expanded`), and `LyraDockPanelEventMap`.
+`LyraDockPanelCollapseChangeDetail = { expanded: boolean }`, and `LyraDockPanelEventMap`.
 The former dock-specific `parseLengthPx()` export is removed; dock length resolution is now a
 private adapter over the library's canonical CSS-length resolver, with container/viewport units
 resolved in the host's owner realm.
@@ -3755,10 +3753,10 @@ resolved in the host's owner realm.
   after each genuine keyboard step whose own `lr-resize-request` was not prevented. `pointercancel`,
   lost capture, disconnect/adoption, live policy/geometry mutation, no-op attempts, and a prevented
   `lr-resize-request` all emit nothing.
-- `lr-collapse-request` (cancelable; `detail: { expanded, collapsed }` is the state proposed by the
-  built-in collapse toggle — `expanded` is the proposed state and the deprecated `collapsed` key its
-  inverse. Call `preventDefault()` to leave `collapsed` unchanged. Not fired when a consumer assigns
-  `collapsed` directly), `lr-collapse-change` (non-cancelable; `detail: { expanded, collapsed }` is
+- `lr-collapse-request` (cancelable; `detail: { expanded }` is the state proposed by the
+  built-in collapse toggle. Call `preventDefault()` to leave the host `collapsed` property
+  unchanged. Not fired when a consumer assigns `collapsed` directly), `lr-collapse-change`
+  (non-cancelable; `detail: { expanded }` is
   the accepted built-in-toggle state. Not fired when a consumer assigns `collapsed` directly). Both
   details are fresh readonly/frozen snapshots.
 
@@ -4273,9 +4271,9 @@ invariant.
 
 The Details events `lr-show` and `lr-hide` have no detail payload and are cancelable; preventing
 either leaves the panel in its previous state. Accepted changes emit `lr-toggle` with
-`detail: { expanded, open, source }` (`expanded` is the new state; the deprecated `open` key, removed
-in 23.0.0, carries the same value), then the non-cancelable `lr-after-show` or `lr-after-hide` once
-rendering and motion settle. `source` is `user` for a summary click or keyboard activation,
+`detail: { expanded, source }` (`expanded` is the new state), then the non-cancelable
+`lr-after-show` or `lr-after-hide` once rendering and motion settle. `source` is `user` for a
+summary click or keyboard activation,
 `programmatic` for `show()`, `hide()`, or assigning `open`, and `peer` when another Details with
 the same non-empty `name` closes this one. The full orders are `lr-show` → `lr-toggle` →
 `lr-after-show` and `lr-hide` → `lr-toggle` → `lr-after-hide`. Initially open markup emits
@@ -5403,8 +5401,7 @@ import "@aceshooting/lyra-ui/components/lr-page.js";
 
 ## Consumer integration notes
 
-- **Multi-split:** `LyraMultiSplitToggleDetail` is `{ expanded: boolean, open: boolean }` (the
-  deprecated `open` key carries the same value). Escape or a backdrop click
+- **Multi-split:** `LyraMultiSplitToggleDetail` is `{ expanded: boolean }`. Escape or a backdrop click
   emits cancelable `lr-toggle-request` before `open` changes; `preventDefault()` or a
   synchronous reentrant write aborts the proposal. Leaving floating mode closes the panel, emits
   the collapse change, and then emits noncancelable `lr-toggle`; accepted interactive changes also
@@ -5434,7 +5431,6 @@ These named interfaces and helper signatures are available to typed integrations
   }`
   Import: `@aceshooting/lyra-ui/components/layout/app-rail/app-rail.class.js`.
   `LyraAppRailToggleDetail {
-    open: boolean;
     expanded: boolean;
   }`
   Import: `@aceshooting/lyra-ui/components/layout/app-rail/app-rail.class.js`.
@@ -5443,14 +5439,12 @@ These named interfaces and helper signatures are available to typed integrations
 - **`components-layout-app-rail-group-app-rail-group-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/layout/app-rail-group/app-rail-group.class.js`.
   `LyraAppRailGroupToggleDetail {
-    open: boolean;
     expanded: boolean;
   }`
 
 - **`components-layout-app-rail-item-app-rail-item-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/layout/app-rail/app-rail-item.class.js`.
   `LyraAppRailItemToggleDetail {
-    open: boolean;
     expanded: boolean;
   }`
 
@@ -5546,7 +5540,6 @@ These named interfaces and helper signatures are available to typed integrations
 - **`components-layout-details-details-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/layout/details/details.class.js`.
   `LyraDetailsToggleDetail {
-    open: boolean;
     expanded: boolean;
     source: LyraDetailsToggleSource;
   }`
@@ -5554,7 +5547,6 @@ These named interfaces and helper signatures are available to typed integrations
 - **`components-layout-dock-panel-dock-panel-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/layout/dock-panel/dock-panel.class.js`.
   `LyraDockPanelCollapseChangeDetail {
-    readonly collapsed: boolean;
     readonly expanded: boolean;
   }`
   Import: `@aceshooting/lyra-ui/components/layout/dock-panel/dock-panel.class.js`.
@@ -5854,7 +5846,6 @@ These named interfaces and helper signatures are available to typed integrations
   }`
   Import: `@aceshooting/lyra-ui/components/layout/multi-split/multi-split.class.js`.
   `LyraMultiSplitToggleDetail {
-    readonly open: boolean;
     readonly expanded: boolean;
   }`
   Import: `@aceshooting/lyra-ui/components/layout/multi-split/multi-split.class.js`.
@@ -5884,7 +5875,6 @@ These named interfaces and helper signatures are available to typed integrations
 - **`components-layout-navigation-menu-item-navigation-menu-item-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/layout/navigation-menu-item/navigation-menu-item.class.js`.
   `LyraNavigationMenuToggleDetail {
-    open: boolean;
     expanded: boolean;
     source: LyraDetailsToggleSource;
   }`
@@ -6170,9 +6160,9 @@ hover opening.
 
 **Methods:** `focus(options?)` and `click()` forward to the link or button.
 
-**Events:** `lr-toggle` — `detail: LyraNavigationMenuToggleDetail` (`{ expanded, open, source }`,
-where `expanded` is the new state, the deprecated `open` key remains emitted and carries the same
-value, and `source` is `'user' | 'programmatic' | 'peer'`, the same vocabulary as `lr-details`), not
+**Events:** `lr-toggle` — `detail: LyraNavigationMenuToggleDetail` (`{ expanded, source }`,
+where `expanded` is the new state and `source` is `'user' | 'programmatic' | 'peer'`, the same
+vocabulary as `lr-details`), not
 cancelable,
 fired after an accepted change renders and never for initial markup. `user` covers click, Enter,
 Space, hover, Escape, light dismiss, focus leaving and link activation; `programmatic` covers `open`

@@ -163,8 +163,8 @@ Upgrading to v24? Follow the [project migration and cleanup guide](./packages/ly
 |---|---|
 | 🆓 Free & Open Source | MIT-licensed and free — nothing hidden inside |
 | Framework Agnostic | Works with Lit, React, Vue, Angular, Svelte, and plain JavaScript — no framework wrappers required |
-| 🪶 Lightweight & Tree-Shakeable | Import only what you use — no dead weight |
-| ⚡ Performance-First | Native custom elements, no virtual DOM, minimal deps |
+| 🪶 Lightweight & Tree-Shakeable | Stable per-component entry points; optional peer integrations remain optional |
+| ⚡ Performance-First | Native custom elements with no virtual DOM or framework wrappers |
 | 🤖 AI & Agentic-AI Ready | Machine-readable docs and manifests AI agents use correctly |
 | 🧩 Consistent Architecture | One shared base — learn one component, know them all |
 | 🎨 Design Tokens Only | Every value is a `--lr-*` token — restyle from one place |
@@ -305,9 +305,8 @@ on 2026-08-22. The workflow badges above remain the source of truth for newer co
 | [Full browser-engine suite](https://github.com/aceshooting/lyra-ui/actions/runs/32534262485) | 16/16 complete Firefox/WebKit shards passed in 7m48s |
 | [Test All Browsers](https://github.com/aceshooting/lyra-ui/actions/runs/32534264180) | Plan, 20/20 Chromium/Chrome/Edge/Firefox/Safari shards, and 5/5 fail-closed aggregates passed in 12m12s |
 
-The optimized post-release code run completed the same 41-job push CI in
-[8m37s](https://github.com/aceshooting/lyra-ui/actions/runs/32531724224), 3m24s (28%) faster than
-the 12.1.0 qualification snapshot; release-run wall time can still vary with hosted-runner queues.
+A post-release run completed the 41-job push CI in
+[8m37s](https://github.com/aceshooting/lyra-ui/actions/runs/32531724224).
 
 ## Built with
 

@@ -202,13 +202,13 @@ it("emits a cancelable collapse request followed by lr-toggle only after commit"
   await el.updateComplete;
 
   expect(el.collapsed).to.be.true;
-  expect(detail).to.deep.equal({ expanded: false, collapsed: true });
+  expect(detail).to.deep.equal({ expanded: false });
   expect(button.getAttribute("aria-expanded")).to.equal("false");
 
   button.click();
   await el.updateComplete;
   expect(el.collapsed).to.be.false;
-  expect(detail).to.deep.equal({ expanded: true, collapsed: false });
+  expect(detail).to.deep.equal({ expanded: true });
 });
 
 it("honors preventDefault on lr-toggle-request without mutating collapse state", async () => {

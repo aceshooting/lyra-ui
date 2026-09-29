@@ -12,7 +12,7 @@ import { property, state, query } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
-import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
+import { nextId, srOnly } from '../../../internal/a11y.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteAdd, finiteCount, finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { escapeCsvField } from '../../utility/export-button/csv.js';
@@ -2563,7 +2563,6 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     );
     const chartLabel =
       this.hostAccessibleLabel ??
-      hostAriaLabel(this) ??
       (this.label ||
         (datasetLabels.length
           ? getListFormat(this.effectiveLocale, { type: 'conjunction' }).format(datasetLabels)

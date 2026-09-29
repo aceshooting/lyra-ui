@@ -115,9 +115,9 @@ it('registers nothing from the root, exactly one tag from a granular entry, and 
       new URL('../test/package-entrypoints-realm.js', import.meta.url).href,
     )) as unknown as PackageEntrypointImports;
 
-    // 1. The root carries the named/type surface WITHOUT registering the library.
+    // 1. The root carries curated helpers and types without registering the library.
     const root = await entrypoints.importRoot();
-    expect(typeof root['LyraEmpty']).to.equal('function');
+    expect('LyraEmpty' in root).to.equal(false);
     expect(definedAmong(registry, packageTags).join(',')).to.equal('');
 
     // Representative exact and wildcard subpaths resolve without registering a component.
@@ -283,8 +283,9 @@ it('does not publish src/internal as a deep-import subpath', async () => {
   const manifest = (await import(packageManifestPath)) as unknown as { exports: Record<string, unknown> };
   const internalKeys = Object.keys(manifest.exports).filter((key) => key.startsWith('./internal'));
   expect(internalKeys.join(', ')).to.equal('');
-  // ...and the curated replacements really are declared, so the boundary has a documented door.
-  expect(Object.keys(manifest.exports)).to.include('./utilities/*');
+  // The broad utility wildcard stays closed while exact public helpers remain reachable.
+  expect(manifest.exports['./utilities/*']).to.equal(null);
+  expect(manifest.exports['./utilities/positioner.js']).to.equal('./dist/utilities/positioner.js');
 });
 
 it('keeps canonical component routes and closes duplicate nested registration routes', async () => {

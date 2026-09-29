@@ -1002,7 +1002,7 @@ const documentHtml = `<!doctype html>
     <script type="module">
       try {
         const fixtures = [...document.querySelectorAll('[data-fixture-tag]')];
-        // Register every definition waiter before the compatibility loader starts upgrading
+        // Register every definition waiter before the registration entry starts upgrading
         // hosts. This captures node identity at Lit's first completed hydration update, rather
         // than after a component's legitimate post-hydration async state changes have rendered.
         const firstHydrationResults = new Map();
@@ -1098,8 +1098,13 @@ const documentHtml = `<!doctype html>
             throw new Error(tag + ': first hydration failed: ' + detail);
           }
         });
-        globalThis.__lyraHydrationStage = 'importing-loader';
-        const loader = await import('/dist/hydration.js');
+        globalThis.__lyraHydrationStage = 'importing-hydration-support';
+        await import('/dist/hydration.js');
+        const loader = await import('/dist/ssr.js');
+        // The hydration hook does not register elements. Exercise the documented browser
+        // sequence: install the hook first, then load the normal registration entry.
+        globalThis.__lyraHydrationStage = 'importing-registrations';
+        await import('/dist/all.js');
         globalThis.__lyraHydrationStage = 'importing-optional-registrations';
         await Promise.all(${JSON.stringify(
           optionalRegistrationUrls

@@ -2,7 +2,7 @@ import { defineLyraLook, getLyraStyle, setLyraStyle } from '@aceshooting/lyra-ui
 import type { LyraLook, LyraMode, LyraStyle, LyraStyleChoices } from '@aceshooting/lyra-ui/theme.js';
 import { LYRA_SHADCN_LOOK } from '@aceshooting/lyra-ui/theme/looks/shadcn.js';
 import '@aceshooting/lyra-ui/theme.css';
-import '@aceshooting/lyra-ui/theme/looks/shadcn.css';
+import '@aceshooting/lyra-ui/looks/shadcn.css';
 import '@aceshooting/lyra-ui/components/lr-activity-feed.js';
 import { LyraGeoJsonViewer } from '@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-viewer.class.js';
 

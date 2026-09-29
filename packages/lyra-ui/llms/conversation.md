@@ -582,8 +582,7 @@ after the write fulfills.
 
 **Events:** `lr-message-retry` (`detail: { messageId?: string }`; fired by the built-in retry button,
 only rendered when `status="failed"`). `lr-toggle-request` is cancelable and carries
-`{ expanded: boolean, collapsed: boolean }` (`ChatMessageToggleDetail`) — `expanded` is the
-proposed state; the deprecated `collapsed` key is its inverse and is removed in 23.0.0; preventing
+`{ expanded: boolean }` (`ChatMessageToggleDetail`) — `expanded` is the proposed state; preventing
 it vetoes the built-in collapse/expand transaction. `lr-toggle` carries that same detail after the
 accepted state is committed.
 
@@ -1719,7 +1718,8 @@ listener either way. A consumer composing this element inside a free-form contai
 renders into its own shadow root and a plain light-DOM `MutationObserver` on the container can
 never see that update happen. See `<lr-thinking-panel>`'s own reference at `llms/components/lr-thinking-panel.md`.
 The forwarded Markdown surface also emits `lr-copy` and `lr-copy-error` for code-block clipboard
-outcomes.
+outcomes. With `internal-link-prefix` set, its intercepted links also pass through
+`lr-link-activate` (`detail: { href: string }`); navigation is prevented.
 
 **Slots:** none — content renders from `content`, not a slot.
 
@@ -1865,7 +1865,8 @@ share one implementation.
 `<lr-streaming-text>`'s own, including the markdown-mode double-fire avoidance (here the composed
 `<lr-markdown-core>` emits it instead of `<lr-markdown>`).
 The forwarded Markdown surface also emits `lr-copy` and `lr-copy-error` for code-block clipboard
-outcomes.
+outcomes. With `internal-link-prefix` set, its intercepted links also pass through
+`lr-link-activate` (`detail: { href: string }`); navigation is prevented.
 
 **Slots:** none — content renders from `content`, not a slot.
 
@@ -2102,10 +2103,9 @@ when the anchor isn't a `line-range`, the id isn't found, or the start line is o
 was written successfully), `lr-error` (`detail: null` — generic notification when clipboard writing
 fails), `lr-copy-error` (frozen `detail: { ok: false, text, reason, error }`, where `reason` is
 `'unsupported' | 'denied' | 'failed'`), `lr-toggle-request` (cancelable;
-`detail: { expanded, collapsed }` is the proposed next state —
-`expanded` is the canonical key, the deprecated `collapsed` key is its inverse and is removed in
-23.0.0 — and canceling leaves `collapsed` unchanged), `lr-toggle` (`detail: { expanded: boolean,
-collapsed: boolean }` — the committed state after the request is accepted),
+`detail: { expanded }` is the proposed next state; canceling leaves the host `collapsed` property
+unchanged),
+`lr-toggle` (`detail: { expanded: boolean }` — the committed state after the request is accepted),
 `lr-line-activate` (`detail: { line: number }` — a gutter line number was activated while
 `activatableLines` is set),
 `lr-text-select` (`detail: { text, anchor, rects }` — a text selection inside the code body ended;
@@ -3077,9 +3077,9 @@ string | number; pinned?: boolean; archived?: boolean }`; `ThreadRowAction = 'pi
 'delete'`; `ThreadListGrouping = 'date' | 'custom' | 'none'`; `ThreadBucketKey = 'pinned' |
 'today' | 'yesterday' | 'previous7' | 'previous30' | `month:${string}` | 'archived'`;
 `ThreadGroupContext { id: string; threads: readonly LyraChatThread[]; bucket?: ThreadBucketKey;
-date?: Date }`; and `ThreadGroupToggleDetail { groupId: string; expanded: boolean; collapsed:
-boolean }` (the shared payload type for the `lr-group-toggle-request`/`lr-group-toggle` pair;
-`collapsed` is the deprecated inverse of `expanded`, removed in 23.0.0). `LyraThreadList` and
+date?: Date }`; and `ThreadGroupToggleDetail { groupId: string; expanded?: boolean }` (the shared
+payload type for the `lr-group-toggle-request`/`lr-group-toggle` pair; this component supplies
+`expanded` on emitted events, though the type keeps it optional). `LyraThreadList` and
 `LyraThreadListEventMap` are exported alongside them. The class
 module, normal and stable tag-shaped registration entries, conversation family entry, and package
 root all retain this complete thread-list surface; the former `ChatThread` name is not retained.
@@ -3205,11 +3205,10 @@ including its retry button, while `error` is set.
 built-in confirmation), `lr-thread-rename` (`detail: { conversationId, label }`, correlated and
 re-emitted from the owned row), `lr-filter-change` (`detail: { text, matchCount }`). Slotted mode
 instead emits `lr-query-change` (`detail: { text }`) and never claims a match count it cannot own.
-`lr-group-toggle-request` (`detail: { groupId, expanded, collapsed }`, cancelable; `expanded` is
-the canonical key and the deprecated `collapsed` its inverse) — proposed before a
+`lr-group-toggle-request` (`detail: { groupId, expanded }`, cancelable) — proposed before a
 custom/date group's collapse state changes; calling `preventDefault()` skips the built-in
 `collapsedGroupIds` write and suppresses the following `lr-group-toggle`, leaving the group's
-collapse state fully controlled. `lr-group-toggle` (`detail: { groupId, expanded, collapsed }`) — the
+collapse state fully controlled. `lr-group-toggle` (`detail: { groupId, expanded }`) — the
 change was accepted and, unless `lr-group-toggle-request` was prevented, already applied to
 `collapsedGroupIds`; native group buttons provide Enter/Space activation and explicit
 `aria-expanded="true"|"false"` regardless. A consumer that already listens for `lr-group-toggle`
@@ -4511,9 +4510,7 @@ These named interfaces and helper signatures are available to typed integrations
   Import: `@aceshooting/lyra-ui/components/conversation/chat-message/chat-message.class.js`.
   `ChatMessageToggleDetail {
     expanded: boolean;
-    collapsed: boolean;
   }`
-  `collapsed` is the deprecated inverse of `expanded` (removed in 23.0.0).
 
 - **`components-conversation-chat-composer-chat-composer-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/conversation/chat-composer/chat-composer.class.js`.
@@ -4530,10 +4527,8 @@ These named interfaces and helper signatures are available to typed integrations
   Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-block.class.js`.
   `LyraCodeBlockToggleDetail {
     expanded: boolean;
-    collapsed: boolean;
   }`
   The `lr-toggle-request`/`lr-toggle` detail of `<lr-code-block>` and `<lr-code-block-core>`.
-  `collapsed` is the deprecated inverse of `expanded` (removed in 23.0.0).
 
 - **`components-conversation-code-block-code-loader-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-loader.js`.

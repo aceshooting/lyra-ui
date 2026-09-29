@@ -620,7 +620,7 @@ describe('original component collection ownership contracts', () => {
     );
     await element.updateComplete;
 
-    const pending = oneEvent(element, 'lr-feedback-submit');
+    const pending = oneEvent(element, 'lr-feedback-submit-request');
     (element.shadowRoot!.querySelector('[part="submit-button"]') as HTMLButtonElement).click();
     const event = (await pending) as CustomEvent<{
       readonly rating: 'down';

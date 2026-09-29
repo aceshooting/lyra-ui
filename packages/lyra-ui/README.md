@@ -29,7 +29,7 @@ library for accessible forms, dashboards, charts, data visualization, and AI cha
 Built with [Lit](https://lit.dev), it works with Lit, React, Vue, Angular, Svelte, and plain JavaScript.
 It is a practical open-source alternative to [Shoelace](https://shoelace.style/) and
 [Web Awesome](https://webawesome.com/), with 303 custom elements, native custom-element APIs,
-tree-shakeable imports, its own `--lr-*` design tokens, built-in localization and RTL support,
+tree-shakeable, granular per-component imports, its own `--lr-*` design tokens, built-in localization and RTL support,
 and no runtime dependency on either project.
 
 > **Independent implementation.** Lyra is not affiliated with, endorsed by, or a fork or rebrand of
@@ -150,7 +150,7 @@ setup.
 
 ## Usage
 
-Import just what you use (tree-shakeable, granular entry points):
+Register components from tree-shakeable, granular per-component entry points:
 
 ```js
 import "@aceshooting/lyra-ui/components/lr-combobox.js";

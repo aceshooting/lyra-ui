@@ -35,6 +35,8 @@ export default {
         'src/**/*.test.ts',
         'src/**/*.stories.ts',
         'type-tests/**/*.ts',
+        // Spawned by installed-hydration.mjs as a worker from its absolute fixture path.
+        'scripts/fixtures/packed-performance/ssr-worker.mjs',
         // Maintainer CLIs invoked from shell/docs rather than a package.json script.
         'scripts/llms-gap-report.mjs',
         'scripts/scaffold-translation.mjs',

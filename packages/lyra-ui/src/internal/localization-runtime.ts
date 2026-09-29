@@ -953,9 +953,13 @@ function inheritedLocale(host: Element, localeAttribute = host.getAttribute('loc
  * because a host must guarantee invalidation for the memo to stay honest —
  * arbitrary elements passed to the public resolvers get no caching.
  */
-const cacheableLocaleHosts = new WeakSet<Element>();
-const resolvedLocaleCache = new WeakMap<Element, { attribute: string; value: string }>();
-const resolvedDirectionCache = new WeakMap<Element, 'ltr' | 'rtl'>();
+interface HostContextCache {
+  attribute?: string;
+  locale?: string;
+  direction?: 'ltr' | 'rtl';
+}
+
+const hostContextCaches = new WeakMap<Element, HostContextCache>();
 
 /**
  * Opts a host into memoized locale/direction resolution. The host must call
@@ -966,13 +970,17 @@ const resolvedDirectionCache = new WeakMap<Element, 'ltr' | 'rtl'>();
  * observable.
  */
 export function enableLyraLocaleCache(host: Element): void {
-  cacheableLocaleHosts.add(host);
+  if (!hostContextCaches.has(host)) hostContextCaches.set(host, {});
 }
 
 /** Drops a host's memoized locale/direction so the next read re-resolves. */
 export function invalidateLyraLocaleCache(host: Element): void {
-  resolvedLocaleCache.delete(host);
-  resolvedDirectionCache.delete(host);
+  const cache = hostContextCaches.get(host);
+  if (cache) {
+    cache.attribute = undefined;
+    cache.locale = undefined;
+    cache.direction = undefined;
+  }
 }
 
 /** Resolve the locale inherited by a component host. */
@@ -981,13 +989,15 @@ export function resolveLyraLocale(host: Element): string {
 }
 
 function cachedLocale(host: Element, localeAttribute: string): string {
-  if (!cacheableLocaleHosts.has(host)) return inheritedLocale(host, localeAttribute);
-  let cached = resolvedLocaleCache.get(host);
-  if (cached === undefined || cached.attribute !== localeAttribute) {
-    cached = { attribute: localeAttribute, value: inheritedLocale(host, localeAttribute) };
-    resolvedLocaleCache.set(host, cached);
+  const cache = hostContextCaches.get(host);
+  if (!cache) return inheritedLocale(host, localeAttribute);
+  let locale = cache.locale;
+  if (locale === undefined || cache.attribute !== localeAttribute) {
+    locale = inheritedLocale(host, localeAttribute);
+    cache.attribute = localeAttribute;
+    cache.locale = locale;
   }
-  return cached.value;
+  return locale;
 }
 
 /** Resolve a LyraElement's property-backed locale before its reflected attribute catches up. */
@@ -1025,11 +1035,12 @@ function inheritedDirection(host: Element): 'ltr' | 'rtl' {
 
 /** Resolve the direction inherited by a component host. */
 export function resolveLyraDirection(host: Element): 'ltr' | 'rtl' {
-  if (!cacheableLocaleHosts.has(host)) return inheritedDirection(host);
-  let direction = resolvedDirectionCache.get(host);
+  const cache = hostContextCaches.get(host);
+  if (!cache) return inheritedDirection(host);
+  let direction = cache.direction;
   if (direction === undefined) {
     direction = inheritedDirection(host);
-    resolvedDirectionCache.set(host, direction);
+    cache.direction = direction;
   }
   return direction;
 }
@@ -1045,12 +1056,12 @@ export function resolveLyraDirection(host: Element): 'ltr' | 'rtl' {
  * purely to seed a comparison.
  */
 export function peekLyraLocale(host: Element): string | undefined {
-  return resolvedLocaleCache.get(host)?.value;
+  return hostContextCaches.get(host)?.locale;
 }
 
 /** @see peekLyraLocale */
 export function peekLyraDirection(host: Element): 'ltr' | 'rtl' | undefined {
-  return resolvedDirectionCache.get(host);
+  return hostContextCaches.get(host)?.direction;
 }
 
 /**

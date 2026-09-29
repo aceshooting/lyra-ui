@@ -104,10 +104,9 @@ when the anchor isn't a `line-range`, the id isn't found, or the start line is o
 was written successfully), `lr-error` (`detail: null` — generic notification when clipboard writing
 fails), `lr-copy-error` (frozen `detail: { ok: false, text, reason, error }`, where `reason` is
 `'unsupported' | 'denied' | 'failed'`), `lr-toggle-request` (cancelable;
-`detail: { expanded, collapsed }` is the proposed next state —
-`expanded` is the canonical key, the deprecated `collapsed` key is its inverse and is removed in
-23.0.0 — and canceling leaves `collapsed` unchanged), `lr-toggle` (`detail: { expanded: boolean,
-collapsed: boolean }` — the committed state after the request is accepted),
+`detail: { expanded }` is the proposed next state; canceling leaves the host `collapsed` property
+unchanged),
+`lr-toggle` (`detail: { expanded: boolean }` — the committed state after the request is accepted),
 `lr-line-activate` (`detail: { line: number }` — a gutter line number was activated while
 `activatableLines` is set),
 `lr-text-select` (`detail: { text, anchor, rects }` — a text selection inside the code body ended;

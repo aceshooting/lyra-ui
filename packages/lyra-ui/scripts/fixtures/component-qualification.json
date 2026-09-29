@@ -220,7 +220,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/details.class.ts",
-              "line": 465,
+              "line": 463,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -416,7 +416,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/details.class.ts",
-              "line": 465,
+              "line": 463,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -10214,7 +10214,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.class.ts",
-              "line": 298,
+              "line": 296,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -10402,7 +10402,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.class.ts",
-              "line": 298,
+              "line": 296,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -14816,7 +14816,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/details.class.ts",
-              "line": 465,
+              "line": 463,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

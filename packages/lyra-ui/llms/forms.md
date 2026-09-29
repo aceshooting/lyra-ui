@@ -2241,7 +2241,7 @@ against the moving fill; the other appearances keep their resting text colour. T
 override also applies while pressed, and the border fallback remains the resting border colour.
 `appearance="link"` ignores `--lr-button-hover-color` and renders without a border, so
 `--lr-button-hover-border` has no effect there. Retuning either fill token also retunes its tier's
-hover and press. For removed historical tokens, see the [changelog](../CHANGELOG.md).
+hover and press. For removed historical tokens, see the [release history archive](https://github.com/aceshooting/lyra-ui/tree/main/docs/changelog).
 
 `--lr-button-width` (default `100%`) is the internal control's inline size, so it follows the host's
 own width; override it to `auto` for a compact inline composition. `--lr-button-active-scale`

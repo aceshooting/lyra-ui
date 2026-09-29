@@ -63,8 +63,7 @@ after the write fulfills.
 
 **Events:** `lr-message-retry` (`detail: { messageId?: string }`; fired by the built-in retry button,
 only rendered when `status="failed"`). `lr-toggle-request` is cancelable and carries
-`{ expanded: boolean, collapsed: boolean }` (`ChatMessageToggleDetail`) — `expanded` is the
-proposed state; the deprecated `collapsed` key is its inverse and is removed in 23.0.0; preventing
+`{ expanded: boolean }` (`ChatMessageToggleDetail`) — `expanded` is the proposed state; preventing
 it vetoes the built-in collapse/expand transaction. `lr-toggle` carries that same detail after the
 accepted state is committed.
 

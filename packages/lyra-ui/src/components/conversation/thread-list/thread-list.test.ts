@@ -747,7 +747,7 @@ describe("data mode", () => {
     )!;
     const pending = oneEvent(el, 'lr-group-toggle');
     toggle.click();
-    expect((await pending).detail).to.deep.equal({ groupId: 'project', expanded: false, collapsed: true });
+    expect((await pending).detail).to.deep.equal({ groupId: 'project', expanded: false });
   });
 
   it('falls back to first-seen custom group order when a groupOrder comparator throws', async () => {
@@ -862,12 +862,10 @@ describe("data mode", () => {
     expect((await requestPromise).detail).to.deep.equal({
       groupId: "alpha",
       expanded: true,
-      collapsed: false,
     });
     expect((await togglePromise).detail).to.deep.equal({
       groupId: "alpha",
       expanded: true,
-      collapsed: false,
     });
     // Self-managed: nothing prevented the request, so this component wrote collapsedGroupIds
     // itself -- no host listener required, unlike this property's fully-controlled-only past.
@@ -928,7 +926,6 @@ describe("data mode", () => {
     expect((await requestPromise).detail).to.deep.equal({
       groupId: "alpha",
       expanded: true,
-      collapsed: false,
     });
     await el.updateComplete;
     expect(

@@ -19,6 +19,7 @@ type FieldExposure = {
 };
 
 const exposures = fieldProofConfig.exposures as unknown as FieldExposure[];
+const fieldMode = (): 'pre-removal' | 'retirement' => fieldProofConfig.mode;
 const stage = document.createElement('main');
 stage.style.cssText = 'position:fixed;inset:0 auto auto 0;width:390px;min-height:800px;overflow:auto;z-index:2147483647;background:white;';
 document.body.append(stage);
@@ -135,7 +136,7 @@ async function createAndAct(tag: string): Promise<{ element: HTMLElement; act: (
       break;
     case 'lr-code-block':
     case 'lr-code-block-core':
-      element.code = 'const answer = 42;'; element.collapsed = true;
+      element.code = 'const answer = 42;'; element.collapsible = true; element.collapsed = true;
       stage.append(element); await settled(element);
       act = () => button(element, '[part~="toggle"]').click();
       break;
@@ -162,7 +163,7 @@ for (const [tag, rows] of grouped) {
     element.addEventListener(row.key.event, event => {
       check(event instanceof CustomEvent, `${tag}/${row.key.event} was not a CustomEvent`);
       check(event.detail && (typeof event.detail.expanded === 'boolean' || (row.canonicalOptional && event.detail.expanded === undefined)), `${tag}/${row.key.event} lost canonical detail.expanded`);
-      if (fieldProofConfig.mode === 'retirement') {
+      if (fieldMode() === 'retirement') {
         check(!Object.hasOwn(event.detail, row.key.declaration.field), `${tag}/${row.key.event} retained retired detail.${row.key.declaration.field}`);
       } else {
         check(Object.hasOwn(event.detail, row.key.declaration.field), `${tag}/${row.key.event} pre-removal proof lost detail.${row.key.declaration.field}`);
@@ -181,30 +182,32 @@ for (const [tag, rows] of grouped) {
     const requestName = requests[0].key.event;
     const settledName = settledRows[0].key.event;
     if (tag === 'lr-multi-split') {
-      const reentrant = () => { element.collapseState = 'rail'; };
+      const split = element as HTMLElement & { collapseState: string; open: boolean };
+      const reentrant = () => { split.collapseState = 'rail'; };
       element.addEventListener(requestName, reentrant, { once: true });
       await act(); await settled(element);
-      check(received.get(requestName)?.length === 1 && received.get(settledName)?.length === 0, 'The installed multi-split did not abort its reentrant request');
-      check(element.open === true, 'The installed multi-split reentrant request changed open state');
-      element.collapseState = 'floating'; await settled(element);
+      check(received.get(requestName)?.length === 1 && received.get(settledName)?.length === 1, 'The installed multi-split lost its reentrant request/settled pair');
+      check(split.collapseState === 'rail' && split.open === false, 'The installed multi-split reentrant transition did not commit');
+      split.collapseState = 'floating'; split.open = true; await settled(element);
+      received.get(requestName)!.length = 0; received.get(settledName)!.length = 0; eventOrder.length = 0;
     }
     const veto = (event: Event) => event.preventDefault();
     element.addEventListener(requestName, veto);
     await act(); await settled(element);
-    check(received.get(requestName)?.length === (tag === 'lr-multi-split' ? 2 : 1), `${tag} did not emit its cancelable request when vetoed`);
+    check(received.get(requestName)?.length === 1, `${tag} did not emit its cancelable request when vetoed`);
     check(received.get(settledName)?.length === 0, `${tag} emitted settled event after the request was vetoed`);
     check(stateEqual(state(element), before), `${tag} changed state after the request was vetoed`);
     element.removeEventListener(requestName, veto);
     await act(); await settled(element);
     await until(() => (received.get(settledName)?.length ?? 0) === 1, `${tag} accepted request did not emit its settled event`);
     const requestEvents = received.get(requestName)!; const settledEvents = received.get(settledName)!;
-    const requestCount = tag === 'lr-multi-split' ? 3 : 2;
+    const requestCount = 2;
     check(requestEvents.length === requestCount && settledEvents.length === 1, `${tag} request/settled counts differ`);
     check(requestEvents.every(event => event.cancelable), `${tag} request events must be cancelable`);
     check(!settledEvents[0].cancelable, `${tag} settled event must be non-cancelable`);
     check(requestEvents.at(-1)!.detail.expanded === settledEvents[0].detail.expanded, `${tag} accepted request and settled canonical value differ`);
     check(!stateEqual(state(element), before), `${tag} accepted request failed to commit state`);
-    check(stateEqual(eventOrder, tag === 'lr-multi-split' ? [requestName, requestName, requestName, settledName] : [requestName, requestName, settledName]), `${tag} request/settled order changed`);
+    check(stateEqual(eventOrder, [requestName, requestName, settledName]), `${tag} request/settled order changed`);
   } else {
     check(settledRows.length === 1, `${tag} settled-only exposure count differs`);
     await act(); await settled(element);

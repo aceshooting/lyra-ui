@@ -1469,7 +1469,9 @@ export function migrateRenameText(original, contract, options) {
       const candidates = accessRules.get(name);
       if (!candidates) continue;
       const start = match.index + match[0].length - name.length;
-      if (handledMembers.has(start) || inComment(start) || inString(start) || inStylesheet(start) || inToken(start)) continue;
+      // A reported event-detail field belongs to the event payload, not the mentioned host's
+      // property surface; its owner-aware field review already names the right replacement.
+      if (handledMembers.has(start) || reportedDetailFieldOffsets.has(start) || inComment(start) || inString(start) || inStylesheet(start) || inToken(start)) continue;
       const call = /^\s*\(/.test(original.slice(start + name.length, start + name.length + 64));
       for (const candidate of candidates) {
         if (candidate.call !== call) continue;

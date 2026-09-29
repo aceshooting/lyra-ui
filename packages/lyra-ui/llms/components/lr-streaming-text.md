@@ -97,7 +97,8 @@ listener either way. A consumer composing this element inside a free-form contai
 renders into its own shadow root and a plain light-DOM `MutationObserver` on the container can
 never see that update happen. See `<lr-thinking-panel>`'s own reference at `llms/components/lr-thinking-panel.md`.
 The forwarded Markdown surface also emits `lr-copy` and `lr-copy-error` for code-block clipboard
-outcomes.
+outcomes. With `internal-link-prefix` set, its intercepted links also pass through
+`lr-link-activate` (`detail: { href: string }`); navigation is prevented.
 
 **Slots:** none — content renders from `content`, not a slot.
 

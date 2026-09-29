@@ -885,21 +885,19 @@ describe("unified show/hide lifecycle", () => {
     ) as HTMLElement;
 
     const userToggle = oneEvent(el, "lr-toggle") as Promise<
-      CustomEvent<{ open: boolean; source: string }>
+      CustomEvent<{ expanded: boolean; source: string }>
     >;
     summary.click();
     expect((await userToggle).detail).to.deep.equal({
-      open: true,
       expanded: true,
       source: "user",
     });
 
     const apiToggle = oneEvent(el, "lr-toggle") as Promise<
-      CustomEvent<{ open: boolean; source: string }>
+      CustomEvent<{ expanded: boolean; source: string }>
     >;
     await el.hide();
     expect((await apiToggle).detail).to.deep.equal({
-      open: false,
       expanded: false,
       source: "programmatic",
     });
@@ -915,11 +913,10 @@ describe("unified show/hide lifecycle", () => {
     ] as [LyraDetails, LyraDetails];
     await Promise.all([first.updateComplete, second.updateComplete]);
     const peerToggle = oneEvent(first, "lr-toggle") as Promise<
-      CustomEvent<{ open: boolean; source: string }>
+      CustomEvent<{ expanded: boolean; source: string }>
     >;
     await second.show();
     expect((await peerToggle).detail).to.deep.equal({
-      open: false,
       expanded: false,
       source: "peer",
     });
@@ -1176,11 +1173,11 @@ describe('findable closed-content gate', () => {
     const gate = contentGateOf(el);
     const summary = summaryOf(el);
     const order: string[] = [];
-    let toggleDetail: { open: boolean; source: string } | undefined;
+    let toggleDetail: { expanded: boolean; source: string } | undefined;
     el.addEventListener('lr-show', () => order.push('lr-show'));
     el.addEventListener('lr-toggle', (event) => {
       order.push('lr-toggle');
-      toggleDetail = (event as CustomEvent<{ open: boolean; source: string }>).detail;
+      toggleDetail = (event as CustomEvent<{ expanded: boolean; source: string }>).detail;
     });
     el.addEventListener('lr-after-show', () => order.push('lr-after-show'));
     const afterShow = oneEvent(el, 'lr-after-show');
@@ -1196,7 +1193,6 @@ describe('findable closed-content gate', () => {
     await afterShow;
     expect(order).to.deep.equal(['lr-show', 'lr-toggle', 'lr-after-show']);
     expect(toggleDetail).to.deep.equal({
-      open: true,
       expanded: true,
       source: 'programmatic',
     });
@@ -1529,7 +1525,7 @@ describe("Web Awesome disclosure surface", () => {
     const first = wrapper.querySelector<LyraDetails>("#rename-first")!;
     const winner = wrapper.querySelector<LyraDetails>("#rename-winner")!;
     const peerToggle = oneEvent(first, "lr-toggle") as Promise<
-      CustomEvent<{ open: boolean; source: string }>
+      CustomEvent<{ expanded: boolean; source: string }>
     >;
 
     winner.name = "faq";
@@ -1539,7 +1535,6 @@ describe("Web Awesome disclosure surface", () => {
     expect(winner.open).to.be.true;
     expect(winner.name).to.equal("faq");
     expect((await peerToggle).detail).to.deep.equal({
-      open: false,
       expanded: false,
       source: "peer",
     });

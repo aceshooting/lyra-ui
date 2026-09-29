@@ -10,7 +10,7 @@ import {
   type LyraHydrationDiagnostic,
   type LyraHydrationStatus,
   type LyraSsrMode,
-} from '../src/ssr-loader.js';
+} from '../src/ssr.js';
 
 const renderers = lyraSsrElementRenderers(LitElementRenderer);
 const fallback: typeof LyraSsrFallbackRenderer = renderers[0];

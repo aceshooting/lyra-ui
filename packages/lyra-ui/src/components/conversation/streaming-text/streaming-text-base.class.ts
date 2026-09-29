@@ -51,6 +51,7 @@ export type StreamingTextContentMode = 'auto' | 'plain' | 'markdown';
 
 export interface LyraStreamingTextEventMap {
   'lr-content-settled': CustomEvent<null>;
+  'lr-link-activate': CustomEvent<{ href: string }>;
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
 }

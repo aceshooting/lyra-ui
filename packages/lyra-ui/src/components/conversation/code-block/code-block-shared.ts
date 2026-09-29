@@ -701,9 +701,6 @@ export interface LyraCodeBlockToggleDetail {
   /** Whether the code region is shown in the resulting (on `lr-toggle-request`, the proposed)
    *  state. */
   expanded: boolean;
-  /** The inverse of `expanded`.
-   *  @deprecated Read `expanded` instead; removal not before 23.0.0. */
-  collapsed: boolean;
 }
 
 /** The two-rectangle copy glyph, matching `<lr-copy-button>`'s own so the library reads as one

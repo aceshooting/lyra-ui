@@ -25,8 +25,6 @@ export type LyraDetailsToggleSource = 'user' | 'programmatic' | 'peer';
 type ContentGateMode = 'open' | 'until-found' | 'ordinary-hidden';
 /** Payload emitted with `lr-toggle` after an accepted disclosure transition renders. */
 export interface LyraDetailsToggleDetail {
-  /** @deprecated Use `expanded`, which carries the same value; removal not before 23.0.0. */
-  open: boolean;
   /** Whether the disclosure is now open. */
   expanded: boolean;
   source: LyraDetailsToggleSource;
@@ -79,8 +77,8 @@ export interface LyraDetailsEventMap {
  * @event lr-after-hide - The panel is closed and its marker transition has finished. Nested
  *   disclosures emit the same name; handle it as this panel's event only when
  *   `event.target === event.currentTarget` (see `lr-toggle`).
- * @event lr-toggle - The disclosure state changed. `detail: { expanded, open, source }`, where
- *   `expanded` is the new state (the deprecated `open` key carries the same value) and `source` is
+ * @event lr-toggle - The disclosure state changed. `detail: { expanded, source }`, where
+ *   `expanded` is the new state and `source` is
  *   `user` for summary activation, `programmatic` for `show()`/`hide()`/`open`, or `peer` when a
  *   named disclosure closes this panel. Reports the direction and source of an accepted state
  *   change. `<lr-accordion>` coordinates its direct `<lr-accordion-item>` children; Details
@@ -563,7 +561,7 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
       // update mid-update. Emitting once the disclosure has actually rendered keeps the historical
       // timing (it used to ride the native <details> toggle event) while preserving the documented
       // lr-show -> lr-toggle -> lr-after-show ordering.
-      this.emit('lr-toggle', { open: this._open, expanded: this._open, source });
+      this.emit('lr-toggle', { expanded: this._open, source });
     });
     if (settled) this.emit(event, null);
   }

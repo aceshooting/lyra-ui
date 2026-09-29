@@ -247,15 +247,16 @@ synchronously inside its own handler instead of deferring past `updateComplete`.
 out of a pane the new state hides (`'floating'` while closed) or clamps (`'rail'`) before the event
 fires, landing on the first surviving pane that can take it, otherwise on one of the split's own
 dividers, preferring one that stays enabled; focus anywhere other than the collapsing pane is untouched),
-`lr-toggle` (`detail: LyraMultiSplitToggleDetail = { expanded: boolean, open: boolean }`, where
-`expanded` is the proposed or forced drawer state; the deprecated `open` key carries the same value; use `expanded` in new code) — Escape/backdrop close proposals are cancelable and fire before `open`
-changes; preventing the event or making a synchronous
-reentrant mutation aborts the proposal. A forced close when a responsive collapse transition leaves
-`floating` fires noncancelably after `open` is false. Direct `open` writes and no-op dismissals are silent,
+`lr-toggle-request` (cancelable; `detail: LyraMultiSplitToggleDetail = { expanded: boolean }`
+contains the proposed drawer state). Escape/backdrop close proposals fire before `open` changes;
+preventing the event or making a synchronous reentrant mutation aborts the proposal.
+`lr-toggle` (non-cancelable; the same detail contains the resulting drawer state) fires after an
+accepted change, or after a responsive transition leaves `floating` and forces `open` to false.
+Forced closes emit no request. Direct `open` writes and no-op dismissals emit neither event,
 `lr-multi-split-constraints-invalid` (`detail: LyraMultiSplitConstraintIssueDetail`, fired once when the configured
 panel minimums/maximums cannot fit the track; the infeasible set is rejected for interaction and a
 normalized percent minimum is used instead), `lr-multi-split-orientation-change` (`detail: { orientation }`,
-fired only when an enabled `orientationBreakpoint` actually changes `effectiveOrientation`); `lr-toggle-request` (cancelable proposal before interactive overlay state changes, with `expanded` and compatibility `open`; direct writes and forced responsive closes do not emit it)
+fired only when an enabled `orientationBreakpoint` actually changes `effectiveOrientation`)
 
 **Slots:** default (each direct child element is one panel; set a unique `panel-id` on every child
 when `storage-key` is used).

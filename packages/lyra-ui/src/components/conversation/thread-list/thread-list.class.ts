@@ -62,9 +62,6 @@ export interface ThreadGroupToggleDetail {
   /** Whether the group is shown in the resulting (on `lr-group-toggle-request`, the proposed)
    *  state. Always present on events this component dispatches. */
   expanded?: boolean;
-  /** The inverse of `expanded`.
-   *  @deprecated Read `expanded` instead; removal not before 23.0.0. */
-  collapsed: boolean;
 }
 
 export interface LyraThreadListEventMap {
@@ -316,14 +313,13 @@ function canonicalThreads(values: readonly unknown[]): readonly LyraChatThread[]
  *   correlated `lr-rename` request (data mode only).
  * @event lr-filter-change - `detail: { text, matchCount }` -- data-mode query plus owned results.
  * @event lr-query-change - `detail: { text }` -- slotted-mode query request; the host owns results.
- * @event lr-group-toggle-request - `detail: { groupId, expanded, collapsed }` (`expanded` is the
- *   canonical key, the deprecated `collapsed` its inverse) -- cancelable proposal before a
+ * @event lr-group-toggle-request - `detail: { groupId, expanded }` is a cancelable proposal before a
  *   custom/date group's collapse state changes. Calling `preventDefault()` skips the built-in
  *   `collapsedGroupIds` write below and suppresses the following `lr-group-toggle`, leaving the
  *   group's collapse state fully controlled -- the host must then reassign `collapsedGroupIds`
  *   itself, mirroring `<lr-chat-message>`'s and `<lr-code-block>`'s own
  *   `lr-toggle-request`/`lr-toggle` pairs.
- * @event lr-group-toggle - `detail: { groupId, expanded, collapsed }` -- a custom/date group's collapse-state
+ * @event lr-group-toggle - `detail: { groupId, expanded }` -- a custom/date group's collapse-state
  *   change was accepted and, unless `lr-group-toggle-request` was prevented, already applied to
  *   `collapsedGroupIds`. A host that already listens here and reassigns `collapsedGroupIds` itself
  *   keeps working unchanged: this component's own write, when it happens, always precedes that
@@ -1302,7 +1298,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
    *  `lr-group-toggle` listener keeps working unchanged: this component's own write, when it
    *  happens, always precedes that listener in the same synchronous dispatch. */
   private toggleGroupCollapsed(groupId: string, collapsed: boolean): void {
-    const detail: ThreadGroupToggleDetail = { groupId, expanded: !collapsed, collapsed };
+    const detail: ThreadGroupToggleDetail = { groupId, expanded: !collapsed };
     // The library's one request/commit helper rather than a hand-written `defaultPrevented`
     // branch. No write-tracking guard is passed, and the reason is the ordering a guard would
     // observe on THIS dispatch, not the one the JSDoc above describes: a guard watches

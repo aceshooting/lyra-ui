@@ -1,4 +1,4 @@
-import { aTimeout, fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './rag-answer.js';
 import type { LyraRagAnswer } from './rag-answer.class.js';
 import type { LyraSourceCard } from '../source-card/source-card.class.js';
@@ -80,7 +80,7 @@ describe('lr-rag-answer', () => {
     const leaked: string[] = [];
     for (const name of [
       'lr-render-error',
-      'lr-link-click',
+      'lr-link-activate',
       'lr-highlight-activate',
       'lr-text-select',
       'lr-anchor-result',
@@ -99,6 +99,23 @@ describe('lr-rag-answer', () => {
       el.removeEventListener(name, listener);
     }
     expect(leaked).to.deep.equal([]);
+  });
+
+  it('does not expose retired link-click from a real rendered Markdown link', async () => {
+    const el = await fixture<LyraRagAnswer>(html`
+      <lr-rag-answer .answer=${'[source](https://example.com/source)'}></lr-rag-answer>
+    `);
+    const markdown = el.shadowRoot!.querySelector('lr-markdown')!;
+    await waitUntil(() => markdown.shadowRoot!.querySelector('a') !== null);
+    const link = markdown.shadowRoot!.querySelector('a')!;
+    let retiredEvents = 0;
+    let canonicalEvents = 0;
+    el.addEventListener('lr-link-click', () => retiredEvents++);
+    el.addEventListener('lr-link-activate', () => canonicalEvents++);
+    link.addEventListener('click', (event) => event.preventDefault());
+    link.click();
+    expect(retiredEvents).to.equal(0);
+    expect(canonicalEvents).to.equal(0);
   });
 
   it('hides the sources section entirely when withoutSources is set, even with real sources data', async () => {

@@ -41,9 +41,9 @@ string | number; pinned?: boolean; archived?: boolean }`; `ThreadRowAction = 'pi
 'delete'`; `ThreadListGrouping = 'date' | 'custom' | 'none'`; `ThreadBucketKey = 'pinned' |
 'today' | 'yesterday' | 'previous7' | 'previous30' | `month:${string}` | 'archived'`;
 `ThreadGroupContext { id: string; threads: readonly LyraChatThread[]; bucket?: ThreadBucketKey;
-date?: Date }`; and `ThreadGroupToggleDetail { groupId: string; expanded: boolean; collapsed:
-boolean }` (the shared payload type for the `lr-group-toggle-request`/`lr-group-toggle` pair;
-`collapsed` is the deprecated inverse of `expanded`, removed in 23.0.0). `LyraThreadList` and
+date?: Date }`; and `ThreadGroupToggleDetail { groupId: string; expanded?: boolean }` (the shared
+payload type for the `lr-group-toggle-request`/`lr-group-toggle` pair; this component supplies
+`expanded` on emitted events, though the type keeps it optional). `LyraThreadList` and
 `LyraThreadListEventMap` are exported alongside them. The class
 module, normal and stable tag-shaped registration entries, conversation family entry, and package
 root all retain this complete thread-list surface; the former `ChatThread` name is not retained.
@@ -169,11 +169,10 @@ including its retry button, while `error` is set.
 built-in confirmation), `lr-thread-rename` (`detail: { conversationId, label }`, correlated and
 re-emitted from the owned row), `lr-filter-change` (`detail: { text, matchCount }`). Slotted mode
 instead emits `lr-query-change` (`detail: { text }`) and never claims a match count it cannot own.
-`lr-group-toggle-request` (`detail: { groupId, expanded, collapsed }`, cancelable; `expanded` is
-the canonical key and the deprecated `collapsed` its inverse) — proposed before a
+`lr-group-toggle-request` (`detail: { groupId, expanded }`, cancelable) — proposed before a
 custom/date group's collapse state changes; calling `preventDefault()` skips the built-in
 `collapsedGroupIds` write and suppresses the following `lr-group-toggle`, leaving the group's
-collapse state fully controlled. `lr-group-toggle` (`detail: { groupId, expanded, collapsed }`) — the
+collapse state fully controlled. `lr-group-toggle` (`detail: { groupId, expanded }`) — the
 change was accepted and, unless `lr-group-toggle-request` was prevented, already applied to
 `collapsedGroupIds`; native group buttons provide Enter/Space activation and explicit
 `aria-expanded="true"|"false"` regardless. A consumer that already listens for `lr-group-toggle`

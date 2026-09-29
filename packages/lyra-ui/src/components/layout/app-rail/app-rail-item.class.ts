@@ -32,8 +32,6 @@ import { LYRA_DEFAULT_appRailItemCollapse, LYRA_DEFAULT_appRailItemExpand } from
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraAppRailItemToggleDetail {
-  /** @deprecated Use `expanded`, which carries the same value; removal not before 23.0.0. */
-  open: boolean;
   /** Whether the item's `children` are (or, on the request, would be) shown. */
   expanded: boolean;
 }
@@ -101,10 +99,9 @@ export interface LyraAppRailItemEventMap {
  *   built-in disclosure. Call `preventDefault()` to keep the current state, or assign `expanded`
  *   from the listener to resolve it yourself -- a write during the dispatch suppresses the default
  *   commit even when it assigns the value the property already held. Not emitted for a direct
- *   `expanded` write. `detail: LyraAppRailItemToggleDetail` (`{ expanded, open }` -- `expanded` is
- *   the proposed state and the deprecated `open` key carries the same value, matching
- *   `<lr-app-rail-group>`'s identical event name and detail shape exactly, so a listener bound to
- *   both components' `lr-toggle-request` need not branch on which fired).
+ *   `expanded` write. `detail: LyraAppRailItemToggleDetail` (`{ expanded }` carries the proposed state,
+ *   matching `<lr-app-rail-group>`'s identical event name and detail shape exactly, so a listener
+ *   bound to both components' `lr-toggle-request` need not branch on which fired).
  * @event lr-toggle - The item finished expanding or collapsing its `children`. Non-cancelable,
  *   emitted after `expanded` is written, and never emitted for a vetoed or listener-resolved
  *   request. `detail: LyraAppRailItemToggleDetail` — `expanded` is the settled state.
@@ -382,13 +379,13 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
     event.stopPropagation();
     const next = !this._expanded;
     requestThenCommit({
-      requestDetail: { open: next, expanded: next },
+      requestDetail: { expanded: next },
       emitRequest: (detail, init: { cancelable: true }) =>
         this.emit('lr-toggle-request', detail, init),
       guard: this.toggleGuard,
       commit: () => {
         this.expanded = next;
-        this.emit('lr-toggle', { open: next, expanded: next });
+        this.emit('lr-toggle', { expanded: next });
       },
     });
   };

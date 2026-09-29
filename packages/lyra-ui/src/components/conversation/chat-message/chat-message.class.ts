@@ -29,9 +29,6 @@ export interface ChatMessageToggleDetail {
   /** Whether the message body is shown in the resulting (on `lr-toggle-request`, the proposed)
    *  state. */
   expanded: boolean;
-  /** The inverse of `expanded`.
-   *  @deprecated Read `expanded` instead; removal not before 23.0.0. */
-  collapsed: boolean;
 }
 
 // Mirrors the shared icon set's viewBox/stroke conventions
@@ -164,11 +161,8 @@ export interface LyraChatMessageEventMap {
  *   `new CustomEvent('lr-message-retry', { bubbles: true, composed: true })` to stay consistent with the
  *   same event contract a listener further up a conversation surface already relies on for every
  *   other message.
- * @event lr-toggle-request - Cancelable request to change collapse state. `detail: { expanded,
- *   collapsed }` is the proposed state; `expanded` is the canonical key and the deprecated
- *   `collapsed` its inverse.
- * @event lr-toggle - Collapse state committed. `detail: { expanded, collapsed }`, the resulting
- *   state; the deprecated `collapsed` is the inverse of `expanded`.
+ * @event lr-toggle-request - Cancelable request to change collapse state. `detail: { expanded }` is the proposed state.
+ * @event lr-toggle - Collapse state committed. `detail: { expanded }` carries the resulting state.
  * @csspart bubble - The message article and bubble root. Programmatically focusable (`tabindex="-1"`) so focus has a stable place to land when the built-in retry button is removed. Its fill, text, and geometry derive from the documented theme hooks.
  * @csspart header - The row above the message body — avatar, badges, and the collapse toggle. Hidden entirely when none of those have anything to show.
  * @csspart avatar - The wrapper around the `avatar` slot.
@@ -465,7 +459,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
   };
 
   private toggleCollapsed = (): void => {
-    const detail = { expanded: this.collapsed, collapsed: !this.collapsed } as const;
+    const detail = { expanded: this.collapsed } as const;
     const request = this.emit('lr-toggle-request', detail, { cancelable: true });
     if (request.defaultPrevented) return;
     this.collapsed = !detail.expanded;

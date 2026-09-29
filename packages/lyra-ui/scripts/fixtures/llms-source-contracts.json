@@ -3577,7 +3577,7 @@
       "module": "src/components/conversation/chat-message/chat-message.class.ts",
       "exportName": "ChatMessageToggleDetail",
       "kind": "interface",
-      "fingerprint": "8252712be334c94647ff",
+      "fingerprint": "31a2150f711535b38947",
       "routes": [
         "src/all.ts",
         "src/components/conversation/chat-message/chat-message.class.ts",
@@ -3621,7 +3621,7 @@
       "module": "src/components/conversation/code-block/code-block-shared.ts",
       "exportName": "LyraCodeBlockToggleDetail",
       "kind": "interface",
-      "fingerprint": "8252712be334c94647ff",
+      "fingerprint": "31a2150f711535b38947",
       "routes": [
         "src/all.ts",
         "src/components/conversation/code-block/code-block-core.class.ts",
@@ -4500,7 +4500,7 @@
       "module": "src/components/conversation/thread-list/thread-list.class.ts",
       "exportName": "ThreadGroupToggleDetail",
       "kind": "interface",
-      "fingerprint": "30e4c0c139060caf4dd9",
+      "fingerprint": "cdda56187b1f2d8f5ee4",
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
@@ -7387,7 +7387,7 @@
       "module": "src/components/layout/app-rail-group/app-rail-group.class.ts",
       "exportName": "LyraAppRailGroupToggleDetail",
       "kind": "interface",
-      "fingerprint": "c190aa3023be4e3111c9",
+      "fingerprint": "31a2150f711535b38947",
       "routes": [
         "src/all.ts",
         "src/components/layout/app-rail-group/app-rail-group.class.ts",
@@ -7409,7 +7409,7 @@
       "module": "src/components/layout/app-rail/app-rail-item.class.ts",
       "exportName": "LyraAppRailItemToggleDetail",
       "kind": "interface",
-      "fingerprint": "c190aa3023be4e3111c9",
+      "fingerprint": "31a2150f711535b38947",
       "routes": [
         "src/all.ts",
         "src/components/layout/app-rail/app-rail-item.class.ts",
@@ -7497,7 +7497,7 @@
       "module": "src/components/layout/app-rail/app-rail.class.ts",
       "exportName": "LyraAppRailToggleDetail",
       "kind": "interface",
-      "fingerprint": "c190aa3023be4e3111c9",
+      "fingerprint": "31a2150f711535b38947",
       "routes": [
         "src/all.ts",
         "src/components/layout/app-rail/app-rail.class.ts",
@@ -7714,7 +7714,7 @@
       "module": "src/components/layout/details/details.class.ts",
       "exportName": "LyraDetailsToggleDetail",
       "kind": "interface",
-      "fingerprint": "c6ece98f008a834c46ff",
+      "fingerprint": "ad706c0e0d89e1e30092",
       "routes": [
         "src/all.ts",
         "src/components/layout/details/details.class.ts",
@@ -7736,7 +7736,7 @@
       "module": "src/components/layout/dock-panel/dock-panel.class.ts",
       "exportName": "LyraDockPanelCollapseChangeDetail",
       "kind": "interface",
-      "fingerprint": "fde1e51b268f555d0d7d",
+      "fingerprint": "7d20a3f16dc71ce12f63",
       "routes": [
         "src/all.ts",
         "src/components/layout/dock-panel/dock-panel.class.ts",
@@ -8565,7 +8565,7 @@
       "module": "src/components/layout/multi-split/multi-split.class.ts",
       "exportName": "LyraMultiSplitToggleDetail",
       "kind": "interface",
-      "fingerprint": "79855d93fccb5eaa0402",
+      "fingerprint": "7d20a3f16dc71ce12f63",
       "routes": [
         "src/all.ts",
         "src/components/layout/index.ts",
@@ -8587,7 +8587,7 @@
       "module": "src/components/layout/navigation-menu-item/navigation-menu-item.class.ts",
       "exportName": "LyraNavigationMenuToggleDetail",
       "kind": "interface",
-      "fingerprint": "4fd5a3394ecacc1761c2",
+      "fingerprint": "988a3883ad0d8e617822",
       "routes": [
         "src/all.ts",
         "src/components/layout/index.ts",
@@ -14015,7 +14015,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "84ab5ed4372215bda810",
+      "fingerprint": "53de5a385225630db72f",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15640,7 +15640,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "f6253adf00525049cae7",
+      "fingerprint": "0eea1c6afa16682c6c76",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15656,7 +15656,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "ffcfcca7504c6457e98d",
+      "fingerprint": "7ead1cfbefcd3e75694e",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15672,7 +15672,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "10c8f48a0f5e6eec5862",
+      "fingerprint": "5350999fe9801647b21b",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16216,7 +16216,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "80cbbf1d52e809e264c4",
+      "fingerprint": "363b751a68d4c1ac71d6",
       "routes": [
         "src/vue.ts"
       ],
@@ -16625,7 +16625,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "13d7cb848c6499e32cf6",
+      "fingerprint": "0fd7cc85a4f24b8a4f7c",
       "routes": [
         "src/framework-types.ts"
       ],

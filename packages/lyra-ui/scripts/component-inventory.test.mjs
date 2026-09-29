@@ -6562,13 +6562,15 @@ test('effective CEM attributes use resolved field defaults and winning subclass 
 
   const dropdown = declaration('lr-dropdown');
   assert.equal(
-    dropdown.members.find(({ name }) => name === 'arrow').default,
-    'false'
+    dropdown.members.find(({ name }) => name === 'placement').default,
+    "'bottom-start'"
   );
   assert.equal(
-    dropdown.attributes.find(({ name }) => name === 'arrow').default,
-    'false'
+    dropdown.attributes.find(({ name }) => name === 'placement').default,
+    "'bottom-start'"
   );
+  assert.equal(dropdown.members.some(({ name }) => name === 'arrow'), false);
+  assert.equal(dropdown.attributes.some(({ name }) => name === 'arrow'), false);
   assert.equal(
     dropdown.members.find(({ name }) => name === 'popupRole').default,
     "'menu'"

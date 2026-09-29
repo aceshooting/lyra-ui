@@ -227,7 +227,9 @@ it('lite chart ignores retired naming aliases and follows host aria-label', asyn
   expect(attributeWarnings).to.have.length(0);
   const propertyWarnings = await captureDeprecationWarnings([], async () => {
     Reflect.set(el, 'accessibleLabel', 'Retired property');
+    el.requestUpdate();
     await el.updateComplete;
+    expect(svgName(el)).to.equal('Revenue');
   });
   expect(propertyWarnings).to.have.length(0);
   expect(svgName(el)).to.equal('Revenue');

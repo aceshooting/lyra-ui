@@ -14,6 +14,10 @@
 
   Map data layers skip unused fallback color resolution when explicit colors are valid. Command palettes project visible result rows plus the active row without filtering every group, and Lite Chart reuses the category-label width it already measured for automatic axis selection. These changes preserve the existing rendered and interaction contracts; no latency claim is implied.
 
+  Lite Chart no longer reads the retired `accessibleLabel` property as a fallback. Streaming text documents and types its existing internal-link event, while RAG answers contain their owned markdown child's link events. Buttons share identical slot and focus handlers, and locale resolution shares one cache record per component.
+
   The package README, migration guides and agent skill now route to focused v24 import, styling, SSR and event-detail guidance. Historical roadmap scope remains available through stable anchors and focused pages.
+
+  Event-detail migration diagnostics distinguish payload fields from component properties, avoiding conflicting advice for `lr-app-rail-group` listeners. The retained migration profiles continue to report manual changes for consumers upgrading across multiple major versions.
 
 Older major versions: [release history archive](https://github.com/aceshooting/lyra-ui/tree/main/docs/changelog).

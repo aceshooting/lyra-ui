@@ -73,9 +73,9 @@ export function parseAttwArguments(arguments_) {
 const UNTYPED_SCRIPT_ASSET_EXPORTS = new Set(['./theme-bootstrap.js']);
 
 /**
- * Returns every typed package export ATTW must resolve. Stylesheets and the classic-script assets
- * above are the only deliberate omissions: they have no declarations, so ATTW correctly classifies
- * them as untyped.
+ * Returns every live typed package export ATTW must resolve. Stylesheets and the classic-script
+ * assets above have no declarations. Exact `null` entries close retired routes that a surviving
+ * wildcard would otherwise reopen; they have no target or types for ATTW to resolve.
  */
 export function attwEntrypoints(manifest) {
   const exportsMap = manifest?.exports;
@@ -86,7 +86,9 @@ export function attwEntrypoints(manifest) {
   ) {
     throw new TypeError('The package manifest must define an exports object.');
   }
-  const entrypoints = Object.keys(exportsMap)
+  const entrypoints = Object.entries(exportsMap)
+    .filter(([, target]) => target !== null)
+    .map(([entrypoint]) => entrypoint)
     .filter((entrypoint) => !entrypoint.endsWith('.css'))
     .filter((entrypoint) => !UNTYPED_SCRIPT_ASSET_EXPORTS.has(entrypoint))
     .sort();

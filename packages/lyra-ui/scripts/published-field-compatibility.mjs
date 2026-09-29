@@ -434,4 +434,3 @@ export function expectedFieldInputPaths(packageJson) {
 
 export const FIELD_DECLARATION_KEYS = Object.freeze(fieldContracts.map(item => item.key));
 export const FIELD_EXPOSURE_KEYS = Object.freeze(exposureSpecs.map(([tag, event, index]) => ({ tag, event, declaration: fieldContracts[index].key })));
-export const FIELD_EVIDENCE_LIMITS = Object.freeze({ maxInputs, maxMemberBytes, maxArchiveBytes });

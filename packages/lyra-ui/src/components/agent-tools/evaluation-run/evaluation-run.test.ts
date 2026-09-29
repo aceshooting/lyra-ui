@@ -54,7 +54,7 @@ async function expandExample(el: LyraEvalRun, index = 0): Promise<HTMLElement> {
   row.dispatchEvent(new CustomEvent('lr-toggle', {
     bubbles: true,
     composed: true,
-    detail: { open: true, expanded: true },
+    detail: { expanded: true },
   }));
   await el.updateComplete;
   return el.shadowRoot!.querySelectorAll('[part="example"]')[index] as HTMLElement;
@@ -450,14 +450,13 @@ it('contains raw lr-code-block events at the example boundary, including a colla
   codeBlock.dispatchEvent(new CustomEvent('lr-copy', { bubbles: true, composed: true, detail: { ok: true, text: 'print("hi")' } }));
   codeBlock.dispatchEvent(new CustomEvent('lr-error', { bubbles: true, composed: true, detail: null }));
   codeBlock.dispatchEvent(new CustomEvent('lr-copy-error', { bubbles: true, composed: true, detail: { ok: false } }));
-  codeBlock.dispatchEvent(new CustomEvent('lr-toggle-request', { bubbles: true, composed: true, detail: { collapsed: true } }));
+  codeBlock.dispatchEvent(new CustomEvent('lr-toggle-request', { bubbles: true, composed: true, detail: { expanded: false } }));
   codeBlock.dispatchEvent(new CustomEvent('lr-line-activate', { bubbles: true, composed: true, detail: { line: 1 } }));
   codeBlock.dispatchEvent(new CustomEvent('lr-text-select', { bubbles: true, composed: true, detail: { text: 'hi', anchor: null, rects: [] } }));
   // lr-code-block's own internal collapse toggle shares its event name with lr-details' disclosure
   // toggle -- unstopped, it bubbles straight into the ancestor <lr-details>'s own @lr-toggle handler
-  // and gets misread as the example collapsing (a code-block-shaped { collapsed } detail has no
-  // `open` field, which reads as falsy and deletes the example from expandedIds).
-  codeBlock.dispatchEvent(new CustomEvent('lr-toggle', { bubbles: true, composed: true, detail: { collapsed: true } }));
+  // and gets misread as the example collapsing because both nested events now carry `expanded`.
+  codeBlock.dispatchEvent(new CustomEvent('lr-toggle', { bubbles: true, composed: true, detail: { expanded: false } }));
   await el.updateComplete;
 
   expect(leaked).to.deep.equal([]);
@@ -653,7 +652,7 @@ it('does not mount heavy example bodies until their disclosure opens', async () 
   expect(el.shadowRoot!.querySelectorAll('lr-markdown').length).to.equal(0);
   const first = el.shadowRoot!.querySelector('[part="example"]') as HTMLElement & { open: boolean };
   first.open = true;
-  first.dispatchEvent(new CustomEvent('lr-toggle', { bubbles: true, composed: true, detail: { open: true, expanded: true } }));
+  first.dispatchEvent(new CustomEvent('lr-toggle', { bubbles: true, composed: true, detail: { expanded: true } }));
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('lr-markdown').length).to.equal(2);
 });

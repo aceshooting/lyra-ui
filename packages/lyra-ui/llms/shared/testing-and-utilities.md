@@ -20,8 +20,8 @@ real component — instead of hand-rolling a `CustomEvent` and guessing its shap
 ```ts
 import { createLyraEvent } from '@aceshooting/lyra-ui/testing';
 
-const event = createLyraEvent('lr-confirm-bar', 'lr-approve', { args: null, waitUntil: () => {} });
-event.cancelable; // true — lr-confirm-bar's own lr-approve call site is cancelable
+const event = createLyraEvent('lr-confirm-bar', 'lr-approve-request', { args: null, waitUntil: () => {} });
+event.cancelable; // true — lr-confirm-bar's own lr-approve-request call site is cancelable
 target.dispatchEvent(event);
 ```
 
@@ -67,11 +67,14 @@ await activateStep(stepper, 'review'); // clicks the [part="step"] button for th
 same `[part="option"]` row plus `data-value` delegated-click pattern for its own listbox/popup.
 `submitConfirmDecision()`
 accepts either `<lr-confirm-bar>` or `<lr-tool-approval-dialog>`, which render the identical
-`[part="approve-button"]`/`[part="deny-button"]` pair for the same `lr-approve`/`lr-deny`
-contract.
+`[part="approve-button"]`/`[part="deny-button"]` pair and emit cancelable
+`lr-approve-request`/`lr-deny-request` events. The driver awaits the component's render;
+if a listener calls `preventDefault()` on either component, or `waitUntil()` on the confirm bar,
+the action may still be pending when the driver returns.
 
 Each driver is `async` and awaits `updateComplete` before returning, so assertions written
-immediately after it see fully-settled DOM/state. Each one also throws a plain `Error` — never a
+immediately after it see the render reached by that interaction. Host-driven async decisions
+still need their own completion check. Each driver also throws a plain `Error` — never a
 silent no-op — when the requested interaction cannot actually happen: the target is disabled, the
 option owner/stepper is read-only or has no matching row/step currently rendered, or the confirm
 bar is already decided. That is the exact failure mode a hand-rolled event misses (for example

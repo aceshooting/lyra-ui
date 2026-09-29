@@ -1476,7 +1476,7 @@ describe("collapsible / collapsed", () => {
     expect(el.collapsed).to.be.false;
     expect(body.hidden).to.be.false;
     expect(toggle.getAttribute("aria-expanded")).to.equal("true");
-    expect((event as CustomEvent).detail).to.deep.equal({ expanded: true, collapsed: false });
+    expect((event as CustomEvent).detail).to.deep.equal({ expanded: true });
 
     firing = oneEvent(el, "lr-toggle");
     toggle.click();
@@ -1484,7 +1484,7 @@ describe("collapsible / collapsed", () => {
     await el.updateComplete;
     expect(el.collapsed).to.be.true;
     expect(body.hidden).to.be.true;
-    expect((event as CustomEvent).detail).to.deep.equal({ expanded: false, collapsed: true });
+    expect((event as CustomEvent).detail).to.deep.equal({ expanded: false });
   });
 
   it("allows a cancelable request to veto mutation and the committed event", async () => {
@@ -1496,11 +1496,11 @@ describe("collapsible / collapsed", () => {
     el.addEventListener("lr-toggle-request", (event) => event.preventDefault());
     const requested = oneEvent(el, "lr-toggle-request");
     el.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle"]')!.click();
-    const event = (await requested) as CustomEvent<{ expanded: boolean; collapsed: boolean }>;
+    const event = (await requested) as CustomEvent<{ expanded: boolean }>;
     await el.updateComplete;
     expect(event.cancelable).to.be.true;
     expect(event.defaultPrevented).to.be.true;
-    expect(event.detail).to.deep.equal({ expanded: false, collapsed: true });
+    expect(event.detail).to.deep.equal({ expanded: false });
     expect(el.collapsed).to.be.false;
     expect(commits).to.equal(0);
   });

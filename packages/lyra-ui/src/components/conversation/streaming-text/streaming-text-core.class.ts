@@ -38,6 +38,8 @@ export interface LyraStreamingTextCoreEventMap extends StreamingTextRuntimeEvent
  * @customElement lr-streaming-text-core
  * @event lr-content-settled - Fired after newly-coalesced content actually reaches the rendered
  *   DOM (plain-text mode only -- see `<lr-streaming-text>`'s class doc). `detail: null`.
+ * @event lr-link-activate - Passthrough from composed Markdown when a rendered link matches
+ *   `internal-link-prefix`; navigation is prevented and `detail: { href }` carries the raw URL.
  * @csspart base - The root container.
  * @csspart cursor - The blinking (or, under reduced motion, static) cursor bar. Only rendered while `streaming` is `true`.
  * @csspart content - Forwarded from the composed `<lr-markdown-core>` in Markdown mode -- the

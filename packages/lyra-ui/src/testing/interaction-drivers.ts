@@ -86,11 +86,13 @@ export async function chooseOption(
 /**
  * Clicks `owner`'s own internal `[part="approve-button"]` (for `'approved'`) or
  * `[part="deny-button"]` (for `'denied'`) -- the same `<lr-button>` a real reviewer presses --
- * which runs the real component's own decision logic and its full `lr-approve`/`lr-deny`
- * sequence, instead of dispatching a hand-built event at the host.
+ * which runs the real component's own decision logic and emits its cancelable
+ * `lr-approve-request`/`lr-deny-request`, instead of dispatching a hand-built event at the host.
  *
  * `<lr-confirm-bar>` and `<lr-tool-approval-dialog>` both render this exact pair of parts for the
- * same `lr-approve`/`lr-deny` contract (each one's own class doc says so), so this accepts either.
+ * same request-event veto contract (each one's own class doc says so), so this accepts either.
+ * The driver waits for the owner's render, not for host work accepted through `waitUntil()` or
+ * `preventDefault()`; a veto can leave the action pending when this promise resolves.
  *
  * @throws {Error} if the requested button is not currently rendered, or is disabled/loading (the
  *   bar/dialog itself is disabled, already decided, or that action is loading/pending the other

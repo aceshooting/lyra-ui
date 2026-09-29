@@ -390,7 +390,7 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
 
   private onExampleToggle(id: string, event: CustomEvent<LyraDetailsEventMap['lr-toggle']['detail']>): void {
     event.stopPropagation();
-    const expanded = event.detail.expanded ?? event.detail.open;
+    const { expanded } = event.detail;
     const next = new Set(this.expandedIds);
     if (expanded) next.add(id);
     else next.delete(id);

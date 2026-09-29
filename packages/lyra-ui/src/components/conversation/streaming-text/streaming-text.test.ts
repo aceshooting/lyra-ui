@@ -647,7 +647,7 @@ describe("Markdown auto-detection and rendering mode", () => {
     expect(md.streaming).to.be.true;
   });
 
-  it('does not expose composed events from its owned Markdown renderer', async () => {
+  it('contains private composed events from its owned Markdown renderer', async () => {
     const el = await fixture<LyraStreamingText>(html`
       <lr-streaming-text
         content-mode="markdown"
@@ -658,7 +658,6 @@ describe("Markdown auto-detection and rendering mode", () => {
     const leaked: string[] = [];
     for (const name of [
       'lr-render-error',
-      'lr-link-click',
       'lr-highlight-activate',
       'lr-text-select',
       'lr-anchor-result',
@@ -673,6 +672,28 @@ describe("Markdown auto-detection and rendering mode", () => {
       el.removeEventListener(name, listener);
     }
     expect(leaked).to.deep.equal([]);
+  });
+
+  it('exposes real internal link activation without the retired link-click event', async () => {
+    const el = await fixture<LyraStreamingText>(html`
+      <lr-streaming-text
+        content-mode="markdown"
+        internal-link-prefix="/docs/"
+        .content=${'[setup](/docs/setup)'}
+      ></lr-streaming-text>
+    `);
+    const markdown = el.shadowRoot!.querySelector('lr-markdown')!;
+    await waitUntil(() => markdown.shadowRoot!.querySelector('a') !== null);
+    const link = markdown.shadowRoot!.querySelector('a')!;
+    let retiredEvents = 0;
+    el.addEventListener('lr-link-click', () => retiredEvents++);
+    const activation = oneEvent(el, 'lr-link-activate');
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true, composed: true });
+    link.dispatchEvent(click);
+    const event = await activation as CustomEvent<{ href: string }>;
+    expect(event.detail).to.deep.equal({ href: '/docs/setup' });
+    expect(click.defaultPrevented).to.equal(true);
+    expect(retiredEvents).to.equal(0);
   });
 });
 

@@ -94,8 +94,6 @@ export interface LyraAppRailModeChangeDetail {
 }
 
 export interface LyraAppRailToggleDetail {
-  /** @deprecated Use `expanded`, which carries the same value; removal not before 23.0.0. */
-  open: boolean;
   /** Whether the mobile overlay is (or, on a cancelable proposal, would be) open. */
   expanded: boolean;
 }
@@ -186,10 +184,10 @@ export interface LyraAppRailEventMap {
  *   (the ordinary default-mode mount stays silent).
  *   `detail: LyraAppRailModeChangeDetail`.
  * @event lr-toggle-request - Cancelable proposal before an interactive overlay state change.
- *   Detail includes `expanded` and the compatibility `open` key. Direct property writes and
+ *   Detail carries the proposed `expanded` state. Direct property writes and
  *   forced responsive closes do not propose an interactive change.
  * @event lr-toggle - Non-cancelable notification after an accepted or forced overlay change.
- *   Detail includes the resulting `expanded` state and the compatibility `open` key.
+ *   Detail carries the resulting `expanded` state.
  * @event lr-rail-resize-request - A cancelable request to change the `resizable` rail's width via
  *   drag or keyboard stepping. Call `preventDefault()` to keep `railWidth` unchanged. Not fired
  *   when a consumer sets `railWidth` directly. `detail: LyraAppRailResizeDetail`.
@@ -1504,17 +1502,17 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     // `mode` is no longer `'mobile'` (where `open` is documented as meaningless).
     if (options?.force) {
       this.open = next;
-      this.emit('lr-toggle', { open: next, expanded: next });
+      this.emit('lr-toggle', { expanded: next });
       return;
     }
     const mode = this._mode;
     const open = this.open;
-    const event = this.emit('lr-toggle-request', { open: next, expanded: next }, { cancelable: true });
+    const event = this.emit('lr-toggle-request', { expanded: next }, { cancelable: true });
     // A listener can synchronously take ownership of mode or open while the
     // proposal is dispatching. Do not overwrite that state after it returns.
     if (event.defaultPrevented || this._mode !== mode || this.open !== open) return;
     this.open = next;
-    this.emit('lr-toggle', { open: next, expanded: next });
+    this.emit('lr-toggle', { expanded: next });
   }
 
   private onToggleClick = (e: MouseEvent): void => {

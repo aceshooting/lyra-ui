@@ -164,25 +164,40 @@ describe('chooseOption', () => {
 });
 
 describe('submitConfirmDecision', () => {
-  it("clicks the real approve button, firing the component's own lr-approve and settling decision", async () => {
+  it("clicks the real approve button, firing the component's cancelable lr-approve-request and settling decision", async () => {
     const el = (await fixture(html`<lr-confirm-bar .args=${{ x: 1 }}></lr-confirm-bar>`)) as LyraConfirmBar;
-    const approved = oneEvent(el, 'lr-approve');
+    const approved = oneEvent(el, 'lr-approve-request');
 
     await submitConfirmDecision(el, 'approved');
 
-    const detail = (await approved).detail as { args: unknown };
+    const event = await approved;
+    expect(event.cancelable).to.equal(true);
+    const detail = event.detail as { args: unknown; waitUntil: unknown };
     expect(detail.args).to.deep.equal({ x: 1 });
+    expect(detail.waitUntil).to.be.a('function');
     expect(el.decision).to.equal('approved');
   });
 
-  it("clicks the real deny button, firing the component's own lr-deny and settling decision", async () => {
+  it("clicks the real deny button, firing the component's cancelable lr-deny-request and settling decision", async () => {
     const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
-    const denied = oneEvent(el, 'lr-deny');
+    const denied = oneEvent(el, 'lr-deny-request');
 
     await submitConfirmDecision(el, 'denied');
 
-    await denied;
+    const event = await denied;
+    expect(event.cancelable).to.equal(true);
+    expect(Object.keys(event.detail as object)).to.deep.equal(['waitUntil']);
     expect(el.decision).to.equal('denied');
+  });
+
+  it('keeps the confirm bar pending when its approval request is vetoed', async () => {
+    const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
+    el.addEventListener('lr-approve-request', (event) => event.preventDefault(), { once: true });
+
+    await submitConfirmDecision(el, 'approved');
+
+    expect(el.decision).to.equal(null);
+    expect(el.pendingAction).to.equal('approve');
   });
 
   it('throws rather than silently no-op once the bar is already decided', async () => {
@@ -211,16 +226,30 @@ describe('submitConfirmDecision', () => {
     expect(el.decision).to.equal(null);
   });
 
-  it("clicks the real approve button on lr-tool-approval-dialog, the same lr-approve/lr-deny contract confirm-bar shares", async () => {
+  it('clicks the real approve button on lr-tool-approval-dialog and fires its cancelable lr-approve-request', async () => {
     const el = (await fixture(
       html`<lr-tool-approval-dialog open tool-name="web_search"></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
-    const approved = oneEvent(el, 'lr-approve');
+    const approved = oneEvent(el, 'lr-approve-request');
 
     await submitConfirmDecision(el, 'approved');
 
-    const detail = (await approved).detail as { args: unknown };
+    const event = await approved;
+    expect(event.cancelable).to.equal(true);
+    const detail = event.detail as { args: unknown };
     expect(detail.args).to.deep.equal({});
+  });
+
+  it('keeps the approval dialog open when its approval request is vetoed', async () => {
+    const el = (await fixture(
+      html`<lr-tool-approval-dialog open tool-name="web_search"></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    el.addEventListener('lr-approve-request', (event) => event.preventDefault(), { once: true });
+
+    await submitConfirmDecision(el, 'approved');
+
+    expect(el.open).to.equal(true);
+    expect(el.pendingAction).to.equal('approve');
   });
 });
 

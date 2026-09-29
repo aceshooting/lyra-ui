@@ -1025,8 +1025,8 @@ it("toggles collapsed via the collapse-toggle button and emits lr-collapse-chang
   await elementUpdated(el);
 
   expect(el.collapsed).to.equal(true);
-  expect(requestDetail).to.deep.equal({ collapsed: true, expanded: false });
-  expect(detail).to.deep.equal({ collapsed: true, expanded: false });
+  expect(requestDetail).to.deep.equal({ expanded: false });
+  expect(detail).to.deep.equal({ expanded: false });
   expect(requestDetail).to.not.equal(detail);
   expect(Object.isFrozen(requestDetail)).to.equal(true);
   expect(Object.isFrozen(detail)).to.equal(true);

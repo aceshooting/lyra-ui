@@ -149,9 +149,9 @@ invariant.
 
 The Details events `lr-show` and `lr-hide` have no detail payload and are cancelable; preventing
 either leaves the panel in its previous state. Accepted changes emit `lr-toggle` with
-`detail: { expanded, open, source }` (`expanded` is the new state; the deprecated `open` key, removed
-in 23.0.0, carries the same value), then the non-cancelable `lr-after-show` or `lr-after-hide` once
-rendering and motion settle. `source` is `user` for a summary click or keyboard activation,
+`detail: { expanded, source }` (`expanded` is the new state), then the non-cancelable
+`lr-after-show` or `lr-after-hide` once rendering and motion settle. `source` is `user` for a
+summary click or keyboard activation,
 `programmatic` for `show()`, `hide()`, or assigning `open`, and `peer` when another Details with
 the same non-empty `name` closes this one. The full orders are `lr-show` → `lr-toggle` →
 `lr-after-show` and `lr-hide` → `lr-toggle` → `lr-after-hide`. Initially open markup emits

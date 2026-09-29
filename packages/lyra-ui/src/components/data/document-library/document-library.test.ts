@@ -1166,7 +1166,7 @@ describe("error state", () => {
     ).to.equal(false);
   });
 
-  it("does not leak the nested table's own lr-retry past this component's boundary as a second event", async () => {
+  it("emits one owned retry request without leaking the nested table request or retired alias", async () => {
     const el = (await fixture(
       html`<lr-document-library error .documents=${docs}></lr-document-library>`
     )) as LyraDocumentLibrary;
@@ -1176,10 +1176,13 @@ describe("error state", () => {
       '[part="retry-button"]'
     )!;
 
-    let count = 0;
-    el.addEventListener("lr-retry", () => count++);
+    const events: string[] = [];
+    el.addEventListener("lr-retry-request", (event) =>
+      events.push(event.target === el ? 'owner' : 'child')
+    );
+    el.addEventListener("lr-retry", () => events.push('retired'));
     retryButton.click();
-    expect(count).to.equal(1);
+    expect(events).to.deep.equal(['owner']);
   });
 
   it("lets the error slot override the nested table's built-in failed-load content without hiding it when unused", async () => {

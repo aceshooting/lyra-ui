@@ -631,7 +631,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     event.stopPropagation();
     const key = entryIdentity(entry);
     const next = new Set(this.openedEntryIds);
-    if (event.detail.expanded ?? event.detail.open) next.add(key);
+    if (event.detail.expanded) next.add(key);
     else next.delete(key);
     this.openedEntryIds = next;
   }

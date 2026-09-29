@@ -622,11 +622,8 @@ describe('localization', () => {
     const spinner = el.shadowRoot!.querySelector(
       '[part="loading"] lr-spinner'
     )!;
-    expect(spinner.getAttribute("aria-label")).to.equal(
-      "Chargement des lignes"
-    );
-    expect(spinner.hasAttribute("aria-label")).to.be.false;
-    expect(spinner.textContent).to.contain("Chargement des lignes");
+    expect(spinner.getAttribute('aria-label')).to.equal('Chargement des lignes');
+    expect(spinner.textContent).to.contain('Chargement des lignes');
   });
 
   it('localizes the no-data empty-state heading (both the whole-table and filtered-to-empty variants)', async () => {
@@ -1274,15 +1271,17 @@ it('activates the focused row from Enter and Space', async () => {
   expect((await spaceActivated).detail.row.id).to.equal(rows[0]!.id);
 });
 
-it('gives host aria-label precedence over the compatibility name and caption', async () => {
-  const el = await fixture<LyraTable<Row>>(html`<lr-table aria-label="Host name" aria-label="Old name" caption="Caption" .columns=${columns} .rows=${rows}></lr-table>`);
+it('uses the host aria-label, including an empty one, before falling back to the caption', async () => {
+  const el = await fixture<LyraTable<Row>>(html`<lr-table aria-label="Host name" caption="Caption" .columns=${columns} .rows=${rows}></lr-table>`);
   const owner = () => el.shadowRoot!.querySelector('[role="grid"]')!;
   expect(owner().getAttribute('aria-label')).to.equal('Host name');
+  expect(owner().hasAttribute('aria-labelledby')).to.equal(false);
   el.ariaLabel = '';
   await el.updateComplete;
   expect(owner().getAttribute('aria-label')).to.equal('');
   expect(owner().hasAttribute('aria-labelledby')).to.equal(false);
   el.removeAttribute('aria-label');
   await el.updateComplete;
-  expect(owner().getAttribute('aria-label')).to.equal('Old name');
+  expect(owner().hasAttribute('aria-label')).to.equal(false);
+  expect(owner().getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('caption')!.id);
 });

@@ -10827,7 +10827,8 @@ export interface LyraComponentTypeMap {
     events: LyraStreamingTextEventMap;
     eventNames:       | 'lr-content-settled'
       | 'lr-copy'
-      | 'lr-copy-error';
+      | 'lr-copy-error'
+      | 'lr-link-activate';
     cssNames:       | '--lr-inline-cursor-height'
       | '--lr-inline-cursor-width';
     attributeAliases: {
@@ -10874,7 +10875,8 @@ export interface LyraComponentTypeMap {
     events: LyraStreamingTextCoreEventMap;
     eventNames:       | 'lr-content-settled'
       | 'lr-copy'
-      | 'lr-copy-error';
+      | 'lr-copy-error'
+      | 'lr-link-activate';
     cssNames:       | '--lr-inline-cursor-height'
       | '--lr-inline-cursor-width';
     attributeAliases: {

@@ -141,6 +141,109 @@ export function assertMigrationReport(report, cases, origin, acknowledged = 0) {
   }
 }
 
+/** Exercise every verified event-detail exposure through the installed migration CLI. */
+async function verifyInstalledFieldMigrationDiagnostics({ fixtureDir, scratch, artifactsDir, executable, facts, mode }) {
+  const inputDir = join(scratch, 'field-input');
+  const resolvedDir = join(scratch, 'field-resolved');
+  await Promise.all([inputDir, resolvedDir].map(path => mkdir(path, { recursive: true })));
+  const historicalShapeSites = new Set([
+    'lr-details/lr-toggle', 'lr-multi-split/lr-toggle', 'lr-navigation-menu-item/lr-toggle',
+    'lr-app-rail-item/lr-toggle-request', 'lr-app-rail-item/lr-toggle', 'lr-app-rail/lr-toggle',
+    'lr-app-rail-group/lr-toggle-request', 'lr-app-rail-group/lr-toggle',
+    'lr-chat-message/lr-toggle-request', 'lr-chat-message/lr-toggle',
+    'lr-code-block/lr-toggle-request', 'lr-code-block/lr-toggle',
+    'lr-code-block-core/lr-toggle-request', 'lr-code-block-core/lr-toggle',
+  ]);
+  const expected = facts.exposures.map((exposure, index) => {
+    const { tag, event, declaration } = exposure.key;
+    const fileName = `field-${String(index + 1).padStart(2, '0')}.ts`;
+    const input = `document.querySelector('${tag}')!.addEventListener('${event}', (event) => event.detail.${declaration.field});\n`;
+    const canonical = exposure.relation === 'inverse' ? '!event.detail.expanded' : 'event.detail.expanded';
+    const resolved = input.replace(`event.detail.${declaration.field}`, canonical);
+    const column = input.lastIndexOf(`.${declaration.field}`) + 2;
+    assert.ok(column > 1, `Field diagnostic has no exact read site: ${tag}/${event}`);
+    return { fileName, file: `migration-v24/field-input/${fileName}`, exposure, input, resolved, column,
+      eventColumn: input.indexOf(`'${event}'`) + 2,
+      target: exposure.relation === 'inverse' ? '!detail.expanded' : 'detail.expanded' };
+  });
+  assert.equal(expected.length, 20, 'Installed field diagnostic cohort changed');
+  assert.equal(expected.filter(item => historicalShapeSites.has(`${item.exposure.key.tag}/${item.exposure.key.event}`)).length, 14,
+    'Historical event-shape overlap changed');
+  for (const item of expected) {
+    await writeFile(join(inputDir, item.fileName), item.input);
+    await writeFile(join(resolvedDir, item.fileName), item.resolved);
+  }
+  const reports = [];
+  for (const origin of ['lyra-v21', 'lyra-v22']) {
+    const historical = origin === 'lyra-v21';
+    const acknowledgedDir = join(scratch, `field-acknowledged-${origin}`);
+    const canonicalReviewedDir = join(scratch, `field-canonical-reviewed-${origin}`);
+    await Promise.all([acknowledgedDir, canonicalReviewedDir].map(path => mkdir(path, { recursive: true })));
+    for (const item of expected) {
+      const { tag, event, declaration } = item.exposure.key;
+      const shape = historical && historicalShapeSites.has(`${tag}/${event}`);
+      const tokens = [`DETAIL_FIELD_REVIEW:${declaration.field}`,
+        ...(shape ? [`DETAIL_SHAPE_REVIEW:${event}`] : [])];
+      await writeFile(join(acknowledgedDir, item.fileName), `// lyra-migrate-reviewed: ${tokens.join(' ')}\n${item.input}`);
+      await writeFile(join(canonicalReviewedDir, item.fileName), shape
+        ? `// lyra-migrate-reviewed: DETAIL_SHAPE_REVIEW:${event}\n${item.resolved}` : item.resolved);
+    }
+    for (const [stage, directory, flags, status, fieldWarnings, shapeWarnings, acknowledged] of [
+      ['preview', inputDir, ['--dry-run'], 0, 20, historical ? 14 : 0, 0],
+      ['check', inputDir, ['--check'], 1, 20, historical ? 14 : 0, 0],
+      ['resolved', resolvedDir, ['--dry-run'], 0, 0, historical ? 14 : 0, 0],
+      ['canonical-reviewed', canonicalReviewedDir, ['--check'], 0, 0, 0, historical ? 14 : 0],
+      ['acknowledged', acknowledgedDir, ['--check'], 0, 0, 0, historical ? 34 : 20],
+    ]) {
+      const reportPath = join(artifactsDir, `${origin}-field-${stage}.json`);
+      await runMigrationProcess(executable, [`--origin=${origin}`, ...flags, `--report=${reportPath}`, directory], fixtureDir, status);
+      reports.push(reportPath);
+      const report = JSON.parse(await readFile(reportPath, 'utf8'));
+      assert.equal(report.schemaVersion, 1); assert.equal(report.origin, origin);
+      assert.equal(report.filesScanned, 20); assert.equal(report.filesChanged, 0);
+      assert.equal(report.changes.length, 0); assert.equal(report.summary.rewrites, 0);
+      const warningCount = fieldWarnings + shapeWarnings;
+      assert.equal(report.warnings.length, warningCount); assert.equal(report.summary.warnings, warningCount);
+      assert.equal(report.summary.acknowledged, acknowledged);
+      assert.equal(report.summary.skipped, 0);
+      const remaining = [...report.warnings];
+      const reportFile = item => relative(fixtureDir, join(directory, item.fileName)).split(sep).join('/');
+      if (fieldWarnings) {
+        for (const item of expected) {
+          const file = reportFile(item);
+          const index = remaining.findIndex(warning => warning.file === file && warning.line === 1 && warning.column === item.column && warning.warningCode === 'DETAIL_FIELD_REVIEW');
+          assert.notEqual(index, -1, `Missing installed field diagnostic at ${file}:1:${item.column}`);
+          const [warning] = remaining.splice(index, 1);
+          assert.equal(warning.origin, origin);
+          assert.equal(warning.upstreamTag, item.exposure.key.tag);
+          assert.equal(warning.upstreamMember, item.exposure.key.declaration.field);
+          assert.equal(warning.action, 'manual-review');
+          assert.equal(warning.warningCode, 'DETAIL_FIELD_REVIEW');
+          assert.equal(warning.target, item.target);
+          assert.ok(warning.message.includes(`${item.exposure.key.tag} ${item.exposure.key.event} detail field ${item.exposure.key.declaration.field}`));
+          assert.ok(warning.message.includes(item.exposure.relation === 'inverse' ? 'is the inverse of detail.expanded' : 'carries the same value as detail.expanded'));
+          const declaration = facts.declarations.find(entry => fieldDeclarationKey(entry.key) === fieldDeclarationKey(item.exposure.key.declaration));
+          assert.ok(declaration && warning.message.includes(declaration.deprecatedField.notice), 'Installed field diagnostic lost the published notice');
+          assert.ok(warning.message.includes('no field rewrite was applied'));
+          assert.ok(warning.message.includes(mode === 'retirement' ? 'It was removed in 24.0.0.' : 'This notice does not assert that the field was removed.'));
+        }
+      }
+      if (shapeWarnings) for (const item of expected.filter(entry => historicalShapeSites.has(`${entry.exposure.key.tag}/${entry.exposure.key.event}`))) {
+        const file = reportFile(item);
+        const index = remaining.findIndex(warning => warning.file === file && warning.line === 1 && warning.column === item.eventColumn && warning.warningCode === 'DETAIL_SHAPE_REVIEW');
+        assert.notEqual(index, -1, `Missing historical event-shape diagnostic at ${file}:1:${item.eventColumn}`);
+        const [warning] = remaining.splice(index, 1);
+        assert.equal(warning.origin, origin); assert.equal(warning.upstreamTag, item.exposure.key.tag);
+        assert.equal(warning.upstreamMember, item.exposure.key.event); assert.equal(warning.action, 'manual-review');
+        assert.equal(warning.target, item.exposure.key.event);
+      }
+      assert.equal(remaining.length, 0, 'Orphan installed field diagnostic');
+    }
+  }
+  for (const item of expected) assert.equal(await readFile(join(inputDir, item.fileName), 'utf8'), item.input, `Installed field CLI rewrote ${item.fileName}`);
+  return reports;
+}
+
 /** Pin every diagnostic in the multiline semantic fixture to its authored source site. */
 export function createV24SemanticMigrationCases(cases, source, file) {
   const lines = source.split('\n');
@@ -271,6 +374,8 @@ async function verifyActualV24MigrationConsumers({ fixtureDir, compatibilityCont
     await writeFile(join(p21Resolved, `${item.id}.${item.key.scope === 'member' ? 'html' : 'ts'}`), item.resolved);
   }
   const executable = join(fixtureDir, 'node_modules', '.bin', binName('lyra-ui-migrate'));
+  const fieldDiagnosticReports = await verifyInstalledFieldMigrationDiagnostics({ fixtureDir, scratch, artifactsDir,
+    executable, facts: published23FieldFacts, mode: fieldMode });
   const reports = [];
   for (const [mode, flags, status] of [['preview', ['--dry-run'], 0], ['check', ['--check'], 1], ['apply', [], 0], ['rerun', ['--check'], 1]]) {
     const reportPath = join(artifactsDir, `lyra-v21-${mode}.json`); reports.push(reportPath);
@@ -308,8 +413,11 @@ async function verifyActualV24MigrationConsumers({ fixtureDir, compatibilityCont
   for (const item of members) await writeFile(join(memberDir, `${item.id}.ts`), `import '@aceshooting/lyra-ui/components/${item.key.tag}.js';\nimport { html } from 'lit';\nconst handler = (event: Event) => console.log(event);\n${item.resolved}`);
   const semanticSource = await readFile(join(fixtures, 'v24-semantics.resolved.ts'), 'utf8');
   await writeFile(join(p22Resolved, 'semantics.ts'), semanticSource);
+  // TypeScript needs the same ambient CSS module convention as a bundler consumer. Exact
+  // package CSS routes are checked separately below with import.meta.resolve().
+  await writeFile(join(p22Resolved, 'css-modules.d.ts'), "declare module '*.css';\n");
   const resolvedTypes = join(scratch, 'resolved-tsconfig.json');
-  await writeFile(resolvedTypes, json({ extends: '../tsconfig.json', include: ['p22-resolved/members/*.ts', 'p22-resolved/semantics.ts'] }));
+  await writeFile(resolvedTypes, json({ extends: '../tsconfig.json', include: ['p22-resolved/css-modules.d.ts', 'p22-resolved/members/*.ts', 'p22-resolved/semantics.ts'] }));
   await runMigrationProcess(join(fixtureDir, 'node_modules', '.bin', binName('tsc')), ['--noEmit', '--skipLibCheck', 'false', '-p', resolvedTypes], fixtureDir);
   const p22ResolvedInput = join(scratch, 'p22-acknowledged'); await mkdir(p22ResolvedInput, { recursive: true });
   for (const item of boundP22) {
@@ -329,16 +437,18 @@ async function verifyActualV24MigrationConsumers({ fixtureDir, compatibilityCont
   await runMigrationProcess(executable, ['--origin=lyra-v22', '--check', `--report=${semanticReport}`, semanticInputDir], fixtureDir, 1);
   assertMigrationReport(JSON.parse(await readFile(semanticReport, 'utf8')), semanticCases, 'lyra-v22');
 
-  const routes = [...cases, ...exports].filter(item => item.key.scope === 'export' && item.key.kind === 'entry-point')
+  const routes = [...cases, ...exports].filter(item => item.key.scope === 'export' && ['entry-point', 'stylesheet'].includes(item.key.kind))
     .map(item => `${packageName}${item.key.name.slice(1)}`);
   const routeProbe = join(scratch, 'removed-routes.mjs');
   await writeFile(routeProbe, `import assert from 'node:assert/strict';\nfor (const specifier of ${JSON.stringify(routes)}) {\n  assert.throws(() => import.meta.resolve(specifier), error => error.code === 'ERR_PACKAGE_PATH_NOT_EXPORTED', specifier);\n}\n`);
   await runMigrationProcess(process.execPath, [routeProbe], fixtureDir);
-  const canonicalRoutes = [...new Set(exports.filter(item => item.key.kind === 'entry-point')
+  const canonicalStylesheets = [...semanticSource.matchAll(/^import '(@aceshooting\/lyra-ui\/[^']+\.css)';$/gmu)].map(match => match[1]);
+  assert.deepEqual(canonicalStylesheets, [`${packageName}/theme.css`, `${packageName}/looks/shadcn.css`]);
+  const canonicalRoutes = [...new Set([...exports.filter(item => ['entry-point', 'stylesheet'].includes(item.key.kind))
     .map(item => item.record.policy.replacement.name).filter(name => typeof name === 'string' && name.startsWith('./'))
-    .map(name => `${packageName}${name.slice(1)}`))];
+    .map(name => `${packageName}${name.slice(1)}`), ...canonicalStylesheets])];
   const canonicalRouteProbe = join(scratch, 'canonical-routes.mjs');
-  await writeFile(canonicalRouteProbe, `import assert from 'node:assert/strict';\nfor (const specifier of ${JSON.stringify(canonicalRoutes)}) {\n  assert.doesNotThrow(() => import.meta.resolve(specifier), specifier);\n}\n`);
+  await writeFile(canonicalRouteProbe, `import assert from 'node:assert/strict';\nimport { stat } from 'node:fs/promises';\nimport { fileURLToPath } from 'node:url';\nfor (const specifier of ${JSON.stringify(canonicalRoutes)}) {\n  const resolved = import.meta.resolve(specifier);\n  assert.equal(new URL(resolved).protocol, 'file:', specifier);\n  assert.ok((await stat(fileURLToPath(resolved))).isFile(), specifier);\n}\n`);
   await runMigrationProcess(process.execPath, [canonicalRouteProbe], fixtureDir);
   const named = exports.filter(item => ['class', 'constant', 'function', 'type'].includes(item.key.kind));
   const negative = named.map(item => `// @ts-expect-error removed v24 export must not resolve\nimport { ${item.key.name} } from '${packageName}${item.key.module === '.' ? '' : item.key.module.slice(1)}';`).join('\n');
@@ -347,7 +457,7 @@ async function verifyActualV24MigrationConsumers({ fixtureDir, compatibilityCont
     if (!['class', 'constant', 'function', 'type'].includes(target.kind) || !target.module || !target.name) return null;
     return [`${target.module}#${target.name}`, { ...target, sourceKind: item.key.kind }];
   }).filter(Boolean)).values()];
-  const positive = canonical.map(item => `import${item.kind === 'type' ? ' type' : ''} { ${item.name} } from '${packageName}${item.module === '.' ? '' : item.module.slice(1)}';`).join('\n');
+  const positive = canonical.map((item, index) => `import${item.kind === 'type' ? ' type' : ''} { ${item.name} as CanonicalExport${index} } from '${packageName}${item.module === '.' ? '' : item.module.slice(1)}';`).join('\n');
   await writeFile(join(scratch, 'negative.ts'), negative);
   await writeFile(join(scratch, 'positive.ts'), `${positive}\nimport { LyraGeoJsonViewer } from '@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-viewer.class.js';\nconst canonicalViewer: typeof LyraGeoJsonViewer = LyraGeoJsonViewer;\nvoid canonicalViewer;\n`);
   const declarationConfig = join(scratch, 'tsconfig.json');
@@ -359,7 +469,7 @@ async function verifyActualV24MigrationConsumers({ fixtureDir, compatibilityCont
   const coveredKeys = [...p21Bound.map(item => item.key), ...p21.coveredKeys, ...boundP22.map(item => item.key)];
   assert.equal(coveredKeys.length, 1053);
   const proof = { packageVersion: installed.version, tarballSha256: sha, stage: 'actual24', coveredKeys,
-    fieldExposureProof: fieldProof, reports: [...reports, ...p21.reports] };
+    fieldExposureProof: fieldProof, reports: [...fieldDiagnosticReports, ...reports, ...p21.reports] };
   await writeFile(join(artifactsDir, 'coverage.json'), json(proof));
   console.log(`Packed migration actual24 proof: ${proof.coveredKeys.length}/1053 exact keys; both origins, removed routes and declarations passed.`);
   return proof;
@@ -389,7 +499,7 @@ export function verifyPublishedFieldAuthority(fieldAuthority) {
 }
 
 /** Check candidate package declarations and public type routes without deriving historical facts from v24. */
-export async function verifyInstalledFieldDeclarations({ fixtureDir, facts, mode = 'retirement' }) {
+async function verifyInstalledFieldDeclarations({ fixtureDir, facts, mode = 'retirement' }) {
   assert.ok(['pre-removal', 'retirement'].includes(mode), 'Unknown installed field proof mode');
   assert.equal(facts?.sourceRelease, 'lyra-ui@23.0.0', 'Candidate inspection requires published v23 authority');
   assert.equal(facts.declarations.length, 10); assert.equal(facts.exposures.length, 20);
@@ -527,6 +637,7 @@ export async function writeResolvedMigrationEntry({ fixtureDir, proof, entry = '
   if (proof.stage === 'all-retirements' || proof.stage === 'actual24') {
     await copyFile(join(fixtures, 'family-browser.ts'), join(fixtureDir, 'src', 'migration-families.ts'));
     await copyFile(join(fixtures, 'family-negative.ts'), join(fixtureDir, 'src', 'migration-family-types.ts'));
+    await writeFile(join(fixtureDir, 'src', 'migration-family-version.ts'), `export const migrationFamilyVersion: number = ${proof.stage === 'actual24' ? 24 : 23};\n`);
   }
   if (proof.stage === 'actual24') {
     assert.ok(proof.fieldExposureProof && proof.fieldExposureProof.exposures === 20, 'Actual v24 proof lacks separate field exposure evidence');
@@ -539,7 +650,7 @@ export async function writeResolvedMigrationEntry({ fixtureDir, proof, entry = '
   await writeFile(join(fixtureDir, 'src', `bundle-${entry}.ts`), browserSource + additionalImports);
   if (proof.stage === 'all-retirements' || proof.stage === 'actual24') {
     const config = join(fixtureDir, 'migration-browser-tsconfig.json');
-    await writeFile(config, json({ extends: './tsconfig.json', include: [`src/bundle-${entry}.ts`, 'src/migration-families.ts', 'src/migration-family-types.ts', ...(proof.stage === 'actual24' ? ['src/v24-field-browser.ts', 'src/v24-field-config.ts'] : [])] }));
+    await writeFile(config, json({ extends: './tsconfig.json', include: [`src/bundle-${entry}.ts`, 'src/migration-families.ts', 'src/migration-family-version.ts', 'src/migration-family-types.ts', ...(proof.stage === 'actual24' ? ['src/v24-field-browser.ts', 'src/v24-field-config.ts'] : [])] }));
     await runMigrationProcess(join(fixtureDir, 'node_modules', '.bin', binName('tsc')), ['--noEmit', '--skipLibCheck', 'false', '-p', config], fixtureDir);
   }
 }

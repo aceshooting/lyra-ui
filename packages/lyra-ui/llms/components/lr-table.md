@@ -31,8 +31,8 @@ it survives and otherwise clamps focus to the nearest surviving index. Moving fo
 table before the update is applied always wins; nested editors and controls keep their independent
 focus contracts.
 
-For historical migration mappings, see the [changelog](../CHANGELOG.md). Current property and event
-contracts follow.
+For historical migration mappings, see the [release history archive](https://github.com/aceshooting/lyra-ui/tree/main/docs/changelog).
+Current property and event contracts follow.
 
 **TypeScript:** `LyraTable<T, K extends string | number = string | number>` takes a second type
 parameter for the row-key type. `K` types `rowKey`'s return value,

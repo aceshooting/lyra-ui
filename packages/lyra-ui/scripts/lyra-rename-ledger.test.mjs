@@ -884,6 +884,34 @@ test('deprecated event-detail fields produce owner-aware manual guidance without
   assert.match(warnings[3].message, /No field rewrite was applied/u);
 });
 
+test('detail.open gets field guidance without suppressing a host open polarity review', () => {
+  const checkedContract = buildMigrationContract(checkedInventory, {
+    renameLedger: readRenameLedger(),
+    compatibilityContext: checkedCompatibilityContext,
+    exportDeprecations: readExportDeprecations(),
+  });
+  const input = [
+    "document.querySelector('lr-app-rail-group')!.addEventListener('lr-toggle-request', (event) => event.detail.open);",
+    "document.querySelector('lr-app-rail-group')!.addEventListener('lr-toggle', (event) => event.detail.open);",
+    "const group = document.querySelector('lr-app-rail-group');",
+    'group.open;',
+    '',
+  ].join('\n');
+  const result = run(input, 'app-rail-group.ts', checkedContract);
+  assert.equal(result.content, input);
+  assert.deepEqual(result.warnings
+    .filter(({ warningCode }) => warningCode === 'DETAIL_FIELD_REVIEW')
+    .map(({ line, upstreamTag, upstreamMember, target }) => [line, upstreamTag, upstreamMember, target]), [
+    [1, 'lr-app-rail-group', 'open', 'detail.expanded'],
+    [2, 'lr-app-rail-group', 'open', 'detail.expanded'],
+  ]);
+  assert.deepEqual(result.warnings
+    .filter(({ warningCode }) => warningCode === 'POLARITY_REVIEW')
+    .map(({ line, upstreamTag, upstreamMember, target }) => [line, upstreamTag, upstreamMember, target]), [
+    [4, 'lr-app-rail-group', 'open', 'collapsed'],
+  ]);
+});
+
 test('a known detail field under an unverified owner/event pair remains an ambiguity report', () => {
   const fieldLedger = structuredClone(ledger);
   for (const profile of fieldLedger.profiles) profile.detailFields = sampleDetailFields();

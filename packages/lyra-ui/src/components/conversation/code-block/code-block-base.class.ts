@@ -108,9 +108,9 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
     emitError: () => this.emit('lr-error', null),
     emitCopyError: (outcome) => this.emit('lr-copy-error', outcome),
     requestToggle: (collapsed) =>
-      !this.emit('lr-toggle-request', { expanded: !collapsed, collapsed }, { cancelable: true })
+      !this.emit('lr-toggle-request', { expanded: !collapsed }, { cancelable: true })
         .defaultPrevented,
-    emitToggle: (collapsed) => this.emit('lr-toggle', { expanded: !collapsed, collapsed }),
+    emitToggle: (collapsed) => this.emit('lr-toggle', { expanded: !collapsed }),
     emitTextSelect: (selection) => this.emit('lr-text-select', selection),
   });
 

@@ -71,7 +71,7 @@ function packageJsonFromCapture(ordinaryCaptureDirectory, ordinaryCapture) {
 }
 
 /** Capture one immutable release attachment from supplied tag, ordinary capture and npm tarball. */
-export function capturePublishedFieldCompatibility({ repository, sourceRelease, tagObject, commit, tarball, tarballSha256, registryIntegrity, ordinaryCaptureDirectory, output }) {
+function capturePublishedFieldCompatibility({ repository, sourceRelease, tagObject, commit, tarball, tarballSha256, registryIntegrity, ordinaryCaptureDirectory, output }) {
   ensure(/^lyra-ui@(22\.0\.0|22\.1\.0|23\.0\.0)$/u.test(sourceRelease), 'Unsupported field evidence release');
   ensure(oidPattern.test(tagObject) && oidPattern.test(commit), 'Invalid field release Git pins');
   ensure(typeof tarballSha256 === 'string' && /^[a-f0-9]{64}$/u.test(tarballSha256) && sha512Pattern.test(registryIntegrity), 'Invalid field release npm pins');
@@ -163,7 +163,7 @@ export function readPublishedFieldAttachmentSync(directory, ordinaryCaptureDirec
 }
 
 /** Write the index only after every exact required release attachment is present and verified. */
-export function writeFieldEvidenceIndex(fieldEvidenceDirectory, ordinaryCaptureDirectories, requiredReleases = REQUIRED_FIELD_RELEASES) {
+function writeFieldEvidenceIndex(fieldEvidenceDirectory, ordinaryCaptureDirectories, requiredReleases = REQUIRED_FIELD_RELEASES) {
   const indexPath = join(fieldEvidenceDirectory, 'index.json');
   ensure(!existsSync(indexPath), 'Field evidence index already exists; its release descriptor pins are immutable');
   ensure(ordinaryCaptureDirectories && typeof ordinaryCaptureDirectories === 'object' && !Array.isArray(ordinaryCaptureDirectories) &&
@@ -186,7 +186,7 @@ export function writeFieldEvidenceIndex(fieldEvidenceDirectory, ordinaryCaptureD
   return index;
 }
 
-export function readFieldEvidenceIndex(fieldEvidenceDirectory, attachments) {
+function readFieldEvidenceIndex(fieldEvidenceDirectory, attachments) {
   const index = JSON.parse(readFileSync(join(fieldEvidenceDirectory, 'index.json'), 'utf8'));
   validateFieldEvidenceIndex(index, attachments);
   return index;

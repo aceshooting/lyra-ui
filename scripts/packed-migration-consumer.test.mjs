@@ -188,6 +188,13 @@ test('all654 v24 sites and multiline semantics match the real scanner including 
     filesChanged: Number(semantic.content !== source), summary: { rewrites: semantic.changes.length,
       warnings: semantic.warnings.length, acknowledged: semantic.acknowledged } }, semanticCases, 'lyra-v22');
 });
+test('resolved v24 stylesheet imports use real canonical package exports', async () => {
+  const resolved = await readFile(new URL('../packages/lyra-ui/scripts/fixtures/lyra-renames/consumer/v24-semantics.resolved.ts', import.meta.url), 'utf8');
+  const packageJson = JSON.parse(await readFile(new URL('../packages/lyra-ui/package.json', import.meta.url), 'utf8'));
+  const stylesheets = [...resolved.matchAll(/^import '@aceshooting\/lyra-ui\/([^']+\.css)';$/gmu)].map(match => `./${match[1]}`);
+  assert.deepEqual(stylesheets, ['./theme.css', './looks/shadcn.css']);
+  for (const route of stylesheets) assert.ok(Object.hasOwn(packageJson.exports, route), `Canonical stylesheet route is not exported: ${route}`);
+});
 test('field authority binds verified attachment facts, index pins and cross-release continuity', async () => {
   const { checkPublishedCompatibility } = await import('../packages/lyra-ui/scripts/check-published-compatibility.mjs');
   const { readPublishedFieldAttachmentSync } = await import('../packages/lyra-ui/scripts/published-field-compatibility-io.mjs');

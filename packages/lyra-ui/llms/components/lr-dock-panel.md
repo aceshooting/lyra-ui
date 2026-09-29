@@ -53,8 +53,7 @@ renders at the `280px` default, and `event.detail.size` reads `undefined`.
 
 **Exported types:** `LyraDockPanelEdge = 'start' | 'end' | 'top' | 'bottom'`, readonly
 `LyraDockPanelResizeDetail = { extent: string }`, readonly
-`LyraDockPanelCollapseChangeDetail = { expanded: boolean, collapsed: boolean }` (the `collapsed`
-key remains emitted but is deprecated; use its inverse, `expanded`), and `LyraDockPanelEventMap`.
+`LyraDockPanelCollapseChangeDetail = { expanded: boolean }`, and `LyraDockPanelEventMap`.
 The former dock-specific `parseLengthPx()` export is removed; dock length resolution is now a
 private adapter over the library's canonical CSS-length resolver, with container/viewport units
 resolved in the host's owner realm.
@@ -74,10 +73,10 @@ resolved in the host's owner realm.
   after each genuine keyboard step whose own `lr-resize-request` was not prevented. `pointercancel`,
   lost capture, disconnect/adoption, live policy/geometry mutation, no-op attempts, and a prevented
   `lr-resize-request` all emit nothing.
-- `lr-collapse-request` (cancelable; `detail: { expanded, collapsed }` is the state proposed by the
-  built-in collapse toggle — `expanded` is the proposed state and the deprecated `collapsed` key its
-  inverse. Call `preventDefault()` to leave `collapsed` unchanged. Not fired when a consumer assigns
-  `collapsed` directly), `lr-collapse-change` (non-cancelable; `detail: { expanded, collapsed }` is
+- `lr-collapse-request` (cancelable; `detail: { expanded }` is the state proposed by the
+  built-in collapse toggle. Call `preventDefault()` to leave the host `collapsed` property
+  unchanged. Not fired when a consumer assigns `collapsed` directly), `lr-collapse-change`
+  (non-cancelable; `detail: { expanded }` is
   the accepted built-in-toggle state. Not fired when a consumer assigns `collapsed` directly). Both
   details are fresh readonly/frozen snapshots.
 

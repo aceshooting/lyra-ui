@@ -365,7 +365,8 @@ it('prefers the host aria-label and restores the generated summary on removal', 
   el.removeAttribute('aria-label');
   await el.updateComplete;
   expect(el.getAttribute('aria-label')).to.be.null;
-  expect(renderedLabel()).to.equal('Component alias');
+  expect('accessibleLabel' in el).to.equal(false);
+  expect(renderedLabel()).to.equal('Text: 2, Tool: 1');
 });
 
 it('renders an empty strip (no cells, generic aria-label) when items is empty', async () => {

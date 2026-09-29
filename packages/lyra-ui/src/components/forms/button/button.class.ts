@@ -746,11 +746,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     queueMicrotask(finish);
   };
 
-  private onFocus = (event: FocusEvent): void => {
-    relayNativeEvent(this, event);
-  };
-
-  private onBlur = (event: FocusEvent): void => {
+  private onFocusChange = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
   };
 
@@ -854,8 +850,8 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     super.willUpdate(changed);
     // Seed the wrapper-visibility flags from light-DOM children before the first render, so the
     // adornment wrappers start collapsed/expanded correctly rather than flashing full-width for a
-    // frame until the first `slotchange` fires. Refreshed thereafter by `onStartSlotChange`/
-    // `onEndSlotChange`.
+    // frame until the first `slotchange` fires. Refreshed thereafter by
+    // `onAdornmentSlotChange`.
     if (!this.hasUpdated) {
       // Browser-only mounts still seed before their first paint. During hydration the base
       // helper defers this browser-only light-DOM sample until the server render (which is
@@ -863,7 +859,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
       // matches the server's markup instead of tearing it down.
       this.seedFirstRenderState(() => {
         this.syncAdornmentSlots();
-        this.isIconButton = this.hasIconOnlyDefaultContent();
+        this.isIconButton = hasIconOnlyDefaultContent(this);
       });
     }
   }
@@ -885,20 +881,12 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     });
   }
 
-  private onStartSlotChange = (): void => {
+  private onAdornmentSlotChange = (): void => {
     this.syncAdornmentSlots();
   };
-
-  private onEndSlotChange = (): void => {
-    this.syncAdornmentSlots();
-  };
-
-  private hasIconOnlyDefaultContent(): boolean {
-    return hasIconOnlyDefaultContent(this);
-  }
 
   private onDefaultSlotChange = (): void => {
-    this.isIconButton = this.hasIconOnlyDefaultContent();
+    this.isIconButton = hasIconOnlyDefaultContent(this);
     this.syncButtonStates();
   };
 
@@ -992,15 +980,15 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
         part="start prefix"
         ?hidden=${!(this.hasStartSlot || this.withStart)}
       >
-        <slot name="start" @slotchange=${this.onStartSlotChange}></slot>
-        <slot name="prefix" @slotchange=${this.onStartSlotChange}></slot>
+        <slot name="start" @slotchange=${this.onAdornmentSlotChange}></slot>
+        <slot name="prefix" @slotchange=${this.onAdornmentSlotChange}></slot>
       </span>
       <span part="label"
         ><slot @slotchange=${this.onDefaultSlotChange}></slot
       ></span>
       <span part="end suffix" ?hidden=${!(this.hasEndSlot || this.withEnd)}>
-        <slot name="end" @slotchange=${this.onEndSlotChange}></slot>
-        <slot name="suffix" @slotchange=${this.onEndSlotChange}></slot>
+        <slot name="end" @slotchange=${this.onAdornmentSlotChange}></slot>
+        <slot name="suffix" @slotchange=${this.onAdornmentSlotChange}></slot>
       </span>
       ${this.withCaret
         ? html`<span part="caret" aria-hidden="true">${chevronIcon()}</span>`
@@ -1053,8 +1041,8 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
         aria-disabled=${disabled ? 'true' : 'false'}
         aria-busy=${this.loading ? 'true' : 'false'}
         tabindex=${disabled ? '-1' : nothing}
-        @focus=${this.onFocus}
-        @blur=${this.onBlur}
+        @focus=${this.onFocusChange}
+        @blur=${this.onFocusChange}
         >${content}</a
       >`;
     }
@@ -1076,8 +1064,8 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
         aria-busy=${this.loading ? 'true' : 'false'}
         ?disabled=${this.effectiveDisabled || this.loading}
         @click=${this.onClick}
-        @focus=${this.onFocus}
-        @blur=${this.onBlur}
+        @focus=${this.onFocusChange}
+        @blur=${this.onFocusChange}
       >
         ${content}
       </button>

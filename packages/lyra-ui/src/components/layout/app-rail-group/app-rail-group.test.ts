@@ -595,7 +595,7 @@ describe('lr-app-rail-group: collapsed and the deprecated inverted open alias', 
     });
   });
 
-  it('reports the proposed and settled state as expanded beside the deprecated open key', async () => {
+  it('reports the proposed and settled state as expanded', async () => {
     const el = await fixture<LyraAppRailGroup>(
       html`<lr-app-rail-group collapsible heading="A"></lr-app-rail-group>`
     );
@@ -609,10 +609,10 @@ describe('lr-app-rail-group: collapsed and the deprecated inverted open alias', 
     toggle.click();
     await el.updateComplete;
     expect(details).to.deep.equal([
-      JSON.stringify({ open: false, expanded: false }),
-      JSON.stringify({ open: false, expanded: false }),
-      JSON.stringify({ open: true, expanded: true }),
-      JSON.stringify({ open: true, expanded: true }),
+      JSON.stringify({ expanded: false }),
+      JSON.stringify({ expanded: false }),
+      JSON.stringify({ expanded: true }),
+      JSON.stringify({ expanded: true }),
     ]);
   });
 });

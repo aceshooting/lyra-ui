@@ -1100,14 +1100,14 @@ describe("collapsible / collapsed", () => {
     let event = await firing;
     await el.updateComplete;
     expect(el.collapsed).to.be.true;
-    expect((event as CustomEvent).detail).to.deep.equal({ expanded: false, collapsed: true });
+    expect((event as CustomEvent).detail).to.deep.equal({ expanded: false });
 
     firing = oneEvent(el, "lr-toggle");
     toggle.click();
     event = await firing;
     await el.updateComplete;
     expect(el.collapsed).to.be.false;
-    expect((event as CustomEvent).detail).to.deep.equal({ expanded: true, collapsed: false });
+    expect((event as CustomEvent).detail).to.deep.equal({ expanded: true });
   });
 
   it("emits a cancelable request and preserves state when collapse is vetoed", async () => {
@@ -1119,11 +1119,11 @@ describe("collapsible / collapsed", () => {
     el.addEventListener("lr-toggle-request", (event) => event.preventDefault());
     const requested = oneEvent(el, "lr-toggle-request");
     el.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle"]')!.click();
-    const event = (await requested) as CustomEvent<{ expanded: boolean; collapsed: boolean }>;
+    const event = (await requested) as CustomEvent<{ expanded: boolean }>;
     await el.updateComplete;
     expect(event.cancelable).to.be.true;
     expect(event.defaultPrevented).to.be.true;
-    expect(event.detail).to.deep.equal({ expanded: false, collapsed: true });
+    expect(event.detail).to.deep.equal({ expanded: false });
     expect(el.collapsed).to.be.false;
     expect(commits).to.equal(0);
   });

@@ -193,17 +193,24 @@ export const ForwardedMarkdownConfiguration: Story = {
     docs: {
       description: {
         story:
-          'The rest of `<lr-markdown>`\'s configuration surface -- `tabSize`, `htmlMode`, `withoutGfm`, `linkTarget`, `internalLinkPrefix`, `headingOffset`, `withoutSyntaxHighlighting`, `headingAnchors`, `math`, `maxHeight` -- forwards verbatim, so a consumer who has customized any of them (here `link-target=""` for same-tab links and `heading-offset="1"`) keeps that behavior after adopting `<lr-streaming-text>`. The composed `<lr-markdown>` still applies its own `rel="noopener noreferrer"` guard whenever a non-empty `link-target` is forwarded.',
+          'The rest of `<lr-markdown>`\'s configuration surface -- `tabSize`, `htmlMode`, `withoutGfm`, `linkTarget`, `internalLinkPrefix`, `headingOffset`, `withoutSyntaxHighlighting`, `headingAnchors`, `math`, `maxHeight` -- forwards verbatim. Click the internal setup link to see `lr-link-activate` pass through the host without navigation; `heading-offset="1"` still shifts the rendered heading. The composed `<lr-markdown>` applies its own `rel="noopener noreferrer"` guard whenever a non-empty `link-target` is forwarded.',
       },
     },
   },
   render: () =>
-    html`<lr-streaming-text
-      content-mode="markdown"
-      link-target=""
-      heading-offset="1"
-      .content=${'# Release notes\n\nSee the [full changelog](https://example.com/changelog) for details.'}
-    ></lr-streaming-text>`,
+    html`<div>
+      <lr-streaming-text
+        content-mode="markdown"
+        internal-link-prefix="/docs/"
+        heading-offset="1"
+        .content=${'# Release notes\n\nSee the [setup guide](/docs/setup) for details.'}
+        @lr-link-activate=${(event: CustomEvent<{ href: string }>) => {
+          const output = (event.currentTarget as HTMLElement).nextElementSibling as HTMLOutputElement;
+          output.textContent = `lr-link-activate: ${JSON.stringify(event.detail)}`;
+        }}
+      ></lr-streaming-text>
+      <output aria-live="polite">Click the setup guide to inspect the forwarded link event.</output>
+    </div>`,
 };
 
 export const NarrowAllocation: Story = {

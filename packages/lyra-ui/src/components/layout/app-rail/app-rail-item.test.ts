@@ -1411,10 +1411,10 @@ describe('nested children (treeitem-with-link)', () => {
     const event = await settled;
     expect((event as CustomEvent<{ expanded: boolean }>).detail.expanded).to.equal(true);
     expect(
-      (event as CustomEvent<{ open: boolean }>).detail.open,
-      'the deprecated open key carries the same value'
+      (event as CustomEvent<{ expanded: boolean }>).detail.expanded,
+      'the canonical expanded key carries the overlay state'
     ).to.equal(true);
-    expect(details).to.deep.equal([JSON.stringify({ open: true, expanded: true })]);
+    expect(details).to.deep.equal([JSON.stringify({ expanded: true })]);
     expect(order.join()).to.equal('request,toggle');
     await el.updateComplete;
     expect(el.expanded).to.equal(true);

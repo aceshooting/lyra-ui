@@ -7,6 +7,8 @@ import { captureDeprecationWarnings, } from '../../../../test/expected-deprecati
 // test below (which only overrides `resizeValuePixels`) can render without tripping the
 // dev-mode locale-fallback warning that strict-console platform lanes treat as fatal.
 import '../../../translations/ar/data.js';
+import '../../../translations/tr/data.js';
+import '../../../translations/tr/shared.js';
 import { installTableTestHooks, TableOpaqueControlElement, type Row, columns, rows, forcedWidthHeaderCell, hostileIterable } from '../../../../test/table.js';
 installTableTestHooks();
 

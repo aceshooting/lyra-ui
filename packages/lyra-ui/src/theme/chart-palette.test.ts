@@ -72,14 +72,18 @@ describe('optional chart palettes', () => {
     const fixed = new CSSStyleSheet();
     fixed.replaceSync(await response.text());
     document.adoptedStyleSheets = [...document.adoptedStyleSheets, fixed];
-    const scope = await fixture<HTMLElement>(html`<section><div></div></section>`);
+    const scope = await fixture<HTMLElement>(html`<section data-lr-look="shadcn"><div></div></section>`);
     const island = scope.querySelector('div')!;
     const context = document.createElement('canvas').getContext('2d')!;
     const normalize = (color: string) => { context.fillStyle = color; return context.fillStyle; };
     for (const mode of ['light', 'dark'] as const) {
-      scope.className = mode === 'light' ? 'lr-dark' : 'lr-light';
-      island.className = mode;
+      const oppositeMode = mode === 'light' ? 'dark' : 'light';
+      scope.setAttribute('data-lr-mode', oppositeMode);
+      island.setAttribute('data-lr-mode', mode);
+      const ancestorPalette = resolveLyraChartPalette(scope, { mode: oppositeMode });
       const palette = resolveLyraChartPalette(island, { mode });
+      expect(ancestorPalette.sequential.map(normalize)).to.deep.equal(LYRA_CHART_PALETTES.shadcn[oppositeMode].sequential.map(normalize));
+      expect(ancestorPalette.diverging.map(normalize)).to.deep.equal(LYRA_CHART_PALETTES.shadcn[oppositeMode].diverging.map(normalize));
       expect(palette.sequential.map(normalize)).to.deep.equal(LYRA_CHART_PALETTES.shadcn[mode].sequential.map(normalize));
       expect(palette.diverging.map(normalize)).to.deep.equal(LYRA_CHART_PALETTES.shadcn[mode].diverging.map(normalize));
     }

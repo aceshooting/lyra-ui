@@ -27,7 +27,7 @@ export function categoryLabelGrowth(index: number, count: number): CategoryLabel
  * non-decreasing; `undefined` keeps every position and `null` asks the caller to use width-only
  * selection because the supplied order cannot describe adjacent labels.
  */
-export function anchorAwareCategoryLabelPicks(
+function anchorAwareCategoryLabelPicks(
   positions: readonly number[],
   width: number,
   gap: number,
@@ -86,7 +86,7 @@ export function widestEstimatedCategoryLabel(
 }
 
 /** Width-only automatic cap for non-monotonic tick positions. */
-export function automaticMaxCategoryLabels(
+function automaticMaxCategoryLabels(
   count: number,
   plotWidth: number,
   renderedIndexes: readonly number[],

@@ -15,8 +15,6 @@ import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_expand } from '../../../internal/de
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraAppRailGroupToggleDetail {
-  /** @deprecated Use `expanded`, which carries the same value; removal not before 23.0.0. */
-  open: boolean;
   /** Whether the group's content is (or, on the request, would be) shown. */
   expanded: boolean;
 }
@@ -64,12 +62,10 @@ export interface LyraAppRailGroupEventMap {
  *   built-in collapse control. Call `preventDefault()` to keep the current state, or assign
  *   `collapsed` from the listener to resolve it yourself — a write during the dispatch suppresses
  *   the default commit even when it assigns the value the property already held. Not emitted for
- *   a direct `collapsed` write. `detail: LyraAppRailGroupToggleDetail` — `expanded` is the
- *   proposed state; the deprecated `open` key carries the same value.
+ *   a direct `collapsed` write. `detail: LyraAppRailGroupToggleDetail` — `expanded` is the proposed state.
  * @event lr-toggle - The group finished expanding or collapsing. Non-cancelable, emitted after
  *   `collapsed` is written, and never emitted for a vetoed or listener-resolved request.
- *   `detail: LyraAppRailGroupToggleDetail` — `expanded` is the settled state; the deprecated
- *   `open` key carries the same value.
+ *   `detail: LyraAppRailGroupToggleDetail` — `expanded` is the settled state.
  * @csspart base - The `role="group"` container.
  * @csspart header - The row holding the heading and any header actions.
  * @csspart heading - The heading landmark. Carries `role="heading"` and `aria-level`.
@@ -275,13 +271,13 @@ export class LyraAppRailGroup extends LyraElement<LyraAppRailGroupEventMap> {
   private onToggleClick = (): void => {
     const expanded = this._collapsed;
     requestThenCommit({
-      requestDetail: { open: expanded, expanded },
+      requestDetail: { expanded },
       emitRequest: (detail, init: { cancelable: true }) =>
         this.emit('lr-toggle-request', detail, init),
       guard: this.toggleGuard,
       commit: () => {
         this.collapsed = !expanded;
-        this.emit('lr-toggle', { open: expanded, expanded });
+        this.emit('lr-toggle', { expanded });
       },
     });
   };

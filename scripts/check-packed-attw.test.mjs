@@ -19,20 +19,24 @@ const manifest = JSON.parse(
   await readFile(new URL('../packages/lyra-ui/package.json', import.meta.url), 'utf8'),
 );
 
-test('derives every non-CSS package export and partitions it exhaustively once', () => {
+test('checks every live typed export while preserving blocked retired routes', () => {
   const entrypoints = attwEntrypoints(manifest);
-  // Retired constructor, SSR loader, and preset aliases no longer expose package routes.
-  assert.equal(entrypoints.length, 2435, 'the reviewed package has 2435 typed exports');
+  assert.equal(entrypoints.length, 2432, 'the reviewed package has 2432 live typed exports');
   assert.ok(entrypoints.includes('.'));
   assert.ok(entrypoints.includes('./package.json'));
   assert.ok(entrypoints.includes('./theme/*'));
+  assert.ok(entrypoints.includes('./theme/looks/shadcn.js'), 'current look routes remain checked');
+  for (const route of ['./utilities/*', './theme/presets.js', './theme/presets/shadcn.js']) {
+    assert.equal(manifest.exports[route], null, `${route} remains an explicit closed door`);
+    assert.ok(!entrypoints.includes(route), `${route} has no typed target for ATTW to resolve`);
+  }
   assert.ok(entrypoints.every((entrypoint) => !entrypoint.endsWith('.css')));
   assert.ok(!entrypoints.includes('./theme-bootstrap.js'), 'classic-script assets are untyped by design');
 
   const shards = Array.from({ length: ATTW_CI_SHARD_TOTAL }, (_, index) =>
     partitionAttwEntrypoints(entrypoints, index + 1, ATTW_CI_SHARD_TOTAL),
   );
-  assert.deepEqual(shards.map((shard) => shard.length), [153, 153, 153, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152]);
+  assert.deepEqual(shards.map((shard) => shard.length), Array(ATTW_CI_SHARD_TOTAL).fill(152));
   assert.equal(new Set(shards.flat()).size, entrypoints.length, 'shards are disjoint');
   assert.deepEqual(shards.flat().sort(), entrypoints, 'shards cover every typed export');
 });
@@ -90,6 +94,7 @@ test('the packed-consumer default remains full and only accepts an explicit ATTW
 test('rejects malformed exports maps instead of silently checking an empty subset', () => {
   assert.throws(() => attwEntrypoints({}), /exports object/u);
   assert.throws(() => attwEntrypoints({ exports: {} }), /no typed/u);
+  assert.throws(() => attwEntrypoints({ exports: { './retired.js': null } }), /no typed/u);
   assert.throws(() => attwEntrypoints({ exports: { public: './dist/public.js' } }), /Invalid/u);
 });
 

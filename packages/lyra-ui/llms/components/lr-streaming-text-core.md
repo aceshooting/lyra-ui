@@ -63,7 +63,8 @@ share one implementation.
 `<lr-streaming-text>`'s own, including the markdown-mode double-fire avoidance (here the composed
 `<lr-markdown-core>` emits it instead of `<lr-markdown>`).
 The forwarded Markdown surface also emits `lr-copy` and `lr-copy-error` for code-block clipboard
-outcomes.
+outcomes. With `internal-link-prefix` set, its intercepted links also pass through
+`lr-link-activate` (`detail: { href: string }`); navigation is prevented.
 
 **Slots:** none — content renders from `content`, not a slot.
 

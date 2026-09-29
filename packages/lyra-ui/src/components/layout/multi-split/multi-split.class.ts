@@ -161,8 +161,6 @@ export interface LyraMultiSplitCollapseChangeDetail {
 }
 
 export interface LyraMultiSplitToggleDetail {
-  /** @deprecated Use `expanded`, which carries the same value; removal not before 23.0.0. */
-  readonly open: boolean;
   /** Whether the floating drawer is (or, on a cancelable proposal, would be) open. */
   readonly expanded: boolean;
 }
@@ -273,10 +271,10 @@ export interface LyraMultiSplitEventMap {
  *   not fire. Not fired for a redundant reassignment to the state already in
  *   effect.
  * @event lr-toggle-request - Cancelable proposal before an interactive overlay state change.
- *   Detail includes `expanded` and the compatibility `open` key. Direct property writes and
+ *   Detail carries the proposed `expanded` state. Direct property writes and
  *   forced responsive closes do not propose an interactive change.
  * @event lr-toggle - Non-cancelable notification after an accepted or forced overlay change.
- *   Detail includes the resulting `expanded` state and the compatibility `open` key.
+ *   Detail carries the resulting `expanded` state.
  * @event lr-multi-split-constraints-invalid - `detail: LyraMultiSplitConstraintIssueDetail`,
  *   fired once when the configured panel minimums/maximums cannot describe a
  *   layout that fits the track. The splitter rejects that infeasible set for
@@ -1172,7 +1170,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     if (options?.force) {
       this.open = next;
       this.forcedCloseVersion += 1;
-      this.emit('lr-toggle', { open: next, expanded: next });
+      this.emit('lr-toggle', { expanded: next });
       return;
     }
     if (this.open === next) return;
@@ -1181,7 +1179,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     const mutationVersion = this.toggleProposalMutationVersion;
     this.toggleProposalDepth += 1;
     try {
-      const event = this.emit('lr-toggle-request', { open: next, expanded: next }, { cancelable: true });
+      const event = this.emit('lr-toggle-request', { expanded: next }, { cancelable: true });
       if (
         event.defaultPrevented ||
         this.toggleProposalMutationVersion !== mutationVersion ||
@@ -1194,7 +1192,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       this.toggleProposalDepth -= 1;
     }
     this.open = next;
-    this.emit('lr-toggle', { open: next, expanded: next });
+    this.emit('lr-toggle', { expanded: next });
   }
 
   override requestUpdate(

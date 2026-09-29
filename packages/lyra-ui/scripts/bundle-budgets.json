@@ -41,7 +41,7 @@
   "dist/ssr/all.js": 1269.2958984375,
   "dist/localization.js": 21.1474609375,
   "dist/lyra.js": 199.388671875,
-  "dist/all.js": 1215.291015625,
+  "dist/all.js": 1200,
   "dist/components/agent-tools/index.js": 409.9326171875,
   "dist/components/charts/index.js": 79.0361328125,
   "dist/components/conversation/index.js": 361.53125,

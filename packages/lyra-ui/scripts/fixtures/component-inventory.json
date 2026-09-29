@@ -121673,6 +121673,13 @@
             "type": "CustomEvent<LyraClipboardWriteFailure>",
             "cancelable": "never",
             "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-link-activate",
+            "type": "CustomEvent<{ href: string }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
+            "composed": true
           }
         ],
         "parts": [
@@ -122237,6 +122244,13 @@
             "type": "CustomEvent<LyraClipboardWriteFailure>",
             "cancelable": "never",
             "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-link-activate",
+            "type": "CustomEvent<{ href: string }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
+            "composed": true
           }
         ],
         "parts": [

@@ -43,7 +43,7 @@ function resultViewIn(entry: HTMLElement | undefined): LyraToolResultView {
 async function openEntry(el: LyraToolTimeline, index = 0): Promise<HTMLElement> {
   const row = entryAt(el, index);
   row.querySelector('lr-details')!.dispatchEvent(
-    new CustomEvent('lr-toggle', { detail: { open: true, expanded: true }, bubbles: true, composed: true }),
+    new CustomEvent('lr-toggle', { detail: { expanded: true }, bubbles: true, composed: true }),
   );
   await el.updateComplete;
   return entryAt(el, index);
@@ -228,7 +228,7 @@ it('uses prototype-safe redaction clones', async () => {
   const el = (await fixture(html`<lr-tool-timeline .entries=${[entry]}></lr-tool-timeline>`)) as LyraToolTimeline;
   const details = entryAt(el).querySelector('lr-details') as HTMLElement & { open: boolean };
   details.open = true;
-  details.dispatchEvent(new CustomEvent('lr-toggle', { detail: { open: true, expanded: true }, bubbles: true, composed: true }));
+  details.dispatchEvent(new CustomEvent('lr-toggle', { detail: { expanded: true }, bubbles: true, composed: true }));
   await el.updateComplete;
   const view = resultViewIn(entriesEl(el)[0]);
   expect(Object.getPrototypeOf(view.args)).to.equal(null);
@@ -1133,7 +1133,7 @@ it('forgets a closed details disclosure and keeps it closed after rerender', asy
   expect(details.open).to.equal(true);
 
   details.dispatchEvent(new CustomEvent('lr-toggle', {
-    detail: { open: false, expanded: false },
+    detail: { expanded: false },
     bubbles: true,
     composed: true,
   }));

@@ -10,6 +10,8 @@ import { setForcedColors } from '../../../../test/wtr-media.js';
 // test below (which only overrides `resizeValuePixels`) can render without tripping the
 // dev-mode locale-fallback warning that strict-console platform lanes treat as fatal.
 import '../../../translations/ar/data.js';
+import '../../../translations/de/data.js';
+import '../../../translations/sv/data.js';
 import { installTableTestHooks, type Row, columns, rows } from '../../../../test/table.js';
 installTableTestHooks();
 

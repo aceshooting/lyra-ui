@@ -2281,6 +2281,8 @@ capability as a row.
   `'.pdf,.docx'`), forwarded to the hidden file input for the `files`/`image` capabilities. `image`
   defaults it to `'image/*'` unless this prop overrides it; `files` always uses it as-is (empty
   means "any file type").
+- Host `aria-label` attribute (default absent) — overrides the localized accessible name on the
+  single-capability button or multi-capability menu trigger. An explicitly empty value stays empty.
 - `multiple: boolean = false` (reflected) — forwarded to the hidden file input. Bare `multiple`
   opts into batches; `multiple="false"` remains false and removal restores single-file mode.
 - `disabled: boolean = false` (reflected)

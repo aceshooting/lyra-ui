@@ -99,12 +99,10 @@ export interface LyraCodeBlockEventMap extends LyraCodeBlockBaseEventMap {}
  *   `{ ok: false, text, reason, error }`, where `reason` is
  *   `'unsupported' | 'denied' | 'failed'`.
  * @event lr-toggle-request - Cancelable request emitted before collapse state changes.
- *   `detail: { expanded, collapsed }` is the proposed next state; `expanded` is the canonical key
- *   and the deprecated `collapsed` its inverse.
+ *   `detail: { expanded }` carries the proposed next state.
  * @event lr-toggle - The collapse/expand header button was activated.
- *   `detail: { expanded, collapsed }` — same event name and shape convention as
- *   `<lr-thinking-panel>`'s own `lr-toggle`; `expanded` is the resulting state and the deprecated
- *   `collapsed` its inverse.
+ *   `detail: { expanded }` carries the resulting state, matching
+ *   `<lr-thinking-panel>`'s own `lr-toggle` event name and shape convention.
  * @event lr-line-activate - A gutter line number was activated (click, or Enter/Space while
  *   focused) while `activatable-lines` is set. `detail: { line }`.
  * @event lr-text-select - Fired when a text selection inside the code body ends. `detail: {
