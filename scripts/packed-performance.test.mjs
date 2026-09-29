@@ -3,7 +3,7 @@ import test from 'node:test';
 import { createHash } from 'node:crypto';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { waitForBrowserReadiness } from '../packages/lyra-ui/scripts/fixtures/packed-performance/browser-readiness.mjs';
 import {
@@ -46,6 +46,38 @@ test('browser readiness failure preserves the package, phase, page errors and st
       return true;
     },
   );
+});
+
+test('interaction readiness failure includes the keyed sample and observable control state', async () => {
+  let evaluations = 0;
+  const page = {
+    async waitForFunction(_predicate, argument, options) {
+      assert.equal(argument, 4);
+      assert.equal(options.timeout, 10000);
+      throw new Error('Timeout 10000ms exceeded');
+    },
+    async evaluate() {
+      evaluations++;
+      return evaluations === 1
+        ? { readyState: 'complete' }
+        : { open: false, value: 'first', activeIndex: -1, latestRecord: undefined };
+    },
+  };
+  await assert.rejects(waitForBrowserReadiness({
+    page,
+    predicate: (count) => count > 0,
+    argument: 4,
+    packageKey: 'baseline',
+    phase: 'interaction select sample 4',
+    errors: ['console.error: fixture failure'],
+    timeoutMs: 10000,
+    snapshot: () => ({ value: 'first' }),
+  }), (error) => {
+    assert.match(error.message, /baseline: interaction select sample 4 browser readiness failed/);
+    assert.match(error.message, /console\.error: fixture failure/);
+    assert.match(error.message, /interactionState=\{"open":false,"value":"first","activeIndex":-1\}/);
+    return true;
+  });
 });
 
 test('packed performance accepts only node_modules-relative package paths', () => {
@@ -100,14 +132,15 @@ test('browser fixture requests remain inside their package or dependency mount',
 
 test('browser bare imports resolve from each installed ESM module parent and use import conditions', async () => {
   const root = await mkdtemp(join(tmpdir(), 'lyra-packed-import-parent-'));
+  const dependencyName = basename(root).toLowerCase();
   try {
     for (const name of ['baseline', 'candidate']) {
       const packageRoot = join(root, name);
-      const dependencyRoot = join(packageRoot, 'node_modules', 'fixture-dependency');
+      const dependencyRoot = join(packageRoot, 'node_modules', dependencyName);
       await mkdir(dependencyRoot, { recursive: true });
       await writeFile(join(packageRoot, 'entry.js'), '');
       await writeFile(join(dependencyRoot, 'package.json'), JSON.stringify({
-        name: 'fixture-dependency',
+        name: dependencyName,
         exports: {
           '.': { import: { node: './node.js', default: './esm.js' } },
           './blocked.js': { browser: null, default: './esm.js' },
@@ -119,19 +152,19 @@ test('browser bare imports resolve from each installed ESM module parent and use
       await writeFile(join(dependencyRoot, 'node.js'), 'export const selected = "node";');
       await mkdir(join(dependencyRoot, 'features'));
       await writeFile(join(dependencyRoot, 'features/example.js'), 'export const feature = true;');
-      assert.equal(import.meta.resolve('fixture-dependency', pathToFileURL(join(packageRoot, 'entry.js')).href),
+      assert.equal(import.meta.resolve(dependencyName, pathToFileURL(join(packageRoot, 'entry.js')).href),
         pathToFileURL(join(dependencyRoot, 'node.js')).href);
-      const resolved = await resolveBrowserSpecifier('fixture-dependency', join(packageRoot, 'entry.js'));
+      const resolved = await resolveBrowserSpecifier(dependencyName, join(packageRoot, 'entry.js'));
       assert.equal(resolved, pathToFileURL(join(dependencyRoot, 'esm.js')).href);
-      await assert.rejects(resolveBrowserSpecifier('fixture-dependency/blocked.js', join(packageRoot, 'entry.js')),
+      await assert.rejects(resolveBrowserSpecifier(`${dependencyName}/blocked.js`, join(packageRoot, 'entry.js')),
         /no safe declared production browser module target/);
-      await assert.rejects(resolveBrowserSpecifier('fixture-dependency/invalid.js', join(packageRoot, 'entry.js')),
+      await assert.rejects(resolveBrowserSpecifier(`${dependencyName}/invalid.js`, join(packageRoot, 'entry.js')),
         /unsupported browser export target shape/);
-      await assert.rejects(resolveBrowserSpecifier('fixture-dependency/feature/example', join(packageRoot, 'entry.js')),
+      await assert.rejects(resolveBrowserSpecifier(`${dependencyName}/feature/example`, join(packageRoot, 'entry.js')),
         /no exact declared browser export\/import entry/);
     }
-    const baselineSource = await readFile(resolve(root, 'baseline/node_modules/fixture-dependency/esm.js'), 'utf8');
-    const candidateSource = await readFile(resolve(root, 'candidate/node_modules/fixture-dependency/esm.js'), 'utf8');
+    const baselineSource = await readFile(resolve(root, 'baseline/node_modules', dependencyName, 'esm.js'), 'utf8');
+    const candidateSource = await readFile(resolve(root, 'candidate/node_modules', dependencyName, 'esm.js'), 'utf8');
     assert.match(baselineSource, /selected = "import"/);
     assert.match(candidateSource, /selected = "import"/);
   } finally {

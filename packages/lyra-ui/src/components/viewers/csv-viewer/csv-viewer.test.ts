@@ -9,6 +9,7 @@ import {
   waitUntil,
 } from '@open-wc/testing';
 import './csv-viewer.js';
+import '../../../translations/fr/viewers.js';
 import type { LyraCsvViewer } from './csv-viewer.js';
 import { LyraResourceLimitError } from '../../../internal/resource-loader.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';

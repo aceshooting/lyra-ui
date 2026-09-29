@@ -484,12 +484,14 @@ function assertInside(root, candidate) {
 async function packagePageHtml(packageInfo, importMap) {
   const runner = await readFile(browserRunnerPath, 'utf8');
   const themeTarget = resolvePublicExportTarget(packageInfo.metadata, './theme.js');
+  const tokensRootTarget = resolvePublicExportTarget(packageInfo.metadata, './tokens-root.css');
   const lookStyles = ['shadcn', 'material', 'data', 'terminal', 'high-contrast']
     .map((look) => `<link rel="stylesheet" href="/packages/${packageInfo.key}/dist/looks/${look}.css">`)
     .join('');
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="/packages/${packageInfo.key}/dist/theme.css">
+<link rel="stylesheet" href="/packages/${packageInfo.key}/${tokensRootTarget.slice(2)}">
 ${lookStyles}
 <link rel="stylesheet" href="/packages/${packageInfo.key}/dist/surfaces/glass.css">
 <link rel="stylesheet" href="/packages/${packageInfo.key}/dist/density.css">
@@ -822,31 +824,80 @@ async function measurePackage(browser, server, packageInfo, importMap, config) {
       const nativeSamples = [];
       const total = config.warmupSamples + config.measuredSamples;
       for (let iteration = 0; iteration < total; iteration++) {
+        const phase = `interaction ${name} ${iteration < config.warmupSamples ? 'warmup' : 'sample'} ${iteration}`;
         if (name === 'typing') {
           await page.evaluate(() => window.__lyraPerformance.resetInput());
           const before = await page.evaluate(() => window.__lyraPerformance.eventRecords.typing.length);
           await page.keyboard.press(key);
-          await page.waitForFunction((count) => {
-            const records = window.__lyraPerformance.eventRecords.typing;
-            return records.length > count && records.at(-1)?.keydownToRenderedFrameMs !== undefined;
-          }, before, { timeout: 10000 });
+          await waitForBrowserReadiness({
+            page,
+            predicate: (count) => {
+              const records = window.__lyraPerformance.eventRecords.typing;
+              return records.length > count && records.at(-1)?.keydownToRenderedFrameMs !== undefined;
+            },
+            argument: before,
+            packageKey: packageInfo.key,
+            phase,
+            errors,
+            timeoutMs: 10000,
+            snapshot: () => ({
+              inputValue: document.querySelector('#input')?.value,
+              nativeValue: document.querySelector('#input')?.shadowRoot?.querySelector('input')?.value,
+              latestRecord: window.__lyraPerformance?.eventRecords.typing.at(-1),
+              failures: window.__lyraPerformance?.failures,
+            }),
+          });
         } else if (name === 'select') {
           await page.evaluate(() => window.__lyraPerformance.resetSelect());
           await page.keyboard.press('ArrowDown');
           await page.keyboard.press('ArrowDown');
+          await page.keyboard.press('ArrowDown');
           const before = await page.evaluate(() => window.__lyraPerformance.eventRecords.select.length);
           await page.keyboard.press('Enter');
-          await page.waitForFunction((count) => {
-            const records = window.__lyraPerformance.eventRecords.select;
-            return records.length > count && records.at(-1).visibleSelection === true;
-          }, before, { timeout: 10000 });
+          await waitForBrowserReadiness({
+            page,
+            predicate: (count) => {
+              const records = window.__lyraPerformance.eventRecords.select;
+              return records.length > count && records.at(-1).visibleSelection === true;
+            },
+            argument: before,
+            packageKey: packageInfo.key,
+            phase,
+            errors,
+            timeoutMs: 10000,
+            snapshot: () => {
+              const select = document.querySelector('#select');
+              return {
+                value: select?.value,
+                open: select?.open,
+                activeIndex: select?.activeIndex,
+                activeRowValue: select?.shadowRoot?.querySelector('[part="option"][data-active]')?.dataset.value,
+                triggerText: select?.shadowRoot?.querySelector('button')?.textContent?.trim(),
+                latestRecord: window.__lyraPerformance?.eventRecords.select.at(-1),
+                failures: window.__lyraPerformance?.failures,
+              };
+            },
+          });
         } else {
           const before = await page.evaluate(() => window.__lyraPerformance.eventRecords.dialog.length);
           await page.locator(selector).click();
-          await page.waitForFunction((count) => {
-            const records = window.__lyraPerformance.eventRecords.dialog;
-            return records.length > count && records.at(-1).visibleAndOpen === true;
-          }, before, { timeout: 15000 });
+          await waitForBrowserReadiness({
+            page,
+            predicate: (count) => {
+              const records = window.__lyraPerformance.eventRecords.dialog;
+              return records.length > count && records.at(-1).visibleAndOpen === true;
+            },
+            argument: before,
+            packageKey: packageInfo.key,
+            phase,
+            errors,
+            timeoutMs: 15000,
+            snapshot: () => ({
+              open: document.querySelector('#dialog')?.open,
+              latestRecord: window.__lyraPerformance?.eventRecords.dialog.at(-1),
+              failures: window.__lyraPerformance?.failures,
+            }),
+          });
         }
         const row = await page.evaluate(({ name, recordProperty }) => {
           const records = window.__lyraPerformance.eventRecords[name];
@@ -1027,6 +1078,12 @@ export async function runPackedPerformanceQualification({ fixtureDir, packages, 
     await new Promise((accept, reject) => server.server.close((error) => error ? reject(error) : accept()));
   }
 
+  assert.ok(results.every((entry) =>
+    entry.hydrationTiming.browser.hydrationToUsable.count === config.measuredSamples),
+  'both installed packages must finish the configured hydration timing samples');
+  const hydrationTimingMetadata = { ...config.hydrationTiming, status: 'measured' };
+  delete hydrationTimingMetadata.reason;
+
   const receipt = {
     schemaVersion: 1,
     recordedAt: new Date().toISOString(),
@@ -1077,7 +1134,7 @@ export async function runPackedPerformanceQualification({ fixtureDir, packages, 
       noNumericCeilings: true,
       noHeapDeltaClaims: true,
     },
-    hydrationTiming: config.hydrationTiming,
+    hydrationTiming: hydrationTimingMetadata,
     packages: results,
   };
   if (artifactsDir) {
@@ -1155,40 +1212,6 @@ export async function runPackedHydrationSmoke({ fixtureDir, packages, artifactsP
     await writeReceiptWithLock(receipt, artifactsPath, fixtureDir, lock);
   }
   return receipt;
-}
-
-/** One readiness probe per exact installed tarball; records no performance samples. */
-export async function diagnosePackedStartup({ fixtureDir, packages }) {
-  assert.ok(Array.isArray(packages) && packages.length === 2, 'exactly two installed package descriptors are required');
-  const config = JSON.parse(await readFile(workloadConfigPath, 'utf8'));
-  const installedPackages = await Promise.all(packages.map((entry) => resolveInstalledPackage(fixtureDir, entry)));
-  const byRole = Object.fromEntries(installedPackages.map((entry) => [entry.role, entry]));
-  assert.deepEqual(Object.keys(byRole).sort(), ['baseline', 'candidate']);
-  await readFixtureLock(fixtureDir);
-  const importMaps = new Map();
-  for (const packageInfo of installedPackages) {
-    importMaps.set(packageInfo.key, await buildBrowserImportMap(packageInfo, ''));
-  }
-  const server = await startStaticServer(installedPackages, importMaps, config);
-  const browser = await chromium.launch({ headless: true });
-  const results = [];
-  try {
-    for (const role of ['baseline', 'candidate']) {
-      const packageInfo = byRole[role];
-      server.setPage(packageInfo.key, await packagePageHtml(packageInfo, importMaps.get(packageInfo.key)));
-      try {
-        const { context, errors } = await launchPackagePage(browser, server.origin, packageInfo, config);
-        results.push({ role, ready: errors.length === 0, errors });
-        await context.close();
-      } catch (error) {
-        results.push({ role, ready: false, error: error instanceof Error ? error.message : String(error) });
-      }
-    }
-  } finally {
-    await browser.close();
-    await new Promise((accept, reject) => server.server.close((error) => error ? reject(error) : accept()));
-  }
-  return results;
 }
 
 export {

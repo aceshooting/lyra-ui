@@ -3,6 +3,8 @@ import { fixture, expect, html, waitUntil, oneEvent } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { LitElement, type PropertyValues } from 'lit';
 import './node-palette.js';
+import '../../../translations/tr/retrieval.js';
+import '../../../translations/tr/shared.js';
 import type {
   LyraNodePalette,
   LyraNodePaletteEventMap,

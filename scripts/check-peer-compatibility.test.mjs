@@ -3027,6 +3027,9 @@ test('embeds deterministic consumer-owned capability fixtures for both package m
   const { createConsumerFileMap, resolvePeerProfiles } = await loadChecker();
   const authority = authorityFixture();
   const profile = resolvePeerProfiles(authority)[0];
+  const packageManifest = JSON.parse(
+    await readFile(new URL('../packages/lyra-ui/package.json', import.meta.url), 'utf8'),
+  );
 
   for (const packageManager of ['pnpm', 'npm']) {
     const options = {
@@ -3058,6 +3061,13 @@ test('embeds deterministic consumer-owned capability fixtures for both package m
     assert.match(first.get('src/browser.ts'), /\[part="math"\] math/u);
     assert.ok(first.get('src/browser.ts').includes("hostileSource = '# Safe\\n\\n<script>"));
     assert.match(first.get('src/browser.ts'), /lr-docx-viewer/u);
+    const registrationRoutes = [
+      ...first.get('src/browser.ts').matchAll(/^import '@aceshooting\/lyra-ui\/(.+)';$/gmu),
+    ].map((match) => `./${match[1]}`);
+    assert.equal(registrationRoutes.length, 2, 'both tested browser components need registration imports');
+    for (const route of registrationRoutes) {
+      assert.ok(Object.hasOwn(packageManifest.exports, route), `${route} must be a published route`);
+    }
     assert.match(first.get('src/browser.ts'), /DOMPurify/u);
     assert.match(first.get('src/browser.ts'), /annotation\.plugin\.id === 'annotation'/u);
     assert.match(first.get('src/browser.ts'), /dataLabels\.plugin\.id === 'datalabels'/u);

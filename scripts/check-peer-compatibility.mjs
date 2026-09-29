@@ -1687,8 +1687,8 @@ import {
   loadChartJsWithZoomResult,
 } from '@aceshooting/lyra-ui/components/charts/chart/chart-feature-loader.js';
 import { loadMarkdownAndSanitizer } from '@aceshooting/lyra-ui/components/conversation/markdown/markdown-loader.js';
-import '@aceshooting/lyra-ui/components/conversation/markdown/markdown.js';
-import '@aceshooting/lyra-ui/components/viewers/docx-viewer/docx-viewer.js';
+import '@aceshooting/lyra-ui/components/lr-markdown.js';
+import '@aceshooting/lyra-ui/components/lr-docx-viewer.js';
 import { MINIMAL_DOCX_BASE64 } from './fixtures.mjs';
 
 declare global {

@@ -1,6 +1,6 @@
-import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { aTimeout, fixture, expect, html, waitUntil } from "@open-wc/testing";
 import "./heatmap.js";
+import '../../../translations/de/data.js';
 import type { CalendarCellPos, LyraHeatmap, MatrixCellPos } from "./heatmap.js";
 import {
   MAX_BUCKET_COUNT,
@@ -74,8 +74,6 @@ async function settleLayout(): Promise<void> {
     );
   }
 }
-
-expectLocaleFallback('de-DE', ['heatmapMatrixLabel', 'heatmapValueLabel']);
 
 describe("v9 canonical heatmap data and bounded projections", () => {
   it("exposes only the discriminated data model, with no legacy mode/collection members", async () => {
