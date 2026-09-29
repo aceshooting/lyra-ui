@@ -151,16 +151,20 @@ try {
     const ids = await evaluate(() => document.querySelector('[data-theme-builder]').themeBuilder.catalog.looks.map(look => look.id));
     let cells = 0;
     for (const look of ids) for (const density of ['compact', 'comfortable', 'touch']) for (const surface of ['solid', 'glass']) for (const mode of ['light', 'dark']) {
-      await evaluate(({ look, density, surface, mode }) => {
+      const revision = await evaluate(async ({ look, density, surface, mode }) => {
         const c = document.querySelector('[data-theme-builder]').themeBuilder;
         c.change({ type: 'look', look: c.catalog.looks.find(item => item.id === look) });
         for (const [name, value] of Object.entries({ density, surface, mode })) c.change({ type: 'axis', name, value });
+        await c.whenSettled();
+        return c.draft.revision;
       }, { look, density, surface, mode });
-      await wait();
       const actual = await evaluate(() => {
         const root = document.querySelector('[data-preview="primary"]');
-        return { look: root.getAttribute('data-lr-look'), density: root.getAttribute('data-lr-density'), surface: root.getAttribute('data-lr-surface'), mode: root.dataset.resolvedMode, bg: getComputedStyle(root).backgroundColor, overflow: document.documentElement.scrollWidth - innerWidth };
+        const c = document.querySelector('[data-theme-builder]').themeBuilder;
+        return { revision: c.draft.revision, appliedRevision: c.appliedRevision, look: root.getAttribute('data-lr-look'), density: root.getAttribute('data-lr-density'), surface: root.getAttribute('data-lr-surface'), mode: root.dataset.resolvedMode, bg: getComputedStyle(root).backgroundColor, overflow: document.documentElement.scrollWidth - innerWidth };
       });
+      assert.equal(actual.revision, revision, 'draft changed while sampling the matrix cell');
+      assert.equal(actual.appliedRevision, revision, 'preview has not applied the matrix revision');
       assert.equal(actual.look, look); assert.equal(actual.density, density); assert.equal(actual.surface, surface); assert.equal(actual.mode, mode); check(actual.bg !== 'rgba(0, 0, 0, 0)', 'preview unpainted'); check(actual.overflow <= 1, 'page overflow'); cells++;
     }
     console.log(`MATRIX ${cells} cells, ${ids.length} looks`);
@@ -168,7 +172,12 @@ try {
   await verify('named and custom accents change painted button colors', async () => {
     let prior;
     for (const value of ['emerald', 'peridot', 'topaz', 'ruby', 'tourmaline', 'amethyst', 'aquamarine', 'sapphire', 'hematite', '#ffee44', { brand: { light: '#eeeeee', dark: '#101010' }, danger: '#663355' }]) {
-      await evaluate(value => document.querySelector('[data-theme-builder]').themeBuilder.change({ type: 'axis', name: 'accent', value }), value); await wait();
+      const coherent = await evaluate(async value => {
+        const c = document.querySelector('[data-theme-builder]').themeBuilder;
+        c.change({ type: 'axis', name: 'accent', value }); await c.whenSettled();
+        return c.appliedRevision === c.draft.revision;
+      }, value);
+      check(coherent, 'accent preview has not applied the current revision');
       const fill = await evaluate(() => getComputedStyle(document.querySelector('[data-preview] [data-brand]').shadowRoot.querySelector('button')).backgroundColor);
       check(fill && fill !== 'rgba(0, 0, 0, 0)', 'accent not painted'); if (typeof value === 'string' && prior) check(fill !== prior, `accent ${value} did not change`); prior = fill;
     }
@@ -182,12 +191,14 @@ try {
       c.change({ type: 'group', group: 'motion', tokens: c.catalog.motion.quick });
       c.change({ type: 'group', group: 'elevation', tokens: c.catalog.elevation.raised });
       c.change({ type: 'group', group: 'palette', tokens: { '--lr-theme-color-chart-1': '#112233' } });
-      await new Promise(r => setTimeout(r, 300));
+      await c.whenSettled();
+      const coherentBefore = c.appliedRevision === c.draft.revision;
       const root = document.querySelector('[data-preview]');
       const before = { fontSize: parseFloat(getComputedStyle(root.querySelector('[data-sample-body]')).fontSize) / parseFloat(getComputedStyle(document.documentElement).fontSize), weight: getComputedStyle(root.querySelector('[data-sample-heading]')).fontWeight, font: getComputedStyle(root).fontFamily, radius: getComputedStyle(root).borderRadius, chart: getComputedStyle(root.querySelector('[data-palette-mark]')).fill, duration: getComputedStyle(root.querySelector('[data-brand]')).getPropertyValue('--lr-duration-fast').trim(), shadow: getComputedStyle(root.querySelector('lr-card').shadowRoot.querySelector('[part~="base"]')).boxShadow };
-      c.change({ type: 'reset' }); await new Promise(r => setTimeout(r, 300));
-      return { before, overrides: c.model.overrides(c.draft), font: getComputedStyle(root).fontFamily };
+      c.change({ type: 'reset' }); await c.whenSettled();
+      return { before, coherentBefore, coherentAfter: c.appliedRevision === c.draft.revision, overrides: c.model.overrides(c.draft), font: getComputedStyle(root).fontFamily };
     });
+    check(result.coherentBefore && result.coherentAfter, 'option preview has not applied the current revision');
     assert.equal(result.before.fontSize, 1.25); assert.equal(result.before.weight, '900'); check(result.before.font.includes('monospace'), 'font pair ineffective'); assert.equal(result.before.chart, 'rgb(17, 34, 51)'); check(result.before.radius !== '0px', 'radius ineffective'); check(result.before.shadow !== 'none', 'shadow ineffective'); check(parseFloat(result.before.duration) < 1, 'OS motion reduction bypassed'); assert.deepEqual(result.overrides, {}); check(!result.font.includes('monospace'), 'reset stale font');
   });
   await verify('keyboard field editing preserves the focused input and rejects invalid CSS', async () => {
@@ -361,11 +372,21 @@ try {
   await verify('increased contrast, explicit reduction and OS settings remain independent', async () => {
     await context.clearPermissions();
     await page.emulateMedia({ reducedMotion: 'no-preference', colorScheme: 'dark', forcedColors: 'active' });
-    await evaluate(() => { const c = document.querySelector('[data-theme-builder]').themeBuilder; c.change({ type: 'axis', name: 'mode', value: 'system' }); c.change({ type: 'preferences', value: { motion: 'reduce', contrast: 'more' } }); }); await wait();
+    const coherent = await evaluate(async () => {
+      const c = document.querySelector('[data-theme-builder]').themeBuilder;
+      c.change({ type: 'axis', name: 'mode', value: 'system' });
+      c.change({ type: 'preferences', value: { motion: 'reduce', contrast: 'more' } }); await c.whenSettled();
+      return c.appliedRevision === c.draft.revision;
+    });
+    check(coherent, 'preference preview has not applied the current revision');
     const current = await evaluate(() => { const root = document.querySelector('[data-preview]'); return { mode: root.dataset.resolvedMode, motion: root.getAttribute('data-lr-motion'), contrast: root.getAttribute('data-lr-contrast'), duration: getComputedStyle(root.querySelector('[data-brand]')).getPropertyValue('--lr-duration-fast').trim() }; });
     assert.equal(current.mode, 'dark'); assert.equal(current.motion, 'reduce'); assert.equal(current.contrast, 'more'); check(parseFloat(current.duration) < 1, 'explicit reduction ignored');
     await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'light', forcedColors: 'none' });
-    await evaluate(() => document.querySelector('[data-theme-builder]').themeBuilder.change({ type: 'reset' })); await wait();
+    const resetCoherent = await evaluate(async () => {
+      const c = document.querySelector('[data-theme-builder]').themeBuilder;
+      c.change({ type: 'reset' }); await c.whenSettled(); return c.appliedRevision === c.draft.revision;
+    });
+    check(resetCoherent, 'reset preview has not applied the current revision');
   });
   await verify('motion replay honors zero, replaces prior work and cancels when reduction changes', async () => {
     await page.emulateMedia({ reducedMotion: 'no-preference' });
