@@ -4,6 +4,10 @@
     {
       "directory": "22.0.0",
       "captureSha256": "02f79d81c3812f94fa63aa152d5dce42926e415b94795de112d9867a13c9a36a"
+    },
+    {
+      "directory": "22.1.0",
+      "captureSha256": "f8540df29566e9036641fffccbeb3c960335d0d2c4036faa04ef75ae7ba9ecea"
     }
   ],
   "retirements": [
@@ -4000,7 +4004,7 @@
   ],
   "policyWitnesses": {
     "file": "policy-witnesses.json.gz",
-    "sha256": "a77e182cf9215fd4abcd6984f04218370b156a6cc2f3ad7bf376d7b5c439930d"
+    "sha256": "36ef97d2156b92013b6009bd97fc2a1ed1ff5039f8c5908a693b6d632ea416ce"
   },
   "guidanceTransitions": [
     {

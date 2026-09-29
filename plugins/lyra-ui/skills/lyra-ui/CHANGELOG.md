@@ -18,4 +18,9 @@
 
   The Swiss German catalog now reuses German messages where their resolved content is identical and retains Swiss-specific wording overrides. Locale loading and resolution behavior are unchanged.
 
+### Patch Changes
+
+- Virtual lists remeasure rendered rows after their key callback or indexed source changes, and group markers after their labels change, even when their DOM boxes keep the same size. This prevents estimated heights from replacing measured heights and overlapping rows or group headers.
+- Navigation-menu indicators stay aligned with the open trigger when a sibling item resizes, in both left-to-right and right-to-left layouts.
+
 Older major versions: [release history archive](https://github.com/aceshooting/lyra-ui/tree/main/docs/changelog).

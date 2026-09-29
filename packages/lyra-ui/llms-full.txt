@@ -182,12 +182,17 @@ only that tag, or use the explicit `all.js` entry when whole-library registratio
 import "@aceshooting/lyra-ui/all.js"; // explicitly registers the root-included tags
 ```
 
-Import component classes from their family-shaped `.class.js` subpaths. Root component-class
-re-exports and family-shaped registration imports are deprecated; they keep working throughout
-the compatibility window, with removal no earlier than 24.0.0. Stable tag-shaped registration
-imports and class-only subpaths are the canonical routes. The package root's helpers and types
-remain available. `all.js` is side-effectful and registers the
-root-included inventory; prefer tag-shaped imports in application code for smaller bundles.
+Import component classes from their family-shaped `.class.js` subpaths. Deprecated root
+component-class exports refer to the component constructor bindings themselves, including a
+constructor re-exported from a module that also exports helpers or types. That deprecation does not
+extend to sibling helpers, constants, or types; those remain supported unless they have their own
+deprecation record. Use the owning component's granular `.class.js` subpath for class imports.
+Family-shaped registration imports are also deprecated. Both deprecated root component-class exports
+and family-shaped registration imports keep working throughout the compatibility window, with
+removal no earlier than 24.0.0. Stable tag-shaped registration imports and class-only subpaths are
+the canonical routes. The package root's helpers and types remain available. `all.js` is
+side-effectful and registers the root-included inventory; prefer tag-shaped imports in application
+code for smaller bundles.
 
 The entry points, then:
 

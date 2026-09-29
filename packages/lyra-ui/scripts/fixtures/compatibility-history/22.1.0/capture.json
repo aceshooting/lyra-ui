@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "sourceRelease": "lyra-ui@22.1.0",
+  "sourceVersion": "22.1.0",
+  "git": {
+    "tagObject": "55fe57976c45b07b2f91c2539cb54887cbd9f986",
+    "commit": "304bc2883e413d318e6917c12b5a8d02b2d448e4"
+  },
+  "package": {
+    "name": "@aceshooting/lyra-ui",
+    "version": "22.1.0",
+    "tarballSha256": "2538dcace113c4b7430469e68813685790fba9e9a23ecebc22965b093211890f",
+    "registryIntegrity": "sha512-WXABpueCdpTN5k5n330BwfaXUq84CylpDZcDdFMoMwiQATgCmVuWoG8Z8f7xtnA/SSzxV9SIr7LPnGJ3fIkzNQ=="
+  },
+  "extractorVersion": 1,
+  "inputs": [
+    {
+      "origin": "source",
+      "role": "packageJson",
+      "path": "packages/lyra-ui/package.json",
+      "sha256": "7b7d09831005be5807603be7d208d6ea0dde1f6dce8d574939f3b438699a8d9d",
+      "bytes": 570600,
+      "gitBlob": "fd02a996c6e3c456f27a5f80dc9dde679211ce0f"
+    },
+    {
+      "origin": "source",
+      "role": "manifest",
+      "path": "packages/lyra-ui/custom-elements.json",
+      "sha256": "1d9f80034ee590897f4632fcbe9195360c0a240ab4aeb4783d1d415bb0376d0b",
+      "bytes": 4903175,
+      "gitBlob": "743363c9fce53a34abbe477ed5151be9cc87e805"
+    },
+    {
+      "origin": "source",
+      "role": "metadata",
+      "path": "packages/lyra-ui/scripts/fixtures/component-metadata.json",
+      "sha256": "49867d65e94cb6198fd36070a42e07b26a6689bb3b5cfe3af12795ebf5653ad8",
+      "bytes": 1234036,
+      "gitBlob": "08b6ca706e690e6e3ebad6a242680bac337210ff"
+    },
+    {
+      "origin": "source",
+      "role": "inventory",
+      "path": "packages/lyra-ui/scripts/fixtures/component-inventory.json",
+      "sha256": "e41f09a1f90fb10cd21c2de453372834b38e111016d316d02ea8211359717823",
+      "bytes": 6950975,
+      "gitBlob": "ea047cbfbc24731389704cb4d0abb711e01b944b"
+    },
+    {
+      "origin": "source",
+      "role": "renameLedger",
+      "path": "packages/lyra-ui/scripts/fixtures/lyra-renames.json",
+      "sha256": "6d15184930c79f2d932980a9c76a6c0c37b8a288ac6133bf592cb84110820433",
+      "bytes": 193379,
+      "gitBlob": "6b996405af523c67d8946949eec7a8e53fd81c8b"
+    },
+    {
+      "origin": "packed",
+      "role": "packageJson",
+      "path": "package/package.json",
+      "sha256": "646bc60b59af74b41a186f3adbe0c2e232ffcd9f38820db58bc698f29b6a796d",
+      "bytes": 570056,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "manifest",
+      "path": "package/custom-elements.json",
+      "sha256": "1d9f80034ee590897f4632fcbe9195360c0a240ab4aeb4783d1d415bb0376d0b",
+      "bytes": 4903175,
+      "gitBlob": null
+    },
+    {
+      "origin": "packed",
+      "role": "migrationContract",
+      "path": "package/dist/cli/migration-contract.json",
+      "sha256": "2b873e50a1ebdb9af905dab65627b2764a86e564476e0936d0c0de9a8d5bfb6c",
+      "bytes": 439973,
+      "gitBlob": null
+    },
+    {
+      "origin": "source-export",
+      "role": "text",
+      "path": "packages/lyra-ui/src/components/lr-geojson-viewer.ts",
+      "sha256": "7454efca55af199e7aa45748f02dae7805aa65daa6b12d8e91328022c64b8db7",
+      "bytes": 180,
+      "gitBlob": "d33f10c606365e432fe97b1ee99fce590bf39475"
+    },
+    {
+      "origin": "source-export",
+      "role": "text",
+      "path": "packages/lyra-ui/src/components/viewers/geojson-view/geojson-viewer.class.ts",
+      "sha256": "f83f08122adc0f741c2d41dc007c2cd2bae00b012cd8cfb65a961e7a37de7bb6",
+      "bytes": 29359,
+      "gitBlob": "6ac3be1963ccedfe538c7de46eeded4981aa9f69"
+    },
+    {
+      "origin": "source-export",
+      "role": "text",
+      "path": "packages/lyra-ui/src/localization.ts",
+      "sha256": "184520050f8a9c045d4c14c9751749a3b5fad8cae80e85dd84ee19c9290a04b6",
+      "bytes": 1841,
+      "gitBlob": "9e6d8eb4e6fb5c7b259ddd3747957454a566c725"
+    },
+    {
+      "origin": "source-export",
+      "role": "text",
+      "path": "packages/lyra-ui/src/components/retrieval/graph/graph.class.ts",
+      "sha256": "a22d6df24a9423bf6ad66b7b5b1a0596b4b674a0d05cd7c8ce0d451ec51f08ae",
+      "bytes": 209203,
+      "gitBlob": "184e8c85f374c8c02e7f94cc90946d68ebb5790b"
+    },
+    {
+      "origin": "source-export",
+      "role": "text",
+      "path": "packages/lyra-ui/src/components/viewers/document-viewer/registry.ts",
+      "sha256": "84ff99aeda7a7a383a4339f43bf244718dc856e05f527e108a007d35e7bcb8bc",
+      "bytes": 20541,
+      "gitBlob": "242e9a3c6825098581011b7cf15ee12ced2bfb26"
+    }
+  ],
+  "evidenceArchiveSha256": "ce2bb08b8203452f17669524114d34db0f33ca13d09554b776c761cac99ac9f9",
+  "factsSha256": "31f29327321363d6bd5d48512d9f504fd5412d8513785090ce018d0fcc3443a9",
+  "retirements": []
+}
