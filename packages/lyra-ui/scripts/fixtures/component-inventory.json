@@ -72225,7 +72225,7 @@
           {
             "name": "lr-hide",
             "type": "CustomEvent<LyraLightboxHideDetail>",
-            "cancelable": "always",
+            "cancelable": "conditional",
             "constructor": "CustomEvent"
           },
           {

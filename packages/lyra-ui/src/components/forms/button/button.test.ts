@@ -3212,12 +3212,19 @@ it("treats missing light-DOM collections as empty during nested SSR state seedin
     value: undefined,
   });
   const internals = el as unknown as {
-    syncAdornmentSlots(): void;
-    hasIconOnlyDefaultContent(): boolean;
+    willUpdate(changed: Map<PropertyKey, unknown>): void;
+    hasStartSlot: boolean;
+    hasEndSlot: boolean;
+    isIconButton: boolean;
   };
+  internals.hasStartSlot = true;
+  internals.hasEndSlot = true;
+  internals.isIconButton = true;
 
-  expect(() => internals.syncAdornmentSlots()).to.not.throw();
-  expect(internals.hasIconOnlyDefaultContent()).to.be.false;
+  expect(() => internals.willUpdate(new Map())).to.not.throw();
+  expect(internals.hasStartSlot).to.be.false;
+  expect(internals.hasEndSlot).to.be.false;
+  expect(internals.isIconButton).to.be.false;
 });
 
 it("keeps [part~='base'] border-box -- and sized to a fixed host width -- even when a light-DOM reset gives the host content-box (bug)", async () => {

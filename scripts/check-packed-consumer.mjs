@@ -469,6 +469,9 @@ const bundleEntries = {
   nativeStyles: {
     fixture: 'core',
   },
+  reservationStyles: {
+    fixture: 'core',
+  },
   utilitiesStyles: {
     fixture: 'core',
   },

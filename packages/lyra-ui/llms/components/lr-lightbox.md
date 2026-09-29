@@ -67,11 +67,14 @@ actual rendered integer index; `reason` defaults to `'api'` and is forwarded as 
 detail.
 
 **Events:** cancelable `lr-show`, followed after a successful open render by `lr-after-show`;
-cancelable `lr-hide` (`detail: LyraLightboxHideDetail = { source: Element }`), then
-cancelable `lr-close-request` with `{ reason: LyraLightboxCloseReason }`; accepted dismissal
-sets `open = false` and emits non-cancelable `lr-close` with the same reason object. Use
+conditionally cancelable `lr-hide` (`detail: LyraLightboxHideDetail = { source: Element }`):
+cancelable before a requested close, non-cancelable when an open instance unmounts. A requested
+close then emits cancelable `lr-close-request` with `{ reason: LyraLightboxCloseReason }`.
+An accepted dismissal sets `open = false` and emits non-cancelable `lr-close` with the same reason
+object. Use
 `lr-close-request` for vetoes and `lr-close` for accepted dismissals.
-`lr-after-hide` follows the closed render. Removal while open reports reason `unmount`. `lr-index-change` (`detail: { index }`, fired
+`lr-after-hide` follows the closed render. Removal while open cannot be vetoed and reports reason
+`unmount`. `lr-index-change` (`detail: { index }`, fired
 only for internally-driven navigation — a button, a keyboard shortcut, or `next()`/`previous()`/
 `goTo()`; **not** when a consumer sets `index`/`images` directly); `lr-zoom-change` (`detail: {
 zoom }`) is not emitted by the lightbox itself — it bubbles up composed from the embedded frame.

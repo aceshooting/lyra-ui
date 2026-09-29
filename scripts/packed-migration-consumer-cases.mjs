@@ -2,10 +2,16 @@ import assert from 'node:assert/strict';
 import { compatibilityKey } from '../packages/lyra-ui/scripts/published-compatibility.mjs';
 
 const templateHandlerExpression = '${handler}';
-// These target events are also dispatched by nested lr-flow-canvas. The migration scanner
-// requires an owner/target review before moving either listener, even though the ledger names
+// These target events are also dispatched by nested components. The migration scanner
+// requires an owner/target review before moving a listener, even though the ledger names
 // the replacement event.
-const sharedTargetEventReviews = new Set(['lr-graph\u0000lr-node-click', 'lr-knowledge-graph-explorer\u0000lr-node-click']);
+const sharedTargetEventReviews = new Set([
+  'lr-graph\u0000lr-node-click',
+  'lr-knowledge-graph-explorer\u0000lr-node-click',
+  'lr-markdown\u0000lr-link-click',
+  'lr-markdown-core\u0000lr-link-click',
+  'lr-message-parts\u0000lr-link-click',
+]);
 
 const manualProperties = {
   compact: ['size', "'s'"], emptyCompact: ['emptySize', "'s'"],

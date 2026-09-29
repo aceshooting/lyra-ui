@@ -82,7 +82,7 @@ export type LyraLightboxCloseReason =
   | 'unmount'
   | (string & Record<never, never>);
 
-/** The concrete affordance that requested a lightbox hide transition. */
+/** The close affordance, or the lightbox host when removal closes an open instance. */
 export interface LyraLightboxHideDetail {
   source: Element;
 }
@@ -165,7 +165,8 @@ function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction)
  * `lr-close` with `{ reason }` after the state commits, and
  * `lr-after-hide` after the closed state renders. A veto leaves the property and reflected
  * attribute synchronized. Initial `open` markup is state rather than a transition and emits no
- * lifecycle events.
+ * lifecycle events. Removing an open instance emits non-cancelable `lr-hide`, `lr-close` with
+ * reason `unmount`, and `lr-after-hide`; removal cannot be vetoed.
  *
  * **Scope for v1 (deliberate, not oversights):** no default slot / no arbitrary slotted content
  * per image (data-driven via `images` only); no dot-style indicators (a textual counter scales
@@ -183,7 +184,8 @@ function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction)
  * @customElement lr-lightbox
  * @slot actions - Optional extra toolbar buttons (e.g. download/share/delete), rendered in
  *   `part="toolbar"` between the counter and the close button.
- * @event lr-hide - Cancelable visibility request before closing, with the close source in its detail.
+ * @event lr-hide - Conditionally cancelable visibility event with the close source in its detail:
+ *   cancelable before a requested close, non-cancelable when an open instance unmounts.
  * @event lr-close-request - Cancelable proposal before dismissal; `detail: { reason }`.
  *   Calling `preventDefault()` keeps the lightbox open.
  * @event lr-close - Non-cancelable accepted dismissal with `{ reason }` detail, including unmount.

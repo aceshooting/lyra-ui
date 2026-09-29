@@ -344,7 +344,7 @@ test('staged standalone references preserve package truth in their own link cont
     'native CSS should keep its cross-topic token route in the standalone skill');
   assert.match(
     readFileSync(path.join(stagedSharedTopics, 'imports-and-registration.md'), 'utf8'),
-    /\]\(\.\/styles-and-tokens\.md#the-shadcn-look--themesshadcncss\)/u,
+    /\]\(\.\/styles-and-tokens\.md#the-shadcn-look--looksshadcncss\)/u,
     'topic-local relative anchors must survive standalone packaging',
   );
   assert.match(

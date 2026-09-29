@@ -99,7 +99,7 @@ test('actual v24 selection requires the installed version and retires the former
   assert.throws(() => createV24ExportMigrationCases({ ...source, packageVersion: '23.0.0' }), /installed v24/u);
   assert.throws(() => createV24ExportMigrationCases({ ...source, records: Object.fromEntries(Object.entries(source.records).filter(([, item]) => item.policy.removalNotBefore !== '24.0.0')) }), /exactly654/u);
 });
-test('the real v24 ledger identifies exactly five automatic member rewrites and checks their report witnesses', async () => {
+test('the real v24 ledger identifies exactly two automatic member rewrites and checks their report witnesses', async () => {
   const { readCurrentCompatibilityContextSync } = await import('../packages/lyra-ui/scripts/check-published-compatibility.mjs');
   const { createV24ExportMigrationCases, createV24MemberMigrationCases } = await import('./packed-migration-consumer-cases.mjs');
   const context = readCurrentCompatibilityContextSync();
@@ -107,12 +107,11 @@ test('the real v24 ledger identifies exactly five automatic member rewrites and 
   const cases = createV24MemberMigrationCases(context, ledger);
   const automatic = cases.filter(item => item.automatic);
   assert.equal(cases.length, 44);
-  assert.equal(automatic.length, 5);
-  assert.deepEqual(cases.filter(item => item.sharedTargetReview).map(item => item.key.tag).sort(), ['lr-graph', 'lr-knowledge-graph-explorer']);
+  assert.equal(automatic.length, 2);
+  assert.deepEqual(cases.filter(item => item.sharedTargetReview).map(item => item.key.tag).sort(), [
+    'lr-graph', 'lr-knowledge-graph-explorer', 'lr-markdown', 'lr-markdown-core', 'lr-message-parts',
+  ]);
   assert.deepEqual(automatic.map(item => [item.key.tag, item.key.kind, item.key.name]).sort(), [
-    ['lr-markdown', 'event', 'lr-link-click'],
-    ['lr-markdown-core', 'event', 'lr-link-click'],
-    ['lr-message-parts', 'event', 'lr-link-click'],
     ['lr-sequence-strip', 'attribute', 'accessible-label'],
     ['lr-table', 'attribute', 'accessible-label'],
   ].sort());
@@ -179,7 +178,7 @@ test('all654 v24 sites and multiline semantics match the real scanner including 
     assert.equal(reviewed.acknowledged, 1 + (item.additionalReviews?.length ?? 0), item.id);
     acknowledged += reviewed.acknowledged;
   }
-  assert.deepEqual({ rewrites, warnings, acknowledged }, { rewrites: 5, warnings: 656, acknowledged: 656 });
+  assert.deepEqual({ rewrites, warnings, acknowledged }, { rewrites: 2, warnings: 659, acknowledged: 659 });
   const source = await readFile(new URL('../packages/lyra-ui/scripts/fixtures/lyra-renames/consumer/v24-semantics.input.ts', import.meta.url), 'utf8');
   const file = 'semantic-input/v24-semantics.input.ts';
   const semanticCases = createV24SemanticMigrationCases(cases, source, file);

@@ -15,7 +15,9 @@
     "id": "deep-focus",
     "files": [
       "src/components/forms/date-picker/date-input.test.ts",
-      "src/components/forms/select/select.test.ts"
+      "src/components/forms/date-picker/date-input-form-lifecycle.test.ts",
+      "src/components/forms/select/select.test.ts",
+      "src/components/forms/select/select-form-lifecycle.test.ts"
     ],
     "markers": [
       "reportValidity",

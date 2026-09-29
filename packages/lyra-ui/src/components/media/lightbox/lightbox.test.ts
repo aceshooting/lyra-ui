@@ -363,16 +363,26 @@ it('stays open when an lr-close-request listener calls preventDefault()', async 
   el.open = false;
 });
 
-it('emits lr-close with the unmount reason when removed from the DOM while open', async () => {
+it('emits non-cancelable lr-hide and lr-close with the unmount reason when removed while open', async () => {
   const el = (await fixture(html`<lr-lightbox .images=${[image]} open></lr-lightbox>`)) as LyraLightbox;
   let detail: unknown;
+  let hideCancelable: boolean | undefined;
+  let hideSourceIsHost = false;
+  el.addEventListener('lr-hide', (event) => {
+    hideCancelable = event.cancelable;
+    hideSourceIsHost = (event as CustomEvent<{ source: Element }>).detail.source === el;
+    event.preventDefault();
+  });
   el.addEventListener('lr-close', (e) => (detail = (e as CustomEvent<{ reason: string }>).detail.reason));
 
   el.remove();
   await Promise.resolve();
   await Promise.resolve();
 
+  expect(hideCancelable).to.equal(false);
+  expect(hideSourceIsHost).to.equal(true);
   expect(detail).to.equal('unmount');
+  expect(el.open).to.equal(false);
 });
 
 it('does not treat a synchronous reparent as an unmount', async () => {

@@ -356,7 +356,7 @@ async function verifyActualV24MigrationConsumers({ fixtureDir, compatibilityCont
   const members = createV24MemberMigrationCases(compatibilityContext, ledger);
   const p22 = [...exports, ...members];
   assert.equal(p22.length, 654);
-  assert.equal(members.filter(item => item.automatic).length, 5, 'The exact v24 automatic member cohort changed');
+  assert.equal(members.filter(item => item.automatic).length, 2, 'The exact v24 automatic member cohort changed');
   assert.equal(exports.flatMap(item => item.additionalReviews).length, 7, 'The exact v24 nested module review cohort changed');
   const published23FieldFacts = verifyPublishedFieldAuthority(fieldAuthority);
   const fieldProof = await verifyInstalledFieldDeclarations({ fixtureDir, facts: published23FieldFacts, mode: fieldMode });
