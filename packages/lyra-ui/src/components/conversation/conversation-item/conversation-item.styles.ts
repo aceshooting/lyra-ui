@@ -93,6 +93,8 @@ export const styles = css`
 
   /* The thread-list row retains this tint while its actions menu is open. The tint's contrast is
      too close to quiet text for the timestamp, so promote secondary text for the same held state. */
+  /* no-pressed-state: excerpt and timestamp are passive text; press feedback belongs to the row.
+     no-transition-needed: promote the text immediately to preserve contrast as the row tint lands. */
   :host(:hover) [part='excerpt'],
   :host(:hover) [part='timestamp'],
   [part~='base-menu-open'] [part='excerpt'],
