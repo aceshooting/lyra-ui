@@ -5,12 +5,14 @@ import type { PlaceStrategy } from './positioner.js';
  * its `PlaceStrategy` when the consumer set no explicit value on the instance -- see
  * {@link resolveEffectivePositioningStrategy}.
  *
- * Surfaces that route their own `place()` call through the resolver (and therefore honor this
- * property): `lr-select`, `lr-popover` (and `lr-dropdown` through it), `lr-tooltip`,
- * `lr-color-picker`, `lr-combobox`, `lr-menu` (the private submenu surface), `lr-mention-popover`,
+ * Surfaces that route placement through the resolver (and therefore honor this property):
+ * `lr-select`, `lr-popover` (and `lr-dropdown` through it), `lr-tooltip`, `lr-color-picker`,
+ * `lr-combobox`, `lr-model-select` and `lr-voice-picker` (through the shared
+ * `CatalogPickerController`), `lr-menu` (the private submenu surface), `lr-mention-popover`,
  * `lr-export-button`, `lr-usage-badge`, `lr-tool-call-chip`, `lr-tour`, `lr-locale-picker`,
- * `lr-date-input`, `lr-time-input`, `lr-citation-badge`, `lr-entity-chip`, and
- * `lr-app-rail-item`. `lr-select`/`lr-popover`/`lr-tooltip`/`lr-color-picker`/`lr-combobox`
+ * `lr-date-input`, `lr-time-input`, `lr-citation-badge`, `lr-entity-chip`,
+ * `lr-app-rail-item`, and `lr-navigation-menu-item`. `lr-select`/`lr-popover`/`lr-tooltip`/
+ * `lr-color-picker`/`lr-combobox`
  * additionally expose an instance-level `positioning-strategy`/`hoist` property that can override
  * it per element; the rest fall back straight to their own fixed internal default.
  *

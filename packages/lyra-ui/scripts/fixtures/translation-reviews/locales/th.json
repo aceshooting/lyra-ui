@@ -2,24 +2,24 @@
   "locale": "th",
   "direction": "ltr",
   "source": {
-    "keyCount": 1384,
-    "sha256": "sha256:00c91cfc7e1388e6c630a1e42d5fe0918eb928f1e37d8451b9a18beb96b4d164"
+    "keyCount": 1385,
+    "sha256": "sha256:09d7ebd99cfe8b1b1ba87d80b6e8776b2dcc9107247c61b252cc3649c759eb65"
   },
   "catalog": {
-    "keyCount": 1384,
-    "sha256": "sha256:f525b42ef4a62c864910b27758b9a752467be7d7201978c951251a75b09a100b"
+    "keyCount": 1385,
+    "sha256": "sha256:f4998c278559597a06feef8e012e914dcdf0e985fa670138613b6f99cbaccc2c"
   },
   "translator": {
     "status": "complete-original",
     "role": "project localization contributor",
     "completedAt": "2026-09-28",
-    "evidence": "The Thai (Thai script; neutral UI register) catalog is recorded as a complete original project localization contribution. The source fragment does not identify an individual translator, so no personal, human, or native-speaker identity is asserted. Updated 2026-09-28 with 69 original messages for change review, agent questions, permission rules, connectors, background runs, research progress and budgets. Placeholders and locale-specific plural forms are preserved; no upstream translated text was copied."
+    "evidence": "The Thai (Thai script; neutral UI register) catalog is recorded as a complete original project localization contribution. The source fragment does not identify an individual translator, so no personal, human, or native-speaker identity is asserted. Updated 2026-09-28 with 69 original messages for change review, agent questions, permission rules, connectors, background runs, research progress and budgets. Placeholders and locale-specific plural forms are preserved; no upstream translated text was copied.\n\n2026-09-29 incremental pollRefresh review: added one original action label to this locale catalog, using existing refresh/update wording as context. The contribution remains AI-assisted and makes no human or native-speaker translator claim."
   },
   "reviewer": {
     "status": "approved",
     "role": "independent localization reviewer",
-    "reviewedAt": "2026-09-28",
-    "evidence": "All 12 family/shared slices were independently read for meaning, register, script, technical terms, and unintended English prose. An AST-based source review confirmed full key coverage, default-key order within every slice, placeholder multisets, and the locale’s CLDR plural-category set. The scaffold report was also used for untranslated-entry discovery and syntax parsing. No tests, builds, typechecks, or gates were run. Corrections: Corrected chart-summary spacing and localized “of” in chart point announcements; changed the Home keyboard key label from the unrelated Thai word for “house”. Kept Jupyter’s literal In [n] markers and clarified the node palette label. Terminology uncertainties: “Embedding”, “span”, “vector”, and graph-hop terminology are specialist AI/graph terms; a Thai technical glossary may prefer other established renderings. Not claimed; this is an AI-assisted independent semantic review. Allowlist has 67 message paths with per-path rationales. Native-speaker certification is not claimed. Terminology uncertainties: “Embedding”, “span”, “vector”, and graph-hop terminology are specialist AI/graph terms; a Thai technical glossary may prefer other established renderings. Updated 2026-09-28: an independent AI-assisted review checked all 69 added messages for meaning, UI register, terminology and placeholders, and corrected the catalog before this snapshot. The research-source count was checked against the pinned CLDR categories, including locale-specific decimal and non-singular forms. The complete 1,384-key snapshot was checked for key coverage, value kinds, placeholders and exact-English message paths; only individually justified new cognates, loanwords and technical names were retained. This increment does not claim a new linguistic review of all older messages, human review or native-speaker certification."
+    "reviewedAt": "2026-09-29",
+    "evidence": "All 12 family/shared slices were independently read for meaning, register, script, technical terms, and unintended English prose. An AST-based source review confirmed full key coverage, default-key order within every slice, placeholder multisets, and the locale’s CLDR plural-category set. The scaffold report was also used for untranslated-entry discovery and syntax parsing. No tests, builds, typechecks, or gates were run. Corrections: Corrected chart-summary spacing and localized “of” in chart point announcements; changed the Home keyboard key label from the unrelated Thai word for “house”. Kept Jupyter’s literal In [n] markers and clarified the node palette label. Terminology uncertainties: “Embedding”, “span”, “vector”, and graph-hop terminology are specialist AI/graph terms; a Thai technical glossary may prefer other established renderings. Not claimed; this is an AI-assisted independent semantic review. Allowlist has 67 message paths with per-path rationales. Native-speaker certification is not claimed. Terminology uncertainties: “Embedding”, “span”, “vector”, and graph-hop terminology are specialist AI/graph terms; a Thai technical glossary may prefer other established renderings. Updated 2026-09-28: an independent AI-assisted review checked all 69 added messages for meaning, UI register, terminology and placeholders, and corrected the catalog before this snapshot. The research-source count was checked against the pinned CLDR categories, including locale-specific decimal and non-singular forms. The complete 1,384-key snapshot was checked for key coverage, value kinds, placeholders and exact-English message paths; only individually justified new cognates, loanwords and technical names were retained. This increment does not claim a new linguistic review of all older messages, human review or native-speaker certification.\n\n2026-09-29 incremental pollRefresh review: an AI-assisted bounded review checked this new action label for meaning, UI action wording and absence of placeholders or exact-English copy. This review covers only this addition, not prior catalog entries; no human or native-speaker certification is claimed."
   },
   "englishIdenticalAllowlist": [
     {

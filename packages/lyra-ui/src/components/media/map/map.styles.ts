@@ -224,6 +224,9 @@ export const styles = css`
     max-inline-size: calc(100% - var(--lr-space-s) - var(--lr-space-s));
     max-block-size: calc(100% - var(--lr-space-s) - var(--lr-space-s) - var(--_lr-map-controls-bottom, calc(var(--lr-space-xs) * 0)) - var(--_lr-map-controls-top, calc(var(--lr-space-xs) * 0)));
     overflow: auto;
+    /* Reserve the scrollbar gutter so this scrolling overlay does not punch a transparent
+       rectangle into the composited WebGL canvas in Chromium. */
+    scrollbar-gutter: stable;
     box-sizing: border-box;
     gap: var(--lr-space-xs);
     padding: var(--lr-space-xs) var(--lr-space-s);
@@ -447,19 +450,16 @@ export const styles = css`
     border-radius: 50%;
     transform: translate(-50%, -50%);
   }
-  /* A row carrying a glyph paints the shape itself in the entry color, so the solid block and the
-     pattern overlay would both sit on top of the thing they are meant to identify. The pattern
-     BORDER does not sit on top of it: it frames the swatch, so it stays, and a glyph row keeps the
-     same solid/dashed/dotted/double edge a color-only row carries. That edge is the only non-color
-     differentiator left once forced colors collapse every authored color to one system color, and
-     two rows may legitimately share one glyph and differ only by category color.
-     Only the radius is dropped: the dots pattern rounds the swatch to a circle, and this swatch
-     clips its contents, so that radius would shave the corners off the very shape it frames.
-     The extra [data-pattern] qualifier is what wins that radius, rather than source order --
-     [data-pattern='dots'] sets it at otherwise equal specificity. */
+  /* A row carrying a glyph paints the shape itself in the entry color, so the solid block, border
+     and pattern overlay would frame or cover the thing they identify. The glyph silhouette is the
+     non-color cue for this row, including in forced colors where the entry color is collapsed.
+     The square, unclipped box also keeps a dotted pattern's circular radius from shaving the
+     glyph's corners. The extra [data-pattern] qualifier wins over [data-pattern='dots'] rather
+     than relying on source order. */
   [part='legend-swatch'][data-pattern][data-icon='true'] {
     inline-size: var(--lr-size-1rem);
     block-size: var(--lr-size-1rem);
+    border: none;
     border-radius: 0;
     background: none;
   }
@@ -708,8 +708,8 @@ export const styles = css`
        currentColor, so the swatch must not be filled with that same color behind it. The extra
        [data-pattern] qualifier OUTRANKS the solid-pattern fill above instead of merely following
        it, so no later edit to this block can leave a solid-pattern glyph row painting CanvasText
-       on CanvasText, which would erase the symbol entirely. The pattern border is untouched here
-       and stays this row's non-color cue. */
+       on CanvasText, which would erase the symbol entirely. Its border is already removed by the
+       base icon rule; the glyph silhouette remains the non-color cue. */
     [part='legend-swatch'][data-pattern][data-icon='true'] {
       background: Canvas !important;
     }

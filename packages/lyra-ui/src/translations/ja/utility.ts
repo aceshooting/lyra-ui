@@ -29,6 +29,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: '表示と検索の対象は先頭 {count} 個の JSON ノードとネスト {depth} 段までです。',
   pollPause: '一時停止',
   pollResume: '再開',
+  pollRefresh: '今すぐ更新',
   pollInactive: '停止中',
   pollRefreshing: '更新中…',
   pollPaused: '一時停止中',

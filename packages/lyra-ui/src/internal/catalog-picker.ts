@@ -1,8 +1,10 @@
 import { AnchoredPopoverController } from './anchored-popover-controller.js';
+import { deferredPlace } from './anchored-overlay-runtime.js';
 import { resolveIntlLocale } from './intl-cache.js';
 import { prefersReducedMotion } from './motion.js';
 import { dispatchNativeEvent, relayNativeEvent } from './native-event-relay.js';
 import { activateNonmodalOverlay, type OverlayHandle } from './nonmodal-overlay-manager.js';
+import { resolveEffectivePositioningStrategy } from './positioning-strategy.js';
 
 function parseCssTime(value: string): number {
   const trimmed = value.trim();
@@ -180,7 +182,7 @@ interface CatalogPickerControllerOptions<T extends LyraCatalogEntry> {
  * transitions, popup ownership, commits, and native/prefixed event relays have one authority.
  */
 export class CatalogPickerController<T extends LyraCatalogEntry> {
-  private readonly popupPosition = new AnchoredPopoverController();
+  private readonly popupPosition: AnchoredPopoverController;
   private overlay?: OverlayHandle;
   private pointerListenerDocument?: Document;
   private pointerListener?: (event: PointerEvent) => void;
@@ -203,7 +205,13 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
   constructor(
     private readonly host: CatalogPickerHost,
     private readonly options: CatalogPickerControllerOptions<T>,
-  ) {}
+  ) {
+    this.popupPosition = new AnchoredPopoverController((anchor, popup) =>
+      deferredPlace(anchor, popup, {
+        strategy: resolveEffectivePositioningStrategy(this.host, undefined, 'fixed'),
+      }),
+    );
+  }
 
   get normalizedCatalog(): T[] {
     return normalizeCatalog<T>(this.options.catalog());

@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'صرف پهريان {count} JSON نوڊ ۽ {depth} اندروني سطحون ڏيکاري ۽ ڳولهي سگهجن ٿيون.',
   pollPause: 'روڪيو',
   pollResume: 'ٻيهر شروع ڪريو',
+  pollRefresh: 'هاڻي تازو ڪريو',
   pollInactive: 'غيرفعال',
   pollRefreshing: 'تازو ٿي رهيو آهي…',
   pollPaused: 'روڪيل',

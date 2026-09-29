@@ -30,6 +30,14 @@ it('renders a named SVG path as a decorative icon', async () => {
   expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-hidden')).to.equal('true');
 });
 
+it('renders the built-in refresh glyph without an accessible name', async () => {
+  const el = (await fixture(html`<lr-icon name="refresh"></lr-icon>`)) as LyraIcon;
+  expect(el.shadowRoot!.querySelector('path')!.getAttribute('d')).to.equal(
+    'M20 11a8 8 0 0 0-14.9-4M4 5v4h4m-4 4a8 8 0 0 0 14.9 4M20 19v-4h-4',
+  );
+  expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-hidden')).to.equal('true');
+});
+
 it('keeps an unknown built-in name blank while preserving its accessible label', async () => {
   const el = (await fixture(
     html`<lr-icon name="gear" label="Settings"></lr-icon>`,

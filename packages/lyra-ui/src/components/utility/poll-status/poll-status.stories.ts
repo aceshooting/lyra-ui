@@ -12,7 +12,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A "next scheduled refresh" countdown with a built-in pause control. Set `next-in-ms` to (re)start a locale-formatted `M:SS` display counting down to the next scheduled action; it shows "Refreshing…" once it reaches zero and fires `lr-poll-due`. A built-in pause/resume button freezes the countdown and suppresses `lr-poll-due` while `paused`, firing `lr-pause-change` and announcing the transition through an internal live region. Setting `active="false"` shows a localized inactive state and disables the pause action.',
+          'A "next scheduled refresh" countdown with a built-in pause control. Set `next-in-ms` to (re)start a locale-formatted `M:SS` display counting down to the next scheduled action; it shows "Refreshing…" once it reaches zero and fires `lr-poll-due`. A built-in pause/resume button freezes the countdown and suppresses automatic `lr-poll-due` events while `paused`, firing `lr-pause-change` and announcing the transition through an internal live region. Opt into a localized manual refresh action with `with-refresh`; it fires `lr-poll-due` with `{ manual: true }` and restarts the countdown. Setting `active="false"` shows a localized inactive state and disables both actions.',
       },
     },
   },
@@ -23,6 +23,11 @@ type Story = StoryObj;
 export const ShortCountdown: Story = {
   name: 'Short countdown (10s)',
   render: () => html`<lr-poll-status next-in-ms="10000"></lr-poll-status>`,
+};
+
+export const ManualRefresh: Story = {
+  name: 'Manual refresh',
+  render: () => html`<lr-poll-status with-refresh next-in-ms="30000"></lr-poll-status>`,
 };
 
 export const DueRefreshing: Story = {
@@ -106,7 +111,7 @@ export const NarrowLongLocalized: Story = {
     <div style="display: grid; gap: var(--lr-space-m);">
       ${(['ltr', 'rtl'] as const).map((direction) => html`
         <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%;">
-          <lr-poll-status .active=${false} .strings=${{
+          <lr-poll-status with-refresh .active=${false} .strings=${{
             pollInactive: 'Hintergrundaktualisierungsverfügbarkeitsüberprüfung',
           }}></lr-poll-status>
           <lr-poll-status next-in-ms="0" .strings=${{

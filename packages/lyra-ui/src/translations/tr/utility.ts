@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'Yalnızca ilk {count} JSON düğümü ve {depth} iç içe geçme düzeyi gösterilir ve aranır.',
   pollPause: 'Duraklat',
   pollResume: 'Sürdür',
+  pollRefresh: 'Şimdi yenile',
   pollInactive: 'Etkin değil',
   pollRefreshing: 'Yenileniyor…',
   pollPaused: 'Duraklatıldı',

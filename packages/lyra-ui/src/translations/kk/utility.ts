@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'Тек алғашқы {count} JSON түйіні және {depth} кірістіру деңгейі көрсетіледі және ізделеді.',
   pollPause: 'Кідірту',
   pollResume: 'Жалғастыру',
+  pollRefresh: 'Қазір жаңартыңыз',
   pollInactive: 'Белсенді емес',
   pollRefreshing: 'Жаңартылуда…',
   pollPaused: 'Кідіртілді',

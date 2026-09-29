@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'Na only di first {count} JSON nodes and {depth} nesting levels dem show and search.',
   pollPause: 'Pause am',
   pollResume: 'Continue am',
+  pollRefresh: 'Make am refresh now',
   pollInactive: 'E no dey active',
   pollRefreshing: 'E dey refresh…',
   pollPaused: 'E don pause',

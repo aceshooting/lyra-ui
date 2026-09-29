@@ -29,6 +29,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'A fi àwọn nóòdù JSON àkọ́kọ́ {count} àti ìpele ìtẹ̀síwájú {depth} hàn, a sì ń wá wọn nìkan.',
   pollPause: 'Dúró díẹ̀',
   pollResume: 'Tẹ̀síwájú',
+  pollRefresh: 'Tún sọ di tuntun nísinsìnyí',
   pollInactive: 'Kò ṣiṣẹ́',
   pollRefreshing: 'Ó ń tún sọ di tuntun…',
   pollPaused: 'Ó dúró',

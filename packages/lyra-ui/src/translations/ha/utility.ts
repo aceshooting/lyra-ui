@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'Ana nuna kuma nemo nodes {count} na farko na JSON da matakan zurfi {depth} kawai.',
   pollPause: 'Dakata',
   pollResume: 'Ci gaba',
+  pollRefresh: 'Sabunta yanzu',
   pollInactive: 'Ba ya aiki',
   pollRefreshing: 'Ana sabuntawa…',
   pollPaused: 'An dakata',

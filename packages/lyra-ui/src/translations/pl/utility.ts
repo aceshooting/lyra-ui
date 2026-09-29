@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'Wyświetlane i przeszukiwane są tylko pierwsze {count} węzły JSON oraz poziomy zagnieżdżenia do {depth}.',
   pollPause: 'Wstrzymaj',
   pollResume: 'Wznów',
+  pollRefresh: 'Odśwież teraz',
   pollInactive: 'Nieaktywne',
   pollRefreshing: 'Odświeżanie…',
   pollPaused: 'Wstrzymano',

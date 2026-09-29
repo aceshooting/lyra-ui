@@ -10,21 +10,16 @@ export class PositionerGeometryError extends RangeError {}
 export function finiteGeometry(value: number, label: string, nonnegative = false): number {
   if (!Number.isFinite(value) || (nonnegative && value < 0)) {
     throw new PositionerGeometryError(
-      `${label} must be a ${nonnegative ? 'finite nonnegative' : 'finite'} number`,
+      `${label} must be a finite${nonnegative ? ' nonnegative' : ''} number`,
     );
   }
   return value;
 }
 
 export function validatedClientRect(rect: DOMRect, label: string): DOMRect {
-  finiteGeometry(rect.x, `${label}.x`);
-  finiteGeometry(rect.y, `${label}.y`);
-  finiteGeometry(rect.width, `${label}.width`, true);
-  finiteGeometry(rect.height, `${label}.height`, true);
-  finiteGeometry(rect.top, `${label}.top`);
-  finiteGeometry(rect.right, `${label}.right`);
-  finiteGeometry(rect.bottom, `${label}.bottom`);
-  finiteGeometry(rect.left, `${label}.left`);
+  for (const field of ['x', 'y', 'width', 'height', 'top', 'right', 'bottom', 'left'] as const) {
+    finiteGeometry(rect[field], `${label}.${field}`, field === 'width' || field === 'height');
+  }
   return rect;
 }
 

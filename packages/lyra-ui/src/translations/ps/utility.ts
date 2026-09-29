@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'یوازې لومړي {count} JSON غوټې او د ځالې {depth} کچې ښودل کېږي او لټول کېږي.',
   pollPause: 'ځنډول',
   pollResume: 'بیا پیلول',
+  pollRefresh: 'اوس تازه کړئ',
   pollInactive: 'غیرفعال',
   pollRefreshing: 'تازه کېږي…',
   pollPaused: 'ځنډول شوی',

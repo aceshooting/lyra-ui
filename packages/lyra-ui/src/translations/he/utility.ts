@@ -35,6 +35,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'מוצגים ונכללים בחיפוש רק {count} צומתי ה-JSON הראשונים ו-{depth} רמות הקינון הראשונות.',
   pollPause: 'השהה',
   pollResume: 'המשך',
+  pollRefresh: 'רענן עכשיו',
   pollInactive: 'לא פעיל',
   pollRefreshing: 'מרענן…',
   pollPaused: 'מושהה',

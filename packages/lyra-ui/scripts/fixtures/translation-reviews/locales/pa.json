@@ -2,24 +2,24 @@
   "locale": "pa",
   "direction": "ltr",
   "source": {
-    "keyCount": 1384,
-    "sha256": "sha256:00c91cfc7e1388e6c630a1e42d5fe0918eb928f1e37d8451b9a18beb96b4d164"
+    "keyCount": 1385,
+    "sha256": "sha256:09d7ebd99cfe8b1b1ba87d80b6e8776b2dcc9107247c61b252cc3649c759eb65"
   },
   "catalog": {
-    "keyCount": 1384,
-    "sha256": "sha256:1cfbc05fa95506bb4281bd8c0799c16dc6d47a8666c660260791432fd5ac8c5f"
+    "keyCount": 1385,
+    "sha256": "sha256:03399812378cf5afc401e292b21dcc3d0d039f5701c437db629f740331b06ad3"
   },
   "translator": {
     "status": "complete-original",
     "role": "project localization contributor",
     "completedAt": "2026-09-28",
-    "evidence": "Complete locale-specific Punjabi messages were supplied across all 1,315 source keys, retaining placeholders, plural forms and established technical notation. Individual translator identity and native-speaker status are not asserted. Updated 2026-09-28 with 69 original messages for change review, agent questions, permission rules, connectors, background runs, research progress and budgets. Placeholders and locale-specific plural forms are preserved; no upstream translated text was copied."
+    "evidence": "Complete locale-specific Punjabi messages were supplied across all 1,315 source keys, retaining placeholders, plural forms and established technical notation. Individual translator identity and native-speaker status are not asserted. Updated 2026-09-28 with 69 original messages for change review, agent questions, permission rules, connectors, background runs, research progress and budgets. Placeholders and locale-specific plural forms are preserved; no upstream translated text was copied.\n\n2026-09-29 incremental pollRefresh review: added one original action label to this locale catalog, using existing refresh/update wording as context. The contribution remains AI-assisted and makes no human or native-speaker translator claim."
   },
   "reviewer": {
     "status": "approved",
     "role": "independent localization reviewer",
-    "reviewedAt": "2026-09-28",
-    "evidence": "Independently read all 12 slices against the English defaults for Gurmukhi Punjabi meaning, neutral UI register, labels and status context; checked direction remains LTR and reviewed every English-identical value. Corrected unset boolean wording, finite-number validation, artifact label, chart radius terminology, and opacity label. Source parsing confirmed all 1,315 keys and placeholders with CLDR one/other plurals. AI-assisted review; no native-speaker certification is claimed. Updated 2026-09-28: an independent AI-assisted review checked all 69 added messages for meaning, UI register, terminology and placeholders, and corrected the catalog before this snapshot. The research-source count was checked against the pinned CLDR categories, including locale-specific decimal and non-singular forms. The complete 1,384-key snapshot was checked for key coverage, value kinds, placeholders and exact-English message paths; only individually justified new cognates, loanwords and technical names were retained. This increment does not claim a new linguistic review of all older messages, human review or native-speaker certification."
+    "reviewedAt": "2026-09-29",
+    "evidence": "Independently read all 12 slices against the English defaults for Gurmukhi Punjabi meaning, neutral UI register, labels and status context; checked direction remains LTR and reviewed every English-identical value. Corrected unset boolean wording, finite-number validation, artifact label, chart radius terminology, and opacity label. Source parsing confirmed all 1,315 keys and placeholders with CLDR one/other plurals. AI-assisted review; no native-speaker certification is claimed. Updated 2026-09-28: an independent AI-assisted review checked all 69 added messages for meaning, UI register, terminology and placeholders, and corrected the catalog before this snapshot. The research-source count was checked against the pinned CLDR categories, including locale-specific decimal and non-singular forms. The complete 1,384-key snapshot was checked for key coverage, value kinds, placeholders and exact-English message paths; only individually justified new cognates, loanwords and technical names were retained. This increment does not claim a new linguistic review of all older messages, human review or native-speaker certification.\n\n2026-09-29 incremental pollRefresh review: an AI-assisted bounded review checked this new action label for meaning, UI action wording and absence of placeholders or exact-English copy. This review covers only this addition, not prior catalog entries; no human or native-speaker certification is claimed."
   },
   "englishIdenticalAllowlist": [
     {

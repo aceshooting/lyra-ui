@@ -2,24 +2,24 @@
   "locale": "sd",
   "direction": "rtl",
   "source": {
-    "keyCount": 1384,
-    "sha256": "sha256:00c91cfc7e1388e6c630a1e42d5fe0918eb928f1e37d8451b9a18beb96b4d164"
+    "keyCount": 1385,
+    "sha256": "sha256:09d7ebd99cfe8b1b1ba87d80b6e8776b2dcc9107247c61b252cc3649c759eb65"
   },
   "catalog": {
-    "keyCount": 1384,
-    "sha256": "sha256:8355b6a9ef3fa600ee6382865ea9e88d890fa15316bafa192a2d597958053485"
+    "keyCount": 1385,
+    "sha256": "sha256:c29abd2922f01f01311aeb24494a3ca4df823f9a702de11a87039eea602f2ced"
   },
   "translator": {
     "status": "complete-original",
     "role": "project localization contributor",
     "completedAt": "2026-09-28",
-    "evidence": "A complete Sindhi catalog was supplied in Arabic-derived Sindhi script across all 1,315 source keys, preserving placeholders, plural forms and technical notation; no individual translator identity is asserted. Updated 2026-09-28 with 69 original messages for change review, agent questions, permission rules, connectors, background runs, research progress and budgets. Placeholders and locale-specific plural forms are preserved; no upstream translated text was copied."
+    "evidence": "A complete Sindhi catalog was supplied in Arabic-derived Sindhi script across all 1,315 source keys, preserving placeholders, plural forms and technical notation; no individual translator identity is asserted. Updated 2026-09-28 with 69 original messages for change review, agent questions, permission rules, connectors, background runs, research progress and budgets. Placeholders and locale-specific plural forms are preserved; no upstream translated text was copied.\n\n2026-09-29 incremental pollRefresh review: added one original action label to this locale catalog, using existing refresh/update wording as context. The contribution remains AI-assisted and makes no human or native-speaker translator claim."
   },
   "reviewer": {
     "status": "approved",
     "role": "independent localization reviewer",
-    "reviewedAt": "2026-09-28",
-    "evidence": "Independently read all 12 slices against English defaults for Sindhi meaning, neutral UI register, Arabic-derived script and label context; verified RTL registration and reviewed every English-identical value. Corrected untranslated “in/out/of” templates, chart flat-trend wording, entity/context terminology, JSON array/key labels, progress, and minimap key wording. Parsing found full ordered coverage/placeholders and CLDR one/other plural forms. AI-assisted; no native-speaker certification claimed. Updated 2026-09-28: an independent AI-assisted review checked all 69 added messages for meaning, UI register, terminology and placeholders, and corrected the catalog before this snapshot. The research-source count was checked against the pinned CLDR categories, including locale-specific decimal and non-singular forms. The complete 1,384-key snapshot was checked for key coverage, value kinds, placeholders and exact-English message paths; only individually justified new cognates, loanwords and technical names were retained. This increment does not claim a new linguistic review of all older messages, human review or native-speaker certification."
+    "reviewedAt": "2026-09-29",
+    "evidence": "Independently read all 12 slices against English defaults for Sindhi meaning, neutral UI register, Arabic-derived script and label context; verified RTL registration and reviewed every English-identical value. Corrected untranslated “in/out/of” templates, chart flat-trend wording, entity/context terminology, JSON array/key labels, progress, and minimap key wording. Parsing found full ordered coverage/placeholders and CLDR one/other plural forms. AI-assisted; no native-speaker certification claimed. Updated 2026-09-28: an independent AI-assisted review checked all 69 added messages for meaning, UI register, terminology and placeholders, and corrected the catalog before this snapshot. The research-source count was checked against the pinned CLDR categories, including locale-specific decimal and non-singular forms. The complete 1,384-key snapshot was checked for key coverage, value kinds, placeholders and exact-English message paths; only individually justified new cognates, loanwords and technical names were retained. This increment does not claim a new linguistic review of all older messages, human review or native-speaker certification.\n\n2026-09-29 incremental pollRefresh review: an AI-assisted bounded review checked this new action label for meaning, UI action wording and absence of placeholders or exact-English copy. This review covers only this addition, not prior catalog entries; no human or native-speaker certification is claimed."
   },
   "englishIdenticalAllowlist": [
     {

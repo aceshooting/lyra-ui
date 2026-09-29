@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'Kun de første {count} JSON-noder og {depth} indlejringsniveauer vises og gennemsøges.',
   pollPause: 'Pause',
   pollResume: 'Genoptag',
+  pollRefresh: 'Opdater nu',
   pollInactive: 'Inaktiv',
   pollRefreshing: 'Opdaterer…',
   pollPaused: 'Sat på pause',

@@ -216,14 +216,13 @@ it('stays axe-clean with a populated glyph legend', async () => {
   await expect(el).to.be.accessible();
 });
 
-it('keeps a forced-colors glyph off its own fill and inside its pattern border', async () => {
+it('keeps a forced-colors glyph on its unframed shape cue', async () => {
   await setForcedColors('active');
   try {
     const el = await mapWithLegend([
       { color: '#f00', label: 'Plain solid', pattern: 'solid' },
       { color: '#0f0', label: 'Plain dots', pattern: 'dots' },
-      // Same pattern as the first row, so the only thing that can separate their fills is the
-      // glyph rule. Source order alone used to decide that; the selector now outranks it.
+      // These glyphs keep their own silhouette as the non-color cue and have no framing border.
       { color: '#00f', label: 'Glyph solid', pattern: 'solid', icon: { path: TRIANGLE_PATH } },
       { color: '#ff0', label: 'Glyph dashed', pattern: 'diagonal', icon: { path: BAR_PATH } },
     ]);
@@ -239,14 +238,17 @@ it('keeps a forced-colors glyph off its own fill and inside its pattern border',
     ).to.equal(fills[1]);
     expect(fills[3], 'every glyph row takes that same unfilled background').to.equal(fills[1]);
     expect(glyphPath(rendered[2]!), 'the glyph itself still renders').to.equal(TRIANGLE_PATH);
+    expect(glyphPath(rendered[3]!), 'the second glyph keeps its own silhouette').to.equal(BAR_PATH);
     const borders = rendered.map((swatch) => getComputedStyle(swatch).borderStyle);
     expect(
-      borders.slice(2),
-      'a glyph row keeps the pattern border, its only surviving non-color cue',
-    ).to.deep.equal(['solid', 'dashed']);
+      borders,
+      'ordinary swatches keep their pattern border while glyphs drop the framing box',
+    ).to.deep.equal(['solid', 'dotted', 'none', 'none']);
     const widths = rendered.map((swatch) => getComputedStyle(swatch).borderTopWidth);
-    expect(widths[2], 'and that border is actually drawn').to.equal(widths[0]);
-    expect(widths[3]).to.equal(widths[0]);
+    expect(widths[0], 'the ordinary color swatch has a visible border').to.not.equal('0px');
+    expect(widths[1], 'the patterned color swatch has a visible border').to.equal(widths[0]);
+    expect(widths[2], 'the glyph swatch drops the border').to.equal('0px');
+    expect(widths[3]).to.equal('0px');
   } finally {
     await setForcedColors('none');
   }

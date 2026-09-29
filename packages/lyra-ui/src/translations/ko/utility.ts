@@ -29,6 +29,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: '처음 {count}개의 JSON 노드와 {depth}단계까지의 중첩만 표시하고 검색합니다.',
   pollPause: '일시 중지',
   pollResume: '돌아가기',
+  pollRefresh: '지금 새로고침',
   pollInactive: '비활성',
   pollRefreshing: '새로 고치는 중…',
   pollPaused: '일시정지됨',

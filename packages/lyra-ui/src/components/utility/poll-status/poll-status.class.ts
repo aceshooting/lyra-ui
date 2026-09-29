@@ -10,11 +10,11 @@ import { styles } from './poll-status.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_pollInactive, LYRA_DEFAULT_pollPause, LYRA_DEFAULT_pollPaused, LYRA_DEFAULT_pollPausedAnnounce, LYRA_DEFAULT_pollRefreshing, LYRA_DEFAULT_pollRefreshingAnnounce, LYRA_DEFAULT_pollResume, LYRA_DEFAULT_pollResumedAnnounce } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_pollInactive, LYRA_DEFAULT_pollPause, LYRA_DEFAULT_pollPaused, LYRA_DEFAULT_pollPausedAnnounce, LYRA_DEFAULT_pollRefresh, LYRA_DEFAULT_pollRefreshing, LYRA_DEFAULT_pollRefreshingAnnounce, LYRA_DEFAULT_pollResume, LYRA_DEFAULT_pollResumedAnnounce } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraPollStatusEventMap {
-  'lr-poll-due': CustomEvent<null>;
+  'lr-poll-due': CustomEvent<{ readonly manual: true } | null>;
   'lr-pause-change': CustomEvent<{ readonly paused: boolean }>;
 }
 
@@ -32,13 +32,16 @@ export interface LyraPollStatusEventMap {
  * action retains its minimum target size.
  *
  * @customElement lr-poll-status
- * @event lr-poll-due - Fired once when the countdown reaches zero (not fired while `paused`).
+ * @event lr-poll-due - Automatic countdowns fire once at zero with `detail: null` (suppressed while
+ *   `paused`); activating the opt-in refresh button fires immediately with `detail: { manual: true }`
+ *   after restarting the countdown.
  * @event lr-pause-change - Fired when `paused` changes via the built-in button.
  *   `detail: { paused: boolean }`.
  * @csspart base - The root wrapper.
  * @csspart indicator - The pulsing status dot.
  * @csspart countdown - The localized `M:SS` text, or the refreshing, paused, or inactive state.
  * @csspart pause-button - The built-in pause/resume toggle.
+ * @csspart refresh-button - The opt-in built-in manual refresh action.
  * @cssprop [--lr-poll-status-due-bg=var(--lr-color-success)] - Background of `indicator` while
  *   `data-due` is set, without repainting every other component that reuses the shared success
  *   token.
@@ -62,6 +65,7 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
     pollPause: LYRA_DEFAULT_pollPause,
     pollPaused: LYRA_DEFAULT_pollPaused,
     pollPausedAnnounce: LYRA_DEFAULT_pollPausedAnnounce,
+    pollRefresh: LYRA_DEFAULT_pollRefresh,
     pollRefreshing: LYRA_DEFAULT_pollRefreshing,
     pollRefreshingAnnounce: LYRA_DEFAULT_pollRefreshingAnnounce,
     pollResume: LYRA_DEFAULT_pollResume,
@@ -84,9 +88,12 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
   })
   active = true;
 
-  /** User-toggled pause -- while `true`, the countdown display freezes and `lr-poll-due` never
-   *  fires. `false` (the default). */
+  /** User-toggled pause -- while `true`, the countdown display freezes and automatic
+   *  `lr-poll-due` events are suppressed. `false` (the default). */
   @property({ type: Boolean, reflect: true }) paused = false;
+
+  /** Whether to show a built-in manual refresh action. `false` (the default). */
+  @property({ type: Boolean, reflect: true, attribute: 'with-refresh' }) withRefresh = false;
 
   @state() private remainingMs = 0;
   @state() private due = false;
@@ -309,6 +316,12 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
     this.emit('lr-pause-change', Object.freeze({ paused: this.paused }));
   };
 
+  private requestRefresh = (): void => {
+    if (!this.active) return;
+    this.restart();
+    this.emit('lr-poll-due', Object.freeze({ manual: true }));
+  };
+
   private formatCountdown(): string {
     if (!this.active) return this.localize('pollInactive');
     if (this.paused) return this.localize('pollPaused');
@@ -330,6 +343,17 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
       <div part="base">
         <span part="indicator" aria-hidden="true" ?data-due=${this.due} ?data-inactive=${!this.active}></span>
         <span part="countdown">${!this.active || this.nextInMs != null ? this.formatCountdown() : nothing}</span>
+        ${this.withRefresh ? html`
+          <button
+            part="refresh-button"
+            type="button"
+            aria-label=${this.localize('pollRefresh')}
+            ?disabled=${!this.active}
+            @click=${this.requestRefresh}
+          >
+            <lr-icon name="refresh"></lr-icon>
+          </button>
+        ` : nothing}
         <button
           part="pause-button"
           type="button"

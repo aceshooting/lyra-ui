@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'Es werden nur die ersten {count} JSON-Knoten und {depth} Verschachtelungsebenen angezeigt und durchsucht.',
   pollPause: 'Pausieren',
   pollResume: 'Fortsetzen',
+  pollRefresh: 'Jetzt aktualisieren',
   pollInactive: 'Inaktiv',
   pollRefreshing: 'Wird aktualisiert…',
   pollPaused: 'Pausiert',

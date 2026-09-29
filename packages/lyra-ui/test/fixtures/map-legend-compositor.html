@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Map legend compositor test</title>
+    <style>
+      body { margin: 0; background: #ff00ff; }
+      lr-map { inline-size: min(747px, 100vw); block-size: 936px; }
+      lr-map::part(legend) {
+        inline-size: 240px;
+        max-block-size: 320px;
+        inset-inline-start: 12px;
+        inset-block-end: 48px;
+        scrollbar-width: thin;
+      }
+      @media (max-width: 500px) {
+        lr-map { block-size: 600px; }
+      }
+    </style>
+  </head>
+  <body>
+    <script type="module">
+      import '../../src/theme.css';
+      import '../../src/components/media/map/map.js';
+
+      const map = document.createElement('lr-map');
+      map.mapStyle = {
+        version: 8,
+        sources: {},
+        layers: [{ id: 'background', type: 'background', paint: { 'background-color': '#123456' } }],
+      };
+      map.legend = Array.from({ length: 12 }, (_, index) => ({
+        color: '#008800',
+        pattern: 'solid',
+        value: String(index),
+        label: `Category ${index}`,
+        group: 'Categories',
+      }));
+      map.legendInteractive = true;
+      map.legendCollapsible = true;
+      document.body.append(map);
+    </script>
+  </body>
+</html>

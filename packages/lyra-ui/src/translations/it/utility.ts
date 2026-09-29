@@ -35,6 +35,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'Vengono mostrati e ricercati solo i primi {count} nodi JSON e {depth} livelli di annidamento.',
   pollPause: 'Sospendi',
   pollResume: 'Riprendi',
+  pollRefresh: 'Aggiorna ora',
   pollInactive: 'Inattivo',
   pollRefreshing: 'Aggiornamento…',
   pollPaused: 'In pausa',

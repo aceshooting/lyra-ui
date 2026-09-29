@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'మొదటి {count} JSON నోడ్‌లు, గరిష్ఠంగా {depth} అంచెల లోతు మాత్రమే చూపించి వెతుకుతారు.',
   pollPause: 'తాత్కాలికంగా ఆపండి',
   pollResume: 'మళ్లీ ప్రారంభించండి',
+  pollRefresh: 'ఇప్పుడే రిఫ్రెష్ చేయండి',
   pollInactive: 'నిష్క్రియంగా ఉంది',
   pollRefreshing: 'తాజా చేస్తోంది…',
   pollPaused: 'ఆపివేశారు',

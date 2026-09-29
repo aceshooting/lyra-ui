@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'Prikazana in preiskana so samo prva vozlišča JSON (največ {count}) in ravni gnezdenja (največ {depth}).',
   pollPause: 'Začasno ustavi',
   pollResume: 'Nadaljuj',
+  pollRefresh: 'Osveži zdaj',
   pollInactive: 'Nedejavno',
   pollRefreshing: 'Osveževanje …',
   pollPaused: 'Začasno ustavljeno',

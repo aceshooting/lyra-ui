@@ -2,14 +2,14 @@ import { css } from 'lit';
 
 export const styles = css`
   :host {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    min-block-size: 0;
+    max-block-size: 100%;
     min-inline-size: 0;
     max-inline-size: 100%;
-    /* A percentage block-size against an auto-height ancestor resolves to auto, so this is a
-       no-op for the content-sized default; it bites only once an ancestor gives this host a
-       definite block size. The chain must continue through [part~='base'], the content gate and
-       [part='content'] below or the fill breaks at whichever one is missing it. */
-    block-size: 100%;
+    /* Natural document flow stays content-sized. A bounded containing block caps the flex column;
+       explicit host sizing or grid/flex stretch can allocate the full available block size. */
     /* The disclosure's density knobs, both on the shared size ladder so the tiers live in one
        place. Spacing reads the ladder's INLINE padding knob: a stacked panel's block rhythm is as
        generous as a control's inline padding, while the ladder's block padding exists to fit text
@@ -21,9 +21,7 @@ export const styles = css`
   [part~='base'] {
     display: flex;
     flex-direction: column;
-    /* Keeps this element's own border from pushing its rendered size past exactly 100% of :host
-       once the block-size: 100% below is a definite value -- same reasoning as
-       file-input.styles.ts's own bordered [part~="base"]. */
+    /* The frame border belongs inside an explicitly allocated host size. */
     box-sizing: border-box;
     /* Control tier, not the decorative --lr-color-border-subtle: the summary is a borderless
        disclosure button, so collapsed this frame is that control's only visible boundary
@@ -34,9 +32,8 @@ export const styles = css`
     background: var(--lr-details-outlined-bg, var(--lr-color-surface));
     min-inline-size: 0;
     max-inline-size: 100%;
-    /* Chain continued from :host -- flex-direction: column keeps [part='header'] at its natural
-       size while the content gate below grows to fill whatever is left. */
-    block-size: 100%;
+    flex: 1 1 auto;
+    min-block-size: 0;
     font-size: var(--lr-details-font-size, var(--_lr-details-font-size));
     overflow: clip;
   }
@@ -156,7 +153,7 @@ export const styles = css`
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
   }
-  [part~='header-actions'] {
+  [part~='header-actions']:where(:not([hidden])) {
     display: flex;
     flex: 0 1 auto;
     align-items: center;
@@ -164,21 +161,14 @@ export const styles = css`
     max-inline-size: 100%;
     overflow-wrap: anywhere;
   }
-  /* The open state (the hidden attribute entirely absent -- see contentGateMode 'open' in
-     details.class.ts). Deliberately scoped with :not([hidden]) rather than a bare .content-gate
-     rule: an unscoped display/sizing declaration here would also win over the user-agent's own
-     hidden-attribute default for the transient 'ordinary-hidden' fallback state below, defeating
-     the very thing that attribute exists to do. flex/min-block-size: 0 let this gate shrink
-     inside the [part~='base'] column instead of being floored at its content's intrinsic size;
-     block-size continues the chain from [part~='base'] -- a no-op default (see :host's comment),
-     and what gives [part='content'] below a definite size to fill and scroll within once this
-     host has one. */
+  /* Only the open gate participates in flex sizing. The ordinary hidden fallback must retain
+     native display:none; the separate until-found gate below preserves find-in-page behavior. */
   .content-gate:not([hidden]) {
-    display: block;
+    display: flex;
+    flex-direction: column;
     flex: 1 1 auto;
     min-inline-size: 0;
     min-block-size: 0;
-    block-size: 100%;
   }
   .content-gate:where([hidden='until-found']) {
     /* This private, layout-contained block preserves find-in-page eligibility while keeping
@@ -215,13 +205,10 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: anywhere;
-    /* Continues the chain from the content gate: a plain percentage of its now block-size: 100%
-       parent, so still a no-op default (see :host's comment) -- and the element that actually
-       scrolls once that chain resolves to a definite size, since the gate above only sizes and
-       shrinks itself to make room for this to happen. box-sizing: border-box keeps this element's
-       own padding from pushing its rendered size past exactly 100% of the gate. */
+    /* A shrinkable flex child owns the scrollport once the host reaches its size limit. */
+    flex: 1 1 auto;
+    min-block-size: 0;
     box-sizing: border-box;
-    block-size: 100%;
     overflow: auto;
   }
   @media (prefers-reduced-motion: reduce) {

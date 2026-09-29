@@ -2,24 +2,24 @@
   "locale": "pnb",
   "direction": "rtl",
   "source": {
-    "keyCount": 1384,
-    "sha256": "sha256:00c91cfc7e1388e6c630a1e42d5fe0918eb928f1e37d8451b9a18beb96b4d164"
+    "keyCount": 1385,
+    "sha256": "sha256:09d7ebd99cfe8b1b1ba87d80b6e8776b2dcc9107247c61b252cc3649c759eb65"
   },
   "catalog": {
-    "keyCount": 1384,
-    "sha256": "sha256:2fe77f755beca0231efc99446f351d6c759dd9ce4ba01f7594a87ac621b57b89"
+    "keyCount": 1385,
+    "sha256": "sha256:e3c7e63f6ce0c0deb3588860189a10e0333a1b21c2146964591fa93391490c4d"
   },
   "translator": {
     "status": "complete-original",
     "role": "project localization contributor",
     "completedAt": "2026-09-28",
-    "evidence": "A complete Shahmukhi Punjabi catalog was supplied across all 1,315 source keys, preserving technical notation, placeholders and plural categories. Individual translator identity and native-speaker status are not asserted. Updated 2026-09-28 with 69 original messages for change review, agent questions, permission rules, connectors, background runs, research progress and budgets. Placeholders and locale-specific plural forms are preserved; no upstream translated text was copied."
+    "evidence": "A complete Shahmukhi Punjabi catalog was supplied across all 1,315 source keys, preserving technical notation, placeholders and plural categories. Individual translator identity and native-speaker status are not asserted. Updated 2026-09-28 with 69 original messages for change review, agent questions, permission rules, connectors, background runs, research progress and budgets. Placeholders and locale-specific plural forms are preserved; no upstream translated text was copied.\n\n2026-09-29 incremental pollRefresh review: added one original action label to this locale catalog, using existing refresh/update wording as context. The contribution remains AI-assisted and makes no human or native-speaker translator claim."
   },
   "reviewer": {
     "status": "approved",
     "role": "independent localization reviewer",
-    "reviewedAt": "2026-09-28",
-    "evidence": "Independently read every message in all 12 slices against the English defaults for Shahmukhi Punjabi meaning, neutral UI register, script and context; confirmed RTL registration and checked all English-identical values. Corrected four untranslated English “of” templates, opacity wording, entity terminology, JSON array wording, a query operator, plural word label, boolean-unset wording, artifact label and minimap instructions. Source parsing confirms full keys/order/placeholders and CLDR one/other categories. AI-assisted; no native-speaker certification is claimed. Updated 2026-09-28: an independent AI-assisted review checked all 69 added messages for meaning, UI register, terminology and placeholders, and corrected the catalog before this snapshot. The research-source count retains the existing one/other branches. The pinned ICU runtime canonicalizes pnb to lah but has no Lahnda plural implementation; its documented en-US fallback defines the current runtime branches. This structural compatibility check is not CLDR or native-speaker certification of Western Punjabi grammar. The complete 1,384-key snapshot was checked for key coverage, value kinds, placeholders and exact-English message paths; only individually justified new cognates, loanwords and technical names were retained. This increment does not claim a new linguistic review of all older messages, human review or native-speaker certification."
+    "reviewedAt": "2026-09-29",
+    "evidence": "Independently read every message in all 12 slices against the English defaults for Shahmukhi Punjabi meaning, neutral UI register, script and context; confirmed RTL registration and checked all English-identical values. Corrected four untranslated English “of” templates, opacity wording, entity terminology, JSON array wording, a query operator, plural word label, boolean-unset wording, artifact label and minimap instructions. Source parsing confirms full keys/order/placeholders and CLDR one/other categories. AI-assisted; no native-speaker certification is claimed. Updated 2026-09-28: an independent AI-assisted review checked all 69 added messages for meaning, UI register, terminology and placeholders, and corrected the catalog before this snapshot. The research-source count retains the existing one/other branches. The pinned ICU runtime canonicalizes pnb to lah but has no Lahnda plural implementation; its documented en-US fallback defines the current runtime branches. This structural compatibility check is not CLDR or native-speaker certification of Western Punjabi grammar. The complete 1,384-key snapshot was checked for key coverage, value kinds, placeholders and exact-English message paths; only individually justified new cognates, loanwords and technical names were retained. This increment does not claim a new linguistic review of all older messages, human review or native-speaker certification.\n\n2026-09-29 incremental pollRefresh review: an AI-assisted bounded review checked this new action label for meaning, UI action wording and absence of placeholders or exact-English copy. This review covers only this addition, not prior catalog entries; no human or native-speaker certification is claimed."
   },
   "englishIdenticalAllowlist": [
     {

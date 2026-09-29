@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'የመጀመሪያዎቹ {count} JSON ኖዶች እና {depth} የመደራረብ ደረጃዎች ብቻ ይታያሉ እና ይፈለጋሉ።',
   pollPause: 'አቁም',
   pollResume: 'ቀጥል',
+  pollRefresh: 'አሁን አድስ',
   pollInactive: 'ንቁ ያልሆነ',
   pollRefreshing: 'በማደስ ላይ…',
   pollPaused: 'ቆሟል',

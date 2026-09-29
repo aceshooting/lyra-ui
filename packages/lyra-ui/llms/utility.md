@@ -794,15 +794,16 @@ A parent Lit component would instead hold the reference via `@query('lr-live-reg
 
 ## `lr-poll-status`
 
-A "next scheduled refresh" countdown with a built-in pause control: a ticking `M:SS` display counting
-down to the next scheduled action, a "Refreshing…" state at zero, and a pause/resume toggle.
+A "next scheduled refresh" countdown with built-in pause and optional manual refresh controls: a ticking
+`M:SS` display counting down to the next scheduled action, a "Refreshing…" state at zero, and a
+pause/resume toggle.
 First-party invention (no Web Awesome equivalent); the closest existing component,
 `<lr-stream-status>`, is scoped to transport/connection-health phases, a different concern from a
 scheduled-interval countdown — this mirrors its internal `<lr-live-region>` composition for
 accessible phase-transition announcements.
 
 Long localized status labels, including unbroken words, wrap within the component’s allocated inline
-size in LTR and RTL. The indicator and pause/resume action retain their size; the 320px example
+size in LTR and RTL. The indicator and both actions retain their size; the 320px example
 shows both inactive and refreshing states.
 
 **Properties:**
@@ -812,19 +813,33 @@ shows both inactive and refreshing states.
   shows no countdown.
 - `active: boolean = true` (reflected) — whether the poll cycle is running at all.
 - `paused: boolean = false` (reflected) — user-toggled pause; while `true`, the countdown display
-  freezes and `lr-poll-due` never fires.
+  freezes and automatic `lr-poll-due` events are suppressed.
+- `withRefresh: boolean = false` (attribute `with-refresh`, reflected) — show a built-in manual
+  refresh action beside the pause control. It stays available while paused and is disabled while
+  inactive.
 
-**Events:** `lr-poll-due` (no detail — fired once when the countdown reaches zero, not fired while
-`paused`), `lr-pause-change` (`detail: { paused: boolean }` — fired when `paused` changes via the
-built-in button).
+**Events:** `lr-poll-due` (automatic countdowns fire once at zero with `detail: null` and are
+suppressed while `paused`; activating the opt-in manual refresh button fires immediately with
+`detail: { manual: true }` after restarting the countdown; TypeScript handlers see the detail as
+`null | { readonly manual: true }`), `lr-pause-change`
+
+With `next-in-ms="0"`, manual activation emits `{ manual: true }` synchronously, then the
+restarted zero-delay timer emits one automatic event with `detail: null` on its next task.
+(`detail: { paused: boolean }` — fired when `paused` changes via the built-in button).
 
 **Methods:** `restart(): void` — restarts the currently configured `nextInMs` delay from now,
 including after its previous deadline fired. With `nextInMs` unset it simply clears the due state.
 
+The manual refresh control calls `restart()` before emitting `lr-poll-due`, so a listener can
+replace the next delay or explicitly restart it during event handling. While paused it emits the
+manual event and resets the frozen delay without resuming or starting a timer; with `nextInMs`
+unset it still emits the manual event but no countdown is armed.
+
 **Slots:** none.
 
 **CSS parts:** `base`, `indicator` (the pulsing status dot), `countdown` (the `M:SS`, or
-"Refreshing…", text), `pause-button` (the built-in pause/resume toggle).
+"Refreshing…", text), `pause-button` (the built-in pause/resume toggle), `refresh-button` (the
+optional built-in manual refresh action).
 
 **Themeable custom properties:** `--lr-poll-status-due-bg` (default `var(--lr-color-success)`) —
 background of `indicator` while `data-due` is set. Component-scoped indirection over the shared
@@ -833,7 +848,8 @@ repainting every other component that reuses the same shared success token. `--l
 `var(--lr-color-brand-quiet)`/`var(--lr-color-brand)`) and
 `--lr-poll-status-pause-active-bg`/`--lr-poll-status-pause-active-color` (defaults the former
 brand-quiet active `color-mix()`/`var(--lr-color-brand)`) retheme the built-in `pause-button`'s
-hover/pressed paint independently of those same shared brand tokens. Plus shared tokens —
+hover/pressed paint independently of those same shared brand tokens; these pause-specific
+overrides do not affect the refresh button, which uses shared brand tokens. Plus shared tokens —
 `--lr-space-xs`, `--lr-font-size-sm`,
 `--lr-color-text-quiet`, `--lr-color-brand`, `--lr-color-success`, `--lr-radius`/`-pill`,
 `--lr-focus-ring-*`.
@@ -841,10 +857,13 @@ hover/pressed paint independently of those same shared brand tokens. Plus shared
 **Optional peer deps:** none.
 
 ```html
-<lr-poll-status next-in-ms="30000"></lr-poll-status>
+<lr-poll-status with-refresh next-in-ms="30000"></lr-poll-status>
 <script type="module">
   const status = document.querySelector("lr-poll-status");
-  status.addEventListener("lr-poll-due", () => refreshData());
+  status.addEventListener("lr-poll-due", (event) => {
+    const { manual } = event.detail ?? {};
+    refreshData({ manual: manual === true });
+  });
   status.addEventListener("lr-pause-change", (e) =>
     console.log("paused:", e.detail.paused)
   );

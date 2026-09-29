@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'Qoodni JSON jalqabaa {count} fi sadarkaawwan wal keessa galuu {depth} qofa agarsiifamu, barbaadamus.',
   pollPause: 'Dhaabi',
   pollResume: 'Itti fufi',
+  pollRefresh: 'Amma haaromsi',
   pollInactive: 'Hojii irra hin jiru',
   pollRefreshing: 'Amma haaromsamaa jira…',
   pollPaused: 'Dhaabbateera',

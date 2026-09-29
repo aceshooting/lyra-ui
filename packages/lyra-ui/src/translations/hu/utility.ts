@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'Csak az első {count} JSON-csomópont és {depth} beágyazási szint látható és kereshető.',
   pollPause: 'Szüneteltetés',
   pollResume: 'Folytatás',
+  pollRefresh: 'Frissíts most',
   pollInactive: 'Inaktív',
   pollRefreshing: 'Frissítés…',
   pollPaused: 'Szüneteltetve',

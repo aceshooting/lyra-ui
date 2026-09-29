@@ -29,6 +29,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: '仅显示和搜索前{count}个 JSON 节点及{depth}层嵌套。',
   pollPause: '暂停',
   pollResume: '继续',
+  pollRefresh: '立即刷新',
   pollInactive: '未启用',
   pollRefreshing: '刷新中…',
   pollPaused: '已暂停',

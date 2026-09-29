@@ -1596,6 +1596,12 @@ surface together with every other floating surface in the library. `--lr-overlay
 decorative `var(--lr-color-border-subtle)` floating panels default to: this listbox belongs to the
 form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
+`--lr-positioning-strategy` — the listbox reads the same cascading `absolute`/`fixed`
+override documented on `<lr-popover>` each time it is positioned, falling back to its existing
+`fixed` default when no recognized value is set. `<lr-model-select>` has no per-instance
+`positioning-strategy` property; set the token on `:root`, a theme, or an ancestor to retune its
+listbox along with the other floating surfaces.
+
 **Optional peer deps:** none.
 
 ```html
@@ -3856,6 +3862,11 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
 - `--lr-overlay-shadow-anchored` — Elevation of the anchored listbox. Default: `var(--lr-shadow-m)`.
   None of the four is declared on `:host`, so one declaration on `:root` — or on any ancestor, to
   scope it — retints this listbox together with every other floating surface in the library.
+- `--lr-positioning-strategy` — The listbox reads the same cascading `absolute`/`fixed` override
+  documented on `<lr-popover>` each time it is positioned, falling back to its existing `fixed`
+  default when no recognized value is set. `<lr-voice-picker>` has no per-instance
+  `positioning-strategy` property; set the token on `:root`, a theme, or an ancestor to retune its
+  listbox along with the other floating surfaces.
 - `--lr-voice-picker-preview-active-border` — Active preview border. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-preview-active-color` — Active preview icon. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-trigger-border-color` — Resting trigger/combobox border color, independent of

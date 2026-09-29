@@ -77,6 +77,26 @@ export const ResponsiveHeaderActions: StoryObj = {
   `,
 };
 
+/** Unsized disclosures follow document flow; explicitly sized panels own a bounded scrollport. */
+export const NaturalAndBoundedSizing: StoryObj = {
+  render: () => html`
+    <div style="display:grid;gap:var(--lr-space-l);max-inline-size:28rem">
+      <div>
+        <p>An unsized panel between ordinary flow content.</p>
+        <lr-details summary="Natural content size" open>
+          A short disclosure keeps its natural height inside this auto grid row.
+        </lr-details>
+        <p>Following content stays immediately below the panel.</p>
+      </div>
+      <div style="block-size:16rem">
+        <lr-details style="block-size:100%" summary="Fill a bounded parent" open>
+          ${Array.from({ length: 12 }, (_, index) => html`<p>Scrollable detail ${index + 1}</p>`)}
+        </lr-details>
+      </div>
+    </div>
+  `,
+};
+
 export const GroupedWithCustomIcons: StoryObj = {
   name: 'Named group, appearance, and custom icons',
   parameters: {

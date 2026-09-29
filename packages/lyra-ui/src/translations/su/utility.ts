@@ -29,6 +29,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'Ngan {count} node JSON jeung {depth} tingkat nesting munggaran nu dipintonkeun jeung dipilarian.',
   pollPause: 'Reureuh',
   pollResume: 'Teruskeun deui',
+  pollRefresh: 'Muat deui ayeuna',
   pollInactive: 'Teu aktip',
   pollRefreshing: 'Ngamuat deui…',
   pollPaused: 'Direureuhkeun',

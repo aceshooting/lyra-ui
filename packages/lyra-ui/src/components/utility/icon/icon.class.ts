@@ -20,6 +20,7 @@ const PATHS: Record<string, string> = {
   add: 'M12 5v14M5 12h14',
   check: 'm5 12 4 4L19 6',
   close: 'm6 6 12 12M18 6 6 18',
+  refresh: 'M20 11a8 8 0 0 0-14.9-4M4 5v4h4m-4 4a8 8 0 0 0 14.9 4M20 19v-4h-4',
   search: 'm21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z',
   menu: 'M4 6h16M4 12h16M4 18h16',
   'chevron-left': 'm15 18-6-6 6-6',
@@ -81,8 +82,8 @@ export interface LyraIconEventMap {
  * canonical node before its trusted library mutator runs, so cached state is never mutated.
  * The mirrored upstreams' icon-name vocabularies are not bundled. The default library contains
  * only `add`, `check`, `close`, `search`, `menu`, `chevron-left`, `chevron-right`, `chevron-down`,
- * `calendar`, `command`, and `trash`; any other name renders no glyph unless a matching library is
- * registered, including through `registerIconLibrary('default', { resolver })`.
+ * `calendar`, `command`, `trash`, and `refresh`; any other name renders no glyph unless a matching
+ * library is registered, including through `registerIconLibrary('default', { resolver })`.
  * @customElement lr-icon
  * @slot - Optional custom SVG/path content when no `name`, `path`, `library`, or `src` resolves.
  * @event lr-load - A remote icon finished loading and is in the DOM. `detail: { src }`.

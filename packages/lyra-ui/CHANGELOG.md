@@ -18,9 +18,20 @@
 
   The Swiss German catalog now reuses German messages where their resolved content is identical and retains Swiss-specific wording overrides. Locale loading and resolution behavior are unchanged.
 
+  Unsized details panels now follow their content without expanding to include siblings in auto-sized grid rows. Long content still scrolls within a definite containing block. Short content no longer automatically fills an ordinary bounded block parent; set `block-size: 100%` on the component when that fill is wanted, or give it a grid or flex allocation.
+
+### Minor Changes
+
+- Poll status adds an optional `with-refresh` action and a built-in `refresh` icon. Manual refresh emits `lr-poll-due` with `{ manual: true }` and restarts the configured delay; paused polling stays paused. Automatic polling keeps its existing event payload.
+
 ### Patch Changes
 
 - Virtual lists remeasure rendered rows after their key callback or indexed source changes, and group markers after their labels change, even when their DOM boxes keep the same size. This prevents estimated heights from replacing measured heights and overlapping rows or group headers.
 - Navigation-menu indicators stay aligned with the open trigger when a sibling item resizes, in both left-to-right and right-to-left layouts.
+- Popup positioning resolves containing blocks across shadow roots and ignores ineffective transform and containment declarations on inline ancestors. Dropdowns and checkbox filter menus inside dialogs stay anchored to their triggers without introducing horizontal dialog scrolling, including right-to-left layouts.
+- Model and voice picker listboxes honor the inherited `--lr-positioning-strategy` override, while retaining fixed positioning when no recognized override is set.
+- Migration diagnostics recognize browser-supported HTML comment endings, keeping following markup and migration review acknowledgements visible to the scanner.
+- Map legends reserve a stable scrollbar gutter to prevent transparent compositor artifacts over the canvas. Icon legend entries omit the color-swatch border in normal and forced-colors modes while retaining their glyph cue.
+- Details headers hide empty action wrappers from layout, allowing the summary to span the full header. Populated actions keep their responsive layout.
 
 Older major versions: [release history archive](https://github.com/aceshooting/lyra-ui/tree/main/docs/changelog).

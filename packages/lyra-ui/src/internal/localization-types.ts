@@ -304,6 +304,7 @@ export type LyraMessageKey =
   | 'subagentPanelLimit'
   | 'pollPause'
   | 'pollResume'
+  | 'pollRefresh'
   | 'pollInactive'
   | 'pollRefreshing'
   | 'pollPaused'

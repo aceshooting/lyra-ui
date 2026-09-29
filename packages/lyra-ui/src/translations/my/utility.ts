@@ -29,6 +29,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'ပထမဆုံး JSON နိုဒ် {count} ခုနှင့် အဆင့်ဆင့်အတွင်းဝင်မှု {depth} အဆင့်အထိကိုသာ ပြသပြီး ရှာဖွေသည်။',
   pollPause: 'ခေတ္တရပ်ရန်',
   pollResume: 'ပြန်စရန်',
+  pollRefresh: 'ယခု ပြန်လည်ဆန်းသစ်ပါ',
   pollInactive: 'မလှုပ်ရှားပါ',
   pollRefreshing: 'ပြန်လည်စတင်နေသည်…',
   pollPaused: 'ခေတ္တရပ်ထားသည်',

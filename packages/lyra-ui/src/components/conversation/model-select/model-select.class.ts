@@ -149,6 +149,8 @@ export interface LyraModelSelectEventMap {
  * @csspart expand-icon - The dropdown indicator.
  * @csspart hint - The hint message.
  * @csspart error - The error message.
+ * @cssprop --lr-positioning-strategy - Cascading `absolute`/`fixed` override for the listbox;
+ *   the default is `fixed` when no recognized ancestor value is set.
  * @cssprop [--lr-model-select-max-inline-size=var(--lr-size-24rem)] - The host's own width
  * ceiling. Set a length to retune it, or `none` to let the control fill its container the way
  * `<lr-select>` does.

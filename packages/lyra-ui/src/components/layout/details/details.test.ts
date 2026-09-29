@@ -363,13 +363,18 @@ it("does not toggle when the header-actions wrapper itself is activated", async 
   expect(el.open).to.be.false;
 });
 
-it("hides the header-actions wrapper and reclaims its layout space when the slot is empty", async () => {
-  const el = (await fixture(
-    html`<lr-details summary="Projects">Content</lr-details>`
-  )) as LyraDetails;
-  const actions = el.shadowRoot!.querySelector('[part~="header-actions"]') as HTMLElement;
-  expect(actions.hidden, "an unused header-actions wrapper must not claim visible layout space").to.be.true;
-});
+for (const direction of ['ltr', 'rtl']) {
+  it(`reclaims the entire header width when actions are absent in ${direction}`, async () => {
+    const el = await fixture<LyraDetails>(html`
+      <lr-details dir=${direction} style="inline-size: 400px" summary="Projects">Content</lr-details>
+    `);
+    const actions = el.shadowRoot!.querySelector<HTMLElement>('[part~="header-actions"]')!;
+    const header = el.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!;
+    expect(actions.hidden).to.equal(true);
+    expect(getComputedStyle(actions).display, 'empty actions do not participate in flex layout').to.equal('none');
+    expect(summaryOf(el).getBoundingClientRect().width).to.be.closeTo(header.getBoundingClientRect().width, 1);
+  });
+}
 
 it('keeps dynamic header actions outside the summary name and toggles their wrapper with slot assignment', async () => {
   const el = (await fixture(
@@ -379,6 +384,7 @@ it('keeps dynamic header actions outside the summary name and toggles their wrap
   const actions = el.shadowRoot!.querySelector<HTMLElement>('[part~="header-actions"]')!;
 
   expect(actions.hidden).to.equal(true);
+  expect(getComputedStyle(actions).display).to.equal('none');
   expect(summary.textContent?.includes('New project')).to.equal(false);
 
   const action = document.createElement('button');
@@ -391,11 +397,13 @@ it('keeps dynamic header actions outside the summary name and toggles their wrap
   await afterMicrotask();
 
   expect(actions.hidden).to.equal(false);
+  expect(getComputedStyle(actions).display).to.equal('flex');
   expect(summary.textContent?.includes('New project')).to.equal(false);
   action.remove();
   await el.updateComplete;
   await afterMicrotask();
   expect(actions.hidden).to.equal(true);
+  expect(getComputedStyle(actions).display).to.equal('none');
 });
 
 it('keeps header actions keyboard-operable and outside the disabled disclosure lifecycle', async () => {
@@ -1784,10 +1792,114 @@ describe("Web Awesome disclosure surface", () => {
 });
 
 describe("fill chain (block-size)", () => {
-  it("fills a bounded, open host through the base and content-gate chain", async () => {
+  for (const nested of [false, true]) {
+    for (const direction of ['ltr', 'rtl']) {
+      it(`keeps ${nested ? 'nested' : 'ordinary'} disclosures intrinsically sized in an auto grid row in ${direction}`, async () => {
+        const content = () => nested
+          ? html`<lr-details summary="Inner" open><div style="block-size: 100px"></div></lr-details>`
+          : html`<div style="block-size: 100px"></div>`;
+        const wrapper = await fixture<HTMLElement>(html`
+          <div dir=${direction} style="inline-size: 400px">
+            <div class="grid" style="display: grid">
+              <div class="row">
+                <div style="block-size: 40px"></div>
+                <lr-details class="subject" summary="More" open>${content()}</lr-details>
+                <div class="after" style="block-size: 40px"></div>
+              </div>
+            </div>
+            <lr-details class="reference" summary="More" open>${content()}</lr-details>
+          </div>
+        `);
+        const subject = wrapper.querySelector<LyraDetails>('.subject')!;
+        const reference = wrapper.querySelector<LyraDetails>('.reference')!;
+        await Promise.all([...wrapper.querySelectorAll<LyraDetails>('lr-details')].map(el => el.updateComplete));
+        const panel = subject.shadowRoot!.querySelector<HTMLElement>('[part="content"]')!;
+        const referencePanel = reference.shadowRoot!.querySelector<HTMLElement>('[part="content"]')!;
+        expect(subject.getBoundingClientRect().height, 'auto grid row does not stretch its block descendant').to.be.closeTo(reference.getBoundingClientRect().height, 1);
+        expect(panel.getBoundingClientRect().height, 'content retains its intrinsic size').to.be.closeTo(referencePanel.getBoundingClientRect().height, 1);
+        expect(panel.scrollHeight, 'intrinsic content needs no internal scrollbar').to.be.at.most(panel.clientHeight + 1);
+        expect(wrapper.querySelector('.after')!.getBoundingClientRect().bottom, 'following sibling stays within the row').to.be.closeTo(wrapper.querySelector('.row')!.getBoundingClientRect().bottom, 1);
+      });
+    }
+  }
+
+  it('fills a percentage-bounded ancestor without applying its percentage twice', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="block-size: 480px; inline-size: 320px">
+        <div class="allocation" style="block-size: 50%">
+          <lr-details summary="More" open><div style="block-size: 400px"></div></lr-details>
+        </div>
+      </div>
+    `);
+    const el = wrapper.querySelector<LyraDetails>('lr-details')!;
+    await el.updateComplete;
+    const allocation = wrapper.querySelector<HTMLElement>('.allocation')!;
+    const content = el.shadowRoot!.querySelector<HTMLElement>('[part="content"]')!;
+    expect(el.getBoundingClientRect().height).to.be.closeTo(allocation.getBoundingClientRect().height, 1);
+    expect(content.scrollHeight).to.be.greaterThan(content.clientHeight);
+    expect(content.getBoundingClientRect().bottom).to.be.at.most(allocation.getBoundingClientRect().bottom + 1);
+  });
+
+  for (const layout of ['grid', 'flex']) {
+    it(`fills a bounded ${layout} allocation alongside a sibling`, async () => {
+      const allocationStyle = layout === 'grid'
+        ? 'display:grid;grid-template-rows:minmax(0,1fr) 40px'
+        : 'display:flex;flex-direction:column';
+      const wrapper = await fixture<HTMLElement>(html`
+        <div style=${`block-size: 240px; inline-size: 320px;${allocationStyle}`}>
+          <div class="allocation" style="min-block-size: 0; flex: 1 1 0">
+            <lr-details summary="More" open><div style="block-size: 400px"></div></lr-details>
+          </div>
+          <div style="block-size: 40px;flex:0 0 40px"></div>
+        </div>
+      `);
+      const el = wrapper.querySelector<LyraDetails>('lr-details')!;
+      await el.updateComplete;
+      const allocation = wrapper.querySelector<HTMLElement>('.allocation')!;
+      const content = el.shadowRoot!.querySelector<HTMLElement>('[part="content"]')!;
+      expect(el.getBoundingClientRect().height).to.be.closeTo(200, 1);
+      expect(content.scrollHeight).to.be.greaterThan(content.clientHeight);
+      expect(content.getBoundingClientRect().bottom).to.be.at.most(allocation.getBoundingClientRect().bottom + 1);
+    });
+  }
+
+  it('keeps short content natural inside an ordinary bounded block ancestor', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="inline-size: 320px">
+        <div style="block-size: 240px"><lr-details class="subject" summary="More" open>Panel content</lr-details></div>
+        <lr-details class="reference" summary="More" open>Panel content</lr-details>
+      </div>
+    `);
+    const subject = wrapper.querySelector<LyraDetails>('.subject')!;
+    const reference = wrapper.querySelector<LyraDetails>('.reference')!;
+    await Promise.all([subject.updateComplete, reference.updateComplete]);
+    expect(subject.getBoundingClientRect().height).to.be.closeTo(reference.getBoundingClientRect().height, 1);
+  });
+
+  for (const allocation of ['pixels', 'grid', 'flex']) {
+    it(`fills an explicit ${allocation} host allocation even with short content`, async () => {
+      const wrapperStyle = allocation === 'grid'
+        ? 'display:grid;grid-template-rows:minmax(0,1fr) 40px;block-size:240px'
+        : allocation === 'flex' ? 'display:flex;flex-direction:column;block-size:240px' : '';
+      const hostStyle = allocation === 'pixels' ? 'block-size:200px' : 'flex:1 1 0';
+      const wrapper = await fixture<HTMLElement>(html`
+        <div style=${`inline-size:320px;${wrapperStyle}`}>
+          <lr-details style=${hostStyle} summary="More" open>Panel content</lr-details>
+          <div style="block-size:40px;flex:0 0 40px"></div>
+        </div>
+      `);
+      const el = wrapper.querySelector<LyraDetails>('lr-details')!;
+      await el.updateComplete;
+      const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+      expect(el.getBoundingClientRect().height).to.be.closeTo(200, 1);
+      expect(base.getBoundingClientRect().height).to.be.closeTo(200, 1);
+    });
+  }
+
+  it("fills an explicitly percentage-sized host through the base and content-gate chain", async () => {
     const wrapper = await fixture<HTMLDivElement>(html`
       <div style="block-size: 240px; inline-size: 320px">
-        <lr-details summary="More" open>Panel content</lr-details>
+        <lr-details style="block-size: 100%" summary="More" open>Panel content</lr-details>
       </div>
     `);
     const el = wrapper.querySelector("lr-details") as LyraDetails;

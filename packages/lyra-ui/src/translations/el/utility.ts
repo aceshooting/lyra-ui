@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'Εμφανίζονται και αναζητούνται μόνο οι πρώτοι {count} κόμβοι JSON και τα {depth} επίπεδα ένθεσης.',
   pollPause: 'Παύση',
   pollResume: 'Συνέχιση',
+  pollRefresh: 'Ανανέωσε τώρα',
   pollInactive: 'Ανενεργό',
   pollRefreshing: 'Ανανέωση…',
   pollPaused: 'Σε παύση',

@@ -29,6 +29,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'แสดงและค้นหาเฉพาะโหนด JSON {count} รายการแรก และระดับการซ้อนกันไม่เกิน {depth} ระดับ',
   pollPause: 'หยุดชั่วคราว',
   pollResume: 'ทำต่อ',
+  pollRefresh: 'รีเฟรชตอนนี้',
   pollInactive: 'ไม่ทำงาน',
   pollRefreshing: 'กำลังรีเฟรช…',
   pollPaused: 'หยุดชั่วคราวแล้ว',

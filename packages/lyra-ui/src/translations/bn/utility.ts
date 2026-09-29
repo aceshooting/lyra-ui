@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'শুধু প্রথম {count}টি JSON নোড ও {depth}টি নেস্টিং স্তর দেখানো ও খোঁজা হচ্ছে।',
   pollPause: 'বিরতি দিন',
   pollResume: 'আবার শুরু করুন',
+  pollRefresh: 'এখন রিফ্রেশ করুন',
   pollInactive: 'নিষ্ক্রিয়',
   pollRefreshing: 'রিফ্রেশ হচ্ছে…',
   pollPaused: 'বিরতি দেওয়া হয়েছে',

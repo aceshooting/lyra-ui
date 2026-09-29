@@ -16,9 +16,8 @@ import {
 import {
   establishesFixedContainingBlock,
   findFixedContainingBlockAncestor,
-  fixedContainingBlockParentNode,
-  isLastTraversableFixedContainingBlockNode,
   isNativeTopLayerElement,
+  usesWebKitContainingBlockRules,
 } from './fixed-containing-block.js';
 import {
   applyReferenceHidden,
@@ -161,7 +160,6 @@ interface PlacementStyleTransactionRecord {
   state: PlacementStyleTransactionState;
 }
 interface PlacementStyleWriteOwner {
-  generation: number;
   transaction: PlacementStyleTransactionRecord;
   write: PlacementStyleWrite;
 }
@@ -202,7 +200,6 @@ interface PlacementSyncOwnershipController {
   release(popup: HTMLElement, run: PlacementRunState): void;
 }
 const placementStyleOwners = new WeakMap<HTMLElement, Map<string, PlacementStyleWriteOwner>>();
-let placementStyleGeneration = 0;
 
 /**
  * Clips `bridge` to the quad spanning the anchor and the popup, so the `offset` gap between them
@@ -216,39 +213,28 @@ function hoverBridgeQuad(
 ): HoverBridgeQuad {
   const side = placement.split('-')[0];
   const onBlockAxis = side === 'top' || side === 'bottom';
-  let quad: HoverBridgeQuad;
-  if (onBlockAxis) {
-    quad =
-      anchorRect.top < popupRect.top
-        ? [
-            [anchorRect.left, anchorRect.bottom],
-            [anchorRect.right, anchorRect.bottom],
-            [popupRect.right, popupRect.top],
-            [popupRect.left, popupRect.top],
-          ]
-        : [
-            [popupRect.left, popupRect.bottom],
-            [popupRect.right, popupRect.bottom],
-            [anchorRect.right, anchorRect.top],
-            [anchorRect.left, anchorRect.top],
-          ];
-  } else {
-    quad =
-      anchorRect.left < popupRect.left
-        ? [
-            [anchorRect.right, anchorRect.top],
-            [popupRect.left, popupRect.top],
-            [popupRect.left, popupRect.bottom],
-            [anchorRect.right, anchorRect.bottom],
-          ]
-        : [
-            [popupRect.right, popupRect.top],
-            [anchorRect.left, anchorRect.top],
-            [anchorRect.left, anchorRect.bottom],
-            [popupRect.right, popupRect.bottom],
-          ];
+  const [first, second] = (onBlockAxis
+    ? anchorRect.top < popupRect.top
+    : anchorRect.left < popupRect.left)
+    ? [anchorRect, popupRect] : [popupRect, anchorRect];
+  return onBlockAxis
+    ? [
+        [first.left, first.bottom], [first.right, first.bottom],
+        [second.right, second.top], [second.left, second.top],
+      ]
+    : [
+        [first.right, first.top], [second.left, second.top],
+        [second.left, second.bottom], [first.right, first.bottom],
+      ];
+}
+
+function styleMapFor<T>(store: WeakMap<HTMLElement, Map<string, T>>, element: HTMLElement): Map<string, T> {
+  let values = store.get(element);
+  if (!values) {
+    values = new Map();
+    store.set(element, values);
   }
-  return quad;
+  return values;
 }
 
 function readInlineStyle(element: HTMLElement, property: string): InlineStyleValue {
@@ -305,14 +291,11 @@ export function createPlacementSyncOwnershipController(): PlacementSyncOwnership
     release(popup, run) {
       const dimensions = syncedDimensions.get(popup);
       if (dimensions && dimensions.placementGeneration > run.generation) return;
-      if (dimensions?.width && sameInlineStyle(readInlineStyle(popup, 'width'), dimensions.width)) {
-        writeInlineStyle(popup, 'width', { value: '', priority: '' });
-      }
-      if (
-        dimensions?.height &&
-        sameInlineStyle(readInlineStyle(popup, 'height'), dimensions.height)
-      ) {
-        writeInlineStyle(popup, 'height', { value: '', priority: '' });
+      for (const dimension of ['width', 'height'] as const) {
+        const owned = dimensions?.[dimension];
+        if (owned && sameInlineStyle(readInlineStyle(popup, dimension), owned)) {
+          writeInlineStyle(popup, dimension, { value: '', priority: '' });
+        }
       }
       // An unsynced placement is itself a successful ownership decision. Its tombstone prevents
       // any later update from an older still-live placement from reintroducing a stale marker.
@@ -335,12 +318,8 @@ export function createPlacementStyleTransaction(): PlacementStyleTransaction {
   return {
     set(element, property, value, priority = '') {
       if (transaction.state !== 'open') return;
-      let owners = placementStyleOwners.get(element);
-      if (!owners) {
-        owners = new Map();
-        placementStyleOwners.set(element, owners);
-      }
-      // Record every write as a distinct ownership generation. Another placement transaction or
+      const owners = styleMapFor(placementStyleOwners, element);
+      // Record every write with a distinct owner identity. Another placement transaction or
       // consumer can intervene between two writes from this transaction; reusing the first
       // predecessor would then roll back across that newer value. The reverse journal walk
       // naturally collapses uninterrupted writes from one transaction back to their baseline.
@@ -363,23 +342,17 @@ export function createPlacementStyleTransaction(): PlacementStyleTransaction {
       writeInlineStyle(element, property, { value, priority });
       write.written = readInlineStyle(element, property);
       write.owner = {
-        generation: ++placementStyleGeneration,
         transaction,
         write,
       };
       owners.set(property, write.owner);
-      let elementWrites = lastWrites.get(element);
-      if (!elementWrites) {
-        elementWrites = new Map();
-        lastWrites.set(element, elementWrites);
-      }
-      elementWrites.set(property, write);
+      styleMapFor(lastWrites, element).set(property, write);
     },
     ownedValue(element, property) {
       if (transaction.state !== 'open') return undefined;
       const write = lastWrites.get(element)?.get(property);
       const owner = placementStyleOwners.get(element)?.get(property);
-      if (!write?.owner || owner?.generation !== write.owner.generation) return undefined;
+      if (!write?.owner || owner !== write.owner) return undefined;
       const current = readInlineStyle(element, property);
       return sameInlineStyle(current, write.written) ? current : undefined;
     },
@@ -390,7 +363,7 @@ export function createPlacementStyleTransaction(): PlacementStyleTransaction {
         const owners = placementStyleOwners.get(write.element);
         if (
           write.owner &&
-          owners?.get(write.property)?.generation === write.owner.generation
+          owners?.get(write.property) === write.owner
         ) {
           owners.delete(write.property);
         }
@@ -404,7 +377,7 @@ export function createPlacementStyleTransaction(): PlacementStyleTransaction {
         const owners = placementStyleOwners.get(write.element);
         if (
           !write.owner ||
-          owners?.get(write.property)?.generation !== write.owner.generation
+          owners?.get(write.property) !== write.owner
         ) {
           continue;
         }
@@ -444,24 +417,14 @@ function writeHoverBridge(
 /**
  * Overrides only `@floating-ui/dom`'s default `platform.getOffsetParent` -- merged over every
  * other default platform method wherever it is passed as `{ ...platform, getOffsetParent:
- * correctedGetOffsetParent }` -- to correct the WebKit blind spot described in
- * `fixed-containing-block.ts`. Only intervenes when the
- * default implementation already fell all the way back to the window AND the element being
- * positioned is itself `position: fixed` (exactly the path a hoisted `place()` popup takes):
- * every other case (a real offset parent, an `absolute`-strategy popup, an SVG or top-layer
- * element) keeps upstream's answer completely unchanged.
+ * correctedGetOffsetParent }` -- to correct fixed containing-block detection and absolute
+ * containing blocks hidden from native `offsetParent` by shadow boundaries or ancestor zoom.
  */
 async function correctedGetOffsetParent(
   element: Element,
   polyfill?: (element: HTMLElement) => Element | null,
 ): Promise<Element | Window> {
-  return correctOffsetParent(element, await platform.getOffsetParent(element, polyfill));
-}
-
-function correctOffsetParent(
-  element: Element,
-  defaultOffsetParent: Element | Window,
-): Element | Window {
+  const defaultOffsetParent = await platform.getOffsetParent(element, polyfill);
   if (!(element instanceof HTMLElement)) return defaultOffsetParent;
   const view = element.ownerDocument.defaultView;
   if (!view) return defaultOffsetParent;
@@ -469,9 +432,44 @@ function correctOffsetParent(
   // chain remains unchanged. In particular, a manual popover nested in a transformed virtual row
   // must not inherit that row as the fixed-position containing block.
   if (isNativeTopLayerElement(element)) return view;
-  if (defaultOffsetParent !== view) return defaultOffsetParent;
-  if (view.getComputedStyle(element).position !== 'fixed') return defaultOffsetParent;
-  return findFixedContainingBlockAncestor(element) ?? defaultOffsetParent;
+  const position = view.getComputedStyle(element).position;
+  // Native offsetParent can skip a positioned ancestor in another shadow root. Its viewport
+  // fallback then double-adds that ancestor's offset when the browser applies absolute insets.
+  // Walk the rendered ancestry (including assigned slots) to use the actual containing block.
+  if (position === 'absolute') {
+    return findFixedContainingBlockAncestor(element, true) ??
+      (Math.abs(ancestorZoom(element) - 1) > 1e-6 ? view : defaultOffsetParent);
+  }
+  if (position !== 'fixed') return defaultOffsetParent;
+  // Floating UI's fallback can also mistake an ineffective inline transform for a containing
+  // block, so validate its element answer before retaining it.
+  if (defaultOffsetParent instanceof Element && establishesFixedContainingBlock(defaultOffsetParent)) {
+    return defaultOffsetParent;
+  }
+  return findFixedContainingBlockAncestor(element) ?? view;
+}
+
+/** Measures the browser's fixed containing-block origin without touching the popup's own
+ *  transform. Insertion in the containing block avoids changing the popup's slot assignment. */
+function fixedInlineOriginCorrection(
+  containingBlock: HTMLElement,
+  expectedOrigin: { left: number; top: number },
+  scale: { x: number; y: number },
+): { x: number; y: number } {
+  const probe = containingBlock.ownerDocument.createElement('span');
+  probe.setAttribute('aria-hidden', 'true');
+  probe.style.cssText = 'all:initial!important;position:fixed!important;left:0!important;top:0!important;width:0!important;height:0!important;visibility:hidden!important';
+  try {
+    (containingBlock.shadowRoot ?? containingBlock).appendChild(probe);
+    if (probe.getClientRects().length === 0) return { x: 0, y: 0 };
+    const actualOrigin = validatedClientRect(probe.getBoundingClientRect(), 'place() fixed origin');
+    return {
+      x: (expectedOrigin.left - actualOrigin.left) / scale.x,
+      y: (expectedOrigin.top - actualOrigin.top) / scale.y,
+    };
+  } finally {
+    probe.remove();
+  }
 }
 
 async function popupRectAtPosition(
@@ -480,8 +478,8 @@ async function popupRectAtPosition(
   strategy: PlaceStrategy,
   x: number,
   y: number,
-  currentRect: DOMRect,
 ): Promise<HoverBridgeRect> {
+  const currentRect = validatedClientRect(popup.getBoundingClientRect(), 'place() popup rect');
   const offsetParent = await correctedGetOffsetParent(popup);
   const rect = await platform.convertOffsetParentRelativeRectToViewportRelativeRect({
     elements: { reference: anchor, floating: popup },
@@ -489,16 +487,12 @@ async function popupRectAtPosition(
     offsetParent: offsetParent as Element,
     strategy,
   });
-  const convertedX = finiteGeometry(rect.x, 'place() converted popup rect.x');
-  const convertedY = finiteGeometry(rect.y, 'place() converted popup rect.y');
-  const width = finiteGeometry(rect.width, 'place() converted popup rect.width', true);
-  const height = finiteGeometry(rect.height, 'place() converted popup rect.height', true);
-  return {
-    top: convertedY,
-    right: finiteGeometry(convertedX + width, 'place() converted popup rect.right'),
-    bottom: finiteGeometry(convertedY + height, 'place() converted popup rect.bottom'),
-    left: convertedX,
-  };
+  const { x: left, y: top, width, height } = rect;
+  // Preserve raw numeric values rather than constructing a DOMRect, whose coercions could turn
+  // invalid platform values into accepted numbers. The shared guard also checks edge overflow.
+  return validatedClientRect({
+    x: left, y: top, width, height, left, top, right: left + width, bottom: top + height,
+  } as DOMRect, 'place() converted popup rect');
 }
 
 function validatePlaceNumericOptions(opts: PlaceOptions): void {
@@ -553,8 +547,6 @@ interface PlacementEscapeHooks {
   beforeCompute(): void;
   /** Extra middleware appended after the public chain. */
   middleware: Middleware[];
-  /** Resolves the popup's offset parent in place of the corrected platform method. */
-  resolveOffsetParent?: typeof correctedGetOffsetParent;
   /** After every computation, with the offset parent the (corrected) platform resolved for the
    *  popup and that pass's middleware data. Returning true rolls this pass back and runs the
    *  update once more. */
@@ -691,14 +683,8 @@ function placeImpl(
           // live element until every later geometry read has succeeded. Synced dimensions cannot
           // be staged because flip and shift must measure the resized box; those writes stay in
           // the rollback journal above.
-          stagedStyles.availableInline = `${Math.max(
-            0,
-            finiteGeometry(availableWidth, 'place() available width'),
-          )}px`;
-          stagedStyles.availableBlock = `${Math.max(
-            0,
-            finiteGeometry(availableHeight, 'place() available height'),
-          )}px`;
+          stagedStyles.availableInline = `${Math.max(0, finiteGeometry(availableWidth, 'place() available width'))}px`;
+          stagedStyles.availableBlock = `${Math.max(0, finiteGeometry(availableHeight, 'place() available height'))}px`;
         },
       }),
       // Runs last so it overwrites the shared measurement above, and only on the axes it names.
@@ -709,16 +695,10 @@ function placeImpl(
             apply({ availableWidth, availableHeight }) {
               if (disposed) return;
               if (autoSize === 'horizontal' || autoSize === 'both') {
-                stagedStyles.availableInline = `${Math.max(
-                  0,
-                  finiteGeometry(availableWidth, 'place() auto-size available width'),
-                )}px`;
+                stagedStyles.availableInline = `${Math.max(0, finiteGeometry(availableWidth, 'place() auto-size available width'))}px`;
               }
               if (autoSize === 'vertical' || autoSize === 'both') {
-                stagedStyles.availableBlock = `${Math.max(
-                  0,
-                  finiteGeometry(availableHeight, 'place() auto-size available height'),
-                )}px`;
+                stagedStyles.availableBlock = `${Math.max(0, finiteGeometry(availableHeight, 'place() auto-size available height'))}px`;
               }
             },
           })
@@ -743,12 +723,13 @@ function placeImpl(
     const styleTransaction = createPlacementStyleTransaction();
     const stagedStyles: StagedPlacementStyles = {};
     openStyleTransactions.add(styleTransaction);
+    const rollback = () => {
+      styleTransaction.rollback();
+      openStyleTransactions.delete(styleTransaction);
+    };
     let resolvedOffsetParent: Element | Window | undefined;
     const recordingGetOffsetParent: typeof correctedGetOffsetParent = async (element, polyfill) => {
-      const result =
-        element === popup && hooks?.resolveOffsetParent
-          ? await hooks.resolveOffsetParent(element, polyfill)
-          : await correctedGetOffsetParent(element, polyfill);
+      const result = await correctedGetOffsetParent(element, polyfill);
       if (element === popup) resolvedOffsetParent = result;
       return result;
     };
@@ -756,17 +737,15 @@ function placeImpl(
       strategy,
       placement: opts.placement ?? 'bottom-start',
       middleware: middlewareFor(styleTransaction, stagedStyles),
-      // Corrects a WebKit-only blind spot in Floating UI's own containing-block detection for
-      // `backdrop-filter`/`filter` ancestors -- see `correctedGetOffsetParent`'s block comment.
+      // Use the same containing block for computation and the browser's eventual inset writes.
       platform: {
         ...platform,
-        getOffsetParent: hooks ? recordingGetOffsetParent : correctedGetOffsetParent,
+        getOffsetParent: recordingGetOffsetParent,
       },
     }).then(
       async ({ x, y, placement, middlewareData }) => {
         if (disposed) {
-          styleTransaction.rollback();
-          openStyleTransactions.delete(styleTransaction);
+          rollback();
           return;
         }
         let bridgeQuad: HoverBridgeQuad | undefined;
@@ -789,21 +768,36 @@ function placeImpl(
             }
             if (rerun) {
               escapeReruns++;
-              styleTransaction.rollback();
-              openStyleTransactions.delete(styleTransaction);
+              rollback();
               update();
               return;
             }
           }
           escapeReruns = 0;
+          // WebKit gives a fixed descendant of a filtered inline box the line-box origin, which
+          // can differ from that inline's border rect. Measure only that parent's origin so an
+          // author transform on the popup remains independent of the placement coordinates.
+          const calibrateInlineOrigin = strategy === 'fixed' &&
+            resolvedOffsetParent instanceof HTMLElement &&
+            !(resolvedOffsetParent instanceof HTMLSlotElement) &&
+            usesWebKitContainingBlockRules() &&
+            getComputedStyle(resolvedOffsetParent).display === 'inline' &&
+            // A popup's own zoom also scales its insets; it is outside this parent-origin fix.
+            ['', 'normal', '1'].includes(getComputedStyle(popup).zoom || '');
+          let inlineOriginCorrection: { x: number; y: number } | undefined;
+          if (calibrateInlineOrigin) {
+            const expectedOrigin = await popupRectAtPosition(anchor, popup, strategy, 0, 0);
+            const scale = await platform.getScale!(resolvedOffsetParent as HTMLElement);
+            if (disposed) {
+              rollback();
+              return;
+            }
+            inlineOriginCorrection = fixedInlineOriginCorrection(resolvedOffsetParent as HTMLElement, expectedOrigin, scale);
+          }
           if (hoverBridge) {
             const anchorRect = validatedClientRect(
               anchor.getBoundingClientRect(),
               'place() anchor rect',
-            );
-            const currentPopupRect = validatedClientRect(
-              popup.getBoundingClientRect(),
-              'place() popup rect',
             );
             const placedPopupRect = await popupRectAtPosition(
               anchor,
@@ -811,11 +805,9 @@ function placeImpl(
               strategy,
               x,
               y,
-              currentPopupRect,
             );
             if (disposed) {
-              styleTransaction.rollback();
-              openStyleTransactions.delete(styleTransaction);
+              rollback();
               return;
             }
             bridgeQuad = hoverBridgeQuad(anchorRect, placedPopupRect, placement);
@@ -834,8 +826,8 @@ function placeImpl(
               stagedStyles.availableBlock,
             );
           }
-          styleTransaction.set(popup, 'left', `${x}px`);
-          styleTransaction.set(popup, 'top', `${y}px`);
+          styleTransaction.set(popup, 'left', `${finiteGeometry(x + (inlineOriginCorrection?.x ?? 0), 'place() resolved x')}px`);
+          styleTransaction.set(popup, 'top', `${finiteGeometry(y + (inlineOriginCorrection?.y ?? 0), 'place() resolved y')}px`);
           if (hoverBridge && bridgeQuad) writeHoverBridge(hoverBridge, bridgeQuad, styleTransaction);
           const ownedSyncDimensions = sync
             ? {
@@ -883,21 +875,6 @@ function placeImpl(
 
 function isWindowLike(value: Element | Window): value is Window {
   return !(value instanceof Element);
-}
-
-/** The containing block of an absolutely positioned element: its nearest flat-tree ancestor that
- *  is positioned or establishes a containing block, or `null` for the initial containing block. */
-function absoluteContainingBlock(element: HTMLElement): Element | null {
-  let node: Node = fixedContainingBlockParentNode(element);
-  while (node instanceof Element && !isLastTraversableFixedContainingBlockNode(node)) {
-    const view = node.ownerDocument.defaultView;
-    if (view && view.getComputedStyle(node).position !== 'static') return node;
-    if (establishesFixedContainingBlock(node)) return node;
-    const parent = fixedContainingBlockParentNode(node);
-    if (parent === node) break;
-    node = parent;
-  }
-  return null;
 }
 
 /** {@link placeAnchoredSurface} options: the public `PlaceOptions` plus the library-internal
@@ -954,17 +931,6 @@ export function placeAnchoredSurface(
   if (bridge) escape(bridge, true);
   escape(popup, fixed);
   return placeImpl(anchor, popup, opts, {
-    // Chromium reports the nearest ancestor with a different effective zoom as `offsetParent`,
-    // which under an ancestor CSS `zoom` is not the element an absolute popup is laid out against.
-    // Resolve the real containing block there instead.
-    resolveOffsetParent(element, polyfill) {
-      if (!fixed && element instanceof HTMLElement && Math.abs(ancestorZoom(element) - 1) > 1e-6) {
-        return Promise.resolve(
-          absoluteContainingBlock(element) ?? element.ownerDocument.defaultView ?? window,
-        );
-      }
-      return correctedGetOffsetParent(element, polyfill);
-    },
     beforeCompute() {
       if (bridge) escape(bridge, true);
       if (fixed) compensateAncestorZoom(popup, null);

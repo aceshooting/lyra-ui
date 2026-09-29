@@ -290,6 +290,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   subagentPanelLimit: 'Only the first {count} subagent runs are shown.',
   pollPause: 'Pause',
   pollResume: 'Resume',
+  pollRefresh: 'Refresh now',
   pollInactive: 'Inactive',
   pollRefreshing: 'Refreshing…',
   pollPaused: 'Paused',

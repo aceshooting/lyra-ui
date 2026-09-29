@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'Alleen de eerste {count} JSON-knooppunten en {depth} nestingniveaus worden weergegeven en doorzocht.',
   pollPause: 'Pauzeren',
   pollResume: 'Hervatten',
+  pollRefresh: 'Nu vernieuwen',
   pollInactive: 'Inactief',
   pollRefreshing: 'Vernieuwen…',
   pollPaused: 'Gepauzeerd',

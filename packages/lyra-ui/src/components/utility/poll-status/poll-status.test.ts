@@ -1,5 +1,7 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './poll-status.js';
 import '../live-region/live-region.js';
 import type { LyraPollStatus } from './poll-status.js';
@@ -11,7 +13,7 @@ function liveRegionText(el: LyraPollStatus): string {
   return region.shadowRoot!.querySelector('[part="region"]')!.textContent ?? '';
 }
 
-expectLocaleFallback('ar-EG', ['pollPause']);
+expectLocaleFallback('ar-EG', ['pollPause', 'pollRefresh']);
 
 describe('lr-poll-status', () => {
   it('ticks down the countdown display and reaches the due phase, firing lr-poll-due', async () => {
@@ -21,6 +23,187 @@ describe('lr-poll-status', () => {
     expect(performance.now() - started).to.be.lessThan(300);
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="countdown"]')!.textContent).to.include('Refreshing');
+  });
+
+  it('keeps the existing DOM and automatic null-detail event when the refresh option is unset', async () => {
+    const wrapper = await fixture(html`<div><lr-poll-status next-in-ms="100"></lr-poll-status></div>`);
+    const el = wrapper.querySelector('lr-poll-status') as LyraPollStatus;
+    expect(el.withRefresh).to.be.false;
+    expect(el.shadowRoot!.querySelector('[part="refresh-button"]')).to.equal(null);
+    expect(el.shadowRoot!.querySelectorAll('button')).to.have.length(1);
+
+    const due = await oneEvent(wrapper, 'lr-poll-due');
+    expect((due as CustomEvent<null>).detail).to.equal(null);
+    expect(due.bubbles).to.be.true;
+    expect(due.composed).to.be.true;
+  });
+
+  it('requests manual refresh with a localized keyboard action and restarts just one automatic deadline', async () => {
+    const wrapper = await fixture(html`
+      <div>
+        <lr-poll-status
+          with-refresh
+          next-in-ms="900"
+          .strings=${{ pollRefresh: 'Actualiser maintenant' }}
+        ></lr-poll-status>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-poll-status') as LyraPollStatus;
+    const button = el.shadowRoot!.querySelector('[part="refresh-button"]') as HTMLButtonElement;
+    expect(button.getAttribute('aria-label')).to.equal('Actualiser maintenant');
+    expect(button.querySelector('lr-icon')?.getAttribute('name')).to.equal('refresh');
+    expect(parseFloat(getComputedStyle(button).minInlineSize)).to.be.greaterThan(0);
+    expect(button.getBoundingClientRect().width).to.be.at.least(
+      parseFloat(getComputedStyle(button).minInlineSize),
+    );
+    await expect(el).to.be.accessible();
+
+    await focusByKeyboard(button);
+    expect(button.matches(':focus-visible')).to.be.true;
+    const events: CustomEvent<{ readonly manual: true } | null>[] = [];
+    wrapper.addEventListener('lr-poll-due', (event) =>
+      events.push(event as CustomEvent<{ readonly manual: true } | null>),
+    );
+    await sendKeys({ press: 'Enter' });
+    expect(events).to.have.length(1);
+    expect(events[0]!.detail).to.deep.equal({ manual: true });
+    expect(Object.isFrozen(events[0]!.detail)).to.be.true;
+    expect(events[0]!.bubbles).to.be.true;
+    expect(events[0]!.composed).to.be.true;
+
+    await aTimeout(200);
+    const restartedAt = performance.now();
+    button.click();
+    expect(events).to.have.length(2);
+    expect(events[1]!.detail).to.deep.equal({ manual: true });
+    await waitUntil(
+      () => events.length >= 3,
+      'the restarted automatic deadline fires',
+      { timeout: 2200 },
+    );
+    expect(events[2]!.detail).to.equal(null);
+    expect(performance.now() - restartedAt).to.be.greaterThan(800);
+    await aTimeout(100);
+    expect(events).to.have.length(3);
+  });
+
+  it('arms the restarted timer before synchronous manual-event listeners run', async () => {
+    const el = (await fixture(html`<lr-poll-status with-refresh next-in-ms="10000"></lr-poll-status>`)) as LyraPollStatus;
+    await el.updateComplete;
+    const button = el.shadowRoot!.querySelector('[part="refresh-button"]') as HTMLButtonElement;
+    const originalSetTimeout = window.setTimeout;
+    const scheduledHandles: number[] = [];
+    window.setTimeout = ((...args: Parameters<typeof window.setTimeout>) => {
+      const handle = Reflect.apply(originalSetTimeout, window, args) as number;
+      scheduledHandles.push(handle);
+      return handle;
+    }) as typeof window.setTimeout;
+    let timersVisibleToListener = -1;
+    el.addEventListener('lr-poll-due', (event) => {
+      if ((event as CustomEvent<{ manual?: boolean } | null>).detail?.manual) {
+        timersVisibleToListener = scheduledHandles.length;
+      }
+    });
+
+    try {
+      button.click();
+      expect(timersVisibleToListener).to.equal(1);
+    } finally {
+      window.setTimeout = originalSetTimeout;
+      el.remove();
+    }
+  });
+
+  it('emits the manual signal before the automatic event for a restarted zero delay', async () => {
+    const el = (await fixture(
+      html`<lr-poll-status with-refresh next-in-ms="0" paused></lr-poll-status>`,
+    )) as LyraPollStatus;
+    const button = el.shadowRoot!.querySelector('[part="refresh-button"]') as HTMLButtonElement;
+    const details: Array<{ manual: true } | null> = [];
+    el.addEventListener('lr-poll-due', (event) => {
+      details.push((event as CustomEvent<{ manual: true } | null>).detail);
+    });
+
+    el.paused = false;
+    button.click();
+    expect(details).to.deep.equal([{ manual: true }]);
+    await waitUntil(
+      () => details.length === 2,
+      'one zero-delay automatic event follows the manual event',
+    );
+    expect(details[1]).to.equal(null);
+    await aTimeout(40);
+    expect(details).to.have.length(2);
+  });
+
+  it('allows manual refresh while paused without resuming or arming an automatic tick', async () => {
+    const el = (await fixture(html`<lr-poll-status with-refresh next-in-ms="25" paused></lr-poll-status>`)) as LyraPollStatus;
+    const button = el.shadowRoot!.querySelector('[part="refresh-button"]') as HTMLButtonElement;
+    let dueCount = 0;
+    let detail: unknown;
+    el.addEventListener('lr-poll-due', (event) => {
+      dueCount++;
+      detail = (event as CustomEvent).detail;
+    });
+
+    button.click();
+    expect(detail).to.deep.equal({ manual: true });
+    expect(el.paused).to.be.true;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="countdown"]')!.textContent).to.equal('Paused');
+    await aTimeout(100);
+    expect(dueCount).to.equal(1);
+  });
+
+  it('disables manual refresh while inactive and does not emit', async () => {
+    const el = (await fixture(
+      html`<lr-poll-status with-refresh next-in-ms="25" active="false"></lr-poll-status>`,
+    )) as LyraPollStatus;
+    const button = el.shadowRoot!.querySelector('[part="refresh-button"]') as HTMLButtonElement;
+    expect(button.disabled).to.be.true;
+    expect(button.getAttribute('aria-label')).to.equal('Refresh now');
+    let dueCount = 0;
+    el.addEventListener('lr-poll-due', () => dueCount++);
+    button.click();
+    await aTimeout(100);
+    expect(dueCount).to.equal(0);
+  });
+
+  it('emits a manual refresh with no configured countdown but never arms a timer', async () => {
+    const el = (await fixture(html`<lr-poll-status with-refresh></lr-poll-status>`)) as LyraPollStatus;
+    const button = el.shadowRoot!.querySelector('[part="refresh-button"]') as HTMLButtonElement;
+    let dueCount = 0;
+    let detail: unknown;
+    el.addEventListener('lr-poll-due', (event) => {
+      dueCount++;
+      detail = (event as CustomEvent).detail;
+    });
+
+    button.click();
+    expect(detail).to.deep.equal({ manual: true });
+    await aTimeout(1150);
+    expect(dueCount).to.equal(1);
+  });
+
+  it('fits both controls and a long inactive label inside 320px in LTR and RTL', async () => {
+    for (const direction of ['ltr', 'rtl'] as const) {
+      const wrapper = await fixture(html`
+        <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%;">
+          <lr-poll-status
+            with-refresh
+            .active=${false}
+            .strings=${{ pollInactive: 'Hintergrundaktualisierungsverfügbarkeitsüberprüfung' }}
+          ></lr-poll-status>
+        </div>
+      `);
+      const container = wrapper as HTMLDivElement;
+      const el = container.querySelector('lr-poll-status') as LyraPollStatus;
+      expect(el.getBoundingClientRect().width).to.be.at.most(container.clientWidth);
+      expect(el.shadowRoot!.querySelector('[part="refresh-button"]')).to.exist;
+      const refreshButton = el.shadowRoot!.querySelector('[part="refresh-button"]') as HTMLButtonElement;
+      expect(refreshButton.disabled).to.be.true;
+      expect(el.shadowRoot!.querySelector('[part="pause-button"]')).to.exist;
+    }
   });
 
   it('shows 0:00 for a due-immediately cycle until its scheduled due tick advances the phase', async () => {
@@ -464,9 +647,10 @@ describe('lr-poll-status', () => {
     }
   });
 
-  it('paints dedicated pause-button hover/active hooks without repainting the shared brand tokens', async () => {
+  it('keeps pause-button hover overrides scoped while refresh follows shared brand tokens', async () => {
     const el = await fixture<LyraPollStatus>(html`
       <lr-poll-status
+        with-refresh
         style="
           --lr-color-brand-quiet: rgb(1, 2, 3);
           --lr-color-brand: rgb(4, 5, 6);
@@ -489,6 +673,14 @@ describe('lr-poll-status', () => {
         const computed = getComputedStyle(button);
         return computed.backgroundColor === 'rgb(13, 14, 15)' && computed.color === 'rgb(16, 17, 18)';
       }, 'the dedicated pause-button active hooks never painted over the shared brand tokens');
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+      const refreshButton = el.shadowRoot!.querySelector<HTMLElement>('[part="refresh-button"]')!;
+      await hoverUntilMatched(refreshButton, 'poll-status refresh-button never registered :hover');
+      await waitUntil(() => {
+        const computed = getComputedStyle(refreshButton);
+        return computed.backgroundColor === 'rgb(1, 2, 3)' && computed.color === 'rgb(4, 5, 6)';
+      }, 'pause-button hover tokens leaked into the independent refresh-button surface');
     } finally {
       await sendMouse({ type: 'up' });
       await resetMouse();

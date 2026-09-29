@@ -1299,3 +1299,216 @@ describe('fixed-position containing blocks', () => {
     stop();
   });
 });
+
+describe('containing blocks across shadow boundaries', () => {
+  for (const authoredTransform of ['transform: translate(11px, 7px)', 'translate: 11px 7px']) {
+    it(`preserves authored ${authoredTransform} under a filtered inline fixed containing block`, async () => {
+      const container = await fixture<HTMLElement>(html`
+        <div style="margin: 70px; padding: 40px;">
+          <span style="filter: blur(0px);">
+            <button id="anchor">Anchor</button>
+            <div id="popup" style="width: 100px; height: 40px;"></div>
+          </span>
+        </div>
+      `);
+      const anchor = container.querySelector<HTMLElement>('#anchor')!;
+      const popup = container.querySelector<HTMLElement>('#popup')!;
+      popup.style.cssText += authoredTransform;
+      const childCount = popup.parentNode!.childNodes.length;
+      let placed = false;
+      const stop = place(anchor, popup, {
+        strategy: 'fixed', flip: false, shift: false, onPlaced: () => placed = true,
+      });
+      try {
+        await waitFor(() => placed, Boolean);
+        expect(popup.getBoundingClientRect().left).to.be.closeTo(anchor.getBoundingClientRect().left + 11, 1);
+        expect(popup.getBoundingClientRect().top).to.be.closeTo(anchor.getBoundingClientRect().bottom + 11, 1);
+        expect(popup.parentNode!.childNodes.length).to.equal(childCount);
+      } finally {
+        stop();
+      }
+    });
+  }
+
+  for (const inlineStyle of [
+    'transform: translateX(30px)', 'will-change: transform', 'contain: layout', 'contain: paint',
+    'content-visibility: auto', 'filter: blur(0px)', 'backdrop-filter: blur(0px)',
+    'will-change: filter', 'will-change: backdrop-filter', 'position: relative; transform: translateX(30px)',
+    'display: contents; transform: translateX(30px)',
+    'display: inline list-item; contain: layout', 'display: ruby; contain: layout',
+  ]) {
+    for (const strategy of ['absolute', 'fixed'] as const) {
+      for (const shadow of [false, true]) {
+        it(`resolves ${strategy} positioning through ${shadow ? 'a shadow' : 'a light-DOM'} inline ancestor with ${inlineStyle} while scrolling`, async function () {
+          const display = inlineStyle.match(/^display: ([^;]+)/)?.[1];
+          if (display && !CSS.supports('display', display)) this.skip();
+          const container = await fixture<HTMLElement>(html`
+            <div style="position: relative; margin: 70px; padding: 40px; height: 200px; overflow: auto;">
+              <span slot="inline" style=${shadow ? '' : inlineStyle}>
+                <button id="anchor">Anchor</button>
+                <div id="popup" style="position: absolute; width: 100px; height: 40px;"></div>
+              </span>
+              <div style="height: 500px;"></div>
+            </div>
+          `);
+          let slotChanges = 0;
+          if (shadow) {
+            const root = container.attachShadow({ mode: 'open' });
+            root.innerHTML = '<span><slot name="inline"></slot></span><slot></slot>';
+            root.querySelector('span')!.style.cssText = inlineStyle;
+            await Promise.resolve();
+            root.querySelector('slot')!.addEventListener('slotchange', () => slotChanges++);
+          }
+          const anchor = container.querySelector<HTMLElement>('#anchor')!;
+          const popup = container.querySelector<HTMLElement>('#popup')!;
+          let updates = 0;
+          const stop = place(anchor, popup, {
+            strategy, flip: false, shift: false, onPlaced: () => updates++,
+          });
+          try {
+            await waitFor(() => updates, (count) => count > 0);
+            const assertAligned = () => {
+              expect(popup.getBoundingClientRect().left).to.be.closeTo(anchor.getBoundingClientRect().left, 1);
+              expect(popup.getBoundingClientRect().top).to.be.closeTo(anchor.getBoundingClientRect().bottom + 4, 1);
+            };
+            assertAligned();
+            expect(slotChanges, 'positioning must not change slot assignment').to.equal(0);
+            const before = updates;
+            container.scrollTop = 20;
+            await waitFor(() => updates, (count) => count > before);
+            assertAligned();
+          } finally {
+            stop();
+          }
+        });
+      }
+    }
+  }
+
+  for (const tablePosition of ['static', 'relative']) {
+    it(`preserves a ${tablePosition} table inside a positioned scrolling ancestor`, async () => {
+      const container = await fixture<HTMLElement>(html`
+        <div style="position: relative; margin: 60px; padding: 30px; height: 200px; overflow: auto;">
+          <table style="position: ${tablePosition}; margin: 20px; border-spacing: 10px;">
+            <tbody><tr><td>
+              <button id="anchor">Anchor</button>
+              <div id="popup" style="width: 100px; height: 40px;"></div>
+            </td></tr></tbody>
+          </table>
+          <div style="height: 500px;"></div>
+        </div>
+      `);
+      const anchor = container.querySelector<HTMLElement>('#anchor')!;
+      const popup = container.querySelector<HTMLElement>('#popup')!;
+      let updates = 0;
+      const stop = place(anchor, popup, {
+        strategy: 'absolute', flip: false, shift: false, onPlaced: () => updates++,
+      });
+      try {
+        await waitFor(() => updates, (count) => count > 0);
+        const before = updates;
+        container.scrollTop = 20;
+        await waitFor(() => updates, (count) => count > before);
+        expect(popup.getBoundingClientRect().left).to.be.closeTo(anchor.getBoundingClientRect().left, 1);
+        expect(popup.getBoundingClientRect().top).to.be.closeTo(anchor.getBoundingClientRect().bottom + 4, 1);
+      } finally {
+        stop();
+      }
+    });
+  }
+
+  for (const rowStyle of [
+    'contain: layout', 'contain: paint', 'will-change: contain', 'content-visibility: auto',
+    'transform: translateX(20px)',
+  ]) {
+    for (const tableBox of ['row', 'cell']) {
+      for (const strategy of ['absolute', 'fixed'] as const) {
+        it(`resolves ${strategy} positioning under a table ${tableBox} with ${rowStyle}`, async () => {
+          const container = await fixture<HTMLElement>(html`
+            <div style="position: relative; margin: 60px; padding: 30px;">
+              <table style="margin: 20px; border-spacing: 10px;">
+                <tbody><tr style=${tableBox === 'row' ? rowStyle : ''}><td style=${tableBox === 'cell' ? rowStyle : ''}>
+                  <button id="anchor">Anchor</button>
+                  <div id="popup" style="width: 100px; height: 40px;"></div>
+                </td></tr></tbody>
+              </table>
+            </div>
+          `);
+          const anchor = container.querySelector<HTMLElement>('#anchor')!;
+          const popup = container.querySelector<HTMLElement>('#popup')!;
+          let placed = false;
+          const stop = place(anchor, popup, {
+            strategy, flip: false, shift: false, onPlaced: () => placed = true,
+          });
+          try {
+            await waitFor(() => placed, Boolean);
+            expect(popup.getBoundingClientRect().left).to.be.closeTo(anchor.getBoundingClientRect().left, 1);
+            expect(popup.getBoundingClientRect().top).to.be.closeTo(anchor.getBoundingClientRect().bottom + 4, 1);
+          } finally {
+            stop();
+          }
+        });
+      }
+    }
+  }
+
+  for (const positionedSlot of [false, true]) {
+    it(`uses a shadow panel through ${positionedSlot ? 'a positioned contents slot' : 'a slot'} and follows scrolling`, async () => {
+      const host = await fixture<HTMLElement>(html`<div style="margin: 80px;">
+        <div id="content" style="height: 600px; padding: 60px;">
+          <button id="anchor" style="width: 90px; height: 30px;">Anchor</button>
+          <div id="popup" style="position: absolute; width: 120px; height: 40px;"></div>
+        </div>
+      </div>`);
+      const root = host.attachShadow({ mode: 'open' });
+      root.innerHTML = `<div id="panel" style="position: relative; height: 250px; overflow: auto; border: 5px solid; padding: 12px;"><slot style="${positionedSlot ? 'position: relative;' : ''}"></slot></div>`;
+      const panel = root.querySelector<HTMLElement>('#panel')!;
+      const anchor = host.querySelector<HTMLElement>('#anchor')!;
+      const popup = host.querySelector<HTMLElement>('#popup')!;
+      let updates = 0;
+      const stop = place(anchor, popup, {
+        strategy: 'absolute', placement: 'bottom-start', flip: false, shift: false,
+        onPlaced: () => updates++,
+      });
+      try {
+        await waitFor(() => updates, (count) => count > 0);
+        const assertAligned = () => {
+          const reference = anchor.getBoundingClientRect();
+          const floating = popup.getBoundingClientRect();
+          expect(floating.left).to.be.closeTo(reference.left, 1);
+          expect(floating.top).to.be.closeTo(reference.bottom + 4, 1);
+        };
+        assertAligned();
+        const before = updates;
+        panel.scrollTop = 35;
+        await waitFor(() => updates, (count) => count > before);
+        assertAligned();
+      } finally {
+        stop();
+      }
+    });
+  }
+
+  it('keeps an absolute popup itself in the native top layer viewport-relative', async function () {
+    const host = await fixture<HTMLElement>(html`
+      <div style="position: relative; margin: 90px;">
+        <button id="anchor">Anchor</button>
+        <div id="popup" popover="manual" style="position: absolute; inset: auto; width: 90px; height: 40px; padding: 0; border: 0;"></div>
+      </div>
+    `);
+    const anchor = host.querySelector<HTMLElement>('#anchor')!;
+    const popup = host.querySelector<HTMLElement>('#popup')!;
+    if (typeof popup.showPopover !== 'function') this.skip();
+    popup.showPopover();
+    let placed = false;
+    const stop = place(anchor, popup, { strategy: 'absolute', onPlaced: () => placed = true });
+    try {
+      await waitFor(() => placed, Boolean);
+      expect(popup.getBoundingClientRect().left).to.be.closeTo(anchor.getBoundingClientRect().left, 1);
+      expect(popup.getBoundingClientRect().top).to.be.closeTo(anchor.getBoundingClientRect().bottom + 4, 1);
+    } finally {
+      stop();
+      popup.hidePopover();
+    }
+  });
+});

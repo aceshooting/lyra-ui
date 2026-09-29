@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'لا يُعرض ولا يُبحث إلا في أول {count} عقدة JSON و{depth} مستويات تداخل.',
   pollPause: 'إيقاف مؤقت',
   pollResume: 'استئناف',
+  pollRefresh: 'حدّث الآن',
   pollInactive: 'غير نشط',
   pollRefreshing: 'جارٍ التحديث…',
   pollPaused: 'متوقف مؤقتًا',

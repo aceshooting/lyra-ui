@@ -78,7 +78,7 @@ const LEGEND_CONTROL_ROLE = literalSetConverter<LyraMapLegendControlRole>(
   'button',
 );
 
-/** One immutable, bounded map-legend row. Pattern is required so color is never the sole cue. */
+/** One immutable, bounded map-legend row. Pattern supplies the non-color cue for color-only swatches. */
 export interface LyraMapLegendEntry {
   readonly color: string;
   readonly label: string;
@@ -2700,10 +2700,10 @@ export interface LyraMapEventMap {
  *  content alone does, and it is never made interactive by `legendInteractive`.
  * @csspart legend - The map legend.
  * @csspart legend-swatch - A legend color swatch, or the entry's glyph when it carries an `icon`
- *   — in which case the swatch drops its color block and pattern overlay, keeps the `pattern`
- *   border framing the glyph as its non-color cue, carries `data-icon="true"`, and paints the
- *   glyph itself in the entry color. It nests inside `legend-toggle` on an interactive row and
- *   stays `aria-hidden`/`inert` there, so it never contributes to the button's accessible name.
+ *   — in which case the swatch drops its color block, border and pattern overlay, carries
+ *   `data-icon="true"`, and paints the glyph itself in the entry color as the non-color cue. It
+ *   nests inside `legend-toggle` on an interactive row and stays `aria-hidden`/`inert` there, so it
+ *   never contributes to the button's accessible name.
  * @csspart legend-toggle - The `button` an interactive legend row renders around its swatch and
  *   label when `legendInteractive` is set and the row carries a `value`. Absent entirely when
  *   either is missing, so an unset map's legend markup is unchanged.

@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'Faqat dastlabki {count} ta JSON tuguni va {depth} ta ichma-ichlik darajasi koʻrsatiladi va qidiriladi.',
   pollPause: 'Toʻxtatib turish',
   pollResume: 'Davom ettirish',
+  pollRefresh: 'Hozir yangilang',
   pollInactive: 'Faol emas',
   pollRefreshing: 'Yangilanmoqda…',
   pollPaused: 'Toʻxtatildi',

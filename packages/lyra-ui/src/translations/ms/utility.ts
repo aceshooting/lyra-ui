@@ -29,6 +29,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'Hanya {count} nod JSON dan {depth} tahap sarang pertama dipaparkan dan dicari.',
   pollPause: 'Jeda',
   pollResume: 'Sambung semula',
+  pollRefresh: 'Muat semula sekarang',
   pollInactive: 'Tidak aktif',
   pollRefreshing: 'Memuat semula…',
   pollPaused: 'Dijeda',

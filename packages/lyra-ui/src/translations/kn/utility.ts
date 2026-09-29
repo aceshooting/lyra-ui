@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'ಮೊದಲ {count} JSON ನೋಡ್‌ಗಳು ಮತ್ತು {depth} ನೆಸ್ಟಿಂಗ್ ಹಂತಗಳನ್ನು ಮಾತ್ರ ತೋರಿಸಲಾಗುತ್ತದೆ ಮತ್ತು ಹುಡುಕಲಾಗುತ್ತದೆ.',
   pollPause: 'ವಿರಾಮಗೊಳಿಸಿ',
   pollResume: 'ಮತ್ತೆ ಆರಂಭಿಸಿ',
+  pollRefresh: 'ಈಗ ರಿಫ್ರೆಶ್ ಮಾಡಿ',
   pollInactive: 'ನಿಷ್ಕ್ರಿಯ',
   pollRefreshing: 'ರಿಫ್ರೆಶ್ ಆಗುತ್ತಿದೆ…',
   pollPaused: 'ವಿರಾಮದಲ್ಲಿದೆ',

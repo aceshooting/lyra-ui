@@ -51,7 +51,8 @@ export const styles = css`
       animation: none;
     }
   }
-  [part='pause-button'] {
+  [part='pause-button'],
+  [part='refresh-button'] {
     flex-shrink: 0;
     display: inline-flex;
     align-items: center;
@@ -66,9 +67,23 @@ export const styles = css`
     border-radius: var(--lr-radius);
     transition: var(--lr-transition-interactive);
   }
+  [part='refresh-button'] {
+    --_lr-poll-status-refresh-hover-bg: var(--lr-color-brand-quiet);
+    --_lr-poll-status-refresh-hover-color: var(--lr-color-brand);
+    --_lr-poll-status-refresh-active-bg: color-mix(
+      in oklab,
+      var(--_lr-poll-status-refresh-hover-bg),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+    --_lr-poll-status-refresh-active-color: var(--lr-color-brand);
+  }
   [part='pause-button']:hover:not(:disabled) {
     background: var(--lr-poll-status-pause-hover-bg, var(--lr-color-brand-quiet));
     color: var(--lr-poll-status-pause-hover-color, var(--lr-color-brand));
+  }
+  [part='refresh-button']:hover:not(:disabled) {
+    background: var(--_lr-poll-status-refresh-hover-bg);
+    color: var(--_lr-poll-status-refresh-hover-color);
   }
   [part='pause-button']:active:not(:disabled) {
     background: var(
@@ -77,11 +92,17 @@ export const styles = css`
     );
     color: var(--lr-poll-status-pause-active-color, var(--lr-color-brand));
   }
-  [part='pause-button']:disabled {
+  [part='refresh-button']:active:not(:disabled) {
+    background: var(--_lr-poll-status-refresh-active-bg);
+    color: var(--_lr-poll-status-refresh-active-color);
+  }
+  [part='pause-button']:disabled,
+  [part='refresh-button']:disabled {
     cursor: default;
     opacity: var(--lr-opacity-disabled);
   }
-  [part='pause-button']:focus-visible {
+  [part='pause-button']:focus-visible,
+  [part='refresh-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }

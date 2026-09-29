@@ -35,6 +35,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'Sunt afișate și căutate doar primele {count} noduri JSON și {depth} niveluri de imbricare.',
   pollPause: 'Pune pe pauză',
   pollResume: 'Reia',
+  pollRefresh: 'Actualizează acum',
   pollInactive: 'Inactiv',
   pollRefreshing: 'Se actualizează…',
   pollPaused: 'Suspendat',

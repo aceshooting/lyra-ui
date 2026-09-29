@@ -38,6 +38,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'Показуються та доступні для пошуку лише перші {count} вузлів JSON і {depth} рівнів вкладеності.',
   pollPause: 'Призупинити',
   pollResume: 'Продовжити',
+  pollRefresh: 'Оновити зараз',
   pollInactive: 'Неактивно',
   pollRefreshing: 'Оновлення…',
   pollPaused: 'Призупинено',

@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'முதல் {count} JSON முனைகள் மற்றும் {depth} அடுக்குகள் மட்டுமே காட்டப்பட்டு தேடப்படும்.',
   pollPause: 'இடைநிறுத்து',
   pollResume: 'தொடர்',
+  pollRefresh: 'இப்போது புதுப்பிக்கவும்',
   pollInactive: 'செயலற்றது',
   pollRefreshing: 'புதுப்பிக்கப்படுகிறது…',
   pollPaused: 'இடைநிறுத்தப்பட்டது',

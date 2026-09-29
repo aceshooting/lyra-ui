@@ -35,6 +35,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'Seuls les {count} premiers nœuds JSON et {depth} niveaux d’imbrication sont affichés et parcourus.',
   pollPause: 'Mettre en pause',
   pollResume: 'Reprendre',
+  pollRefresh: 'Actualiser maintenant',
   pollInactive: 'Inactif',
   pollRefreshing: 'Actualisation…',
   pollPaused: 'En pause',

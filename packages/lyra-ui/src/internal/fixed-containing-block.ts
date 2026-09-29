@@ -34,39 +34,51 @@ import { nativePopoverSupported } from './native-popover.js';
  * `offset-path` -- and matches `will-change` by token, so `transform-origin` and
  * `perspective-origin` (which establish nothing) are not mistaken for containing blocks.
  */
-const FIXED_CONTAINING_BLOCK_WILL_CHANGE = new Set([
-  'transform', 'translate', 'scale', 'rotate', 'perspective', 'filter', 'backdrop-filter',
-  'contain', 'offset-path', 'transform-style',
-]);
+const FILTER_PROPERTIES = ['filter', 'backdrop-filter'];
+const CONTAINING_BLOCK_PROPERTIES = ['transform', 'translate', 'scale', 'rotate', 'perspective', 'offset-path', ...FILTER_PROPERTIES];
+const FIXED_CONTAINING_BLOCK_WILL_CHANGE = [...CONTAINING_BLOCK_PROPERTIES, 'contain', 'transform-style'];
 const FIXED_CONTAINING_BLOCK_CONTAIN_RE = /paint|layout|strict|content/;
-
-/** Token membership, not a substring test: `transform-origin`, `perspective-origin` and
- *  `contain-intrinsic-size` are not containing-block triggers in any engine. */
-function willChangeEstablishesContainingBlock(value: string): boolean {
-  return (value || '').split(',').some((token) => FIXED_CONTAINING_BLOCK_WILL_CHANGE.has(token.trim()));
-}
+const INLINE_REPLACED_ELEMENTS = /^(audio|canvas|embed|iframe|img|input|object|video)$/;
+const NON_ATOMIC_INLINE_DISPLAYS = /^(inline|inline list-item|ruby|inline ruby)$/;
 
 function isNonNoneCssValue(value: string | undefined): boolean {
-  return value !== undefined && value !== '' && value !== 'none';
+  return Boolean(value) && value !== 'none';
+}
+
+/** Engine discriminator for the separately verified inline-origin and will-change differences. */
+export function usesWebKitContainingBlockRules(): boolean {
+  return typeof CSS !== 'undefined' && CSS.supports?.('-webkit-backdrop-filter', 'none') === true;
 }
 
 export function establishesFixedContainingBlock(element: Element): boolean {
   const view = element.ownerDocument.defaultView;
   if (!view) return false;
   const css = view.getComputedStyle(element);
+  if (css.display === 'contents' || css.display === 'none') return false;
+  // Non-replaced inline boxes are not transformable and do not apply layout/paint containment.
+  // Computed style retains those declarations, but they cannot establish a containing block.
+  const nonAtomicInline =
+    element instanceof HTMLElement && NON_ATOMIC_INLINE_DISPLAYS.test(css.display) &&
+    !INLINE_REPLACED_ELEMENTS.test(element.localName);
+  // Internal table boxes other than cells do not apply layout/paint containment. Their valid
+  // transforms and filters still establish containing blocks independently of containment.
+  const containmentApplies = !css.display.startsWith('table-') ||
+    css.display === 'table-cell' || css.display === 'table-caption';
   return (
-    isNonNoneCssValue(css.transform) ||
-    isNonNoneCssValue(css.translate) ||
-    isNonNoneCssValue(css.scale) ||
-    isNonNoneCssValue(css.rotate) ||
-    isNonNoneCssValue(css.perspective) ||
-    isNonNoneCssValue(css.backdropFilter) ||
-    isNonNoneCssValue(css.filter) ||
-    isNonNoneCssValue(css.offsetPath) ||
-    css.contentVisibility === 'auto' || css.contentVisibility === 'hidden' ||
-    css.transformStyle === 'preserve-3d' ||
-    willChangeEstablishesContainingBlock(css.willChange) ||
-    FIXED_CONTAINING_BLOCK_CONTAIN_RE.test(css.contain || '')
+    (nonAtomicInline ? FILTER_PROPERTIES : CONTAINING_BLOCK_PROPERTIES)
+      .some((property) => isNonNoneCssValue(css.getPropertyValue(property))) ||
+    (!nonAtomicInline && (
+      css.transformStyle === 'preserve-3d' ||
+      (containmentApplies && (css.contentVisibility === 'auto' || css.contentVisibility === 'hidden' ||
+        FIXED_CONTAINING_BLOCK_CONTAIN_RE.test(css.contain || '')))
+    )) ||
+    (css.willChange || '').split(',').some((token) => {
+      const property = token.trim();
+      // WebKit ignores inline filter hints, but honors containment hints on internal table boxes.
+      if (nonAtomicInline) return FILTER_PROPERTIES.includes(property) && !usesWebKitContainingBlockRules();
+      return FIXED_CONTAINING_BLOCK_WILL_CHANGE.includes(property) &&
+        (property !== 'contain' || containmentApplies || usesWebKitContainingBlockRules());
+    })
   );
 }
 
@@ -120,12 +132,21 @@ export function isLastTraversableFixedContainingBlockNode(node: Node): boolean {
  * own detection still misses there (see the block comment above). Returns `null` when none
  * exists -- the real containing block is the viewport, the common case every engine agrees on.
  */
-export function findFixedContainingBlockAncestor(element: Element): HTMLElement | null {
+export function findFixedContainingBlockAncestor(element: Element): HTMLElement | null;
+export function findFixedContainingBlockAncestor(element: Element, absolute: true): Element | null;
+/** Absolute positioning also accepts positioned ancestors and SVG boxes; fixed positioning
+ *  preserves its HTMLElement-only traversal. */
+export function findFixedContainingBlockAncestor(element: Element, absolute = false): Element | null {
   let node: Node = fixedContainingBlockParentNode(element);
-  while (node instanceof HTMLElement && !isLastTraversableFixedContainingBlockNode(node)) {
+  while (node instanceof Element && (absolute || node instanceof HTMLElement) &&
+    !isLastTraversableFixedContainingBlockNode(node)) {
+    const css = absolute ? node.ownerDocument.defaultView?.getComputedStyle(node) : undefined;
+    if (css && css.display !== 'contents' && css.display !== 'none' && css.position !== 'static') return node;
     if (establishesFixedContainingBlock(node)) return node;
     if (isNativeTopLayerElement(node)) return null;
-    node = fixedContainingBlockParentNode(node);
+    const parent = fixedContainingBlockParentNode(node);
+    if (parent === node) break;
+    node = parent;
   }
   return null;
 }

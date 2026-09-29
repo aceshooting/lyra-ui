@@ -2,24 +2,24 @@
   "locale": "gu",
   "direction": "ltr",
   "source": {
-    "keyCount": 1384,
-    "sha256": "sha256:00c91cfc7e1388e6c630a1e42d5fe0918eb928f1e37d8451b9a18beb96b4d164"
+    "keyCount": 1385,
+    "sha256": "sha256:09d7ebd99cfe8b1b1ba87d80b6e8776b2dcc9107247c61b252cc3649c759eb65"
   },
   "catalog": {
-    "keyCount": 1384,
-    "sha256": "sha256:13d12ee7d7ac814a0aa599047ad0c48fb70835ecf0796b26d4b97212a05217f0"
+    "keyCount": 1385,
+    "sha256": "sha256:77fa1a50042a47563d19ba90506a2dbc8283eb90251f739964013d7ce682730b"
   },
   "translator": {
     "status": "complete-original",
     "role": "project localization contributor",
     "completedAt": "2026-09-28",
-    "evidence": "A complete Gujarati catalog was supplied across all 1,315 source keys, preserving placeholders, plural forms and standard technical notation; no individual translator identity is asserted. Updated 2026-09-28 with 69 original messages for change review, agent questions, permission rules, connectors, background runs, research progress and budgets. Placeholders and locale-specific plural forms are preserved; no upstream translated text was copied."
+    "evidence": "A complete Gujarati catalog was supplied across all 1,315 source keys, preserving placeholders, plural forms and standard technical notation; no individual translator identity is asserted. Updated 2026-09-28 with 69 original messages for change review, agent questions, permission rules, connectors, background runs, research progress and budgets. Placeholders and locale-specific plural forms are preserved; no upstream translated text was copied.\n\n2026-09-29 incremental pollRefresh review: added one original action label to this locale catalog, using existing refresh/update wording as context. The contribution remains AI-assisted and makes no human or native-speaker translator claim."
   },
   "reviewer": {
     "status": "approved",
     "role": "independent localization reviewer",
-    "reviewedAt": "2026-09-28",
-    "evidence": "Independently read every message in all 12 slices against the English defaults for Gujarati meaning, neutral UI register, Gujarati script and context; reviewed each English-identical value. Corrected plural forms for messages, threads, tools, highlighted passages and child nodes, plus an untranslated “of” in a flow announcement. Parsing confirms all ordered keys/placeholders and CLDR one/other forms. AI-assisted; no native-speaker certification is claimed. Updated 2026-09-28: an independent AI-assisted review checked all 69 added messages for meaning, UI register, terminology and placeholders, and corrected the catalog before this snapshot. The research-source count was checked against the pinned CLDR categories, including locale-specific decimal and non-singular forms. The complete 1,384-key snapshot was checked for key coverage, value kinds, placeholders and exact-English message paths; only individually justified new cognates, loanwords and technical names were retained. This increment does not claim a new linguistic review of all older messages, human review or native-speaker certification."
+    "reviewedAt": "2026-09-29",
+    "evidence": "Independently read every message in all 12 slices against the English defaults for Gujarati meaning, neutral UI register, Gujarati script and context; reviewed each English-identical value. Corrected plural forms for messages, threads, tools, highlighted passages and child nodes, plus an untranslated “of” in a flow announcement. Parsing confirms all ordered keys/placeholders and CLDR one/other forms. AI-assisted; no native-speaker certification is claimed. Updated 2026-09-28: an independent AI-assisted review checked all 69 added messages for meaning, UI register, terminology and placeholders, and corrected the catalog before this snapshot. The research-source count was checked against the pinned CLDR categories, including locale-specific decimal and non-singular forms. The complete 1,384-key snapshot was checked for key coverage, value kinds, placeholders and exact-English message paths; only individually justified new cognates, loanwords and technical names were retained. This increment does not claim a new linguistic review of all older messages, human review or native-speaker certification.\n\n2026-09-29 incremental pollRefresh review: an AI-assisted bounded review checked this new action label for meaning, UI action wording and absence of placeholders or exact-English copy. This review covers only this addition, not prior catalog entries; no human or native-speaker certification is claimed."
   },
   "englishIdenticalAllowlist": [
     {

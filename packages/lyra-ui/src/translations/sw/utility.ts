@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'Ni nodi {count} za kwanza za JSON na viwango {depth} vya ndani pekee vinavyoonyeshwa na kutafutwa.',
   pollPause: 'Sitisha',
   pollResume: 'Endelea',
+  pollRefresh: 'Sasisha sasa',
   pollInactive: 'Haifanyi kazi',
   pollRefreshing: 'Inasasisha…',
   pollPaused: 'Imesitishwa',

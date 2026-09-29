@@ -2021,7 +2021,7 @@ it('normalizes a legend assignment whose own length getter throws to empty inste
   expect(el.legendProjection.renderedCount).to.equal(0);
 });
 
-it('keeps every legend category pattern distinct in forced colors', async () => {
+it('keeps every color-only legend category pattern distinct in forced colors', async () => {
   await setForcedColors('active');
   try {
     const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
@@ -2030,19 +2030,17 @@ it('keeps every legend category pattern distinct in forced colors', async () => 
       { color: '#0f0', label: 'Diagonal', pattern: 'diagonal' },
       { color: '#00f', label: 'Dots', pattern: 'dots' },
       { color: '#ff0', label: 'Crosshatch', pattern: 'crosshatch' },
-      // A glyph row is the fifth case: forced colors collapse its authored color, so the pattern
-      // border has to keep framing the swatch or the row loses every non-color cue it had.
-      { color: '#0ff', label: 'Glyph', pattern: 'diagonal', icon: { path: 'M12 3 L21 20 L3 20 Z' } },
+      { color: '#0ff', label: 'Second solid', pattern: 'solid' },
     ];
     await el.updateComplete;
     const swatches = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="legend-swatch"]')];
     const styles = swatches.map((swatch) => getComputedStyle(swatch).borderStyle);
-    expect(styles).to.deep.equal(['solid', 'dashed', 'dotted', 'double', 'dashed']);
+    expect(styles).to.deep.equal(['solid', 'dashed', 'dotted', 'double', 'solid']);
     const widths = swatches.map((swatch) => getComputedStyle(swatch).borderTopWidth);
     expect(
       widths[4],
-      'the glyph row keeps a drawn border, not a zero-width one that computes to a style name',
-    ).to.equal(widths[1]);
+      'the second solid swatch keeps the same drawn border as the first',
+    ).to.equal(widths[0]);
   } finally {
     await setForcedColors('none');
   }

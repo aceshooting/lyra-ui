@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'Kuboniswa futhi kuseshwa amafindo e-JSON okuqala angu-{count} namazinga okushutheka angu-{depth} kuphela.',
   pollPause: 'Misa isikhashana',
   pollResume: 'Qhubeka',
+  pollRefresh: 'Vuselela manje',
   pollInactive: 'Ayisebenzi',
   pollRefreshing: 'Iyavuselela…',
   pollPaused: 'Imisiwe isikhashana',

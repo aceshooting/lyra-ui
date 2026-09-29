@@ -29,6 +29,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'Chỉ hiển thị và tìm kiếm {count} nút JSON đầu tiên, tối đa {depth} cấp lồng nhau.',
   pollPause: 'Tạm dừng',
   pollResume: 'Tiếp tục',
+  pollRefresh: 'Làm mới ngay',
   pollInactive: 'Không hoạt động',
   pollRefreshing: 'Đang làm mới…',
   pollPaused: 'Đã tạm dừng',

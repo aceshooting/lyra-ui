@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'تنها نخستین {count} گرهٔ JSON و سطح‌های تودرتوی {depth} نمایش داده و جست‌وجو می‌شوند.',
   pollPause: 'مکث',
   pollResume: 'ازسرگیری',
+  pollRefresh: 'همین حالا تازه‌سازی کنید',
   pollInactive: 'غیرفعال',
   pollRefreshing: 'در حال تازه‌سازی…',
   pollPaused: 'متوقف‌شده',

@@ -43,6 +43,10 @@ export interface LyraDetailsEventMap {
 /**
  * `<lr-details>` — an accessible disclosure panel.
  *
+ * Unsized panels follow their content; a definite containing block caps long content to an internal
+ * scrollport. Explicit host sizing or grid/flex allocation fills the assigned space. Use
+ * `block-size: 100%` on the host to make short content fill an ordinary bounded block parent.
+ *
  * Lifecycle: opening emits `lr-show` (cancelable), then `lr-toggle`, then `lr-after-show`;
  * closing emits `lr-hide` (cancelable), then `lr-toggle`, then `lr-after-hide`. `show()`,
  * `hide()` and assigning `open` all run the same sequence, as does clicking (or activating with

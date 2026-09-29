@@ -35,6 +35,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'Prikazuje se i pretražuje samo prvih {count} JSON čvorova i {depth} razina ugniježđivanja.',
   pollPause: 'Pauziraj',
   pollResume: 'Nastavi',
+  pollRefresh: 'Osvježi sada',
   pollInactive: 'Neaktivno',
   pollRefreshing: 'Osvježavanje…',
   pollPaused: 'Pauzirano',

@@ -32,6 +32,7 @@ const strings: LyraLocaleStrings = {
   jsonViewerLimit: 'Vain ensimmäiset {count} JSON-solmua ja {depth} sisäkkäistä tasoa näytetään ja haetaan.',
   pollPause: 'Keskeytä',
   pollResume: 'Jatka',
+  pollRefresh: 'Päivitä nyt',
   pollInactive: 'Ei käytössä',
   pollRefreshing: 'Päivitetään…',
   pollPaused: 'Keskeytetty',
