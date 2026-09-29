@@ -439,17 +439,16 @@ test('checked-in metadata covers the current manifest and inventory', () => {
   );
   assert.equal(state.metadata.assignments['compatibility-stable'].length, 1);
   assert.equal(state.metadata.assignments['introduced-stable'].length, 19);
-  // The eight older mirrored hooks stay while their upstream counterparts exist. The
-  // eligible naming aliases have retired; the retained attribute, property and
-  // event notices must survive one whole subsequent major.
+  // The eight older mirrored hooks stay while their upstream counterparts exist. All 44
+  // member notices with a 24.0.0 removal floor have retired.
   const removalCohorts = {};
   for (const entry of state.metadata.deprecations) {
     removalCohorts[entry.removalNotBefore] = (removalCohorts[entry.removalNotBefore] ?? 0) + 1;
   }
   assert.deepEqual(removalCohorts, {
     '10.0.0': 8,
-    '24.0.0': 44,
   });
+  assert.deepEqual(state.metadata.exportDeprecations, []);
 });
 
 test('a subclass records an inherited alias against its full public surface', () => {

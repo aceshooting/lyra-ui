@@ -19,6 +19,11 @@ const sourceDirectory = 'scripts/fixtures/component-metadata';
 const aggregatePath = 'scripts/fixtures/component-metadata.json';
 const render = value => `${JSON.stringify(value, null, 2)}\n`;
 const read = file => JSON.parse(fs.readFileSync(file, 'utf8'));
+const syntheticExportNotice = {
+  kind: 'entry-point', name: './fixture-legacy.js', since: 'unreleased',
+  replacement: { kind: 'entry-point', name: './fixture-current.js' },
+  removalNotBefore: '27.0.0', rationale: 'Synthetic source-partition fixture.',
+};
 
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'metadata-source-'));
@@ -62,7 +67,7 @@ test('authored metadata sources reproduce the aggregate bytes and detached recor
 
 test('an authored family edit is visible before refreshing the generated aggregate', t => {
   const root = fixture(t);
-  change(root, 'families/forms.json', value => { value.deprecations[0].rationale += ' Additional context.'; });
+  change(root, 'families/media.json', value => { value.deprecations[0].rationale += ' Additional context.'; });
   const sources = readComponentMetadataSources(root);
   const aggregate = assembleComponentMetadata(sources);
   assert.ok(aggregate.deprecations.some(entry => entry.rationale.endsWith(' Additional context.')));
@@ -73,7 +78,7 @@ test('the CEM metadata plugin reads its package sources when the aggregate is st
   const root = fixture(t);
   fs.copyFileSync(path.join(packageDir, 'package.json'), path.join(root, 'package.json'));
   let changedTag;
-  change(root, 'families/forms.json', value => {
+  change(root, 'families/media.json', value => {
     changedTag = value.deprecations[0].tag;
     value.deprecations[0].rationale = 'An updated authored family rationale.';
   });
@@ -95,9 +100,9 @@ for (const [name, mutate, pattern] of [
     const file = path.join(root, sourceDirectory, 'policy.json');
     fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replace('"schemaVersion": 1', '"schemaVersion": 1, "schemaVersion": 1'));
   }, /duplicate JSON key/i],
-  ['duplicate member', root => change(root, 'families/forms.json', value => value.deprecations.push(value.deprecations[0])), /duplicate.*member/i],
-  ['duplicate export', root => change(root, 'exports.json', value => value.exportDeprecations.push(value.exportDeprecations[0])), /duplicate.*export/i],
-  ['cross-family member', root => change(root, 'families/forms.json', value => { value.deprecations[0].tag = 'lr-card'; }), /family/i],
+  ['duplicate member', root => change(root, 'families/media.json', value => value.deprecations.push(value.deprecations[0])), /duplicate.*member/i],
+  ['duplicate export', root => change(root, 'exports.json', value => value.exportDeprecations.push(syntheticExportNotice, syntheticExportNotice)), /duplicate.*export/i],
+  ['cross-family member', root => change(root, 'families/media.json', value => { value.deprecations[0].tag = 'lr-card'; }), /family/i],
   ['duplicate assignment', root => change(root, 'families/forms.json', value => {
     const profile = Object.keys(value.assignments).find(key => value.assignments[key].length);
     value.assignments[profile].push(value.assignments[profile][0]);
@@ -126,28 +131,27 @@ for (const [name, mutate, pattern] of [
 
 test('same-version writes retain unreleased notices and rollover persists stamps in both owners', t => {
   const root = fixture(t);
-  change(root, 'families/forms.json', value => {
+  change(root, 'families/media.json', value => {
     value.deprecations[0].since = 'unreleased';
-    value.deprecations[0].removalNotBefore = '25.0.0';
+    value.deprecations[0].removalNotBefore = '27.0.0';
   });
   change(root, 'exports.json', value => {
-    value.exportDeprecations[0].since = 'unreleased';
-    value.exportDeprecations[0].removalNotBefore = '25.0.0';
+    value.exportDeprecations.push(syntheticExportNotice);
   });
   let sources = readComponentMetadataSources(root);
   const metadata = assembleComponentMetadata(sources);
-  const history = { ...metadata.history, packageVersion: '22.0.0', rolloverCurrent: false };
+  const history = { ...metadata.history, packageVersion: '24.0.0', rolloverCurrent: false };
   commitComponentMetadataWritePlan(createComponentMetadataWritePlan(sources, nextWriteMetadata(metadata, history)));
   sources = readComponentMetadataSources(root);
   assert.ok(assembleComponentMetadata(sources).deprecations.some(entry => entry.since === 'unreleased'));
   const next = nextWriteMetadata(assembleComponentMetadata(sources), {
-    ...history, packageVersion: '23.0.0', rolloverCurrent: true,
-    current: { ...history.current, version: '23.0.0' }, taggedCurrent: null,
+    ...history, packageVersion: '25.0.0', rolloverCurrent: true,
+    current: { ...history.current, version: '25.0.0' }, taggedCurrent: null,
   });
   commitComponentMetadataWritePlan(createComponentMetadataWritePlan(sources, next));
-  assert.equal(read(path.join(root, sourceDirectory, 'families/forms.json')).deprecations[0].since, '23.0.0');
-  assert.equal(read(path.join(root, sourceDirectory, 'exports.json')).exportDeprecations[0].since, '23.0.0');
-  assert.equal(read(path.join(root, sourceDirectory, 'exports.json')).exportDeprecations[0].removalNotBefore, '25.0.0');
+  assert.equal(read(path.join(root, sourceDirectory, 'families/media.json')).deprecations[0].since, '25.0.0');
+  assert.equal(read(path.join(root, sourceDirectory, 'exports.json')).exportDeprecations[0].since, '25.0.0');
+  assert.equal(read(path.join(root, sourceDirectory, 'exports.json')).exportDeprecations[0].removalNotBefore, '27.0.0');
   sources = readComponentMetadataSources(root);
   assert.deepEqual(componentMetadataSourceFindings(sources), []);
   assert.ok(createComponentMetadataWritePlan(sources, assembleComponentMetadata(sources)).entries.every(entry => entry.original === entry.expected));

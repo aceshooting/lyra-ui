@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "reviewedBasis": {
+    "date": "2026-09-29",
+    "candidateCheckpoint": "798eb9c07045ed23214b6514185e20a298ab7c36",
+    "candidateVersion": "24.0.0",
+    "publishedBaselineVersion": "23.0.0",
+    "publishedBaselineTarballSha256": "b2d8e4155e9d4265a95e28357c1ad3402505d150205203251d9f16a1a4bd88da",
+    "measurement": "The five task transcripts include their reviewed path/label wrappers. Byte counts are UTF-8 payload bytes, not package size or full model context.",
+    "namedProxy": "tiktoken 0.14.0, o200k_base encode_ordinary; this is not a verified tokenizer for the current local model. Exact-model context limits remain unmeasured."
+  },
+  "routes": {
+    "known-table": {
+      "published23Utf8Bytes": 64183,
+      "reviewedCheckpointUtf8Bytes": 58280,
+      "reviewedCheckpointProxyTokens": 14112,
+      "ceilingUtf8Bytes": 60000
+    },
+    "component-discovery": {
+      "published23Utf8Bytes": 106727,
+      "reviewedCheckpointUtf8Bytes": 98043,
+      "reviewedCheckpointProxyTokens": 24161,
+      "ceilingUtf8Bytes": 100000
+    },
+    "imports-ssr": {
+      "published23Utf8Bytes": 43687,
+      "reviewedCheckpointUtf8Bytes": 44244,
+      "reviewedCheckpointProxyTokens": 10573,
+      "ceilingUtf8Bytes": 46000
+    },
+    "look-composition": {
+      "published23Utf8Bytes": 14858,
+      "reviewedCheckpointUtf8Bytes": 15258,
+      "reviewedCheckpointProxyTokens": 4018,
+      "ceilingUtf8Bytes": 16000
+    },
+    "v23-v24-upgrade": {
+      "published23Utf8Bytes": null,
+      "reviewedCheckpointUtf8Bytes": 24379,
+      "reviewedCheckpointProxyTokens": 6103,
+      "ceilingUtf8Bytes": 26000
+    }
+  }
+}
