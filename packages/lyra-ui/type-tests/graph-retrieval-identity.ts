@@ -11,22 +11,26 @@ graph.focusNodeId = 'entity-a';
 // @ts-expect-error focusId was replaced by the domain-specific focusNodeId.
 graph.focusId = 'entity-a';
 
-const nodeClick: LyraGraphEventMap['lr-node-click']['detail'] = {
+const nodeClick: LyraGraphEventMap['lr-node-activate']['detail'] = {
   nodeId: 'entity-a',
   x: 1,
   y: 2,
 };
-const legacyNodeClick: LyraGraphEventMap['lr-node-click']['detail'] = {
+const legacyNodeClick: LyraGraphEventMap['lr-node-activate']['detail'] = {
   // @ts-expect-error graph node events no longer overload id.
   id: 'entity-a',
   x: 1,
   y: 2,
 };
-const linkClick: LyraGraphEventMap['lr-link-click']['detail'] = {
+const linkClick: LyraGraphEventMap['lr-edge-activate']['detail'] = {
   sourceNodeId: 'entity-a',
   targetNodeId: 'entity-b',
-  linkId: 'relationship-a',
+  edgeId: 'relationship-a',
 };
+// @ts-expect-error The old node event was replaced by lr-node-activate.
+export type _RemovedGraphNodeClick = LyraGraphEventMap['lr-node-click'];
+// @ts-expect-error The old link event was replaced by lr-edge-activate.
+export type _RemovedGraphLinkClick = LyraGraphEventMap['lr-link-click'];
 const pathRequest: LyraKnowledgeGraphExplorerEventMap['lr-path-request']['detail'] =
   {
     sourceNodeId: 'entity-a',

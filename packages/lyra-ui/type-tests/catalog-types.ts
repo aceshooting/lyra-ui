@@ -50,17 +50,15 @@ const sharedEntries: [
 const mixedCatalog: UtilityCatalog = ['one', { id: 'two', label: 'Two' }];
 
 // @ts-expect-error LyraModelCatalog was replaced by generic LyraCatalog in v9.
-import type {
-  LyraModelCatalog as RemovedGranularModelCatalog } from '../src/components/conversation/model-select/model-select.js';
+import type { LyraModelCatalog as RemovedGranularModelCatalog } from '../src/components/conversation/model-select/model-select.js';
 
+// @ts-expect-error LyraVoiceCatalog was replaced by generic LyraCatalog in v9.
 import type { LyraVoiceCatalog as RemovedGranularVoiceCatalog } from '../src/components/conversation/voice-picker/voice-picker.js';
 
-import type { LyraModelCatalog as RemovedRootModelCatalog,
-} from '../src/lyra.js';
 // @ts-expect-error Old component-specific catalog aliases are absent from the curated root.
-import type {
-  LyraVoiceCatalog as RemovedRootVoiceCatalog,
-} from '../src/lyra.js';
+import type { LyraModelCatalog as RemovedRootModelCatalog } from '../src/lyra.js';
+// @ts-expect-error Old component-specific catalog aliases are absent from the curated root.
+import type { LyraVoiceCatalog as RemovedRootVoiceCatalog } from '../src/lyra.js';
 
 void [sharedCatalogs, sharedEntries, mixedCatalog];
 declare const removed: [

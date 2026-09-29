@@ -28,7 +28,7 @@
     "plugin:sync": "node scripts/sync-plugin-version.mjs",
     "skill:check": "node --test scripts/sync-plugin-version.test.mjs scripts/skill-reference-context.test.mjs scripts/check-task-context-budgets.test.mjs && node scripts/sync-plugin-version.mjs --check && node scripts/check-skill-manifest.mjs && node scripts/check-task-context-budgets.mjs",
     "check:framework-recipes": "node --test scripts/check-framework-recipes.test.mjs && node scripts/check-framework-recipes.mjs",
-    "test:packed-consumer-tooling": "node --test scripts/check-packed-consumer.test.mjs scripts/check-packed-attw.test.mjs scripts/packed-migration-consumer.test.mjs",
+    "test:packed-consumer-tooling": "node --experimental-import-meta-resolve --test scripts/check-packed-consumer.test.mjs scripts/check-packed-attw.test.mjs scripts/packed-migration-consumer.test.mjs scripts/packed-performance.test.mjs packages/lyra-ui/scripts/fixtures/packed-performance/installed-hydration.test.mjs",
     "check:packed-attw": "node --test scripts/check-packed-attw.test.mjs && node scripts/check-packed-attw.mjs",
     "check:packed-consumer:contracts": "pnpm run test:packed-consumer-tooling && node scripts/check-packed-consumer.mjs --skip-attw && node scripts/check-packed-framework-types.mjs && pnpm run check:framework-recipes",
     "check:packed-consumer": "pnpm run test:packed-consumer-tooling && node scripts/check-packed-consumer.mjs && node scripts/check-packed-framework-types.mjs && pnpm run check:framework-recipes",

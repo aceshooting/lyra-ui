@@ -4,6 +4,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { describeBrowserError, waitForBrowserReadiness } from './browser-readiness.mjs';
 
 const fixtureDir = fileURLToPath(new URL('.', import.meta.url));
 const workerPath = join(fixtureDir, 'ssr-worker.mjs');
@@ -117,7 +118,7 @@ export async function createHydrationPageHtml({ packageInfo, origin, importMap, 
     expectedLightDomText: ssr.expectedLightDomText,
     measureTiming: ssr.measureTiming === true,
   };
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script type="importmap">${JSON.stringify({ imports: importMap.imports })}</script><script>window.configuration=${JSON.stringify(configuration)}</script></head><body>${ssr.html}<script type="module">${runner}</script></body></html>`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script type="importmap">${JSON.stringify({ imports: importMap.imports, scopes: importMap.scopes })}</script><script>window.configuration=${JSON.stringify(configuration)}</script></head><body>${ssr.html}<script type="module">${runner}</script></body></html>`;
 }
 
 /**
@@ -142,7 +143,7 @@ export async function measureInstalledHydrationInBrowser({ browser, server, pack
     try {
       const page = await context.newPage();
       const errors = [];
-      page.on('pageerror', (error) => errors.push(error.stack ?? error.message));
+      page.on('pageerror', (error) => errors.push(`pageerror: ${describeBrowserError(error)}`));
       page.on('console', (message) => {
         if (message.type() === 'error') errors.push(message.text());
       });
@@ -156,7 +157,13 @@ export async function measureInstalledHydrationInBrowser({ browser, server, pack
         return route.abort();
       });
       await page.goto(`${server.origin}/fixture/${packageInfo.key}/`, { waitUntil: 'load' });
-      await page.waitForFunction(() => Boolean(window.__lyraHydrationResult), undefined, { timeout: 30000 });
+      await waitForBrowserReadiness({
+        page,
+        predicate: () => Boolean(window.__lyraHydrationResult),
+        packageKey: packageInfo.key,
+        phase: `installed hydration timing sample ${index}`,
+        errors,
+      });
       const result = await page.evaluate(() => window.__lyraHydrationResult);
       assert.deepEqual(errors, [], `${packageInfo.key}: hydration page had runtime or network errors`);
       assert.equal(result.preservedDeclarativeShadowRoot, true);
@@ -212,7 +219,7 @@ export async function runInstalledHydrationSmoke({ browser, server, packageInfo,
   try {
     const page = await context.newPage();
     const errors = [];
-    page.on('pageerror', (error) => errors.push(error.stack ?? error.message));
+    page.on('pageerror', (error) => errors.push(`pageerror: ${describeBrowserError(error)}`));
     page.on('console', (message) => {
       if (message.type() === 'error') errors.push(message.text());
     });
@@ -226,7 +233,13 @@ export async function runInstalledHydrationSmoke({ browser, server, packageInfo,
       return route.abort();
     });
     await page.goto(`${server.origin}/fixture/${packageInfo.key}/`, { waitUntil: 'load' });
-    await page.waitForFunction(() => Boolean(window.__lyraHydrationResult), undefined, { timeout: 30000 });
+    await waitForBrowserReadiness({
+      page,
+      predicate: () => Boolean(window.__lyraHydrationResult),
+      packageKey: packageInfo.key,
+      phase: 'installed hydration smoke',
+      errors,
+    });
     const result = await page.evaluate(() => window.__lyraHydrationResult);
     assert.deepEqual(errors, [], `${packageInfo.key}: hydration smoke had runtime or network errors`);
     assert.equal(result.hydrationToUsableMs, undefined, 'smoke mode must not record timing samples');

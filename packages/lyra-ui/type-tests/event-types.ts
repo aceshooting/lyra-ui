@@ -247,7 +247,7 @@ void agentToolNativeEventMapTypes;
 // through their own shadow boundary, without re-emitting a duplicate event.
 const composedEventMapTypes: [
   LyraContextInspectorEventMap['lr-copy'],
-  LyraContextInspectorEventMap['lr-export'],
+  LyraContextInspectorEventMap['lr-export-request'],
   LyraContextInspectorEventMap['lr-export-complete'],
   LyraContextInspectorEventMap['lr-citation-activate'],
   LyraContextInspectorEventMap['lr-citation-open'],
@@ -259,6 +259,8 @@ const composedEventMapTypes: [
   LyraEntityDossierEventMap['lr-tab-show'],
 ] | undefined = undefined;
 void composedEventMapTypes;
+// @ts-expect-error The old export event was replaced by the request/completion pair.
+export type _RemovedContextInspectorExportEvent = LyraContextInspectorEventMap['lr-export'];
 
 // The canonical media-card request retains its public open-detail payload.
 declare const mediaCardDownloadRequest: LyraMediaCardEventMap['lr-media-download-request'];
@@ -444,7 +446,10 @@ appRail.addEventListener('lr-mode-change', (event) => {
   void mode;
 });
 appRail.addEventListener('lr-toggle', (event) => {
+  const expanded: boolean = event.detail.expanded;
+  // @ts-expect-error The toggle detail uses expanded, not the retired open field.
   const open: boolean = event.detail.open;
+  void expanded;
   void open;
 });
 appRail.addEventListener('lr-rail-resize', (event) => {
@@ -493,10 +498,12 @@ toolApproval.addEventListener('lr-close', (event) => {
   void reason;
   void bareReason;
 });
-toolApproval.addEventListener('lr-approve', (event) => {
+toolApproval.addEventListener('lr-approve-request', (event) => {
   const args: unknown = event.detail.args;
   void args;
 });
+// @ts-expect-error The old approval event was replaced by lr-approve-request.
+export type _RemovedToolApprovalEvent = LyraToolApprovalDialogEventMap['lr-approve'];
 
 declare const toolSelect: LyraToolSelectDialog;
 toolSelect.addEventListener('lr-close', (event) => {
@@ -536,11 +543,17 @@ dockPanel.addEventListener('lr-resize-change', (event) => {
   void extent;
 });
 dockPanel.addEventListener('lr-collapse-request', (event) => {
+  const expanded: boolean = event.detail.expanded;
+  // @ts-expect-error The proposed state uses expanded, not the retired collapsed field.
   const collapsed: boolean = event.detail.collapsed;
+  void expanded;
   void collapsed;
 });
 dockPanel.addEventListener('lr-collapse-change', (event) => {
+  const expanded: boolean = event.detail.expanded;
+  // @ts-expect-error The committed state uses expanded, not the retired collapsed field.
   const collapsed: boolean = event.detail.collapsed;
+  void expanded;
   void collapsed;
 });
 // @ts-expect-error lr-resize was replaced by the explicit input/commit event pair.

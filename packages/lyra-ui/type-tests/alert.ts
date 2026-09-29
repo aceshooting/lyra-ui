@@ -3,7 +3,7 @@ import { LyraAlert as GranularLyraAlert } from '../src/components/overlays/alert
 import { LyraAlert as FamilyLyraAlert } from '../src/components/overlays/index.js';
 import type {
   AlertCountdown } from '../src/components/overlays/alert/alert.class.js';
-import {
+import type {
   AlertVariant,
   LyraAlertEventMap,
 } from '../src/lyra.js';

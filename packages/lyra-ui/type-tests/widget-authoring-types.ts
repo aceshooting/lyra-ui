@@ -215,11 +215,13 @@ void ConversationFamily.createWidgetTypeRegistry;
 void ConversationFamily.isWidgetTypeRegistry;
 void ConversationFamily.DEFAULT_WIDGET_TYPE_REGISTRY;
 void ConversationFamily.LyraThreadList;
+// @ts-expect-error Component constructors are available from granular or family entries, not the root.
 void Root.LyraWidgetRenderer;
 void Root.createWidgetDocument;
 void Root.createWidgetTypeRegistry;
 void Root.isWidgetTypeRegistry;
 void Root.DEFAULT_WIDGET_TYPE_REGISTRY;
+// @ts-expect-error Component constructors are available from granular or family entries, not the root.
 void Root.LyraThreadList;
 
 // @ts-expect-error ChatThread was replaced by LyraChatThread.

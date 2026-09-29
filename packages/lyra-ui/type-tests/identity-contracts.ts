@@ -137,10 +137,11 @@ threadList.activeId = 'conversation-a';
 const groupToggle: LyraThreadListEventMap['lr-group-toggle']['detail'] = {
   groupId: 'today',
   expanded: false,
-  collapsed: true,
 };
 // @ts-expect-error group toggle identity uses groupId.
-const legacyGroupToggle: LyraThreadListEventMap['lr-group-toggle']['detail'] = { id: 'today', expanded: false, collapsed: true };
+const legacyGroupToggle: LyraThreadListEventMap['lr-group-toggle']['detail'] = { id: 'today', expanded: false };
+// @ts-expect-error group toggle detail reports expanded, not a second collapsed field.
+const legacyCollapsedGroupToggle: LyraThreadListEventMap['lr-group-toggle']['detail'] = { groupId: 'today', expanded: false, collapsed: true };
 
 const stageSelection: LyraRetrievalTraceEventMap['lr-stage-select']['detail'] = { stageId: 'retrieve' };
 // @ts-expect-error stage selection detail uses stageId.
@@ -275,6 +276,7 @@ void promptSourceSelection;
 void legacyPromptSourceSelection;
 void groupToggle;
 void legacyGroupToggle;
+void legacyCollapsedGroupToggle;
 void stageSelection;
 void legacyStageSelection;
 void stageChunkAction;

@@ -4,9 +4,11 @@ import { createHash } from 'node:crypto';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { waitForBrowserReadiness } from '../packages/lyra-ui/scripts/fixtures/packed-performance/browser-readiness.mjs';
 import {
   assertInside,
+  buildBrowserImportMap,
   buildStyleSwitchPlan,
   packageInstallPath,
   parsePerformanceQualificationOptions,
@@ -19,6 +21,32 @@ import {
   summarizeSamples,
   writeReceiptWithLock,
 } from './packed-performance.mjs';
+
+test('browser readiness failure preserves the package, phase, page errors and state', async () => {
+  const errors = ['pageerror: missing browser dependency', 'HTTP 404: /missing.js'];
+  const page = {
+    async waitForFunction() { throw new Error('Timeout 30000ms exceeded'); },
+    async evaluate() { return { readyState: 'complete', performanceBootPresent: false }; },
+  };
+  await assert.rejects(
+    waitForBrowserReadiness({
+      page,
+      predicate: () => false,
+      packageKey: 'baseline',
+      phase: 'performance startup first usable control',
+      errors,
+    }),
+    (error) => {
+      assert.match(error.message, /baseline: performance startup first usable control browser readiness failed/);
+      assert.match(error.message, /pageerror: missing browser dependency/);
+      assert.match(error.message, /HTTP 404: \/missing\.js/);
+      assert.match(error.message, /"readyState":"complete"/);
+      assert.match(error.message, /"performanceBootPresent":false/);
+      assert.match(error.cause.message, /Timeout 30000ms exceeded/);
+      return true;
+    },
+  );
+});
 
 test('packed performance accepts only node_modules-relative package paths', () => {
   assert.deepEqual(packageInstallPath('@aceshooting/lyra-ui'), ['@aceshooting', 'lyra-ui']);
@@ -80,17 +108,87 @@ test('browser bare imports resolve from each installed ESM module parent and use
       await writeFile(join(packageRoot, 'entry.js'), '');
       await writeFile(join(dependencyRoot, 'package.json'), JSON.stringify({
         name: 'fixture-dependency',
-        exports: { '.': { import: './esm.js', require: './cjs.cjs' } },
+        exports: {
+          '.': { import: { node: './node.js', default: './esm.js' } },
+          './blocked.js': { browser: null, default: './esm.js' },
+          './invalid.js': { browser: ['./esm.js'], default: './esm.js' },
+          './feature/*': './features/*.js',
+        },
       }));
       await writeFile(join(dependencyRoot, 'esm.js'), 'export const selected = "import";');
-      await writeFile(join(dependencyRoot, 'cjs.cjs'), 'module.exports = "require";');
-      const resolved = resolveBrowserSpecifier('fixture-dependency', join(packageRoot, 'entry.js'));
+      await writeFile(join(dependencyRoot, 'node.js'), 'export const selected = "node";');
+      await mkdir(join(dependencyRoot, 'features'));
+      await writeFile(join(dependencyRoot, 'features/example.js'), 'export const feature = true;');
+      assert.equal(import.meta.resolve('fixture-dependency', pathToFileURL(join(packageRoot, 'entry.js')).href),
+        pathToFileURL(join(dependencyRoot, 'node.js')).href);
+      const resolved = await resolveBrowserSpecifier('fixture-dependency', join(packageRoot, 'entry.js'));
       assert.equal(resolved, pathToFileURL(join(dependencyRoot, 'esm.js')).href);
+      await assert.rejects(resolveBrowserSpecifier('fixture-dependency/blocked.js', join(packageRoot, 'entry.js')),
+        /no safe declared production browser module target/);
+      await assert.rejects(resolveBrowserSpecifier('fixture-dependency/invalid.js', join(packageRoot, 'entry.js')),
+        /unsupported browser export target shape/);
+      await assert.rejects(resolveBrowserSpecifier('fixture-dependency/feature/example', join(packageRoot, 'entry.js')),
+        /no exact declared browser export\/import entry/);
     }
     const baselineSource = await readFile(resolve(root, 'baseline/node_modules/fixture-dependency/esm.js'), 'utf8');
     const candidateSource = await readFile(resolve(root, 'candidate/node_modules/fixture-dependency/esm.js'), 'utf8');
     assert.match(baselineSource, /selected = "import"/);
     assert.match(candidateSource, /selected = "import"/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('raw browser fixture selects tslib ESM instead of its Node-only CommonJS bridge', async () => {
+  const parent = fileURLToPath(new URL('../packages/lyra-ui/package.json', import.meta.url));
+  const browserEntry = await resolveBrowserSpecifier('tslib', parent);
+  assert.match(browserEntry, /\/tslib\/tslib\.es6\.mjs$/);
+  const tslib = await import(browserEntry);
+  assert.equal(typeof tslib.__decorate, 'function');
+});
+
+test('package-private browser imports use literal scoped keys and production targets for each installed version', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'lyra-packed-private-imports-'));
+  try {
+    for (const role of ['baseline', 'candidate']) {
+      const packageRoot = join(root, role);
+      await mkdir(join(packageRoot, 'dist', 'components'), { recursive: true });
+      await mkdir(join(packageRoot, 'dist', 'internal'), { recursive: true });
+      const productionTarget = `./dist/internal/${role}-production.js`;
+      await writeFile(join(packageRoot, 'package.json'), JSON.stringify({
+        name: '@aceshooting/lyra-ui',
+        type: 'module',
+        imports: {
+          '#lyra-dev-attributes': {
+            development: './dist/internal/development.js',
+            default: productionTarget,
+          },
+        },
+        exports: {
+          './theme.js': './dist/theme.js',
+          './hydration.js': './dist/hydration.js',
+        },
+      }));
+      await writeFile(join(packageRoot, productionTarget), 'export const mode = "production";');
+      await writeFile(join(packageRoot, 'dist/internal/development.js'), 'export const mode = "development";');
+      for (const name of ['input', 'select', 'option', 'dialog', 'data-grid', 'tree', 'button']) {
+        await writeFile(join(packageRoot, `dist/components/lr-${name}.js`),
+          name === 'input' ? "import '#lyra-dev-attributes';\n" : '');
+      }
+      await writeFile(join(packageRoot, 'dist/theme.js'), '');
+      await writeFile(join(packageRoot, 'dist/hydration.js'), '');
+      const map = await buildBrowserImportMap({
+        key: role,
+        root: packageRoot,
+        metadata: JSON.parse(await readFile(join(packageRoot, 'package.json'), 'utf8')),
+      }, '');
+      const scope = `/packages/${role}/`;
+      assert.equal(map.scopes[scope]['#lyra-dev-attributes'],
+        `/packages/${role}/dist/internal/${role}-production.js`);
+      assert.equal(Object.keys(map.scopes[scope]).length, 1);
+      assert.equal(Object.keys(map.imports).some((key) => key.includes('#lyra-dev-attributes')), false);
+      assert.equal(JSON.stringify(map.scopes).includes('development.js'), false);
+    }
   } finally {
     await rm(root, { recursive: true, force: true });
   }

@@ -27,15 +27,16 @@ import type { LyraChatSuggestion as GranularChatSuggestion } from '../src/compon
 import type { LyraChatSuggestion as RootChatSuggestion,
 } from '../src/lyra.js';
 // @ts-expect-error LyraModelSelectSize was removed in favor of the shared LyraSize.
-import type {
-  LyraModelSelectSize as RemovedGranularModelSelectSize } from '../src/components/conversation/model-select/model-select.js';
+import type { LyraModelSelectSize as RemovedGranularModelSelectSize } from '../src/components/conversation/model-select/model-select.js';
 
+// @ts-expect-error LyraVoicePickerSize was removed in favor of the shared LyraSize.
 import type { LyraVoicePickerSize as RemovedGranularVoicePickerSize } from '../src/components/conversation/voice-picker/voice-picker.js';
 
+// @ts-expect-error ChatSuggestion was replaced by LyraChatSuggestion.
 import type { ChatSuggestion as RemovedGranularChatSuggestion } from '../src/components/conversation/suggestion-chips/suggestion-chips.js';
 
-import type { ChatSuggestion as RemovedRootChatSuggestion,
-} from '../src/lyra.js';
+// @ts-expect-error ChatSuggestion was replaced by LyraChatSuggestion at the curated root.
+import type { ChatSuggestion as RemovedRootChatSuggestion } from '../src/lyra.js';
 
 const rootSuggestion: RootChatSuggestion = { suggestionId: 'inspect', label: 'Inspect', icon: '🔎' };
 const granularSuggestion: GranularChatSuggestion = rootSuggestion;

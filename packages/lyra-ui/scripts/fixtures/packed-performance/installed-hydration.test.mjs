@@ -27,7 +27,14 @@ test('browser fixture imports hydration before its public tag registration over 
   const html = await createHydrationPageHtml({
     packageInfo,
     origin: 'http://127.0.0.1:43127',
-    importMap: { imports: { 'lit': 'http://127.0.0.1:43127/external/baseline/m0/lit.js' } },
+    importMap: {
+      imports: { 'lit': 'http://127.0.0.1:43127/external/baseline/m0/lit.js' },
+      scopes: {
+        'http://127.0.0.1:43127/packages/baseline/': {
+          '#lyra-dev-attributes': 'http://127.0.0.1:43127/packages/baseline/dist/internal/prod.js',
+        },
+      },
+    },
     ssr: {
       html: '<lr-input data-hydration-probe><template shadowrootmode="open"><input value="retained-server-value"></template><span data-hydration-light-dom>SSR light DOM probe</span></lr-input>',
       expectedValue: 'retained-server-value',
@@ -39,7 +46,8 @@ test('browser fixture imports hydration before its public tag registration over 
     },
   });
   assert.match(html, /<template shadowrootmode="open">/);
-  assert.match(html, /"imports":\{"lit":"http:\/\/127\.0\.0\.1:43127\/external\/baseline\/m0\/lit\.js"\}\}/);
+  assert.match(html, /"imports":\{"lit":"http:\/\/127\.0\.0\.1:43127\/external\/baseline\/m0\/lit\.js"\}/);
+  assert.match(html, /"scopes":\{"http:\/\/127\.0\.0\.1:43127\/packages\/baseline\/":\{"#lyra-dev-attributes":"http:\/\/127\.0\.0\.1:43127\/packages\/baseline\/dist\/internal\/prod\.js"\}\}/);
   assert.ok(html.indexOf('await import(configuration.hydrationUrl)') < html.indexOf('await import(configuration.registrationUrl)'));
   assert.match(html, /http:\/\/127\.0\.0\.1:43127\/packages\/baseline\/dist\/hydration\.js/);
   assert.match(html, /http:\/\/127\.0\.0\.1:43127\/packages\/baseline\/dist\/components\/lr-input\.js/);

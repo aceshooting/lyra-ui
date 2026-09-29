@@ -12,6 +12,7 @@ import {
   runInstalledHydrationSmoke,
   resolvePublicExportTarget,
 } from '../packages/lyra-ui/scripts/fixtures/packed-performance/installed-hydration.mjs';
+import { describeBrowserError, waitForBrowserReadiness } from '../packages/lyra-ui/scripts/fixtures/packed-performance/browser-readiness.mjs';
 
 const scriptDir = fileURLToPath(new URL('.', import.meta.url));
 const fixtureDirPath = join(scriptDir, 'fixtures', 'packed-performance');
@@ -36,6 +37,7 @@ const mimeTypes = new Map([
   ['.css', 'text/css'],
   ['.html', 'text/html'],
   ['.js', 'text/javascript'],
+  ['.mjs', 'text/javascript'],
   ['.json', 'application/json'],
   ['.svg', 'image/svg+xml'],
   ['.woff2', 'font/woff2'],
@@ -172,12 +174,58 @@ function importSpecifiers(source) {
   return [...found];
 }
 
-function resolveBrowserSpecifier(specifier, parentPath) {
+function resolveNodeSpecifier(specifier, parentPath) {
   assert.ok(
     process.execArgv.includes('--experimental-import-meta-resolve'),
     'packed performance must enable parent-aware import.meta.resolve for installed module dependencies',
   );
   return import.meta.resolve(specifier, pathToFileURL(parentPath).href);
+}
+
+function browserConditionTarget(entry) {
+  if (typeof entry === 'string') return entry;
+  if (entry === null) return null;
+  assert.ok(entry && typeof entry === 'object' && !Array.isArray(entry),
+    'unsupported browser export target shape');
+  // Preserve the package's declared condition order, as export resolution does. This fixture
+  // runs production browser ESM, not Node's `node` branch or a development implementation.
+  const conditions = new Set(['browser', 'import', 'module', 'default']);
+  for (const [condition, target] of Object.entries(entry)) {
+    if (!conditions.has(condition)) continue;
+    const selected = browserConditionTarget(target);
+    assert.notEqual(selected, undefined, `unsupported browser export target under ${condition}`);
+    return selected;
+  }
+  return undefined;
+}
+
+async function resolveBrowserSpecifier(specifier, parentPath) {
+  const nodeUrl = resolveNodeSpecifier(specifier, parentPath);
+  assert.ok(nodeUrl.startsWith('file:'), `${specifier}: browser dependency did not resolve to an installed file`);
+  const ownerPath = specifier.startsWith('#') ? parentPath : fileURLToPath(nodeUrl);
+  const owner = await packageRootForModule(ownerPath);
+  const metadata = JSON.parse(await readFile(join(owner.root, 'package.json'), 'utf8'));
+  let entry;
+  if (specifier.startsWith('#')) {
+    entry = metadata.imports?.[specifier];
+  } else if (specifier === owner.name || specifier.startsWith(`${owner.name}/`)) {
+    const exportName = specifier === owner.name ? '.' : `./${specifier.slice(owner.name.length + 1)}`;
+    entry = metadata.exports?.[exportName];
+    if (entry === undefined && metadata.exports === undefined && exportName === '.' &&
+        typeof metadata.module === 'string') {
+      entry = metadata.module;
+    }
+  } else {
+    throw new Error(`${specifier}: browser import owner ${owner.name} does not match the requested package`);
+  }
+  assert.ok(entry !== undefined, `${specifier}: no exact declared browser export/import entry`);
+  const browserTarget = browserConditionTarget(entry);
+  assert.ok(typeof browserTarget === 'string' && browserTarget.startsWith('./'),
+    `${specifier}: no safe declared production browser module target`);
+  const browserPath = resolve(owner.root, browserTarget);
+  assert.ok(browserPath.startsWith(`${owner.root}${sep}`), `${specifier}: browser condition escaped package root`);
+  assert.ok((await stat(browserPath)).isFile(), `${specifier}: declared browser module is missing`);
+  return pathToFileURL(browserPath).href;
 }
 
 async function packageRootForModule(modulePath) {
@@ -196,7 +244,7 @@ async function packageRootForModule(modulePath) {
 }
 
 async function runtimeModuleProvenance(specifier, parentPath) {
-  const moduleUrl = resolveBrowserSpecifier(specifier, parentPath);
+  const moduleUrl = resolveNodeSpecifier(specifier, parentPath);
   assert.ok(moduleUrl.startsWith('file:'), `runtime toolchain module ${specifier} did not resolve to a file`);
   const modulePath = fileURLToPath(moduleUrl);
   const owner = await packageRootForModule(modulePath);
@@ -219,6 +267,7 @@ async function runtimeToolchainProvenance() {
 async function buildBrowserImportMap(packageInfo, origin) {
   const packageMount = `/packages/${packageInfo.key}/`;
   const importMap = {};
+  const scopes = {};
   const moduleMounts = new Map();
   const visited = new Set();
   const allowedRoots = new Set([packageInfo.root]);
@@ -240,36 +289,31 @@ async function buildBrowserImportMap(packageInfo, origin) {
         if ([...allowedRoots].some((root) => child.startsWith(`${root}${sep}`))) queue.push(child);
         continue;
       }
-      const resolvedUrl = resolveBrowserSpecifier(specifier, modulePath);
+      const resolvedUrl = await resolveBrowserSpecifier(specifier, modulePath);
       if (!resolvedUrl.startsWith('file:')) continue;
       const resolvedPath = fileURLToPath(resolvedUrl);
-      let browserSpecifier = specifier;
+      let mappings = importMap;
       if (specifier.startsWith('#')) {
-        let parentAddress;
+        let scopePrefix;
         if (modulePath.startsWith(`${packageInfo.root}${sep}`)) {
-          parentAddress = `${packageMount}${relative(packageInfo.root, modulePath).split(sep).join('/')}`;
+          scopePrefix = `${origin}${packageMount}`;
         } else {
           const parentMount = [...moduleMounts.values()].find((mount) =>
             modulePath.startsWith(`${mount.root}${sep}`),
           );
           assert.ok(parentMount, `no browser mount found for private import parent ${modulePath}`);
-          parentAddress =
-            `/external/${packageInfo.key}/${parentMount.id}/${relative(parentMount.root, modulePath).split(sep).join('/')}`;
+          scopePrefix = `${origin}/external/${packageInfo.key}/${parentMount.id}/`;
         }
-        const resolvedBrowserSpecifier = new URL(
-          specifier,
-          new URL(parentAddress, 'https://lyra-import-map.invalid'),
-        );
-        browserSpecifier = `${resolvedBrowserSpecifier.pathname}${resolvedBrowserSpecifier.hash}`;
+        mappings = scopes[scopePrefix] ??= {};
       }
       if (resolvedPath.startsWith(`${packageInfo.root}${sep}`)) {
         const target =
           `${origin}${packageMount}${relative(packageInfo.root, resolvedPath).split(sep).join('/')}`;
         assert.ok(
-          !importMap[browserSpecifier] || importMap[browserSpecifier] === target,
-          `ambiguous browser import-map entry for ${browserSpecifier}`,
+          !mappings[specifier] || mappings[specifier] === target,
+          `ambiguous browser import-map entry for ${specifier}`,
         );
-        importMap[browserSpecifier] = target;
+        mappings[specifier] = target;
         queue.push(resolvedPath);
         continue;
       }
@@ -288,15 +332,16 @@ async function buildBrowserImportMap(packageInfo, origin) {
       const subpath = relative(externalPackage.root, resolvedPath).split(sep).join('/');
       const target = `${origin}/external/${packageInfo.key}/${mount.id}/${subpath}`;
       assert.ok(
-        !importMap[browserSpecifier] || importMap[browserSpecifier] === target,
-        `ambiguous browser import-map entry for ${browserSpecifier}`,
+        !mappings[specifier] || mappings[specifier] === target,
+        `ambiguous browser import-map entry for ${specifier}`,
       );
-      importMap[browserSpecifier] = target;
+      mappings[specifier] = target;
       queue.push(resolvedPath);
     }
   }
   return {
     imports: importMap,
+    scopes,
     mounts: [...moduleMounts.values()],
   };
 }
@@ -449,7 +494,7 @@ ${lookStyles}
 <link rel="stylesheet" href="/packages/${packageInfo.key}/dist/surfaces/glass.css">
 <link rel="stylesheet" href="/packages/${packageInfo.key}/dist/density.css">
 <link rel="stylesheet" href="/packages/${packageInfo.key}/dist/accents.css">
-<script type="importmap">${JSON.stringify(importMap)}</script></head>
+<script type="importmap">${JSON.stringify({ imports: importMap.imports, scopes: importMap.scopes })}</script></head>
 <body><script>window.__lyraPackage=${JSON.stringify({ key: packageInfo.key })};window.__lyraThemeUrl=${JSON.stringify(`/packages/${packageInfo.key}/${themeTarget.slice(2)}`)};</script>
 <script type="module">${runner}</script></body></html>`;
 }
@@ -521,25 +566,36 @@ async function launchPackagePage(browser, origin, packageInfo, config) {
     deviceScaleFactor: 1,
     reducedMotion: 'no-preference',
   });
-  const page = await context.newPage();
-  const errors = [];
-  page.on('pageerror', (error) => errors.push(`pageerror: ${error.stack ?? error.message}`));
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(`console.error: ${message.text()}`);
-  });
-  page.on('requestfailed', (request) => errors.push(`request failed: ${request.url()}`));
-  page.on('response', (response) => {
-    if (response.status() >= 400) errors.push(`HTTP ${response.status()}: ${response.url()}`);
-  });
-  await page.route('**/*', (route) => {
-    const url = route.request().url();
-    if (url.startsWith(`${origin}/`)) return route.continue();
-    errors.push(`unexpected external request: ${url}`);
-    return route.abort();
-  });
-  await page.goto(`${origin}/fixture/${packageInfo.key}/`, { waitUntil: 'load' });
-  await page.waitForFunction(() => Boolean(window.__lyraPerformance?.boot?.firstUsable), undefined, { timeout: 30000 });
-  return { context, page, errors };
+  try {
+    const page = await context.newPage();
+    const errors = [];
+    page.on('pageerror', (error) => errors.push(`pageerror: ${describeBrowserError(error)}`));
+    page.on('console', (message) => {
+      if (message.type() === 'error') errors.push(`console.error: ${message.text()}`);
+    });
+    page.on('requestfailed', (request) => errors.push(`request failed: ${request.url()}`));
+    page.on('response', (response) => {
+      if (response.status() >= 400) errors.push(`HTTP ${response.status()}: ${response.url()}`);
+    });
+    await page.route('**/*', (route) => {
+      const url = route.request().url();
+      if (url.startsWith(`${origin}/`)) return route.continue();
+      errors.push(`unexpected external request: ${url}`);
+      return route.abort();
+    });
+    await page.goto(`${origin}/fixture/${packageInfo.key}/`, { waitUntil: 'load' });
+    await waitForBrowserReadiness({
+      page,
+      predicate: () => Boolean(window.__lyraPerformance?.boot?.firstUsable),
+      packageKey: packageInfo.key,
+      phase: 'performance startup first usable control',
+      errors,
+    });
+    return { context, page, errors };
+  } catch (error) {
+    await context.close();
+    throw error;
+  }
 }
 
 async function retentionPageHtml(packageInfo, importMap) {
@@ -1101,8 +1157,43 @@ export async function runPackedHydrationSmoke({ fixtureDir, packages, artifactsP
   return receipt;
 }
 
+/** One readiness probe per exact installed tarball; records no performance samples. */
+export async function diagnosePackedStartup({ fixtureDir, packages }) {
+  assert.ok(Array.isArray(packages) && packages.length === 2, 'exactly two installed package descriptors are required');
+  const config = JSON.parse(await readFile(workloadConfigPath, 'utf8'));
+  const installedPackages = await Promise.all(packages.map((entry) => resolveInstalledPackage(fixtureDir, entry)));
+  const byRole = Object.fromEntries(installedPackages.map((entry) => [entry.role, entry]));
+  assert.deepEqual(Object.keys(byRole).sort(), ['baseline', 'candidate']);
+  await readFixtureLock(fixtureDir);
+  const importMaps = new Map();
+  for (const packageInfo of installedPackages) {
+    importMaps.set(packageInfo.key, await buildBrowserImportMap(packageInfo, ''));
+  }
+  const server = await startStaticServer(installedPackages, importMaps, config);
+  const browser = await chromium.launch({ headless: true });
+  const results = [];
+  try {
+    for (const role of ['baseline', 'candidate']) {
+      const packageInfo = byRole[role];
+      server.setPage(packageInfo.key, await packagePageHtml(packageInfo, importMaps.get(packageInfo.key)));
+      try {
+        const { context, errors } = await launchPackagePage(browser, server.origin, packageInfo, config);
+        results.push({ role, ready: errors.length === 0, errors });
+        await context.close();
+      } catch (error) {
+        results.push({ role, ready: false, error: error instanceof Error ? error.message : String(error) });
+      }
+    }
+  } finally {
+    await browser.close();
+    await new Promise((accept, reject) => server.server.close((error) => error ? reject(error) : accept()));
+  }
+  return results;
+}
+
 export {
   assertInside,
+  buildBrowserImportMap,
   buildStyleSwitchPlan,
   packageInstallPath,
   parsePerformanceQualificationOptions,
