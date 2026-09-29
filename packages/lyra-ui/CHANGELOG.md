@@ -1,5 +1,11 @@
 # Changelog
 
+## 22.1.0
+
+### Minor Changes
+
+- 7d23fd5: Complete deprecation notices, editor feedback, and migration coverage for deprecated package-root component-class exports. All APIs remain available in this release.
+
 ## 22.0.0
 
 ### Major Changes

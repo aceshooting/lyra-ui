@@ -48,7 +48,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-breadcrumb-item"></a>`lr-breadcrumb-item` | layout | `import '@aceshooting/lyra-ui/components/layout/breadcrumb/breadcrumb-item.js';` | none | none | none | 21.3 KiB |
 | <a id="lr-browser-frame"></a>`lr-browser-frame` | agent-tools | `import '@aceshooting/lyra-ui/components/agent-tools/browser-frame/browser-frame.js';` | none | none | none | 27.7 KiB |
 | <a id="lr-bubble-chart"></a>`lr-bubble-chart` | charts | `import '@aceshooting/lyra-ui/components/charts/chart/bubble-chart.js';` | `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` | `lr-chart`, `lr-skeleton` | none | 55.3 KiB |
-| <a id="lr-budget-meter"></a>`lr-budget-meter` | agent-tools | `import '@aceshooting/lyra-ui/components/agent-tools/budget-meter/budget-meter.js';` | none | none | none | 21 KiB |
+| <a id="lr-budget-meter"></a>`lr-budget-meter` | agent-tools | `import '@aceshooting/lyra-ui/components/agent-tools/budget-meter/budget-meter.js';` | none | none | none | 20.9 KiB |
 | <a id="lr-button"></a>`lr-button` | forms | `import '@aceshooting/lyra-ui/components/forms/button/button.js';` | none | none | none | 29.9 KiB |
 | <a id="lr-button-group"></a>`lr-button-group` | layout | `import '@aceshooting/lyra-ui/components/layout/button-group/button-group.js';` | none | none | none | 19.6 KiB |
 | <a id="lr-calendar"></a>`lr-calendar` | data | `import '@aceshooting/lyra-ui/components/data/calendar/calendar.js';` | none | none | none | 26.7 KiB |
