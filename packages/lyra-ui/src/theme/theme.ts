@@ -691,8 +691,9 @@ function applyStoredThemeBeforePaint() {
   const normalizeMap = (rawTokens: unknown): LyraThemeTokens => {
     const normalizedTokens: Record<string, LyraThemeTokenValue> = {};
     try {
-      const names = isPlain(rawTokens) ? Object.keys(rawTokens) : [];
-      if (isPlain(rawTokens) && names.length <= tokenEntryMax) {
+      if (!isPlain(rawTokens)) return normalizedTokens as LyraThemeTokens;
+      const names = Object.keys(rawTokens);
+      if (names.length <= tokenEntryMax) {
         for (const name of names) {
           if (!isTokenName(name)) continue;
           const value = rawTokens[name];
@@ -702,8 +703,8 @@ function applyStoredThemeBeforePaint() {
             continue;
           }
           if (!isPlain(value)) continue;
-          const hasLight = Object.prototype.hasOwnProperty.call(value, 'light');
-          const hasDark = Object.prototype.hasOwnProperty.call(value, 'dark');
+          const hasLight = Object.hasOwn(value, 'light');
+          const hasDark = Object.hasOwn(value, 'dark');
           if ((!hasLight && !hasDark) || Object.keys(value).some((key) => key !== 'light' && key !== 'dark')) continue;
           const light = safeTokenValue(value['light']);
           const dark = safeTokenValue(value['dark']);
@@ -984,7 +985,7 @@ function applyStoredStyleBeforePaint(
     const accentName = record['accentName'] as string | undefined;
     let accent = record['accent'] as LyraThemeAccent;
     if (mode !== 'unset' && accent && typeof accent === 'object' && !Object.values(accent).some(value =>
-      typeof value === 'string' || (value && typeof value === 'object' && Object.values(value).some(branch => typeof branch === 'string')))) accent = null;
+      typeof value === 'string' || (value && Object.values(value).some(Boolean)))) accent = null;
     desiredAttributes['data-lr-accent'] = accentName ?? (accent ? 'custom' : 'none');
     const desired = new Map<string, string>();
     if (mode === 'unset') for (const [name, value] of Object.entries(tokens)) {
