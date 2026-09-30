@@ -860,15 +860,9 @@ function applyStoredThemeBeforePaint() {
     if (entries.has(overlayName) || entries.has(`${prefix}color-on-strong-overlay`)) {
       pairForeground(`${prefix}color-on-strong-overlay`, overlay);
     }
-    const boundaries = [
-      ...roles.flatMap((role) => [`${prefix}color-${role}-border-normal`, `${prefix}color-${role}-border-loud`]),
-      `${prefix}color-surface-border`,
-      `${prefix}color-border-strong`,
-      `${prefix}color-focus`,
-    ];
-    for (const name of boundaries) floor(name, background, background, 3);
+    // Repair only supplied boundary tokens; absent tokens remain the stylesheet's responsibility.
     for (const name of entries.keys()) {
-      if (/^--lr-theme-color-chart-\d+$/.test(name)) floor(name, background, background, 3);
+      if (/^--lr-theme-color-(?:(?:brand|success|warning|danger|neutral)-border-(?:normal|loud)|surface-border|border-strong|focus|chart-\d+)$/.test(name)) floor(name, background, background, 3);
       else if (/^--lr-theme-terminal-color-[a-z0-9-]+$/.test(name)) floor(name, raised, raised, 4.5);
       else if (/^--lr-theme-terminal-bg-[a-z0-9-]+$/.test(name)) floor(name, raised, text, 4.5);
     }

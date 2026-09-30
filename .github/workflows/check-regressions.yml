@@ -50,8 +50,8 @@ jobs:
 
       - name: Check the regression toolchain
         run: |
-          test "$(node --version)" = v22.23.2
-          test "$(pnpm --version)" = 12.6.0
+          node scripts/check-node-version.mjs
+          test "pnpm@$(pnpm --version)" = "$(node -p "require('./package.json').packageManager")"
 
       - run: pnpm install --frozen-lockfile
 

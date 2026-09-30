@@ -20,10 +20,6 @@ export function resolveStyleStartup(
     const result = normalizeMap(value);
     return result && Object.keys(result).length ? result : null;
   };
-  const overrides = (value: unknown): LyraThemeTokens | null => {
-    const entries = Object.entries(map(value) ?? {}).filter(([name, input]) => allowed(name, input));
-    return entries.length ? Object.fromEntries(entries) : null;
-  };
   const pair = (value: unknown): unknown => {
     if (value === null) return null;
     if (typeof value === 'string') return color(value);
@@ -46,19 +42,17 @@ export function resolveStyleStartup(
     }
     return Object.keys(result).length ? result : undefined;
   };
-  const fallback: Record<string, unknown> = {
+  const result: Record<string, unknown> = {
     version: 2, look: defaults.look, treatment: defaults.surface, density: defaults.density,
     mode: defaults.mode, accent: gemstones[defaults.accent], accentName: defaults.accent, surface: null,
   };
 
   const version = field(saved, 'version');
-  if (!object(saved) || (version !== undefined && version !== 2)) return fallback;
-  const result = { ...fallback };
+  if (!object(saved) || (version !== undefined && version !== 2)) return result;
   const savedLook = field(saved, 'look');
   const tokens = map(field(saved, 'tokens'));
   if (id(savedLook) || tokens) {
     result['look'] = id(savedLook) ? savedLook : 'custom';
-    delete result['tokens'];
     if (tokens) result['tokens'] = tokens;
   }
   for (const [key, values] of [
@@ -78,11 +72,7 @@ export function resolveStyleStartup(
   }
   const background = pair(field(saved, 'surface'));
   if (background !== undefined) result['surface'] = background;
-  const savedOverrides = field(saved, 'overrides');
-  const normalizedOverrides = overrides(savedOverrides);
-  if (savedOverrides === null || normalizedOverrides) {
-    delete result['overrides'];
-    if (normalizedOverrides) result['overrides'] = normalizedOverrides;
-  }
+  const overrides = Object.entries(map(field(saved, 'overrides')) ?? {}).filter(([name, input]) => allowed(name, input));
+  if (overrides.length) result['overrides'] = Object.fromEntries(overrides);
   return result;
 }

@@ -65,6 +65,13 @@ describe('built-in appearance defaults', () => {
     ['runtime tokens with invalid id', JSON.stringify({ version: 2, look: 'Bad ID', tokens: { '--lr-theme-radius-m': '7px' } }), { look: 'custom', lookForm: 'runtime' }],
     ['contrast-repaired mode token maps', JSON.stringify({ version: 2, mode: 'dark', accent: null, tokens: { '--lr-theme-color-brand-fill-loud': { light: '#ffffff', dark: '#000000' }, '--lr-theme-color-text-normal': { light: '#eeeeee', dark: '#111111' }, '--lr-theme-radius-m': ' 7px ' } }), { look: 'custom', lookForm: 'runtime', mode: 'dark', accent: null }],
     ['density and brand-follow token membership', JSON.stringify({ version: 2, mode: 'light', density: 'compact', accent: '#006633', tokens: { '--lr-theme-radius-m': '7px', '--lr-theme-space-m': '12px', '--lr-theme-color-success-fill-loud': 'var(--lr-theme-color-brand-fill-loud)' } }), { look: 'custom', lookForm: 'runtime', density: 'compact', mode: 'light', accent: '#006633', accentName: null }],
+    ['supplied contrast boundaries', JSON.stringify({ version: 2, mode: 'light', accent: null, tokens: {
+      '--lr-theme-color-danger-border-normal': '#ffffff', '--lr-theme-color-brand-border-loud': '#ffffff',
+      '--lr-theme-color-neutral-border-quiet': '#eeeeee', '--lr-theme-color-other-border-normal': '#eeeeee',
+      '--lr-theme-color-chart-12': '#ffffff', '--lr-theme-color-focus': '#ffffff',
+      '--lr-theme-color-surface-border': '#ffffff', '--lr-theme-color-border-strong': '#ffffff',
+      '--lr-theme-terminal-color-custom': '#eeeeee', '--lr-theme-terminal-bg-custom': '#1a1a1a',
+    } }), { look: 'custom', lookForm: 'runtime', mode: 'light', accent: null }],
     ['invalid token maps', JSON.stringify({ version: 2, tokens: { '--lr-theme-radius-m': '7px; color:red' }, overrides: [] }), { look: 'shadcn', lookForm: 'stylesheet' }],
     ['saved background pair', JSON.stringify({ version: 2, accent: '#e63950', surface: { light: null, dark: '#111827' } }), { accentBackground: { light: null, dark: '#111827' } }],
     ['runtime tokens without id', JSON.stringify({ version: 2, tokens: { '--lr-theme-radius-m': '8px' }, overrides: { '--lr-theme-font-weight-body': '500' } }), { look: 'custom', lookForm: 'runtime', overrides: { '--lr-theme-font-weight-body': '500' } }],
