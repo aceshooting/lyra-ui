@@ -3,6 +3,14 @@ name: Prepare source artifacts
 on:
   workflow_dispatch:
     inputs:
+      mode:
+        description: 'Prepare source projections or consume pending changesets for a release review'
+        required: true
+        type: choice
+        default: source
+        options:
+          - source
+          - release
       publication:
         description: 'Optional immutable capture JSON: version, tagObject, commit, tarballSha256, registryIntegrity'
         required: false
@@ -21,9 +29,12 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    env:
+      PREPARATION_MODE: ${{ inputs.mode }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
@@ -44,8 +55,18 @@ jobs:
             throw new Error(`Expected Node ${node} and ${manager}; got Node ${process.versions.node} and pnpm@${actualPnpm}`);
           }
           NODE
+      - name: Validate preparation inputs and source path safety
+        env:
+          PUBLICATION_JSON: ${{ inputs.publication }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { assertPreparationInputs } from './scripts/prepare-artifacts-paths.mjs';
+          assertPreparationInputs(process.env.PREPARATION_MODE, process.env.PUBLICATION_JSON);
+          NODE
+          node --test scripts/prepare-artifacts.test.mjs
       - run: pnpm install --frozen-lockfile
       - name: Capture an explicitly pinned publication
+        if: inputs.mode == 'source'
         env:
           PUBLICATION_JSON: ${{ inputs.publication }}
           GH_TOKEN: ${{ github.token }}
@@ -53,6 +74,7 @@ jobs:
       # History reconciliation needs a current manifest and pinned inventory first.
       # The repository runner refreshes package, plugin, size and Storybook projections.
       - name: Reconcile release history and generate source
+        if: inputs.mode == 'source'
         run: |
           pnpm --filter @aceshooting/lyra-ui run default-string-slices
           pnpm --filter @aceshooting/lyra-ui run translation-slices
@@ -60,6 +82,9 @@ jobs:
           pnpm --filter @aceshooting/lyra-ui run component-inventory
           pnpm --filter @aceshooting/lyra-ui run component-metadata:history
           ./scripts/regen.sh
+      - name: Prepare release source from pending changesets
+        if: inputs.mode == 'release'
+        run: pnpm release:prepare
       - name: Verify generated source contracts
         run: |
           pnpm --filter @aceshooting/lyra-ui run check:published-compatibility

@@ -7,11 +7,14 @@ import { capturePublishedCompatibility } from '../packages/lyra-ui/scripts/captu
 import { capturePolicyWitnesses } from '../packages/lyra-ui/scripts/capture-published-policy-witnesses.mjs';
 import { checkPublishedCompatibilitySync } from '../packages/lyra-ui/scripts/check-published-compatibility.mjs';
 import { decodeEvidence, encodeEvidence, jsonBytes, readPublishedCaptureSync, sha256, verifyPolicyWitnesses } from '../packages/lyra-ui/scripts/published-compatibility-io.mjs';
+import { assertGeneratedAddition, assertPreparationInputs, assertSourcePath } from './prepare-artifacts-paths.mjs';
 
 // This runner prepares reviewable source only. Qualification and publication retain their
 // existing workflows; neither this script nor its workflow writes Git refs.
 assert.equal(process.env.GITHUB_ACTIONS, 'true', 'Use the hosted generation workflow');
 assert.equal(process.env.GITHUB_REF, 'refs/heads/main', 'Generation requires main');
+const preparationMode = process.env.PREPARATION_MODE ?? 'source';
+assertPreparationInputs(preparationMode, process.env.PUBLICATION_JSON ?? '');
 const root = process.cwd();
 const git = args => execFileSync('git', args, { cwd: root, maxBuffer: 128 * 1024 * 1024 });
 const historyDir = join(root, 'packages/lyra-ui/scripts/fixtures/compatibility-history');
@@ -125,29 +128,22 @@ function bundle() {
   }));
   const modified = git(['diff', 'HEAD', '--name-only', '-z']).toString().split('\0').filter(Boolean);
   const added = git(['ls-files', '--others', '--exclude-standard', '-z']).toString().split('\0').filter(Boolean);
-  const hiddenGenerated = new Set([
-    '.storybook/token-preview.generated.js', '.storybook/sitemap.xml',
-    '.claude-plugin/marketplace.json',
-    'plugins/lyra-ui/.claude-plugin/plugin.json', 'plugins/lyra-ui/.codex-plugin/plugin.json',
-  ]);
-  // New generated files are restricted to the library projections and packaged references.
-  // All authored source additions must already be committed before running this workflow.
-  for (const file of added) assert.ok(hiddenGenerated.has(file) || /^(?:packages\/lyra-ui\/(?:src|llms|scripts\/fixtures)\/|plugins\/lyra-ui\/skills\/(?:lyra-ui|compose-lyra-interfaces)\/|docs\/changelog\/v\d+\.md$|skills\/[^/]+\.skill$)/u.test(file), `Unexpected generated addition ${file}`);
+  for (const file of added) assertGeneratedAddition(file);
   const output = join(process.env.RUNNER_TEMP, 'lyra-generated-source');
   assert.ok(!existsSync(output));
   mkdirSync(join(output, 'blobs'), { recursive: true });
   const changes = [];
   for (const file of [...new Set([...modified, ...added])].sort()) {
-    assert.ok(hiddenGenerated.has(file) || !file.split('/').some(part => part.startsWith('.') || ['node_modules', 'dist'].includes(part)), `Non-source path ${file}`);
-    assert.ok(!/(?:^|\/)(?:[^/]*\.log|[^/]*\.pem|[^/]*\.key)$/u.test(file), `Non-source path ${file}`);
     const old = tracked.get(file);
     if (old) assert.equal(old.kind, 'blob');
     if (old) assert.ok(['100644', '100755'].includes(old.mode));
     const before = old ? { sha256: sha256(git(['cat-file', 'blob', old.oid])), gitBlob: old.oid, mode: old.mode } : null;
     const target = resolve(root, file);
+    // lstat detects dangling symlinks too; they cannot masquerade as a consumed changeset.
+    const stat = lstatSync(target, { throwIfNoEntry: false });
+    assertSourcePath(file, { mode: preparationMode, tracked: old, deleted: stat === undefined });
     let after = null;
-    if (existsSync(target)) {
-      const stat = lstatSync(target);
+    if (stat) {
       assert.ok(stat.isFile() && !stat.isSymbolicLink(), `Non-regular source ${file}`);
       const bytes = readFileSync(target);
       const hash = sha256(bytes);
