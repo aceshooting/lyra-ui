@@ -68,10 +68,32 @@ describe("<lr-scroller>", () => {
     );
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.getBoundingClientRect().height).to.be.closeTo(100, 2);
+    expect(el.firstElementChild!.getBoundingClientRect().height).to.be.closeTo(400, 2);
     expect(viewport.clientHeight).to.be.greaterThan(0);
     expect(viewport.clientHeight).to.be.at.most(100);
+    expect(viewport.scrollHeight).to.be.at.least(400);
     expect(viewport.scrollHeight).to.be.greaterThan(viewport.clientHeight);
     expect(next.disabled).to.be.false;
+  });
+
+  it('uses the default vertical height within a definite parent without shrinking tall content', async () => {
+    const parent = await fixture<HTMLElement>(html`
+      <div style="block-size:300px">
+        <lr-scroller controls orientation="vertical" label="Tall items">
+          <div style="block-size:400px">tall content</div>
+        </lr-scroller>
+      </div>
+    `);
+    const el = parent.querySelector<LyraScroller>('lr-scroller')!;
+    await el.updateComplete;
+    const viewport = el.shadowRoot!.querySelector<HTMLElement>('[part="viewport"]')!;
+    await waitUntil(() => viewport.scrollHeight > viewport.clientHeight, 'default vertical viewport never overflowed');
+    expect(el.getBoundingClientRect().height).to.be.closeTo(300, 2);
+    expect(el.firstElementChild!.getBoundingClientRect().height).to.be.closeTo(400, 2);
+    expect(viewport.clientHeight).to.be.greaterThan(0);
+    expect(viewport.clientHeight).to.be.lessThan(300);
+    expect(viewport.scrollHeight).to.be.at.least(400);
+    await waitUntil(() => !el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="next"]')!.disabled);
   });
 
   it("honors a max-block-size vertical allocation with long content", async () => {

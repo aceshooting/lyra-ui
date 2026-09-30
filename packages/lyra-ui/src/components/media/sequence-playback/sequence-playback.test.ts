@@ -728,7 +728,8 @@ it('derives the play/pause icon size from --lr-icon-button-size via a token, not
   const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
 
   // The glyph tracks 35% of the default 36px shared target.
-  expect(getComputedStyle(button).fontSize).to.equal('12.6px');
+  // Firefox quantizes the computed size to 1/64px (12.5938px).
+  expect(Number.parseFloat(getComputedStyle(button).fontSize)).to.be.closeTo(12.6, 0.01);
 
   // Overriding the icon-button-size token must move the icon size with it --
   // proof the icon size is now backed by a design token instead of a bare

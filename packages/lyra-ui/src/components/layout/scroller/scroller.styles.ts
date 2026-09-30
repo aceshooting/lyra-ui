@@ -103,12 +103,13 @@ export const styles = css`
   }
 
   :host([orientation="vertical"]) [part="viewport"],
-  :host([orientation="vertical"]) [part="content"],
   :host([orientation="vertical"]) .viewport-wrap {
     block-size: 100%;
   }
 
   :host([orientation="vertical"]) [part="content"] {
+    /* Keep the flex column intrinsic so tall slotted items create overflow instead of shrinking
+       into the viewport's allocated block size. */
     flex-direction: column;
     min-block-size: max-content;
     min-inline-size: 100%;

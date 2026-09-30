@@ -132,26 +132,34 @@ it('keeps compact node pointer targets at the 36px floor and activates through t
   ).matrixTransform(ringMatrix);
   const ringRadius =
     focusRing.r.baseVal.value * Math.hypot(ringMatrix.a, ringMatrix.b);
+  // Native SVG hit testing differs at the exact stroke boundary. Keep the
+  // probes one rendered pixel inside the 18px radius, including after rounding.
+  const edgePoints: Array<[number, number]> = [
+    [Math.round(center.x + 17), Math.round(center.y)],
+    [Math.round(center.x), Math.round(center.y + 17)],
+  ];
+  for (const [x, y] of edgePoints) {
+    expect(
+      Math.hypot(x - center.x, y - center.y),
+      'the native pointer probe is near the edge and inside the 36px target'
+    ).to.be.within(16.5, 18);
+  }
+  const positions: Array<[number, number]> = [
+    ...edgePoints,
+    [Math.round(ringCenter.x + ringRadius), Math.round(ringCenter.y)],
+  ];
   try {
     await resetMouse();
-    await sendMouse({
-      type: 'click',
-      position: [Math.round(center.x + 18), Math.round(center.y)],
-    });
-    await sendMouse({
-      type: 'click',
-      position: [Math.round(center.x), Math.round(center.y + 18)],
-    });
-    await sendMouse({
-      type: 'click',
-      position: [
-        Math.round(ringCenter.x + ringRadius),
-        Math.round(ringCenter.y),
-      ],
-    });
+    for (const [index, position] of positions.entries()) {
+      await sendMouse({ type: 'click', position });
+      await waitUntil(
+        () => selected.length === index + 1,
+        'each target-edge and focus-ring annulus click activates the node'
+      );
+    }
     expect(
       selected,
-      'target edges and the focus-ring annulus activate the compact node'
+      'near target edges and the focus-ring annulus activate the compact node'
     ).to.deep.equal(['tiny', 'tiny', 'tiny']);
   } finally {
     await resetMouse();

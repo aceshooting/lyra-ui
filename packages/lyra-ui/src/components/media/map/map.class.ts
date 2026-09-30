@@ -3840,6 +3840,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.setAttribute('aria-busy', String(this.loading));
+    if (this.legendCollapsed && (changed.has('legendOpen') || changed.has('legendCollapsible'))) {
+      // Reset before the sticky material measures the collapsed viewport. WebKit can otherwise
+      // retain the previous offset as scrollable overflow even after the legend rows disappear.
+      const legend = this.shadowRoot?.querySelector<HTMLElement>('[part="legend"]');
+      if (legend) legend.scrollTop = 0;
+    }
     if (changed.has('choropleth') || changed.has('legendGradient')) {
       this.warnOnLegendChoroplethMismatch();
     }

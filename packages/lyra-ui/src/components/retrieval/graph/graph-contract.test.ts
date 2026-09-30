@@ -1,8 +1,12 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './graph.js';
 import type { LyraGraph } from './graph.class.js';
+import { loadD3 } from './graph-loader.js';
 
 async function graph() {
+  // Peer startup is asynchronous; prepare the real modules before testing DOM readiness.
+  const modules = await loadD3();
+  expect(modules !== null, 'the optional graph peers are available').to.equal(true);
   const element = await fixture<LyraGraph>(html`<lr-graph layout="layered" selection-mode="single"></lr-graph>`);
   element.nodes = [{ id: 'a' }, { id: 'b' }];
   element.edges = [{ id: 'ab', source: 'a', target: 'b' }];

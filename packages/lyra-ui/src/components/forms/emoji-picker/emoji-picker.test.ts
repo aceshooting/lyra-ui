@@ -443,6 +443,8 @@ describe('windowed geometry token resolution', () => {
   it('derives the windowed column count from the pixel-resolved gap, so a rem gap never overflows the row', async () => {
     const el = await connectEmojiPicker();
     el.style.inlineSize = '320px';
+    // Isolate gap resolution from the theme's default item-size tier.
+    el.style.setProperty('--lr-emoji-picker-item-size', '2.5rem');
     el.style.setProperty('--lr-emoji-picker-gap', '1rem');
     el.groups = largeGroups();
     await el.updateComplete;

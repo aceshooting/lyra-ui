@@ -20,6 +20,8 @@
 
 ### Patch Changes
 
+- Preserve tall content inside vertically constrained scrollers instead of shrinking slotted items to the viewport.
+- Reset a collapsed map legend's scroll position so its Glass layer cannot retain an empty scroll range; preserve focus and expanded scrolling.
 - 29ef483: Keep locale-picker language menus within the viewport when text is enlarged by capping their minimum width by the existing viewport limit.
 - 57d8360: Declare cascade layer order in the signature starter so bundled styles preserve the selected look and accent, and include the supported refresh glyph in the icon reference.
 - ad64381: Apply the shared Glass treatment to map navigation, scale, attribution and legends. Solid and

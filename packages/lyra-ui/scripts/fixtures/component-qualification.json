@@ -27974,7 +27974,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map-legend-scroll.test.ts",
-              "line": 7,
+              "line": 9,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -27991,7 +27991,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map-legend-scroll.test.ts",
-              "test": "keeps a bounded scrolling legend accessible with a stable gutter in ${direction}",
+              "test": "keeps a bounded scrolling legend accessible with a stable gutter in ${surface}/${direction}",
               "kind": "320px allocation test signal"
             }
           ]
