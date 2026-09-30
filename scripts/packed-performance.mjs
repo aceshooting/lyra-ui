@@ -43,6 +43,15 @@ const mimeTypes = new Map([
   ['.woff2', 'font/woff2'],
 ]);
 
+/** Keep the historical v23 baseline while qualifying each later candidate release. */
+export function assertPerformancePackageVersions(baselineVersion, candidateVersion) {
+  assert.match(baselineVersion, /^23\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u,
+    'baseline must have an exact published v23 semantic version');
+  const candidate = typeof candidateVersion === 'string' && /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u.exec(candidateVersion);
+  assert.ok(candidate && candidate.slice(1, 4).every(part => Number.isSafeInteger(Number(part))) && Number(candidate[1]) >= 24,
+    'candidate must have an exact v24 or later semantic version');
+}
+
 function digest(bytes) {
   return createHash('sha256').update(bytes).digest('hex');
 }
@@ -1045,16 +1054,7 @@ export async function runPackedPerformanceQualification({ fixtureDir, packages, 
   const config = JSON.parse(await readFile(workloadConfigPath, 'utf8'));
   const installedPackages = await Promise.all(packages.map((entry) => resolveInstalledPackage(fixtureDir, entry)));
   const byRole = Object.fromEntries(installedPackages.map((entry) => [entry.role, entry]));
-  assert.match(
-    byRole.baseline.expectedVersion,
-    /^23\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/,
-    'baseline must have an exact published v23 semantic version',
-  );
-  assert.match(
-    byRole.candidate.expectedVersion,
-    /^24\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/,
-    'candidate must have an exact v24 semantic version',
-  );
+  assertPerformancePackageVersions(byRole.baseline.expectedVersion, byRole.candidate.expectedVersion);
   const lock = await readFixtureLock(fixtureDir);
   const runtimeToolchain = await runtimeToolchainProvenance();
   const importMaps = new Map();
@@ -1153,10 +1153,7 @@ export async function runPackedHydrationSmoke({ fixtureDir, packages, artifactsP
   const config = JSON.parse(await readFile(workloadConfigPath, 'utf8'));
   const installedPackages = await Promise.all(packages.map((entry) => resolveInstalledPackage(fixtureDir, entry)));
   const byRole = Object.fromEntries(installedPackages.map((entry) => [entry.role, entry]));
-  assert.match(byRole.baseline.expectedVersion, /^23\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)/,
-    'hydration smoke baseline must be a published v23 package');
-  assert.match(byRole.candidate.expectedVersion, /^24\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)/,
-    'hydration smoke candidate must be a v24 package');
+  assertPerformancePackageVersions(byRole.baseline.expectedVersion, byRole.candidate.expectedVersion);
   const lock = await readFixtureLock(fixtureDir);
   const runtimeToolchain = await runtimeToolchainProvenance();
   const importMaps = new Map();

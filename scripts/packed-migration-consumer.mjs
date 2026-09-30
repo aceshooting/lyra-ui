@@ -289,6 +289,16 @@ export function runMigrationProcess(command, args, cwd, expectedStatus = 0) {
   });
 }
 
+/** The CLI banner must identify the exact installed package, including its patch version. */
+export function assertInstalledMigrationBanner(output, installedVersion) {
+  assertMigrationPackageVersion(installedVersion, 23);
+  const banners = output.split(/\r?\n/u).filter(line => line.startsWith('Applying entries available in @aceshooting/lyra-ui '));
+  assert.equal(banners.length, 1, 'CLI must report one installed-version banner');
+  const match = /^Applying entries available in @aceshooting\/lyra-ui (\d+\.\d+\.\d+)(?:\.|; \d+ entr(?:y needs|ies need) a later release\.)$/u.exec(banners[0]);
+  assert.ok(match, 'CLI installed-version banner is malformed');
+  assert.equal(match[1], installedVersion, 'CLI must discover the exact installed version');
+}
+
 export async function verifyPackedMigrationConsumers({ fixtureDir, compatibilityContext, tarballPath, fieldAuthority = null, fieldMode = 'retirement', artifactsDir = join(fixtureDir, 'migration-x-reports') }) {
   const installedRoot = join(fixtureDir, 'node_modules', '@aceshooting', 'lyra-ui');
   const installed = JSON.parse(await readFile(join(installedRoot, 'package.json'), 'utf8'));
@@ -315,7 +325,7 @@ export async function verifyPackedMigrationConsumers({ fixtureDir, compatibility
     for (const [mode, flags, status] of [['preview', ['--dry-run'], 0], ['check', ['--check'], 1], ['apply', [], 0], ['rerun', ['--check'], 1]]) {
       const reportPath = join(artifactsDir, `${origin}-${mode}.json`); reportPaths.push(reportPath);
       const result = await runMigrationProcess(executable, [`--origin=${origin}`, ...flags, `--report=${reportPath}`, inputDir], fixtureDir, status);
-      assert.match(result.stdout + result.stderr, new RegExp(`Applying entries available in @aceshooting/lyra-ui ${installed.version.replaceAll('.', '\\.')}`, 'u'), 'CLI must discover the actual installed version');
+      assertInstalledMigrationBanner(result.stdout + result.stderr, installed.version);
       assertMigrationReport(JSON.parse(await readFile(reportPath, 'utf8')), expected, origin);
       for (const item of bound) assert.equal(await readFile(join(fixtureDir, item.file), 'utf8'), item.input, 'Automatic output must remain the authored manual-review input');
       assert.equal(await readFile(rootFile, 'utf8'), RETAINED_ROOT.input);
@@ -380,7 +390,7 @@ async function verifyActualV24MigrationConsumers({ fixtureDir, compatibilityCont
   for (const [mode, flags, status] of [['preview', ['--dry-run'], 0], ['check', ['--check'], 1], ['apply', [], 0], ['rerun', ['--check'], 1]]) {
     const reportPath = join(artifactsDir, `lyra-v21-${mode}.json`); reports.push(reportPath);
     const result = await runMigrationProcess(executable, ['--origin=lyra-v21', ...flags, `--report=${reportPath}`, p21Input], fixtureDir, status);
-    assert.match(result.stdout + result.stderr, /Applying entries available in @aceshooting\/lyra-ui 24\./u);
+    assertInstalledMigrationBanner(result.stdout + result.stderr, installed.version);
     assertMigrationReport(JSON.parse(await readFile(reportPath, 'utf8')), p21Bound, 'lyra-v21');
     for (const item of p21Bound) assert.equal(await readFile(join(fixtureDir, item.file), 'utf8'), item.input);
   }
@@ -402,7 +412,7 @@ async function verifyActualV24MigrationConsumers({ fixtureDir, compatibilityCont
   for (const [mode, flags, status] of [['preview', ['--dry-run'], 0], ['check', ['--check'], 1], ['apply', [], 0], ['rerun', ['--check'], 1]]) {
     const reportPath = join(artifactsDir, `lyra-v22-${mode}.json`); reports.push(reportPath);
     const result = await runMigrationProcess(executable, ['--origin=lyra-v22', ...flags, `--report=${reportPath}`, p22Input], fixtureDir, status);
-    assert.match(result.stdout + result.stderr, /Applying entries available in @aceshooting\/lyra-ui 24\./u);
+    assertInstalledMigrationBanner(result.stdout + result.stderr, installed.version);
     assertMigrationReport(JSON.parse(await readFile(reportPath, 'utf8')), mode === 'rerun' ? boundP22.filter(item => !item.automatic) : boundP22, 'lyra-v22');
     for (const item of boundP22) assert.equal(await readFile(join(fixtureDir, item.file), 'utf8'), mode === 'apply' || mode === 'rerun' ? item.applied ?? item.input : item.input, `Unexpected migration output: ${item.id}`);
   }

@@ -8,6 +8,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { waitForBrowserReadiness } from '../packages/lyra-ui/scripts/fixtures/packed-performance/browser-readiness.mjs';
 import {
   assertInside,
+  assertPerformancePackageVersions,
   buildBrowserImportMap,
   buildStyleSwitchPlan,
   packageInstallPath,
@@ -21,6 +22,18 @@ import {
   summarizeSamples,
   writeReceiptWithLock,
 } from './packed-performance.mjs';
+
+test('performance candidates advance beyond v24 while the baseline remains historical v23', () => {
+  for (const version of ['24.0.0', '24.2.0', '25.0.0', '26.1.2', '100.0.0', '25.0.0-rc.1', '25.0.0+build.1']) {
+    assert.doesNotThrow(() => assertPerformancePackageVersions('23.0.0', version));
+  }
+  for (const version of ['23.9.0', '22.0.0', '25.0', '25.0.0garbage', '025.0.0', '25.00.0', '999999999999999999.0.0', '', null, ['25.0.0']]) {
+    assert.throws(() => assertPerformancePackageVersions('23.0.0', version));
+  }
+  for (const baseline of ['22.0.0', '24.0.0', '25.0.0', '23.0.0garbage', '023.0.0']) {
+    assert.throws(() => assertPerformancePackageVersions(baseline, '25.0.0'));
+  }
+});
 
 test('browser readiness failure preserves the package, phase, page errors and state', async () => {
   const errors = ['pageerror: missing browser dependency', 'HTTP 404: /missing.js'];

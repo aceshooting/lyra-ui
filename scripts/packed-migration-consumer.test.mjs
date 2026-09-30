@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { X_CASES, RETAINED_ROOT } from '../packages/lyra-ui/scripts/fixtures/lyra-renames/consumer/x-cases.mjs';
 import { compatibilityKey } from '../packages/lyra-ui/scripts/published-compatibility.mjs';
-import { assertInstalledRetainedField, createV24SemanticMigrationCases, selectMigrationCases, assertMigrationReport, assertBrowserProof, runMigrationProcess, verifyPackedMigrationConsumers, writeResolvedMigrationEntry } from './packed-migration-consumer.mjs';
+import { assertInstalledMigrationBanner, assertInstalledRetainedField, createV24SemanticMigrationCases, selectMigrationCases, assertMigrationReport, assertBrowserProof, runMigrationProcess, verifyPackedMigrationConsumers, writeResolvedMigrationEntry } from './packed-migration-consumer.mjs';
 
 function context() {
   const records = Object.fromEntries(X_CASES.map(item => [compatibilityKey(item.key), {
@@ -25,6 +25,19 @@ function report(item, origin = 'lyra-v21') {
       target: item.record.policy.replacement.usage, message: 'This API was removed in 23.0.0; review replacement.',
     }] };
 }
+test('migration CLI banners bind the exact installed version in every later release', () => {
+  const banner = version => `Applying entries available in @aceshooting/lyra-ui ${version}.\n`;
+  for (const version of ['23.0.0', '24.2.0', '25.0.0', '26.1.2']) {
+    assert.doesNotThrow(() => assertInstalledMigrationBanner(banner(version), version));
+    assert.doesNotThrow(() => assertInstalledMigrationBanner(`Applying entries available in @aceshooting/lyra-ui ${version}; 1 entry needs a later release.\n`, version));
+    assert.doesNotThrow(() => assertInstalledMigrationBanner(`Applying entries available in @aceshooting/lyra-ui ${version}; 2 entries need a later release.\n`, version));
+  }
+  for (const output of [banner('24.0.0'), banner('25.0.1'), banner('25.0.00'), banner('25.0.0') + banner('25.0.0'),
+    'Applying entries available in @aceshooting/lyra-ui 25.0.0garbage.\n',
+    'No installed @aceshooting/lyra-ui found under the working directory; applying every entry of the profile.\n', '']) {
+    assert.throws(() => assertInstalledMigrationBanner(output, '25.0.0'));
+  }
+});
 test('X coverage derives exactly nine identities and requires the actual installed retirement state', () => {
   const source = context();
   const selected = selectMigrationCases(source, '23.0.0');
