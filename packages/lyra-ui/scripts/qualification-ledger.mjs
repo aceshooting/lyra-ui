@@ -160,7 +160,7 @@ function sourceDimension({ applicable, signal, kind, limitation }) {
 
 function walkSyntax(node, visit) {
   if (!node || typeof node !== 'object') return;
-  visit(node);
+  if (visit(node) === false) return;
   for (const [key, value] of Object.entries(node)) {
     if (key === 'parent' || key === 'type' || key === 'start' || key === 'end') continue;
     if (Array.isArray(value)) {
@@ -238,18 +238,87 @@ function implementationInteractionSignal(files, packageDir) {
   return null;
 }
 
-function keyboardTestSignal(files, packageDir) {
+function invocationName(node, aliases) {
+  const callee = unwrapExpression(node.callee);
+  if (callee?.type === 'Identifier') return aliases.get(callee.name) ?? callee.name;
+  if (callee?.type === 'MemberExpression' && !callee.computed) return callee.property?.name;
+  return undefined;
+}
+
+function testOperationSignal(files, packageDir, matches) {
   for (const file of files) {
-    let found;
-    walkSyntax(syntax(file), (node) => {
-      if (found || node.type !== 'Identifier') return;
-      if (/^(?:KeyboardEvent|sendKeys|pressTab)$/.test(node.name)) {
-        found = sourceSignal(file, node.start, packageDir);
+    const program = syntax(file);
+    const aliases = new Map();
+    const helpers = [];
+    const scopes = [program];
+    walkSyntax(program, (node) => {
+      if (node.body && ['FunctionDeclaration', 'FunctionExpression', 'ArrowFunctionExpression'].includes(node.type)) {
+        scopes.push(node.body);
       }
+    });
+    const addHelper = (name, body, position) => {
+      if (!name || !body) return;
+      const scope = scopes.filter((entry) => entry.start <= position && position < entry.end)
+        .sort((a, b) => (a.end - a.start) - (b.end - b.start))[0];
+      helpers.push({ name, body, scope });
+    };
+    walkSyntax(program, (node) => {
+      if (node.type === 'ImportDeclaration' && node.importKind !== 'type') {
+        for (const specifier of node.specifiers) {
+          if (specifier.type === 'ImportSpecifier' && specifier.importKind !== 'type') {
+            aliases.set(specifier.local.name, specifier.imported.name);
+          }
+        }
+      }
+      if (node.type === 'FunctionDeclaration') addHelper(node.id?.name, node.body, node.start);
+      if (node.type === 'VariableDeclaration') {
+        for (const declaration of node.declarations) {
+          const value = unwrapExpression(declaration.init);
+          if (declaration.id?.type === 'Identifier' &&
+              ['ArrowFunctionExpression', 'FunctionExpression'].includes(value?.type)) {
+            addHelper(declaration.id.name, value.body, declaration.start);
+          }
+        }
+      }
+    });
+    const testStarts = new Set(extractTestCases(file.source, file.file).map((entry) => entry.index));
+    let found;
+    walkSyntax(program, (node) => {
+      if (found || node.type !== 'CallExpression') return;
+      const isTest = testStarts.has(node.start);
+      const isHook = /^(?:before|beforeEach|after|afterEach)$/.test(invocationName(node, aliases) ?? '');
+      if (!isTest && !isHook) return;
+      const callback = node.arguments.find((argument) =>
+        ['ArrowFunctionExpression', 'FunctionExpression'].includes(argument?.type));
+      if (!callback) return;
+      const visited = new Set();
+      const inspect = (body) => walkSyntax(body, (operation) => {
+        if (found) return;
+        // Uninvoked local function declarations are not execution evidence.
+        if (operation.type === 'FunctionDeclaration' ||
+            (operation.type === 'VariableDeclarator' &&
+             ['ArrowFunctionExpression', 'FunctionExpression'].includes(unwrapExpression(operation.init)?.type))) return false;
+        if (matches(operation, aliases)) found = sourceSignal(file, node.start, packageDir);
+        if (operation.type !== 'CallExpression' || operation.callee?.type !== 'Identifier') return;
+        const helper = helpers.filter((entry) => entry.name === operation.callee.name &&
+          entry.scope.start <= operation.start && operation.end <= entry.scope.end)
+          .sort((a, b) => (a.scope.end - a.scope.start) - (b.scope.end - b.scope.start))[0]?.body;
+        if (helper && !visited.has(helper)) {
+          visited.add(helper);
+          inspect(helper);
+        }
+      });
+      inspect(callback.body);
     });
     if (found) return found;
   }
   return null;
+}
+
+function keyboardTestSignal(files, packageDir) {
+  return testOperationSignal(files, packageDir, (node, aliases) =>
+    (node.type === 'NewExpression' && invocationName(node, aliases) === 'KeyboardEvent') ||
+    (node.type === 'CallExpression' && /^(?:sendKeys|pressTab)$/.test(invocationName(node, aliases) ?? '')));
 }
 
 function finiteDirectionArrays(program) {
@@ -372,26 +441,11 @@ function motionImplementationSignal(files, packageDir) {
 }
 
 function motionTestSignal(files, packageDir) {
-  for (const file of files) {
-    let found;
-    walkSyntax(syntax(file), (node) => {
-      if (found) return;
-      if (
-        node.type === 'Identifier' &&
-        /^(?:stubReducedMotion|motionPreference|prefersReducedMotion)$/.test(node.name)
-      ) {
-        found = sourceSignal(file, node.start, packageDir);
-      } else if (
-        node.type === 'Literal' &&
-        typeof node.value === 'string' &&
-        /\(prefers-reduced-motion:\s*(?:reduce|no-preference)\)/.test(node.value)
-      ) {
-        found = sourceSignal(file, node.start, packageDir);
-      }
-    });
-    if (found) return found;
-  }
-  return null;
+  return testOperationSignal(files, packageDir, (node, aliases) =>
+    (node.type === 'CallExpression' &&
+      /^(?:stubReducedMotion|motionPreference|prefersReducedMotion)$/.test(invocationName(node, aliases) ?? '')) ||
+    (node.type === 'Literal' && typeof node.value === 'string' &&
+      /\(prefers-reduced-motion:\s*(?:reduce|no-preference)\)/.test(node.value)));
 }
 
 /** Parsed/structured applicability signals used by the generated qualification ledger. */
@@ -602,7 +656,7 @@ function componentRecord({ component, packageDir, exemptions, visualManifest, ss
     keyboard: sourceDimension({
       applicable: Boolean(interactiveSignal || keyboardSignal),
       signal: keyboardSignal,
-      kind: 'component keyboard assertion signal',
+      kind: 'component keyboard exercise signal',
       limitation: !interactiveSignal && !keyboardSignal
         ? 'No component-owned interactive surface was detected; applicability is re-evaluated when the source changes.'
         : keyboardSignal

@@ -311,6 +311,92 @@ test('moving a titled keyboard test leaves its qualification reference unchanged
   });
 });
 
+test('keyboard and motion evidence ignores unused imports, bindings, and testless helpers', () => {
+  const scan = (source) => qualificationApplicabilitySignals({
+    component: component('lr-example', 'stable'), packageDir: '/fixture',
+    sources: [], styles: [], interactiveTags: new Set(),
+    tests: [sourceFile('/fixture/example.test.ts', source)],
+  });
+  for (const source of [
+    `import { sendKeys, pressTab } from './helpers.js';`,
+    `import type { KeyboardEvent } from './types.js';`,
+    `const sendKeys = undefined; const pressTab = false;`,
+    `function unused() { new KeyboardEvent('keydown'); }`,
+    `import { stubReducedMotion, motionPreference, prefersReducedMotion } from './helpers.js';`,
+    `const motionPreference = false; const prefersReducedMotion = undefined;`,
+    `function stubReducedMotion() { matchMedia('(prefers-reduced-motion: reduce)'); }`,
+  ]) {
+    const signals = scan(`${source}\nit('renders', () => { expect(true).to.equal(true); });`);
+    assert.equal(signals.keyboardSignal, null, source);
+    assert.equal(signals.motionSignal, null, source);
+  }
+});
+
+test('invoked keyboard and motion operations retain test titles with imports and local helpers', () => {
+  const scan = (source) => qualificationApplicabilitySignals({
+    component: component('lr-example', 'stable'), packageDir: '/fixture',
+    sources: [], styles: [], interactiveTags: new Set(),
+    tests: [sourceFile('/fixture/example.test.ts', source)],
+  });
+  for (const [prefix, operation, dimension] of [
+    [`import { sendKeys } from './helpers.js';`, `await sendKeys({ press: 'Enter' });`, 'keyboardSignal'],
+    [`import { sendKeys as keys } from './helpers.js';`, `await keys({ press: 'Enter' });`, 'keyboardSignal'],
+    [``, `new window.KeyboardEvent('keydown');`, 'keyboardSignal'],
+    [``, `const activate = () => { new KeyboardEvent('keydown'); }; activate();`, 'keyboardSignal'],
+    [``, `await waitUntil(() => matchMedia('(prefers-reduced-motion: reduce)').matches);`, 'motionSignal'],
+    [``, `window.matchMedia = (query) => ({ matches: query === '(prefers-reduced-motion: reduce)' });`, 'motionSignal'],
+    [`function activate() { new KeyboardEvent('keydown'); }`, `activate();`, 'keyboardSignal'],
+    [`const activate = () => { new KeyboardEvent('keydown'); };`, `activate();`, 'keyboardSignal'],
+    [`function outer() { inner(); } function inner() { outer(); new KeyboardEvent('keydown'); }`, `outer();`, 'keyboardSignal'],
+    [`import { stubReducedMotion } from './helpers.js';`, `stubReducedMotion(true);`, 'motionSignal'],
+    [`import { stubReducedMotion as stub } from './helpers.js';`, `stub(true);`, 'motionSignal'],
+    [`function configureMotion() { matchMedia('(prefers-reduced-motion: reduce)'); }`, `configureMotion();`, 'motionSignal'],
+    [``, `matchMedia('(prefers-reduced-motion: no-preference)');`, 'motionSignal'],
+  ]) {
+    const source = `${prefix}\nit('exercises operation', async () => { ${operation} });`;
+    const expected = { file: 'example.test.ts', test: 'exercises operation' };
+    assert.deepEqual(scan(source)[dimension], expected, operation);
+    assert.deepEqual(scan(`\n// unrelated documentation\n${source}`)[dimension], expected, operation);
+  }
+});
+
+test('invoked setup hooks preserve operation evidence without crediting unused callbacks', () => {
+  const scan = (source) => qualificationApplicabilitySignals({
+    component: component('lr-example', 'stable'), packageDir: '/fixture',
+    sources: [], styles: [], interactiveTags: new Set(),
+    tests: [sourceFile('/fixture/example.test.ts', source)],
+  });
+  for (const hook of ['before', 'beforeEach', 'after', 'afterEach']) {
+    const source = `import { sendKeys } from './helpers.js';\n${hook}(async () => { await sendKeys({ press: 'Tab' }); });`;
+    assert.deepEqual(scan(source).keyboardSignal, { file: 'example.test.ts', line: 2 });
+  }
+  const source = `function configureMotion() { matchMedia('(prefers-reduced-motion: reduce)'); }\nbeforeEach(() => { configureMotion(); });`;
+  assert.deepEqual(scan(source).motionSignal, { file: 'example.test.ts', line: 2 });
+  const unused = scan(`it('renders', () => {
+    const keyboard = () => { new KeyboardEvent('keydown'); };
+    function motion() { matchMedia('(prefers-reduced-motion: reduce)'); }
+    expect(true).to.equal(true);
+  });`);
+  assert.equal(unused.keyboardSignal, null);
+  assert.equal(unused.motionSignal, null);
+});
+
+test('suite-local helpers retain the invoking test and obey lexical helper scope', () => {
+  const source = `function activate() { new KeyboardEvent('keydown'); }
+    describe('suite', () => {
+      const activate = () => {};
+      const enterOn = () => { new KeyboardEvent('keydown'); };
+      it('does not use the outer helper', () => { activate(); });
+      it('submits with Enter', () => { enterOn(); });
+    });`;
+  const signals = qualificationApplicabilitySignals({
+    component: component('lr-example', 'stable'), packageDir: '/fixture',
+    sources: [], styles: [], interactiveTags: new Set(),
+    tests: [sourceFile('/fixture/example.test.ts', source)],
+  });
+  assert.deepEqual(signals.keyboardSignal, { file: 'example.test.ts', test: 'submits with Enter' });
+});
+
 test('visual qualification schema rejects dangling enrollment and invented pending review provenance', () => {
   const inventory = { components: [component('lr-stable', 'stable')] };
   const findings = validateVisualQualificationManifest({

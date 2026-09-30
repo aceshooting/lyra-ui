@@ -1620,6 +1620,66 @@ function addMemberSurfaces(entries, base, surface, label, module, members) {
   }
 }
 
+// These types require scope resolution or generic substitution before two same-spelled
+// signatures can be considered identical. Keep those overrides in the contract until that
+// equivalence can be proved; lifecycle and other primitive-only signatures need neither.
+function scopeIndependentMethod(member) {
+  if (member.type !== 'MethodDefinition' || member.kind !== 'method'
+    || member.computed || member.abstract || member.accessibility === 'private') return false;
+  const scopeDependent = new Set(['TSTypeReference', 'TSTypeQuery', 'TSImportType', 'TSThisType']);
+  const visit = (node) => {
+    if (!node || typeof node !== 'object') return true;
+    if (scopeDependent.has(node.type)) return false;
+    return Object.entries(node).every(([key, value]) =>
+      key === 'type' || key === 'start' || key === 'end'
+        || (Array.isArray(value) ? value.every(visit) : visit(value)));
+  };
+  return visit(member);
+}
+
+/** Project provably scope-independent inherited methods into the effective class contract.
+ * An explicit identical override then retains the same entries, while a changed override is
+ * still compared with the inherited signature. Nearest declarations shadow whole overload
+ * groups; unresolved/mixin heritage and signatures needing substitution stay conservative. */
+function addClassMemberSurfaces(entries, base, surface, label, resolved, primary, graph) {
+  addMemberSurfaces(entries, base, surface, label, resolved.module, primary.body?.body ?? []);
+  if (!graph || !primary.superClass) return;
+  // Member entry IDs share a name across static and instance sides. Do not project an
+  // inherited entry over a same-named own member; its static flag remains part of the diff.
+  const memberKey = (module, member) => propertyName(member.key, module);
+  const shadowed = new Set((primary.body?.body ?? []).map((member) =>
+    memberKey(resolved.module, member)));
+  let ancestor = resolved;
+  let ancestorNode = primary;
+  const seen = new Set([declarationIdentity(resolved)]);
+  while (ancestorNode.superClass) {
+    const reference = entityNameParts(ancestorNode.superClass).join('.');
+    if (!reference) break;
+    const dependencies = resolveTypeDependencies(graph, ancestor, reference);
+    if (dependencies.length !== 1) break;
+    ancestor = dependencies[0].resolved;
+    const identity = declarationIdentity(ancestor);
+    if (seen.has(identity) || ancestor.records.length !== 1) break;
+    seen.add(identity);
+    ancestorNode = ancestor.records[0].node;
+    if (ancestorNode.type !== 'ClassDeclaration') break;
+    const groups = new Map();
+    for (const member of ancestorNode.body?.body ?? []) {
+      const key = memberKey(ancestor.module, member);
+      const group = groups.get(key) ?? [];
+      group.push(member);
+      groups.set(key, group);
+    }
+    for (const [key, inherited] of groups) {
+      if (shadowed.has(key)) continue;
+      shadowed.add(key);
+      if (inherited.every(scopeIndependentMethod)) {
+        addMemberSurfaces(entries, base, surface, label, ancestor.module, inherited);
+      }
+    }
+  }
+}
+
 function addDeclarationSurface(entries, base, surface, label, resolved, graph) {
   const { module, records } = resolved;
   const nodes = records.map((record) => record.node);
@@ -1714,7 +1774,7 @@ function addDeclarationSurface(entries, base, surface, label, resolved, graph) {
       ]
       : [];
     addEntry(entries, `${base}:extends`, surface, 'heritage', heritage, label);
-    addMemberSurfaces(entries, base, surface, label, module, primary.body?.body ?? []);
+    addClassMemberSurfaces(entries, base, surface, label, resolved, primary, graph);
     return;
   }
   if (kind === 'function') {
@@ -1941,7 +2001,7 @@ function declarationSurfaceTemplate(graph, resolved) {
   if (!template) {
     const templateEntries = new Map();
     addDeclarationSurface(templateEntries, '$', 'declaration-template', '$', resolved, graph);
-    template = [...templateEntries.entries()];
+    template = [...templateEntries.entries()].sort(([left], [right]) => left.localeCompare(right));
     graph.declarationSurfaceCache.set(identity, template);
   }
   return template;

@@ -889,12 +889,18 @@ It is a composition recommendation, not a change to Lyra's runtime defaults. Exi
 adopt it only during an authorized migration or redesign; valid saved style and locale choices win.
 
 ```css
+@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;
+@layer lr-theme-preset.look, lr-theme-preset.density, lr-theme-preset.surface, lr-theme-preset.accent, lr-theme-preset.mode;
 @import "@aceshooting/lyra-ui/theme.css";
 @import "@aceshooting/lyra-ui/tokens-root.css";
 @import "@aceshooting/lyra-ui/looks/shadcn.css";
 @import "@aceshooting/lyra-ui/surfaces/glass.css";
 @import "@aceshooting/lyra-ui/accents.css";
 ```
+
+Keep both layer-order statements before these imports. Bundlers can hoist statements from imported
+stylesheets; declaring the master order and preset sublayers first preserves the look, surface and
+accent when the imports are flattened. See [Cascade layers](#cascade-layers).
 
 The first-use choices are independent axes:
 

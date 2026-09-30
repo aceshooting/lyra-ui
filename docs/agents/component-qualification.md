@@ -60,7 +60,7 @@ source signal is a review pointer, not a claim that behavior passed.
 | Dimension | Recorded evidence and interpretation |
 |---|---|
 | Accessibility | Exact populated/open axe evidence or the narrow exception above. Blocking. |
-| Keyboard | Component-local keyboard assertion signal when the component owns interaction. |
+| Keyboard | Component-local keyboard exercise signal when the component owns interaction. |
 | RTL | Component-local rendered RTL test signal. Arrow semantics and logical layout still require review. |
 | Reduced motion | Motion applicability from implementation plus a component-local reduced-motion test signal. |
 | Narrow allocation | Component-local 320px allocation assertion signal. |

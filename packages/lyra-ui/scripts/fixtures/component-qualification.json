@@ -114,7 +114,7 @@
             {
               "file": "src/components/layout/details/accordion.test.ts",
               "test": "uses one roving tab stop, skips disabled items, and supports Home/End",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -321,7 +321,7 @@
             {
               "file": "src/components/layout/details/accordion.test.ts",
               "test": "uses one roving tab stop, skips disabled items, and supports Home/End",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -853,8 +853,8 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/agent-question/agent-question.test.ts",
-              "line": 4,
-              "kind": "component keyboard assertion signal"
+              "test": "blocks unknown schemas, still allows declining, and never submits hidden draft keys",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -1196,8 +1196,8 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/agent-trace/agent-trace.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "contains the canonical lr-visibility-change-request proposal from native pointer and keyboard activation",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -1740,7 +1740,7 @@
           "evidence": [
             {
               "file": "src/components/media/animated-image/animated-image.test.ts",
-              "line": 36,
+              "test": "rebinds reduced-motion and DPR work to the adopted owner window and cleans up symmetrically",
               "kind": "reduced-motion test signal"
             }
           ]
@@ -1909,7 +1909,7 @@
           "evidence": [
             {
               "file": "src/components/media/animation/animation.test.ts",
-              "line": 20,
+              "test": "rebinds animation, motion, styles, and visibility to the adopted realm and ignores stale observers",
               "kind": "reduced-motion test signal"
             }
           ]
@@ -2158,8 +2158,8 @@
           "evidence": [
             {
               "file": "src/components/layout/app-rail/app-rail-focus-return.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "falls back to the element that held focus when the overlay opened while the trigger stays hidden",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -2345,8 +2345,8 @@
           "evidence": [
             {
               "file": "src/components/layout/app-rail-group/app-rail-group.test.ts",
-              "line": 3,
-              "kind": "component keyboard assertion signal"
+              "test": "toggles from the keyboard when the toggle itself holds focus",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -2593,8 +2593,8 @@
           "evidence": [
             {
               "file": "src/components/layout/app-rail/app-rail-focus-return.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "falls back to the element that held focus when the overlay opened while the trigger stays hidden",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -3457,8 +3457,8 @@
           "evidence": [
             {
               "file": "src/components/media/attachment-trigger/attachment-trigger-composition.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "opens the picker on Enter from the actually focused control",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -3807,7 +3807,7 @@
             {
               "file": "src/components/media/av-player/av-player.test.ts",
               "test": "handles an internal keyboard-triggered play rejection through the localized render-error path",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -4499,8 +4499,8 @@
           "evidence": [
             {
               "file": "src/components/overlays/badge/tag.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "fires from keyboard activation of the focused remove button",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -4521,7 +4521,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/badge/badge.test.ts",
-              "line": 343,
+              "test": "runs an infinite pulse for attention=\"pulse\" (full-motion branch)",
               "kind": "reduced-motion test signal"
             }
           ]
@@ -4665,7 +4665,7 @@
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
               "test": "announces the focused box summary and walks boxes with Arrow/Home/End",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -4891,7 +4891,7 @@
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
               "test": "announces the focused box summary and walks boxes with Arrow/Home/End",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -5809,7 +5809,7 @@
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
               "test": "announces the focused box summary and walks boxes with Arrow/Home/End",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -6234,8 +6234,8 @@
           "evidence": [
             {
               "file": "src/components/forms/button/button-remediation.test.ts",
-              "line": 6,
-              "kind": "component keyboard assertion signal"
+              "test": "keeps the pressed owner focused through native keyboard activation and disabled changes",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -6577,8 +6577,8 @@
           "evidence": [
             {
               "file": "src/components/data/calendar/calendar.test.ts",
-              "line": 6,
-              "kind": "component keyboard assertion signal"
+              "test": "rolls the view to the next month when ArrowDown moves focus past the bottom of the 6-week grid",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -6935,8 +6935,8 @@
           "evidence": [
             {
               "file": "src/components/overlays/callout/callout-close-composition.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "closes on Enter from the actually focused control",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -7152,8 +7152,8 @@
           "evidence": [
             {
               "file": "src/components/layout/card/card.test.ts",
-              "line": 30,
-              "kind": "component keyboard assertion signal"
+              "test": "leaves the href path untouched: no tabindex of its own and no lr-card-activate",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -7348,8 +7348,8 @@
           "evidence": [
             {
               "file": "src/components/layout/carousel/carousel-remediation.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "leaves ${key} in a focused ${name} (${placement})",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -7521,8 +7521,8 @@
           "evidence": [
             {
               "file": "src/components/layout/carousel/carousel-remediation.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "leaves ${key} in a focused ${name} (${placement})",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -7691,8 +7691,8 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/change-review/change-review.test.ts",
-              "line": 4,
-              "kind": "component keyboard assertion signal"
+              "test": "keeps native keyboard decisions usable in a narrow RTL allocation",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -7887,7 +7887,7 @@
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
               "test": "announces the focused box summary and walks boxes with Arrow/Home/End",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -8106,8 +8106,8 @@
           "evidence": [
             {
               "file": "src/components/conversation/chat-composer/chat-composer.test.ts",
-              "line": 36,
-              "kind": "component keyboard assertion signal"
+              "test": "plain Enter submits and prevents the default newline insertion",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -8457,7 +8457,7 @@
             {
               "file": "src/components/conversation/chat-viewport/chat-viewport.test.ts",
               "test": "treats PageUp/ArrowUp/Home as a user scroll gesture, and ignores other keys",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -8644,7 +8644,7 @@
             {
               "file": "src/components/forms/checkbox/checkbox.test.ts",
               "test": "toggles on Space but not Enter, matching the native checkbox keyboard contract",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -9007,7 +9007,7 @@
             {
               "file": "src/components/conversation/checkpoint/checkpoint.test.ts",
               "test": "reverts to the restore button and refocuses it on Escape",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -9602,8 +9602,8 @@
           "evidence": [
             {
               "file": "src/components/retrieval/chunk-inspector/chunk-inspector.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "renders open-button and toggle hover/focus-visible feedback",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -9773,8 +9773,8 @@
           "evidence": [
             {
               "file": "src/components/retrieval/citation-badge/citation-badge-overlay-lifecycle.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "defers Escape to a newer dialog opened on top, instead of closing its own popover first",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -10105,8 +10105,8 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-composition.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "copies on Enter from the actually focused control",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -10305,8 +10305,8 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-composition.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "copies on Enter from the actually focused control",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -10488,7 +10488,7 @@
             {
               "file": "src/components/forms/code-editor/code-editor.test.ts",
               "test": "renders line numbers and inserts spaces for Tab",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -10673,8 +10673,8 @@
           "evidence": [
             {
               "file": "src/components/forms/color-picker/color-picker-remediation.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "preserves the enabled ${draft === '' ? 'empty' : 'nonempty'} native draft through unrelated updates",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -10901,7 +10901,7 @@
             {
               "file": "src/components/forms/combobox/combobox-form-lifecycle.test.ts",
               "test": "does not emit lr-filter when a keyboard selection commits and resets the query (multiple)",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -11110,8 +11110,8 @@
           "evidence": [
             {
               "file": "src/components/layout/command-palette/command-palette.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "selects the active command with Enter and ignores Enter when no enabled command exists",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -11452,8 +11452,8 @@
           "evidence": [
             {
               "file": "src/components/retrieval/community-card/community-card.test.ts",
-              "line": 3,
-              "kind": "component keyboard assertion signal"
+              "test": "renders the title, member, and overflow hover/focus-visible feedback",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -11771,8 +11771,8 @@
           "evidence": [
             {
               "file": "src/components/data/condition-builder/condition-builder-remediation.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "contains every child select alias for one real ${part} choice",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -11995,7 +11995,7 @@
             {
               "file": "src/components/agent-tools/confirm-bar/confirm-bar.test.ts",
               "test": "escape-denies maps Escape on [part=\"base\"] to the same outcome as clicking Deny",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -12661,8 +12661,8 @@
           "evidence": [
             {
               "file": "src/components/overlays/context-menu/context-menu.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "opens below the focused element on Shift+F10 and focuses the first row",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -12858,8 +12858,8 @@
           "evidence": [
             {
               "file": "src/components/data/context-meter/context-meter-interactive.test.ts",
-              "line": 3,
-              "kind": "component keyboard assertion signal"
+              "test": "activates from the keyboard on the focused segment",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -13203,7 +13203,7 @@
             {
               "file": "src/components/conversation/conversation-item/conversation-item-remediation.test.ts",
               "test": "keeps composing ${key} in the thread rename editor (${legacy ? 'legacy' : 'modern'})",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -13399,8 +13399,8 @@
           "evidence": [
             {
               "file": "src/components/utility/copy-button/copy-button-composition.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "copies on Enter from the actually focused control",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -13734,8 +13734,8 @@
           "evidence": [
             {
               "file": "src/components/layout/dashboard-grid/dashboard-grid.test.ts",
-              "line": 4,
-              "kind": "component keyboard assertion signal"
+              "test": "keeps keyboard-navigation feedback silent when the host or a composed ancestor is accessibility-excluded",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -13946,7 +13946,7 @@
             {
               "file": "src/components/data/data-grid/data-grid-columns.test.ts",
               "test": "leaves disabled sort, resize, and movement capabilities inert",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -14334,7 +14334,7 @@
             {
               "file": "src/components/forms/date-picker/date-input-form-lifecycle.test.ts",
               "test": "closes the popover on Escape from anywhere inside the form control",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -14528,7 +14528,7 @@
             {
               "file": "src/components/forms/date-picker/date-input-form-lifecycle.test.ts",
               "test": "closes the popover on Escape from anywhere inside the form control",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -14721,7 +14721,7 @@
             {
               "file": "src/components/layout/details/accordion.test.ts",
               "test": "uses one roving tab stop, skips disabled items, and supports Home/End",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -14957,8 +14957,8 @@
           "evidence": [
             {
               "file": "src/components/overlays/dialog/confirm.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "resolves false and removes the dialog on Escape",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -15473,7 +15473,7 @@
             {
               "file": "src/components/layout/dock-panel/dock-panel.test.ts",
               "test": "treats each genuine keyboard step as a frozen input/change transaction",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -15807,8 +15807,8 @@
           "evidence": [
             {
               "file": "src/components/data/document-library/document-library.test.ts",
-              "line": 3,
-              "kind": "component keyboard assertion signal"
+              "test": "keeps row and select-all toggle proposals inside for native pointer and keyboard activation while lr-selection-change still reports",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -15995,7 +15995,7 @@
             {
               "file": "src/components/viewers/document-preview/document-preview-remediation.test.ts",
               "test": "moves focus with ArrowDown/ArrowUp/Home/End across the region-highlight-action list",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -16169,8 +16169,8 @@
           "evidence": [
             {
               "file": "src/components/viewers/document-viewer/document-viewer.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "keeps the shell dialog lifecycle and close proposals inside for a real open and Escape dismissal while lr-close still reports",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -16514,7 +16514,7 @@
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
               "test": "announces the focused box summary and walks boxes with Arrow/Home/End",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -16733,8 +16733,8 @@
           "evidence": [
             {
               "file": "src/components/overlays/drawer/drawer.test.ts",
-              "line": 3,
-              "kind": "component keyboard assertion signal"
+              "test": "includes a prose body in the drawer Tab order when narrowing makes it overflow",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -17269,8 +17269,8 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/dropdown-dialog-position.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "anchors ${composed ? 'a checkbox filter' : 'a dropdown'} inside a wide ${direction} dialog without scrolling",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -17472,7 +17472,7 @@
             {
               "file": "src/components/layout/menu/dropdown-item.test.ts",
               "test": "clears both reflected spellings after Escape dismisses an alias-opened submenu",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -17988,8 +17988,8 @@
           "evidence": [
             {
               "file": "src/components/retrieval/embedding-explorer/embedding-explorer.test.ts",
-              "line": 3,
-              "kind": "component keyboard assertion signal"
+              "test": "supports keyboard activation and navigation",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -18159,7 +18159,7 @@
             {
               "file": "src/components/forms/emoji-picker/emoji-picker-remediation.test.ts",
               "test": "leaves search ${key} unconsumed during ${'isComposing' in composition ? 'composition' : 'legacy composition'}",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -18674,8 +18674,8 @@
           "evidence": [
             {
               "file": "src/components/retrieval/entity-chip/entity-chip-overlay-lifecycle.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "defers Escape to a newer dialog opened on top, instead of closing its own popover first",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -19629,7 +19629,7 @@
             {
               "file": "src/components/utility/export-button/export-button.test.ts",
               "test": "closes on Escape and returns focus to the trigger",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -19997,7 +19997,7 @@
             {
               "file": "src/components/media/file-input/file-input.test.ts",
               "test": "opens the picker on Enter and Space keydown",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -20340,7 +20340,7 @@
             {
               "file": "src/components/layout/filter-bar/filter-bar.test.ts",
               "test": "adapts a two-handle lr-time-range and clears it through its active chip",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -20668,8 +20668,8 @@
           "evidence": [
             {
               "file": "src/components/data/flow-canvas/flow-canvas.test.ts",
-              "line": 11,
-              "kind": "component keyboard assertion signal"
+              "test": "uses owner CSS escaping and an exact-id fallback for adopted keyboard, drag, and connect paths",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -21011,7 +21011,7 @@
             {
               "file": "src/components/data/flow-minimap/flow-minimap.test.ts",
               "test": "the viewport rect is the single focusable stop; +/-/Enter/Home/arrows drive the canvas",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -22702,7 +22702,7 @@
             {
               "file": "src/components/retrieval/graph/graph-accessibility.test.ts",
               "test": "swaps ArrowLeft/ArrowRight roving-tabindex navigation under dir=\"rtl\"",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -22909,8 +22909,8 @@
           "evidence": [
             {
               "file": "src/components/retrieval/graph-legend/graph-legend.test.ts",
-              "line": 3,
-              "kind": "component keyboard assertion signal"
+              "test": "uses the same proposal and commit sequence for native pointer and keyboard activation",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -23068,8 +23068,8 @@
           "evidence": [
             {
               "file": "src/components/data/graph-query-builder/graph-query-builder-remediation.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "contains all select aliases while a real ${part} choice emits one full query",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -23624,8 +23624,8 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap-remediation.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "restores the neighboring ${mode} fill when native keyboard focus moves",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -23817,7 +23817,7 @@
             {
               "file": "src/components/viewers/highlight-layer/highlight-layer.test.ts",
               "test": "focuses an item whose public id contains selector metacharacters",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -23979,7 +23979,7 @@
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
               "test": "announces the focused box summary and walks boxes with Arrow/Home/End",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -24720,7 +24720,7 @@
             {
               "file": "src/components/media/image-comparer/image-comparer.test.ts",
               "test": "normalizes every keyboard direction and commit in LTR and RTL",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -24887,8 +24887,8 @@
           "evidence": [
             {
               "file": "src/components/media/image-viewer/image-viewer-remediation.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "keeps highlight Enter owned by the native button (${direction}, draft ${withDraft})",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -25387,8 +25387,8 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1855,
-              "kind": "component keyboard assertion signal"
+              "test": "submits the ancestor form when Enter is pressed in the field",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -26233,8 +26233,8 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-base/knowledge-base.test.ts",
-              "line": 3,
-              "kind": "component keyboard assertion signal"
+              "test": "forwards every documented table part and renders the actual nested action trigger states",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -26403,7 +26403,7 @@
             {
               "file": "src/components/retrieval/knowledge-base-admin/knowledge-base-admin.test.ts",
               "test": "mirrors previous and next tab navigation under RTL",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -26573,8 +26573,8 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-remediation.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "the actual preset-search story displays canonical query and match metadata after native input",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -26744,7 +26744,7 @@
             {
               "file": "src/components/utility/known-date/known-date.test.ts",
               "test": "moves focus to the previous field on Backspace in an already-empty field, without altering its content",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -26919,7 +26919,7 @@
             {
               "file": "src/components/media/lightbox/lightbox.test.ts",
               "test": "closes on Escape and emits lr-close with the escape reason",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -27080,7 +27080,7 @@
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
               "test": "announces the focused box summary and walks boxes with Arrow/Home/End",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -27312,7 +27312,7 @@
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
               "test": "announces the focused box summary and walks boxes with Arrow/Home/End",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -27703,8 +27703,8 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker-loader.test.ts",
-              "line": 1,
-              "kind": "component keyboard assertion signal"
+              "test": "catches synchronous callback failures and retries through a fresh request without exposing raw errors",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -27961,8 +27961,8 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 11,
-              "kind": "component keyboard assertion signal"
+              "test": "gives an interactive marker a pointer cursor and a themed focus ring",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -28156,8 +28156,8 @@
           "evidence": [
             {
               "file": "src/components/conversation/markdown/markdown-code-header.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "${name} reaches each copy button before its code and copies the focused block from the keyboard",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -28375,8 +28375,8 @@
           "evidence": [
             {
               "file": "src/components/conversation/markdown/markdown-code-header.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "${name} reaches each copy button before its code and copies the focused block from the keyboard",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -28938,7 +28938,7 @@
             {
               "file": "src/components/retrieval/memory-panel/memory-panel.test.ts",
               "test": "cancels the confirmation on Escape and returns focus to the row",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -29106,7 +29106,7 @@
             {
               "file": "src/components/utility/mention-popover/mention-popover-remediation.test.ts",
               "test": "leaves ${key} with the native editor while ${legacy ? 'legacy keyCode229' : 'isComposing'} is active",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -29353,7 +29353,7 @@
             {
               "file": "src/components/layout/menu/dropdown-item.test.ts",
               "test": "clears both reflected spellings after Escape dismisses an alias-opened submenu",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -29603,7 +29603,7 @@
             {
               "file": "src/components/layout/menu/dropdown-item.test.ts",
               "test": "clears both reflected spellings after Escape dismisses an alias-opened submenu",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -29775,7 +29775,7 @@
             {
               "file": "src/components/layout/menu/dropdown-item.test.ts",
               "test": "clears both reflected spellings after Escape dismisses an alias-opened submenu",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -29975,8 +29975,8 @@
           "evidence": [
             {
               "file": "src/components/layout/menubar/menubar.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "wraps arrow traversal and carries open menus in ${direction}",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -30181,8 +30181,8 @@
           "evidence": [
             {
               "file": "src/components/layout/menubar/menubar.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "wraps arrow traversal and carries open menus in ${direction}",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -30376,8 +30376,8 @@
           "evidence": [
             {
               "file": "src/components/conversation/message-actions/message-actions-composition.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "emits lr-regenerate on Enter from the actually focused control",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -30551,7 +30551,7 @@
             {
               "file": "src/components/conversation/message-feedback/message-feedback.test.ts",
               "test": "closes the panel on Escape, keeps rating, and returns focus to the active thumb",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -30724,8 +30724,8 @@
           "evidence": [
             {
               "file": "src/components/conversation/message-parts/message-parts.test.ts",
-              "line": 1,
-              "kind": "component keyboard assertion signal"
+              "test": "preserves interrupted content and emits a controlled owned resume request",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -30900,7 +30900,7 @@
             {
               "file": "src/components/retrieval/mind-map/mind-map.test.ts",
               "test": "keeps compact node pointer targets at the 40px floor and activates through the focus-ring annulus",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -31117,7 +31117,7 @@
             {
               "file": "src/components/conversation/model-select/model-select.test.ts",
               "test": "keeps omitted readonly editable across both catalog modes",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -31465,8 +31465,8 @@
           "evidence": [
             {
               "file": "src/components/layout/multi-split/multi-split-trigger.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "returns focus to the external launcher on Escape after programmatic opening",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -31791,8 +31791,8 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1855,
-              "kind": "component keyboard assertion signal"
+              "test": "submits the ancestor form when Enter is pressed in the field",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -31988,8 +31988,8 @@
           "evidence": [
             {
               "file": "src/components/layout/navigation-menu/navigation-menu.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "acts on the focused trigger for Enter and Space while the pointer hovers another",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -32175,7 +32175,7 @@
             {
               "file": "src/components/layout/navigation-menu-item/navigation-menu-item.test.ts",
               "test": "closes an unowned in-flow panel on Escape and returns focus to the trigger",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -32547,8 +32547,8 @@
           "evidence": [
             {
               "file": "src/components/retrieval/node-palette/node-palette-remediation.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "the actual WithCanvas story commits repeated native placements to visible canvas nodes",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -32702,8 +32702,8 @@
           "evidence": [
             {
               "file": "src/components/viewers/notebook-viewer/notebook-viewer.test.ts",
-              "line": 3,
-              "kind": "component keyboard assertion signal"
+              "test": "renders output-toggle hover and keyboard focus-visible feedback",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -32895,8 +32895,8 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1855,
-              "kind": "component keyboard assertion signal"
+              "test": "submits the ancestor form when Enter is pressed in the field",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -33084,7 +33084,7 @@
             {
               "file": "src/components/forms/combobox/combobox-form-lifecycle.test.ts",
               "test": "does not emit lr-filter when a keyboard selection commits and resets the query (multiple)",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -33269,8 +33269,8 @@
           "evidence": [
             {
               "file": "src/components/forms/otp-input/otp-input.test.ts",
-              "line": 87,
-              "kind": "component keyboard assertion signal"
+              "test": "moves the active segment with clamped physical arrows in LTR and RTL",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -33465,7 +33465,7 @@
             {
               "file": "src/components/layout/page/page.test.ts",
               "test": "uses the shared mobile overlay lifecycle for Escape, scroll lock, and focus return",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -33649,7 +33649,7 @@
             {
               "file": "src/components/viewers/page-rail/page-rail.test.ts",
               "test": "typing a digit jumps to that page in mediated mode",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -33853,7 +33853,7 @@
             {
               "file": "src/components/data/pagination/pagination.test.ts",
               "test": "commits a valid numeric page jump on Enter",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -34027,7 +34027,7 @@
             {
               "file": "src/components/media/pan-zoom/pan-zoom.test.ts",
               "test": "uses group semantics for independently tabbable zoom controls",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -34202,7 +34202,7 @@
             {
               "file": "src/components/retrieval/path-strip/path-strip.test.ts",
               "test": "has one roving tab stop across every element, moving forward with ArrowRight in LTR",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -34377,7 +34377,7 @@
             {
               "file": "src/components/viewers/pdf-viewer/pdf-viewer.test.ts",
               "test": "stops the highlight-layer-owned lr-highlight-activate event from leaking past the viewer as a raw duplicate (keyboard activation)",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -34884,8 +34884,8 @@
           "evidence": [
             {
               "file": "src/components/forms/phone-input/phone-input.test.ts",
-              "line": 1765,
-              "kind": "component keyboard assertion signal"
+              "test": "submits the ancestor form when Enter is pressed in the telephone field",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -35048,7 +35048,7 @@
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
               "test": "announces the focused box summary and walks boxes with Arrow/Home/End",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -35258,7 +35258,7 @@
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
               "test": "announces the focused box summary and walks boxes with Arrow/Home/End",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -35631,8 +35631,8 @@
           "evidence": [
             {
               "file": "src/components/utility/poll-status/poll-status.test.ts",
-              "line": 3,
-              "kind": "component keyboard assertion signal"
+              "test": "requests manual refresh with a localized keyboard action and restarts just one automatic deadline",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -35828,8 +35828,8 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/dropdown-dialog-position.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "anchors ${composed ? 'a checkbox filter' : 'a dropdown'} inside a wide ${direction} dialog without scrolling",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -36686,8 +36686,8 @@
           "evidence": [
             {
               "file": "src/components/conversation/prompt-input/prompt-input.test.ts",
-              "line": 11,
-              "kind": "component keyboard assertion signal"
+              "test": "detects mention triggers, anchors the popover to the real textarea, and inserts a selection",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -37016,8 +37016,8 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/prompt-studio/prompt-studio.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "supports native keyboard activation and keeps focus with the moved message action",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -37179,8 +37179,8 @@
           "evidence": [
             {
               "file": "src/components/retrieval/provenance-panel/provenance-panel.test.ts",
-              "line": 3,
-              "kind": "component keyboard assertion signal"
+              "test": "renders the disclosure header hover/focus-visible feedback",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -37343,7 +37343,7 @@
             {
               "file": "src/components/conversation/push-to-talk/push-to-talk.test.ts",
               "test": "ignores a repeated (auto-repeat) Enter keydown -- only the first keydown starts a take",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -37679,7 +37679,7 @@
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
               "test": "announces the focused box summary and walks boxes with Arrow/Home/End",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -37913,7 +37913,7 @@
             {
               "file": "src/components/forms/radio/radio-button.test.ts",
               "test": "selects on Space from the keyboard",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -38084,7 +38084,7 @@
             {
               "file": "src/components/forms/radio/radio-button.test.ts",
               "test": "selects on Space from the keyboard",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -38266,7 +38266,7 @@
             {
               "file": "src/components/forms/radio/radio-button.test.ts",
               "test": "selects on Space from the keyboard",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -38948,7 +38948,7 @@
             {
               "file": "src/components/overlays/rating/rating.test.ts",
               "test": "exposes a keyboard-accessible rating slider",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -39470,8 +39470,8 @@
           "evidence": [
             {
               "file": "src/components/layout/reorder-list/reorder-item-composition.test.ts",
-              "line": 3,
-              "kind": "component keyboard assertion signal"
+              "test": "requests a move on Enter from the actually focused control",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -39647,8 +39647,8 @@
           "evidence": [
             {
               "file": "src/components/layout/reorder-list/reorder-item-composition.test.ts",
-              "line": 3,
-              "kind": "component keyboard assertion signal"
+              "test": "requests a move on Enter from the actually focused control",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -40148,8 +40148,8 @@
           "evidence": [
             {
               "file": "src/components/layout/responsive-panel/native-modal.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "${tag} accepts pointer and focus and returns to its native opener on Escape",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -40836,8 +40836,8 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.test.ts",
-              "line": 11,
-              "kind": "component keyboard assertion signal"
+              "test": "keeps the toggle proposal and its input/change aliases inside for native pointer and keyboard activation while lr-select still reports",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -41033,8 +41033,8 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-search/retrieval-search.test.ts",
-              "line": 120,
-              "kind": "component keyboard assertion signal"
+              "test": "Enter in the query field submits, emitting lr-search with the full RetrievalQuery",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -41364,8 +41364,8 @@
           "evidence": [
             {
               "file": "src/components/forms/rubric-form/rubric-form.test.ts",
-              "line": 4,
-              "kind": "component keyboard assertion signal"
+              "test": "submits on Ctrl/Cmd+Enter, but not on a plain Enter or an unmodified other key (onFormKeyDown)",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -41526,7 +41526,7 @@
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
               "test": "announces the focused box summary and walks boxes with Arrow/Home/End",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -41906,7 +41906,7 @@
             {
               "file": "src/components/layout/segmented/segmented.test.ts",
               "test": "ArrowRight from the unselected, first-tabbable state selects the first item",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -42131,7 +42131,7 @@
             {
               "file": "src/components/forms/select/select-interaction.test.ts",
               "test": "preserves the active option when lr-hide is vetoed so Enter still selects it",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -42313,7 +42313,7 @@
             {
               "file": "src/components/conversation/selection-toolbar/selection-toolbar.test.ts",
               "test": "dismisses on Escape through the shared overlay manager",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -42485,7 +42485,7 @@
             {
               "file": "src/components/media/sequence-playback/sequence-playback.test.ts",
               "test": "pins ArrowLeft/ArrowRight step direction to a fixed next/previous meaning in both LTR and RTL, independent of native engine handling",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -42669,7 +42669,7 @@
             {
               "file": "src/components/data/sequence-strip/sequence-strip.test.ts",
               "test": "fills 320px with the whole span in both directions, one item per cell at the cap and ranges past it",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -43024,7 +43024,7 @@
             {
               "file": "src/components/forms/slider/slider-form-lifecycle.test.ts",
               "test": "clears a pending keyboard commit when own or fieldset disablement interrupts the key sequence",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -43559,8 +43559,8 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker-remediation.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "restores a visible tree entry when search is re-enabled (${focused ? 'focused' : 'outside focus'})",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -43741,7 +43741,7 @@
             {
               "file": "src/components/agent-tools/span-waterfall/span-waterfall.test.ts",
               "test": "emits lr-span-select on bar click and on Enter",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -44256,7 +44256,7 @@
             {
               "file": "src/components/layout/split-panel/split-panel-remediation.test.ts",
               "test": "proposes ${primary}-edge percentages and pixels with cancellation=${canceled}",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -44432,7 +44432,7 @@
             {
               "file": "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.test.ts",
               "test": "ignores a keydown for a key other than Enter/Space, leaving the highlight inert",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -44800,8 +44800,8 @@
           "evidence": [
             {
               "file": "src/components/data/stat/stat-remediation.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "preserves ${modifier || 'plain'} native pointer intent from a passive slotted caption to its anchor",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -44999,8 +44999,8 @@
           "evidence": [
             {
               "file": "src/components/layout/stepper/stepper.test.ts",
-              "line": 9,
-              "kind": "component keyboard assertion signal"
+              "test": "supports ArrowRight/ArrowLeft/Home/End among non-disabled steps, clamped (not cyclic)",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -45173,8 +45173,8 @@
           "evidence": [
             {
               "file": "src/components/conversation/stream-status/stream-status.test.ts",
-              "line": 1,
-              "kind": "component keyboard assertion signal"
+              "test": "shows interrupted state and requests controlled resume only when enabled and resumable",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -45681,7 +45681,7 @@
             {
               "file": "src/components/agent-tools/subagent-panel/subagent-panel.test.ts",
               "test": "activates the focused treeitem with Enter/Space and contextualizes row actions",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -45871,7 +45871,7 @@
             {
               "file": "src/components/conversation/suggestion-chips/suggestion-chips.test.ts",
               "test": "roving tabindex: only one chip is tabbable at a time, and ArrowRight/ArrowLeft move it",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -46230,8 +46230,8 @@
           "evidence": [
             {
               "file": "src/components/forms/swatch-picker/swatch-picker.test.ts",
-              "line": 1,
-              "kind": "component keyboard assertion signal"
+              "test": "keeps duplicate-valued swatches as distinct occurrences for selection and navigation",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -46429,7 +46429,7 @@
             {
               "file": "src/components/forms/switch/switch.test.ts",
               "test": "emits input and change on Space while leaving Enter to the surrounding form",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -46650,7 +46650,7 @@
             {
               "file": "src/components/layout/tab-group/tab-group-remediation.test.ts",
               "test": "repairs removal of a manually focused unselected tab with outside focus=${outside}",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -46869,7 +46869,7 @@
             {
               "file": "src/components/layout/tab-group/tab-group-remediation.test.ts",
               "test": "repairs removal of a manually focused unselected tab with outside focus=${outside}",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -47107,7 +47107,7 @@
             {
               "file": "src/components/layout/tab-group/tab-group-remediation.test.ts",
               "test": "repairs removal of a manually focused unselected tab with outside focus=${outside}",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -47357,7 +47357,7 @@
             {
               "file": "src/components/data/table/table-accessibility.test.ts",
               "test": "emits lr-row-activate via keydown (Enter and Space) on a focused row",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -47550,8 +47550,8 @@
           "evidence": [
             {
               "file": "src/components/overlays/badge/tag.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "fires from keyboard activation of the focused remove button",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -47572,7 +47572,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/badge/badge.test.ts",
-              "line": 343,
+              "test": "runs an infinite pulse for attention=\"pulse\" (full-motion branch)",
               "kind": "reduced-motion test signal"
             }
           ]
@@ -47724,8 +47724,8 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/task-list/task-list-reorderable.test.ts",
-              "line": 44,
-              "kind": "component keyboard assertion signal"
+              "test": "is opt-in: unset task rows remain non-focusable and Ctrl+Arrow never emits lr-reorder",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -47895,7 +47895,7 @@
             {
               "file": "src/components/agent-tools/terminal/terminal.test.ts",
               "test": "pressing End in the viewport re-engages follow via the same jump-to-latest path",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -48248,7 +48248,7 @@
             {
               "file": "src/components/forms/textarea/textarea.test.ts",
               "test": "flushes a pending debounce immediately on Enter and on the native change event",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -48641,8 +48641,8 @@
           "evidence": [
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 4,
-              "kind": "component keyboard assertion signal"
+              "test": "keeps a focus-revealed trigger visible while keyboard focus is inside the open menu, and arrow keys stay in that menu",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -48822,8 +48822,8 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1855,
-              "kind": "component keyboard assertion signal"
+              "test": "submits the ancestor form when Enter is pressed in the field",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -49011,7 +49011,7 @@
             {
               "file": "src/components/forms/time-range/time-range-form-lifecycle.test.ts",
               "test": "rounds exponent-form steps without collapsing the nudge to zero",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -49193,8 +49193,8 @@
           "evidence": [
             {
               "file": "src/components/data/timeline/timeline.test.ts",
-              "line": 3,
-              "kind": "component keyboard assertion signal"
+              "test": "reaches the stop by Tab and paints the shared focus ring on it",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -49387,8 +49387,8 @@
           "evidence": [
             {
               "file": "src/components/data/timeline/timeline.test.ts",
-              "line": 3,
-              "kind": "component keyboard assertion signal"
+              "test": "reaches the stop by Tab and paints the shared focus ring on it",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -49555,8 +49555,8 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toaster.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "keeps helper toasts interactive and announced inside mobile Page navigation",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -49739,8 +49739,8 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toaster.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "keeps helper toasts interactive and announced inside mobile Page navigation",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -49931,8 +49931,8 @@
           "evidence": [
             {
               "file": "src/components/forms/toggle/toggle.test.ts",
-              "line": 5,
-              "kind": "component keyboard assertion signal"
+              "test": "toggles from the keyboard: Space activates on keyup and Enter on keydown",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -50105,8 +50105,8 @@
           "evidence": [
             {
               "file": "src/components/forms/toggle-group/toggle-group.test.ts",
-              "line": 10,
-              "kind": "component keyboard assertion signal"
+              "test": "keeps exactly one tab stop on an internal button and lets Tab enter and leave the group",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -50274,8 +50274,8 @@
           "evidence": [
             {
               "file": "src/components/forms/token-input/token-input-remediation.test.ts",
-              "line": 18,
-              "kind": "component keyboard assertion signal"
+              "test": "leaves draft ${key} with ${mode} unconsumed",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -50467,7 +50467,7 @@
             {
               "file": "src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.test.ts",
               "test": "closes on Escape and emits lr-close with reason \"escape\"",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -50659,8 +50659,8 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-call-block/tool-call-block.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "toggles from the keyboard with Enter and Space on the focused header",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -50828,8 +50828,8 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-call-chip/tool-call-chip-overlay-lifecycle.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "defers Escape to a newer dialog opened on top, instead of closing its own tooltip first",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -51160,8 +51160,8 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-result-dialog/tool-result-dialog.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "closes on Escape and emits lr-close with reason \"escape\"",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -51505,8 +51505,8 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-select-dialog/tool-select-dialog.test.ts",
-              "line": 1,
-              "kind": "component keyboard assertion signal"
+              "test": "closes on Escape and emits lr-close with reason \"escape\"",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -51849,8 +51849,8 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/dropdown-dialog-position.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "anchors ${composed ? 'a checkbox filter' : 'a dropdown'} inside a wide ${direction} dialog without scrolling",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -52055,8 +52055,8 @@
           "evidence": [
             {
               "file": "src/components/utility/tour/native-modal.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "accepts pointer, focus and Escape ${nativeOpen ? 'above a native modal' : 'on the ordinary path'}",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -52230,7 +52230,7 @@
             {
               "file": "src/components/agent-tools/trace-tree/trace-tree.test.ts",
               "test": "moves roving tabindex with ArrowDown/ArrowUp",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -52607,7 +52607,7 @@
             {
               "file": "src/components/data/tree/tree-declarative.test.ts",
               "test": "survives keyboard navigation over slotted tree-items that carry no item",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -52812,7 +52812,7 @@
             {
               "file": "src/components/data/tree/tree-declarative.test.ts",
               "test": "survives keyboard navigation over slotted tree-items that carry no item",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -53178,8 +53178,8 @@
           "evidence": [
             {
               "file": "src/components/conversation/usage-badge/usage-badge-overlay-lifecycle.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "retains activation order when a hidden older tooltip resumes below a newer dialog",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -53368,8 +53368,8 @@
           "evidence": [
             {
               "file": "src/components/media/video/video.test.ts",
-              "line": 3,
-              "kind": "component keyboard assertion signal"
+              "test": "uses native range ArrowRight/ArrowLeft behavior on the physical RTL timeline axis",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -53548,8 +53548,8 @@
           "evidence": [
             {
               "file": "src/components/media/video-playlist/video-playlist.test.ts",
-              "line": 74,
-              "kind": "component keyboard assertion signal"
+              "test": "does not wrap arrow-navigation focus past either end of the list",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -53739,7 +53739,7 @@
             {
               "file": "src/components/layout/virtual-list/virtual-list.test.ts",
               "test": "cancels an estimate correction on manual scroll intent and source replacement",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -54085,8 +54085,8 @@
           "evidence": [
             {
               "file": "src/components/conversation/voice-picker/voice-picker.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "keeps omitted readonly editable across both catalog modes",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -54305,7 +54305,7 @@
             {
               "file": "src/components/layout/widget/widget.test.ts",
               "test": "exits fullscreen on Escape and returns focus to the trigger button",
-              "kind": "component keyboard assertion signal"
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -54639,8 +54639,8 @@
           "evidence": [
             {
               "file": "src/components/data/word-cloud/word-cloud.test.ts",
-              "line": 67,
-              "kind": "component keyboard assertion signal"
+              "test": "moves roving focus with arrow keys, wraps at neither end, and Home/End jump to the ends",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },
@@ -55008,8 +55008,8 @@
           "evidence": [
             {
               "file": "src/components/media/zoomable-frame/zoomable-frame-remediation.test.ts",
-              "line": 2,
-              "kind": "component keyboard assertion signal"
+              "test": "distinguishes zoom control focus from iframe entry, exit, public blur and reconnect",
+              "kind": "component keyboard exercise signal"
             }
           ]
         },

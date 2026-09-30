@@ -25,7 +25,7 @@ Pairs with `lr-icon-button` (see `llms/components/lr-icon-button.md`).
 **Properties:**
 
 - `name: string = ''` (reflected once set) — a built-in glyph: `add`, `check`, `close`, `search`, `menu`,
-  `chevron-left`, `chevron-right`, `chevron-down`, `calendar`, `command`, `trash`. An unknown name
+  `chevron-left`, `chevron-right`, `chevron-down`, `calendar`, `command`, `trash`, `refresh`. An unknown name
   renders nothing (no error, no fallback glyph). With a registered `library`, this is instead the
   name handed to that library's resolver. The setter accepts `undefined` to clear the name; reads
   remain the canonical non-nullable `''`.

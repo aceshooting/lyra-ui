@@ -76,6 +76,98 @@ function reachableSnapshot(digest, definition, contracts) {
 
 const memberEntry = (value) => ({ surface: 'named-export', semantic: 'type', value, label: 'm' });
 
+function inheritedMethodFixture(ownMembers, baseMembers = 'disconnectedCallback(): void;', middleMembers = '') {
+  return {
+    packageJson: {
+      name: '@aceshooting/lyra-ui', version: '1.0.0',
+      exports: { './sample.js': './dist/sample.js' },
+    },
+    manifest: { modules: [] },
+    declarations: {
+      files: {
+        'dist/base.d.ts': `export declare class Base<T> { ${baseMembers} }`,
+        'dist/sample.d.ts': `import { Base as Parent } from './base.js';
+          declare class Middle extends Parent<string> { ${middleMembers} }
+          export declare class Sample extends Middle { ${ownMembers} }
+          export type Props = Partial<Sample>;`,
+      },
+      packageFiles: ['dist/base.d.ts', 'dist/sample.d.ts', 'dist/sample.js'],
+    },
+  };
+}
+
+test('identical inherited method overrides do not add API or change reachable contracts', () => {
+  const baseMembers = 'connectedCallback(): void; disconnectedCallback(): void;';
+  const before = normalizePublicApi(inheritedMethodFixture('private pendingFrame;', baseMembers));
+  const after = normalizePublicApi(inheritedMethodFixture(
+    'private pendingFrame; private cancelFrame; disconnectedCallback(): void;', baseMembers,
+  ));
+  assert.deepEqual(diffPublicApi(before, after), []);
+  assert.deepEqual(diffPublicApi(after, before), []);
+});
+
+test('inherited method normalization retains new methods and changed signatures', () => {
+  for (const ownMembers of [
+    'newMethod(): void;',
+    'disconnectedCallback(reason: string): void;',
+    'disconnectedCallback(): string;',
+    'protected disconnectedCallback(): void;',
+    'static disconnectedCallback(): void;',
+    'disconnectedCallback(): void; disconnectedCallback(reason: string): void;',
+  ]) {
+    const before = normalizePublicApi(inheritedMethodFixture(''));
+    const after = normalizePublicApi(inheritedMethodFixture(ownMembers));
+    assert.ok(diffPublicApi(before, after).length > 0, ownMembers);
+  }
+});
+
+test('an intervening declaration blocks matching a more distant ancestor method', () => {
+  const before = normalizePublicApi(inheritedMethodFixture('', 'disconnectedCallback(): void;',
+    'protected disconnectedCallback(): void;'));
+  const after = normalizePublicApi(inheritedMethodFixture('disconnectedCallback(): void;',
+    'disconnectedCallback(): void;', 'protected disconnectedCallback(): void;'));
+  assert.ok(diffPublicApi(before, after).length > 0);
+});
+
+test('method normalization does not equate unresolved scoped types or generic parameters', () => {
+  const fixture = (own) => {
+    const input = inheritedMethodFixture(own, 'read(): T;');
+    input.declarations.files['dist/sample.d.ts'] += "\ntype T = 'narrow';";
+    return normalizePublicApi(input);
+  };
+  const before = fixture('');
+  const after = fixture('read(): T;');
+  assert.ok(diffPublicApi(before, after).length > 0);
+});
+
+test('changed overrides retain breaking signature and visibility classification', () => {
+  const before = normalizePublicApi(inheritedMethodFixture('disconnectedCallback(): void;'));
+  for (const ownMembers of [
+    'disconnectedCallback(reason: string): void;',
+    'disconnectedCallback(): string;',
+    'protected disconnectedCallback(): void;',
+  ]) {
+    const after = normalizePublicApi(inheritedMethodFixture(ownMembers));
+    assert.equal(minimumRequiredBump(diffPublicApi(before, after)), 'major', ownMembers);
+  }
+});
+
+test('base method changes remain breaking through an unchanged explicit override', () => {
+  const before = normalizePublicApi(inheritedMethodFixture('disconnectedCallback(): void;'));
+  const after = normalizePublicApi(inheritedMethodFixture('disconnectedCallback(): void;',
+    'disconnectedCallback(reason: string): void;'));
+  assert.equal(minimumRequiredBump(diffPublicApi(before, after)), 'major');
+});
+
+test('inherited overload groups compare as a whole and retain removals', () => {
+  const overloads = 'read(): string; read(index: number): string;';
+  const before = normalizePublicApi(inheritedMethodFixture('', overloads));
+  const identical = normalizePublicApi(inheritedMethodFixture(overloads, overloads));
+  assert.deepEqual(diffPublicApi(before, identical), []);
+  const narrowed = normalizePublicApi(inheritedMethodFixture('read(): string;', overloads));
+  assert.equal(minimumRequiredBump(diffPublicApi(before, narrowed)), 'major');
+});
+
 
 test('classifies additive CEM, export, framework, and named-export surface as minor', () => {
   const changes = diffPublicApi(normalizePublicApi(baseline), normalizePublicApi(additive));
