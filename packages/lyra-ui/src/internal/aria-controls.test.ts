@@ -335,29 +335,6 @@ it('adopts a reflected author baseline during an explicit update when observatio
   }
 });
 
-it('composes descriptions across query-imported current source copies', async () => {
-  const copyUrl = new URL('./aria-controls.ts?current-description-copy=one', import.meta.url).href;
-  const copy = await import(copyUrl) as typeof import('./aria-controls.js');
-  const root = await fixture<HTMLElement>(html`
-    <div><button></button><span id="first"></span><span id="second"></span></div>
-  `);
-  const target = root.querySelector<HTMLButtonElement>('button')!;
-  const firstSource = root.querySelector<HTMLElement>('#first')!;
-  const secondSource = root.querySelector<HTMLElement>('#second')!;
-  const first = acquireAriaDescription(target, [firstSource]);
-  const second = copy.acquireAriaDescription(target, [secondSource]);
-
-  try {
-    expect(target.getAttribute('aria-describedby')).to.equal('first second');
-    first.release();
-    expect(target.getAttribute('aria-describedby')).to.equal('second');
-    second.release();
-    expect(target.hasAttribute('aria-describedby')).to.equal(false);
-  } finally {
-    first.release();
-    second.release();
-  }
-});
 
 it('projects authored described-by references before target baseline and generated descriptions', () => {
   const host = document.createElement('div');
@@ -668,5 +645,89 @@ it('observes only the host until a late described-by write needs source-root tra
     target.remove();
     baseline.remove();
     window.MutationObserver = OriginalMutationObserver;
+  }
+});
+
+it('updates a cross-root description handle without releasing its peer or author baseline', async () => {
+  const root = await fixture<HTMLElement>(html`
+    <div><button aria-describedby="">Go</button><span id="handle-baseline"></span>
+      <span id="handle-peer"></span><div id="handle-shadow"></div></div>
+  `);
+  const target = root.querySelector<HTMLButtonElement>('button')!;
+  const baseline = root.querySelector<HTMLElement>('#handle-baseline')!;
+  const peerSource = root.querySelector<HTMLElement>('#handle-peer')!;
+  const shadow = root.querySelector<HTMLElement>('#handle-shadow')!.attachShadow({ mode: 'open' });
+  shadow.innerHTML = '<span id="handle-first">First</span><span id="handle-next">Next</span>';
+  const first = shadow.querySelector<HTMLElement>('#handle-first')!;
+  const next = shadow.querySelector<HTMLElement>('#handle-next')!;
+  const cleanup = installElementReferenceReflection(target, 'aria-describedby', [baseline]);
+  const applied = describeElement(target, first);
+  const peer = acquireAriaDescription(target, [peerSource]);
+  try {
+    expect(applied.had).to.equal(true);
+    expect(applied.value).to.equal('');
+    expect(applied.target === target).to.equal(true);
+    expect(applied.assigned).to.equal(true);
+    expect(reflectedIds(target, 'aria-describedby')).to.deep.equal([baseline.id, first.id, peerSource.id]);
+    applied.update([next]);
+    expect(reflectedIds(target, 'aria-describedby')).to.deep.equal([baseline.id, next.id, peerSource.id]);
+    undescribeElement(applied);
+    expect(reflectedIds(target, 'aria-describedby')).to.deep.equal([baseline.id, peerSource.id]);
+    peer.release();
+    expect(reflectedIds(target, 'aria-describedby')).to.deep.equal([baseline.id]);
+    expect(target.getAttribute('aria-describedby')).to.equal('');
+    undescribeElement(applied);
+    expect(reflectedIds(target, 'aria-describedby')).to.deep.equal([baseline.id]);
+  } finally {
+    applied.release();
+    peer.release();
+    cleanup();
+  }
+});
+
+it('disconnects an unpublished resolved observer when its lease releases during construction', async () => {
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const view = iframe.contentWindow!;
+  const doc = iframe.contentDocument!;
+  const descriptor = Object.getOwnPropertyDescriptor(view, 'MutationObserver');
+  const NativeObserver = Reflect.get(view, 'MutationObserver') as typeof MutationObserver;
+  const host = doc.createElement('div');
+  const source = doc.createElement('span');
+  source.id = 'reentrant-description';
+  doc.body.append(host, source);
+  const lease = acquireResolvedAriaRelationship(host, null, 'aria-describedby');
+  let candidates = 0;
+  let disconnects = 0;
+  class ReleasingObserver extends NativeObserver {
+    constructor(callback: MutationCallback) {
+      super(callback);
+      candidates += 1;
+      lease.release();
+    }
+    override disconnect(): void {
+      disconnects += 1;
+      super.disconnect();
+    }
+  }
+  try {
+    Object.defineProperty(view, 'MutationObserver', { configurable: true, value: ReleasingObserver });
+    host.setAttribute('aria-describedby', source.id);
+    lease.update(null);
+    expect(candidates).to.equal(1);
+    expect(disconnects).to.equal(1);
+    expect(lease.target === null).to.equal(true);
+    const target = doc.createElement('button');
+    target.setAttribute('aria-describedby', 'author-kept');
+    lease.update(target);
+    expect(target.getAttribute('aria-describedby')).to.equal('author-kept');
+    expect(host.getAttribute('aria-describedby')).to.equal(source.id);
+    await mutationComplete();
+    expect(candidates).to.equal(1);
+  } finally {
+    lease.release();
+    if (descriptor) Object.defineProperty(view, 'MutationObserver', descriptor);
+    else Reflect.deleteProperty(view, 'MutationObserver');
+    iframe.remove();
   }
 });

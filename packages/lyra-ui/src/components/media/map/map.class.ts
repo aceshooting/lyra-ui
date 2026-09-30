@@ -3857,7 +3857,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (changed.has('visible') && this.visible) this.tryConstructMap();
 
     if (changed.has('mapStyle') && !hasMapStyle(this.mapStyle) && this._maplibreModule) {
-      this.failInitialization('style-required');
+      const generation = this._connectGeneration;
+      const module = this._maplibreModule;
+      this.scheduleAfterUpdate(() => {
+        if (!this.isConnected || generation !== this._connectGeneration || module !== this._maplibreModule || hasMapStyle(this.mapStyle)) return;
+        this.failInitialization('style-required');
+      }, 'map-style-required');
     } else if (changed.has('mapStyle') && !this._map && this._maplibreModule && hasMapStyle(this.mapStyle)) {
       this.tryConstructMap();
     } else if (changed.has('mapStyle') && this._map) {

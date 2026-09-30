@@ -20,6 +20,8 @@
 
 ### Patch Changes
 
+- Handle removed map styles after rendering and discard obsolete failures when the style or connection changes.
+- Refresh document-library error content when an existing child's slot assignment changes.
 - Preserve tall content inside vertically constrained scrollers instead of shrinking slotted items to the viewport.
 - Reset a collapsed map legend's scroll position so its Glass layer cannot retain an empty scroll range; preserve focus and expanded scrolling.
 - 29ef483: Keep locale-picker language menus within the viewport when text is enlarged by capping their minimum width by the existing viewport limit.

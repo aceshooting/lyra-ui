@@ -61,3 +61,54 @@ for (const legacy of [false, true]) {
     });
   }
 }
+
+for (const textarea of [false, true]) {
+  it(`restores authored ${textarea ? 'textarea' : 'input'} semantics when element-reference setters reject writes`, async () => {
+    const root = await fixture<HTMLDivElement>(html`
+      <div><span id="rejecting-author-active">Author active</span>
+        <span id="rejecting-author-controls">Author controls</span>
+        <lr-mention-popover></lr-mention-popover></div>
+    `);
+    const control = document.createElement(textarea ? 'textarea' : 'input');
+    control.setAttribute('aria-label', 'Message');
+    control.setAttribute('role', 'textbox');
+    control.setAttribute('aria-expanded', 'false');
+    control.setAttribute('aria-haspopup', 'menu');
+    control.setAttribute('aria-controls', textarea ? '' : 'rejecting-author-controls');
+    control.setAttribute('aria-activedescendant', textarea ? '' : 'rejecting-author-active');
+    const authored = new Map([...control.attributes].map(attribute => [attribute.name, attribute.value]));
+    const active = root.querySelector<HTMLElement>('#rejecting-author-active')!;
+    const controls = root.querySelector<HTMLElement>('#rejecting-author-controls')!;
+    Object.defineProperties(control, {
+      ariaActiveDescendantElement: {
+        configurable: true,
+        get: () => active,
+        set: () => { throw new TypeError('element-reference writes unavailable'); },
+      },
+      ariaControlsElements: {
+        configurable: true,
+        get: () => [controls],
+        set: () => { throw new TypeError('element-reference writes unavailable'); },
+      },
+    });
+    root.prepend(control);
+    const viewer = root.querySelector<LyraMentionPopover>('lr-mention-popover')!;
+    try {
+      viewer.anchor = control;
+      viewer.items = [{ suggestionId: 'first', label: 'First' }, { suggestionId: 'second', label: 'Second' }];
+      viewer.open = true;
+      await viewer.updateComplete;
+      expect(viewer.shadowRoot!.querySelectorAll('[part="option"]').length).to.equal(2);
+      expect(control.hasAttribute('aria-controls')).to.equal(false);
+      expect(control.hasAttribute('aria-activedescendant')).to.equal(false);
+      expect(viewer.syncActiveDescendant(control)).to.equal(false);
+      viewer.open = false;
+      await viewer.updateComplete;
+      for (const [name, value] of authored) expect(control.getAttribute(name), name).to.equal(value);
+    } finally {
+      viewer.remove();
+      Reflect.deleteProperty(control, 'ariaActiveDescendantElement');
+      Reflect.deleteProperty(control, 'ariaControlsElements');
+    }
+  });
+}

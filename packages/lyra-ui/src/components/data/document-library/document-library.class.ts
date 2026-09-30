@@ -520,6 +520,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     this.errorSlotObserver.observe(this, {
       childList: true,
       attributes: true,
+      subtree: true,
       attributeFilter: ['slot'],
     });
   }

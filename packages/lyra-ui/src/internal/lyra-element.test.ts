@@ -306,6 +306,13 @@ it("detaches Map and Set event paths behind mutation-free readonly facades", asy
   };
   expect(detail.map.size).to.equal(1);
   expect(detail.map.get("entry")!.label).to.equal("first");
+  const mapCallbacks: { key: string; label: string; sameMap: boolean; sameThis: boolean }[] = [];
+  const callbackContext = { owner: 'detached event' };
+  detail.map.forEach(function (this: typeof callbackContext, value, key, map) {
+    mapCallbacks.push({ key, label: value.label, sameMap: map === detail.map, sameThis: this === callbackContext });
+    expect(Object.isFrozen(value)).to.be.true;
+  }, callbackContext);
+  expect(mapCallbacks).to.deep.equal([{ key: 'entry', label: 'first', sameMap: true, sameThis: true }]);
   expect([...detail.set][0]!.label).to.equal("only");
   expect(Object.isFrozen(detail.map)).to.be.true;
   expect(Object.isFrozen(detail.set)).to.be.true;
@@ -875,6 +882,14 @@ it("owns a bounded frozen readonly-map facade while retaining value identity", a
   expect(el.registry.size).to.equal(1);
   expect(el.registry.get("first") === definition).to.be.true;
   expect(el.registry.has("later")).to.be.false;
+  const callbacks: { key: string; sameValue: boolean; sameMap: boolean; sameThis: boolean }[] = [];
+  const callbackContext = { owner: 'identity property' };
+  el.registry.forEach(function (this: typeof callbackContext, value, key, map) {
+    callbacks.push({ key, sameValue: value === definition, sameMap: map === el.registry, sameThis: this === callbackContext });
+  }, callbackContext);
+  expect(callbacks).to.deep.equal([{ key: 'first', sameValue: true, sameMap: true, sameThis: true }]);
+  expect(() => Map.prototype.set.call(el.registry, 'injected', definition)).to.throw(TypeError);
+  expect([...el.registry.keys()]).to.deep.equal(['first']);
   expect(Object.isFrozen(el.registry)).to.be.true;
   expect("set" in el.registry).to.be.false;
 });

@@ -4811,6 +4811,7 @@
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
           "src/components/charts/chart/chart-deprecated-aliases.test.ts",
@@ -5037,6 +5038,7 @@
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
           "src/components/charts/chart/chart-deprecated-aliases.test.ts",
@@ -5955,6 +5957,7 @@
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
           "src/components/charts/chart/chart-deprecated-aliases.test.ts",
@@ -8043,6 +8046,7 @@
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
           "src/components/charts/chart/chart-deprecated-aliases.test.ts",
@@ -11041,6 +11045,7 @@
           "src/components/forms/combobox/combobox-form-lifecycle.test.ts",
           "src/components/forms/combobox/combobox-remediation.test.ts",
           "src/components/forms/combobox/combobox-rendering-a11y.test.ts",
+          "src/components/forms/combobox/combobox-selected-rows-runtime.test.ts",
           "src/components/forms/combobox/combobox-source-state.test.ts",
           "src/components/forms/combobox/combobox.test.ts",
           "src/components/forms/combobox/option.test.ts",
@@ -12661,8 +12666,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/overlays/context-menu/context-menu.test.ts",
-              "test": "opens below the focused element on Shift+F10 and focuses the first row",
+              "file": "src/components/overlays/context-menu/context-menu-anchor-lifecycle.test.ts",
+              "test": "returns programmatic menu focus to the focused descendant of an external context anchor",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -12793,6 +12798,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/overlays/context-menu/context-menu-anchor-lifecycle.test.ts",
           "src/components/overlays/context-menu/context-menu.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -13945,8 +13951,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/data-grid/data-grid-columns.test.ts",
-              "test": "leaves disabled sort, resize, and movement capabilities inert",
+              "file": "src/components/data/data-grid/data-grid-boundaries.test.ts",
+              "test": "retains logical alignment, pinning and missing-value sorting through column normalization in ${direction}",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -13956,8 +13962,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/data-grid/data-grid-interaction.test.ts",
-              "test": "commits keyboard resize, rolls back pointer cancellation, and reorders with finished events",
+              "file": "src/components/data/data-grid/data-grid-boundaries.test.ts",
+              "line": 10,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -14076,6 +14082,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/data/data-grid/data-grid-boundaries.test.ts",
           "src/components/data/data-grid/data-grid-columns.test.ts",
           "src/components/data/data-grid/data-grid-export.test.ts",
           "src/components/data/data-grid/data-grid-interaction.test.ts",
@@ -15928,6 +15935,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/data/document-library/document-library-boundaries.test.ts",
           "src/components/data/document-library/document-library-remediation.test.ts",
           "src/components/data/document-library/document-library-search-sizing.test.ts",
           "src/components/data/document-library/document-library.test.ts"
@@ -16660,6 +16668,7 @@
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
           "src/components/charts/chart/chart-deprecated-aliases.test.ts",
@@ -17412,6 +17421,7 @@
           "src/components/overlays/overlay/dropdown-dialog-position.test.ts",
           "src/components/overlays/overlay/dropdown.test.ts",
           "src/components/overlays/overlay/overlay-closed-layout.test.ts",
+          "src/components/overlays/overlay/overlay-public-lifecycle.test.ts",
           "src/components/overlays/overlay/overlay-remediation.test.ts",
           "src/components/overlays/overlay/overlay.test.ts",
           "src/components/overlays/overlay/popover-trigger.test.ts",
@@ -17724,8 +17734,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/viewers/ebook-viewer/ebook-viewer.test.ts",
-              "test": "renders safe-url and missing-peer errors with exactly one event per failure",
+              "file": "src/components/viewers/ebook-viewer/ebook-viewer-peer-boundaries.test.ts",
+              "test": "retains usable CFIs with malformed excerpts and rejects malformed CFIs from a peer result",
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -17776,6 +17786,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/viewers/ebook-viewer/ebook-loader.test.ts",
+          "src/components/viewers/ebook-viewer/ebook-viewer-peer-boundaries.test.ts",
           "src/components/viewers/ebook-viewer/ebook-viewer-register.test.ts",
           "src/components/viewers/ebook-viewer/ebook-viewer-remediation.test.ts",
           "src/components/viewers/ebook-viewer/ebook-viewer.test.ts",
@@ -22734,8 +22745,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/retrieval/graph/graph-fallbacks.test.ts",
-              "test": "follows the host content box under dir=\"rtl\" exactly as under ltr",
+              "file": "src/components/retrieval/graph/graph-canvas-shapes.test.ts",
+              "line": 33,
               "kind": "320px allocation test signal"
             }
           ]
@@ -22852,6 +22863,7 @@
           "src/components/retrieval/graph/graph-accessibility.test.ts",
           "src/components/retrieval/graph/graph-aliases.test.ts",
           "src/components/retrieval/graph/graph-canvas-coverage.test.ts",
+          "src/components/retrieval/graph/graph-canvas-shapes.test.ts",
           "src/components/retrieval/graph/graph-canvas.test.ts",
           "src/components/retrieval/graph/graph-contract.test.ts",
           "src/components/retrieval/graph/graph-fallbacks.test.ts",
@@ -24125,6 +24137,7 @@
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
           "src/components/charts/chart/chart-deprecated-aliases.test.ts",
@@ -25843,6 +25856,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/schema-viewer/schema-viewer-selection.test.ts",
           "src/components/agent-tools/schema-viewer/schema-viewer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -27226,6 +27240,7 @@
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
           "src/components/charts/chart/chart-deprecated-aliases.test.ts",
@@ -27453,6 +27468,7 @@
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
           "src/components/charts/chart/chart-deprecated-aliases.test.ts",
@@ -28058,8 +28074,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/map/map.test.ts",
-              "test": "shows a loading skeleton and aria-busy while maplibre-gl loads, then swaps to the container",
+              "file": "src/components/media/map/map-public-boundaries.test.ts",
+              "test": "contains a public peer fit failure and recovers after the required style is restored",
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -28112,6 +28128,7 @@
           "src/components/media/map/map-legend-icon.test.ts",
           "src/components/media/map/map-legend-scroll.test.ts",
           "src/components/media/map/map-loader.test.ts",
+          "src/components/media/map/map-public-boundaries.test.ts",
           "src/components/media/map/map-remediation.test.ts",
           "src/components/media/map/map.test.ts"
         ],
@@ -28321,6 +28338,7 @@
           "src/components/conversation/markdown/markdown-progressive.test.ts",
           "src/components/conversation/markdown/markdown-remediation.test.ts",
           "src/components/conversation/markdown/markdown-shared.test.ts",
+          "src/components/conversation/markdown/markdown-streaming-recovery.test.ts",
           "src/components/conversation/markdown/markdown-streaming-render.test.ts",
           "src/components/conversation/markdown/markdown-streaming.test.ts",
           "src/components/conversation/markdown/markdown-tables.test.ts",
@@ -28526,6 +28544,7 @@
           "src/components/conversation/markdown/markdown-progressive.test.ts",
           "src/components/conversation/markdown/markdown-remediation.test.ts",
           "src/components/conversation/markdown/markdown-shared.test.ts",
+          "src/components/conversation/markdown/markdown-streaming-recovery.test.ts",
           "src/components/conversation/markdown/markdown-streaming-render.test.ts",
           "src/components/conversation/markdown/markdown-streaming.test.ts",
           "src/components/conversation/markdown/markdown-tables.test.ts",
@@ -30502,6 +30521,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/conversation/message-actions/message-actions-composition.test.ts",
+          "src/components/conversation/message-actions/message-actions-provider-boundaries.test.ts",
           "src/components/conversation/message-actions/message-actions-remediation.test.ts",
           "src/components/conversation/message-actions/message-actions.test.ts"
         ],
@@ -30665,6 +30685,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/message-feedback/message-feedback-boundaries.test.ts",
           "src/components/conversation/message-feedback/message-feedback-remediation.test.ts",
           "src/components/conversation/message-feedback/message-feedback.test.ts"
         ],
@@ -32001,8 +32022,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/navigation-menu/navigation-menu.test.ts",
-              "test": "swaps ArrowLeft and ArrowRight under RTL",
+              "file": "src/components/layout/navigation-menu/navigation-menu-allocation.test.ts",
+              "line": 5,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -32018,8 +32039,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/navigation-menu/navigation-menu.test.ts",
-              "test": "passes axe collapsed and expanded with an item open in flow",
+              "file": "src/components/layout/navigation-menu/navigation-menu-allocation.test.ts",
+              "test": "measures content allocation when ResizeObserver is unavailable in ${direction}",
               "kind": "320px allocation test signal"
             }
           ]
@@ -32134,6 +32155,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/navigation-menu/navigation-menu-allocation.test.ts",
           "src/components/layout/navigation-menu/navigation-menu.test.ts",
           "src/components/layout/navigation-menu/top-layer.test.ts"
         ],
@@ -33215,6 +33237,7 @@
           "src/components/forms/combobox/combobox-form-lifecycle.test.ts",
           "src/components/forms/combobox/combobox-remediation.test.ts",
           "src/components/forms/combobox/combobox-rendering-a11y.test.ts",
+          "src/components/forms/combobox/combobox-selected-rows-runtime.test.ts",
           "src/components/forms/combobox/combobox-source-state.test.ts",
           "src/components/forms/combobox/combobox.test.ts",
           "src/components/forms/combobox/option.test.ts",
@@ -35204,6 +35227,7 @@
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
           "src/components/charts/chart/chart-deprecated-aliases.test.ts",
@@ -35406,6 +35430,7 @@
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
           "src/components/charts/chart/chart-deprecated-aliases.test.ts",
@@ -35971,6 +35996,7 @@
           "src/components/overlays/overlay/dropdown-dialog-position.test.ts",
           "src/components/overlays/overlay/dropdown.test.ts",
           "src/components/overlays/overlay/overlay-closed-layout.test.ts",
+          "src/components/overlays/overlay/overlay-public-lifecycle.test.ts",
           "src/components/overlays/overlay/overlay-remediation.test.ts",
           "src/components/overlays/overlay/overlay.test.ts",
           "src/components/overlays/overlay/popover-trigger.test.ts",
@@ -37457,6 +37483,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/push-to-talk/push-to-talk-pending-cancel.test.ts",
           "src/components/conversation/push-to-talk/push-to-talk-remediation.test.ts",
           "src/components/conversation/push-to-talk/push-to-talk.test.ts"
         ],
@@ -37827,6 +37854,7 @@
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
           "src/components/charts/chart/chart-deprecated-aliases.test.ts",
@@ -41353,6 +41381,12 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/forms/rubric-form/rubric-form-runtime-values.test.ts",
+              "test": "drops a revoked schema row while retaining the later accessible field",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/forms/rubric-form/rubric-form.test.ts",
               "test": "is accessible",
               "target": "el",
@@ -41488,6 +41522,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/rubric-form/rubric-form-remediation.test.ts",
+          "src/components/forms/rubric-form/rubric-form-runtime-values.test.ts",
           "src/components/forms/rubric-form/rubric-form.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -41674,6 +41709,7 @@
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
           "src/components/charts/chart/chart-deprecated-aliases.test.ts",
@@ -46201,6 +46237,12 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/forms/swatch-picker/swatch-picker-live-items.test.ts",
+              "test": "contains throwing item indices and fields while retaining a usable later swatch",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/forms/swatch-picker/swatch-picker.test.ts",
               "test": "drops swatches with empty or whitespace-only labels while retaining an accessible valid option",
               "target": "el",
@@ -46365,6 +46407,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/swatch-picker/swatch-picker-live-items.test.ts",
           "src/components/forms/swatch-picker/swatch-picker-remediation.test.ts",
           "src/components/forms/swatch-picker/swatch-picker.test.ts"
         ],
@@ -48249,8 +48292,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/textarea/textarea.test.ts",
-              "test": "flushes a pending debounce immediately on Enter and on the native change event",
+              "file": "src/components/forms/textarea/textarea-count-debounce.test.ts",
+              "test": "announces only the latest character count after consecutive native keyboard edits",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -48381,6 +48424,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/textarea/textarea-count-debounce.test.ts",
           "src/components/forms/textarea/textarea-remediation.test.ts",
           "src/components/forms/textarea/textarea.test.ts"
         ],
@@ -49195,8 +49239,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/timeline/timeline.test.ts",
-              "test": "reaches the stop by Tab and paints the shared focus ring on it",
+              "file": "src/components/data/timeline/timeline-cluster-boundaries.test.ts",
+              "test": "keeps focus on a surviving cluster representative when new members join and restores its managed hidden marker",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -49322,6 +49366,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/data/timeline/timeline-cluster-boundaries.test.ts",
           "src/components/data/timeline/timeline-item.test.ts",
           "src/components/data/timeline/timeline-remediation.test.ts",
           "src/components/data/timeline/timeline.test.ts"
@@ -49389,8 +49434,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/timeline/timeline.test.ts",
-              "test": "reaches the stop by Tab and paints the shared focus ring on it",
+              "file": "src/components/data/timeline/timeline-cluster-boundaries.test.ts",
+              "test": "keeps focus on a surviving cluster representative when new members join and restores its managed hidden marker",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -49516,6 +49561,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/data/timeline/timeline-cluster-boundaries.test.ts",
           "src/components/data/timeline/timeline-item.test.ts",
           "src/components/data/timeline/timeline-remediation.test.ts",
           "src/components/data/timeline/timeline.test.ts"
@@ -51992,6 +52038,7 @@
           "src/components/overlays/overlay/dropdown-dialog-position.test.ts",
           "src/components/overlays/overlay/dropdown.test.ts",
           "src/components/overlays/overlay/overlay-closed-layout.test.ts",
+          "src/components/overlays/overlay/overlay-public-lifecycle.test.ts",
           "src/components/overlays/overlay/overlay-remediation.test.ts",
           "src/components/overlays/overlay/overlay.test.ts",
           "src/components/overlays/overlay/popover-trigger.test.ts",
@@ -53768,8 +53815,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/virtual-list/virtual-list.test.ts",
-              "test": "wraps ordinary long row content and measures its auto height at 320px in LTR and RTL",
+              "file": "src/components/layout/virtual-list/virtual-list-window-scroll.test.ts",
+              "test": "scrolls its owner Window to public list coordinates without scrolling the parent",
               "kind": "320px allocation test signal"
             }
           ]
@@ -53861,6 +53908,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/virtual-list/virtual-list-window-scroll.test.ts",
           "src/components/layout/virtual-list/virtual-list.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",

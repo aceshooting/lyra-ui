@@ -1,0 +1,34 @@
+import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import type { LyraVirtualList } from './virtual-list.class.js';
+import './virtual-list.js';
+
+it('scrolls its owner Window to public list coordinates without scrolling the parent', async () => {
+  const frame = await fixture<HTMLIFrameElement>(html`<iframe title="List scroll realm" style="width:320px;height:200px"></iframe>`);
+  const view = frame.contentWindow!;
+  const doc = frame.contentDocument!;
+  doc.body.style.margin = '0';
+  const prefix = doc.createElement('div');
+  prefix.style.height = '60px';
+  doc.body.append(prefix);
+  const element = document.createElement('lr-virtual-list') as LyraVirtualList;
+  element.rowHeight = 20;
+  element.items = Array.from({ length: 100 }, (_, index) => index);
+  element.renderItem = (item) => html`Row ${item}`;
+  element.scrollElement = view;
+  doc.body.append(element);
+  await element.updateComplete;
+  await waitUntil(() => element.renderedRows.length > 0);
+  const parentScroll = window.scrollY;
+  const listTop = element.getBoundingClientRect().top + view.scrollY;
+  element.scrollToIndex(20, { align: 'start', behavior: 'auto' });
+  await waitUntil(() => Math.abs(view.scrollY - (listTop + element.offsetForIndex(20))) <= 1);
+  await waitUntil(() => element.renderedRows.some((row) => row.dataset['rowIndex'] === '20'));
+  expect(window.scrollY).to.equal(parentScroll);
+  expect(element.scrollContainer?.getAttribute('tabindex')).to.equal(null);
+  element.scrollToIndex(0, { align: 'start' });
+  await waitUntil(() => Math.abs(view.scrollY - listTop) <= 1);
+  element.scrollToIndex(30, { align: 'start', behavior: 'smooth' });
+  await waitUntil(() => Math.abs(view.scrollY - (listTop + element.offsetForIndex(30))) <= 1, 'owner Window smooth scroll did not reach row30', { timeout: 3000 });
+  expect(window.scrollY).to.equal(parentScroll);
+  element.remove();
+});

@@ -33,3 +33,39 @@ it('selects the final result on first backward navigation and preserves declarat
   expect(await viewer.searchPrevious()).to.equal(true);
   expect(viewer.shadowRoot!.querySelector('[data-active]')?.textContent).to.include('needle last');
 });
+
+it('omits a revoked array branch while preserving valid siblings and later search updates', async () => {
+  const hostile = Proxy.revocable<unknown[]>([], {});
+  hostile.revoke();
+  const viewer = await fixture<LyraJsonViewer>(html`
+    <lr-json-viewer .data=${{ unsafe: hostile.proxy, safe: 'kept value' }}></lr-json-viewer>
+  `);
+  expect(viewer.shadowRoot!.textContent).to.contain('safe');
+  expect(viewer.shadowRoot!.textContent).to.contain('kept value');
+  expect(viewer.shadowRoot!.querySelectorAll('[part="limit"]').length).to.equal(1);
+  expect(await viewer.runSearch('kept')).to.equal(1);
+  expect(await viewer.searchNext()).to.equal(true);
+  expect(viewer.shadowRoot!.querySelector('[data-active]')?.textContent).to.contain('kept value');
+  viewer.data = { safe: 'fresh value' };
+  await viewer.updateComplete;
+  expect(viewer.shadowRoot!.querySelectorAll('[part="limit"]').length).to.equal(0);
+  expect(await viewer.runSearch('fresh')).to.equal(1);
+});
+
+for (const invalidLength of [NaN, Infinity, -1, Number.MAX_SAFE_INTEGER + 1]) {
+  it(`bounds an array with a hostile length descriptor (${String(invalidLength)}) without discarding safe siblings`, async () => {
+    const array = new Proxy<unknown[]>([], {
+      getOwnPropertyDescriptor(target, key) {
+        const descriptor = Reflect.getOwnPropertyDescriptor(target, key);
+        return key === 'length' ? { ...descriptor!, value: invalidLength } : descriptor;
+      },
+    });
+    const viewer = await fixture<LyraJsonViewer>(html`
+      <lr-json-viewer .data=${{ unsafe: array, safe: 'kept value' }}></lr-json-viewer>
+    `);
+    expect(viewer.shadowRoot!.textContent).to.contain('safe');
+    expect(viewer.shadowRoot!.textContent).to.contain('kept value');
+    expect(viewer.shadowRoot!.querySelectorAll('[part="limit"]').length).to.equal(1);
+    expect(await viewer.runSearch('kept')).to.equal(1);
+  });
+}
