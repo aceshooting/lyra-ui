@@ -242,6 +242,22 @@ export const LazyCatalogs: Story = {
     .locales=${['en', 'fr', 'de']} .localeLoader=${loadLyraLocale}></lr-locale-picker>`,
 };
 
+export const LazyCatalogRetry: Story = {
+  parameters: { docs: { description: { story: 'The first accepted language request fails to demonstrate recovery. The top-layer options stay open outside the failure guidance; click Retry or reach it with the keyboard to load the requested catalog. The previous language remains selected until loading succeeds.' } } },
+  render: () => {
+    let attempts = 0;
+    const localeLoader = (tag: string) => {
+      if (++attempts === 1) return Promise.reject(new Error('Catalog unavailable'));
+      return loadLyraLocale(tag);
+    };
+    return html`<div style="max-inline-size:var(--lr-size-20rem)">
+      <lr-locale-picker top-layer locale="en" value="en" trigger-display="flag"
+        label="Interface language" hint="Choose a language, then retry the first failed request."
+        .locales=${['en', 'fr']} .localeLoader=${localeLoader}></lr-locale-picker>
+    </div>`;
+  },
+};
+
 export const TopLayer: Story = {
   parameters: {
     docs: {

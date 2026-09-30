@@ -6613,7 +6613,10 @@ picker.localeLoader = loadLyraLocale;
 The unset callback preserves synchronous selection. A vetoed request never invokes the loader.
 While loading, the previous value stays committed and the trigger exposes `aria-busy`; a visible
 localized status and light-DOM announcement explain progress. Failure retains the value and offers
-Retry through a fresh request. New selection, host value/catalog/loader writes, reset, disablement,
+Retry through a fresh request. An open listbox places above or below the full control and its
+failure guidance, including when `top-layer` is enabled, so it cannot cover Retry. Dismissing and
+reopening the listbox retains the failure guidance and the reachable retry action.
+New selection, host value/catalog/loader writes, reset, disablement,
 disconnect or adoption cancel ownership of an old completion. Dynamic imports themselves may still
 finish and register messages. No raw loader error is shown. Style the status with `load-status` and
 the retry button with `load-retry`.

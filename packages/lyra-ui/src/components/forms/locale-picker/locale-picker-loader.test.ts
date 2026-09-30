@@ -1,5 +1,6 @@
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './locale-picker.js';
 import type { LyraLocalePicker } from './locale-picker.class.js';
@@ -115,8 +116,13 @@ it('catches synchronous callback failures and retries through a fresh request wi
     return Promise.resolve();
   };
   el.addEventListener('lr-change-request', () => { requests++; });
-  pick(el, 'fr');
+  await focusByKeyboard(trigger(el));
+  await sendKeys({ press: 'ArrowDown' });
+  await sendKeys({ press: 'ArrowDown' });
+  await sendKeys({ press: 'ArrowDown' });
+  await sendKeys({ press: 'Enter' });
   await waitUntil(() => el.shadowRoot!.querySelector('[part="load-retry"]') !== null);
+  expect(el.open).to.equal(true);
   expect(el.value).to.equal('en');
   const status = el.shadowRoot!.querySelector('[part="load-status"]')!.textContent!;
   expect(el.shadowRoot!.querySelector('[part="load-status"]')?.textContent).to.contain('Cannot load');
@@ -129,6 +135,57 @@ it('catches synchronous callback failures and retries through a fresh request wi
   expect(requests).to.equal(2);
   expect(el.shadowRoot!.activeElement === trigger(el)).to.equal(true);
 });
+
+for (const topLayer of [false, true]) {
+  it(`allows a real pointer retry beside the open ${topLayer ? 'top-layer' : 'ordinary'} listbox`, async () => {
+    const el = await fixture<Picker>(html`<lr-locale-picker
+      locale="en" value="en" without-flags ?top-layer=${topLayer}
+      .locales=${['en', 'fr']}
+    ></lr-locale-picker>`);
+    const second = pending();
+    let loads = 0;
+    let requests = 0;
+    let notifications = 0;
+    const loadedTags: string[] = [];
+    el.localeLoader = (tag) => {
+      loadedTags.push(tag);
+      return ++loads === 1 ? Promise.reject(new Error('not rendered')) : second.promise;
+    };
+    el.addEventListener('lr-change-request', () => { requests++; });
+    el.addEventListener('lr-change', () => { notifications++; });
+    const clickPointer = async (target: HTMLElement) => {
+      const rect = target.getBoundingClientRect();
+      await sendMouse({ type: 'click', position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)] });
+    };
+    try {
+      await clickPointer(trigger(el));
+      const listbox = el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+      await waitUntil(() => el.open && listbox.style.left !== '' && listbox.getBoundingClientRect().height > 0);
+      await settlePointer();
+      await clickPointer(el.shadowRoot!.querySelector<HTMLElement>('[part="option"][data-value="fr"]')!);
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="load-retry"]') !== null);
+      await settlePointer();
+      expect(el.open).to.equal(true);
+      expect(el.value).to.equal('en');
+      expect(getLyraLocale()).to.equal('en');
+      const retry = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="load-retry"]')!;
+      await clickPointer(retry);
+      await waitUntil(() => loads === 2, 'the real pointer reaches Retry rather than an option', { timeout: 1200 });
+      expect(loadedTags).to.deep.equal(['fr', 'fr']);
+      expect(requests).to.equal(2);
+      expect(notifications).to.equal(0);
+      expect(el.value).to.equal('en');
+      expect(getLyraLocale()).to.equal('en');
+      second.resolve();
+      await waitUntil(() => el.value === 'fr');
+      expect(notifications).to.equal(1);
+      expect(getLyraLocale()).to.equal('fr');
+    } finally {
+      second.resolve();
+      await resetMouse();
+    }
+  });
+}
 
 it('prevents nested selection during the request callback from starting a second load', async () => {
   const el = await create();

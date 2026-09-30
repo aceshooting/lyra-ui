@@ -323,7 +323,8 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   private _localeLoader?: LyraLocaleLoader;
   /** Optional catalog loader. Selection waits for it before changing the value or page locale.
    * Import loadLyraLocale from the optional locale-loader.js entry to load built-in catalogs.
-   * Unset preserves synchronous selection. Failures keep the previous value and offer retry. */
+   * Unset preserves synchronous selection. Failures keep the previous value and offer retry;
+   * an open popup places outside the failure guidance so Retry remains reachable. */
   @property({ attribute: false })
   get localeLoader(): LyraLocaleLoader | undefined { return this._localeLoader; }
   set localeLoader(next: LyraLocaleLoader | undefined) {
@@ -994,7 +995,10 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     }
     this.activatePopupOverlay();
     this.bindDocumentPointer();
-    const anchor = this.renderRoot.querySelector('[part="trigger"]') as HTMLElement | null;
+    // Keep inline failure guidance outside the options' floating surface in either placement.
+    const anchor = this.renderRoot.querySelector(
+      this.loadFailureTag !== undefined ? '[part="form-control"]' : '[part="trigger"]',
+    ) as HTMLElement | null;
     const listbox = this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null;
     if (anchor && listbox) {
       this.placedTopLayer = syncTopLayerRelease(listbox, this.placedTopLayer, this.topLayer);
@@ -1036,6 +1040,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
         (changed.has('locales') ||
           changed.has('registryTick') ||
           changed.has('locale') ||
+          changed.has('loadFailureTag') ||
           changed.has('topLayer')));
     if (reposition) {
       this.syncPopup();

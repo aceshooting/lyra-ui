@@ -140,6 +140,12 @@ html[data-lr-contrast='more'] body::before { background: var(--lr-color-surface)
 @media (forced-colors: active) { body::before { background: Canvas; } }
 ```
 
+Keep an existing application's multicolor spotlight palette when adopting a control look. For
+example, an accent/violet/pink canvas should retain all three gradient colors across Lyra, Shadcn,
+and Material; changing `look` must not replace those colors with the same-accent starter above.
+Keep application background rules outside look selectors, while letting mode and accent update
+their own inputs.
+
 These are decorative application backgrounds, not an `accentBackground` value: that style field
 accepts absolute colors used as contrast reference surfaces, not gradients or image URLs. Use
 semantic surface/text pairings for content and keep the decorative layer behind it.
@@ -150,12 +156,26 @@ with its localized caption, nine canonical gemstones, and shared selected-glyph 
 `30rem`, hit size `1.5rem` and gap `.125rem` (28/4px and 24/2px at a 16px root). Leave its fill size
 unset. Bound the palette to the viewport and provide horizontal overflow for unusually narrow
 allocations or enlarged text; keyboard focus must bring every swatch into view. Do not shrink
-below the component's 24px floor or replace its Arrow/Home/End and RTL behavior.
+below the component's 24px floor or replace its Arrow/Home/End and RTL behavior. For an independent
+Shine preference, set `--lr-gemstone-selected-animation: none` on the scope shared by the trigger
+and picker; remove that declaration for Shine ON. OFF preserves the halo and selected accent.
+Application and OS reduced motion still take precedence; persist Shine independently from motion.
+See the composition guide for the controlled picker and preference wiring.
 
 The four separate topbar controls—gemstone, mode, design, language—stay square `2.75rem` targets
 (44px at a 16px root), with localized names and tooltips. Use gemstone, sun/moon and horizontal-slider
 icons, and a country flag for language. Dense gemstone options do not reduce
-those launcher targets. Set the locale picker's `--lr-locale-picker-trigger-height: 2.75rem` and
+those launcher targets. Size icon launchers directly and keep their slotted glyphs bounded:
+
+```css
+.appearance-launcher { --lr-icon-button-size: 2.75rem; }
+.appearance-launcher::part(button) { inline-size: 2.75rem; block-size: 2.75rem; }
+.appearance-launcher > svg,
+.appearance-launcher > lr-icon { inline-size: 1.125rem; block-size: 1.125rem; }
+```
+
+Apply `appearance-launcher` to each `lr-icon-button`, including buttons slotted through a popover.
+Keep the mode action separate from the design fields. Set the locale picker's `--lr-locale-picker-trigger-height: 2.75rem` and
 use its public flag-only trigger with readable menu entries:
 
 ```ts
@@ -175,6 +195,83 @@ country for regional entries when known, such as `en-US` → `US`. Keep flags as
 never the only accessible names, and preserve a valid saved locale in the controlled `value`.
 Use the component's flag resolver rather than emoji, invented flag SVGs, or guessed display APIs.
 Verify 320px and desktop, light/dark, RTL, enlarged text, keyboard focus, and saved preferences.
+
+#### Two-column design panel
+
+Compose a settings form inside `lr-popover`; use its dialog behavior rather than assigning menu or
+ARIA grid roles to form fields. Import the existing native utility stylesheet and granular controls:
+
+```css
+@import "@aceshooting/lyra-ui/utilities.css";
+
+.design-popover { --lr-overlay-max-inline-size: min(29rem, calc(100dvw - 1rem)); }
+.design-popover::part(content) { padding: 0; }
+.design-panel {
+  box-sizing: border-box;
+  inline-size: 29rem;
+  max-inline-size: calc(100dvw - 1rem);
+  padding: var(--lr-space-l);
+  max-block-size: min(75dvh, 40rem);
+  overflow: auto;
+  overflow-wrap: anywhere;
+}
+.design-fields { --lr-grid-min-inline-size: 12rem; }
+.design-fields > * { min-inline-size: 0; max-inline-size: 100%; }
+.design-reset { inline-size: 100%; margin-block-start: var(--lr-space-l); }
+```
+
+```ts
+import '@aceshooting/lyra-ui/components/lr-popover.js';
+import '@aceshooting/lyra-ui/components/lr-icon-button.js';
+import '@aceshooting/lyra-ui/components/lr-select.js';
+import '@aceshooting/lyra-ui/components/lr-option.js';
+import '@aceshooting/lyra-ui/components/lr-button.js';
+```
+
+```html
+<lr-popover class="design-popover" top-layer placement="bottom-end" aria-label="Design settings">
+  <lr-icon-button slot="trigger" class="appearance-launcher" label="Design settings">
+    <!-- Application's decorative horizontal-slider glyph -->
+  </lr-icon-button>
+  <section class="design-panel">
+    <div class="design-fields lr-grid-auto lr-gap-s">
+      <lr-select label="Look" value="shadcn">
+        <lr-option value="shadcn">Shadcn</lr-option>
+        <lr-option value="lyra">Lyra</lr-option>
+        <lr-option value="material">Material</lr-option>
+      </lr-select>
+      <lr-select label="Surface" value="glass">
+        <lr-option value="glass">Glass</lr-option>
+        <lr-option value="solid">Solid</lr-option>
+      </lr-select>
+      <lr-select label="Density" value="comfortable">
+        <lr-option value="compact">Compact</lr-option>
+        <lr-option value="comfortable">Comfortable</lr-option>
+        <lr-option value="touch">Touch</lr-option>
+      </lr-select>
+      <!-- Further independent settings in their reading order -->
+    </div>
+    <lr-button class="design-reset" type="button">Reset appearance</lr-button>
+  </section>
+</lr-popover>
+```
+
+Localize the example's labels and options, bind values to the current application state, and handle
+each select's `lr-change` through the relevant public style or preference API. Reset restores the
+application profile and any separate application preferences.
+
+`lr-grid-auto` already uses `auto-fit` with a `min(100%, minimum)` track floor. A bounded `29rem`
+panel and `12rem` minimum give two columns when both fit, then one in narrow allocations; a third
+column would need at least `36rem` before gaps. Keep those bounds together when customizing the
+recipe. The existing `lr-gap-s` supplies the gap; no extra grid component or layout controller is
+needed. The minimum is measured in rem, so enlarged text can also reduce the column count.
+
+Keep every field in one row-major source list. Default grid placement and native Tab order then
+agree: first row, second row, and so on; inherited RTL starts each row on the right. Do not split
+fields into separate column wrappers, reorder with CSS, or add positive tabindex values. Leave the
+full-width Reset action outside the field grid. Verify two columns at desktop allocation, one at
+320px and enlarged text, long translated labels, RTL reading order, and Escape/focus return to the
+design launcher. Keep these layout rules shared across application headers and administrative views.
 
 ### Reading the resolved tokens from your own components — `tokens-root.css`
 
