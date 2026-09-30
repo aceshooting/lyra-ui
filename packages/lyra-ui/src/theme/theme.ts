@@ -836,16 +836,11 @@ function applyStoredThemeBeforePaint() {
     const text = entries.has(`${prefix}color-text-normal`)
       ? resolveToken(painted.get(`${prefix}color-text-normal`), background)
       : defaults.text;
-    const synthesized = new Map<string, string>();
     const pairForeground = (onName: string, fill: number[] | null): void => {
       if (!fill) return;
       const onValue = painted.get(onName);
-      if (onValue === undefined) {
-        synthesized.set(onName, rgb(on(fill)));
-        return;
-      }
-      const color = resolveToken(onValue, fill);
-      if (color && contrast(color, fill) < 4.5) painted.set(onName, rgb(on(fill)));
+      const color = onValue === undefined ? null : resolveToken(onValue, fill);
+      if (onValue === undefined || (color && contrast(color, fill) < 4.5)) painted.set(onName, rgb(on(fill)));
     };
     for (const role of roles) {
       for (const tier of tiers) {
@@ -867,7 +862,6 @@ function applyStoredThemeBeforePaint() {
       else if (/^--lr-theme-terminal-color-[a-z0-9-]+$/.test(name)) floor(name, raised, raised, 4.5);
       else if (/^--lr-theme-terminal-bg-[a-z0-9-]+$/.test(name)) floor(name, raised, text, 4.5);
     }
-    for (const [name, value] of synthesized) painted.set(name, value);
 
     if (!context) return painted;
 
