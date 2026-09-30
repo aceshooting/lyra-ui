@@ -2597,6 +2597,10 @@ test('primary CI and release qualification use the exact Node file while compati
     1,
     'the primary hosted packed-consumer contract job must run peer qualification exactly once',
   );
+  assert.match(contractJob, /tarballs=\("\$LYRA_PACKED_MIGRATION_ARTIFACTS"\/packages\/aceshooting-lyra-ui-\*\.tgz\)/u);
+  assert.match(contractJob, /"\$\{#tarballs\[@\]\}" -ne 1/u);
+  assert.match(contractJob, /receipt\.sha256, createHash\('sha256'\)\.update\(bytes\)\.digest\('hex'\)/u);
+  assert.match(contractJob, /node scripts\/check-peer-compatibility\.mjs --tarball "\$\{tarballs\[0\]\}"/u);
   assert.match(
     contractJob,
     /node-version-file: \.nvmrc/u,
