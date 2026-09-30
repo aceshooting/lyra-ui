@@ -634,7 +634,7 @@ function readOwnershipList(): string[] {
  * Its token grammar and color pipeline mirror the runtime without importing module state.
  */
 function applyStoredThemeBeforePaint() {
-  const roles = ['brand', 'success', 'warning', 'danger', 'neutral'];
+  const roles = ['brand', 'success', 'warning', 'danger', 'neutral'] as const;
   const tiers = ['quiet', 'normal', 'loud'];
 
   // Literal copy of the token-map grammar (scripts/fixtures/theme-token-grammar.json is the single
@@ -719,11 +719,12 @@ function applyStoredThemeBeforePaint() {
       || /^(?:accentcolor|accentcolortext|activetext|buttonborder|buttonface|buttontext|canvas|canvastext|field|fieldtext|graytext|highlight|highlighttext|linktext|mark|marktext|selecteditem|selecteditemtext|visitedtext)$/i.test(value)) return undefined;
     return CSS.supports('color', value) ? value : undefined;
   };
+  // Private boundary: the adapter supplies only token maps and accents validated by resolveStartup.
   const paint = (
     tokens: LyraThemeTokens,
     resolvedMode: 'light' | 'dark',
     referenceSurface: unknown,
-    rawAccent: unknown,
+    accent: LyraThemeAccent,
     references: readonly number[][],
   ): Map<string, string> => {
     const entries = new Map<string, string>();
@@ -732,26 +733,12 @@ function applyStoredThemeBeforePaint() {
       if (branch) entries.set(name, branch);
     }
 
-    // A role's raw value is a bare color, `null`, or a `{ light, dark }` per-mode map -- resolves
-    // to the branch matching `resolvedMode` (mirroring theme.ts's own `resolveAccentValueForMode`)
-    // before the same absolute-color validation every other color passes through.
-    const resolveRoleAccent = (raw: unknown): string | null => {
-      if (typeof raw === 'string') return normalizeColor(raw) ?? null;
-      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
-      const perMode = raw as Record<string, unknown>;
-      if (!('light' in perMode) && !('dark' in perMode)) return null;
-      return normalizeColor(perMode[resolvedMode]) ?? null;
-    };
-
-    const accentRoles: Record<string, string> = {};
-    if (typeof rawAccent === 'string') {
-      const normalized = normalizeColor(rawAccent);
-      if (normalized) accentRoles['brand'] = normalized;
-    } else if (rawAccent && typeof rawAccent === 'object' && !Array.isArray(rawAccent)) {
-      for (const role of roles) {
-        const normalized = resolveRoleAccent((rawAccent as Record<string, unknown>)[role]);
-        if (normalized) accentRoles[role] = normalized;
-      }
+    const accentInput: Exclude<LyraThemeAccent, string> = typeof accent === 'string' ? { brand: accent } : accent;
+    const accentRoles: Partial<Record<LyraThemeSemanticRole, string>> = {};
+    for (const role of roles) {
+      const value = accentInput?.[role];
+      const color = typeof value === 'string' ? value : value?.[resolvedMode];
+      if (color) accentRoles[role] = color;
     }
 
     let context: CanvasRenderingContext2D | null = null;
@@ -950,33 +937,25 @@ function applyStoredStyleBeforePaint(
 ): void {
   const { surfaces: STYLE_REFERENCE_SURFACES, contrastSurfaces: STYLE_CONTRAST_SURFACES, gemstones: STYLE_GEMSTONES } = model;
   // Store each property suffix once. The leading digit carries density/follow/accent membership.
-  const STYLE_SLOTTED: string[] = [];
-  const STYLE_DENSITY: string[] = [];
-  const STYLE_FOLLOW: string[] = [];
-  const ALL_RAMP_PROPERTIES: string[] = [];
-  for (const input of model.inputs.split(' ')) {
-    const flags = Number(input[0]);
-    const name = `--lr-theme-${input.slice(1)}`;
-    STYLE_SLOTTED.push(name);
-    if (flags & 1) STYLE_DENSITY.push(name);
-    if (flags & 2) STYLE_FOLLOW.push(name);
-    if (flags & 4) ALL_RAMP_PROPERTIES.push(name);
-  }
+  const membership = new Map<string, number>();
+  for (const input of model.inputs.split(' ')) membership.set(`--lr-theme-${input.slice(1)}`, Number(input[0]));
+  const STYLE_SLOTTED = [...membership.keys()];
   function styleSlot(name: string, mode: 'light' | 'dark', accent = false): string {
     return `--_lr-${accent ? 'a' : 'l'}${mode === 'light' ? 'l' : 'd'}-${name.slice(11)}`;
   }
   function styleBranch(name: string, mode: 'light' | 'dark'): string {
+    const flags = membership.get(name) ?? 0;
     let result = `var(${styleSlot(name, mode)})`;
-    if (STYLE_FOLLOW.includes(name)) {
+    if (flags & 2) {
       const key = mode === 'light' ? 'l' : 'd';
       const target = name.replace(/color-(?:success|warning|danger|neutral)-/, 'color-brand-');
       result = `var(--_lr-f${key}-${name.slice(11)},${result})var(--_lr-o${key}-${name.slice(11)},var(${styleSlot(target, mode, true)},var(${styleSlot(target, mode)})))`;
     }
-    return ALL_RAMP_PROPERTIES.includes(name) ? `var(${styleSlot(name, mode, true)},${result})` : result;
+    return flags & 4 ? `var(${styleSlot(name, mode, true)},${result})` : result;
   }
   function styleResolvedInput(name: string): string {
     const input = `var(--_lr-dark-on,${styleBranch(name, 'light')})var(--_lr-light-on,${styleBranch(name, 'dark')})`;
-    if (!STYLE_DENSITY.includes(name)) return input;
+    if (!((membership.get(name) ?? 0) & 1)) return input;
     const spacing = name.startsWith('--lr-theme-space-');
     return `var(--_lr-dense-on,${input})var(--_lr-dense-off,max(calc((${input}) * var(--_lr-density-${spacing ? 'space' : 'control'},1)),${spacing ? '0px' : 'var(--_lr-density-target-min,0px)'}))`;
   }
@@ -987,14 +966,12 @@ function applyStoredStyleBeforePaint(
     const key = configuredKey && configuredKey.length <= 200 ? configuredKey : defaultStorageKey;
     const names = script?.getAttribute('data-lr-theme-attributes')?.trim().split(/\s+/);
     const attributes = names?.length && names.length <= 8 && new Set(names).size === names.length && names.every(name => name.length <= 64 && /^data-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name)) ? names : defaultModeAttributes;
-    let record: Record<string, unknown> = {};
-    try {
-      const parsed: unknown = JSON.parse(localStorage.getItem(key) ?? 'null');
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) record = parsed as Record<string, unknown>;
-    } catch { /* A corrupt or inaccessible record uses the built-in profile. */ }
+    let saved: unknown;
+    try { saved = JSON.parse(localStorage.getItem(key) ?? 'null'); }
+    catch { /* A corrupt or inaccessible record uses the built-in profile. */ }
     const root = document.documentElement;
     const [normalizeMap, normalizeColor, paint] = createPaint();
-    record = resolveStartup(record, model.defaults, normalizeMap,
+    const record = resolveStartup(saved, model.defaults, normalizeMap,
       normalizeColor, (name, value) => allowed(name, value, STYLE_SLOTTED), STYLE_GEMSTONES);
     const mode = record['mode'] as LyraMode;
     const resolved = mode === 'unset' ? null : mode === 'system' ? matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light' : mode;
@@ -1011,7 +988,7 @@ function applyStoredStyleBeforePaint(
     if (mode !== 'unset') desiredAttributes['data-lr-mode'] = mode;
     if (resolved) for (const name of attributes) desiredAttributes[name] = resolved;
     const accentName = record['accentName'] as string | undefined;
-    let accent = accentName ? STYLE_GEMSTONES[accentName] : record['accent'];
+    let accent = record['accent'] as LyraThemeAccent;
     if (mode !== 'unset' && accent && typeof accent === 'object' && !Object.values(accent).some(value =>
       typeof value === 'string' || (value && typeof value === 'object' && Object.values(value).some(branch => typeof branch === 'string')))) accent = null;
     desiredAttributes['data-lr-accent'] = accentName ?? (accent ? 'custom' : 'none');
@@ -1030,13 +1007,14 @@ function applyStoredStyleBeforePaint(
           accentPass ? STYLE_CONTRAST_SURFACES[branch].map(color => [1, 3, 5].map(index => parseInt(color.slice(index, index + 2), 16))) : []);
         for (const [name, value] of painted) {
           if (name === '--lr-theme-accent') { if (branch === resolved) desired.set(name, value); continue; }
-          if (STYLE_SLOTTED.includes(name) && allowed(name, value, STYLE_SLOTTED)) {
+          const flags = membership.get(name);
+          if (flags !== undefined && allowed(name, value, STYLE_SLOTTED)) {
             const channel = name.match(/^--lr-theme-color-(?:success|warning|danger|neutral)-((?:fill|border|on)-(?:quiet|normal|loud))$/)?.[1];
             const follows = !accentPass && channel && value === `var(--lr-theme-color-brand-${channel})`;
             const suffix = name.slice(11);
             const key = branch === 'light' ? 'l' : 'd';
             if (!follows) desired.set(styleSlot(name, branch, accentPass), value);
-            if (!accentPass && STYLE_FOLLOW.includes(name)) {
+            if (!accentPass && (flags & 2)) {
               desired.set(`--_lr-f${key}-${suffix}`, follows ? ' ' : 'initial');
               desired.set(`--_lr-o${key}-${suffix}`, follows ? 'initial' : ' ');
             }
@@ -1060,7 +1038,7 @@ function applyStoredStyleBeforePaint(
       const legacy = node[legacyKey];
       if (Array.isArray(legacy)) {
         const names = legacy.slice(0, 528).filter(name => typeof name === 'string' && name.length <= 80 && /^--lr-theme-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name));
-        for (const name of [...names, ...ALL_RAMP_PROPERTIES, '--lr-theme-accent']) {
+        for (const name of [...names, ...STYLE_SLOTTED.filter(name => membership.get(name)! & 4), '--lr-theme-accent']) {
           if (!ownership.properties.has(name) && root.style.getPropertyValue(name)) {
             ownership.properties.set(name, { before: null, priority: '', written: root.style.getPropertyValue(name) });
           }
@@ -1138,7 +1116,11 @@ export function createLyraThemeBootstrap(
     return `${flags}${name.slice(11)}`;
   }).join(' ');
   const model = JSON.stringify({ defaults: STYLE_DEFAULTS, inputs, surfaces: STYLE_REFERENCE_SURFACES, contrastSurfaces: STYLE_CONTRAST_SURFACES, gemstones: STYLE_GEMSTONES });
-  return `(${applyStoredStyleBeforePaint.toString()})(${serializeInlineScriptData(storageKey)},${serializeInlineScriptData(MODE_ATTRIBUTES)},${applyStoredThemeBeforePaint.toString()},${styleTokenAllowed.toString()},${readStyleOwnership.toString()},${resolveStyleStartup.toString()},${styleMaterial.toString()},${model});`;
+  // These self-contained helpers do not recurse. Their module bindings stay named and hoisted;
+  // only the serialized function expressions omit names unused by the standalone script.
+  const functions = [applyStoredStyleBeforePaint, applyStoredThemeBeforePaint, styleTokenAllowed, readStyleOwnership, resolveStyleStartup, styleMaterial]
+    .map(helper => helper.toString().replace(/^function\s+[\w$]+/, 'function'));
+  return `(${functions[0]})(${serializeInlineScriptData(storageKey)},${serializeInlineScriptData(MODE_ATTRIBUTES)},${functions.slice(1).join(',')},${model});`;
 }
 
 /**

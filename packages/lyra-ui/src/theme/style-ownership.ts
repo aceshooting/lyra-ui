@@ -26,14 +26,14 @@ export function readStyleOwnership(raw: unknown): StyleOwnership | undefined {
         // Two capped input maps, private mode branches, follow switches, and accent ramps.
         if (++count > 8192 || typeof name !== 'string' || name.length > 96 ||
           !(kind === 'attributes' ? /^data-[a-z0-9]+(?:-[a-z0-9]+)*$/ : /^--(?:lr-theme-|_lr-)[a-z0-9-]+$/).test(name) ||
-          !value || typeof value !== 'object') throw new TypeError('Invalid style ownership');
+          !value || typeof value !== 'object') throw new TypeError();
         const before = data(value, 'before');
         const written = data(value, 'written');
         const priority = data(value, 'priority');
         const requested = data(value, 'requested');
         if ((before !== null && typeof before !== 'string') || (written !== null && typeof written !== 'string') ||
           typeof priority !== 'string' || (requested !== undefined && typeof requested !== 'string')) {
-          throw new TypeError('Invalid style ownership value');
+          throw new TypeError();
         }
         result[kind].set(name, { before, written, priority, ...(requested === undefined ? {} : { requested }) });
       });
