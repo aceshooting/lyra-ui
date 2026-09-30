@@ -2,86 +2,93 @@ import type { ReactiveController, ReactiveControllerHost } from 'lit';
 
 /** Keeps a decorative sticky layer aligned with its public scrollport without measuring on scroll. */
 export class GlassScrollLayer implements ReactiveController {
-  private observer?: ResizeObserver;
-  private surface?: HTMLElement;
-  private layer?: HTMLElement;
-  private measureQueued = false;
+  #observer?: ResizeObserver;
+  #surface?: HTMLElement;
+  #layer?: HTMLElement;
+  #measureQueued = false;
 
-  private readonly handleScroll = (): void => {
-    if (!this.surface || !this.layer) return;
+  readonly #handleScroll = (): void => {
+    if (!this.#surface || !this.#layer) return;
     // Native vertical stickiness is stable across directions. Compensating only the horizontal
     // offset also keeps the layer stationary in engines whose RTL sticky inline constraint drifts.
-    const offset = `${this.surface.scrollLeft}px`;
-    if (this.layer.style.getPropertyValue('--_lr-glass-scroll-offset') !== offset) {
-      this.layer.style.setProperty('--_lr-glass-scroll-offset', offset);
+    const offset = `${this.#surface.scrollLeft}px`;
+    if (this.#layer.style.getPropertyValue('--_lr-glass-scroll-offset') !== offset) {
+      this.#layer.style.setProperty('--_lr-glass-scroll-offset', offset);
     }
   };
 
+  readonly #host: ReactiveControllerHost & HTMLElement;
+  readonly #selector: string;
+  readonly #isVisible: () => boolean;
+
   constructor(
-    private readonly host: ReactiveControllerHost & HTMLElement,
-    private readonly selector: string,
-    private readonly isVisible: () => boolean = () => true,
+    host: ReactiveControllerHost & HTMLElement,
+    selector: string,
+    isVisible: () => boolean = () => true,
   ) {
+    this.#host = host;
+    this.#selector = selector;
+    this.#isVisible = isVisible;
     host.addController(this);
   }
 
   hostUpdated(): void {
-    const surface = this.host.shadowRoot?.querySelector<HTMLElement>(this.selector) ?? undefined;
-    if (surface === this.surface) {
-      if (!this.isVisible() || surface?.hidden) {
-        this.observer?.disconnect();
-        this.observer = undefined;
+    const surface = this.#host.shadowRoot?.querySelector<HTMLElement>(this.#selector) ?? undefined;
+    if (surface === this.#surface) {
+      if (!this.#isVisible() || surface?.hidden) {
+        this.#observer?.disconnect();
+        this.#observer = undefined;
         return;
       }
-      this.scheduleMeasure();
+      this.#scheduleMeasure();
       return;
     }
-    this.observer?.disconnect();
-    this.observer = undefined;
-    this.surface?.removeEventListener('scroll', this.handleScroll);
-    this.surface = surface;
-    this.layer = undefined;
+    this.#observer?.disconnect();
+    this.#observer = undefined;
+    this.#surface?.removeEventListener('scroll', this.#handleScroll);
+    this.#surface = surface;
+    this.#layer = undefined;
     if (!surface) return;
-    surface.addEventListener('scroll', this.handleScroll, { passive: true });
-    this.scheduleMeasure();
+    surface.addEventListener('scroll', this.#handleScroll, { passive: true });
+    this.#scheduleMeasure();
   }
 
   hostDisconnected(): void {
-    this.observer?.disconnect();
-    this.observer = undefined;
-    this.surface?.removeEventListener('scroll', this.handleScroll);
-    this.surface = undefined;
-    this.layer = undefined;
+    this.#observer?.disconnect();
+    this.#observer = undefined;
+    this.#surface?.removeEventListener('scroll', this.#handleScroll);
+    this.#surface = undefined;
+    this.#layer = undefined;
   }
 
   hostConnected(): void {
     // Reconnection need not schedule another Lit update.
-    if (this.host.shadowRoot) this.hostUpdated();
+    if (this.#host.shadowRoot) this.hostUpdated();
   }
 
-  private scheduleMeasure(): void {
-    if (this.measureQueued || !this.surface || this.surface.hidden || !this.isVisible()) return;
-    this.measureQueued = true;
+  #scheduleMeasure(): void {
+    if (this.#measureQueued || !this.#surface || this.#surface.hidden || !this.#isVisible()) return;
+    this.#measureQueued = true;
     // Lit calls controllers before updated(); defer the first layout read until reflected state
     // and component-owned layout work have settled, avoiding an unintended initial transition.
     queueMicrotask(() => {
-      this.measureQueued = false;
-      if (this.host.isConnected) this.measure();
+      this.#measureQueued = false;
+      if (this.#host.isConnected) this.#measure();
     });
   }
 
-  private measure(): void {
-    const surface = this.surface;
+  #measure(): void {
+    const surface = this.#surface;
     const view = surface?.ownerDocument.defaultView;
-    if (!surface || !view || surface.hidden || !this.isVisible()) return;
+    if (!surface || !view || surface.hidden || !this.#isVisible()) return;
     const layer = surface.querySelector<HTMLElement>(':scope > .glass-scroll-layer');
     if (!layer) return;
-    if (!this.observer && view.ResizeObserver) {
-      this.observer = new view.ResizeObserver(() => this.measure());
-      this.observer.observe(surface);
+    if (!this.#observer && view.ResizeObserver) {
+      this.#observer = new view.ResizeObserver(() => this.#measure());
+      this.#observer.observe(surface);
     }
-    this.layer = layer;
-    this.handleScroll();
+    this.#layer = layer;
+    this.#handleScroll();
     const styles = view.getComputedStyle(surface);
     // client dimensions round fractional CSS pixels up in some layouts. A decorative layer
     // must not extend past the actual viewport and turn a short surface into a scroll region.

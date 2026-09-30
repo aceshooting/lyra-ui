@@ -11,8 +11,9 @@ import { css, unsafeCSS, type CSSResult } from 'lit';
  */
 export function glassSurface(selector: string, fill: CSSResult, restingFill: CSSResult = fill, scrolling = false): CSSResult {
   const surface = unsafeCSS(selector);
-  const children = unsafeCSS(selector.split(',').map(part => `${part.trim()} > *`).join(', '));
-  const layer = unsafeCSS(selector.split(',').map(part => `${part.trim()}${scrolling ? ' > .glass-scroll-layer' : ''}::before`).join(', '));
+  const selectors = selector.split(',').map(part => part.trim());
+  const children = unsafeCSS(selectors.map(part => `${part} > *`).join(', '));
+  const layer = unsafeCSS(selectors.map(part => `${part}${scrolling ? ' > .glass-scroll-layer' : ''}::before`).join(', '));
   return css`
     :host([data-lr-surface='solid']) {
       --_lr-surface-enabled: 0;
