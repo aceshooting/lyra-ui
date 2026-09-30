@@ -1,5 +1,19 @@
 # Changelog
 
+## 24.2.0
+
+### Minor Changes
+
+- 78b333b: Add controlled `loadingMore` and optional `loadingMoreLabel` to tables. Incremental loading keeps existing rows and the focused Load more button in place, communicates localized progress, and suppresses duplicate requests while pending. Initial full-table loading remains separate.
+- 78b333b: Add an optional `interactionBoundary` to `lr-popover.showAt()` so caller-owned virtual targets can toggle a popover without outside-pointer dismissal racing their click handler. The boundary affects only light dismissal and preserves caller-owned positioning, ARIA, and focus return.
+
+### Patch Changes
+
+- 548e61d: Preserve click pinning when popover or dropdown trigger lists combine click with hover or focus. Clicking an already revealed surface keeps it open without moving focus, while a second click dismisses it. Disabled or vetoed click openings no longer leave a stale pin behind.
+- 78b333b: Coalesce element resize positioning updates into the next animation frame to prevent resize-delivery errors when an open anchored surface changes size. Initial placement, scrolling and layout shifts remain immediate; queued resize updates are canceled when placement is disposed.
+
+  Reduce temporary placement allocations while preserving rollback and consumer-owned styles.
+
 ## 24.1.0
 
 ### Minor Changes

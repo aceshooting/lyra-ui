@@ -1,4 +1,4 @@
-import { fixture, expect, html, waitUntil } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { sendMouse, resetMouse } from '../../../../test/wtr-mouse.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
@@ -50,13 +50,30 @@ it('lets the consumer toggle the current virtual target without capture listener
 
 it('replaces the boundary when another target reanchors, retaining outside and Escape dismissal', async () => {
   const { first, second, outside, popover } = await setup();
-  popover.showAt({ x: 10, y: 10 }, { returnFocusTo: first, interactionBoundary: first });
+  // Exercise a touch-sized target with compact text. A popup at (10, 10) can cover its center;
+  // opening alone would then falsely pass without the native click ever reanchoring the popup.
+  second.style.minBlockSize = '48px';
+  second.style.fontSize = '12px';
+  const shown = oneEvent(popover, 'lr-after-show');
+  const targetRowBottom = Math.max(...[first, second, outside].map((el) => el.getBoundingClientRect().bottom));
+  popover.showAt({ x: 10, y: targetRowBottom + 100 }, {
+    returnFocusTo: first, interactionBoundary: first,
+  });
   await popover.updateComplete;
-  second.addEventListener('click', () => popover.showAt({ x: 200, y: 100 }, {
-    returnFocusTo: second, interactionBoundary: second,
-  }));
+  await shown;
+  const target = second.getBoundingClientRect();
+  const hit = document.elementFromPoint(Math.round(target.x + target.width / 2), Math.round(target.y + target.height / 2));
+  expect(hit?.id).to.equal('second');
+  let secondClicks = 0;
+  second.addEventListener('click', () => {
+    secondClicks++;
+    popover.showAt({ x: 200, y: 100 }, {
+      returnFocusTo: second, interactionBoundary: second,
+    });
+  });
   await click(second);
   await popover.updateComplete;
+  expect(secondClicks).to.equal(1);
   expect(popover.open).to.equal(true);
   press(second);
   await popover.updateComplete;
