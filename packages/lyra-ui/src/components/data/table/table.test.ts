@@ -1,14 +1,154 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './table.js';
 import '../../forms/select/select.js';
 import type { LyraTable, TableColumn } from './table.js';
-import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 // Registers the real shipped `ar` catalog's `data` slice so the `lang="ar-EG"` resize-value
 // test below (which only overrides `resizeValuePixels`) can render without tripping the
 // dev-mode locale-fallback warning that strict-console platform lanes treat as fatal.
 import '../../../translations/ar/data.js';
 import { installTableTestHooks, sinkTexts, type Row, columns, rows, priorityColumns } from '../../../../test/table.js';
 installTableTestHooks();
+
+it('preserves the focused continuation and rows while loading more, suppressing duplicate activations', async () => {
+  const el = (await fixture(html`<lr-table has-more></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  await el.updateComplete;
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="more-button"]')!;
+  await focusByKeyboard(button);
+  let requests = 0;
+  el.addEventListener('lr-load-more', () => {
+    requests++;
+    el.setAttribute('loading-more', '');
+  });
+  await sendKeys({ press: 'Enter' });
+  await el.updateComplete;
+  expect(requests).to.equal(1);
+  expect(el.shadowRoot!.querySelector('[part="more-button"]') === button).to.equal(true);
+  expect(el.shadowRoot!.activeElement === button).to.equal(true);
+  expect(button.disabled).to.equal(false);
+  expect(button.getAttribute('aria-disabled')).to.equal('true');
+  expect(button.getAttribute('aria-busy')).to.equal('true');
+  expect(button.textContent!.trim()).to.equal('Loading more rows');
+  expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(rows.length);
+  button.click();
+  const rect = button.getBoundingClientRect();
+  await sendMouse({ type: 'click', position: [Math.round(rect.x + rect.width / 2), Math.round(rect.y + rect.height / 2)] });
+  await sendKeys({ press: 'Enter' });
+  await sendKeys({ press: 'Space' });
+  expect(requests).to.equal(1);
+  el.removeAttribute('loading-more');
+  await el.updateComplete;
+  expect(button.textContent!.trim()).to.equal('Load more');
+  expect(button.hasAttribute('aria-disabled')).to.equal(false);
+  expect(button.hasAttribute('aria-busy')).to.equal(false);
+  expect(el.shadowRoot!.activeElement === button).to.equal(true);
+  await sendKeys({ press: 'Enter' });
+  expect(requests).to.equal(2);
+});
+
+it('leaves continuation markup and activation unchanged when loadingMore is unset', async () => {
+  const el = (await fixture(html`<lr-table has-more></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  await el.updateComplete;
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="more-button"]')!;
+  expect(el.loadingMore).to.equal(false);
+  expect(el.hasAttribute('loading-more')).to.equal(false);
+  expect(button.disabled).to.equal(false);
+  expect(button.hasAttribute('aria-disabled')).to.equal(false);
+  expect(button.hasAttribute('aria-busy')).to.equal(false);
+  expect(button.textContent!.trim()).to.equal('Load more');
+  let requests = 0;
+  el.addEventListener('lr-load-more', (event) => {
+    requests++;
+    expect(event.detail).to.equal(null);
+    expect(event.bubbles).to.equal(true);
+    expect(event.composed).to.equal(true);
+    expect(event.cancelable).to.equal(false);
+  });
+  button.click();
+  button.click();
+  expect(requests).to.equal(2);
+  el.hasMore = false;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="more-button"]').length).to.equal(0);
+});
+
+it('guards another activation before the busy render commits', async () => {
+  const el = (await fixture(html`<lr-table has-more></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  await el.updateComplete;
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="more-button"]')!;
+  let requests = 0;
+  el.addEventListener('lr-load-more', () => {
+    requests++;
+    el.loadingMore = true;
+  });
+  button.click();
+  button.click();
+  expect(requests).to.equal(1);
+  await el.updateComplete;
+  expect(el.hasAttribute('loading-more')).to.equal(true);
+});
+
+it('localizes incremental busy copy, preserves literal overrides, and stays accessible in RTL', async () => {
+  const el = (await fixture(html`<lr-table has-more loading-more dir="rtl" aria-label="Scores"></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  el.strings = { tableLoadingMore: 'Chargement des lignes suivantes' };
+  await el.updateComplete;
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="more-button"]')!;
+  expect(button.textContent!.trim()).to.equal('Chargement des lignes suivantes');
+  expect(button.getAttribute('aria-busy')).to.equal('true');
+  await expect(el).to.be.accessible();
+  el.loadingMoreLabel = 'Loading more rows';
+  await el.updateComplete;
+  expect(button.textContent!.trim()).to.equal('Loading more rows');
+  el.loadingMoreLabel = '';
+  await el.updateComplete;
+  expect(button.textContent!.trim()).to.equal('');
+  el.loadingMoreLabel = undefined;
+  await el.updateComplete;
+  expect(button.textContent!.trim()).to.equal('Chargement des lignes suivantes');
+});
+
+it('announces repeated incremental loading only for a rendered post-mount continuation', async () => {
+  const el = (await fixture(html`<lr-table has-more loading-more .columns=${columns} .rows=${rows}></lr-table>`)) as LyraTable<Row>;
+  expect(sinkTexts()).to.deep.equal([]);
+  el.loadingMore = false;
+  await el.updateComplete;
+  el.loadingMore = true;
+  await el.updateComplete;
+  await waitUntil(() => sinkTexts().length === 1);
+  expect(sinkTexts()).to.deep.equal(['Loading more rows']);
+  el.loadingMore = false;
+  await el.updateComplete;
+  el.loadingMore = true;
+  await el.updateComplete;
+  await waitUntil(() => sinkTexts().length === 2);
+  expect(sinkTexts()).to.deep.equal(['Loading more rows', 'Loading more rows']);
+  el.hasMore = false;
+  el.loadingMore = false;
+  await el.updateComplete;
+  el.loadingMore = true;
+  await el.updateComplete;
+  expect(sinkTexts().length).to.equal(2);
+  el.loadingMore = false;
+  el.loading = true;
+  await el.updateComplete;
+  await waitUntil(() => sinkTexts().length === 3);
+  el.hasMore = true;
+  el.loadingMore = true;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(0);
+  expect(el.shadowRoot!.querySelectorAll('[part="more-button"]').length).to.equal(0);
+  expect(sinkTexts()).to.deep.equal(['Loading more rows', 'Loading more rows', 'Loading rows']);
+});
 
 
 

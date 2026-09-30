@@ -20,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: 'Filtriraj vrstice',
   tableFilterPlaceholder: 'Filtriraj vrstice',
   tableLoading: 'Nalaganje vrstic',
+  tableLoadingMore: 'Nalaganje dodatnih vrstic',
   tableEditCell: 'Uredi {column}',
   showAllColumns: 'Pokaži vse stolpce',
   showFewerColumns: 'Pokaži manj stolpcev',

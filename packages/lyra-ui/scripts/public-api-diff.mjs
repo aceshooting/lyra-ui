@@ -2494,14 +2494,129 @@ function sameValue(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
+/** Input unions and optional object members preserve existing arguments without assuming
+ * covariance of an arbitrary generic or callback type.
+ */
+function isInputTypeWidening(before, after, baseline, current) {
+  const old = resolveUniqueAliases(before, baseline);
+  const next = resolveUniqueAliases(after, current);
+  if (old === next || isObjectTypeWidening(old, next)) return true;
+  const oldAtoms = typeAtoms(old);
+  const newAtoms = typeAtoms(next);
+  return newAtoms.size > oldAtoms.size && [...oldAtoms].every((atom) => newAtoms.has(atom));
+}
+
+/** Compare parameters positionally, retaining defaults and required/rest semantics. */
+function isParameterWidening(before, after, baseline, current) {
+  if (!Array.isArray(before) || !Array.isArray(after) || after.length < before.length) return false;
+  const parameter = (value) => {
+    if (typeof value === 'string') {
+      const match = /^(value|rest):([^:]+):(optional|required):(.*)$/s.exec(value);
+      return match ? { rest: match[1] === 'rest', optional: match[3] === 'optional', type: match[4], default: null } : null;
+    }
+    if (!value || typeof value.type !== 'string' || typeof value.optional !== 'boolean') return null;
+    return { rest: Boolean(value.rest), optional: value.optional, type: value.type, default: value.default };
+  };
+  for (const [index, raw] of before.entries()) {
+    const old = parameter(raw);
+    const next = parameter(after[index]);
+    if (!old || !next || old.rest !== next.rest || (old.optional && !next.optional)
+      || !sameValue(old.default, next.default)
+      || !isInputTypeWidening(old.type, next.type, baseline, current)) return false;
+  }
+  return after.slice(before.length).every((raw) => {
+    const next = parameter(raw);
+    return next?.optional === true && !next.rest;
+  });
+}
+
+/** Signature text identifies overloads, but a compatible replacement keeps the same method.
+ * Match complete records one-to-one, so widening parameters cannot hide metadata or return breaks.
+ */
+function alignCompatibleMethods(before, after, baseline, current) {
+  const groups = (entries, other) => {
+    const result = new Map();
+    for (const [id, entry] of Object.entries(entries)) {
+      const marker = id.indexOf(':method:');
+      if (other[id] || marker < 0 || entry.semantic !== 'presence' || !id.endsWith(')')) continue;
+      const start = marker + ':method:'.length;
+      const opening = findTopLevelOpeningParen(id.slice(start));
+      if (opening < 0) continue;
+      const family = id.slice(0, start + opening);
+      const members = Object.fromEntries(Object.entries(entries)
+        .filter(([key]) => key === id || key.startsWith(`${id}:`))
+        .map(([key, value]) => [key.slice(id.length), value]));
+      result.set(id, { family, members });
+    }
+    return result;
+  };
+  const oldGroups = groups(before, after);
+  if (!oldGroups.size) return after;
+  const newGroups = groups(after, before);
+  const candidates = new Map();
+  for (const [id, old] of oldGroups) {
+    if (newGroups.has(id)) continue;
+    const matches = [];
+    for (const [nextId, next] of newGroups) {
+      if (oldGroups.has(nextId) || old.family !== next.family) continue;
+      const compatible = Object.entries(old.members).every(([suffix, entry]) => {
+        const replacement = next.members[suffix];
+        return replacement && replacement.semantic === entry.semantic
+          && (sameValue(entry.value, replacement.value)
+            || (entry.semantic === 'parameters' && suffix === ':parameters'
+              && isParameterWidening(entry.value, replacement.value, baseline, current)));
+      });
+      if (compatible) matches.push(nextId);
+    }
+    candidates.set(id, matches);
+  }
+  const owners = new Map();
+  const assign = (id, seen) => {
+    for (const candidate of candidates.get(id) ?? []) {
+      if (seen.has(candidate)) continue;
+      seen.add(candidate);
+      const owner = owners.get(candidate);
+      if (!owner || assign(owner, seen)) { owners.set(candidate, id); return true; }
+    }
+    return false;
+  };
+  for (const id of candidates.keys()) assign(id, new Set());
+  if (!owners.size) return after;
+  const aligned = { ...after };
+  for (const [nextId, id] of owners) {
+    for (const [suffix, entry] of Object.entries(newGroups.get(nextId).members)) {
+      delete aligned[`${nextId}${suffix}`];
+      aligned[`${id}${suffix}`] = entry;
+    }
+  }
+  return aligned;
+}
+
+// One invocation can reach the same declaration through hundreds of exports. Reset between
+// comparisons so callers may mutate snapshots between runs without retaining a stale result.
+let declarationBumpCache = new WeakMap();
 function declarationContractBump(before, after, baseline, current) {
+  const cacheable = before && after && typeof before === 'object' && typeof after === 'object';
+  const cache = cacheable ? declarationBumpCache.get(before) : undefined;
+  const cached = cache?.get(after);
+  if (cached) return cached;
+  const originalAfter = after;
+  const finish = (bump) => {
+    if (cacheable) {
+      const entries = cache ?? new WeakMap();
+      entries.set(originalAfter, bump);
+      declarationBumpCache.set(before, entries);
+    }
+    return bump;
+  };
+  after = alignCompatibleMethods(before ?? {}, after ?? {}, baseline, current);
   let bump = 'none';
   const ids = new Set([...Object.keys(before ?? {}), ...Object.keys(after ?? {})]);
   for (const id of ids) {
     const beforeEntry = before?.[id];
     const afterEntry = after?.[id];
     if (!beforeEntry) bump = maxBump(bump, 'minor');
-    else if (!afterEntry) return 'major';
+    else if (!afterEntry) return finish('major');
     else if (!sameValue(beforeEntry.value, afterEntry.value)) {
       bump = maxBump(
         bump,
@@ -2509,7 +2624,7 @@ function declarationContractBump(before, after, baseline, current) {
       );
     }
   }
-  return bump;
+  return finish(bump);
 }
 
 /**
@@ -2630,6 +2745,7 @@ function changedBump(entry, before, after, baseline, current) {
   if (entry.semantic === 'dependency-contract-ref') {
     return dependencyContractBump(before, after, baseline, current);
   }
+  if (entry.semantic === 'parameters' && isParameterWidening(before, after, baseline, current)) return 'minor';
   if (entry.semantic === 'type' && isTypeWidening(before, after, baseline, current)) return 'minor';
   if (entry.semantic === 'heritage' && isHeritageSpecialization(before, after)) return 'minor';
   if (entry.semantic === 'optional' && before === false && after === true) return 'minor';
@@ -2639,16 +2755,18 @@ function changedBump(entry, before, after, baseline, current) {
 }
 
 export function diffPublicApi(baseline, current) {
+  declarationBumpCache = new WeakMap();
   if (baseline.packageName !== current.packageName) {
     throw new Error(
       `Cannot compare different packages: ${baseline.packageName} and ${current.packageName}.`,
     );
   }
   const changes = [];
-  const ids = new Set([...Object.keys(baseline.entries), ...Object.keys(current.entries)]);
+  const currentEntries = alignCompatibleMethods(baseline.entries, current.entries, baseline, current);
+  const ids = new Set([...Object.keys(baseline.entries), ...Object.keys(currentEntries)]);
   for (const id of [...ids].sort()) {
     const beforeEntry = baseline.entries[id];
-    const afterEntry = current.entries[id];
+    const afterEntry = currentEntries[id];
     if (!beforeEntry) {
       changes.push({
         id,

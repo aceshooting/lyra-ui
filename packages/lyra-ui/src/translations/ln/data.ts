@@ -20,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: 'Filtrer milɔngɔ',
   tableFilterPlaceholder: 'Filtrer milɔngɔ',
   tableLoading: 'Milɔngɔ ezali kocharger',
+  tableLoadingMore: 'Milɔngɔ mosusu ezali kocharger',
   tableEditCell: 'Bongisa {column}',
   showAllColumns: 'Lakisa ba colonne nyonso',
   showFewerColumns: 'Lakisa ba colonne moke',

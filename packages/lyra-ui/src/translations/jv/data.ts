@@ -20,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: 'Saring baris',
   tableFilterPlaceholder: 'Saring baris',
   tableLoading: 'Lagi ngemot baris',
+  tableLoadingMore: 'Lagi ngemot baris liyane',
   tableEditCell: 'Sunting {column}',
   showAllColumns: 'Tampilake kabeh kolom',
   showFewerColumns: 'Tampilake kolom luwih sithik',

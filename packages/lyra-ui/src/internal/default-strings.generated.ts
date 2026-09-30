@@ -1231,6 +1231,7 @@ export const LYRA_DEFAULT_tableFilterLabel: LyraMessage = 'Filter rows';
 export const LYRA_DEFAULT_tableFilterPlaceholder: LyraMessage = 'Filter rows';
 export const LYRA_DEFAULT_tableLoadFailed: LyraMessage = 'Could not load data';
 export const LYRA_DEFAULT_tableLoading: LyraMessage = 'Loading rows';
+export const LYRA_DEFAULT_tableLoadingMore: LyraMessage = 'Loading more rows';
 export const LYRA_DEFAULT_taskListCompletedOfTotal: LyraMessage = '{completed} of {total} completed';
 export const LYRA_DEFAULT_taskListLabel: LyraMessage = 'Tasks';
 export const LYRA_DEFAULT_taskListStepCompletedAnnounce: LyraMessage = 'Step completed: {label}';

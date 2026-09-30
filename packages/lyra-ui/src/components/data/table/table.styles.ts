@@ -655,11 +655,11 @@ export const styles = css`
        from the data rows above. */
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
-  [part='more-button']:hover,
+  [part='more-button']:hover:where(:not([aria-disabled='true'])),
   [part='reveal-columns-button']:hover {
     background: var(--lr-color-brand-quiet);
   }
-  [part='more-button']:active,
+  [part='more-button']:active:where(:not([aria-disabled='true'])),
   [part='reveal-columns-button']:active {
     background: color-mix(
       in oklab,
@@ -671,6 +671,9 @@ export const styles = css`
   [part='reveal-columns-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
+  }
+  [part='more-button']:where([aria-disabled='true']) {
+    cursor: progress;
   }
   /* Structural full-width row, deliberately not [part='row'] -- like [part='group-row']/
      [part='expanded-row'], it is not a data row and must not pick up hover/selected/stripe

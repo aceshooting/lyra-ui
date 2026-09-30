@@ -20,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: 'ረድፎችን አጣራ',
   tableFilterPlaceholder: 'ረድፎችን አጣራ',
   tableLoading: 'ረድፎችን በመጫን ላይ',
+  tableLoadingMore: 'ተጨማሪ ረድፎችን በመጫን ላይ',
   tableEditCell: '{column}ን አርትዕ',
   showAllColumns: 'ሁሉንም አምዶች አሳይ',
   showFewerColumns: 'ጥቂት አምዶችን አሳይ',

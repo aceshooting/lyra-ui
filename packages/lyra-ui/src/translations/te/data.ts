@@ -20,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: 'వరుసలను వడపోయండి',
   tableFilterPlaceholder: 'వరుసలను వడపోయండి',
   tableLoading: 'వరుసలు లోడ్ అవుతున్నాయి',
+  tableLoadingMore: 'మరిన్ని వరుసలు లోడ్ అవుతున్నాయి',
   tableEditCell: '{column}ను సవరించండి',
   showAllColumns: 'అన్ని కాలమ్‌లను చూపించండి',
   showFewerColumns: 'తక్కువ కాలమ్‌లను చూపించండి',

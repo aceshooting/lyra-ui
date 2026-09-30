@@ -20,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: 'အတန်းများ စစ်ထုတ်ရန်',
   tableFilterPlaceholder: 'အတန်းများ စစ်ထုတ်ရန်',
   tableLoading: 'အတန်းများ တင်နေသည်',
+  tableLoadingMore: 'နောက်ထပ် အတန်းများ တင်နေသည်',
   tableEditCell: '{column} ကို တည်းဖြတ်ရန်',
   showAllColumns: 'ကော်လံအားလုံး ပြရန်',
   showFewerColumns: 'ကော်လံနည်းနည်းသာ ပြရန်',

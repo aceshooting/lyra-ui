@@ -20,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: 'پالایه‌کردن ردیف‌ها',
   tableFilterPlaceholder: 'پالایه‌کردن ردیف‌ها',
   tableLoading: 'در حال بارگذاری ردیف‌ها',
+  tableLoadingMore: 'در حال بارگذاری ردیف‌های بیشتر',
   tableEditCell: 'ویرایش {column}',
   showAllColumns: 'نمایش همهٔ ستون‌ها',
   showFewerColumns: 'نمایش ستون‌های کمتر',

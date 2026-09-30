@@ -20,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: '행 필터링',
   tableFilterPlaceholder: '행 필터링',
   tableLoading: '행 로드 중',
+  tableLoadingMore: '행을 더 불러오는 중',
   tableEditCell: '{column} 편집',
   showAllColumns: '모든 열 표시',
   showFewerColumns: '열 개수 줄이기',

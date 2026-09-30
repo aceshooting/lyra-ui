@@ -20,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: 'کتارونه چاڼول',
   tableFilterPlaceholder: 'کتارونه چاڼول',
   tableLoading: 'کتارونه راوړل کېږي',
+  tableLoadingMore: 'نور کتارونه راوړل کېږي',
   tableEditCell: '{column} سمول',
   showAllColumns: 'ټول ستنونه ښکاره کول',
   showFewerColumns: 'لږ ستنونه ښکاره کول',

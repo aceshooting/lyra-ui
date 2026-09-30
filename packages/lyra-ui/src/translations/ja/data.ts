@@ -20,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: '行を絞り込む',
   tableFilterPlaceholder: '行を絞り込む',
   tableLoading: '行を読み込み中',
+  tableLoadingMore: '追加の行を読み込み中',
   tableEditCell: '{column} を編集',
   showAllColumns: 'すべての列を表示',
   showFewerColumns: '列の表示を減らす',

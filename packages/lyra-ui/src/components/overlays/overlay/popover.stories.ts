@@ -71,7 +71,15 @@ function onSurfaceClick(e: MouseEvent): void {
   const popover = surface.parentElement!.querySelector('lr-popover') as LyraPopover;
   // showAt() anchors to an arbitrary point with no DOM interaction owner -- exactly the contract a
   // canvas/SVG surface like lr-graph composes with (see llms-full.txt for a node-click example).
-  popover.showAt({ x: e.clientX, y: e.clientY });
+  if (popover.open) {
+    void popover.hide();
+    return;
+  }
+  const rect = surface.getBoundingClientRect();
+  popover.showAt({
+    x: e.detail === 0 ? rect.x + rect.width / 2 : e.clientX,
+    y: e.detail === 0 ? rect.y + rect.height / 2 : e.clientY,
+  }, { interactionBoundary: surface, returnFocusTo: surface });
 }
 
 export const VirtualAnchor: Story = {
@@ -80,18 +88,19 @@ export const VirtualAnchor: Story = {
     docs: {
       description: {
         story:
-          'Instead of a DOM anchor, `showAt({ x, y })` anchors the popover to an arbitrary rectangle -- here, the point clicked inside the surface below. The virtual anchor wins positioning and has no DOM interaction/ARIA owner. Escape or an outside click still dismisses it.',
+          'Instead of a DOM anchor, `showAt({ x, y })` anchors the popover to an arbitrary rectangle -- here, the point clicked inside the surface below. The virtual anchor wins positioning and has no DOM interaction/ARIA owner. The optional `interactionBoundary` lets this surface toggle it closed on a second activation without becoming a DOM trigger. Escape or an outside click still dismisses it.',
       },
     },
   },
   render: () => html`
     <div>
-      <div
+      <button
+        type="button"
         @click=${onSurfaceClick}
         style="width:20rem;height:10rem;border:1px dashed var(--lr-color-border);display:flex;align-items:center;justify-content:center;cursor:crosshair;"
       >
-        Click anywhere — the popover anchors to that point
-      </div>
+        Click anywhere — activate again to close
+      </button>
       <lr-popover><p>Anchored to your click.</p></lr-popover>
     </div>
   `,

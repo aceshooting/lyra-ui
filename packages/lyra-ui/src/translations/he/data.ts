@@ -20,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: 'סנן שורות',
   tableFilterPlaceholder: 'סנן שורות',
   tableLoading: 'טוען שורות',
+  tableLoadingMore: 'טוען שורות נוספות',
   tableEditCell: 'ערוך את {column}',
   showAllColumns: 'הצג את כל העמודות',
   showFewerColumns: 'הצג פחות עמודות',

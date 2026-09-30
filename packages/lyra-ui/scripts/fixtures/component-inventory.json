@@ -97764,7 +97764,7 @@
                   },
                   {
                     "name": "options",
-                    "type": "{ returnFocusTo?: HTMLElement }",
+                    "type": "{ returnFocusTo?: HTMLElement; interactionBoundary?: Element }",
                     "optional": true,
                     "hasDefault": false
                   }
@@ -125501,6 +125501,25 @@
             "hasDefault": false
           },
           {
+            "name": "loading-more",
+            "property": "loadingMore",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "loading-more-label",
+            "property": "loadingMoreLabel",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -126005,6 +126024,25 @@
           {
             "name": "loadingLabel",
             "attribute": "loading-label",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "loadingMore",
+            "attribute": "loading-more",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "loadingMoreLabel",
+            "attribute": "loading-more-label",
             "type": "string | undefined",
             "readonly": false,
             "reflects": false,

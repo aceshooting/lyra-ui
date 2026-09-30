@@ -20,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: 'Φιλτράρισμα γραμμών',
   tableFilterPlaceholder: 'Φιλτράρισμα γραμμών',
   tableLoading: 'Φόρτωση γραμμών',
+  tableLoadingMore: 'Φόρτωση περισσότερων γραμμών',
   tableEditCell: 'Επεξεργασία {column}',
   showAllColumns: 'Εμφάνιση όλων των στηλών',
   showFewerColumns: 'Εμφάνιση λιγότερων στηλών',

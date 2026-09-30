@@ -1512,3 +1512,34 @@ describe('containing blocks across shadow boundaries', () => {
     }
   });
 });
+
+it('preserves the latest open owner through interleaved journal rollback', async () => {
+  const popup = await fixture<HTMLElement>(html`<div></div>`);
+  const first = createPlacementStyleTransaction();
+  const intervening = createPlacementStyleTransaction();
+  const newest = createPlacementStyleTransaction();
+  first.set(popup, 'width', '10px');
+  intervening.set(popup, 'width', '20px');
+  first.set(popup, 'width', '30px');
+  newest.set(popup, 'width', '40px');
+  newest.rollback();
+  expect(first.ownedValue(popup, 'width')?.value).to.equal('30px');
+  intervening.rollback();
+  expect(first.ownedValue(popup, 'width')?.value).to.equal('30px');
+  first.rollback();
+  expect(popup.style.width).to.equal('');
+});
+
+it('restores an earlier open journal owner after a foreign rollback', async () => {
+  const popup = await fixture<HTMLElement>(html`<div></div>`);
+  const first = createPlacementStyleTransaction();
+  const intervening = createPlacementStyleTransaction();
+  first.set(popup, 'width', '10px', 'important');
+  intervening.set(popup, 'width', '20px');
+  intervening.rollback();
+  expect(first.ownedValue(popup, 'width')).to.deep.equal({ value: '10px', priority: 'important' });
+  popup.style.setProperty('width', '12px', 'important');
+  expect(first.ownedValue(popup, 'width')).to.equal(undefined);
+  first.rollback();
+  expect(popup.style.width).to.equal('12px');
+});

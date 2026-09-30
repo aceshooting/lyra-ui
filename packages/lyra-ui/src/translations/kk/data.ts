@@ -20,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: 'Жолдарды сүзу',
   tableFilterPlaceholder: 'Жолдарды сүзу',
   tableLoading: 'Жолдар жүктелуде',
+  tableLoadingMore: 'Қосымша жолдар жүктелуде',
   tableEditCell: 'Өңдеу: {column}',
   showAllColumns: 'Барлық бағандарды көрсету',
   showFewerColumns: 'Азырақ баған көрсету',

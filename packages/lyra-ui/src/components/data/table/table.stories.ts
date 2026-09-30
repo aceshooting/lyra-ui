@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html, render } from 'lit';
-import type { TableColumn } from './table.class.js';
+import type { LyraTable, TableColumn } from './table.class.js';
 import { narrowStoryFrames } from '../../../../../../.storybook/narrow-story.js';
 import '../../../density.css';
 
@@ -399,6 +399,32 @@ export const ControlledCollectionFocus: Story = {
 
 export const LoadMore: Story = {
   render: () => html`<lr-table .columns=${columns} .rows=${rows} has-more more-label="Load more rows"></lr-table>`,
+};
+
+export const IncrementalLoading: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'Activate Load more by keyboard or pointer. The consumer sets loadingMore synchronously, leaving existing rows and the focused action in place while the next page arrives. The busy action ignores repeated activation. Initial loading remains separate.',
+      },
+    },
+  },
+  render: () => {
+    let page = 0;
+    return html`<lr-table aria-label="Incrementally loaded scores" .columns=${columns} .rows=${rows} has-more
+      @lr-load-more=${async (event: Event) => {
+        const table = event.currentTarget as LyraTable<DemoRow>;
+        table.loadingMore = true;
+        try {
+          await new Promise((resolve) => setTimeout(resolve, 1200));
+          page++;
+          table.rows = [...table.rows, { id: `page-${page}`, name: `Next row ${page}`, score: 70 - page }];
+          table.hasMore = page < 3;
+        } finally {
+          table.loadingMore = false;
+        }
+      }}></lr-table>`;
+  },
 };
 
 export const Filterable: Story = {

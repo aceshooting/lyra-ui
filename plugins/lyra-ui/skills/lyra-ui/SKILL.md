@@ -15,6 +15,16 @@ custom elements use the `lr-` prefix and ship with design tokens, localization, 
 (for form controls) native form association. The current element count and complete tag list live
 in `references/index.md`; do not repeat a remembered count.
 
+## New application defaults
+
+For a new application, apply the [Lyra signature starter](references/shared/styles-and-tokens.md#lyra-signature-starter)
+unless explicit project branding or the user's choices override it: Shadcn look, glass surfaces,
+Emerald accent, theme-aware spotlights, compact single-row gemstones, and separate 44px gemstone,
+mode, design, and country-flag language controls. Language menus retain flags and readable localized
+names. Read the recipe before implementing startup and persistence; prefer the installed package's
+matching guide. Preserve valid saved style and locale choices. This recommendation changes no
+library defaults and grants no permission to retheme an existing application.
+
 ## Look up the exact API before writing any `lr-*` markup
 
 Never infer attributes, slots, events, parts or CSS custom properties from memory, or from a

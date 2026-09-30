@@ -881,6 +881,103 @@ See [Where an override actually reaches](#where-an-override-actually-reaches) be
 inheritance rules, including the one documented exception (per-component `--lr-<component>-*`
 hooks, layer 3, which do inherit through wrappers).
 
+### Lyra signature starter
+
+Use this application profile for new projects unless explicit branding or user choices override it.
+It is a composition recommendation, not a change to Lyra's runtime defaults. Existing applications
+adopt it only during an authorized migration or redesign; valid saved style and locale choices win.
+
+```css
+@import "@aceshooting/lyra-ui/theme.css";
+@import "@aceshooting/lyra-ui/tokens-root.css";
+@import "@aceshooting/lyra-ui/looks/shadcn.css";
+@import "@aceshooting/lyra-ui/surfaces/glass.css";
+@import "@aceshooting/lyra-ui/accents.css";
+```
+
+The first-use choices are independent axes:
+
+```ts
+import { setLyraStyle } from '@aceshooting/lyra-ui/theme.js';
+
+// Apply only when initializing the application's unsaved choices.
+setLyraStyle({ look: 'shadcn', surface: 'glass', accent: 'emerald', mode: 'system' });
+```
+
+Do not run that assignment unconditionally on every visit. Restore saved choices through the
+published style runtime; use `parseLyraStyleRecord()` when validating a persisted record, and
+`setLyraStyle()` to normalize browser color inputs. Preserve valid custom accents, semantic-role
+palettes, runtime looks, overrides, and historical v1 records. Fill missing or invalid choices from
+the application profile without overwriting independently saved axes. An application Reset action
+restores this profile: `resetLyraStyle()` alone restores the library's defaults instead.
+
+For first paint, run the synchronous `lyraThemeBootstrap`, then apply the application's unsaved-axis
+fallback attributes, then load the blocking stylesheets. Use the documented CSP-safe embedding or
+classic-script asset. With empty storage, the bootstrap writes Lyra's library defaults and would
+overwrite earlier Shadcn/glass/Emerald attributes; it has no application-defaults option. With
+denied storage, still apply the application fallbacks after it. Retain valid restored axes and
+record which fallbacks were used, then apply those same choices through `setLyraStyle()` during
+runtime initialization. A later module assignment alone cannot prevent a color flash. Test fresh,
+malformed, partial, legacy, and storage-denied records before modules load and after hydration,
+alongside valid saved choices. Do not copy Lyra's bootstrap, normalizer, or ownership internals.
+
+Keep spotlights in application CSS, independent of the chosen control look. The public root-token
+stylesheet makes this static recipe follow both light/dark mode and the current accent:
+
+```css
+body { isolation: isolate; min-block-size: 100svh; background: var(--lr-color-surface); }
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 46rem 30rem at 8% 4%, color-mix(in srgb, var(--lr-color-brand) 16%, transparent), transparent 60%),
+    radial-gradient(ellipse 40rem 30rem at 96% 22%, color-mix(in srgb, var(--lr-color-brand) 12%, transparent), transparent 58%),
+    radial-gradient(ellipse 44rem 32rem at 78% 96%, color-mix(in srgb, var(--lr-color-brand) 9%, transparent), transparent 60%),
+    var(--lr-color-surface);
+}
+html[data-lr-contrast='more'] body::before { background: var(--lr-color-surface); }
+@media (forced-colors: active) { body::before { background: Canvas; } }
+```
+
+These are decorative application backgrounds, not an `accentBackground` value: that style field
+accepts absolute colors used as contrast reference surfaces, not gradients or image URLs. Use
+semantic surface/text pairings for content and keep the decorative layer behind it.
+
+Use the existing [gemstoneAccentPicker composition](../components/lr-swatch-picker.md#gemstoneaccentpicker--the-signature-accent-selector),
+with its localized caption, nine canonical gemstones, and shared selected-glyph treatment. Keep
+`--lr-swatch-picker-wrap: nowrap`: desktop hit size `1.75rem` and gap `.25rem`; at widths up to
+`30rem`, hit size `1.5rem` and gap `.125rem` (28/4px and 24/2px at a 16px root). Leave its fill size
+unset. Bound the palette to the viewport and provide horizontal overflow for unusually narrow
+allocations or enlarged text; keyboard focus must bring every swatch into view. Do not shrink
+below the component's 24px floor or replace its Arrow/Home/End and RTL behavior.
+
+The four separate topbar controls—gemstone, mode, design, language—stay square `2.75rem` targets
+(44px at a 16px root), with localized names and tooltips. Use gemstone, sun/moon and horizontal-slider
+icons, and a country flag for language. Dense gemstone options do not reduce
+those launcher targets. Set the locale picker's `--lr-locale-picker-trigger-height: 2.75rem` and
+use its public flag-only trigger with readable menu entries:
+
+```ts
+import '@aceshooting/lyra-ui/components/lr-locale-picker.js';
+import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
+```
+
+```html
+<lr-locale-picker top-layer trigger-display="flag" option-display="label"
+  aria-label="Localized language action"></lr-locale-picker>
+```
+
+Install the optional `@aceshooting/lyra-flags` peer; the granular resolver import loads requested
+flags without a bulk flag import. Leave `withoutFlags` false. Assign `locales` as a property with
+`{ tag, label, country? }` entries: provide readable localized language names and an explicit ISO
+country for regional entries when known, such as `en-US` → `US`. Keep flags as supplementary cues,
+never the only accessible names, and preserve a valid saved locale in the controlled `value`.
+Use the component's flag resolver rather than emoji, invented flag SVGs, or guessed display APIs.
+Verify 320px and desktop, light/dark, RTL, enlarged text, keyboard focus, and saved preferences.
+
 ### Reading the resolved tokens from your own components — `tokens-root.css`
 
 The paragraph above is a real problem for any application that has custom elements of its own: they
@@ -2755,7 +2852,10 @@ void`, and `virtualAnchorFromRect()`** — thin wrapper over `@floating-ui/dom`'
   `computePosition` + `autoUpdate`. Forces `strategy: 'fixed'` (matching the
   popup's own `position: fixed` CSS — otherwise it lands offset by the page scroll), middleware
   `offset(opts.offset ?? 4)`, `flip()`, `shift({ padding: 8 })`, default `placement: 'bottom-start'`.
-  Returns a cleanup function that stops the `autoUpdate` loop — call it in `disconnectedCallback()`.
+  Returns a cleanup function that stops observation and queued updates — call it in `disconnectedCallback()`.
+  For `place()`, element-resize notifications coalesce into the next animation frame; initial
+  computation, scrolling and layout-shift updates begin immediately. Cleanup cancels a pending
+  resize frame.
   `trackRect()` reports the target's initial viewport rect exactly once before returning, follows
   later layout/viewport changes, and returns the same cleanup shape.
   `virtualAnchorFromRect()` adapts a live rectangle provider to the exported `VirtualAnchor`

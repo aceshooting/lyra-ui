@@ -20,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: 'Sorok szűrése',
   tableFilterPlaceholder: 'Sorok szűrése',
   tableLoading: 'Sorok betöltése',
+  tableLoadingMore: 'További sorok betöltése',
   tableEditCell: 'Szerkesztés: {column}',
   showAllColumns: 'Összes oszlop megjelenítése',
   showFewerColumns: 'Kevesebb oszlop megjelenítése',

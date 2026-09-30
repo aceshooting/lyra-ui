@@ -20,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: 'Filtrovat řádky',
   tableFilterPlaceholder: 'Filtrovat řádky',
   tableLoading: 'Načítání řádků',
+  tableLoadingMore: 'Načítají se další řádky',
   tableEditCell: 'Upravit {column}',
   showAllColumns: 'Zobrazit všechny sloupce',
   showFewerColumns: 'Zobrazit méně sloupců',

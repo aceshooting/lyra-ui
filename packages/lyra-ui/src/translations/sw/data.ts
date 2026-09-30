@@ -20,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: 'Chuja safu mlalo',
   tableFilterPlaceholder: 'Chuja safu mlalo',
   tableLoading: 'Inapakia safu mlalo',
+  tableLoadingMore: 'Inapakia safu mlalo zaidi',
   tableEditCell: 'Hariri {column}',
   showAllColumns: 'Onyesha safu wima zote',
   showFewerColumns: 'Onyesha safu wima chache',

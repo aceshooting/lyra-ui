@@ -20,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: 'Tace layuka',
   tableFilterPlaceholder: 'Tace layuka',
   tableLoading: 'Ana loda layuka',
+  tableLoadingMore: 'Ana loda ƙarin layuka',
   tableEditCell: 'Gyara {column}',
   showAllColumns: 'Nuna duk ginshiƙai',
   showFewerColumns: 'Nuna ginshiƙai kaɗan',

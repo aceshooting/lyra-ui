@@ -20,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: 'Lọc hàng',
   tableFilterPlaceholder: 'Lọc hàng',
   tableLoading: 'Đang tải hàng…',
+  tableLoadingMore: 'Đang tải thêm hàng…',
   tableEditCell: 'Chỉnh sửa {column}',
   showAllColumns: 'Hiện tất cả cột',
   showFewerColumns: 'Hiện ít cột hơn',

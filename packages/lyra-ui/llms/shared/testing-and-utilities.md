@@ -320,7 +320,10 @@ void`, and `virtualAnchorFromRect()`** — thin wrapper over `@floating-ui/dom`'
   `computePosition` + `autoUpdate`. Forces `strategy: 'fixed'` (matching the
   popup's own `position: fixed` CSS — otherwise it lands offset by the page scroll), middleware
   `offset(opts.offset ?? 4)`, `flip()`, `shift({ padding: 8 })`, default `placement: 'bottom-start'`.
-  Returns a cleanup function that stops the `autoUpdate` loop — call it in `disconnectedCallback()`.
+  Returns a cleanup function that stops observation and queued updates — call it in `disconnectedCallback()`.
+  For `place()`, element-resize notifications coalesce into the next animation frame; initial
+  computation, scrolling and layout-shift updates begin immediately. Cleanup cancels a pending
+  resize frame.
   `trackRect()` reports the target's initial viewport rect exactly once before returning, follows
   later layout/viewport changes, and returns the same cleanup shape.
   `virtualAnchorFromRect()` adapts a live rectangle provider to the exported `VirtualAnchor`

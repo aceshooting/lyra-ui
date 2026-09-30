@@ -148,20 +148,16 @@ interface InlineStyleValue {
   priority: string;
 }
 interface PlacementStyleWrite {
+  transaction: PlacementStyleTransactionRecord;
   element: HTMLElement;
   property: string;
   previous: InlineStyleValue;
-  previousOwner?: PlacementStyleWriteOwner;
+  previousOwner?: PlacementStyleWrite;
   written: InlineStyleValue;
-  owner?: PlacementStyleWriteOwner;
 }
 type PlacementStyleTransactionState = 'open' | 'committed' | 'rolled-back';
 interface PlacementStyleTransactionRecord {
   state: PlacementStyleTransactionState;
-}
-interface PlacementStyleWriteOwner {
-  transaction: PlacementStyleTransactionRecord;
-  write: PlacementStyleWrite;
 }
 interface PlacementStyleTransaction {
   set(element: HTMLElement, property: string, value: string, priority?: string): void;
@@ -199,7 +195,7 @@ interface PlacementSyncOwnershipController {
   ): void;
   release(popup: HTMLElement, run: PlacementRunState): void;
 }
-const placementStyleOwners = new WeakMap<HTMLElement, Map<string, PlacementStyleWriteOwner>>();
+const placementStyleOwners = new WeakMap<HTMLElement, Map<string, PlacementStyleWrite>>();
 
 /**
  * Clips `bridge` to the quad spanning the anchor and the popup, so the `offset` gap between them
@@ -312,7 +308,6 @@ const placementSyncOwnership = createPlacementSyncOwnershipController();
 /** @internal */
 export function createPlacementStyleTransaction(): PlacementStyleTransaction {
   const writes: PlacementStyleWrite[] = [];
-  const lastWrites = new WeakMap<HTMLElement, Map<string, PlacementStyleWrite>>();
   const transaction: PlacementStyleTransactionRecord = { state: 'open' };
 
   return {
@@ -326,6 +321,7 @@ export function createPlacementStyleTransaction(): PlacementStyleTransaction {
       const previous = readInlineStyle(element, property);
       const currentOwner = owners.get(property);
       const write: PlacementStyleWrite = {
+        transaction,
         element,
         property,
         previous,
@@ -333,7 +329,7 @@ export function createPlacementStyleTransaction(): PlacementStyleTransaction {
         // write still matches the observable value+priority; a distinct external write severs the
         // ownership chain and becomes this generation's rollback baseline.
         previousOwner:
-          currentOwner && sameInlineStyle(previous, currentOwner.write.written)
+          currentOwner && sameInlineStyle(previous, currentOwner.written)
             ? currentOwner
             : undefined,
         written: previous,
@@ -341,20 +337,14 @@ export function createPlacementStyleTransaction(): PlacementStyleTransaction {
       writes.push(write);
       writeInlineStyle(element, property, { value, priority });
       write.written = readInlineStyle(element, property);
-      write.owner = {
-        transaction,
-        write,
-      };
-      owners.set(property, write.owner);
-      styleMapFor(lastWrites, element).set(property, write);
+      owners.set(property, write);
     },
     ownedValue(element, property) {
       if (transaction.state !== 'open') return undefined;
-      const write = lastWrites.get(element)?.get(property);
       const owner = placementStyleOwners.get(element)?.get(property);
-      if (!write?.owner || owner !== write.owner) return undefined;
+      if (owner?.transaction !== transaction) return undefined;
       const current = readInlineStyle(element, property);
-      return sameInlineStyle(current, write.written) ? current : undefined;
+      return sameInlineStyle(current, owner.written) ? current : undefined;
     },
     commit() {
       if (transaction.state !== 'open') return;
@@ -362,8 +352,7 @@ export function createPlacementStyleTransaction(): PlacementStyleTransaction {
       for (const write of writes) {
         const owners = placementStyleOwners.get(write.element);
         if (
-          write.owner &&
-          owners?.get(write.property) === write.owner
+          owners?.get(write.property) === write
         ) {
           owners.delete(write.property);
         }
@@ -376,8 +365,7 @@ export function createPlacementStyleTransaction(): PlacementStyleTransaction {
       for (const write of writes.reverse()) {
         const owners = placementStyleOwners.get(write.element);
         if (
-          !write.owner ||
-          owners?.get(write.property) !== write.owner
+          owners?.get(write.property) !== write
         ) {
           continue;
         }
@@ -390,8 +378,8 @@ export function createPlacementStyleTransaction(): PlacementStyleTransaction {
         let previous = write.previous;
         let previousOwner = write.previousOwner;
         while (previousOwner?.transaction.state === 'rolled-back') {
-          previous = previousOwner.write.previous;
-          previousOwner = previousOwner.write.previousOwner;
+          previous = previousOwner.previous;
+          previousOwner = previousOwner.previousOwner;
         }
         writeInlineStyle(write.element, write.property, previous);
         if (previousOwner?.transaction.state === 'open') owners.set(write.property, previousOwner);
@@ -587,6 +575,7 @@ function placeImpl(
   let disposed = false;
   let escapeReruns = 0;
   let stopAutoUpdate: (() => void) | undefined;
+  let stopResize: (() => void) | undefined;
   const openStyleTransactions = new Set<PlacementStyleTransaction>();
   const visualViewport = popup.ownerDocument.defaultView?.visualViewport;
   const updateFromVisualViewport = () => update();
@@ -594,6 +583,7 @@ function placeImpl(
   const dispose = (): void => {
     if (disposed) return;
     disposed = true;
+    stopResize?.();
     stopAutoUpdate?.();
     stopAutoUpdate = undefined;
     visualViewport?.removeEventListener('resize', updateFromVisualViewport);
@@ -860,7 +850,17 @@ function placeImpl(
     );
   }
 
-  stopAutoUpdate = autoUpdate(anchor, popup, update);
+  // Size middleware may resize an observed surface. Updating inside resize delivery would
+  // invalidate another observation at the same depth; defer only that source to the next frame.
+  // Initial placement, scrolling and layout shifts retain Floating UI's immediate publication.
+  const stop = autoUpdate(anchor, popup, update, { elementResize: false });
+  // autoUpdate publishes synchronously, and that update can reject a now-invalid virtual rect.
+  if (disposed) {
+    stop();
+    return dispose;
+  }
+  stopAutoUpdate = stop;
+  stopResize = observeElementResize(anchor, popup, update);
   // The visual viewport changes independently of the layout viewport when a
   // mobile on-screen keyboard opens or closes. Floating UI's normal window
   // resize listener does not receive those events, so keep the available-size
@@ -984,5 +984,32 @@ export function trackRect(target: HTMLElement, onUpdate: (rect: DOMRect) => void
     stopAutoUpdate();
     visualViewport?.removeEventListener('resize', onVisualViewportChange);
     visualViewport?.removeEventListener('scroll', onVisualViewportChange);
+  };
+}
+
+function observeElementResize(
+  anchor: Element | VirtualAnchor,
+  popup: HTMLElement,
+  update: () => void,
+): () => void {
+  const view = popup.ownerDocument.defaultView;
+  let active = true;
+  let frame: number | undefined;
+  const observer = view?.ResizeObserver ? new view.ResizeObserver(() => {
+    if (!active || frame !== undefined) return;
+    frame = view.requestAnimationFrame(() => {
+      frame = undefined;
+      if (active) update();
+    });
+  }) : undefined;
+  const reference = (anchor as Element).nodeType === 1
+    ? anchor as Element
+    : (anchor as VirtualAnchor).contextElement;
+  if (reference) observer?.observe(reference);
+  observer?.observe(popup);
+  return () => {
+    active = false;
+    observer?.disconnect();
+    if (frame !== undefined) view?.cancelAnimationFrame(frame);
   };
 }

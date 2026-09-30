@@ -20,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: 'Suodata rivejä',
   tableFilterPlaceholder: 'Suodata rivejä',
   tableLoading: 'Ladataan rivejä',
+  tableLoadingMore: 'Ladataan lisää rivejä',
   tableEditCell: 'Muokkaa: {column}',
   showAllColumns: 'Näytä kaikki sarakkeet',
   showFewerColumns: 'Näytä vähemmän sarakkeita',

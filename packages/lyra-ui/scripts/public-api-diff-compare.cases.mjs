@@ -1575,3 +1575,125 @@ test('falls back to the edge count when a snapshot predates the reachable map', 
   );
   assert.equal(shrunk[0].bump, 'major');
 });
+
+function callableFixture(options, { extra = '', parameters = undefined, result = 'void', metadata = {} } = {}) {
+  const args = parameters ?? [{ name: 'options', type: { text: options }, optional: true }];
+  return {
+    packageJson: { name: '@aceshooting/lyra-ui', version: '1.0.0', exports: {
+      '.': { types: './dist/lyra.d.ts', default: './dist/lyra.js' },
+    } },
+    manifest: { modules: [{ path: 'sample.js', declarations: [{ kind: 'class', name: 'Sample',
+      customElement: true, tagName: 'lr-sample', members: [{ kind: 'method', name: 'open',
+        parameters: args, return: { type: { text: result } }, ...metadata,
+      }],
+    }] }] },
+    declarations: { named: `export class Sample { open(options?: ${options}): ${result}; ${extra} }` },
+  };
+}
+
+test('recognizes optional method option additions in CEM and reachable declaration contracts', () => {
+  const changes = diffPublicApi(
+    normalizePublicApi(callableFixture('{ target?: HTMLElement }')),
+    normalizePublicApi(callableFixture('{ target?: HTMLElement; boundary?: Element }')),
+  );
+  assert.equal(minimumRequiredBump(changes), 'minor');
+  assert.equal(changes.some((change) => change.bump === 'major'), false);
+});
+
+test('retains method narrowing, required options, return, defaults and metadata breaks', () => {
+  const original = normalizePublicApi(callableFixture('{ target?: HTMLElement }'));
+  for (const next of [
+    callableFixture('{ target?: HTMLButtonElement }'),
+    callableFixture('{ target: HTMLElement }'),
+    callableFixture('{ target?: HTMLElement; boundary: Element }'),
+    callableFixture('{ target?: HTMLElement; boundary?: Element }', { result: 'string' }),
+    callableFixture('{ target?: HTMLElement; boundary?: Element }', { result: 'void | string' }),
+    callableFixture('{ target?: HTMLElement; boundary?: Element }', { metadata: { reflects: true } }),
+    callableFixture('{ target?: HTMLElement; boundary?: Element }', { parameters: [
+      { name: 'options', type: { text: '{ target?: HTMLElement; boundary?: Element }' }, optional: true, default: '{}' },
+    ] }),
+    callableFixture('{ target?: HTMLElement; boundary?: Element }', { parameters: [
+      { name: 'options', type: { text: '{ target?: HTMLElement; boundary?: Element }' } },
+    ] }),
+  ]) assert.equal(minimumRequiredBump(diffPublicApi(original, normalizePublicApi(next))), 'major');
+});
+
+test('matches method overloads individually without concealing a removed or narrowed overload', () => {
+  const fixture = (methods) => ({
+    packageJson: { name: '@aceshooting/lyra-ui', version: '1.0.0', exports: {
+      '.': { types: './dist/lyra.d.ts', default: './dist/lyra.js' },
+    } },
+    manifest: { modules: [] },
+    declarations: { named: `export class Sample { ${methods} }` },
+  });
+  const old = normalizePublicApi(fixture('open(value: string): void; open(value: number): void;'));
+  const added = normalizePublicApi(fixture('open(value: string): void; open(value: number): void; open(value: boolean): void;'));
+  assert.equal(minimumRequiredBump(diffPublicApi(old, added)), 'minor');
+  const removed = normalizePublicApi(fixture('open(value: string | number): void;'));
+  assert.equal(minimumRequiredBump(diffPublicApi(old, removed)), 'major');
+  const narrowed = normalizePublicApi(fixture('open(value: string): void; open(value: 1): void;'));
+  assert.equal(minimumRequiredBump(diffPublicApi(old, narrowed)), 'major');
+});
+
+test('accepts optional positional parameters but rejects parameter and method removals', () => {
+  const fixture = (parameters, signature) => {
+    const input = callableFixture('string', { parameters });
+    input.declarations.named = `export class Sample { ${signature} }`;
+    return normalizePublicApi(input);
+  };
+  const value = { name: 'value', type: { text: 'string' } };
+  const boundary = { name: 'boundary', type: { text: 'Element' }, optional: true };
+  const before = fixture([value], 'open(value: string): void;');
+  assert.equal(minimumRequiredBump(diffPublicApi(before,
+    fixture([value, boundary], 'open(value: string, boundary?: Element): void;'))), 'minor');
+  assert.equal(minimumRequiredBump(diffPublicApi(before,
+    fixture([], 'open(): void;'))), 'major');
+  const removed = callableFixture('string');
+  removed.manifest.modules[0].declarations[0].members = [];
+  removed.declarations.named = 'export class Sample {}';
+  assert.equal(minimumRequiredBump(diffPublicApi(before, normalizePublicApi(removed))), 'major');
+});
+
+test('does not erase method generic constraints or defaults when matching signatures', () => {
+  const fixture = (generic) => normalizePublicApi({
+    packageJson: { name: '@aceshooting/lyra-ui', version: '1.0.0', exports: {
+      '.': { types: './dist/lyra.d.ts', default: './dist/lyra.js' },
+    } }, manifest: { modules: [] },
+    declarations: { named: `export class Sample { open<${generic}>(value: T): void; }` },
+  });
+  const before = fixture("T extends string = 'a'");
+  for (const generic of ["T extends string = 'b'", 'T extends number = 1']) {
+    assert.equal(minimumRequiredBump(diffPublicApi(before, fixture(generic))), 'major');
+  }
+});
+
+test('does not assume covariance of generic callback parameters', () => {
+  const fixture = (type) => {
+    const input = callableFixture(type, { parameters: [{ name: 'callback', type: { text: type } }] });
+    input.declarations.named = `type Sink<T> = (value: T) => void; export class Sample { open(callback: ${type}): void; }`;
+    return normalizePublicApi(input);
+  };
+  assert.equal(minimumRequiredBump(diffPublicApi(fixture("Sink<'a'>"), fixture("Sink<'a' | 'b'>"))), 'major');
+});
+
+test('keeps required-to-rest parameter changes breaking', () => {
+  const fixture = (parameter) => normalizePublicApi({
+    packageJson: { name: '@aceshooting/lyra-ui', version: '1.0.0', exports: {
+      '.': { types: './dist/lyra.d.ts', default: './dist/lyra.js' },
+    } }, manifest: { modules: [] },
+    declarations: { named: `export class Sample { open(${parameter}): void; }` },
+  });
+  assert.equal(minimumRequiredBump(diffPublicApi(fixture('value: string'), fixture('...value: string[]'))), 'major');
+});
+
+test('rechecks reachable contracts when snapshots change between comparisons', () => {
+  const before = reachableSnapshot('before', { edgeCount: 1, reachable: { 'mod#Row': 'c1' } }, {
+    c1: { 'mod#Row:member:a': memberEntry('string') },
+  });
+  const after = reachableSnapshot('after', { edgeCount: 1, reachable: { 'mod#Row': 'c2' } }, {
+    c2: { 'mod#Row:member:a': memberEntry('string'), 'mod#Row:member:b': memberEntry('number') },
+  });
+  assert.equal(minimumRequiredBump(diffPublicApi(before, after)), 'minor');
+  delete after.contracts.c2['mod#Row:member:a'];
+  assert.equal(minimumRequiredBump(diffPublicApi(before, after)), 'major');
+});

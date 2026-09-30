@@ -17373,7 +17373,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1084,
+              "line": 1100,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -17414,6 +17414,7 @@
           "src/components/overlays/overlay/overlay-remediation.test.ts",
           "src/components/overlays/overlay/overlay.test.ts",
           "src/components/overlays/overlay/popover-trigger.test.ts",
+          "src/components/overlays/overlay/popover-virtual-boundary.test.ts",
           "src/components/overlays/overlay/popover.test.ts",
           "src/components/overlays/overlay/positioning-strategy.test.ts",
           "src/components/overlays/overlay/retired-events.test.ts",
@@ -35929,7 +35930,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1084,
+              "line": 1100,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -35970,6 +35971,7 @@
           "src/components/overlays/overlay/overlay-remediation.test.ts",
           "src/components/overlays/overlay/overlay.test.ts",
           "src/components/overlays/overlay/popover-trigger.test.ts",
+          "src/components/overlays/overlay/popover-virtual-boundary.test.ts",
           "src/components/overlays/overlay/popover.test.ts",
           "src/components/overlays/overlay/positioning-strategy.test.ts",
           "src/components/overlays/overlay/retired-events.test.ts",
@@ -47335,6 +47337,12 @@
             },
             {
               "file": "src/components/data/table/table.test.ts",
+              "test": "localizes incremental busy copy, preserves literal overrides, and stays accessible in RTL",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/data/table/table.test.ts",
               "test": "renders a localized busy state before rows while loading",
               "target": "el",
               "state": "populated"
@@ -51943,7 +51951,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1084,
+              "line": 1100,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -51984,6 +51992,7 @@
           "src/components/overlays/overlay/overlay-remediation.test.ts",
           "src/components/overlays/overlay/overlay.test.ts",
           "src/components/overlays/overlay/popover-trigger.test.ts",
+          "src/components/overlays/overlay/popover-virtual-boundary.test.ts",
           "src/components/overlays/overlay/popover.test.ts",
           "src/components/overlays/overlay/positioning-strategy.test.ts",
           "src/components/overlays/overlay/retired-events.test.ts",

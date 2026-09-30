@@ -108,6 +108,9 @@ import '@aceshooting/lyra-ui/components/lr-option.js';
 
 Per-component optional peers and the tree-shakeable import patterns:
 [`packages/lyra-ui/README.md#install`](./packages/lyra-ui/README.md#install).
+For new apps, the [Lyra signature starter](./packages/lyra-ui/llms/shared/styles-and-tokens.md#lyra-signature-starter)
+combines Shadcn, glass, Emerald, theme-aware spotlights, compact gemstones and country-flag language
+controls, while preserving saved preferences and explicit branding.
 For arbitrary server/CMS markup, the optional guarded loader discovers only rendered tags and has a
 separate ESM-CDN auto-start entry:
 [`packages/lyra-ui/README.md#optional-autoloader-and-cdn-entry`](./packages/lyra-ui/README.md#optional-autoloader-and-cdn-entry).

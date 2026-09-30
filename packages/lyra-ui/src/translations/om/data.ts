@@ -20,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: 'Tarreewwan calali',
   tableFilterPlaceholder: 'Tarreewwan calali',
   tableLoading: 'Tarreewwan fe\'amaa jiru',
+  tableLoadingMore: 'Tarreewwan dabalataa fe’amaa jiru',
   tableEditCell: '{column} gulaali',
   showAllColumns: 'Tarjaawwan hunda agarsiisi',
   showFewerColumns: 'Tarjaawwan muraasa agarsiisi',

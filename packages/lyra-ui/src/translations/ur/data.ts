@@ -20,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: 'قطاریں فلٹر کریں',
   tableFilterPlaceholder: 'قطاریں فلٹر کریں',
   tableLoading: 'قطاریں لوڈ ہو رہی ہیں',
+  tableLoadingMore: 'مزید قطاریں لوڈ ہو رہی ہیں',
   tableEditCell: '{column} میں ترمیم کریں',
   showAllColumns: 'تمام کالم دکھائیں',
   showFewerColumns: 'کم کالم دکھائیں',

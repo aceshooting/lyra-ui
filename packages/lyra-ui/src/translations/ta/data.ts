@@ -20,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: 'வரிசைகளை வடிகட்டு',
   tableFilterPlaceholder: 'வரிசைகளை வடிகட்டு',
   tableLoading: 'வரிசைகள் ஏற்றப்படுகின்றன',
+  tableLoadingMore: 'மேலும் வரிசைகள் ஏற்றப்படுகின்றன',
   tableEditCell: '{column}-ஐத் திருத்து',
   showAllColumns: 'அனைத்து நெடுவரிசைகளையும் காட்டு',
   showFewerColumns: 'குறைவான நெடுவரிசைகளைக் காட்டு',

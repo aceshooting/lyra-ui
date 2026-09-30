@@ -59,17 +59,10 @@ The [release roadmap](../../docs/roadmap.md#roadmap-index-and-release-status) tr
 localization, cleanup and qualification work, then the separate website and consumer rollout after
 v24 publication.
 
-Choose the original Lyra look by loading `theme.css`. To select shadcn through the runtime:
-
-```js
-import '@aceshooting/lyra-ui/theme.css';
-import '@aceshooting/lyra-ui/looks/shadcn.css';
-import '@aceshooting/lyra-ui/accents.css';
-import { setLyraStyle } from '@aceshooting/lyra-ui/theme.js';
-
-setLyraStyle({ look: 'shadcn', mode: 'system', accent: 'sapphire' });
-setLyraStyle({ accent: 'ruby' }); // keeps the other choices
-```
+For new apps, use the [Lyra signature starter](./llms/shared/styles-and-tokens.md#lyra-signature-starter):
+Shadcn, glass, Emerald, theme-aware spotlights, compact gemstones and country-flag language controls.
+The recipe preserves saved choices and explicit branding and covers first paint, persistence and
+accessible controls. Lyra's runtime defaults remain independently configurable.
 
 See the [changelog](CHANGELOG.md) for version-by-version changes and historical upgrade notes.
 

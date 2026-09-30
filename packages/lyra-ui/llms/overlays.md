@@ -1741,7 +1741,7 @@ consumes its own action so the same click never closes an ancestor.
 `el.open = true`, including the veto point — and resolves after `lr-after-show`. A no-op or vetoed
 transition returns an already-resolved promise.
 `showAt(rect: { x, y, width?, height?, contextElement? }, options?: { returnFocusTo?:
-HTMLElement })` opens the popover anchored to an arbitrary rectangle instead of any DOM anchor —
+HTMLElement; interactionBoundary?: Element })` opens the popover anchored to an arbitrary rectangle instead of any DOM anchor —
 for a graph node, a canvas pixel, a chart datum, or any other non-DOM location
 (`width`/`height` default to `0`, a point). Escape and light-dismiss return focus to
 `options.returnFocusTo` when supplied, or skip focus-return entirely otherwise, since a virtual
@@ -1752,7 +1752,14 @@ the anchor point moves on its own (e.g. a graph pan/zoom tick), re-call `showAt(
 coordinates to re-anchor — the popover stays open across such a call. A popover that never calls
 `showAt()` behaves exactly as before. Non-finite coordinates or dimensions are a no-op and leave
 the current open/anchor state unchanged. While virtual anchoring is active, no slotted/`for` DOM
-element owns click or generated ARIA.
+element owns click or generated ARIA. Optional `interactionBoundary` includes a connected element
+and its composed descendants in light-dismiss containment, so its own click handler can toggle
+`open` or re-anchor without a document capture listener. It supplies no positioning, activation,
+ARIA, or focus-return behavior; use `returnFocusTo` independently. SVG elements and canvas
+wrappers are valid boundaries. The element must belong to the popover's document. Each valid
+`showAt()` call replaces the boundary (omitting it clears the previous one); successful close or
+disconnect clears it. Vetoed transitions retain the previous state. Non-finite rectangles remain
+no-ops, including for the boundary.
 `hide(options?: { focusTrigger?: boolean }): Promise<void>` programmatically closes the popover and
 resolves after `lr-after-hide`; pass
 `{ focusTrigger: false }` to opt out of focus restoration. By default, `hide()`, Escape, light

@@ -338,6 +338,19 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   exists again (the same convention `selectedRowKeys` follows for server pagination). Reads return
   immutable detached `ReadonlySet` facades; reassign a new set to update
 - `hasMore: boolean = false` (attribute `has-more`, reflected)
+- `loadingMore: boolean = false` (attribute `loading-more`, reflected) — controlled busy state
+  for the built-in incremental action. With `hasMore`, keeps existing rows and the same focusable
+  `more-button` mounted, exposes `aria-busy="true"` and `aria-disabled="true"`, and suppresses
+  pointer and keyboard `lr-load-more` requests while pending. Set it synchronously in the event
+  handler before awaiting the next page, then clear it when the request settles. It does not fetch
+  or append data itself; reassign `rows` when results arrive. `hasMore` still controls the button's
+  presence, and `loading` retains its separate full-table loading behavior. Left unset, the
+  continuation markup and activation behavior are unchanged.
+- `loadingMoreLabel?: string` (attribute `loading-more-label`) — omission renders localized
+  `tableLoadingMore` (`'Loading more rows'` in the built-in English catalog); supplied strings,
+  including `''`, render verbatim. Post-mount transitions into incremental loading append this
+  copy to the shared light-DOM polite sink only when the continuation is rendered and initial
+  `loading` is false. Declarative initial busy state remains silent.
 - `moreLabel?: string` (attribute `more-label`) — omission renders localized `loadMore` (`'Load more'` in the built-in English catalog); a supplied string, including `''`, renders verbatim
 - `error: boolean = false` (attribute `error`, reflected) — replaces `<tbody>`'s row content with
   a built-in failed-load state while keeping the surrounding `<thead>`, filter field, and
@@ -449,7 +462,7 @@ any of the attributes — a consumer-supplied key is not safe to interpolate int
 `detail: { phase: 'request', sortKey, sortDir }`) precedes `lr-sort` (frozen readonly
 `detail: { phase: 'commit', sortKey, sortDir }`) only when accepted. Client mode also updates its
 sort properties; server mode leaves them controlled. Other events are `lr-row-activate`
-(a row was activated by pointer or Enter/Space, `detail: { row }`), `lr-load-more` (fired on the "load more" button),
+(a row was activated by pointer or Enter/Space, `detail: { row }`), `lr-load-more` (fired on the "load more" button only while `loadingMore` is false),
 `lr-priority-columns-visibility-change` (frozen readonly `detail: { visible }`), and the expansion
 pair `lr-row-expand-request` (**cancelable**, frozen readonly `detail: { row, rowKey, expanded }`,
 emitted only while `expansionMode` is `'single'` or `'multiple'`; `preventDefault()` skips the

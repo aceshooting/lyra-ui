@@ -147,6 +147,7 @@ export type LyraMessageKey =
   | 'tableFilterLabel'
   | 'tableFilterPlaceholder'
   | 'tableLoading'
+  | 'tableLoadingMore'
   | 'tableLoadFailed'
   | 'tableEditCell'
   | 'carousel'

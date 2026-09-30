@@ -20,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: 'ಸಾಲುಗಳನ್ನು ಫಿಲ್ಟರ್ ಮಾಡಿ',
   tableFilterPlaceholder: 'ಸಾಲುಗಳನ್ನು ಫಿಲ್ಟರ್ ಮಾಡಿ',
   tableLoading: 'ಸಾಲುಗಳನ್ನು ಲೋಡ್ ಮಾಡಲಾಗುತ್ತಿದೆ',
+  tableLoadingMore: 'ಇನ್ನಷ್ಟು ಸಾಲುಗಳನ್ನು ಲೋಡ್ ಮಾಡಲಾಗುತ್ತಿದೆ',
   tableEditCell: '{column} ಸಂಪಾದಿಸಿ',
   showAllColumns: 'ಎಲ್ಲಾ ಕಾಲಮ್‌ಗಳನ್ನು ತೋರಿಸಿ',
   showFewerColumns: 'ಕಡಿಮೆ ಕಾಲಮ್‌ಗಳನ್ನು ತೋರಿಸಿ',

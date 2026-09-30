@@ -20,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: '篩選行',
   tableFilterPlaceholder: '篩選行',
   tableLoading: '正在載入行',
+  tableLoadingMore: '正在載入更多資料列',
   tableEditCell: '編輯{column}',
   showAllColumns: '顯示所有列',
   showFewerColumns: '減少顯示的列',

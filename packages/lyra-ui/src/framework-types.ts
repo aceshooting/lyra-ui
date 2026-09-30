@@ -11179,6 +11179,8 @@ export interface LyraComponentTypeMap {
       | 'loading'
       | 'loadingAppearance'
       | 'loadingLabel'
+      | 'loadingMore'
+      | 'loadingMoreLabel'
       | 'locale'
       | 'moreLabel'
       | 'page'
@@ -11268,6 +11270,8 @@ export interface LyraComponentTypeMap {
       'has-next'?: LyraTable['hasNext'];
       'loading-appearance'?: LyraTable['loadingAppearance'];
       'loading-label'?: LyraTable['loadingLabel'];
+      'loading-more'?: LyraTable['loadingMore'];
+      'loading-more-label'?: LyraTable['loadingMoreLabel'];
       'more-label'?: LyraTable['moreLabel'];
       'page-size'?: LyraTable['pageSize'];
       'pagination-mode'?: LyraTable['paginationMode'];

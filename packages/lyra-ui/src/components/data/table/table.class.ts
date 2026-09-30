@@ -37,7 +37,7 @@ import { requestThenCommit } from '../../../internal/request-commit.js';
 import { renderDataState } from '../../../internal/data-state-renderer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_tableLoading } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_tableLoading, LYRA_DEFAULT_tableLoadingMore } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** How `loading` renders. `'spinner'` (the default) replaces the grid with an indeterminate
@@ -772,7 +772,7 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  *   `detail: { phase: 'commit', sortKey, sortDir }`. Client mode also updates `sortKey`/`sortDir`;
  *   server mode leaves them controlled while reporting the accepted proposal.
  * @event lr-row-activate - A row was activated by pointer or Enter/Space. `detail: { row }`.
- * @event lr-load-more - The "load more" control was activated.
+ * @event lr-load-more - The "load more" control was activated while `loadingMore` is false.
  * @event lr-retry-request - Cancelable retry proposal before the default retry action. `detail: null`.
  *   The built-in `[part='retry-button']` was activated, only rendered while
  *   `error` is set. Cancelable: the default action clears `error`; `preventDefault()` leaves it
@@ -836,7 +836,8 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  *   `editTrigger: 'double-click'` cell, and rendered persistently in every body cell of an
  *   `editTrigger: 'always'`
  *   column.
- * @csspart more-button - The "load more" control, shown when `hasMore` is true.
+ * @csspart more-button - The "load more" control, shown when `hasMore` is true. Remains mounted
+ *   and focusable while `loadingMore` exposes its busy, unavailable state.
  * @csspart sort-icon - The direction indicator in a sortable header cell.
  * @csspart sort-icon-active - The active direction chevron; also carries sort-icon.
  * @csspart sort-icon-inactive - The muted bidirectional indicator when sortIndicators is all; also carries sort-icon.
@@ -997,6 +998,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     tableFilterPlaceholder: LYRA_DEFAULT_tableFilterPlaceholder,
     tableLoadFailed: LYRA_DEFAULT_tableLoadFailed,
     tableLoading: LYRA_DEFAULT_tableLoading,
+    tableLoadingMore: LYRA_DEFAULT_tableLoadingMore,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -1333,6 +1335,16 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  row for it to occupy, and this renders nothing. */
   @property({ attribute: false }) grandTotal?: (rows: readonly T[]) => unknown;
   @property({ type: Boolean, attribute: 'has-more', reflect: true }) hasMore = false;
+  /** Controlled incremental-load state for the built-in continuation action. Keeps existing rows
+   *  and the same focusable button mounted, marks the action busy with `aria-busy` and unavailable
+   *  with `aria-disabled`, and suppresses `lr-load-more` until the consumer clears it. Set this
+   *  synchronously in the event handler before awaiting a page, then clear it when that request
+   *  settles. Does not start a request or replace rows; `loading` remains the initial-load state.
+   *  `hasMore` still controls whether the action is present. Left unset, output is unchanged. */
+  @property({ type: Boolean, attribute: 'loading-more', reflect: true }) loadingMore = false;
+  /** Optional incremental-loading copy override. Omission localizes `tableLoadingMore`; supplied
+   *  strings, including an empty string, render verbatim. */
+  @property({ attribute: 'loading-more-label' }) loadingMoreLabel?: string;
   /** Optional copy overrides. Omission localizes the matching message key; supplied strings,
    * including the built-in English text or an empty string, render verbatim. */
   @property({ attribute: 'more-label' }) moreLabel?: string;
@@ -1952,6 +1964,14 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
 
   private loadingText(): string {
     return this.localizedOverride('tableLoading', this.loadingLabel);
+  }
+
+  private loadingMoreText(): string {
+    return this.localizedOverride('tableLoadingMore', this.loadingMoreLabel);
+  }
+
+  private onLoadMore(): void {
+    if (!this.loadingMore) this.emit('lr-load-more');
   }
 
   private observeBase(base: Element): void {
@@ -2804,6 +2824,12 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     super.updated(changed);
     if (this.firstUpdateAnnouncementsReady && changed.has('loading') && this.loading) {
       this.announcementSink?.announce(this.loadingText());
+    }
+    if (
+      this.firstUpdateAnnouncementsReady && changed.has('loadingMore') && this.loadingMore &&
+      !this.loading && this.shadowRoot?.querySelector('[part="more-button"]')
+    ) {
+      this.announcementSink?.announce(this.loadingMoreText());
     }
     // Guarded the same way as the loading announcement above -- `error` defaulting to `false`
     // means a bare `changed.has('error')` would otherwise be true (and announce) on whatever the
@@ -3996,9 +4022,11 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
             </button>`
           : nothing}
         ${this.hasMore
-          ? html`<button part="more-button" type="button" @click=${() => this.emit('lr-load-more')}>
-              ${this.localizedOverride('loadMore', this.moreLabel)}
-            </button>`
+          ? html`<button part="more-button" type="button"
+              aria-disabled=${this.loadingMore ? 'true' : nothing}
+              aria-busy=${this.loadingMore ? 'true' : nothing}
+              @click=${this.onLoadMore}
+            >${this.loadingMore ? this.loadingMoreText() : this.localizedOverride('loadMore', this.moreLabel)}</button>`
           : nothing}
         ${hasPagination
           ? html`<lr-pagination

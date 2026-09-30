@@ -20,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: 'Nyocha ahịrị',
   tableFilterPlaceholder: 'Nyocha ahịrị',
   tableLoading: 'A na-ebunye ahịrị',
+  tableLoadingMore: 'A na-ebunye ahịrị ndị ọzọ',
   tableEditCell: 'Dezie kọlụm {column}',
   showAllColumns: 'Gosi kọlụm niile',
   showFewerColumns: 'Gosi kọlụm ole na ole',

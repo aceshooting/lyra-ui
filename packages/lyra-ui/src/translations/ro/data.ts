@@ -20,6 +20,7 @@ const strings: LyraLocaleStrings = {
   tableFilterLabel: 'Filtrează rândurile',
   tableFilterPlaceholder: 'Filtrează rândurile',
   tableLoading: 'Se încarcă rândurile',
+  tableLoadingMore: 'Se încarcă mai multe rânduri',
   tableEditCell: 'Editează {column}',
   showAllColumns: 'Afișează toate coloanele',
   showFewerColumns: 'Afișează mai puține coloane',

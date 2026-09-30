@@ -530,6 +530,8 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   /** `options.returnFocusTo` from the `showAt()` call that opened the popover, if any -- see
    *  `showAt()`'s doc comment and `activatePopoverOverlay()`'s focus-return configuration. */
   private returnFocusTo?: HTMLElement;
+  /** Explicit light-dismiss containment for the current virtual anchor, without trigger ownership. */
+  private interactionBoundary?: Element;
   private cleanup?: () => void;
   private positioningGeneration = 0;
   private positioningReady: Promise<boolean> = Promise.resolve(false);
@@ -656,7 +658,11 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
 
   /** Lets a mapped subclass include a separate containing element in its dismiss boundary. */
   protected isInsideLightDismissBoundary(path: EventTarget[]): boolean {
-    return path.includes(this) || (this.triggerElement != null && path.includes(this.triggerElement));
+    const boundary = this.virtualAnchor ? this.interactionBoundary : undefined;
+    return path.includes(this)
+      || (this.triggerElement != null && path.includes(this.triggerElement))
+      || (boundary != null && boundary.isConnected
+        && boundary.ownerDocument === this.ownerDocument && path.includes(boundary));
   }
 
   /** Runs once when a newly opened/re-anchored popup has completed its first placement and is no
@@ -770,6 +776,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
           this.overlayHandle = undefined;
           this.virtualAnchor = undefined;
           this.returnFocusTo = undefined;
+          this.interactionBoundary = undefined;
           this.syncInteractionTrigger();
         }
       }
@@ -856,6 +863,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     // Transient interaction state, per the library's reset-on-disconnect rule: a pin taken before
     // a drag-and-drop reparent must not outlive the move and strand the surface open.
     this.cancelPendingTransition();
+    this.interactionBoundary = undefined;
     this.pinned = false;
     this.openedByInteraction = false;
     // A pending after-event must not announce a transition the detached element left behind.
@@ -987,6 +995,11 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
    * still works, it just means only explicit re-`showAt()` calls keep the popover anchored.
    *
    * While the virtual anchor is active, no slotted/`for` element owns click or generated ARIA.
+   * `options.interactionBoundary` optionally keeps pointer presses within a connected element
+   * (including its composed descendants) inside the light-dismiss boundary. It does not supply
+   * positioning, click handling, generated ARIA, or focus return; the caller owns activation.
+   * Only elements in this popover's document qualify. Each call replaces the boundary; omitting
+   * it clears the previous one. Closing or disconnecting also clears it.
    * A virtual anchor also has no `.focus()`. Escape, light dismiss, and programmatic close return
    * focus to `options.returnFocusTo` when supplied, or skip focus-return entirely otherwise --
    * refocusing the right place after a virtual anchor closes is the host's responsibility, since
@@ -996,12 +1009,13 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
    */
   showAt(
     rect: OverlayVirtualRect,
-    options?: { returnFocusTo?: HTMLElement },
+    options?: { returnFocusTo?: HTMLElement; interactionBoundary?: Element },
   ): void {
     const normalizedRect = normalizeVirtualRect(rect);
     if (!normalizedRect) return;
     const previousAnchor = this.virtualAnchor;
     const previousReturnFocusTo = this.returnFocusTo;
+    const previousInteractionBoundary = this.interactionBoundary;
     const bounds = new DOMRect(
       normalizedRect.x,
       normalizedRect.y,
@@ -1013,6 +1027,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
       contextElement: normalizedRect.contextElement,
     };
     this.returnFocusTo = options?.returnFocusTo;
+    this.interactionBoundary = options?.interactionBoundary;
     this.syncInteractionTrigger();
     if (this.open) {
       this.updatePopoverRestoreFocusTarget();
@@ -1023,6 +1038,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     if (this.open) return;
     this.virtualAnchor = previousAnchor;
     this.returnFocusTo = previousReturnFocusTo;
+    this.interactionBoundary = previousInteractionBoundary;
     this.syncInteractionTrigger();
   }
   /** Resolves what the popup is positioned against: an explicit virtual anchor first, then the
