@@ -37,6 +37,11 @@ export function gemstoneGlyph(color = 'currentColor'): TemplateResult {
  * gets the identical treatment by adding this export to their own component's `static styles` and
  * setting the attribute, with no need to fork the keyframes, the halo, or the reduced-motion rule.
  *
+ * Set `--lr-gemstone-selected-animation: none` on a common ancestor to turn off only the shine
+ * while retaining the static halo and selection. Removing that override restores the default
+ * shine. Application reduced motion (with `preferences.css`) and OS reduced motion take
+ * precedence over this hook, including an explicitly supplied animation.
+ *
  * Genuinely stops the loop under `prefers-reduced-motion: reduce` (a hand-written
  * `animation: none`) rather than merely shortening it: the shared ambient duration token this
  * treatment defaults to already collapses to an imperceptibly fast, but still infinite, loop
@@ -46,6 +51,8 @@ export function gemstoneGlyph(color = 'currentColor'): TemplateResult {
  * @cssprop [--lr-gemstone-selected-blur=var(--lr-size-0-5rem)] - Halo blur radius.
  * @cssprop [--lr-gemstone-selected-shine-duration=var(--lr-transition-ambient)] - Shine loop
  *   duration.
+ * @cssprop --lr-gemstone-selected-animation - Selected glyph animation shorthand; unset uses
+ *   the shared shine loop. Set `none` to stop the shine while keeping the halo.
  */
 export const gemstoneSelectedGlyphStyles: CSSResult = css`
   [data-lr-gemstone-selected] {
@@ -55,9 +62,9 @@ export const gemstoneSelectedGlyphStyles: CSSResult = css`
           var(--lr-gemstone-selected-color, var(--lr-color-brand))
       )
       brightness(1);
-    animation: var(--_lr-motion-animation, lr-gemstone-selected-shine
+    animation: var(--_lr-motion-animation, var(--lr-gemstone-selected-animation, lr-gemstone-selected-shine
       var(--lr-gemstone-selected-shine-duration, var(--lr-transition-ambient))
-      infinite);
+      infinite));
   }
   @keyframes lr-gemstone-selected-shine {
     0%,

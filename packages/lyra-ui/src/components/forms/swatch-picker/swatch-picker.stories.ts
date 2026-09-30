@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { LitElement, css, html, type TemplateResult } from 'lit';
+import { styleMap } from 'lit/directives/style-map.js';
 import {
   GEMSTONE_KEYS,
   GEMSTONES,
@@ -308,6 +309,13 @@ class AppGemstoneAccentPicker extends LitElement {
       .name {
         color: var(--text-color);
       }
+      .shine-option {
+        display: flex;
+        align-items: center;
+        gap: var(--lr-space-xs);
+        padding: var(--lr-space-xs);
+        color: var(--text-color);
+      }
       .palette lr-swatch-picker {
         padding: 0 0.3rem 0.3rem;
         --lr-swatch-picker-hit-size: 1.75rem;
@@ -329,6 +337,7 @@ class AppGemstoneAccentPicker extends LitElement {
   // Built once: a fresh array on every render would re-create every swatch and drop focus.
   private readonly items = gemstoneAccents();
   private selected: GemstoneKey = 'amethyst';
+  private shineOff = false;
 
   private readonly onAccentChange = (
     event: CustomEvent<{ value: string }>
@@ -347,7 +356,10 @@ class AppGemstoneAccentPicker extends LitElement {
         placement="bottom-end"
         popup-role="dialog"
         aria-label="Accent color"
-        style="--accent-color: ${GEMSTONES[this.selected].fill}"
+        style=${styleMap({
+          '--accent-color': GEMSTONES[this.selected].fill,
+          '--lr-gemstone-selected-animation': this.shineOff ? 'none' : undefined,
+        })}
       >
         <lr-icon-button slot="trigger" label=${`Accent color: ${name}`}>
           <span class="gem" data-lr-gemstone-selected aria-hidden="true"
@@ -363,6 +375,17 @@ class AppGemstoneAccentPicker extends LitElement {
             .value=${this.selected}
             @lr-change=${this.onAccentChange}
           ></lr-swatch-picker>
+          <label class="shine-option">
+            <input
+              type="checkbox"
+              .checked=${!this.shineOff}
+              @change=${(event: Event) => {
+                this.shineOff = !(event.currentTarget as HTMLInputElement).checked;
+                this.requestUpdate();
+              }}
+            />
+            Shine
+          </label>
         </div>
       </lr-popover>
     `;
@@ -382,7 +405,7 @@ export const GemstoneAccentPicker: Story = {
     docs: {
       description: {
         story:
-          'The documented `gemstoneAccentPicker` pattern, composed by an application element rather than shipped as a tag: an `lr-icon-button` trigger showing the current gem with `gemstoneSelectedGlyphStyles` (0.42rem halo at 92% of the accent), an `lr-popover` dialog with one "Gemstone: name" caption, and all nine canonical gems in one `lr-swatch-picker mode="gemstone"` row -- 28px targets with 4px gaps, 24px with 2px gaps below 30rem. The picker stays controlled through `value` and `lr-change`; applying and persisting the accent stays with the application.',
+          'The documented `gemstoneAccentPicker` pattern, composed by an application element rather than shipped as a tag: an `lr-icon-button` trigger showing the current gem with `gemstoneSelectedGlyphStyles` (0.42rem halo at 92% of the accent), an `lr-popover` dialog with one "Gemstone: name" caption, and all nine canonical gems in one `lr-swatch-picker mode="gemstone"` row -- 28px targets with 4px gaps, 24px with 2px gaps below 30rem. Shine is on by default; its independent checkbox sets `--lr-gemstone-selected-animation: none` on the common popover scope so the trigger and selected swatch retain their static halos. Application and OS reduced motion still take precedence. The picker stays controlled through `value` and `lr-change`; applying and persisting the accent and shine choice stays with the application.',
       },
     },
   },

@@ -61,6 +61,9 @@ export interface LyraSwatchPickerEventMap {
  * `data-lr-gemstone-selected` attribute documented on that export -- so a glyph rendered anywhere
  * else on the page (for example a header trigger showing the current selection) can reach the
  * identical halo/shine by consuming that export directly, and the two can never drift apart. An
+ * inherited `--lr-gemstone-selected-animation: none` stops the automatic glyph's shine while
+ * preserving its static halo and selection; removing the override restores the default loop.
+ * Application and OS reduced motion take precedence over an explicit animation. An
  * explicit `icon` override on a `mode="gemstone"` item is a consumer-authored shape, not that
  * shared glyph, so it keeps this picker's own generic selected-icon shine instead (see
  * `--lr-swatch-picker-gemstone-selected-blur`/`-shine-duration` below). The `items` array controls
@@ -121,6 +124,8 @@ export interface LyraSwatchPickerEventMap {
  * @cssprop [--lr-swatch-picker-gemstone-shine-duration=var(--lr-gemstone-selected-shine-duration, var(--lr-transition-ambient))] - Selected shine timing used by
  *   `mode="gemstone"` when `--lr-swatch-picker-shine-duration` is not overridden. Same scope and
  *   aliasing as `--lr-swatch-picker-gemstone-selected-blur` above.
+ * @cssprop --lr-gemstone-selected-animation - Animation shorthand for the checked automatic
+ *   gemstone glyph; unset uses the shared shine loop. Set `none` to retain a static halo.
  * @cssprop [--lr-swatch-picker-hit-size=var(--lr-size-2-5rem)] - Hit-area size (both
  *   min-inline-size and min-block-size) for the swatch button. Its private default follows the
  *   active tier and is floored at 24px; an inherited or direct public value wins.

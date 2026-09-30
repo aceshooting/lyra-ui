@@ -6,6 +6,8 @@ import { tag } from '../internal/prefix.js';
 import { tokens } from '../internal/tokens.styles.js';
 import { palette } from '../internal/tokens/palette.styles.js';
 import { gemstoneGlyph, gemstoneSelectedGlyphStyles } from './gemstones.js';
+import { applyLyraPreferences } from './preferences.js';
+import type { LyraSwatchPicker } from '../components/forms/swatch-picker/swatch-picker.class.js';
 import '../components/forms/swatch-picker/swatch-picker.js';
 
 function renderGlyph(tpl: ReturnType<typeof gemstoneGlyph>): SVGElement {
@@ -61,6 +63,109 @@ it('gemstoneGlyph(color) still bakes in an explicit color (back-compat)', () => 
 });
 
 describe('gemstoneSelectedGlyphStyles', () => {
+  describe('independent shine preference', () => {
+    let previousSheets: CSSStyleSheet[];
+    let preferenceSheet: CSSStyleSheet;
+
+    before(async () => {
+      const response = await fetch(new URL('../preferences.css', import.meta.url));
+      if (!response.ok) throw new Error('Missing preference stylesheet fixture');
+      preferenceSheet = new CSSStyleSheet();
+      preferenceSheet.replaceSync(await response.text());
+    });
+
+    beforeEach(async () => {
+      previousSheets = document.adoptedStyleSheets;
+      document.adoptedStyleSheets = [...previousSheets, preferenceSheet];
+      await setReducedMotion('no-preference');
+    });
+
+    afterEach(async () => {
+      document.adoptedStyleSheets = previousSheets;
+      await setReducedMotion('no-preference');
+    });
+
+    async function selectedGlyphs() {
+      const scope = await fixture<HTMLElement>(html`
+        <section style="--lr-gemstone-selected-color: rgb(10, 20, 30); --lr-gemstone-selected-blur: 3px;">
+          <lr-gemstone-glyph-probe selected></lr-gemstone-glyph-probe>
+          <lr-swatch-picker mode="gemstone" aria-label="Accent color"
+            .items=${[
+              { value: 'ruby', color: '#df2845', label: 'Ruby', gemstone: 'ruby' },
+              { value: 'emerald', color: '#34d399', label: 'Emerald', gemstone: 'emerald' },
+            ]}
+            value="emerald"
+          ></lr-swatch-picker>
+        </section>
+      `);
+      const probe = scope.querySelector<GemstoneGlyphProbe>('lr-gemstone-glyph-probe')!;
+      const picker = scope.querySelector<LyraSwatchPicker>('lr-swatch-picker')!;
+      await Promise.all([probe.updateComplete, picker.updateComplete]);
+      const glyphs = [
+        probe.shadowRoot!.querySelector<HTMLElement>('[data-lr-gemstone-selected]')!,
+        picker.shadowRoot!.querySelector<HTMLElement>('[data-lr-gemstone-selected]')!,
+      ];
+      return { scope, picker, glyphs };
+    }
+
+    for (const shine of ['unset', 'off', 'explicit-on'] as const) {
+      for (const osMotion of ['no-preference', 'reduce'] as const) {
+        for (const appMotion of ['system', 'reduce'] as const) {
+          it(`inherits shine ${shine} into picker and external glyph with OS ${osMotion} and app ${appMotion}`, async () => {
+            const { scope, picker, glyphs } = await selectedGlyphs();
+            if (shine !== 'unset') {
+              scope.style.setProperty('--lr-gemstone-selected-animation',
+                shine === 'off' ? 'none' : 'lr-gemstone-selected-shine 2s infinite');
+            }
+            applyLyraPreferences(scope, { motion: appMotion });
+            await setReducedMotion(osMotion);
+            const stopped = shine === 'off' || osMotion === 'reduce' || appMotion === 'reduce';
+            for (const glyph of glyphs) {
+              const paint = getComputedStyle(glyph);
+              expect(paint.animationName).to.equal(stopped ? 'none' : 'lr-gemstone-selected-shine');
+              expect(glyph.getAnimations().length).to.equal(stopped ? 0 : 1);
+              expect(paint.filter).to.contain('drop-shadow');
+              expect(paint.filter).to.contain('rgb(10, 20, 30)');
+              expect(paint.filter).to.contain('3px');
+              if (stopped) expect(paint.filter).to.contain('brightness(1)');
+              else {
+                expect(paint.animationIterationCount).to.equal('infinite');
+                expect(paint.animationDuration).to.equal(shine === 'explicit-on' ? '2s' : '1.8s');
+              }
+            }
+            expect(picker.value).to.equal('emerald');
+            expect(picker.shadowRoot!.querySelector('[data-value="emerald"]')!.getAttribute('aria-checked')).to.equal('true');
+            expect(picker.shadowRoot!.querySelector('[data-value="ruby"]')!.getAttribute('aria-checked')).to.equal('false');
+          });
+        }
+      }
+    }
+
+    it('restores the unchanged default shine when OFF is removed without changing selection or emitting changes', async () => {
+      const { scope, picker, glyphs } = await selectedGlyphs();
+      let changes = 0;
+      picker.addEventListener('lr-change', () => { changes++; });
+      for (const glyph of glyphs) {
+        const paint = getComputedStyle(glyph);
+        expect(paint.animationName).to.equal('lr-gemstone-selected-shine');
+        expect(paint.animationDuration).to.equal('1.8s');
+      }
+      scope.style.setProperty('--lr-gemstone-selected-animation', 'none');
+      for (const glyph of glyphs) {
+        expect(getComputedStyle(glyph).animationName).to.equal('none');
+        expect(glyph.getAnimations().length).to.equal(0);
+        expect(getComputedStyle(glyph).filter).to.contain('brightness(1)');
+      }
+      scope.style.removeProperty('--lr-gemstone-selected-animation');
+      for (const glyph of glyphs) {
+        expect(getComputedStyle(glyph).animationName).to.equal('lr-gemstone-selected-shine');
+        expect(getComputedStyle(glyph).animationDuration).to.equal('1.8s');
+      }
+      expect(picker.value).to.equal('emerald');
+      expect(changes).to.equal(0);
+    });
+  });
+
   it('unset-regression: a bare glyph with the attribute unset gets no filter or animation', async () => {
     const el = await fixture<GemstoneGlyphProbe>(
       html`<lr-gemstone-glyph-probe></lr-gemstone-glyph-probe>`
