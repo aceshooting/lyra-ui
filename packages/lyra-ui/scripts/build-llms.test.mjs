@@ -920,7 +920,7 @@ assert.match(tokens, /## Derived and fixed tokens \(77\)/);
 // The effective Shadcn defaults keep decorative edges separate from control borders.
 assert.equal(
   tokens.split('\n').find(line => line.startsWith('| `--lr-color-border-subtle` |')),
-  '| `--lr-color-border-subtle` | `--lr-theme-color-surface-border-subtle` | `#e5e5e5` | dark: `var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, rgb(255 255 255 / 0.1)))`<br>forcedColors: `ButtonText` |',
+  '| `--lr-color-border-subtle` | `--lr-theme-color-surface-border-subtle` | `color-mix(in srgb, #e5e5e5 var(--_lr-subtle-mix,100%), var(--lr-color-border))` | dark: `var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, color-mix(in srgb, rgb(255 255 255 / 0.1) var(--_lr-subtle-mix,100%), var(--lr-color-border))))`<br>forcedColors: `ButtonText` |',
 );
 assert.match(tokens, /Aliases and computed values still follow/);
 assert.match(tokens, /fixed contract constants are intentionally\nnot theme inputs/);
