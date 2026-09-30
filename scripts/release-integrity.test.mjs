@@ -153,6 +153,8 @@ function linkOrCopyExecutable(source, target) {
 function exerciseSelectedToolchain({ label, selectedNode }) {
   const root = mkdtempSync(path.join(tmpdir(), `lyra-ci-${label}-toolchain-`));
   try {
+    // The extensionless pnpm fixture must not inherit an enclosing repository's ESM mode.
+    writeFileSync(path.join(root, 'package.json'), '{"type":"commonjs"}\n');
     const overrideDirectory = path.join(root, `${label}-override-without-node`);
     const selectedRuntimeDirectory = path.join(root, `${label}-selected-runtime`);
     const selectedPnpmDirectory = path.join(root, `${label}-pnpm-without-node`);

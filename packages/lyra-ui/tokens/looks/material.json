@@ -159,7 +159,7 @@
     },
     "--lr-theme-color-surface-container-highest": {
       "light": "#ecdfd7",
-      "dark": "#3a2f29"
+      "dark": "#352a24"
     }
   }
 }

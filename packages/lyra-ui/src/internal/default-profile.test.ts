@@ -28,7 +28,7 @@ describe('intrinsic built-in profile without document theme stylesheets', () => 
     const popover = await fixture<LyraPopover>(html`<lr-popover open aria-label="Settings"><button slot="trigger">Settings</button>Content</lr-popover>`);
     await popover.updateComplete;
     const popup = popover.shadowRoot!.querySelector('[part~="popup"]')!;
-    expect(toRgba(getComputedStyle(popup).backgroundColor)[3]).to.be.within(203, 205);
+    expect(toRgba(getComputedStyle(popup).backgroundColor)[3]).to.be.within(178, 180);
     popover.setAttribute('data-lr-surface', 'solid');
     expect(toRgba(getComputedStyle(popup).backgroundColor)[3]).to.equal(255);
     const layer = popup.querySelector('.glass-scroll-layer') ?? popup;
@@ -48,7 +48,7 @@ describe('intrinsic built-in profile without document theme stylesheets', () => 
       expect(toRgba(getComputedStyle(popup).backgroundColor)[3]).to.equal(255);
       expect(getComputedStyle(layer, '::before').backdropFilter).to.equal('none');
       applyLyraStyleScope(popover, { surface: 'glass' });
-      expect(toRgba(getComputedStyle(popup).backgroundColor)[3]).to.be.within(203, 205);
+      expect(toRgba(getComputedStyle(popup).backgroundColor)[3]).to.be.within(178, 180);
       expect(getComputedStyle(layer, '::before').backdropFilter).to.include('blur(12px)');
       applyLyraStyleScope(popover, null);
       expect(toRgba(getComputedStyle(popup).backgroundColor)[3]).to.equal(255);

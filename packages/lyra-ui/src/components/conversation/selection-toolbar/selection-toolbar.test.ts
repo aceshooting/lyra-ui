@@ -459,8 +459,13 @@ it("contains long localized action labels inside a 375px toolbar allocation", as
   const toolbar = el.shadowRoot!.querySelector(
     '[part="toolbar"]'
   ) as HTMLElement;
+  const layer = toolbar.querySelector<HTMLElement>('.glass-scroll-layer')!;
   toolbar.style.maxInlineSize = "375px";
-  await aTimeout(0);
+  // Allocation changes reach the decorative layer through ResizeObserver.
+  await waitUntil(() => {
+    const paintedWidth = parseFloat(getComputedStyle(layer, '::before').inlineSize);
+    return paintedWidth <= toolbar.clientWidth && toolbar.clientWidth - paintedWidth < 1;
+  }, 'the decorative Glass layer did not resize to the toolbar allocation');
 
   expect(toolbar.scrollWidth).to.be.at.most(toolbar.clientWidth);
 });

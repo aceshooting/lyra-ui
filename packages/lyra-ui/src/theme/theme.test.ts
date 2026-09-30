@@ -1388,6 +1388,93 @@ describe('theme token maps', () => {
     expect(legacyFixtureSnapshot().tokens).to.equal(undefined);
   });
 
+  it('uses canonical Shadcn references without a document stylesheet', () => {
+    document.adoptedStyleSheets = originalSheets;
+    setLyraStyle({ look: 'shadcn', mode: 'dark', accent: 'emerald', overrides: { [T('color-text-quiet')]: '#8a8a8a' } });
+    expect(inline(T('color-text-quiet'))).to.equal('#8a8a8a');
+    expect(contrast(inline(T('color-text-quiet')), '#171717')).to.be.at.least(4.5);
+  });
+
+  it('restores an authored important reference after clearing runtime ownership', () => {
+    const root = document.documentElement;
+    const slot = '--_lr-ll-color-surface-default';
+    const before = root.style.getPropertyValue(slot);
+    const priority = root.style.getPropertyPriority(slot);
+    root.style.setProperty(slot, '#eeeeee', 'important');
+    try {
+      setLyraStyle({ look: 'shadcn', mode: 'light', accent: null, overrides: { [T('color-surface-default')]: '#666666' } });
+      setLyraStyle({ overrides: { [T('color-surface-default')]: '#444444', [T('color-text-quiet')]: '#cccccc' } });
+      expect(root.style.getPropertyPriority(slot)).to.equal('');
+      expect(root.style.getPropertyValue(slot)).to.equal('#444444');
+      setLyraStyle({ overrides: { [T('color-text-quiet')]: '#737373' } });
+      expect(root.style.getPropertyValue(slot)).to.equal('#eeeeee');
+      expect(root.style.getPropertyPriority(slot)).to.equal('important');
+    } finally {
+      if (before) root.style.setProperty(slot, before, priority);
+      else root.style.removeProperty(slot);
+    }
+  });
+
+  it('projects a changed page override before resolving a raised-surface alias', () => {
+    const root = document.documentElement;
+    const slot = '--_lr-ll-color-surface-raised';
+    const before = root.style.getPropertyValue(slot);
+    const priority = root.style.getPropertyPriority(slot);
+    root.style.setProperty(slot, 'var(--_lr-ll-color-surface-default)');
+    try {
+      setLyraStyle({ look: 'shadcn', mode: 'light', accent: null, overrides: { [T('color-surface-default')]: '#666666' } });
+      setLyraStyle({ overrides: { [T('color-surface-default')]: '#ffffff', [T('color-text-quiet')]: '#737373' } });
+      expect(inline(T('color-text-quiet'))).to.equal('#737373');
+      expect(contrast(inline(T('color-text-quiet')), '#ffffff')).to.be.at.least(4.5);
+      expect(getComputedStyle(root).getPropertyValue(T('color-surface-raised')).trim()).to.equal('#ffffff');
+    } finally {
+      if (before) root.style.setProperty(slot, before, priority);
+      else root.style.removeProperty(slot);
+    }
+  });
+
+  it('clears old page ownership before resolving a raised-surface alias', () => {
+    const root = document.documentElement;
+    const slot = '--_lr-ll-color-surface-raised';
+    const before = root.style.getPropertyValue(slot);
+    const priority = root.style.getPropertyPriority(slot);
+    root.style.setProperty(slot, 'var(--_lr-ll-color-surface-default)');
+    try {
+      setLyraStyle({ look: 'shadcn', mode: 'light', accent: null, overrides: { [T('color-surface-default')]: '#666666' } });
+      setLyraStyle({ overrides: { [T('color-text-quiet')]: '#737373' } });
+      expect(inline(T('color-text-quiet'))).to.equal('#737373');
+      expect(contrast(inline(T('color-text-quiet')), '#ffffff')).to.be.at.least(4.5);
+      expect(getComputedStyle(root).getPropertyValue(T('color-surface-raised')).trim()).to.equal('#ffffff');
+    } finally {
+      if (before) root.style.setProperty(slot, before, priority);
+      else root.style.removeProperty(slot);
+    }
+  });
+
+  it('recomputes scoped floors when the inherited look changes with the same page surface', () => {
+    const region = document.createElement('section');
+    document.body.append(region);
+    try {
+      setLyraStyle({ look: 'shadcn', mode: 'light', accent: null, overrides: null });
+      const choices = { mode: 'light' as const, overrides: { [T('color-text-quiet')]: '#737373' } };
+      applyLyraStyleScope(region, choices);
+      const read = () => getComputedStyle(region).getPropertyValue(T('color-text-quiet')).trim();
+      expect(region.hasAttribute('data-lr-look')).to.equal(false);
+      expect(read()).to.equal('#737373');
+      expect(contrast(read(), '#fafafa')).to.be.at.least(4.5);
+      setLyraStyle({ look: 'lyra' });
+      applyLyraStyleScope(region, choices);
+      expect(read()).to.not.equal('#737373');
+      expect(contrast(read(), '#f6f8fa')).to.be.at.least(4.5);
+      setLyraStyle({ look: 'shadcn' });
+      applyLyraStyleScope(region, choices);
+      expect(read()).to.equal('#737373');
+    } finally {
+      applyLyraStyleScope(region, null);
+      region.remove();
+    }
+  });
+
   it('floors body and quiet text against the page and the raised surface', () => {
     setStyleForTest({ mode: 'light', tokens: { [T('color-surface-default')]: '#f0f0f0', [T('color-text-quiet')]: '#cccccc' } });
     expect(contrast(inline(T('color-text-quiet')), '#f0f0f0')).to.be.at.least(4.5);
@@ -1401,7 +1488,8 @@ describe('theme token maps', () => {
     expect(contrast(inline(T('color-text-quiet')), '#ffffff')).to.be.at.least(4.5);
     expect(contrast(inline(T('color-text-quiet')), '#e0e0e0')).to.be.at.least(4.5);
 
-    // No raised surface in the map: the mode default is the second reference.
+    // An explicit Lyra look supplies its raised reference when the map omits it.
+    setLyraStyle({ look: 'lyra' });
     setStyleForTest({ mode: 'light', tokens: { [T('color-text-quiet')]: '#757575' } });
     expect(contrast(inline(T('color-text-quiet')), '#f6f8fa')).to.be.at.least(4.5);
     setStyleForTest({ mode: 'dark', tokens: { [T('color-text-quiet')]: '#8a8a8a' } });
@@ -1673,49 +1761,51 @@ describe('theme token maps', () => {
     });
   }
 
-  it('diff-writes: an identical re-apply mutates nothing, and a one-value change writes one property', async () => {
-    // A quoted value too: WebKit re-serializes it with double quotes, which must not read as a change.
-    const tokens = { [T('a')]: '1px', [T('b')]: '2px', [T('color-text-normal')]: '#111111', [T('font-family-body')]: '\'Geist\', sans-serif' };
-    setStyleForTest({ mode: 'light', accent: '#e63950', tokens });
-    const rootStyle = document.documentElement.style;
-    const originalSet = CSSStyleDeclaration.prototype.setProperty;
-    const originalRemove = CSSStyleDeclaration.prototype.removeProperty;
-    const calls = { set: 0, remove: 0 };
-    CSSStyleDeclaration.prototype.setProperty = function (this: CSSStyleDeclaration, ...args: Parameters<CSSStyleDeclaration['setProperty']>) {
-      if (this === rootStyle) calls.set += 1;
-      return originalSet.apply(this, args);
-    };
-    CSSStyleDeclaration.prototype.removeProperty = function (this: CSSStyleDeclaration, ...args: Parameters<CSSStyleDeclaration['removeProperty']>) {
-      if (this === rootStyle) calls.remove += 1;
-      return originalRemove.apply(this, args);
-    };
-    const records: MutationRecord[] = [];
-    const observer = new MutationObserver((batch) => records.push(...batch));
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
-    try {
-      setStyleForTest({ mode: 'light', accent: '#e63950', tokens });
-      await Promise.resolve();
-      records.push(...observer.takeRecords());
-      expect(calls).to.deep.equal({ set: 0, remove: 0 });
-      expect(records.length).to.equal(0);
+  for (const surface of [null, '#fafafa']) {
+    it(`diff-writes: identical re-apply and one-value change with accent background ${surface}`, async () => {
+      // A quoted value too: WebKit re-serializes it with double quotes, which must not read as a change.
+      const tokens = { [T('a')]: '1px', [T('b')]: '2px', [T('color-text-normal')]: '#111111', [T('font-family-body')]: '\'Geist\', sans-serif' };
+      setStyleForTest({ mode: 'light', accent: '#e63950', surface, tokens });
+      const rootStyle = document.documentElement.style;
+      const originalSet = CSSStyleDeclaration.prototype.setProperty;
+      const originalRemove = CSSStyleDeclaration.prototype.removeProperty;
+      const calls = { set: 0, remove: 0 };
+      CSSStyleDeclaration.prototype.setProperty = function (this: CSSStyleDeclaration, ...args: Parameters<CSSStyleDeclaration['setProperty']>) {
+        if (this === rootStyle) calls.set += 1;
+        return originalSet.apply(this, args);
+      };
+      CSSStyleDeclaration.prototype.removeProperty = function (this: CSSStyleDeclaration, ...args: Parameters<CSSStyleDeclaration['removeProperty']>) {
+        if (this === rootStyle) calls.remove += 1;
+        return originalRemove.apply(this, args);
+      };
+      const records: MutationRecord[] = [];
+      const observer = new MutationObserver((batch) => records.push(...batch));
+      observer.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+      try {
+        setStyleForTest({ mode: 'light', accent: '#e63950', surface, tokens });
+        await Promise.resolve();
+        records.push(...observer.takeRecords());
+        expect(calls).to.deep.equal({ set: 0, remove: 0 });
+        expect(records.length).to.equal(0);
 
-      setStyleForTest({ tokens: { ...tokens, [T('b')]: '3px' } });
-      expect(calls).to.deep.equal({ set: 1, remove: 0 });
+        setStyleForTest({ tokens: { ...tokens, [T('b')]: '3px' } });
+        expect(calls).to.deep.equal({ set: 1, remove: 0 });
 
-      calls.set = 0;
-      rootStyle.removeProperty(T('a'));
-      calls.remove = 0;
-      setStyleForTest({ tokens: null });
-      expect(calls).to.deep.equal({ set: 0, remove: 5 });
-      for (const name of [T('b'), T('color-text-normal'), T('font-family-body'), '--_lr-ll-color-text-normal', '--_lr-ld-color-text-normal']) {
-        expect(appliedThemeValue(name), name).to.equal('');
+        calls.set = 0;
+        rootStyle.removeProperty(T('a'));
+        calls.remove = 0;
+        setStyleForTest({ tokens: null });
+        expect(calls).to.deep.equal({ set: 0, remove: 5 });
+        for (const name of [T('b'), T('color-text-normal'), T('font-family-body'), '--_lr-ll-color-text-normal', '--_lr-ld-color-text-normal']) {
+          expect(appliedThemeValue(name), name).to.equal('');
+        }
+      } finally {
+        observer.disconnect();
+        CSSStyleDeclaration.prototype.setProperty = originalSet;
+        CSSStyleDeclaration.prototype.removeProperty = originalRemove;
       }
-    } finally {
-      observer.disconnect();
-      CSSStyleDeclaration.prototype.setProperty = originalSet;
-      CSSStyleDeclaration.prototype.removeProperty = originalRemove;
-    }
-  });
+    });
+  }
 });
 
 describe('lyraThemeBootstrap token maps', () => {
@@ -1765,6 +1855,19 @@ describe('lyraThemeBootstrap token maps', () => {
       const { expected, actual } = runtimeThenBootstrap(record);
       expect(actual).to.deep.equal(expected);
       expect(Object.keys(expected.inline).length).to.be.greaterThan(0);
+    });
+  }
+
+  for (const look of ['shadcn', 'lyra']) {
+    it(`uses the selected raised surface in runtime and bootstrap: ${look}`, () => {
+      setLyraStyle({ look, mode: 'dark', accent: null, overrides: { [T('color-text-quiet')]: '#8a8a8a' } });
+      const expected = inlineThemeProperties();
+      const color = inline(T('color-text-quiet'));
+      expect(color === '#8a8a8a').to.equal(look === 'shadcn');
+      expect(contrast(color, look === 'lyra' ? '#22272e' : '#171717')).to.be.at.least(4.5);
+      applyLyraStyleScope(document.documentElement, null);
+      new Function(lyraThemeBootstrap)();
+      expect(inlineThemeProperties()).to.deep.equal(expected);
     });
   }
 

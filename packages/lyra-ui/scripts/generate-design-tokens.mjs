@@ -220,7 +220,7 @@ export function verifyRuntimeTokenParity(source, packageDir = defaultPackageDir)
     for (const mode of MODES) {
       const authoredValue = expected.values?.[mode];
       const expectedValue = ['light', 'dark'].includes(mode) && authoredValue !== undefined
-        ? expected.scope === 'theme-input' ? profileInputs[name]?.[mode] ?? profileInputs[name]?.light ?? authoredValue : replaceStyleFallbacks(authoredValue, profileInputs, mode)
+        ? expected.scope === 'theme-input' ? profileInputs[name]?.[mode] ?? profileInputs[name]?.light ?? authoredValue : replaceStyleFallbacks(authoredValue, profileInputs, mode, source.tokens)
         : authoredValue;
       const actualValue = actual.values?.[mode];
       if (expectedValue !== actualValue) {
@@ -760,7 +760,7 @@ export function projectDefaultTokenSource(source, packageDir = defaultPackageDir
     for (const mode of ['light', 'dark']) {
       const value = token.values[mode];
       if (value === undefined) continue;
-      token.values[mode] = token.scope === 'theme-input' ? inputs[name]?.[mode] ?? inputs[name]?.light ?? value : replaceStyleFallbacks(value, inputs, mode);
+      token.values[mode] = token.scope === 'theme-input' ? inputs[name]?.[mode] ?? inputs[name]?.light ?? value : replaceStyleFallbacks(value, inputs, mode, source.tokens);
     }
   }
   return projected;

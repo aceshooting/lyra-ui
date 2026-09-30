@@ -38,7 +38,7 @@ describe('av-player owned clear controls', () => {
     const player = await fixture<LyraAvPlayer>(html`<lr-av-player></lr-av-player>`);
     expect(player.controlsSurface).to.equal('regular');
     const toolbar = player.shadowRoot!.querySelector('[part="toolbar"]')!;
-    expect(toRgba(getComputedStyle(toolbar).backgroundColor)[3]).to.equal(204);
+    expect(toRgba(getComputedStyle(toolbar).backgroundColor)[3]).to.be.within(178, 180);
     expect(getComputedStyle(toolbar).backgroundImage).to.equal('none');
     expect(getComputedStyle(toolbar, '::before').backdropFilter).to.include('blur(12px)');
     expect(player.shadowRoot!.querySelector('[part="media"]')!.hasAttribute('controls')).to.equal(true);

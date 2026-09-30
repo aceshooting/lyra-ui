@@ -62,10 +62,11 @@ test('authored look validation rejects shapes the runtime cannot accept', () => 
   }
 });
 
-test('glass qualifies text, control edges and focus across all built-in looks and named accents', () => {
+test('default glass qualifies text, control edges and focus across all built-in looks and named accents', () => {
   const model = readStyleModel(packageDir);
   const glass = JSON.parse(readFileSync(new URL('../tokens/surfaces/glass.json', import.meta.url), 'utf8'));
-  assert.ok(glass.minimumOpacity <= 0.92, 'regular glass remains visibly translucent');
+  assert.equal(glass.opacity, 0.7, 'default glass uses the authored 70% opacity');
+  assert.equal(glass.minimumOpacity, 0, 'explicit opacity can reach zero');
   const highlightAlpha = Number(glass.highlight.match(/\/ ([\d.]+)\)/)[1]);
   const rgb = value => {
     if (/^#[a-f0-9]{6}$/i.test(value)) return [1, 3, 5].map(index => parseInt(value.slice(index, index + 2), 16));
@@ -92,7 +93,7 @@ test('glass qualifies text, control edges and focus across all built-in looks an
     const normal = read('text-normal');
     const qualify = color => mix(color, normal, glass.foregroundWeight);
     for (const surface of ['surface-default', 'surface-raised', 'surface-overlay', 'surface-container-high', 'surface-container-highest']) {
-      const backgrounds = [0, 255].map(backdrop => mix([backdrop, backdrop, backdrop], read(surface), glass.minimumOpacity));
+      const backgrounds = [0, 255].map(backdrop => mix([backdrop, backdrop, backdrop], read(surface), glass.opacity));
       const roles = [['text-normal', normal, 4.5], ['text-quiet', qualify(read('text-quiet')), 4.5], ['action', qualify(read('brand-fill-loud')), 4.5], ['control', qualify(read('surface-border')), 3], ['focus', qualify(read('focus')), 3]];
       for (const [role, color, minimum] of roles) {
         const measured = backgrounds.map(background => role === 'control' || role === 'focus' ? mix(background, [255, 255, 255], highlightAlpha) : background);
@@ -107,7 +108,11 @@ test('glass qualifies text, control edges and focus across all built-in looks an
 
 test('glass compiler rejects an unqualified transparency or foreground bound', () => {
   const glass = JSON.parse(readFileSync(new URL('../tokens/surfaces/glass.json', import.meta.url), 'utf8'));
-  assert.throws(() => renderGlass({ ...glass, minimumOpacity: 0.5 }), /Invalid glass bounds/);
+  assert.doesNotThrow(() => renderGlass(glass));
+  for (const value of [-0.01, 1.01, NaN, Infinity, '0.7', null]) {
+    assert.throws(() => renderGlass({ ...glass, minimumOpacity: value }), /Invalid glass bounds/);
+    assert.throws(() => renderGlass({ ...glass, opacity: value }), /Invalid glass bounds/);
+  }
   assert.throws(() => renderGlass({ ...glass, foregroundWeight: 0 }), /Invalid glass bounds/);
   assert.throws(() => renderGlass({ ...glass, maximumBlur: '100px' }), /blur radius bound/);
   assert.throws(() => renderGlass({ ...glass, highlight: 'rgb(255 255 255 / 0.5)' }), /highlight bound/);
@@ -158,6 +163,22 @@ test('reference surfaces accept one value or sparse mode pairs', () => {
   assert.deepEqual(references.sparse, { light: model.base['--lr-theme-color-surface-default'].light, dark: '#111111' });
 });
 
+test('full look references preserve the canonical page, raised, text and scrim in both modes', () => {
+  const model = readStyleModel(packageDir);
+  const references = referenceSurfaces(model, true);
+  assert.deepEqual(references.lyra.light, ['#ffffff', '#f6f8fa', '#1a1a1a', 'rgb(0 0 0 / 0.92)']);
+  assert.deepEqual(references.shadcn.dark, ['#0a0a0a', '#171717', '#fafafa', 'rgb(0 0 0 / 0.95)']);
+  for (const look of model.looks) for (const mode of ['light', 'dark']) {
+    const names = ['color-surface-default', 'color-surface-raised', 'color-text-normal', 'color-overlay-strong'];
+    for (const [index, suffix] of names.entries()) {
+      const name = `--lr-theme-${suffix}`;
+      const own = look.tokens[name];
+      const expected = (typeof own === 'string' ? own : own?.[mode]) ?? model.base[name]?.[mode] ?? model.base[name]?.light;
+      assert.equal(references[look.id][mode][index], expected, `${look.id} ${mode} ${suffix}`);
+    }
+  }
+});
+
 test('clear media scrim plus fill qualifies white controls over black and white', () => {
   const { clearMedia } = JSON.parse(readFileSync(new URL('../tokens/surfaces/glass.json', import.meta.url), 'utf8'));
   const luminance = channel => channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
@@ -193,6 +214,20 @@ test('theme alone contains only the built-in profile and explicit Lyra restorati
   assert.match(css, /\[data-lr-accent='emerald'\]/);
   assert.match(css, /:root:not\(\[data-lr-surface\]\)/);
   for (const look of ['material', 'data', 'terminal', 'high-contrast']) assert.equal(css.includes(`[data-lr-look='${look}']`), false);
+});
+
+test('optional subtle projection keeps the canonical local alias and is idempotent', () => {
+  const model = readStyleModel(packageDir);
+  const inputs = defaultStyleInputs(model);
+  for (const mode of ['light', 'dark']) {
+    const canonical = model.canonical.tokens['--lr-color-border-subtle'].values[mode];
+    const projected = replaceStyleFallbacks(canonical, inputs, mode, model.canonical.tokens);
+    assert.ok(projected.includes('var(--lr-color-border)'), 'the alias resolves at the consuming host');
+    assert.ok(projected.includes('var(--_lr-subtle-mix,100%)'), 'sheetless startup retains its projected default');
+    assert.equal(replaceStyleFallbacks(projected, inputs, mode, model.canonical.tokens), projected);
+    assert.equal(replaceStyleFallbacks(projected, model.base, mode, model.canonical.tokens), canonical);
+  }
+  assert.match(renderTheme(model), /--_lr-subtle-mix: 0%;/);
 });
 
 test('startup look projects a delta over one canonical scope base without changing cascade priority', () => {

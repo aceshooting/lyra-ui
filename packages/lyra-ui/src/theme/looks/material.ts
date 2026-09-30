@@ -53,6 +53,6 @@ export const LYRA_MATERIAL_LOOK = defineLyraLook({
     '--lr-theme-color-surface-container-low': { light: '#fcf2ed', dark: '#211914' },
     '--lr-theme-color-surface-container': { light: '#f8eeea', dark: '#251d19' },
     '--lr-theme-color-surface-container-high': { light: '#f2e7e0', dark: '#302621' },
-    '--lr-theme-color-surface-container-highest': { light: '#ecdfd7', dark: '#3a2f29' },
+    '--lr-theme-color-surface-container-highest': { light: '#ecdfd7', dark: '#352a24' },
   },
 });

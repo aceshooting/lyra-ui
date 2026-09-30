@@ -41,13 +41,11 @@ test('caps the packed core raw sum at the reviewed v24 measurement plus selected
 
 test('keeps the packed button canary aligned with the authoritative granular hard budget', () => {
   const budgetPath = 'dist/components/forms/button/button.js';
-  // Final 22.0.0 production measurement is 30,595 gzip bytes. The integer-KiB canary
-  // tightens to 30 KiB (30,720 bytes), preserving a smaller allowance than the general ceiling.
-  assert.equal(
-    bundleBudgets[budgetPath],
-    30,
-    'the granular button entry must retain an explicit KiB ceiling',
-  );
+  const ceilingBytes = bundleBudgets[budgetPath] * 1024;
+  assert.ok(Number.isSafeInteger(ceilingBytes) && ceilingBytes > 0,
+    'the granular button entry must retain an exact positive byte ceiling');
+  assert.ok(ceilingBytes >= bundleBudgets.$reviewedGzipBytes[budgetPath],
+    'the reviewed button measurement remains within the authoritative ceiling');
   assert.match(
     checkerSource,
     /const buttonGranularBudgetKilobytes = granularBundleBudgets\[BUTTON_GRANULAR_ENTRY\];/u,
@@ -55,7 +53,7 @@ test('keeps the packed button canary aligned with the authoritative granular har
   );
   assert.match(
     checkerSource,
-    /button:\s*\{[\s\S]*?maxGzipBytes:\s*buttonGranularBudgetKilobytes\s*\*\s*1024,[\s\S]*?\n\s*\},/u,
+    /button:\s*\{[\s\S]*?maxGzipBytes:\s*buttonGranularBudgetBytes,[\s\S]*?\n\s*\},/u,
     'the packed button entry must derive its byte ceiling from the authoritative granular budget',
   );
   assert.doesNotMatch(
@@ -63,11 +61,21 @@ test('keeps the packed button canary aligned with the authoritative granular har
     /button:\s*\{[\s\S]*?maxGzipBytes:\s*\d+\s*\*\s*1024,[\s\S]*?\n\s*\},/u,
     'the packed canary must not reintroduce a second literal KiB ceiling',
   );
-  assert.match(
-    checkerSource,
-    /if \(!Number\.isSafeInteger\(buttonGranularBudgetKilobytes\) \|\| buttonGranularBudgetKilobytes <= 0\) \{/u,
-    'the packed canary must fail closed when its authoritative ceiling is missing or invalid',
-  );
+  const guard = checkerSource.match(/const buttonGranularBudgetKilobytes = [\s\S]*?(?=const optionalPeers)/u)?.[0];
+  assert.ok(guard, 'the authority validation must remain inspectable');
+  const validate = new Function('granularBundleBudgets', 'BUTTON_GRANULAR_ENTRY', `${guard}\nreturn buttonGranularBudgetBytes;`);
+  assert.equal(validate(bundleBudgets, budgetPath), ceilingBytes);
+  for (const invalid of [undefined, null, '30', NaN, Infinity, 0, -1, 30 + 0.5 / 1024]) {
+    assert.throws(() => validate({ [budgetPath]: invalid }, budgetPath), TypeError,
+      `invalid authority ${String(invalid)} must fail closed`);
+  }
+  const overageGate = checkerSource.match(/if \(config\.maxGzipBytes != null && output\.gzipBytes > config\.maxGzipBytes\) \{[\s\S]*?\n  \}/u)?.[0];
+  assert.ok(overageGate, 'the actual packed-byte gate must remain inspectable');
+  const inspectOverage = new Function('output', 'config', 'formatBytes', `const violations = []; ${overageGate}\nreturn violations;`);
+  assert.deepEqual(inspectOverage({ gzipBytes: ceilingBytes }, { maxGzipBytes: ceilingBytes }, String), []);
+  const overage = inspectOverage({ gzipBytes: ceilingBytes + 1 }, { maxGzipBytes: ceilingBytes }, String);
+  assert.equal(overage.length, 1, 'one byte over the authoritative ceiling must fail');
+  assert.match(overage[0], /exceeds budget/u);
 });
 
 test('gates packed form-label retention without modal overlay infrastructure', () => {
@@ -165,7 +173,7 @@ function shadcnThemeRetentionMarkers() {
   return markers;
 }
 
-test('gates the shadcn look canary on markers unique to each imported stylesheet', async () => {
+test('gates the shadcn look canary on exact installed stylesheet provenance and retained content', async () => {
   assert.match(
     checkerSource,
     /shadcnTheme: `import '@aceshooting\/lyra-ui\/looks\/shadcn\.css';\\nimport '@aceshooting\/lyra-ui\/theme\.css';/u,
@@ -175,8 +183,8 @@ test('gates the shadcn look canary on markers unique to each imported stylesheet
   assert.ok(branch, 'the shadcnTheme bundle assertion must remain inspectable');
   assert.match(branch, /SHADCN_THEME_RETENTION_MARKERS\.preset/u);
   assert.match(branch, /SHADCN_THEME_RETENTION_MARKERS\.baseTheme/u);
-  // Present in BOTH files, so any one of them passes with the preset tree-shaken away.
-  assert.doesNotMatch(branch, /--lr-theme-color-brand-fill-loud|'lr-theme-preset'/u);
+  assert.match(branch, /bundledModuleIds/u, 'the shared default look requires emitted module provenance');
+  assert.match(branch, /realpath/u, 'stylesheet identity must resolve the installed package path');
 
   const markers = shadcnThemeRetentionMarkers();
   const packageDir = fileURLToPath(new URL('../packages/lyra-ui/', import.meta.url));
@@ -198,7 +206,7 @@ test('gates the shadcn look canary on markers unique to each imported stylesheet
     await rm(scratch, { recursive: true, force: true });
   }
 
-  const inspect = new Function('output', 'readFile', 'SHADCN_THEME_RETENTION_MARKERS', `
+  const inspect = new Function('output', 'readFile', 'SHADCN_THEME_RETENTION_MARKERS', 'bundledModuleIds', 'fixtureDir', 'join', 'realpath', `
     return (async () => {
       const violations = [];
       ${branch}
@@ -206,10 +214,15 @@ test('gates the shadcn look canary on markers unique to each imported stylesheet
     })();
   `);
   for (const [form, texts] of [['source', sources], ['minified', minified]]) {
-    const inspectFiles = (files) => inspect(
+    const installed = '/consumer/node_modules/@aceshooting/lyra-ui/dist';
+    const inspectFiles = (files, moduleIds = files.map(file => `${installed}/${file === 'preset.css' ? 'looks/shadcn.css' : 'theme.css'}`)) => inspect(
       { files },
       async (file) => texts[file === 'preset.css' ? 'preset' : 'baseTheme'],
       markers,
+      moduleIds,
+      '/consumer',
+      join,
+      async path => path,
     );
     assert.deepEqual(await inspectFiles(['preset.css', 'base.css']), [], `${form}: both stylesheets retained`);
     const withoutPreset = await inspectFiles(['base.css']);
@@ -219,10 +232,20 @@ test('gates the shadcn look canary on markers unique to each imported stylesheet
     assert.equal(withoutBase.length, 1, `${form}: missing base fails independently`);
     assert.match(withoutBase[0], /no retained base theme/u);
     assert.equal((await inspectFiles([])).length, 2, `${form}: neither stylesheet retained`);
-    for (const [owner, other] of [['preset', 'baseTheme'], ['baseTheme', 'preset']]) {
+    assert.equal((await inspectFiles(['preset.css', 'base.css'], [`${installed}/theme.css`])).length, 1,
+      `${form}: combined default content cannot substitute for the explicit look module`);
+    assert.equal((await inspectFiles(['preset.css', 'base.css'], [`${installed}/looks/shadcn.css`])).length, 1,
+      `${form}: both content streams cannot substitute for the explicit base module`);
+    assert.equal((await inspectFiles(['preset.css', 'base.css'], [
+      `/foreign${installed}/looks/shadcn.css`, `${installed}/theme.css`,
+    ])).length, 1, `${form}: a matching foreign path suffix cannot substitute for the installed look`);
+    assert.equal((await inspect(
+      { files: ['combined.css'] }, async () => '', markers,
+      [`${installed}/looks/shadcn.css`, `${installed}/theme.css`], '/consumer', join, async path => path,
+    )).length, 2, `${form}: module provenance cannot substitute for emitted stylesheet content`);
+    for (const owner of ['preset', 'baseTheme']) {
       for (const marker of markers[owner]) {
         assert.match(texts[owner], marker, `${form} ${owner}: ${marker} must occur in the file it vouches for`);
-        assert.doesNotMatch(texts[other], marker, `${form} ${other}: ${marker} must not occur in the other file`);
       }
     }
   }

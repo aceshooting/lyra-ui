@@ -75,7 +75,7 @@ normally from an ancestor.
 | `--lr-border-width-thin` | `--lr-theme-border-width-thin` | `1px` | — |
 | `--lr-color-border` | `--lr-theme-color-surface-border` | `#919191` | dark: `var(--_lr-glass-qualified-border, var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #646464)))`<br>forcedColors: `ButtonText` |
 | `--lr-color-border-strong` | `--lr-theme-color-border-strong` | `#919191` | dark: `var(--_lr-glass-qualified-border-strong, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #646464)))` |
-| `--lr-color-border-subtle` | `--lr-theme-color-surface-border-subtle` | `#e5e5e5` | dark: `var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, rgb(255 255 255 / 0.1)))`<br>forcedColors: `ButtonText` |
+| `--lr-color-border-subtle` | `--lr-theme-color-surface-border-subtle` | `color-mix(in srgb, #e5e5e5 var(--_lr-subtle-mix,100%), var(--lr-color-border))` | dark: `var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, color-mix(in srgb, rgb(255 255 255 / 0.1) var(--_lr-subtle-mix,100%), var(--lr-color-border))))`<br>forcedColors: `ButtonText` |
 | `--lr-color-brand-border-loud` | `--lr-theme-color-brand-border-loud` | `rgb(21 85 62)` | dark: `var(--lr-theme-color-brand-border-loud, rgb(93 220 173))` |
 | `--lr-color-brand-border-normal` | `--lr-theme-color-brand-border-normal` | `rgb(65 134 109)` | dark: `var(--lr-theme-color-brand-border-normal, rgb(46 170 125))` |
 | `--lr-color-brand-border-quiet` | `--lr-theme-color-brand-border-quiet` | `rgb(178 238 216)` | dark: `var(--lr-theme-color-brand-border-quiet, rgb(38 111 84))` |

@@ -24,7 +24,8 @@ import { fileURLToPath } from 'node:url';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const outputPath = join(packageDir, 'src', 'internal', 'tokens', 'palette.styles.ts');
-const defaultInputs = defaultStyleInputs(readStyleModel(packageDir));
+const styleModel = readStyleModel(packageDir);
+const defaultInputs = defaultStyleInputs(styleModel);
 
 // --- colour maths -------------------------------------------------------------------------------
 // sRGB <-> OKLab per Björn Ottosson's published derivation. Kept inline and dependency-free: this
@@ -315,7 +316,7 @@ assertCanonicalPalette(readCanonicalPalette(packageDir), Object.fromEntries(
 mkdirSync(dirname(outputPath), { recursive: true });
 const darkMarker = output.indexOf(":host([data-lr-theme='dark'])");
 if (darkMarker < 0) throw new Error('Palette fallback mode marker changed');
-const projected = replaceStyleFallbacks(output.slice(0, darkMarker), defaultInputs, 'light') + replaceStyleFallbacks(output.slice(darkMarker), defaultInputs, 'dark');
+const projected = replaceStyleFallbacks(output.slice(0, darkMarker), defaultInputs, 'light', styleModel.canonical.tokens) + replaceStyleFallbacks(output.slice(darkMarker), defaultInputs, 'dark', styleModel.canonical.tokens);
 writeFileSync(outputPath, projected, 'utf8');
 
 const slots = Object.keys(VARIANTS).length * 9;

@@ -1,6 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 
 import { setForcedColors, setReducedMotion } from '../../test/wtr-media.js';
+import { toRgba } from '../../test/color-contrast.js';
 
 import '../components/layout/card/card.js';
 
@@ -183,9 +184,9 @@ it('keeps the default decorative border role independent and accepts its own inp
   const root = document.documentElement;
   const dark = scope.querySelector('#dark')!;
   const themed = scope.querySelector('#themed')!;
-  expect(read(root, '--lr-color-border-subtle')).to.equal('#e5e5e5');
+  expect(toRgba(read(root, '--lr-color-border-subtle'))).to.deep.equal([229, 229, 229, 255]);
   expect(read(root, '--lr-color-border')).to.equal('#919191');
-  expect(read(dark, '--lr-color-border-subtle')).to.equal('rgb(255 255 255 / 0.1)');
+  expect(toRgba(read(dark, '--lr-color-border-subtle'))).to.deep.equal(toRgba('rgb(255 255 255 / 0.1)'));
   expect(read(dark, '--lr-color-border')).to.equal('#646464');
   expect(read(dark, '--lr-color-border'), 'the dark scope must really be a different mode').to.not.equal(
     read(root, '--lr-color-border'),

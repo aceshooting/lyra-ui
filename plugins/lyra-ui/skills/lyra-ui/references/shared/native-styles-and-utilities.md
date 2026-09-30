@@ -292,8 +292,10 @@ an already treated Lyra popup.
 local high container surface, then the overlay surface, and resolves on the painted wrapper, so nearer
 theme inputs work.
 The existing `--lr-theme-surface-opacity`, `--lr-theme-surface-blur`,
-`--lr-theme-surface-saturation` and `--lr-theme-surface-highlight` controls apply. Glass uses 80%
-opacity with an 80% floor, 12px blur with a 16px ceiling, and qualified text, edges and focus.
+`--lr-theme-surface-saturation` and `--lr-theme-surface-highlight` controls apply. Glass uses 70%
+opacity by default, 12px blur with a 16px ceiling, and qualified text, edges and focus.
+The public opacity input accepts 0–1; lower custom opacity may expose backdrops that need
+stronger foreground contrast. Solid and accessibility preferences still force opaque fills.
 Explicit `data-lr-surface="solid"`, unsupported backdrop filtering, reduced transparency, increased
 contrast and forced colors retain opaque fills. Load `preferences.css` for explicit inherited
 contrast/motion choices. Nested chrome suppresses repeated blur; independently presented top-layer

@@ -65,12 +65,12 @@ export function glassSurface(selector: string, fill: CSSResult, restingFill: CSS
         --_lr-glass-qualified-focus-ring-color: color-mix(
           in srgb,
           var(--_lr-glass-original-focus-ring-color, var(--lr-color-text)),
-          var(--lr-color-text) calc(var(--_lr-surface-foreground-weight, 80%) * var(--_lr-surface-enabled, 1) * (1 - var(--_lr-glass-parent-opacity, 0)) * (1 - var(--_lr-preference-glass-opacity, 0)))
+          var(--lr-color-text) calc(var(--_lr-surface-foreground-weight, 99%) * var(--_lr-surface-enabled, 1) * (1 - var(--_lr-glass-parent-opacity, 0)) * (1 - var(--_lr-preference-glass-opacity, 0)))
         );
       }
       ${surface} {
         isolation: var(--_lr-surface-isolation, isolate);
-        --_lr-glass-foreground-weight: calc(var(--_lr-surface-foreground-weight, 80%) * var(--_lr-surface-enabled, 1) * (1 - var(--_lr-glass-parent-opacity, 0)) * (1 - var(--_lr-preference-glass-opacity, 0)));
+        --_lr-glass-foreground-weight: calc(var(--_lr-surface-foreground-weight, 99%) * var(--_lr-surface-enabled, 1) * (1 - var(--_lr-glass-parent-opacity, 0)) * (1 - var(--_lr-preference-glass-opacity, 0)));
         --_lr-glass-qualified-text-quiet: color-mix(in srgb, var(--_lr-glass-original-text-quiet, var(--lr-color-text)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
         --lr-color-text-quiet: var(--_lr-glass-qualified-text-quiet, var(--_lr-glass-original-text-quiet));
         --_lr-glass-qualified-border: color-mix(in srgb, var(--_lr-glass-original-border, var(--lr-color-text)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
@@ -82,7 +82,7 @@ export function glassSurface(selector: string, fill: CSSResult, restingFill: CSS
           ${restingFill} calc((1 - var(--_lr-surface-enabled, 1) * (1 - var(--_lr-preference-glass-opacity, 0))) * 100%),
           color-mix(
             in srgb,
-            ${fill} calc(var(--_lr-preference-glass-opacity, max(var(--_lr-glass-parent-opacity, 0), clamp(var(--_lr-surface-min-opacity, 0.8), var(--lr-theme-surface-opacity, 0.8), 1))) * 100%),
+            ${fill} calc(var(--_lr-preference-glass-opacity, max(var(--_lr-glass-parent-opacity, 0), clamp(var(--_lr-surface-min-opacity, 0), var(--lr-theme-surface-opacity, 0.7), 1))) * 100%),
             transparent
           )
         );

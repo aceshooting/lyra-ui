@@ -72,19 +72,10 @@ const TOKEN_OWNERSHIP_MAX = TOKEN_ENTRY_MAX + TOKEN_SYNTHESIZED_MAX;
 /** `Symbol.for` key of the list of token names last written on `<html>`, shared with the bootstrap. */
 const TOKEN_OWNERSHIP_SYMBOL = '@aceshooting/lyra-ui.theme-tokens.v1';
 
-/**
- * theme.css's own mode values the contrast floor measures against when a token map does not carry
- * the reference itself: the page surface, the raised surface, the body text, and the strong scrim's
- * black alpha.
- */
-const MODE_DEFAULTS: Readonly<Record<ResolvedThemeMode, {
-  readonly surface: Rgb;
-  readonly raised: Rgb;
-  readonly text: Rgb;
-  readonly overlayStrongAlpha: number;
-}>> = {
-  light: { surface: [255, 255, 255], raised: [246, 248, 250], text: [26, 26, 26], overlayStrongAlpha: 0.92 },
-  dark: { surface: [26, 26, 26], raised: [34, 39, 46], text: [242, 242, 242], overlayStrongAlpha: 0.95 },
+/** Page fallback for unresolved colors; other references come from the selected look's tuple. */
+const MODE_SURFACES: Readonly<Record<ResolvedThemeMode, Rgb>> = {
+  light: [255, 255, 255],
+  dark: [10, 10, 10],
 };
 
 const COLOR_SCHEME_QUERY = '(prefers-color-scheme: dark)';
@@ -425,7 +416,7 @@ function createRoleRamp(
   owner: Document = document,
 ): Record<string, string> | null {
   const references = STYLE_CONTRAST_SURFACES[mode].flatMap(color => {
-    const value = parseResolvedRgb(color, MODE_DEFAULTS[mode].surface, owner);
+    const value = parseResolvedRgb(color, MODE_SURFACES[mode], owner);
     return value ? [value] : [];
   });
   const resolved = parseResolvedRgb(base, background, owner);
@@ -536,17 +527,15 @@ function resolveTokenColor(value: string | undefined, background: Rgb | null, ow
  */
 function floorTokenEntries(
   entries: ReadonlyMap<string, string>,
-  mode: ResolvedThemeMode,
   surface: Rgb,
-  owner: Document = document,
+  owner: Document,
+  references: readonly string[],
 ): Map<string, string> {
+  if (!entries.size) return new Map();
   const resolveColor = (value: string | undefined, background: Rgb | null): Rgb | null => resolveTokenColor(value, background, owner);
   const painted = new Map(entries);
   const prefix = '--lr-theme-';
-  const defaults = MODE_DEFAULTS[mode];
-  const reference = (name: string, fallback: Rgb): Rgb | null =>
-    entries.has(prefix + name) ? resolveColor(entries.get(prefix + name), surface) : fallback;
-  const raised = reference('color-surface-raised', defaults.raised);
+  const raised = resolveColor(entries.get(`${prefix}color-surface-raised`) ?? references[1], surface);
   const floor = (name: string, over: Rgb | null, against: Rgb | null, minimum: number, alsoAgainst?: Rgb | null): void => {
     const value = painted.get(name);
     if (value === undefined || !against || alsoAgainst === null) return;
@@ -561,15 +550,14 @@ function floorTokenEntries(
   floor(`${prefix}color-text-quiet`, surface, surface, 4.5, raised);
   const text = entries.has(`${prefix}color-text-normal`)
     ? resolveColor(painted.get(`${prefix}color-text-normal`), surface)
-    : defaults.text;
+    : resolveColor(references[2], surface);
 
   // Row 2: each on-* against its own fill, synthesized when the map carries only the fill.
-  const synthesized = new Map<string, string>();
   const pairForeground = (onName: string, fill: Rgb | null): void => {
     if (!fill) return;
     const on = painted.get(onName);
     if (on === undefined) {
-      synthesized.set(onName, serializeRgb(contrastForeground(fill)));
+      painted.set(onName, serializeRgb(contrastForeground(fill)));
       return;
     }
     const color = resolveColor(on, fill);
@@ -587,27 +575,19 @@ function floorTokenEntries(
   const overlayName = `${prefix}color-overlay-strong`;
   const overlay = entries.has(overlayName)
     ? resolveColor(entries.get(overlayName), surface)
-    : mixRgb(surface, [0, 0, 0], defaults.overlayStrongAlpha);
+    : resolveColor(references[3], surface);
   // With no scrim in the map, pairForeground only checks an on-strong-overlay that is present.
   if (entries.has(overlayName) || entries.has(`${prefix}color-on-strong-overlay`)) {
     pairForeground(`${prefix}color-on-strong-overlay`, overlay);
   }
 
   // Rows 4-7: boundaries, chart series and terminal colours.
-  const boundaries = [
-    ...SEMANTIC_ROLES.flatMap((role) => [`${prefix}color-${role}-border-normal`, `${prefix}color-${role}-border-loud`]),
-    `${prefix}color-surface-border`,
-    `${prefix}color-border-strong`,
-    `${prefix}color-focus`,
-  ];
-  for (const name of boundaries) floor(name, surface, surface, 3);
   for (const name of entries.keys()) {
-    if (/^--lr-theme-color-chart-\d+$/.test(name)) floor(name, surface, surface, 3);
+    if (/^--lr-theme-color-(?:(?:brand|success|warning|danger|neutral)-border-(?:normal|loud)|surface-border|border-strong|focus|chart-\d+)$/.test(name)) floor(name, surface, surface, 3);
     else if (/^--lr-theme-terminal-color-[a-z0-9-]+$/.test(name)) floor(name, raised, raised, 4.5);
     else if (/^--lr-theme-terminal-bg-[a-z0-9-]+$/.test(name)) floor(name, raised, text, 4.5);
   }
 
-  for (const [name, value] of synthesized) painted.set(name, value);
   return painted;
 }
 
@@ -648,9 +628,9 @@ function applyStoredThemeBeforePaint() {
   const tokenCssWidePattern = /^(?:inherit|initial|revert(?:-layer)?|unset)$/i;
   const tokenFunctionPattern = /([a-z0-9_-]+)\s*\(/gi;
   const tokenAllowedFunctions = 'rgb rgba hsl hsla hwb lab lch oklab oklch color color-mix light-dark calc min max clamp var cubic-bezier steps linear'.split(' ');
-  const modeDefaults = {
-    light: { surface: [255, 255, 255], raised: [246, 248, 250], text: [26, 26, 26], overlayStrongAlpha: 0.92 },
-    dark: { surface: [26, 26, 26], raised: [34, 39, 46], text: [242, 242, 242], overlayStrongAlpha: 0.95 },
+  const modeSurfaces = {
+    light: [255, 255, 255],
+    dark: [10, 10, 10],
   };
 
   const isBalanced = (value: string): boolean => {
@@ -727,6 +707,7 @@ function applyStoredThemeBeforePaint() {
     referenceSurface: unknown,
     accent: LyraThemeAccent,
     references: readonly number[][],
+    colors: readonly string[],
   ): Map<string, string> => {
     const entries = new Map<string, string>();
     for (const [name, value] of Object.entries(tokens)) {
@@ -803,8 +784,7 @@ function applyStoredThemeBeforePaint() {
     };
     const rgb = (value: number[]) => `rgb(${value.join(' ')})`;
 
-    const defaults = modeDefaults[resolvedMode];
-    const defaultSurface = defaults.surface;
+    const defaultSurface = modeSurfaces[resolvedMode];
     const surface = normalizeColor(referenceSurface) ?? normalizeColor(entries.get('--lr-theme-color-surface-default'));
     const background = (surface && paintRgb(surface, defaultSurface)) || defaultSurface;
 
@@ -815,7 +795,7 @@ function applyStoredThemeBeforePaint() {
     const resolveToken = (value: string | undefined, over: number[] | null): number[] | null =>
       value !== undefined && over && normalizeColor(value) ? paintRgb(value, over) : null;
     const raisedName = `${prefix}color-surface-raised`;
-    const raised = entries.has(raisedName) ? resolveToken(entries.get(raisedName), background) : defaults.raised;
+    const raised = resolveToken(entries.get(raisedName) ?? colors[1], background);
     const floor = (
       name: string,
       over: number[] | null,
@@ -834,7 +814,7 @@ function applyStoredThemeBeforePaint() {
     floor(`${prefix}color-text-quiet`, background, background, 4.5, raised);
     const text = entries.has(`${prefix}color-text-normal`)
       ? resolveToken(painted.get(`${prefix}color-text-normal`), background)
-      : defaults.text;
+      : resolveToken(colors[2], background);
     const pairForeground = (onName: string, fill: number[] | null): void => {
       if (!fill) return;
       const onValue = painted.get(onName);
@@ -852,7 +832,7 @@ function applyStoredThemeBeforePaint() {
     if (entries.has(overlayName) || entries.has(`${prefix}color-on-strong-overlay`)) {
       pairForeground(`${prefix}color-on-strong-overlay`, entries.has(overlayName)
         ? resolveToken(entries.get(overlayName), background)
-        : mix(background, black, defaults.overlayStrongAlpha));
+        : resolveToken(colors[3], background));
     }
     // Repair only supplied boundary tokens; absent tokens remain the stylesheet's responsibility.
     for (const name of entries.keys()) {
@@ -924,9 +904,9 @@ function applyStoredStyleBeforePaint(
   readOwnership: typeof readStyleOwnership,
   resolveStartup: typeof resolveStyleStartup,
   material: typeof styleMaterial,
-  model: { defaults: typeof STYLE_DEFAULTS; inputs: string; surfaces: typeof STYLE_REFERENCE_SURFACES; contrastSurfaces: typeof STYLE_CONTRAST_SURFACES; gemstones: typeof STYLE_GEMSTONES },
+  model: { defaults: typeof STYLE_DEFAULTS; inputs: string; surfaces: typeof STYLE_REFERENCE_SURFACES; contrast: typeof STYLE_CONTRAST_SURFACES; accent: typeof STYLE_GEMSTONES },
 ): void {
-  const { surfaces: STYLE_REFERENCE_SURFACES, contrastSurfaces: STYLE_CONTRAST_SURFACES, gemstones: STYLE_GEMSTONES } = model;
+  const { surfaces: STYLE_REFERENCE_SURFACES, contrast: STYLE_CONTRAST_SURFACES, accent: STYLE_GEMSTONES } = model;
   // Store each property suffix once. The leading digit carries density/follow/accent membership.
   const membership = new Map<string, number>();
   for (const input of model.inputs.split(' ')) membership.set(`--lr-theme-${input.slice(1)}`, Number(input[0]));
@@ -992,12 +972,13 @@ function applyStoredStyleBeforePaint(
     for (const branch of ['light', 'dark'] as const) {
       const background = modeValue(record['surface'], branch);
       const surfaceToken = modeValue(tokens['--lr-theme-color-surface-default'], branch);
-      const surface = background ?? surfaceToken ?? STYLE_REFERENCE_SURFACES[look]?.[branch];
+      const colors = (STYLE_REFERENCE_SURFACES[look] ?? STYLE_REFERENCE_SURFACES['lyra'])![branch];
+      const surface = background ?? surfaceToken ?? colors[0];
       // Separate paints preserve accent precedence in nested mode islands without flattening it into the look.
       for (const accentPass of [false, true]) {
         if (accentPass && (!accent || accentName)) continue;
         const painted = paint(accentPass ? {} : tokens, branch, surface, accentPass ? accent : null,
-          accentPass ? STYLE_CONTRAST_SURFACES[branch].map(color => [1, 3, 5].map(index => parseInt(color.slice(index, index + 2), 16))) : []);
+          accentPass ? STYLE_CONTRAST_SURFACES[branch].map(color => [1, 3, 5].map(index => parseInt(color.slice(index, index + 2), 16))) : [], colors);
         for (const [name, value] of painted) {
           if (name === '--lr-theme-accent') { if (branch === resolved) desired.set(name, value); continue; }
           const flags = membership.get(name);
@@ -1108,7 +1089,7 @@ export function createLyraThemeBootstrap(
       | (Number(ALL_RAMP_PROPERTIES.includes(name)) << 2);
     return `${flags}${name.slice(11)}`;
   }).join(' ');
-  const model = JSON.stringify({ defaults: STYLE_DEFAULTS, inputs, surfaces: STYLE_REFERENCE_SURFACES, contrastSurfaces: STYLE_CONTRAST_SURFACES, gemstones: STYLE_GEMSTONES });
+  const model = JSON.stringify({ defaults: STYLE_DEFAULTS, inputs, surfaces: STYLE_REFERENCE_SURFACES, contrast: STYLE_CONTRAST_SURFACES, accent: STYLE_GEMSTONES });
   // These self-contained helpers do not recurse. Their module bindings stay named and hoisted;
   // only the serialized function expressions omit names unused by the standalone script.
   const functions = [applyStoredStyleBeforePaint, applyStoredThemeBeforePaint, styleTokenAllowed, readStyleOwnership, resolveStyleStartup, styleMaterial]
@@ -1379,13 +1360,13 @@ const STYLE_FOLLOW: readonly string[] = [
   '--lr-theme-color-warning-on-normal',
   '--lr-theme-color-warning-on-quiet',
 ];
-const STYLE_REFERENCE_SURFACES: Readonly<Record<string, { light: string; dark: string }>> = {
-  'lyra': { light: '#ffffff', dark: '#1a1a1a' },
-  'data': { light: '#ffffff', dark: '#101820' },
-  'high-contrast': { light: '#ffffff', dark: '#000000' },
-  'material': { light: '#fff8f5', dark: '#18120f' },
-  'shadcn': { light: '#ffffff', dark: '#0a0a0a' },
-  'terminal': { light: '#fcfdf9', dark: '#0e1713' },
+const STYLE_REFERENCE_SURFACES: Readonly<Record<string, { light: readonly string[]; dark: readonly string[] }>> = {
+  'lyra': { light: ['#ffffff', '#f6f8fa', '#1a1a1a', 'rgb(0 0 0 / 0.92)'], dark: ['#1a1a1a', '#22272e', '#f2f2f2', 'rgb(0 0 0 / 0.95)'] },
+  'data': { light: ['#ffffff', '#f2f5f8', '#10202c', '#17212b'], dark: ['#101820', '#192630', '#eef5fa', '#e7eef4'] },
+  'high-contrast': { light: ['#ffffff', '#ffffff', '#000000', '#17212b'], dark: ['#000000', '#000000', '#ffffff', '#e7eef4'] },
+  'material': { light: ['#fff8f5', '#f8eeea', '#241b17', 'rgb(0 0 0 / 0.92)'], dark: ['#18120f', '#251d19', '#f8eee8', 'rgb(0 0 0 / 0.95)'] },
+  'shadcn': { light: ['#ffffff', '#fafafa', '#0a0a0a', 'rgb(0 0 0 / 0.92)'], dark: ['#0a0a0a', '#171717', '#fafafa', 'rgb(0 0 0 / 0.95)'] },
+  'terminal': { light: ['#fcfdf9', '#f1f5eb', '#0d2115', '#17212b'], dark: ['#0e1713', '#18271e', '#e5f5e9', '#e7eef4'] },
 };
 const STYLE_CONTRAST_SURFACES: Readonly<Record<'light' | 'dark', readonly string[]>> = {
   light: [
@@ -1414,7 +1395,7 @@ const STYLE_CONTRAST_SURFACES: Readonly<Record<'light' | 'dark', readonly string
   '#302621',
   '#120d0a',
   '#211914',
-  '#3a2f29',
+  '#352a24',
   '#0a0a0a',
   '#171717',
   '#0e1713',
@@ -1711,31 +1692,45 @@ function styleResolvedInput(name: string): string {
   const spacing = name.startsWith('--lr-theme-space-');
   return `var(--_lr-dense-on,${input})var(--_lr-dense-off,max(calc((${input}) * var(--_lr-density-${spacing ? 'space' : 'control'},1)),${spacing ? '0px' : 'var(--_lr-density-target-min,0px)'}))`;
 }
-function styleBackground(state: StyleState, entries: ReadonlyMap<string, string>, mode: 'light' | 'dark', element: Element): string | undefined {
-  const explicit = typeof state.accentBackground === 'string' ? state.accentBackground : state.accentBackground?.[mode];
-  const ownLook = element.getAttribute('data-lr-look');
-  let reference = explicit ?? entries.get('--lr-theme-color-surface-default') ??
-    (ownLook ? (STYLE_REFERENCE_SURFACES[ownLook] ?? STYLE_REFERENCE_SURFACES['lyra'])?.[mode] : undefined);
-  if (!reference) {
-    const slot = styleSlot('--lr-theme-color-surface-default', mode);
-    const style = (element as HTMLElement | SVGElement).style;
-    const owned = ownershipFor(element).properties.get(slot);
-    const suspend = owned && style?.getPropertyValue(slot) === owned.written && !style.getPropertyPriority(slot);
-    // Read the new inherited scope rather than the surface left by a previous runtime map.
-    // Restore the old write immediately; the ownership writer handles its replacement below.
-    try {
-      if (suspend) {
-        if (owned.before) style.setProperty(slot, owned.before, owned.priority);
-        else style.removeProperty(slot);
-      }
-      reference = element.ownerDocument.defaultView?.getComputedStyle(element).getPropertyValue(slot).trim();
-    } finally {
-      if (suspend && owned.written !== null) style.setProperty(slot, owned.written);
+function styleReferences(state: StyleState, entries: ReadonlyMap<string, string>, mode: 'light' | 'dark', element: Element, previous?: readonly (string | undefined)[]): { colors: readonly string[]; supplied: readonly (string | undefined)[] } {
+  const look = element.closest('[data-lr-look]')?.getAttribute('data-lr-look');
+  const colors = (STYLE_REFERENCE_SURFACES[look ?? STYLE_DEFAULTS.look] ?? STYLE_REFERENCE_SURFACES['lyra'])![mode];
+  // Custom accents without a token map consume only the page reference.
+  const names = ['color-surface-default', 'color-surface-raised', 'color-text-normal', 'color-overlay-strong'].slice(0, entries.size ? 4 : 1).map(suffix => `--lr-theme-${suffix}`);
+  const supplied = names.map(name => entries.get(name));
+  const background = typeof state.accentBackground === 'string' ? state.accentBackground : state.accentBackground?.[mode];
+  const style = (element as HTMLElement | SVGElement).style;
+  const ownership = ownershipFor(element).properties;
+  const projected = names.flatMap((name, index) => {
+    const slot = styleSlot(name, mode);
+    const owned = ownership.get(slot);
+    const before = style?.getPropertyValue(slot) ?? '';
+    const priority = style?.getPropertyPriority(slot) ?? '';
+    const owns = owned && before === owned.written && !priority;
+    if (supplied[index] !== undefined && previous?.[index] === supplied[index] && owns) return [];
+    if (supplied[index] === undefined && !owns) return [];
+    const value = supplied[index] ?? owned?.before ?? '';
+    const nextPriority = supplied[index] === undefined ? owned?.priority ?? '' : '';
+    return before === value && priority === nextPriority ? [] : [{ slot, before, priority, value, nextPriority }];
+  });
+  // Project changed inputs and restore removed ones together before resolving cross-reference aliases.
+  try {
+    for (const { slot, value, nextPriority } of projected) {
+      if (style.getPropertyPriority(slot)) style.removeProperty(slot);
+      if (value) style.setProperty(slot, value, nextPriority);
+      else style.removeProperty(slot);
+    }
+    const computed = element.ownerDocument.defaultView?.getComputedStyle(element);
+    return { supplied, colors: names.map((name, index) => (index === 0 ? background : undefined) ?? supplied[index] ?? (computed?.getPropertyValue(styleSlot(name, mode)).trim() || colors[index]!)) };
+  } finally {
+    for (const { slot, before, priority } of projected) {
+      if (style.getPropertyPriority(slot)) style.removeProperty(slot);
+      if (before) style.setProperty(slot, before, priority);
+      else style.removeProperty(slot);
     }
   }
-  return reference;
 }
-const stylePaintCache = new WeakMap<Element, Map<string, { key: string; tokens: Map<string, string>; accent: Map<string, string>; applied: LyraThemeAccent }>>();
+const stylePaintCache = new WeakMap<Element, Map<string, { key: string; supplied: readonly (string | undefined)[]; tokens: Map<string, string>; accent: Map<string, string>; applied: LyraThemeAccent }>>();
 function stylePaint(state: StyleState, element: Element, wholeDocument: boolean): Map<string, string> {
   const desired = new Map<string, string>();
   const mode = styleResolvedMode(state.mode, element.ownerDocument.defaultView);
@@ -1751,13 +1746,14 @@ function stylePaint(state: StyleState, element: Element, wholeDocument: boolean)
   let applied = state.accent;
   for (const branch of ['light', 'dark'] as const) {
     const entries = tokenEntries(tokens, branch);
-    const reference = styleBackground(state, entries, branch, element);
-    const key = JSON.stringify([tokens, state.accent, state.accentName, reference]);
+    const { colors: references, supplied } = styleReferences(state, entries, branch, element, cache.get(branch)?.supplied);
+    const reference = references[0];
+    const key = JSON.stringify([tokens, state.accent, state.accentName, references]);
     let cached = cache.get(branch);
     if (!cached || cached.key !== key) {
-      const background = reference ? parseResolvedRgb(reference, MODE_DEFAULTS[branch].surface, element.ownerDocument) ?? MODE_DEFAULTS[branch].surface : MODE_DEFAULTS[branch].surface;
+      const background = reference ? parseResolvedRgb(reference, MODE_SURFACES[branch], element.ownerDocument) ?? MODE_SURFACES[branch] : MODE_SURFACES[branch];
       const accent = state.accentName ? { applied: state.accent, properties: new Map<string, string>() } : paintAccent(state.accent, branch, background, element.ownerDocument);
-      cached = { key, tokens: floorTokenEntries(entries, branch, background, element.ownerDocument), accent: accent.properties, applied: accent.applied };
+      cached = { key, supplied, tokens: floorTokenEntries(entries, background, element.ownerDocument, references), accent: accent.properties, applied: accent.applied };
       cache.set(branch, cached);
     }
     if (branch === mode) applied = cached.applied;

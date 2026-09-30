@@ -67,7 +67,8 @@ for (const [region, text] of Object.entries(regions)) {
   test(`(b) the ${region} copy carries the mode-default references`, () => {
     for (const mode of ['light', 'dark']) {
       const defaults = grammar.modeDefaults[mode];
-      const expected = `${mode}: { surface: [${defaults.surface.join(', ')}], raised: [${defaults.raised.join(', ')}], text: [${defaults.text.join(', ')}], overlayStrongAlpha: ${defaults.overlayStrongAlpha} }`;
+      // Both painters take raised/text/scrim references from the canonical selected-look tuple.
+      const expected = `${mode}: [${defaults.surface.join(', ')}]`;
       assert.equal(occurrences(text, expected), 1, `${region}: ${expected}`);
     }
   });

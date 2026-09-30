@@ -1,6 +1,7 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { toRgba } from '../../../../test/color-contrast.js';
 import './data-grid.js';
 import type { LyraDataGrid } from './data-grid.js';
 import type { DataGridColumn } from './data-grid-types.js';
@@ -882,6 +883,7 @@ describe("grid-line colour tier", () => {
     const element = await dataGrid(html`
       <lr-data-grid paginate with-search label="People" style="--lr-theme-color-surface-border: rgb(10, 20, 30)" .columns=${columns} .data=${rows}></lr-data-grid>
     `);
-    expect(Object.values(lines(element))).to.deep.equal(Array(5).fill("rgb(229, 229, 229)"));
+    expect(Object.values(lines(element)).map(toRgba)).to.deep.equal(Array(5).fill([229, 229, 229, 255]));
+    expect(Object.values(controls(element)).map(toRgba)).to.deep.equal(Array(2).fill([10, 20, 30, 255]));
   });
 });

@@ -156,6 +156,7 @@ async function inspectDoc(context, doc) {
       ),
     );
     const deadline = Date.now() + STABILISE_BUDGET_MS;
+    const requiresControls = doc.importPath.includes('/src/components/');
     let idlePolls = 0;
     let previousTotal = -1;
     while (idlePolls < QUIET_POLLS && Date.now() < deadline && clicked < MAX_CLICKS) {
@@ -195,7 +196,10 @@ async function inspectDoc(context, doc) {
       // Source controls can switch to "Hide code" before their asynchronously rendered text is
       // available. Keep the same bounded settling budget for that content, not just the controls.
       const sourcesReady = (await readSourceTexts()).every((source) => source.trim().length > 0);
-      idlePolls = expanded || !rendered || !sourcesReady || total !== previousTotal ? 0 : idlePolls + 1;
+      // A rendered body can precede its first lazy docs block. Component pages must expose a
+      // source control before quiescence is meaningful; missing controls still exhaust the budget.
+      const controlsReady = !requiresControls || clicked > 0;
+      idlePolls = expanded || !rendered || !controlsReady || !sourcesReady || total !== previousTotal ? 0 : idlePolls + 1;
       previousTotal = total;
       if (idlePolls < QUIET_POLLS) await page.waitForTimeout(POLL_INTERVAL_MS);
     }
@@ -213,7 +217,7 @@ async function inspectDoc(context, doc) {
       sourceTexts,
       settled: idlePolls >= QUIET_POLLS,
       reachedClickCap: clicked >= MAX_CLICKS,
-      requiresControls: doc.importPath.includes('/src/components/'),
+      requiresControls,
     });
     return {
       ...doc,

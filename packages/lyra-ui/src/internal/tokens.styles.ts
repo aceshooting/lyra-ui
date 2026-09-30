@@ -58,12 +58,11 @@ import { css } from 'lit';
 // separator between items, a gutter line. It is never the only visible boundary of an interactive
 // control or of a meaningful graphic -- WCAG 2.2 SC 1.4.11 holds those to 3:1 against what is next
 // to them, so they stay on --lr-color-border, and `check:border-subtle` fails the build if the
-// subtle tier appears in a form control. Its input, --lr-theme-color-surface-border-subtle, is
-// declared NOWHERE by default -- theme.css leaves it out for the same reason it leaves out
-// --lr-theme-form-control-radius -- so while it is unset the token resolves to exactly
-// --lr-color-border in every mode, and a stylesheet re-pointed to it renders identically until an
-// application opts in. The fallback is resolved on the element itself, so it follows the dark value
-// of --lr-color-border and any retuned --lr-theme-color-surface-border without restating a colour;
+// subtle tier appears in a form control. The default Shadcn look supplies its own decorative
+// input. Explicit Lyra leaves that input optional; clearing it in a resolved scope restores
+// --lr-color-border. The projected fallback retains Shadcn without a resolver and evaluates
+// the canonical alias on the consuming element when a resolver is present. That local evaluation
+// follows the dark control role, retuned theme inputs and direct --lr-color-border overrides;
 // the dark fragment repeats the same chain only so every mode's record agrees. Forced colours pin
 // it to the same system colour as --lr-color-border: a themed grey must not survive there.
 //
@@ -94,7 +93,7 @@ const baseTokens = css`
     --_lr-glass-original-border-strong: var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #919191));
     --_lr-glass-qualified-border-strong: color-mix(in srgb, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #919191)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
     --lr-color-border-strong: var(--_lr-glass-qualified-border-strong, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #919191)));
-    --lr-color-border-subtle: var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, #e5e5e5));
+    --lr-color-border-subtle: var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, color-mix(in srgb, #e5e5e5 var(--_lr-subtle-mix,100%), var(--lr-color-border))));
     --_lr-glass-brand-text: color-mix(in srgb, var(--lr-color-brand), var(--lr-color-text) var(--_lr-glass-foreground-weight));
     --_lr-glass-danger-text: color-mix(in srgb, var(--lr-color-danger), var(--lr-color-text) var(--_lr-glass-foreground-weight));
     --lr-color-brand: var(--lr-color-brand-fill-loud);
@@ -453,7 +452,7 @@ const darkTokens = css`
       --_lr-glass-original-border-strong: var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #646464));
     --_lr-glass-qualified-border-strong: color-mix(in srgb, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #646464)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
     --lr-color-border-strong: var(--_lr-glass-qualified-border-strong, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #646464)));
-      --lr-color-border-subtle: var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, rgb(255 255 255 / 0.1)));
+      --lr-color-border-subtle: var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, color-mix(in srgb, rgb(255 255 255 / 0.1) var(--_lr-subtle-mix,100%), var(--lr-color-border))));
       /* A modal panel cannot share the page surface token in dark mode: both resolve to the same
          near-black, so an open dialog reads as a scrim with text floating on it and no panel at
          all. Light mode keeps the page surface deliberately -- a white dialog on a white page is

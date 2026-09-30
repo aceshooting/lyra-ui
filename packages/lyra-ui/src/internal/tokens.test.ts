@@ -9,6 +9,7 @@ import { contextualSizes } from './contextual-vocabulary.styles.js';
 import { tokens } from './tokens.styles.js';
 import { palette } from './tokens/palette.styles.js';
 import { glassSurface } from './glass-surface.styles.js';
+import { toRgba } from '../../test/color-contrast.js';
 
 class TokenProbe extends LitElement {
   static override styles = [palette, tokens];
@@ -718,14 +719,16 @@ it('keeps the default decorative and control boundary roles distinct on every mo
     const values = await probeTokensUnder(BORDER_TIERS, route);
     const dark = route !== 'none';
     expect(values.get('--lr-color-border'), route).to.equal(dark ? '#646464' : '#919191');
-    expect(values.get('--lr-color-border-subtle'), route).to.equal(dark ? 'rgb(255 255 255 / 0.1)' : '#e5e5e5');
+    expect(toRgba(values.get('--lr-color-border-subtle')!), route).to.deep.equal(
+      toRgba(dark ? 'rgb(255 255 255 / 0.1)' : '#e5e5e5'),
+    );
   }
 });
 
 it('keeps the Shadcn decorative role independent of a control-boundary override', async () => {
-  expect(
+  expect(toRgba(
     await probeNestedVar('--lr-color-border-subtle', '--lr-theme-color-surface-border: rgb(7, 8, 9)'),
-  ).to.equal('#e5e5e5');
+  )).to.deep.equal([229, 229, 229, 255]);
 });
 
 it('lets --lr-theme-color-surface-border-subtle set on an ancestor reach a component nested below another host', async () => {
@@ -1072,7 +1075,12 @@ it('changes no bridged token value anywhere when theme.css is imported', async (
     const probe = wrapper.querySelector(tag('specialist-token-probe')) as SpecialistTokenProbe;
     await probe.updateComplete;
     const computed = getComputedStyle(probe);
-    return new Map(names.map((name) => [name, normalize(computed.getPropertyValue(name))]));
+    return new Map(names.map((name) => {
+      const value = normalize(computed.getPropertyValue(name));
+      // The optional alias and concrete startup input may serialize differently while painting
+      // the same channels and alpha. Other token streams retain their exact parity assertion.
+      return [name, name === '--lr-color-border-subtle' ? JSON.stringify(toRgba(value)) : value];
+    }));
   }
 
   const baseline = await snapshot();

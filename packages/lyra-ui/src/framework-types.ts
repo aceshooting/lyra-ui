@@ -3631,6 +3631,9 @@ export interface LyraComponentTypeMap {
       | '--lr-form-control-required-color'
       | '--lr-form-control-required-content'
       | '--lr-form-control-required-offset'
+      | '--lr-overlay-border'
+      | '--lr-overlay-radius'
+      | '--lr-overlay-surface'
       | '--lr-positioning-strategy'
       | '--show-duration';
     attributeAliases: {

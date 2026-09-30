@@ -1,4 +1,5 @@
 import { fixture, expect, html } from '@open-wc/testing';
+import { toRgba } from '../../../../test/color-contrast.js';
 import './divider.js';
 import type { LyraDivider } from './divider.js';
 
@@ -51,7 +52,7 @@ it('defaults to the Shadcn subtle border independently of the control border', a
       <lr-divider orientation="vertical"></lr-divider>
     </div>
   `);
-  expect(separatorColors(wrapper)).to.deep.equal(['rgb(229, 229, 229)', 'rgb(229, 229, 229)']);
+  expect(separatorColors(wrapper).map(toRgba)).to.deep.equal([[229, 229, 229, 255], [229, 229, 229, 255]]);
 });
 
 it('follows a theme-level subtle border, and --color still wins over it', async () => {

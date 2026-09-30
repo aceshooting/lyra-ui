@@ -239,6 +239,9 @@ describe('Markdown code direction: rendered geometry', () => {
       // The dark theme's text needs the dark page surface behind it for axe's contrast check.
       host.setAttribute('data-lr-theme', 'dark');
       host.style.background = '#1a1a1a';
+      // Without theme.css, pin the component's mode for engines without :host-context().
+      el.setAttribute('data-lr-theme', 'dark');
+      expect(getComputedStyle(contentOf(el)).color).to.equal('rgb(250, 250, 250)');
       await expect(el).to.be.accessible();
     });
 

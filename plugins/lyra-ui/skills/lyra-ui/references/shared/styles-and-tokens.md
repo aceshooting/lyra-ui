@@ -1116,13 +1116,35 @@ forced colors retain solid fills. Solid surfaces use `backdrop-filter: none`; fo
 `Canvas`. Offer a solid choice wherever the application offers glass, since reduced-transparency
 media-query support varies between browsers.
 
-Regular glass defaults to 80% opacity, with an 80% minimum and a 12px blur clamped to 16px.
+Regular glass defaults to 70% opacity with a 12px blur clamped to 16px.
+The public `--lr-theme-surface-opacity` input accepts 0 through 1. Lower opacity exposes more
+of the backdrop; the default foreground qualification covers 70%, while a custom lower setting
+cannot guarantee contrast against every backdrop. Solid and accessibility preferences retain
+opaque fills regardless of this input.
 Quiet text, necessary control edges, focus indicators and transparent actions gain a local
 contrast-qualified foreground; opaque accent fills retain their own on-colours. Supported chrome
 includes app rails, navigation menus, menubars, menus and their context-menu composition, popovers,
 selection toolbars, toast items and the owned playback-rate toolbar of `lr-av-player`. Nested glass
 chrome is opaque, preventing repeated blur. Independently promoted menus and modal panels start a
 new material root. Content cards and editing fields remain opaque.
+A design panel can offer a Glass opacity range from 0–100%, shown when the selected surface is
+Glass. Start and reset it at 70%; convert the displayed percentage to the public token's 0–1 range.
+Apply this CSS input independently of look overrides: `setLyraStyle()` does not accept surface
+inputs in its `overrides` allowlist. Persist the percentage in the application's own settings and
+apply it before first paint, including after restoring those settings. Reset the app setting to 70
+and reapply it. Native `.lr-surface-chrome` wrappers and eligible component chrome consume the
+same input:
+
+```js
+function applyGlassOpacity(percent) {
+  if (!Number.isFinite(percent)) return;
+  const opacity = Math.min(100, Math.max(0, percent)) / 100;
+  document.documentElement.style.setProperty('--lr-theme-surface-opacity', String(opacity));
+}
+
+applyGlassOpacity(70); // Default and reset value; apply saved app settings before first paint.
+```
+
 Scrolling rail, popup, modal-panel and selection-toolbar surfaces keep a stationary decorative blur layer;
 the public surface continues to own scrolling, focus and author overflow hooks.
 

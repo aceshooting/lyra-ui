@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
-import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, realpath, rm, stat, writeFile } from 'node:fs/promises';
 import { join, relative, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawn } from 'node:child_process';
@@ -36,9 +36,10 @@ if (
 }
 const BUTTON_GRANULAR_ENTRY = 'dist/components/forms/button/button.js';
 const buttonGranularBudgetKilobytes = granularBundleBudgets[BUTTON_GRANULAR_ENTRY];
-if (!Number.isSafeInteger(buttonGranularBudgetKilobytes) || buttonGranularBudgetKilobytes <= 0) {
+const buttonGranularBudgetBytes = buttonGranularBudgetKilobytes * 1024;
+if (typeof buttonGranularBudgetKilobytes !== 'number' || !Number.isSafeInteger(buttonGranularBudgetBytes) || buttonGranularBudgetBytes <= 0) {
   throw new TypeError(
-    `The granular bundle-budget authority must define ${BUTTON_GRANULAR_ENTRY} as a positive integer KiB ceiling.`,
+    `The granular bundle-budget authority must define ${BUTTON_GRANULAR_ENTRY} as a KiB ceiling resolving to a positive safe integer byte count.`,
   );
 }
 const optionalPeers = Object.keys(uiPackageJson.peerDependencies ?? {})
@@ -149,17 +150,14 @@ const coreRawBudget = {
 };
 
 /**
- * What the shadcnTheme canary requires in the emitted CSS. Every pattern occurs in exactly one of
- * the two imported files, so the canary fails when EITHER is dropped: the layer-order statement,
- * the `lr-theme-preset` name and the brand fill appear in both files, and a check built on them
- * passes with the base theme alone. Patterns rather than substrings, because the consumer's
- * minifier decides the whitespace around `{`, `:` and `,`.
+ * Content required by the shadcnTheme canary alongside exact installed module provenance.
+ * The base theme includes the default Shadcn look, so content alone cannot prove that the
+ * explicitly imported optional look survived. Patterns tolerate consumer minifier whitespace.
  */
 const SHADCN_THEME_RETENTION_MARKERS = Object.freeze({
   preset: Object.freeze([
-    // The portable look opens its own layer; the base theme only declares layer order.
+    // The portable look's scoped layer and installation marker must survive bundling.
     /@layer\s+lr-theme-preset\.look\s*\{/u,
-    // The scoped selector and installation marker are unique to the shadcn look sheet.
     /\[data-lr-look=['"]?shadcn['"]?\]/u,
     /--_lr-look-installed\s*:\s*shadcn-1\s*[;}]/u,
   ]),
@@ -212,7 +210,7 @@ const bundleEntries = {
   // second ceiling. It is intentionally not a measured-current-plus-headroom rebaseline.
   button: {
     fixture: 'core',
-    maxGzipBytes: buttonGranularBudgetKilobytes * 1024,
+    maxGzipBytes: buttonGranularBudgetBytes,
   },
   // Production retention canary for the opt-in form-label bridge. This entry is deliberately a
   // non-overlay form control: its graph must retain the label installer without inheriting modal
@@ -1329,19 +1327,27 @@ async function runBundle(fixtureDir, entry, config, noOptionalPeers, maplibreMaj
     }
   }
   if (entry === 'shadcnTheme') {
+    const installedDist = join(fixtureDir, 'node_modules', '@aceshooting', 'lyra-ui', 'dist');
+    const [presetModule, baseThemeModule] = await Promise.all([
+      realpath(join(installedDist, 'looks', 'shadcn.css')),
+      realpath(join(installedDist, 'theme.css')),
+    ]);
+    const modules = new Set(bundledModuleIds.map((id) => id.replaceAll('\\', '/')));
+    const retainedPreset = modules.has(presetModule.replaceAll('\\', '/'));
+    const retainedBaseTheme = modules.has(baseThemeModule.replaceAll('\\', '/'));
     const cssFiles = output.files.filter((file) => file.endsWith('.css'));
     const css = (await Promise.all(cssFiles.map((file) => readFile(file, 'utf8')))).join('\n');
     const missing = (markers) => markers.filter((marker) => !marker.test(css)).map(String);
     const missingPreset = missing(SHADCN_THEME_RETENTION_MARKERS.preset);
     const missingBaseTheme = missing(SHADCN_THEME_RETENTION_MARKERS.baseTheme);
-    if (cssFiles.length === 0 || missingPreset.length > 0) {
+    if (!retainedPreset || cssFiles.length === 0 || missingPreset.length > 0) {
       violations.push(
-        `the bare looks/shadcn.css import emitted no retained look (missing ${missingPreset.join(', ') || 'CSS output'})`,
+        `the bare looks/shadcn.css import emitted no retained look (missing ${!retainedPreset ? 'installed module' : missingPreset.join(', ') || 'CSS output'})`,
       );
     }
-    if (cssFiles.length === 0 || missingBaseTheme.length > 0) {
+    if (!retainedBaseTheme || cssFiles.length === 0 || missingBaseTheme.length > 0) {
       violations.push(
-        `the theme.css imported beside the preset emitted no retained base theme (missing ${missingBaseTheme.join(', ') || 'CSS output'})`,
+        `the theme.css imported beside the preset emitted no retained base theme (missing ${!retainedBaseTheme ? 'installed module' : missingBaseTheme.join(', ') || 'CSS output'})`,
       );
     }
   }

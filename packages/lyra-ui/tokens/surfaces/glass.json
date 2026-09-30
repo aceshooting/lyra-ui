@@ -1,11 +1,11 @@
 {
-  "opacity": 0.8,
-  "minimumOpacity": 0.8,
+  "opacity": 0.7,
+  "minimumOpacity": 0,
   "blur": "12px",
   "maximumBlur": "16px",
   "saturation": 1.1,
   "highlight": "rgb(255 255 255 / 0.12)",
-  "foregroundWeight": 0.8,
+  "foregroundWeight": 0.99,
   "clearMedia": {
     "scrimStart": 0.78,
     "scrimEnd": 0.92,

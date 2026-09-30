@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard gzip KiB ceilings for bundled, minified ESM with optional peers externalized. Reviewed byte measurements use Node 22.23.2, production esbuild, and gzip level 9. Each ceiling must satisfy the maximum headroom policy. The shared default-profile and material correctness review updates only failing entries with 2% headroom; all passing canaries retain their tighter ceilings.",
+  "$comment": "Hard gzip KiB ceilings for bundled, minified ESM with optional peers externalized. Reviewed byte measurements use Node 22.23.2, production esbuild, and gzip level 9. Each ceiling must satisfy the maximum headroom policy. The shared default-profile and material correctness review updates only failing entries with 2% headroom; all passing canaries retain their tighter ceilings. The theme entry includes canonical per-look contrast references and batched alias ownership after removal of redundant allocations and unused palette fields; its 13,099-byte measurement retains 2% headroom without changing other ceilings.",
   "$maximumHeadroomPercent": 4,
   "$reviewedGzipBytes": {
     "$componentMaxGzipKb": 234305,
@@ -30,7 +30,7 @@
     "dist/lyra.js": 196322,
     "dist/ssr.js": 4525,
     "dist/ssr/all.js": 1271684,
-    "dist/theme/theme.js": 12592
+    "dist/theme/theme.js": 13099
   },
   "$componentP95GzipKb": 113.4853515625,
   "$componentMaxGzipKb": 230.484375,
@@ -60,5 +60,5 @@
   "dist/components/data/gauge/gauge.js": 23.0322265625,
   "dist/components/viewers/pdf-viewer/pdf-viewer.js": 61.8359375,
   "dist/components/data/flow-canvas/flow-canvas.js": 50.591796875,
-  "dist/theme/theme.js": 12.6962890625
+  "dist/theme/theme.js": 13.0478515625
 }

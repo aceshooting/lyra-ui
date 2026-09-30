@@ -6,7 +6,7 @@ import test from 'node:test';
 
 const checker = fileURLToPath(new URL('./check-docs-show-code.mjs', import.meta.url));
 
-async function inspectFixture(t, { delayedSource }) {
+async function inspectFixture(t, { delayedSource = false, initialDelay = 0, neverRender = false }) {
   const server = createServer((request, response) => {
     if (request.url === '/index.json') {
       response.setHeader('Content-Type', 'application/json');
@@ -23,19 +23,25 @@ async function inspectFixture(t, { delayedSource }) {
     response.setHeader('Content-Type', 'text/html');
     response.end(`<!doctype html>
       <body class="sb-show-main">
-        <button role="switch" aria-checked="false" aria-controls="source">Show code</button>
-        <pre id="source"></pre>
+        <div id="controls"></div>
         <script>
-          const control = document.querySelector('button');
-          control.addEventListener('click', () => {
-            control.textContent = 'Hide code';
-            control.setAttribute('aria-checked', 'true');
-            if (${delayedSource}) {
-              setTimeout(() => {
-                document.getElementById('source').textContent = '<lr-empty>No results</lr-empty>';
-              }, 2000);
-            }
-          });
+          function mountControls() {
+            document.getElementById('controls').innerHTML = '<button role="switch" aria-checked="false" aria-controls="source">Show code</button><pre id="source"></pre>';
+            const control = document.querySelector('button');
+            control.addEventListener('click', () => {
+              control.textContent = 'Hide code';
+              control.setAttribute('aria-checked', 'true');
+              if (${delayedSource}) {
+                setTimeout(() => {
+                  document.getElementById('source').textContent = '<lr-empty>No results</lr-empty>';
+                }, 2000);
+              }
+            });
+          }
+          if (!${neverRender}) {
+            if (${initialDelay} > 0) setTimeout(mountControls, ${initialDelay});
+            else mountControls();
+          }
         </script>
       </body>`);
   });
@@ -76,4 +82,21 @@ test('still rejects an expanded source block that never receives text', { timeou
   assert.equal(summary.structuralFailures.length, 1);
   assert.equal(summary.structuralFailures[0].sourceBlocks, 1);
   assert.match(summary.structuralFailures[0].failure, /empty expanded source|never settled/);
+});
+
+test('waits for the first required controls after an initially empty rendered body', { timeout: 100_000 }, async (t) => {
+  const { code, summary, stderr } = await inspectFixture(t, { initialDelay: 2000, delayedSource: true });
+  assert.equal(code, 0, JSON.stringify(summary.structuralFailures) || stderr);
+  assert.equal(summary.clicked, 1);
+  assert.deepEqual(summary.structuralFailures, []);
+  assert.deepEqual(summary.diagnosticFailures, []);
+});
+
+test('still fails within the bounded budget when required controls never render', { timeout: 100_000 }, async (t) => {
+  const { code, summary } = await inspectFixture(t, { neverRender: true });
+  assert.equal(code, 1);
+  assert.equal(summary.clicked, 0);
+  assert.equal(summary.structuralFailures.length, 1);
+  assert.match(summary.structuralFailures[0].failure, /no Show code controls were found/);
+  assert.ok(summary.elapsedMs < 45_000, `missing controls exceeded the bounded settling budget: ${summary.elapsedMs}ms`);
 });

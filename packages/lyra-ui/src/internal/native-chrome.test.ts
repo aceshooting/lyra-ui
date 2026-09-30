@@ -26,6 +26,46 @@ describe('native chrome material', () => {
   beforeEach(() => { previous = document.adoptedStyleSheets; document.adoptedStyleSheets = [...previous, ...sheets]; });
   afterEach(() => { document.adoptedStyleSheets = previous; });
 
+  it('inherits the full public opacity range into explicit and promoted Glass while opaque preferences win', async function () {
+    if (!CSS.supports('backdrop-filter', 'blur(1px)')) this.skip();
+    const rootStyle = document.documentElement.style;
+    const previousOpacity = rootStyle.getPropertyValue('--lr-theme-surface-opacity');
+    const previousPriority = rootStyle.getPropertyPriority('--lr-theme-surface-opacity');
+    const ancestor = await fixture<HTMLDivElement>(html`<div><div data-lr-surface="glass"><div class="lr-surface-chrome">Chrome</div></div><div class="lr-surface-chrome" data-lr-surface="glass"><div class="lr-surface-chrome" data-lr-surface="glass" popover="manual">Promoted</div></div></div>`);
+    const scope = ancestor.firstElementChild!;
+    const surface = scope.firstElementChild as HTMLElement;
+    const paintedParent = ancestor.lastElementChild as HTMLElement;
+    const promoted = paintedParent.firstElementChild as HTMLElement;
+    try {
+      promoted.showPopover();
+      expect(promoted.matches(':popover-open')).to.equal(true);
+      for (const opacity of [0, 0.35, 0.7, 1]) {
+        rootStyle.setProperty('--lr-theme-surface-opacity', String(opacity));
+        for (const target of [surface, promoted]) {
+          expect(toRgba(getComputedStyle(target).backgroundColor)[3], `inherited public opacity ${opacity}`).to.be.closeTo(Math.round(opacity * 255), 1);
+        }
+      }
+      rootStyle.setProperty('--lr-theme-surface-opacity', '0');
+      ancestor.style.setProperty('--lr-theme-surface-opacity', '0.35');
+      expect(toRgba(getComputedStyle(surface).backgroundColor)[3], 'nearer unpainted ancestor override').to.be.within(89, 90);
+      surface.style.setProperty('--lr-theme-surface-opacity', '0.7');
+      expect(toRgba(getComputedStyle(surface).backgroundColor)[3], 'local surface override').to.be.within(178, 180);
+      surface.style.removeProperty('--lr-theme-surface-opacity');
+      ancestor.style.removeProperty('--lr-theme-surface-opacity');
+      expect(toRgba(getComputedStyle(surface).backgroundColor)[3]).to.equal(0);
+      scope.setAttribute('data-lr-surface', 'solid');
+      expect(toRgba(getComputedStyle(surface).backgroundColor)[3]).to.equal(255);
+      scope.setAttribute('data-lr-surface', 'glass');
+      scope.setAttribute('data-lr-contrast', 'more');
+      expect(toRgba(getComputedStyle(surface).backgroundColor)[3]).to.equal(255);
+      expect(getComputedStyle(surface, '::before').backdropFilter).to.equal('none');
+    } finally {
+      if (promoted.matches(':popover-open')) promoted.hidePopover();
+      if (previousOpacity) rootStyle.setProperty('--lr-theme-surface-opacity', previousOpacity, previousPriority);
+      else rootStyle.removeProperty('--lr-theme-surface-opacity');
+    }
+  });
+
   for (const look of ['lyra', 'shadcn', 'material', 'data', 'terminal', 'high-contrast']) for (const mode of ['light', 'dark']) {
     it(`qualifies native ${look}/${mode} text, necessary edges and focus against both extreme backdrops`, async function () {
       if (!CSS.supports('backdrop-filter', 'blur(1px)')) this.skip();
@@ -34,7 +74,7 @@ describe('native chrome material', () => {
       for (const fill of ['--lr-theme-color-surface-overlay', '--lr-theme-color-surface-container-high', '--lr-theme-color-surface-container-highest']) {
         (surface as HTMLElement).style.setProperty('--lr-surface-background', `var(${fill}, var(--lr-theme-color-surface-overlay))`);
         const paint = getComputedStyle(surface).backgroundColor;
-        expect(toRgba(paint)[3], `${look}/${mode}/${fill}: opacity`).to.be.within(203, 205);
+        expect(toRgba(paint)[3], `${look}/${mode}/${fill}: opacity`).to.be.within(178, 180);
         for (const backdrop of ['black', 'white']) {
           const background = composite(paint, backdrop);
           for (const token of ['--lr-color-text', '--lr-color-text-quiet']) expect(contrastRatio(resolvedColorToken(surface, token), background), `${look}/${mode}/${fill}/${token}/${backdrop}`).to.be.at.least(4.5);
@@ -51,14 +91,14 @@ describe('native chrome material', () => {
     const fixed = surface.firstElementChild!;
     expect(getComputedStyle(surface).position).to.equal('fixed');
     expect(getComputedStyle(surface).color).to.equal('rgb(20, 30, 40)');
-    expect(toRgba(getComputedStyle(surface).backgroundColor)).to.deep.equal([250, 240, 230, 204]);
+    expect(toRgba(getComputedStyle(surface).backgroundColor)).to.deep.equal(toRgba('rgb(250 240 230 / 0.7)'));
     expect(getComputedStyle(surface, '::before').backdropFilter).to.include('blur(2px)');
     expect(fixed.getBoundingClientRect().top).to.equal(7);
     expect(fixed.getBoundingClientRect().left).to.equal(9);
     const scrollport = surface.lastElementChild as HTMLElement;
     scrollport.scrollTop = 100;
     expect(scrollport.scrollTop).to.equal(100);
-    expect(toRgba(getComputedStyle(surface).backgroundColor)[3]).to.equal(204);
+    expect(toRgba(getComputedStyle(surface).backgroundColor)[3]).to.be.within(178, 180);
   });
 
   it('suppresses nested material and restores Solid and explicit increased contrast', async () => {
@@ -80,7 +120,7 @@ describe('native chrome material', () => {
     const solid = await fixture<HTMLDivElement>(html`<div class="lr-surface-chrome" data-lr-surface="solid"><div class="lr-surface-chrome" data-lr-surface="glass">Glass below Solid</div></div>`);
     const child = solid.firstElementChild!;
     expect(toRgba(getComputedStyle(solid).backgroundColor)[3]).to.equal(255);
-    expect(toRgba(getComputedStyle(child).backgroundColor)[3]).to.be.within(203, 205);
+    expect(toRgba(getComputedStyle(child).backgroundColor)[3]).to.be.within(178, 180);
     expect(getComputedStyle(child, '::before').backdropFilter).to.include('blur(12px)');
     solid.setAttribute('data-lr-surface', 'glass');
     expect(toRgba(getComputedStyle(child).backgroundColor)[3]).to.equal(255);
@@ -104,7 +144,7 @@ describe('native chrome material', () => {
       const probe = scope.querySelector('[data-probe]')!;
       const alpha = toRgba(getComputedStyle(probe).backgroundColor)[3];
       if (frosted) {
-        expect(alpha).to.be.within(203, 205);
+        expect(alpha).to.be.within(178, 180);
         expect(getComputedStyle(probe, '::before').backdropFilter).to.include('blur(12px)');
       } else {
         expect(alpha).to.equal(255);
@@ -129,16 +169,16 @@ describe('native chrome material', () => {
         expect(getComputedStyle(promoted, '::before').content).to.equal('none');
         expect(getComputedStyle(promoted, '::before').backdropFilter).to.equal('none');
         promoted.setAttribute('data-lr-surface', 'glass');
-        expect(toRgba(getComputedStyle(promoted).backgroundColor)[3]).to.be.within(203, 205);
+        expect(toRgba(getComputedStyle(promoted).backgroundColor)[3]).to.be.within(178, 180);
         expect(getComputedStyle(promoted, '::before').backdropFilter).to.include('blur(12px)');
         promoted.setAttribute('data-lr-contrast', 'more');
         expect(toRgba(getComputedStyle(promoted).backgroundColor)[3]).to.equal(255);
         expect(getComputedStyle(promoted, '::before').backdropFilter).to.equal('none');
         promoted.removeAttribute('data-lr-contrast');
-        expect(toRgba(getComputedStyle(promoted).backgroundColor)[3]).to.be.within(203, 205);
+        expect(toRgba(getComputedStyle(promoted).backgroundColor)[3]).to.be.within(178, 180);
         expect(getComputedStyle(promoted, '::before').backdropFilter).to.include('blur(12px)');
         outer.setAttribute('data-lr-surface', 'glass');
-        expect(toRgba(getComputedStyle(promoted).backgroundColor)[3]).to.be.within(203, 205);
+        expect(toRgba(getComputedStyle(promoted).backgroundColor)[3]).to.be.within(178, 180);
         expect(getComputedStyle(promoted, '::before').backdropFilter).to.include('blur(12px)');
         promoted.removeAttribute('data-lr-surface');
         outer.setAttribute('data-lr-surface', 'solid');

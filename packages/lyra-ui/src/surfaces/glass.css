@@ -1,6 +1,9 @@
 @layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;
 @layer lr-theme-preset.look, lr-theme-preset.density, lr-theme-preset.surface, lr-theme-preset.accent, lr-theme-preset.mode;
 @layer lr-theme-preset.surface {
+  :root {
+    --lr-theme-surface-opacity: 0.7;
+  }
   :root, :host {
     --_lr-media-clear-scrim-start: 0.78;
     --_lr-media-clear-scrim-end: 0.92;
@@ -14,12 +17,11 @@
     --_lr-glass-blocker: initial;
     --_lr-surface-content: '';
     --_lr-surface-isolation: isolate;
-    --_lr-surface-min-opacity: 0.8;
+    --_lr-surface-min-opacity: 0;
     --_lr-surface-maximum-blur: 16px;
-    --_lr-surface-foreground-weight: 80%;
+    --_lr-surface-foreground-weight: 99%;
     --_lr-surface-child-filter: none;
     --_lr-surface-child-opacity: 1;
-    --lr-theme-surface-opacity: 0.8;
     --lr-theme-surface-blur: 12px;
     --lr-theme-surface-saturation: 1.1;
     --lr-theme-surface-highlight: rgb(255 255 255 / 0.12);
@@ -100,12 +102,12 @@
         --_lr-glass-qualified-focus-ring-color: color-mix(
           in srgb,
           var(--_lr-glass-original-focus-ring-color, var(--lr-color-text)),
-          var(--lr-color-text) calc(var(--_lr-surface-foreground-weight, 80%) * var(--_lr-surface-enabled, 1) * (1 - var(--_lr-glass-parent-opacity, 0)) * (1 - var(--_lr-preference-glass-opacity, 0)))
+          var(--lr-color-text) calc(var(--_lr-surface-foreground-weight, 99%) * var(--_lr-surface-enabled, 1) * (1 - var(--_lr-glass-parent-opacity, 0)) * (1 - var(--_lr-preference-glass-opacity, 0)))
         );
       }
       :where(.lr-surface-chrome) {
         isolation: var(--_lr-surface-isolation, isolate);
-        --_lr-glass-foreground-weight: calc(var(--_lr-surface-foreground-weight, 80%) * var(--_lr-surface-enabled, 1) * (1 - var(--_lr-glass-parent-opacity, 0)) * (1 - var(--_lr-preference-glass-opacity, 0)));
+        --_lr-glass-foreground-weight: calc(var(--_lr-surface-foreground-weight, 99%) * var(--_lr-surface-enabled, 1) * (1 - var(--_lr-glass-parent-opacity, 0)) * (1 - var(--_lr-preference-glass-opacity, 0)));
         --_lr-glass-qualified-text-quiet: color-mix(in srgb, var(--_lr-glass-original-text-quiet, var(--lr-color-text)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
         --lr-color-text-quiet: var(--_lr-glass-qualified-text-quiet, var(--_lr-glass-original-text-quiet));
         --_lr-glass-qualified-border: color-mix(in srgb, var(--_lr-glass-original-border, var(--lr-color-text)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
@@ -117,7 +119,7 @@
           var(--lr-surface-background, var(--lr-theme-color-surface-container-high, var(--lr-theme-color-surface-overlay, Canvas))) calc((1 - var(--_lr-surface-enabled, 1) * (1 - var(--_lr-preference-glass-opacity, 0))) * 100%),
           color-mix(
             in srgb,
-            var(--lr-surface-background, var(--lr-theme-color-surface-container-high, var(--lr-theme-color-surface-overlay, Canvas))) calc(var(--_lr-preference-glass-opacity, max(var(--_lr-glass-parent-opacity, 0), clamp(var(--_lr-surface-min-opacity, 0.8), var(--lr-theme-surface-opacity, 0.8), 1))) * 100%),
+            var(--lr-surface-background, var(--lr-theme-color-surface-container-high, var(--lr-theme-color-surface-overlay, Canvas))) calc(var(--_lr-preference-glass-opacity, max(var(--_lr-glass-parent-opacity, 0), clamp(var(--_lr-surface-min-opacity, 0), var(--lr-theme-surface-opacity, 0.7), 1))) * 100%),
             transparent
           )
         );
