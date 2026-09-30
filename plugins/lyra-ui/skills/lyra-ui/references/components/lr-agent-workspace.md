@@ -103,11 +103,33 @@ RetrievalChunk[] }`) — forwarded from the built-in retrieval results.
 - `lr-tool-approval-decide-request` (`detail: ToolTimelineApprovalDetail` = `ToolApprovalEventDetail &
 { args?: unknown }` = `{ invocationId: string; approved: boolean; args?: unknown }`) — forwarded
   from the built-in tool timeline; `args` is present only on approval and may differ from what the
-  entry originally proposed (the dialog's inline edit step).
+  entry originally proposed (the dialog's inline edit step). Call `preventDefault()` synchronously
+  to hold the built-in dialog while persisting the decision.
 - `lr-cancel` (`detail: CancelEventDetail = { reason?: string }`) / `lr-run-retry` (`detail: RetryEventDetail` =
   `{ attempt: number; messageId?: string }`, from `@aceshooting/lyra-ui/ai`) — forwarded from the
   built-in agent run. The distinct retry name prevents a rendered message or attachment retry from
   being mistaken for a whole-run retry.
+
+**Methods:** `finalizePendingApproval(): void` closes a vetoed approval in the built-in tool timeline
+after persistence succeeds; `revertPendingApproval(): void` releases its pending state after a failed
+save while retaining the open dialog and edited arguments for retry. Both forward to the built-in
+timeline only and are no-ops when no timeline or pending decision exists, including when `details`
+is replaced by a custom slot or `withoutDetails` is set. The host still owns `tools` updates.
+These methods settle whichever approval is currently pending; an async host must discard stale
+completions when it replaces the run or tools before persistence returns.
+
+```ts
+workspace.addEventListener('lr-tool-approval-decide-request', async (event) => {
+  event.preventDefault();
+  try {
+    await persistDecision(event.detail);
+    workspace.tools = applyDecision(workspace.tools, event.detail);
+    workspace.finalizePendingApproval();
+  } catch {
+    workspace.revertPendingApproval();
+  }
+});
+```
 
 **Slots:** `messages` (replaces the data-driven transcript message list; assign ordinary messages
 directly, or exactly one `lr-virtual-list` when the slot itself owns virtualization), `details` (replaces the

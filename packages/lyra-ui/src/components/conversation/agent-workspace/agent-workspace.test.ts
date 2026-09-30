@@ -6,6 +6,8 @@ import type {
   RetrievalChunk,
 } from "../../../ai/types.js";
 import type { LyraMarkdown } from "../markdown/markdown.class.js";
+import type { LyraToolTimeline, ToolTimelineEntry } from "../../agent-tools/tool-timeline/tool-timeline.class.js";
+import type { LyraToolApprovalDialog } from "../../agent-tools/tool-approval-dialog/tool-approval-dialog.class.js";
 import "../../forms/button/button.js";
 import "./agent-workspace.js";
 import type { LyraAgentWorkspace } from "./agent-workspace.class.js";
@@ -309,6 +311,102 @@ it('gates built-in detail sections on canonical nonblank collection identities',
   expect(el.shadowRoot!.querySelector('lr-retrieval-results') === null).to.be.true;
   expect(el.shadowRoot!.querySelector('lr-grounding-summary') === null).to.be.true;
   expect(el.shadowRoot!.querySelector('lr-context-inspector') === null).to.be.true;
+});
+
+it('lets a host retry a rejected built-in tool approval without entering the workspace shadow tree', async () => {
+  const entry: ToolTimelineEntry = {
+    id: 'call-1', name: 'write', args: { path: '/draft' }, status: 'pending', needsApproval: true,
+  };
+  const el = await fixture<LyraAgentWorkspace>(html`
+    <lr-agent-workspace .tools=${[entry]}></lr-agent-workspace>
+  `);
+  const timeline = el.shadowRoot!.querySelector<LyraToolTimeline>('lr-tool-timeline')!;
+  await timeline.updateComplete;
+  timeline.shadowRoot!.querySelector<HTMLElement>('lr-tool-call-chip')!.click();
+  await timeline.updateComplete;
+  const dialog = timeline.shadowRoot!.querySelector<LyraToolApprovalDialog>('lr-tool-approval-dialog')!;
+  dialog.shadowRoot!.querySelector<HTMLButtonElement>('[part="edit-button"]')!.click();
+  await dialog.updateComplete;
+  const editor = dialog.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="args-editor"]')!;
+  editor.value = '{"path":"/retry"}';
+  editor.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  await dialog.updateComplete;
+  el.addEventListener('lr-tool-approval-decide-request', (event) => event.preventDefault());
+  dialog.shadowRoot!.querySelector<HTMLButtonElement>('[part="approve-button"]')!.click();
+  await timeline.updateComplete;
+  expect(timeline.pendingApproval).to.equal('approve');
+
+  // A failed save can reassign the same controlled tools, but that does not release the dialog.
+  el.tools = [{ ...entry }];
+  await el.updateComplete;
+  await timeline.updateComplete;
+  expect(timeline.pendingApproval).to.equal('approve');
+  el.revertPendingApproval();
+  await timeline.updateComplete;
+  await dialog.updateComplete;
+  expect(timeline.pendingApproval).to.equal(null);
+  expect(dialog.open).to.equal(true);
+  expect(dialog.pendingAction).to.equal(null);
+  expect(editor.value).to.equal('{"path":"/retry"}');
+});
+
+it('finalizes a vetoed built-in denial and ignores absent or custom details timelines', async () => {
+  const detached = document.createElement('lr-agent-workspace');
+  expect(() => detached.finalizePendingApproval()).not.to.throw();
+  expect(() => detached.revertPendingApproval()).not.to.throw();
+
+  const entry: ToolTimelineEntry = {
+    id: 'call-2', name: 'delete', args: {}, status: 'pending', needsApproval: true,
+  };
+  const el = await fixture<LyraAgentWorkspace>(html`
+    <lr-agent-workspace .tools=${[entry]}></lr-agent-workspace>
+  `);
+  const timeline = el.shadowRoot!.querySelector<LyraToolTimeline>('lr-tool-timeline')!;
+  await timeline.updateComplete;
+  timeline.shadowRoot!.querySelector<HTMLElement>('lr-tool-call-chip')!.click();
+  await timeline.updateComplete;
+  const dialog = timeline.shadowRoot!.querySelector<LyraToolApprovalDialog>('lr-tool-approval-dialog')!;
+  el.addEventListener('lr-tool-approval-decide-request', (event) => event.preventDefault());
+  dialog.shadowRoot!.querySelector<HTMLButtonElement>('[part="deny-button"]')!.click();
+  await timeline.updateComplete;
+  expect(timeline.pendingApproval).to.equal('deny');
+  el.finalizePendingApproval();
+  await timeline.updateComplete;
+  expect(timeline.pendingApproval).to.equal(null);
+  expect(dialog.open).to.equal(false);
+
+  const custom = await fixture<LyraAgentWorkspace>(html`
+    <lr-agent-workspace .tools=${[entry]}></lr-agent-workspace>
+  `);
+  const hiddenTimeline = custom.shadowRoot!.querySelector<LyraToolTimeline>('lr-tool-timeline')!;
+  let calls = 0;
+  hiddenTimeline.finalizePendingApproval = () => { calls++; };
+  hiddenTimeline.revertPendingApproval = () => { calls++; };
+  const details = document.createElement('p');
+  details.slot = 'details';
+  custom.append(details);
+  custom.finalizePendingApproval();
+  custom.revertPendingApproval();
+  expect(calls).to.equal(0);
+
+  const suppressed = await fixture<LyraAgentWorkspace>(html`
+    <lr-agent-workspace .tools=${[entry]}></lr-agent-workspace>
+  `);
+  const suppressedTimeline = suppressed.shadowRoot!.querySelector<LyraToolTimeline>('lr-tool-timeline')!;
+  await suppressedTimeline.updateComplete;
+  suppressedTimeline.shadowRoot!.querySelector<HTMLElement>('lr-tool-call-chip')!.click();
+  await suppressedTimeline.updateComplete;
+  suppressed.addEventListener('lr-tool-approval-decide-request', (event) => event.preventDefault());
+  suppressedTimeline.shadowRoot!.querySelector<LyraToolApprovalDialog>('lr-tool-approval-dialog')!
+    .shadowRoot!.querySelector<HTMLButtonElement>('[part="deny-button"]')!.click();
+  await suppressedTimeline.updateComplete;
+  expect(suppressedTimeline.pendingApproval).to.equal('deny');
+  suppressed.withoutDetails = true;
+  suppressed.finalizePendingApproval();
+  suppressed.revertPendingApproval();
+  expect(suppressedTimeline.pendingApproval).to.equal('deny');
+  await suppressed.updateComplete;
+  expect(suppressed.shadowRoot!.querySelector('lr-tool-timeline') === null).to.be.true;
 });
 
 it("forwards caller-supplied retrieval failure text through the child errorText contract", async () => {

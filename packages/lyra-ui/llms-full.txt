@@ -450,7 +450,7 @@ Every one of those names is also typed — per component through its own event m
 through `@aceshooting/lyra-ui/events` for listeners on an ancestor, `document` or `window`. See
 "TypeScript" below.
 
-For the manually reviewed, retained event-detail compatibility fields in the v23-to-v24 upgrade,
+For event-detail compatibility fields removed in the v23-to-v24 upgrade,
 use step 7 of the [migration checklist](v23-to-v24-migration.md#migrate-a-project-in-reviewable-steps).
 Those nested detail fields are separate from deprecated event names and are not automatic renames.
 
@@ -462,7 +462,7 @@ Those nested detail fields are separate from deprecated event names and are not 
   ```ts
   import { LyraTable } from "@aceshooting/lyra-ui/components/data/table/table.class.js";
   const table = document.querySelector("lr-table") as LyraTable;
-  table.addEventListener("lr-sort", (event) => event.detail.key); // typed
+  table.addEventListener("lr-sort", (event) => event.detail.sortKey); // typed
   ```
 - **`HTMLElementTagNameMap`** is augmented in the `.class.d.ts` files. `document.querySelector('lr-table')`
   is only typed as `LyraTable` when that class module is in the type graph — importing just the
@@ -501,13 +501,13 @@ Those nested detail fields are separate from deprecated event names and are not 
   `LyraGlobalEventMap` is exported as well, for writing your own typed helper over it.
 
 - **The surface is per-event type aliases, not runtime event classes.** `LyraSortEvent` and its
-  generated siblings are `type` aliases over the owning component's own map entry
-  (`LyraTableEventMap['lr-sort']`) — there is nothing to `new`, and `instanceof LyraSortEvent` is
-  not a thing. The module compiles to `export {};`: shipping runtime event subclasses to type a
-  listener would cost every consumer runtime bytes for a compile-time concern, so it deliberately
-  costs zero.
+  generated siblings are `type` aliases over component event-map entries. `LyraSortEvent` unions
+  the `lr-sort` entries for document-library, eval-dataset and table. These aliases have no runtime
+  constructor and cannot be used with `new` or `instanceof`. The module compiles to `export {};`:
+  shipping runtime event subclasses to type a listener would cost every consumer runtime bytes for
+  a compile-time concern, so it deliberately costs zero.
 - **A shared event name narrows to the union of its dispatchers.** One name can come from several
-  components with different details — `lr-select` from five, `lr-selection-change` from five — so
+  components with different details, such as `lr-select` and `lr-selection-change`, so
   its global entry is the _union_ of their entries, and `event.detail` there exposes only what all
   of them share. Index the owning component's own map when you need one component's exact detail:
 
@@ -9603,6 +9603,9 @@ gemstone?: GemstoneKey }`; a valid CSS `color` is used as the
   remains the sole action. `gemstone` selects the canonical faceted glyph when
   `mode="gemstone"`. An explicit `icon` wins over `gemstone`. Assignments are bounded and copied
   into a frozen owned snapshot; mutate a new array/item and reassign it to update the palette.
+  Fresh items with unchanged fields retain their radio nodes and keyboard focus without a blur.
+  Custom icons match by identity. Duplicate values remain distinct occurrences; surviving original
+  item identities take precedence when a palette mixes original and equivalent fresh items.
 - `value: string | null = null` — the currently selected option's `value` (controlled); `null`
   leaves nothing selected while keeping the first swatch tabbable.
 - `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — scales the swatch hit-area and
@@ -9865,8 +9868,6 @@ locale's own separator), and `translateGemstone()` come from the application's c
 `onAccentChange()` validates the string and updates application state:
 
 ```ts
-// Build once per locale. A new array on every render re-creates every swatch and briefly blurs
-// the focused one.
 const items = GEMSTONE_KEYS.map((key) => ({
   value: key,
   color: GEMSTONES[key].fill,
@@ -42175,11 +42176,33 @@ RetrievalChunk[] }`) — forwarded from the built-in retrieval results.
 - `lr-tool-approval-decide-request` (`detail: ToolTimelineApprovalDetail` = `ToolApprovalEventDetail &
 { args?: unknown }` = `{ invocationId: string; approved: boolean; args?: unknown }`) — forwarded
   from the built-in tool timeline; `args` is present only on approval and may differ from what the
-  entry originally proposed (the dialog's inline edit step).
+  entry originally proposed (the dialog's inline edit step). Call `preventDefault()` synchronously
+  to hold the built-in dialog while persisting the decision.
 - `lr-cancel` (`detail: CancelEventDetail = { reason?: string }`) / `lr-run-retry` (`detail: RetryEventDetail` =
   `{ attempt: number; messageId?: string }`, from `@aceshooting/lyra-ui/ai`) — forwarded from the
   built-in agent run. The distinct retry name prevents a rendered message or attachment retry from
   being mistaken for a whole-run retry.
+
+**Methods:** `finalizePendingApproval(): void` closes a vetoed approval in the built-in tool timeline
+after persistence succeeds; `revertPendingApproval(): void` releases its pending state after a failed
+save while retaining the open dialog and edited arguments for retry. Both forward to the built-in
+timeline only and are no-ops when no timeline or pending decision exists, including when `details`
+is replaced by a custom slot or `withoutDetails` is set. The host still owns `tools` updates.
+These methods settle whichever approval is currently pending; an async host must discard stale
+completions when it replaces the run or tools before persistence returns.
+
+```ts
+workspace.addEventListener('lr-tool-approval-decide-request', async (event) => {
+  event.preventDefault();
+  try {
+    await persistDecision(event.detail);
+    workspace.tools = applyDecision(workspace.tools, event.detail);
+    workspace.finalizePendingApproval();
+  } catch {
+    workspace.revertPendingApproval();
+  }
+});
+```
 
 **Slots:** `messages` (replaces the data-driven transcript message list; assign ordinary messages
 directly, or exactly one `lr-virtual-list` when the slot itself owns virtualization), `details` (replaces the

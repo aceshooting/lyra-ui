@@ -1,6 +1,9 @@
 import { html } from 'lit';
+import { createRef, ref } from 'lit/directives/ref.js';
 import type { Meta, StoryObj } from '@storybook/web-components';
 import type { AgentRun, ChatMessage } from '../../../ai/types.js';
+import type { ToolTimelineApprovalDetail, ToolTimelineEntry } from '../../agent-tools/tool-timeline/tool-timeline.class.js';
+import type { LyraAgentWorkspace } from './agent-workspace.class.js';
 import './agent-workspace.js';
 import '../../forms/button/button.js';
 
@@ -145,6 +148,43 @@ export const CustomSlots: Story = {
       </lr-agent-workspace>
     </div>
   `,
+};
+
+/** The first persistence attempt fails and keeps the edited approval open for a retry. */
+export const DeferredToolApproval: Story = {
+  render: () => {
+    const workspaceRef = createRef<LyraAgentWorkspace>();
+    const entry: ToolTimelineEntry = {
+      id: 'tool-approval', name: 'save_draft', args: { path: '/draft' },
+      status: 'pending', needsApproval: true,
+    };
+    let rejectNext = true;
+    const decide = (event: CustomEvent<ToolTimelineApprovalDetail>) => {
+      event.preventDefault();
+      window.setTimeout(async () => {
+        const workspace = workspaceRef.value;
+        if (!workspace) return;
+        if (rejectNext) {
+          rejectNext = false;
+          workspace.revertPendingApproval();
+          return;
+        }
+        workspace.tools = [{ ...entry, approved: event.detail.approved,
+          status: event.detail.approved ? 'success' : 'denied' }];
+        await workspace.updateComplete;
+        workspace.finalizePendingApproval();
+      }, 500);
+    };
+    return html`<div style="height: 560px; padding: var(--lr-space-m);">
+      <p>The first decision fails to save. Retry it to complete.</p>
+      <lr-agent-workspace
+        ${ref(workspaceRef)}
+        label="Deferred tool approval"
+        .tools=${[entry]}
+        @lr-tool-approval-decide-request=${decide}
+      ></lr-agent-workspace>
+    </div>`;
+  },
 };
 
 export const ProgressiveMarkdown: Story = {

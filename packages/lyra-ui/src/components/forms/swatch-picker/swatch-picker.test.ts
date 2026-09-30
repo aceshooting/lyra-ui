@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { setReducedMotion } from "../../../../test/wtr-media.js";
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import "./swatch-picker.js";
 import type { LyraSwatchPicker } from "./swatch-picker.js";
 import { styles } from "./swatch-picker.styles.js";
@@ -220,6 +221,115 @@ describe("lr-swatch-picker", () => {
       0, -1, -1,
     ]);
     expect(el.value).to.equal("green");
+  });
+
+  it('retains radios without blurring keyboard focus when equivalent fresh items are assigned', async () => {
+    const el = await fixture<LyraSwatchPicker>(html`
+      <lr-swatch-picker .items=${options()} value="green"></lr-swatch-picker>
+    `);
+    const buttons = swatches(el);
+    await focusByKeyboard(buttons[1]!);
+    let blurs = 0;
+    let changes = 0;
+    buttons[1]!.addEventListener('blur', () => blurs++);
+    el.addEventListener('lr-change', () => changes++);
+
+    el.items = options();
+    await el.updateComplete;
+
+    expect(swatches(el).every((button, index) => button === buttons[index])).to.equal(true);
+    expect(el.shadowRoot!.activeElement === buttons[1]).to.equal(true);
+    expect(blurs).to.equal(0);
+    expect(changes).to.equal(0);
+    el.disabled = true;
+    el.items = options();
+    await el.updateComplete;
+    expect(swatches(el).every((button, index) => button === buttons[index])).to.equal(true);
+    expect(swatches(el).every((button) => button.disabled)).to.equal(true);
+  });
+
+  it('retains the selected duplicate occurrence when equivalent fresh items reorder', async () => {
+    const palette = [
+      { value: 'same', color: '#0969da', label: 'First' },
+      { value: 'same', color: '#1a7f37', label: 'Second' },
+      { value: 'other', color: '#cf222e', label: 'Other' },
+    ];
+    const el = await fixture<LyraSwatchPicker>(html`
+      <lr-swatch-picker .items=${palette}></lr-swatch-picker>
+    `);
+    swatches(el)[1]!.click();
+    await el.updateComplete;
+    const selected = swatches(el)[1]!;
+    await focusByKeyboard(selected);
+
+    el.items = [palette[1]!, palette[2]!, palette[0]!].map((item) => ({ ...item }));
+    await el.updateComplete;
+
+    expect(swatches(el)[0] === selected).to.equal(true);
+    expect(el.shadowRoot!.activeElement === selected).to.equal(true);
+    expect(swatches(el).map((button) => button.getAttribute('aria-checked'))).to.deep.equal(['true', 'false', 'false']);
+    selected.click();
+    await el.updateComplete;
+    expect(el.value).to.equal('same');
+  });
+
+  it('preserves original duplicate identity when a fresh equivalent occurrence precedes it', async () => {
+    const first = { value: 'same', color: '#0969da', label: 'Same' };
+    const second = { ...first };
+    const el = await fixture<LyraSwatchPicker>(html`
+      <lr-swatch-picker .items=${[first, second]}></lr-swatch-picker>
+    `);
+    swatches(el)[0]!.click();
+    await el.updateComplete;
+    const original = swatches(el)[0]!;
+
+    el.items = [{ ...first }, first];
+    await el.updateComplete;
+
+    expect(swatches(el).length).to.equal(2);
+    expect(swatches(el)[1] === original).to.equal(true);
+    expect(swatches(el).map((button) => button.getAttribute('aria-checked'))).to.deep.equal(['false', 'true']);
+  });
+
+  it('keeps repeated references to the same item as distinct radio occurrences', async () => {
+    const item = { value: 'same', color: '#0969da', label: 'Same' };
+    const el = await fixture<LyraSwatchPicker>(html`
+      <lr-swatch-picker .items=${[item, item]}></lr-swatch-picker>
+    `);
+    swatches(el)[1]!.click();
+    await el.updateComplete;
+    const selected = swatches(el)[1]!;
+
+    el.items = [{ ...item }, { ...item }];
+    await el.updateComplete;
+
+    expect(swatches(el).length).to.equal(2);
+    expect(swatches(el)[1] === selected).to.equal(true);
+    expect(swatches(el).map((button) => button.getAttribute('aria-checked'))).to.deep.equal(['false', 'true']);
+  });
+
+  it('updates paint, accessible names and custom icons when fresh item fields change', async () => {
+    const initial = { value: 'one', color: 'red', label: 'First', icon: html`<span>First icon</span>` };
+    const el = await fixture<LyraSwatchPicker>(html`
+      <lr-swatch-picker .items=${[initial]} value="one"></lr-swatch-picker>
+    `);
+    const button = swatches(el)[0]!;
+    el.items = [{ ...initial }];
+    await el.updateComplete;
+    expect(swatches(el)[0] === button).to.equal(true);
+
+    el.items = [{ value: 'one', color: 'blue', label: 'Second', icon: html`<span>Second icon</span>` }];
+    await el.updateComplete;
+    const updated = swatches(el)[0]!;
+    expect(updated.getAttribute('aria-label')).to.equal('Second');
+    expect(updated.textContent).to.contain('Second icon');
+    expect(updated.textContent).not.to.contain('First icon');
+    expect(getComputedStyle(updated).color).to.equal('rgb(0, 0, 255)');
+    const change = oneEvent(el, 'lr-change');
+    el.value = null;
+    await el.updateComplete;
+    updated.click();
+    expect((await change).detail.value).to.equal('one');
   });
 
   it("selects on click and emits lr-change with the option value", async () => {

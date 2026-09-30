@@ -34,6 +34,15 @@ export interface SwatchPickerItem {
   readonly gemstone?: GemstoneKey;
 }
 
+interface SwatchSnapshotQueue {
+  items: SwatchPickerItem[];
+  index: number;
+}
+
+function snapshotKey(item: SwatchPickerItem): string {
+  return JSON.stringify([item.value, item.color, item.label]);
+}
+
 export type LyraSwatchPickerMode = 'swatch' | 'gemstone';
 
 const SWATCH_PICKER_MODE = literalSetConverter<LyraSwatchPickerMode>(
@@ -67,6 +76,8 @@ export interface LyraSwatchPickerEventMap {
  * display order and `value` still controls the initial selection. Live option reorders preserve
  * focus by option identity; removing the focused option moves focus to the nearest surviving
  * swatch without changing the controlled `value` or emitting `lr-change`.
+ * Equivalent fresh items retain their immutable snapshots and radio nodes without blurring
+ * keyboard focus. Duplicate values remain distinct occurrences; custom icons match by identity.
  *
  * `disabled` locks the whole picker: every swatch renders as a real `disabled` `<button>` (out of
  * the tab sequence, inert to activation), keyboard navigation and `click()` become no-ops, and the
@@ -152,6 +163,8 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
   set items(next: readonly SwatchPickerItem[]) {
     const old = this._items;
     const snapshots: SwatchPickerItem[] = [];
+    const entries: { raw: object; item: SwatchPickerItem; cached?: SwatchPickerItem }[] = [];
+    const reserved = new Set<SwatchPickerItem>();
     if (Array.isArray(next)) {
       for (let index = 0; index < Math.min(next.length, 512); index += 1) {
         try {
@@ -159,7 +172,8 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
           if (raw === null || typeof raw !== 'object') continue;
           const cached = this.itemSnapshots.get(raw);
           if (cached) {
-            snapshots.push(cached);
+            entries.push({ raw, item: cached, cached });
+            reserved.add(cached);
             continue;
           }
           const value = raw.value;
@@ -172,19 +186,44 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
             label.trim() === ''
           )
             continue;
-          const snapshot = Object.freeze({
+          const icon = raw.icon;
+          const gemstone = raw.gemstone;
+          entries.push({ raw, item: {
             value,
             color,
             label,
-            ...(raw.icon === undefined ? {} : { icon: raw.icon }),
-            ...(raw.gemstone === undefined ? {} : { gemstone: raw.gemstone }),
-          });
-          this.itemSnapshots.set(raw, snapshot);
-          snapshots.push(snapshot);
+            ...(icon === undefined ? {} : { icon }),
+            ...(gemstone === undefined ? {} : { gemstone }),
+          } });
         } catch {
           // A hostile getter invalidates only that row; later valid swatches remain available.
         }
       }
+    }
+    // Reserve surviving object identities before matching fresh equivalents, so a duplicate
+    // appearing earlier cannot take the identity of an original occurrence later in the list.
+    const buckets = new Map<string, Map<GemstoneKey | undefined, Map<unknown, SwatchSnapshotQueue>>>();
+    for (const item of old) {
+      if (reserved.has(item)) continue;
+      const key = snapshotKey(item);
+      let gemstones = buckets.get(key);
+      if (!gemstones) buckets.set(key, gemstones = new Map());
+      let icons = gemstones.get(item.gemstone);
+      if (!icons) gemstones.set(item.gemstone, icons = new Map());
+      let queue = icons.get(item.icon);
+      if (!queue) icons.set(item.icon, queue = { items: [], index: 0 });
+      queue.items.push(item);
+    }
+    const used = new Set<SwatchPickerItem>();
+    for (const { raw, item, cached } of entries) {
+      let snapshot = cached && !used.has(cached) ? cached : undefined;
+      if (!snapshot) {
+        const queue = buckets.get(snapshotKey(item))?.get(item.gemstone)?.get(item.icon);
+        snapshot = queue?.items[queue.index++] ?? Object.freeze({ ...item });
+      }
+      used.add(snapshot);
+      if (!this.itemSnapshots.has(raw)) this.itemSnapshots.set(raw, snapshot);
+      snapshots.push(snapshot);
     }
     this._items = Object.freeze(snapshots);
     this.requestUpdate('items', old);

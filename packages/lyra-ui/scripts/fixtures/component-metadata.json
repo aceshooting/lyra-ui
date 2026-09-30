@@ -22402,7 +22402,7 @@
     "current": {
       "version": "24.0.0",
       "sourceCommit": null,
-      "manifestSha256": "846fcc9f3decbad9d2a64fc19c6be978bd262071b4f4a16c6680a6194c842859",
+      "manifestSha256": "80d1e4f3e945766f7de6ee865e8a607d800be054c76a9750e1cb48cff32644a7",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",

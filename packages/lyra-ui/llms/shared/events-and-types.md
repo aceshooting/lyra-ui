@@ -24,7 +24,7 @@ Every one of those names is also typed — per component through its own event m
 through `@aceshooting/lyra-ui/events` for listeners on an ancestor, `document` or `window`. See
 "TypeScript" below.
 
-For the manually reviewed, retained event-detail compatibility fields in the v23-to-v24 upgrade,
+For event-detail compatibility fields removed in the v23-to-v24 upgrade,
 use step 7 of the [migration checklist](v23-to-v24-migration.md#migrate-a-project-in-reviewable-steps).
 Those nested detail fields are separate from deprecated event names and are not automatic renames.
 
@@ -36,7 +36,7 @@ Those nested detail fields are separate from deprecated event names and are not 
   ```ts
   import { LyraTable } from "@aceshooting/lyra-ui/components/data/table/table.class.js";
   const table = document.querySelector("lr-table") as LyraTable;
-  table.addEventListener("lr-sort", (event) => event.detail.key); // typed
+  table.addEventListener("lr-sort", (event) => event.detail.sortKey); // typed
   ```
 - **`HTMLElementTagNameMap`** is augmented in the `.class.d.ts` files. `document.querySelector('lr-table')`
   is only typed as `LyraTable` when that class module is in the type graph — importing just the
@@ -75,13 +75,13 @@ Those nested detail fields are separate from deprecated event names and are not 
   `LyraGlobalEventMap` is exported as well, for writing your own typed helper over it.
 
 - **The surface is per-event type aliases, not runtime event classes.** `LyraSortEvent` and its
-  generated siblings are `type` aliases over the owning component's own map entry
-  (`LyraTableEventMap['lr-sort']`) — there is nothing to `new`, and `instanceof LyraSortEvent` is
-  not a thing. The module compiles to `export {};`: shipping runtime event subclasses to type a
-  listener would cost every consumer runtime bytes for a compile-time concern, so it deliberately
-  costs zero.
+  generated siblings are `type` aliases over component event-map entries. `LyraSortEvent` unions
+  the `lr-sort` entries for document-library, eval-dataset and table. These aliases have no runtime
+  constructor and cannot be used with `new` or `instanceof`. The module compiles to `export {};`:
+  shipping runtime event subclasses to type a listener would cost every consumer runtime bytes for
+  a compile-time concern, so it deliberately costs zero.
 - **A shared event name narrows to the union of its dispatchers.** One name can come from several
-  components with different details — `lr-select` from five, `lr-selection-change` from five — so
+  components with different details, such as `lr-select` and `lr-selection-change`, so
   its global entry is the _union_ of their entries, and `event.detail` there exposes only what all
   of them share. Index the owning component's own map when you need one component's exact detail:
 

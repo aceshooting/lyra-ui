@@ -6,6 +6,7 @@ import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import { tag } from '../../../internal/prefix.js';
 import { normalizeChatComposerStatus } from '../chat-composer/chat-composer.class.js';
 import type { ChatComposerStatus } from '../chat-composer/chat-composer.class.js';
 import type { AgentRunMetric } from '../../agent-tools/agent-run/agent-run.class.js';
@@ -24,6 +25,7 @@ import type {
 } from '../../../ai/types.js';
 import type { RetrievalResultsSelectDetail } from '../../retrieval/retrieval-results/retrieval-results.class.js';
 import type { ToolTimelineEntry, ToolTimelineApprovalDetail } from '../../agent-tools/tool-timeline/tool-timeline.class.js';
+import type { LyraToolTimeline } from '../../agent-tools/tool-timeline/tool-timeline.class.js';
 export type { ToolTimelineEntry } from '../../agent-tools/tool-timeline/tool-timeline.class.js';
 import { styles } from './agent-workspace.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
@@ -91,6 +93,10 @@ export interface LyraAgentWorkspaceEventMap {
  * Composer value, follow state, and retrieval selection are request-only:
  * child events are forwarded, but the workspace never writes those public
  * properties. The host applies accepted state back to the component.
+ * A vetoed tool approval in the built-in timeline stays pending until the host calls
+ * `finalizePendingApproval()` after persistence or `revertPendingApproval()` after failure.
+ * Async hosts must ignore stale completions after replacing the run or tools because these
+ * methods act on the currently pending approval.
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
@@ -267,6 +273,23 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
 
   private hasSlotted(name: string): boolean {
     return Array.from(this.children).some((element) => element.getAttribute('slot') === name);
+  }
+
+  private builtInToolTimeline(): LyraToolTimeline | null {
+    if (this.withoutDetails || this.hasSlotted('details')) return null;
+    return this.renderRoot?.querySelector<LyraToolTimeline>(tag('tool-timeline')) ?? null;
+  }
+
+  /** Closes a vetoed approval in the built-in tool timeline after the host persists its decision.
+   * No-op when that timeline or a pending approval is absent, including with a custom details slot. */
+  finalizePendingApproval(): void {
+    this.builtInToolTimeline()?.finalizePendingApproval();
+  }
+
+  /** Releases a vetoed approval in the built-in tool timeline after persistence fails, preserving
+   * the open dialog and its edited arguments for retry. No-op without the built-in timeline. */
+  revertPendingApproval(): void {
+    this.builtInToolTimeline()?.revertPendingApproval();
   }
 
   private get safeContextTotal(): number {

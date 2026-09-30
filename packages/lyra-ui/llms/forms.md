@@ -3963,6 +3963,9 @@ gemstone?: GemstoneKey }`; a valid CSS `color` is used as the
   remains the sole action. `gemstone` selects the canonical faceted glyph when
   `mode="gemstone"`. An explicit `icon` wins over `gemstone`. Assignments are bounded and copied
   into a frozen owned snapshot; mutate a new array/item and reassign it to update the palette.
+  Fresh items with unchanged fields retain their radio nodes and keyboard focus without a blur.
+  Custom icons match by identity. Duplicate values remain distinct occurrences; surviving original
+  item identities take precedence when a palette mixes original and equivalent fresh items.
 - `value: string | null = null` — the currently selected option's `value` (controlled); `null`
   leaves nothing selected while keeping the first swatch tabbable.
 - `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — scales the swatch hit-area and
@@ -4225,8 +4228,6 @@ locale's own separator), and `translateGemstone()` come from the application's c
 `onAccentChange()` validates the string and updates application state:
 
 ```ts
-// Build once per locale. A new array on every render re-creates every swatch and briefly blurs
-// the focused one.
 const items = GEMSTONE_KEYS.map((key) => ({
   value: key,
   color: GEMSTONES[key].fill,
