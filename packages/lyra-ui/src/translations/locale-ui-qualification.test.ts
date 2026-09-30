@@ -17,26 +17,29 @@ function numberText(locale: string, value: number): string {
   }
 }
 
-it('qualifies representative accessible controls across every manifest-backed locale', async () => {
-  const activeLocale = getLyraLocale();
-  const activeDirection = getLyraLocaleDirection(activeLocale);
-  const shell = await fixture<HTMLDivElement>(html`
-    <div style="inline-size: 320px" data-lr-density="compact">
-      <lr-input type="password" password-toggle size="xs"></lr-input>
-      <lr-format-number value="1234567.89"></lr-format-number>
-      <lr-date-input value="2026-07-15"></lr-date-input>
-    </div>
-  `);
-  const input = shell.querySelector<LyraInput>('lr-input')!;
-  const formatNumber = shell.querySelector<LyraFormatNumber>('lr-format-number')!;
-  const dateInput = shell.querySelector<LyraDateInput>('lr-date-input')!;
-
-  // The generated loader table is the runtime inventory of canonical tags and their literal
-  // aggregate imports. Load one at a time so browser memory stays bounded and each control sees
-  // the same registered catalog the public lazy-loader API would use.
-  const locales = Object.keys(localeLoaders).sort();
+// The generated loader table is the runtime inventory of canonical tags and their literal
+// aggregate imports. Each locale gets a bounded test and a fresh fixture; the full inventory
+// remains qualified without letting one long axe loop exceed Mocha's per-test timeout.
+const locales = Object.keys(localeLoaders).sort();
+it('exposes manifest-backed locales for UI qualification', () => {
   expect(locales.length).to.be.greaterThan(0);
-  for (const locale of locales) {
+});
+
+for (const locale of locales) {
+  it(`qualifies representative accessible controls for ${locale}`, async () => {
+    const activeLocale = getLyraLocale();
+    const activeDirection = getLyraLocaleDirection(activeLocale);
+    const shell = await fixture<HTMLDivElement>(html`
+      <div style="inline-size: 320px" data-lr-density="compact">
+        <lr-input type="password" password-toggle size="xs"></lr-input>
+        <lr-format-number value="1234567.89"></lr-format-number>
+        <lr-date-input value="2026-07-15"></lr-date-input>
+      </div>
+    `);
+    const input = shell.querySelector<LyraInput>('lr-input')!;
+    const formatNumber = shell.querySelector<LyraFormatNumber>('lr-format-number')!;
+    const dateInput = shell.querySelector<LyraDateInput>('lr-date-input')!;
+
     await loadLyraLocale(locale);
     const direction = getLyraLocaleDirection(locale);
     expect(['ltr', 'rtl']).to.include(direction, `${locale} declares a usable direction`);
@@ -131,21 +134,20 @@ it('qualifies representative accessible controls across every manifest-backed lo
       dateNativeInput.dispatchEvent(new Event('change', { bubbles: true }));
       expect(dateInput.value, `${locale} parses its own localized date digits`).to.equal('2026-07-15');
     }
-  }
-
-  input.locale = 'en';
-  input.dir = 'ltr';
-  input.type = 'password';
-  input.passwordToggle = true;
-  input.passwordVisible = false;
-  input.label = '';
-  input.strings = {};
-  await input.updateComplete;
-  const englishNativeInput = input.shadowRoot!.querySelector<HTMLInputElement>('input')!;
-  const englishPasswordToggle = input.shadowRoot!.querySelector<HTMLButtonElement>('[part="password-toggle"]')!;
-  expect(englishNativeInput.getAttribute('aria-label')).to.equal('Text');
-  expect(englishPasswordToggle.getAttribute('aria-label')).to.equal('Show password');
-  expect(getLyraLocale()).to.equal(activeLocale, 'loading catalogs does not select a new page locale');
-  expect(getLyraLocaleDirection(getLyraLocale())).to.equal(activeDirection,
-    'loading catalogs preserves the active page direction');
-});
+    input.locale = 'en';
+    input.dir = 'ltr';
+    input.type = 'password';
+    input.passwordToggle = true;
+    input.passwordVisible = false;
+    input.label = '';
+    input.strings = {};
+    await input.updateComplete;
+    const englishNativeInput = input.shadowRoot!.querySelector<HTMLInputElement>('input')!;
+    const englishPasswordToggle = input.shadowRoot!.querySelector<HTMLButtonElement>('[part="password-toggle"]')!;
+    expect(englishNativeInput.getAttribute('aria-label')).to.equal('Text');
+    expect(englishPasswordToggle.getAttribute('aria-label')).to.equal('Show password');
+    expect(getLyraLocale()).to.equal(activeLocale, 'loading catalogs does not select a new page locale');
+    expect(getLyraLocaleDirection(getLyraLocale())).to.equal(activeDirection,
+      'loading catalogs preserves the active page direction');
+  });
+}
