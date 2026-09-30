@@ -5,7 +5,7 @@ export function resolveStyleStartup(
   saved: unknown,
   defaults: { readonly look: string; readonly surface: string; readonly density: string; readonly mode: string; readonly accent: string },
   normalizeMap: (value: unknown) => LyraThemeTokens | null,
-  supportsColor: (value: string) => boolean,
+  color: (value: unknown) => string | undefined,
   allowed: (name: string, value: LyraThemeTokenValue) => boolean,
   gemstones: Readonly<Record<string, string>>,
 ): Record<string, unknown> {
@@ -23,13 +23,6 @@ export function resolveStyleStartup(
   const overrides = (value: unknown): LyraThemeTokens | null => {
     const entries = Object.entries(map(value) ?? {}).filter(([name, input]) => allowed(name, input));
     return entries.length ? Object.fromEntries(entries) : null;
-  };
-  const color = (value: unknown): string | undefined => {
-    if (typeof value !== 'string') return undefined;
-    const candidate = map({ '--lr-theme-startup-color': value })?.['--lr-theme-startup-color'];
-    if (typeof candidate !== 'string' || /\b(?:var|light-dark)\s*\(|\b(?:currentcolor|from)\b/i.test(candidate)) return undefined;
-    if (/^(?:accentcolor|accentcolortext|activetext|buttonborder|buttonface|buttontext|canvas|canvastext|field|fieldtext|graytext|highlight|highlighttext|linktext|mark|marktext|selecteditem|selecteditemtext|visitedtext)$/i.test(candidate)) return undefined;
-    return supportsColor(candidate) ? candidate : undefined;
   };
   const pair = (value: unknown): unknown => {
     if (value === null) return null;

@@ -630,75 +630,67 @@ function readOwnershipList(): string[] {
 
 /**
  * Self-contained token normalization and contrast paint, serialized into the pre-paint adapter.
- * The adapter owns storage and document attributes; each call paints a supplied scratch element.
+ * The adapter owns storage and document writes; this factory shares validation and returns paint maps.
  * Its token grammar and color pipeline mirror the runtime without importing module state.
  */
-function applyStoredThemeBeforePaint(
-  supplied: { record: Record<string, unknown>; root: HTMLElement; references?: readonly number[][]; normalizeOnly?: boolean; tokens?: LyraThemeTokens },
-): LyraThemeTokens | undefined {
-  try {
-    const theme = supplied.record;
-    const resolvedMode = theme['mode'] === 'light' || theme['mode'] === 'dark' ? theme['mode'] : null;
-    const root = supplied.root;
-    const style = root.style;
-    const roles = ['brand', 'success', 'warning', 'danger', 'neutral'];
-    const tiers = ['quiet', 'normal', 'loud'];
+function applyStoredThemeBeforePaint() {
+  const roles = ['brand', 'success', 'warning', 'danger', 'neutral'];
+  const tiers = ['quiet', 'normal', 'loud'];
 
-    // Literal copy of the token-map grammar (scripts/fixtures/theme-token-grammar.json is the single
-    // source; scripts/theme-token-grammar.test.mjs keeps this copy identical to it).
-    const tokenNamePattern = /^--lr-theme-[a-z0-9]+(?:-[a-z0-9]+)*$/;
-    const tokenNameMaxLength = 80;
-    const tokenReservedName = '--lr-theme-accent';
-    const tokenEntryMax = 512;
-    const tokenValueMaxLength = 256;
-    const tokenForbiddenPattern = /[\x00-\x1f\x7f\\;{}!<>@[\]`$^|~=?&:\u2028\u2029]|\/\*|\*\//;
-    const tokenCssWidePattern = /^(?:inherit|initial|revert(?:-layer)?|unset)$/i;
-    const tokenFunctionPattern = /([a-z0-9_-]+)\s*\(/gi;
-    const tokenAllowedFunctions = 'rgb rgba hsl hsla hwb lab lch oklab oklch color color-mix light-dark calc min max clamp var cubic-bezier steps linear'.split(' ');
-    const modeDefaults = {
-      light: { surface: [255, 255, 255], raised: [246, 248, 250], text: [26, 26, 26], overlayStrongAlpha: 0.92 },
-      dark: { surface: [26, 26, 26], raised: [34, 39, 46], text: [242, 242, 242], overlayStrongAlpha: 0.95 },
-    };
+  // Literal copy of the token-map grammar (scripts/fixtures/theme-token-grammar.json is the single
+  // source; scripts/theme-token-grammar.test.mjs keeps this copy identical to it).
+  const tokenNamePattern = /^--lr-theme-[a-z0-9]+(?:-[a-z0-9]+)*$/;
+  const tokenNameMaxLength = 80;
+  const tokenReservedName = '--lr-theme-accent';
+  const tokenEntryMax = 512;
+  const tokenValueMaxLength = 256;
+  const tokenForbiddenPattern = /[\x00-\x1f\x7f\\;{}!<>@[\]`$^|~=?&:\u2028\u2029]|\/\*|\*\//;
+  const tokenCssWidePattern = /^(?:inherit|initial|revert(?:-layer)?|unset)$/i;
+  const tokenFunctionPattern = /([a-z0-9_-]+)\s*\(/gi;
+  const tokenAllowedFunctions = 'rgb rgba hsl hsla hwb lab lch oklab oklch color color-mix light-dark calc min max clamp var cubic-bezier steps linear'.split(' ');
+  const modeDefaults = {
+    light: { surface: [255, 255, 255], raised: [246, 248, 250], text: [26, 26, 26], overlayStrongAlpha: 0.92 },
+    dark: { surface: [26, 26, 26], raised: [34, 39, 46], text: [242, 242, 242], overlayStrongAlpha: 0.95 },
+  };
 
-    const isBalanced = (value: string): boolean => {
-      let depth = 0;
-      let quote = '';
-      for (const character of value) {
-        if (quote) {
-          if (character === quote) quote = '';
-          continue;
-        }
-        if (character === '\'' || character === '"') quote = character;
-        else if (character === '(') depth += 1;
-        else if (character === ')' && (depth -= 1) < 0) return false;
+  const isBalanced = (value: string): boolean => {
+    let depth = 0;
+    let quote = '';
+    for (const character of value) {
+      if (quote) {
+        if (character === quote) quote = '';
+        continue;
       }
-      return quote === '' && depth === 0;
-    };
-    const isTokenName = (name: unknown): name is string =>
-      typeof name === 'string'
-        && name.length <= tokenNameMaxLength
-        && tokenNamePattern.test(name)
-        && name !== tokenReservedName;
-    const safeTokenValue = (value: unknown): string | null => {
-      if (typeof value !== 'string') return null;
-      const trimmed = value.trim();
-      if (!trimmed || trimmed.length > tokenValueMaxLength) return null;
-      if (tokenForbiddenPattern.test(trimmed) || tokenCssWidePattern.test(trimmed)) return null;
-      for (const match of trimmed.matchAll(tokenFunctionPattern)) {
-        if (!tokenAllowedFunctions.includes((match[1] ?? '').toLowerCase())) return null;
-      }
-      return isBalanced(trimmed) ? trimmed : null;
-    };
-    const isPlain = (value: unknown): value is Record<string, unknown> => {
-      if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
-      const prototype = Object.getPrototypeOf(value) as unknown;
-      return prototype === Object.prototype || prototype === null;
-    };
+      if (character === '\'' || character === '"') quote = character;
+      else if (character === '(') depth += 1;
+      else if (character === ')' && (depth -= 1) < 0) return false;
+    }
+    return quote === '' && depth === 0;
+  };
+  const isTokenName = (name: unknown): name is string =>
+    typeof name === 'string'
+      && name.length <= tokenNameMaxLength
+      && tokenNamePattern.test(name)
+      && name !== tokenReservedName;
+  const safeTokenValue = (value: unknown): string | null => {
+    if (typeof value !== 'string') return null;
+    const trimmed = value.trim();
+    if (!trimmed || trimmed.length > tokenValueMaxLength) return null;
+    if (tokenForbiddenPattern.test(trimmed) || tokenCssWidePattern.test(trimmed)) return null;
+    for (const match of trimmed.matchAll(tokenFunctionPattern)) {
+      if (!tokenAllowedFunctions.includes((match[1] ?? '').toLowerCase())) return null;
+    }
+    return isBalanced(trimmed) ? trimmed : null;
+  };
+  const isPlain = (value: unknown): value is Record<string, unknown> => {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+    const prototype = Object.getPrototypeOf(value) as unknown;
+    return prototype === Object.prototype || prototype === null;
+  };
 
-    // Normalize each persisted map before composition, retaining both valid mode branches.
+  const normalizeMap = (rawTokens: unknown): LyraThemeTokens => {
     const normalizedTokens: Record<string, LyraThemeTokenValue> = {};
     try {
-      const rawTokens = theme['tokens'];
       const names = isPlain(rawTokens) ? Object.keys(rawTokens) : [];
       if (isPlain(rawTokens) && names.length <= tokenEntryMax) {
         for (const name of names) {
@@ -719,45 +711,41 @@ function applyStoredThemeBeforePaint(
         }
       }
     } catch { /* An invalid map contributes no entries. */ }
-    if (supplied.normalizeOnly) return normalizedTokens as LyraThemeTokens;
+    return normalizedTokens as LyraThemeTokens;
+  };
+  const normalizeColor = (raw: unknown): string | undefined => {
+    const value = safeTokenValue(raw);
+    if (!value || /\b(?:var|light-dark)\s*\(|\b(?:currentcolor|from)\b/i.test(value)
+      || /^(?:accentcolor|accentcolortext|activetext|buttonborder|buttonface|buttontext|canvas|canvastext|field|fieldtext|graytext|highlight|highlighttext|linktext|mark|marktext|selecteditem|selecteditemtext|visitedtext)$/i.test(value)) return undefined;
+    return CSS.supports('color', value) ? value : undefined;
+  };
+  const paint = (
+    tokens: LyraThemeTokens,
+    resolvedMode: 'light' | 'dark',
+    referenceSurface: unknown,
+    rawAccent: unknown,
+    references: readonly number[][],
+  ): Map<string, string> => {
     const entries = new Map<string, string>();
-    for (const [name, value] of Object.entries(supplied.tokens ?? normalizedTokens)) {
-      const branch = typeof value === 'string' ? value : resolvedMode ? value[resolvedMode] : null;
+    for (const [name, value] of Object.entries(tokens)) {
+      const branch = typeof value === 'string' ? value : value[resolvedMode];
       if (branch) entries.set(name, branch);
     }
 
-    const unsupported = (value: string) =>
-      tokenCssWidePattern.test(value)
-        || /^(?:accentcolor|accentcolortext|activetext|buttonborder|buttonface|buttontext|canvas|canvastext|field|fieldtext|graytext|highlight|highlighttext|linktext|mark|marktext|selecteditem|selecteditemtext|visitedtext)$/i.test(value)
-        || /\bcurrentcolor\b/i.test(value)
-        || /\bvar\s*\(/i.test(value)
-        || /\blight-dark\s*\(/i.test(value)
-        || /\b(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\s*\(\s*from\b/i.test(value);
-
-    const normalize = (raw: unknown): string | null => {
-      if (typeof raw !== 'string') return null;
-      const trimmed = raw.trim();
-      if (!trimmed || !isBalanced(trimmed) || unsupported(trimmed)) return null;
-      const syntaxProbe = document.createElement('span');
-      syntaxProbe.style.color = trimmed;
-      return syntaxProbe.style.color ? trimmed : null;
-    };
-
     // A role's raw value is a bare color, `null`, or a `{ light, dark }` per-mode map -- resolves
     // to the branch matching `resolvedMode` (mirroring theme.ts's own `resolveAccentValueForMode`)
-    // before the same syntax-level `normalize` every other color passes through.
+    // before the same absolute-color validation every other color passes through.
     const resolveRoleAccent = (raw: unknown): string | null => {
-      if (typeof raw === 'string') return normalize(raw);
+      if (typeof raw === 'string') return normalizeColor(raw) ?? null;
       if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
       const perMode = raw as Record<string, unknown>;
-      if (!resolvedMode || (!('light' in perMode) && !('dark' in perMode))) return null;
-      return normalize(perMode[resolvedMode]);
+      if (!('light' in perMode) && !('dark' in perMode)) return null;
+      return normalizeColor(perMode[resolvedMode]) ?? null;
     };
 
     const accentRoles: Record<string, string> = {};
-    const rawAccent = theme['accent'];
     if (typeof rawAccent === 'string') {
-      const normalized = normalize(rawAccent);
+      const normalized = normalizeColor(rawAccent);
       if (normalized) accentRoles['brand'] = normalized;
     } else if (rawAccent && typeof rawAccent === 'object' && !Array.isArray(rawAccent)) {
       for (const role of roles) {
@@ -767,7 +755,7 @@ function applyStoredThemeBeforePaint(
     }
 
     let context: CanvasRenderingContext2D | null = null;
-    if (resolvedMode && (entries.size > 0 || Object.keys(accentRoles).length > 0)) {
+    if (entries.size > 0 || Object.keys(accentRoles).length > 0) {
       try {
         const canvas = document.createElement('canvas');
         canvas.width = 1;
@@ -816,7 +804,7 @@ function applyStoredThemeBeforePaint(
     const on = (fill: number[]) => contrast(fill, black) >= contrast(fill, white) ? black : white;
     const ensureContrast = (value: number[], background: number[], minimum = 3, alsoAgainst = background) => {
       const passes = (candidate: number[]) =>
-        contrast(candidate, background) >= minimum && contrast(candidate, alsoAgainst) >= minimum && (supplied.references ?? []).every(reference => contrast(candidate, reference) >= minimum);
+        contrast(candidate, background) >= minimum && contrast(candidate, alsoAgainst) >= minimum && references.every(reference => contrast(candidate, reference) >= minimum);
       if (passes(value)) return value;
       const target = contrast(background, black) >= contrast(background, white) ? black : white;
       for (let step = 1; step <= 10; step += 1) {
@@ -827,86 +815,79 @@ function applyStoredThemeBeforePaint(
     };
     const rgb = (value: number[]) => `rgb(${value.join(' ')})`;
 
-    const defaults = modeDefaults[resolvedMode ?? 'light'];
+    const defaults = modeDefaults[resolvedMode];
     const defaultSurface = defaults.surface;
-    const surface = normalize(theme['surface']) ?? normalize(entries.get('--lr-theme-color-surface-default'));
+    const surface = normalizeColor(referenceSurface) ?? normalizeColor(entries.get('--lr-theme-color-surface-default'));
     const background = (surface && paintRgb(surface, defaultSurface)) || defaultSurface;
 
     // The contrast floor, row for row the runtime's: an unresolved value or reference is written
     // verbatim and synthesizes nothing.
     const painted = new Map(entries);
-    if (resolvedMode) {
-      const prefix = '--lr-theme-';
-      const resolveToken = (value: string | undefined, over: number[] | null): number[] | null =>
-        value !== undefined && over && normalize(value) ? paintRgb(value, over) : null;
-      const reference = (name: string, fallback: number[]): number[] | null =>
-        entries.has(prefix + name) ? resolveToken(entries.get(prefix + name), background) : fallback;
-      const raised = reference('color-surface-raised', defaults.raised);
-      const floor = (
-        name: string,
-        over: number[] | null,
-        against: number[] | null,
-        minimum: number,
-        alsoAgainst?: number[] | null,
-      ): void => {
-        const value = painted.get(name);
-        if (value === undefined || !against || alsoAgainst === null) return;
-        const color = resolveToken(value, over);
-        if (!color) return;
-        const repaired = ensureContrast(color, against, minimum, alsoAgainst ?? against);
-        if (repaired !== color) painted.set(name, rgb(repaired));
-      };
-      floor(`${prefix}color-text-normal`, background, background, 4.5, raised);
-      floor(`${prefix}color-text-quiet`, background, background, 4.5, raised);
-      const text = entries.has(`${prefix}color-text-normal`)
-        ? resolveToken(painted.get(`${prefix}color-text-normal`), background)
-        : defaults.text;
-      const synthesized = new Map<string, string>();
-      const pairForeground = (onName: string, fill: number[] | null): void => {
-        if (!fill) return;
-        const onValue = painted.get(onName);
-        if (onValue === undefined) {
-          synthesized.set(onName, rgb(on(fill)));
-          return;
-        }
-        const color = resolveToken(onValue, fill);
-        if (color && contrast(color, fill) < 4.5) painted.set(onName, rgb(on(fill)));
-      };
-      for (const role of roles) {
-        for (const tier of tiers) {
-          const fillName = `${prefix}color-${role}-fill-${tier}`;
-          if (!entries.has(fillName)) continue;
-          pairForeground(`${prefix}color-${role}-on-${tier}`, resolveToken(entries.get(fillName), background));
-        }
+    const prefix = '--lr-theme-';
+    const resolveToken = (value: string | undefined, over: number[] | null): number[] | null =>
+      value !== undefined && over && normalizeColor(value) ? paintRgb(value, over) : null;
+    const reference = (name: string, fallback: number[]): number[] | null =>
+      entries.has(prefix + name) ? resolveToken(entries.get(prefix + name), background) : fallback;
+    const raised = reference('color-surface-raised', defaults.raised);
+    const floor = (
+      name: string,
+      over: number[] | null,
+      against: number[] | null,
+      minimum: number,
+      alsoAgainst?: number[] | null,
+    ): void => {
+      const value = painted.get(name);
+      if (value === undefined || !against || alsoAgainst === null) return;
+      const color = resolveToken(value, over);
+      if (!color) return;
+      const repaired = ensureContrast(color, against, minimum, alsoAgainst ?? against);
+      if (repaired !== color) painted.set(name, rgb(repaired));
+    };
+    floor(`${prefix}color-text-normal`, background, background, 4.5, raised);
+    floor(`${prefix}color-text-quiet`, background, background, 4.5, raised);
+    const text = entries.has(`${prefix}color-text-normal`)
+      ? resolveToken(painted.get(`${prefix}color-text-normal`), background)
+      : defaults.text;
+    const synthesized = new Map<string, string>();
+    const pairForeground = (onName: string, fill: number[] | null): void => {
+      if (!fill) return;
+      const onValue = painted.get(onName);
+      if (onValue === undefined) {
+        synthesized.set(onName, rgb(on(fill)));
+        return;
       }
-      const overlayName = `${prefix}color-overlay-strong`;
-      const overlay = entries.has(overlayName)
-        ? resolveToken(entries.get(overlayName), background)
-        : mix(background, black, defaults.overlayStrongAlpha);
-      if (entries.has(overlayName) || entries.has(`${prefix}color-on-strong-overlay`)) {
-        pairForeground(`${prefix}color-on-strong-overlay`, overlay);
+      const color = resolveToken(onValue, fill);
+      if (color && contrast(color, fill) < 4.5) painted.set(onName, rgb(on(fill)));
+    };
+    for (const role of roles) {
+      for (const tier of tiers) {
+        const fillName = `${prefix}color-${role}-fill-${tier}`;
+        if (!entries.has(fillName)) continue;
+        pairForeground(`${prefix}color-${role}-on-${tier}`, resolveToken(entries.get(fillName), background));
       }
-      const boundaries = [
-        ...roles.flatMap((role) => [`${prefix}color-${role}-border-normal`, `${prefix}color-${role}-border-loud`]),
-        `${prefix}color-surface-border`,
-        `${prefix}color-border-strong`,
-        `${prefix}color-focus`,
-      ];
-      for (const name of boundaries) floor(name, background, background, 3);
-      for (const name of entries.keys()) {
-        if (/^--lr-theme-color-chart-\d+$/.test(name)) floor(name, background, background, 3);
-        else if (/^--lr-theme-terminal-color-[a-z0-9-]+$/.test(name)) floor(name, raised, raised, 4.5);
-        else if (/^--lr-theme-terminal-bg-[a-z0-9-]+$/.test(name)) floor(name, raised, text, 4.5);
-      }
-      for (const [name, value] of synthesized) painted.set(name, value);
     }
-
-    for (const [name, value] of painted) style.setProperty(name, value);
-
-    if (!resolvedMode || !context) {
-      style.removeProperty('--lr-theme-accent');
-      return;
+    const overlayName = `${prefix}color-overlay-strong`;
+    const overlay = entries.has(overlayName)
+      ? resolveToken(entries.get(overlayName), background)
+      : mix(background, black, defaults.overlayStrongAlpha);
+    if (entries.has(overlayName) || entries.has(`${prefix}color-on-strong-overlay`)) {
+      pairForeground(`${prefix}color-on-strong-overlay`, overlay);
     }
+    const boundaries = [
+      ...roles.flatMap((role) => [`${prefix}color-${role}-border-normal`, `${prefix}color-${role}-border-loud`]),
+      `${prefix}color-surface-border`,
+      `${prefix}color-border-strong`,
+      `${prefix}color-focus`,
+    ];
+    for (const name of boundaries) floor(name, background, background, 3);
+    for (const name of entries.keys()) {
+      if (/^--lr-theme-color-chart-\d+$/.test(name)) floor(name, background, background, 3);
+      else if (/^--lr-theme-terminal-color-[a-z0-9-]+$/.test(name)) floor(name, raised, raised, 4.5);
+      else if (/^--lr-theme-terminal-bg-[a-z0-9-]+$/.test(name)) floor(name, raised, text, 4.5);
+    }
+    for (const [name, value] of synthesized) painted.set(name, value);
+
+    if (!context) return painted;
 
     let appliedBrand: string | null = null;
     for (const role of roles) {
@@ -925,26 +906,24 @@ function applyStoredThemeBeforePaint(
       );
       const borderLoud = ensureContrast(mix(loud, borderTarget, 0.2), background);
       const prefix = `--lr-theme-color-${role}`;
-      style.setProperty(`${prefix}-fill-quiet`, rgb(quiet));
-      style.setProperty(`${prefix}-fill-normal`, rgb(normal));
-      style.setProperty(`${prefix}-fill-loud`, rgb(loud));
-      style.setProperty(`${prefix}-border-quiet`, rgb(borderQuiet));
-      style.setProperty(`${prefix}-border-normal`, rgb(borderNormal));
-      style.setProperty(`${prefix}-border-loud`, rgb(borderLoud));
-      style.setProperty(`${prefix}-on-quiet`, rgb(on(quiet)));
-      style.setProperty(`${prefix}-on-normal`, rgb(on(normal)));
-      style.setProperty(`${prefix}-on-loud`, rgb(on(loud)));
+      painted.set(`${prefix}-fill-quiet`, rgb(quiet));
+      painted.set(`${prefix}-fill-normal`, rgb(normal));
+      painted.set(`${prefix}-fill-loud`, rgb(loud));
+      painted.set(`${prefix}-border-quiet`, rgb(borderQuiet));
+      painted.set(`${prefix}-border-normal`, rgb(borderNormal));
+      painted.set(`${prefix}-border-loud`, rgb(borderLoud));
+      painted.set(`${prefix}-on-quiet`, rgb(on(quiet)));
+      painted.set(`${prefix}-on-normal`, rgb(on(normal)));
+      painted.set(`${prefix}-on-loud`, rgb(on(loud)));
       if (role === 'brand') {
-        style.setProperty('--lr-theme-color-focus', rgb(ensureContrast(color, background)));
+        painted.set('--lr-theme-color-focus', rgb(ensureContrast(color, background)));
         appliedBrand = base;
       }
     }
-    if (appliedBrand) style.setProperty('--lr-theme-accent', appliedBrand);
-    else style.removeProperty('--lr-theme-accent');
-  } catch {
-    // A no-flash bootstrap must never block the rest of the document head.
-  }
-  return undefined;
+    if (appliedBrand) painted.set('--lr-theme-accent', appliedBrand);
+    return painted;
+  };
+  return [normalizeMap, normalizeColor, paint] as const;
 }
 
 /** Material opt-outs for granular components before a document stylesheet is available. */
@@ -962,7 +941,7 @@ function styleMaterial(desired: Map<string, string>, surface: LyraSurface): void
 function applyStoredStyleBeforePaint(
   defaultStorageKey: string,
   defaultModeAttributes: readonly string[],
-  paint: typeof applyStoredThemeBeforePaint,
+  createPaint: typeof applyStoredThemeBeforePaint,
   allowed: typeof styleTokenAllowed,
   readOwnership: typeof readStyleOwnership,
   resolveStartup: typeof resolveStyleStartup,
@@ -1014,11 +993,9 @@ function applyStoredStyleBeforePaint(
       if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) record = parsed as Record<string, unknown>;
     } catch { /* A corrupt or inaccessible record uses the built-in profile. */ }
     const root = document.documentElement;
-    const normalizeMap = (value: unknown): LyraThemeTokens => paint({
-      root, record: { mode: 'unset', tokens: value }, normalizeOnly: true,
-    }) ?? {};
+    const [normalizeMap, normalizeColor, paint] = createPaint();
     record = resolveStartup(record, model.defaults, normalizeMap,
-      value => CSS.supports('color', value), (name, value) => allowed(name, value, STYLE_SLOTTED), STYLE_GEMSTONES);
+      normalizeColor, (name, value) => allowed(name, value, STYLE_SLOTTED), STYLE_GEMSTONES);
     const mode = record['mode'] as LyraMode;
     const resolved = mode === 'unset' ? null : mode === 'system' ? matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light' : mode;
     const desiredAttributes: Record<string, string> = {};
@@ -1049,10 +1026,9 @@ function applyStoredStyleBeforePaint(
       // Separate paints preserve accent precedence in nested mode islands without flattening it into the look.
       for (const accentPass of [false, true]) {
         if (accentPass && (!accent || accentName)) continue;
-        const scratch = document.createElement('div');
-        paint({ root: scratch, tokens: accentPass ? {} : tokens, references: accentPass ? STYLE_CONTRAST_SURFACES[branch].map(color => [1, 3, 5].map(index => parseInt(color.slice(index, index + 2), 16))) : [], record: { mode: branch, surface: accentPass && accentName ? STYLE_REFERENCE_SURFACES['lyra']?.[branch] : surface, tokens: accentPass ? null : tokens, accent: accentPass ? accent : null } });
-        for (const name of scratch.style) {
-          const value = scratch.style.getPropertyValue(name);
+        const painted = paint(accentPass ? {} : tokens, branch, surface, accentPass ? accent : null,
+          accentPass ? STYLE_CONTRAST_SURFACES[branch].map(color => [1, 3, 5].map(index => parseInt(color.slice(index, index + 2), 16))) : []);
+        for (const [name, value] of painted) {
           if (name === '--lr-theme-accent') { if (branch === resolved) desired.set(name, value); continue; }
           if (STYLE_SLOTTED.includes(name) && allowed(name, value, STYLE_SLOTTED)) {
             const channel = name.match(/^--lr-theme-color-(?:success|warning|danger|neutral)-((?:fill|border|on)-(?:quiet|normal|loud))$/)?.[1];
@@ -1554,11 +1530,12 @@ export function defineLyraLook<const Look extends LyraLook>(look: Look): Readonl
 }
 
 /** DOM-free syntactic color validation; final browser painting revalidates absolute colors. */
-function styleColor(value: unknown): string | null {
+function styleColor(value: unknown, browserColors = false): string | null {
   if (!isSafeLyraThemeTokenValue(value)) return null;
   const text = value.trim();
   if (/\b(?:var|light-dark)\s*\(|\b(?:currentcolor|from)\b/i.test(text)) return null;
   if (/^(?:accentcolor|accentcolortext|activetext|buttonborder|buttonface|buttontext|canvas|canvastext|field|fieldtext|graytext|highlight|highlighttext|linktext|mark|marktext|selecteditem|selecteditemtext|visitedtext)$/i.test(text)) return null;
+  if (browserColors && typeof CSS !== 'undefined') return CSS.supports('color', text) ? text : null;
   return /^(?:#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})|[a-z]+|(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color|color-mix)\(.+\))$/i.test(text) ? text : null;
 }
 function styleColorPair(value: unknown): LyraAccentBackground {
@@ -1608,7 +1585,7 @@ function normalizeStyleChoices(raw: unknown, base: StyleState): StyleState {
 }
 function styleFromRecord(value: unknown, browserColors = false): StyleState {
   const record = resolveStyleStartup(value, STYLE_DEFAULTS, normalizeTokens,
-    input => browserColors && typeof CSS !== 'undefined' ? CSS.supports('color', input) : styleColor(input) !== null,
+    input => styleColor(input, browserColors) ?? undefined,
     styleTokenAllowed, STYLE_GEMSTONES);
   const state = normalizeStyleChoices({
     look: ownField(record, 'look'), mode: ownField(record, 'mode'), density: ownField(record, 'density'),
