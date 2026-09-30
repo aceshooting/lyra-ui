@@ -480,7 +480,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     // completeness re-checks make a code that changed again in that window drop the stale submit.
     setTimeout(() => {
       if (token !== this.autosubmitToken || completeEvent.defaultPrevented) return;
-      if (!this.isConnected || !this.autosubmit) return;
+      if (!this.isConnected || !this.autosubmit || this.effectiveDisabled || this.readonly) return;
       if (this.value !== completionValue || this.filledSegmentCount !== this.renderedSegmentCount) return;
       this.submitOwningForm();
     });

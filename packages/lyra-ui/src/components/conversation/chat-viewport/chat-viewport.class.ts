@@ -635,7 +635,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
    */
   private announcementTextFor(node: Node): string {
     const primary = composedAccessibilityText(node);
-    if (!(node instanceof Element) || !node.shadowRoot) return primary;
+    if (node.nodeType !== Node.ELEMENT_NODE || !(node as Element).shadowRoot) return primary;
     const content = composedAccessibilityText(node.childNodes);
     const normalizedPrimary = primary.replace(/\s+/g, ' ').trim();
     const normalizedContent = content.replace(/\s+/g, ' ').trim();
@@ -676,15 +676,23 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
       sink.announce(text);
       return;
     }
-    if (node instanceof Element && node.localName.includes('-')) void this.announceAfterRender(node);
+    if (node.nodeType === Node.ELEMENT_NODE && (node as Element).localName.includes('-')) {
+      void this.announceAfterRender(node as Element);
+    }
   }
 
   private async announceAfterRender(node: Element): Promise<void> {
     const registry = node.ownerDocument.defaultView?.customElements;
-    if (registry && !registry.get(node.localName)) await registry.whenDefined(node.localName);
-    const pending = (node as Element & { updateComplete?: unknown }).updateComplete;
-    if (!(pending instanceof Promise)) return;
+    if (!node.matches(':defined') && registry && !registry.get(node.localName)) {
+      await registry.whenDefined(node.localName);
+    }
     try {
+      const pending = (node as Element & { updateComplete?: unknown }).updateComplete;
+      if (
+        pending === null ||
+        (typeof pending !== 'object' && typeof pending !== 'function') ||
+        typeof (pending as { then?: unknown }).then !== 'function'
+      ) return;
       await pending;
     } catch {
       return;

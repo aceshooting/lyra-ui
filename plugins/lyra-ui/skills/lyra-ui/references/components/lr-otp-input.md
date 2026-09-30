@@ -113,7 +113,9 @@ still veto it; it then goes through the same resolved default button as Enter-to
 `focus` and `blur` are re-dispatched from the host as bubbling, composed events since the originals
 do not cross the shadow boundary. Replacing the live or default code, resetting/restoring the form state, or disconnecting
 the component before the deferred task runs retires that completion's submission; a task for code
-A can never submit a later full code B.
+A can never submit a later full code B. The deferred task also checks effective disabled state
+(including an ancestor fieldset) and `readonly`; either state suppresses that submission. Restoring
+editability afterward does not replay it, but a fresh incomplete-to-complete edit can submit again.
 `lr-invalid` (no detail) fires when a validity check finds the one-time-code input invalid.
 Programmatic value/default/reset/state-restoration writes do not emit `input`, `change`, or
 `lr-complete`.

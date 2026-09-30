@@ -355,6 +355,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
     this.errorSlotObserver.observe(this, {
       childList: true,
       attributes: true,
+      subtree: true,
       attributeFilter: ['slot'],
     });
   }

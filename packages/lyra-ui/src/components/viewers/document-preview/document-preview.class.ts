@@ -411,6 +411,19 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     if (!this.hasUpdated) {
       this.hasUnsupportedSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'unsupported');
     }
+    if (
+      this.textFetch.kind !== 'idle' &&
+      (classifyFormat(this.mimeType) !== 'text' ||
+        safeFetchUrl(this.src) === null ||
+        this.status === 'converting' ||
+        this.status === 'error')
+    ) {
+      // Drop obsolete text before rendering the new format or host-driven state. Invalidation
+      // also prevents a pending response body from committing after this transition.
+      this.generation++;
+      this.beginAbortableLoad();
+      this.textFetch = IDLE_TEXT_FETCH;
+    }
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -437,13 +450,6 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
           void this.fetchText(safeTextSrc);
         });
       }
-    } else if (this.textFetch.kind !== 'idle') {
-      // No longer applicable (format changed away from text, src cleared,
-      // or status moved to converting/error) -- abort any in-flight fetch
-      // and drop the stale result so a later re-entry starts clean.
-      this.generation++;
-      this.beginAbortableLoad();
-      this.textFetch = IDLE_TEXT_FETCH;
     }
   }
 

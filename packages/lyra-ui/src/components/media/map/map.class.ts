@@ -3237,6 +3237,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   // before doing anything observable, and bails if a newer
   // connectedCallback has since superseded it.
   private _connectGeneration = 0;
+  private _styleGeneration = 0;
 
   /** The underlying runtime `maplibregl.Map`, declared through Lyra's peer-neutral common-method
    * subset so consumers do not acquire a mandatory `maplibre-gl` type dependency. Consumers that
@@ -3855,6 +3856,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // common case and is instead handled at the end of the
     // `loadMaplibre().then()` chain in connectedCallback() above).
     if (changed.has('visible') && this.visible) this.tryConstructMap();
+    if (changed.has('mapStyle')) this._styleGeneration += 1;
 
     if (changed.has('mapStyle') && !hasMapStyle(this.mapStyle) && this._maplibreModule) {
       const generation = this._connectGeneration;
@@ -3879,10 +3881,22 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       // registering the listener afterwards would miss that emission and
       // leave the choropleth (and `_styleLoaded`) never re-applied.
       const map = this._map;
+      const style = this.mapStyle;
+      const generation = this._connectGeneration;
+      const styleGeneration = this._styleGeneration;
+      const current = () => this.isConnected && this._map === map &&
+        generation === this._connectGeneration && styleGeneration === this._styleGeneration &&
+        this.mapStyle === style;
+      const failStyle = () => {
+        if (!current()) return;
+        this.scheduleAfterUpdate(() => {
+          if (current()) this.failInitialization('initialization-failed');
+        }, `map-style-failure-${styleGeneration}`);
+      };
       try {
         for (const sourceId of this.appliedPointIcons.keys()) this.removePointIcons(sourceId);
         map.once('style.load', () => {
-          if (this._map !== map) return;
+          if (!current()) return;
           try {
             this._styleLoaded = true;
             this._appliedDataLayerIds.clear(); // a style change wipes every layer/source maplibre-gl knows about
@@ -3893,18 +3907,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
             this.applyChoropleth();
             this.applyDataLayers();
           } catch {
-            this.scheduleAfterUpdate(
-              () => this.failInitialization('initialization-failed'),
-              'map-style-failure',
-            );
+            failStyle();
           }
         });
-        map.setStyle(this.mapStyle as never);
+        map.setStyle(style as never);
       } catch {
-        this.scheduleAfterUpdate(
-          () => this.failInitialization('initialization-failed'),
-          'map-style-failure',
-        );
+        failStyle();
       }
     } else if (this._styleLoaded && (changed.has('dataLayers') || changed.has('choropleth'))) {
       const choropleth = this.canonicalChoropleth;

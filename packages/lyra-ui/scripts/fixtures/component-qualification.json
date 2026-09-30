@@ -1664,6 +1664,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/overlays/alert/alert-toast-activation-lifecycle.test.ts",
           "src/components/overlays/alert/alert.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -8547,7 +8548,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/chat-viewport/chat-viewport.class.ts",
-              "line": 831,
+              "line": 839,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -8583,6 +8584,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/chat-viewport/chat-viewport-async-announcements.test.ts",
           "src/components/conversation/chat-viewport/chat-viewport.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -12799,6 +12801,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/overlays/context-menu/context-menu-anchor-lifecycle.test.ts",
+          "src/components/overlays/context-menu/context-menu-stable-anchor.test.ts",
           "src/components/overlays/context-menu/context-menu.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -16133,6 +16136,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/viewers/document-preview/document-preview-fetch-lifecycle.test.ts",
           "src/components/viewers/document-preview/document-preview-remediation.test.ts",
           "src/components/viewers/document-preview/document-preview.test.ts"
         ],
@@ -26368,6 +26372,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/retrieval/knowledge-base/knowledge-base-error-slot-lifecycle.test.ts",
           "src/components/retrieval/knowledge-base/knowledge-base.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -28087,7 +28092,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.class.ts",
-              "line": 3553,
+              "line": 3554,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -28130,6 +28135,7 @@
           "src/components/media/map/map-loader.test.ts",
           "src/components/media/map/map-public-boundaries.test.ts",
           "src/components/media/map/map-remediation.test.ts",
+          "src/components/media/map/map-style-failure-supersession.test.ts",
           "src/components/media/map/map.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -33294,8 +33300,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/otp-input/otp-input.test.ts",
-              "test": "moves the active segment with clamped physical arrows in LTR and RTL",
+              "file": "src/components/forms/otp-input/otp-input-completion-lifecycle.test.ts",
+              "test": "cancels queued OTP autosubmission when a completion listener makes it ${state}",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -33432,6 +33438,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/otp-input/otp-input-completion-lifecycle.test.ts",
           "src/components/forms/otp-input/otp-input.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",

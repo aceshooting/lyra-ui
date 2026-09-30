@@ -20,7 +20,11 @@
 
 ### Patch Changes
 
-- Handle removed map styles after rendering and discard obsolete failures when the style or connection changes.
+- Handle map style failures after rendering and discard obsolete work when the style or connection changes.
+- Honor the current disabled and read-only state before submitting a completed OTP value.
+- Refresh knowledge-base error content when an existing child's slot assignment changes.
+- Cancel obsolete text previews before rendering a changed format or loading status.
+- Announce asynchronously rendered chat messages across window realms, including adopted custom elements.
 - Refresh document-library error content when an existing child's slot assignment changes.
 - Preserve tall content inside vertically constrained scrollers instead of shrinking slotted items to the viewport.
 - Reset a collapsed map legend's scroll position so its Glass layer cannot retain an empty scroll range; preserve focus and expanded scrolling.
