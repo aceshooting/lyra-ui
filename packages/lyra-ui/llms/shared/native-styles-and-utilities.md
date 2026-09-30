@@ -289,7 +289,8 @@ application fixed, sticky or absolute positioning still wins. Avoid an extra opa
 an already treated Lyra popup.
 
 `--lr-surface-background` optionally supplies this native wrapper's base fill. It falls back to the
-local semantic overlay surface and resolves on the painted wrapper, so nearer theme inputs work.
+local high container surface, then the overlay surface, and resolves on the painted wrapper, so nearer
+theme inputs work.
 The existing `--lr-theme-surface-opacity`, `--lr-theme-surface-blur`,
 `--lr-theme-surface-saturation` and `--lr-theme-surface-highlight` controls apply. Glass uses 80%
 opacity with an 80% floor, 12px blur with a 16px ceiling, and qualified text, edges and focus.

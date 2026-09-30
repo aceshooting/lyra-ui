@@ -48,11 +48,10 @@ for (const [region, text] of Object.entries(regions)) {
     : {
       tokenNameMaxLength: grammar.nameMaxLength,
       tokenEntryMax: grammar.entryMax,
-      tokenSynthesizedMax: grammar.synthesizedMax,
       tokenValueMaxLength: grammar.valueMaxLength,
     };
 
-  test(`(a) the ${region} copy carries every grammar constant exactly once`, () => {
+  test(`(a) the ${region} copy carries every applicable grammar constant exactly once`, () => {
     for (const key of ['namePattern', 'forbiddenPattern', 'cssWidePattern', 'functionTokenPattern']) {
       assert.equal(occurrences(text, literal(grammar[key])), 1, `${region}: ${key} ${literal(grammar[key])}`);
     }

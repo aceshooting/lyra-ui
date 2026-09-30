@@ -16,7 +16,8 @@ const esbuild = requireFromLoaderHost('esbuild');
 // readable identifiers elsewhere. A script transform (no module format) retains each declaration
 // name and free identifier, so surrounding imports/exports and callback defaults stay intact.
 const serializedFunctions = new Map([
-  ['theme/theme.js', new Set(['applyStoredThemeBeforePaint', 'applyStoredStyleBeforePaint', 'styleTokenAllowed'])],
+  ['theme/theme.js', new Set(['applyStoredThemeBeforePaint', 'applyStoredStyleBeforePaint', 'styleTokenAllowed', 'styleMaterial'])],
+  ['theme/startup-resolution.js', new Set(['resolveStyleStartup'])],
   ['theme/style-ownership.js', new Set(['readStyleOwnership'])],
 ]);
 

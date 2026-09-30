@@ -654,26 +654,11 @@ function applyStoredThemeBeforePaint(
 ): LyraThemeTokens | undefined {
   try {
     const theme = supplied.record;
-    const mode = theme['mode'] === 'light' || theme['mode'] === 'dark' || theme['mode'] === 'unset'
-      ? theme['mode']
-      : 'auto';
-    let resolvedMode: 'light' | 'dark' | null = null;
-    if (mode === 'light' || mode === 'dark') resolvedMode = mode;
-    else if (mode === 'auto') {
-      resolvedMode = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
+    const resolvedMode = theme['mode'] === 'light' || theme['mode'] === 'dark' ? theme['mode'] : null;
     const root = supplied.root;
     const style = root.style;
     const roles = ['brand', 'success', 'warning', 'danger', 'neutral'];
-    const channels = ['fill', 'border', 'on'];
     const tiers = ['quiet', 'normal', 'loud'];
-    const properties: string[] = [];
-    for (const role of roles) {
-      for (const channel of channels) {
-        for (const tier of tiers) properties.push(`--lr-theme-color-${role}-${channel}-${tier}`);
-      }
-    }
-    properties.push('--lr-theme-color-focus');
 
     // Literal copy of the token-map grammar (scripts/fixtures/theme-token-grammar.json is the single
     // source; scripts/theme-token-grammar.test.mjs keeps this copy identical to it).
@@ -681,13 +666,11 @@ function applyStoredThemeBeforePaint(
     const tokenNameMaxLength = 80;
     const tokenReservedName = '--lr-theme-accent';
     const tokenEntryMax = 512;
-    const tokenSynthesizedMax = 16;
     const tokenValueMaxLength = 256;
     const tokenForbiddenPattern = /[\x00-\x1f\x7f\\;{}!<>@[\]`$^|~=?&:\u2028\u2029]|\/\*|\*\//;
     const tokenCssWidePattern = /^(?:inherit|initial|revert(?:-layer)?|unset)$/i;
     const tokenFunctionPattern = /([a-z0-9_-]+)\s*\(/gi;
     const tokenAllowedFunctions = 'rgb rgba hsl hsla hwb lab lch oklab oklch color color-mix light-dark calc min max clamp var cubic-bezier steps linear'.split(' ');
-    const tokenOwnershipKey = Symbol.for('@aceshooting/lyra-ui.theme-tokens.v1');
     const modeDefaults = {
       light: { surface: [255, 255, 255], raised: [246, 248, 250], text: [26, 26, 26], overlayStrongAlpha: 0.92 },
       dark: { surface: [26, 26, 26], raised: [34, 39, 46], text: [242, 242, 242], overlayStrongAlpha: 0.95 },
@@ -753,23 +736,6 @@ function applyStoredThemeBeforePaint(
       }
     } catch { /* An invalid map contributes no entries. */ }
     if (supplied.normalizeOnly) return normalizedTokens as LyraThemeTokens;
-    // Clear what a previous page (or another copy of the runtime) owned: every ramp property, the
-    // accent hook, and each validated name on the shared ownership list.
-    const ownedBefore: string[] = [];
-    try {
-      const list = (root as unknown as Record<symbol, unknown>)[tokenOwnershipKey];
-      if (Array.isArray(list)) {
-        const length = Math.min(list.length, tokenEntryMax + tokenSynthesizedMax);
-        for (let index = 0; index < length; index += 1) {
-          const name: unknown = list[index];
-          if (isTokenName(name)) ownedBefore.push(name);
-        }
-      }
-    } catch {
-      ownedBefore.length = 0;
-    }
-    for (const property of [...properties, '--lr-theme-accent', ...ownedBefore]) style.removeProperty(property);
-
     const entries = new Map<string, string>();
     for (const [name, value] of Object.entries(supplied.tokens ?? normalizedTokens)) {
       const branch = typeof value === 'string' ? value : resolvedMode ? value[resolvedMode] : null;
@@ -951,12 +917,6 @@ function applyStoredThemeBeforePaint(
       for (const [name, value] of synthesized) painted.set(name, value);
     }
 
-    // Ownership first, so a later runtime apply removes exactly these names; then the values.
-    try {
-      (root as unknown as Record<symbol, unknown>)[tokenOwnershipKey] = Object.freeze([...painted.keys()]);
-    } catch {
-      // An unwritable expando only costs the handoff; the values are still written.
-    }
     for (const [name, value] of painted) style.setProperty(name, value);
 
     if (!resolvedMode || !context) {

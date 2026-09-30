@@ -72,28 +72,37 @@ try {
   await writeFile(path.join(themeDirectory, 'style-ownership.js'), `
     export function readStyleOwnership(longOwnershipValue) { return longOwnershipValue + 1; }
   `);
+  await writeFile(path.join(themeDirectory, 'startup-resolution.js'), `
+    export function resolveStyleStartup(longStartupValue) { return longStartupValue; }
+  `);
   await writeFile(path.join(themeDirectory, 'theme.js'), `
     import { readStyleOwnership } from './style-ownership.js';
+    import { resolveStyleStartup } from './startup-resolution.js';
     export const preservedLabel = 'Résumé 🦉';
     function applyStoredThemeBeforePaint(longPaintValue) { return longPaintValue * 2; }
     function styleTokenAllowed(longTokenValue) { return longTokenValue > 0; }
-    function applyStoredStyleBeforePaint(longInputValue, paintCallback, allowedCallback, ownershipCallback) {
-      return allowedCallback(longInputValue) ? ownershipCallback(paintCallback(longInputValue)) : 0;
+    function styleMaterial(longMaterialValue) { return longMaterialValue; }
+    function applyStoredStyleBeforePaint(longInputValue, paintCallback, allowedCallback, ownershipCallback, startupCallback, materialCallback) {
+      const resolvedValue = materialCallback(startupCallback(longInputValue));
+      return allowedCallback(resolvedValue) ? ownershipCallback(paintCallback(resolvedValue)) : 0;
     }
     export function publicBootstrap(value) {
       return '(' + applyStoredStyleBeforePaint.toString() + ')(' + value + ',' +
         applyStoredThemeBeforePaint.toString() + ',' + styleTokenAllowed.toString() + ',' +
-        readStyleOwnership.toString() + ')';
+        readStyleOwnership.toString() + ',' + resolveStyleStartup.toString() + ',' +
+        styleMaterial.toString() + ')';
     }
   `);
   const originalSource = await readFile(path.join(themeDirectory, 'theme.js'), 'utf8');
   const originalOwnership = await readFile(path.join(themeDirectory, 'style-ownership.js'), 'utf8');
+  const originalStartup = await readFile(path.join(themeDirectory, 'startup-resolution.js'), 'utf8');
   const url = pathToFileURL(path.join(themeDirectory, 'theme.js')).href;
   const before = await import(url);
   const uncompressed = before.publicBootstrap(7);
   await compactBuildJavaScript(bootstrapFixture);
   const compactedSource = await readFile(path.join(themeDirectory, 'theme.js'), 'utf8');
   const compactedOwnership = await readFile(path.join(themeDirectory, 'style-ownership.js'), 'utf8');
+  const compactedStartup = await readFile(path.join(themeDirectory, 'startup-resolution.js'), 'utf8');
   await compactBuildJavaScript(bootstrapFixture);
   const published = path.join(bootstrapFixture, 'published');
   await cp(themeDirectory, published, { recursive: true });
@@ -101,7 +110,7 @@ try {
   const after = await import(pathToFileURL(path.join(published, 'theme.js')).href);
   const compressed = after.publicBootstrap(7);
   assert.ok(compressed.length < uncompressed.length);
-  assert.doesNotMatch(compressed, /longInputValue|longPaintValue|longTokenValue|longOwnershipValue/u);
+  assert.doesNotMatch(compressed, /longInputValue|longPaintValue|longTokenValue|longOwnershipValue|longStartupValue|longMaterialValue/u);
   assert.equal(after.publicBootstrap.name, 'publicBootstrap');
   assert.equal(after.preservedLabel, 'Résumé 🦉');
   assert.equal(Function('return ' + compressed)(), 15);
@@ -114,9 +123,11 @@ try {
   await mkdir(path.join(repeat, 'theme'), { recursive: true });
   await writeFile(path.join(repeat, 'theme/theme.js'), originalSource);
   await writeFile(path.join(repeat, 'theme/style-ownership.js'), originalOwnership);
+  await writeFile(path.join(repeat, 'theme/startup-resolution.js'), originalStartup);
   await compactBuildJavaScript(repeat);
   assert.equal(await readFile(path.join(repeat, 'theme/theme.js'), 'utf8'), compactedSource);
   assert.equal(await readFile(path.join(repeat, 'theme/style-ownership.js'), 'utf8'), compactedOwnership);
+  assert.equal(await readFile(path.join(repeat, 'theme/startup-resolution.js'), 'utf8'), compactedStartup);
 } finally {
   await rm(bootstrapFixture, { recursive: true, force: true });
 }
