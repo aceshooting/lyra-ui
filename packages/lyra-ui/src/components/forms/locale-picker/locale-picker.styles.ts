@@ -185,7 +185,7 @@ export const styles = css`
     overflow-y: auto;
     overflow-x: hidden;
     inline-size: max-content;
-    min-inline-size: var(--lr-size-12rem);
+    min-inline-size: min(var(--lr-size-12rem), var(--lr-popover-viewport-clamp), var(--lr-size-28rem));
     max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-28rem));
     padding: var(--lr-space-xs);
     /* Fill and edge from the shared overlay-surface family

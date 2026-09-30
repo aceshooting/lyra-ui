@@ -1,6 +1,7 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { fixture, expect, oneEvent, html, aTimeout, waitUntil } from '@open-wc/testing';
-import { sendKeys } from '@web/test-runner-commands';
+import { sendKeys, setViewport } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import type { PropertyValues } from 'lit';
 import './locale-picker.js';
@@ -1972,4 +1973,71 @@ it('preserves synchronous host value writes and blocks recursive locale requests
   expect(notifications).to.equal(0);
   expect(el.value).to.equal('de');
   expect(getLyraLocale()).to.equal('en');
+});
+
+
+for (const direction of ['ltr', 'rtl'] as const) {
+  for (const topLayer of [false, true]) {
+    it(`bounds the enlarged locale listbox in a narrow viewport in ${direction}, topLayer=${topLayer}`, async () => {
+      const viewport = { width: window.innerWidth, height: window.innerHeight };
+      const rootFont = document.documentElement.style.fontSize;
+      let el: LyraLocalePicker | undefined;
+      try {
+        await setViewport({ width: 320, height: 800 });
+        document.documentElement.style.fontSize = '32px';
+        el = await fixture<LyraLocalePicker>(html`<lr-locale-picker dir=${direction} locale="en"
+          label="Interface language" value="en" .topLayer=${topLayer}
+          .locales=${[{ tag: 'en', label: 'English' }, { tag: 'fr', label: 'Français — langue de l’interface et des préférences' }]}></lr-locale-picker>`);
+        const button = trigger(el);
+        await focusByKeyboard(button);
+        await sendKeys({ press: 'ArrowDown' });
+        await el.updateComplete;
+        expect(el.open).to.equal(true);
+        const listbox = el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+        await waitUntil(() => getComputedStyle(listbox).visibility === 'visible');
+        const bounds = listbox.getBoundingClientRect();
+        expect(bounds.width, 'the rem minimum must not override the viewport maximum').to.be.at.most(320);
+        const limit = Number.parseFloat(getComputedStyle(listbox).maxInlineSize);
+        expect(Number.isFinite(limit), 'the listbox maximum resolves to a measurable width').to.equal(true);
+        expect(bounds.width, 'the minimum remains bounded by the existing maximum').to.be.at.most(limit + 1);
+        expect(bounds.left, 'the listbox stays within the leading viewport edge').to.be.at.least(-1);
+        expect(bounds.right, 'the listbox stays within the trailing viewport edge').to.be.at.most(321);
+        expect(listbox.scrollWidth, 'long caller labels do not widen the listbox').to.be.at.most(listbox.clientWidth + 1);
+        await sendKeys({ press: 'End' });
+        await el.updateComplete;
+        expect(button.getAttribute('aria-activedescendant')).to.equal(requiredItem(rows(el), 1, 'last locale').id);
+        await sendKeys({ press: 'Home' });
+        await el.updateComplete;
+        expect(button.getAttribute('aria-activedescendant')).to.equal(requiredItem(rows(el), 0, 'first locale').id);
+        await sendKeys({ press: 'Escape' });
+        await el.updateComplete;
+        expect(el.open).to.equal(false);
+        expect(el.shadowRoot!.activeElement === button, 'Escape returns keyboard focus').to.equal(true);
+      } finally {
+        el?.remove();
+        document.documentElement.style.fontSize = rootFont;
+        await setViewport(viewport);
+      }
+    });
+  }
+}
+
+it('retains the locale listbox baseline minimum when the viewport has room', async () => {
+  const viewport = { width: window.innerWidth, height: window.innerHeight };
+  const rootFont = document.documentElement.style.fontSize;
+  let el: LyraLocalePicker | undefined;
+  try {
+    await setViewport({ width: 1024, height: 800 });
+    document.documentElement.style.fontSize = '16px';
+    el = await fixture<LyraLocalePicker>(html`<lr-locale-picker locale="en" value="en"
+      .locales=${['en', 'fr']}></lr-locale-picker>`);
+    el.open = true;
+    await el.updateComplete;
+    const listbox = el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+    expect(listbox.getBoundingClientRect().width).to.be.at.least(192);
+  } finally {
+    el?.remove();
+    document.documentElement.style.fontSize = rootFont;
+    await setViewport(viewport);
+  }
 });

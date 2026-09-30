@@ -6518,6 +6518,9 @@ and later supplied text renders normally.
 
 Public `--lr-locale-picker-*` theme inputs stay undeclared on the host, so an ancestor theme
 wrapper can override size-tier fallbacks; a value set directly on the element still wins.
+The listbox retains its 12rem baseline minimum when space permits, but caps that minimum by its
+existing viewport limit so enlarged text cannot force the menu beyond the viewport. Long option
+labels keep their full accessible text while the visible label truncates within the bounded menu.
 
 **Properties:**
 
