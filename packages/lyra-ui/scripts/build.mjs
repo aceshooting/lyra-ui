@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { compactBuildCss } from './compact-build-css.mjs';
 import { consolidateBuildDeclarations } from './consolidate-build-declarations.mjs';
 import { compactBuildDeclarations } from './compact-build-declarations.mjs';
-import { compactBuildJavaScript } from './compact-build-js.mjs';
+import { compactBuildJavaScript, pruneEmptyBuildJavaScript } from './compact-build-js.mjs';
 import { checkLocalizationSlices, checkTranslationSlices } from './check-localization-slices.mjs';
 import { createMigrationRuntimeInventory, readRenameLedger } from './migrate-wa.mjs';
 import { copyMigrationRuntimeModules } from './copy-migration-runtime.mjs';
@@ -129,6 +129,10 @@ console.log(
     `${compactedMigrationCli.afterBytes.toLocaleString('en')} bytes across ` +
     `${compactedMigrationCli.files} modules.`,
 );
+
+const prunedRuntime = await pruneEmptyBuildJavaScript(join(packageDir, 'dist'),
+  JSON.parse(await readFile(join(packageDir, 'package.json'), 'utf8')));
+console.log(`Published empty private runtime modules removed: ${prunedRuntime.removedPaths.length}.`);
 
 await checkLocalizationSlices(packageDir);
 console.log('Unbundled localization slice imports and public fallback catalog verified.');

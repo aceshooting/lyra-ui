@@ -1,6 +1,6 @@
 import { isMainModule } from './is-main-module.mjs';
 
-import { readFile, readdir, writeFile } from 'node:fs/promises';
+import { readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -87,6 +87,82 @@ export async function compactBuildJavaScript(directory) {
     await writeFile(file, code);
   }));
   return { files: files.length, beforeBytes, afterBytes };
+}
+
+/** Remove only empty private runtime markers after the complete module tree is compacted.
+ * Package entry points, declared side effects and every runtime reference are protected; an
+ * unknown dynamic import keeps all candidates. Declaration files are never removed. */
+export async function pruneEmptyBuildJavaScript(directory, manifest) {
+  const files = await javascriptFiles(directory);
+  const modules = await Promise.all(files.map(async file => {
+    const parsed = parseSync(file, await readFile(file, 'utf8'));
+    if (parsed.errors.length) throw new Error(`${file}: cannot parse runtime pruning inventory`);
+    return { file, program: parsed.program };
+  }));
+  const candidates = modules.filter(({ program }) => program.body.length === 1 &&
+    program.body[0].type === 'ExportNamedDeclaration' && program.body[0].declaration === null &&
+    program.body[0].source === null && program.body[0].specifiers.length === 0).map(({ file }) => file);
+  const targets = [];
+  function collectTargets(value, into = targets, keys = false) {
+    if (typeof value === 'string') into.push(value);
+    else if (Array.isArray(value)) value.forEach(item => collectTargets(item, into, keys));
+    else if (value && typeof value === 'object') {
+      for (const [key, item] of Object.entries(value)) {
+        if (keys) into.push(key);
+        collectTargets(item, into, keys);
+      }
+    }
+  }
+  for (const value of [manifest.exports, manifest.imports, manifest.main, manifest.module, manifest.bin]) collectTargets(value);
+  collectTargets(manifest.browser, targets, true);
+  const sideEffectTargets = [];
+  collectTargets(manifest.sideEffects, sideEffectTargets);
+  // Package subpath stars substitute arbitrary substrings, including directory separators.
+  const targetPatterns = targets.map(target => new RegExp('^' + target.replace(/^\.\//u, '').split('*').map(part => part.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')).join('.*') + '$'));
+  const protectedFiles = new Set();
+  let unknownReference = false;
+  function protectReference(file, specifier, moduleUrl = false) {
+    if (moduleUrl ? /^(?:[a-z][a-z0-9+.-]*:|\/)/iu.test(specifier) : !specifier.startsWith('.')) return;
+    const target = path.resolve(path.dirname(file), specifier.split(/[?#]/u)[0]);
+    for (const suffix of ['', '.js', '.mjs', '/index.js', '/index.mjs']) protectedFiles.add(target + suffix);
+  }
+  for (const { file, program } of modules) {
+    function visit(node) {
+      if (!node || typeof node !== 'object') return;
+      const staticSource = ['ImportDeclaration', 'ExportNamedDeclaration', 'ExportAllDeclaration'].includes(node.type) ? node.source : null;
+      const dynamicSource = node.type === 'ImportExpression' ? node.source :
+        node.type === 'CallExpression' && ((node.callee?.type === 'Identifier' && node.callee.name === 'require') ||
+          (node.callee?.type === 'MemberExpression' && node.callee.object?.name === 'require' && node.callee.property?.name === 'resolve')) ? node.arguments[0] : null;
+      if (typeof staticSource?.value === 'string') protectReference(file, staticSource.value);
+      if (dynamicSource) {
+        if (typeof dynamicSource.value === 'string') protectReference(file, dynamicSource.value);
+        else unknownReference = true;
+      }
+      // Relative module strings also protect uncommon loader aliases such as requireFromPackage.
+      if (typeof node.value === 'string' && /^\.{1,2}\/.*\.m?js(?:[?#].*)?$/u.test(node.value)) protectReference(file, node.value);
+      const base = node.type === 'NewExpression' && node.callee?.type === 'Identifier' && node.callee.name === 'URL' ? node.arguments[1] : null;
+      if (base?.type === 'MemberExpression' && base.object?.type === 'MetaProperty' && base.object.meta?.name === 'import' && base.property?.name === 'url') {
+        if (typeof node.arguments[0]?.value === 'string') protectReference(file, node.arguments[0].value, true);
+        else unknownReference = true;
+      }
+      for (const [key, value] of Object.entries(node)) {
+        if (key === 'parent') continue;
+        if (Array.isArray(value)) value.forEach(visit);
+        else if (value && typeof value === 'object') visit(value);
+      }
+    }
+    visit(program);
+  }
+  const removedPaths = [];
+  for (const file of candidates.sort()) {
+    const packagePath = path.relative(path.dirname(directory), file).split(path.sep).join('/');
+    if (unknownReference || manifest.sideEffects === true || protectedFiles.has(path.resolve(file)) ||
+      targetPatterns.some(pattern => pattern.test(packagePath)) ||
+      sideEffectTargets.some(target => path.posix.matchesGlob(packagePath, target.replace(/^\.\//u, '')))) continue;
+    await rm(file);
+    removedPaths.push(path.relative(directory, file).split(path.sep).join('/'));
+  }
+  return { removedPaths };
 }
 
 if (isMainModule(import.meta.url)) {

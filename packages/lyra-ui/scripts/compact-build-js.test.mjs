@@ -3,7 +3,7 @@ import { cp, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { compactBuildJavaScript } from './compact-build-js.mjs';
+import { compactBuildJavaScript, pruneEmptyBuildJavaScript } from './compact-build-js.mjs';
 
 const fixture = await mkdtemp(path.join(tmpdir(), 'lyra-compact-js-'));
 try {
@@ -130,6 +130,59 @@ try {
   assert.equal(await readFile(path.join(repeat, 'theme/startup-resolution.js'), 'utf8'), compactedStartup);
 } finally {
   await rm(bootstrapFixture, { recursive: true, force: true });
+}
+
+// Only unreachable private module markers are removable; declarations and every runtime route stay.
+const pruneFixture = await mkdtemp(path.join(tmpdir(), 'lyra-prune-empty-js-'));
+try {
+  const dist = path.join(pruneFixture, 'dist');
+  await mkdir(path.join(dist, 'patterns/deep'), { recursive: true });
+  const protectedNames = ['public', 'condition', 'side-effect', 'main', 'module', 'browser', 'bin', 'package-import', 'static', 'dynamic', 'reexport', 'asset', 'nondot-url', 'require-resolve', 'alias-require', 'patterns/public', 'patterns/deep/public'];
+  for (const name of [...protectedNames, 'private']) await writeFile(path.join(dist, `${name}.js`), 'export {};\n');
+  await writeFile(path.join(dist, 'private.d.ts'), '/** Retained type contract. */\nexport interface PrivateType {}\n');
+  await writeFile(path.join(dist, 'effect.js'), 'globalThis.pruneEffect = 1;\n');
+  await writeFile(path.join(dist, 'entry.js'), `
+    import './static.js';
+    export * from './reexport.js';
+    export const load = () => import('./dynamic.js');
+    export const asset = new URL('./asset.js', import.meta.url);
+    export const nondot = new URL('nondot-url.js', import.meta.url);
+    export const requireTarget = require.resolve('./require-resolve.js');
+    export const alias = requireFromPackage('./alias-require.js');
+  `);
+  const manifest = {
+    exports: { '.': './dist/public.js', './conditional': { import: './dist/condition.js' }, './patterns/*': './dist/patterns/*.js' },
+    imports: { '#private': { default: './dist/package-import.js' } },
+    main: 'dist/main.js', module: './dist/module.js', browser: { 'dist/browser.js': false },
+    bin: { cli: 'dist/bin.js' }, sideEffects: ['./dist/side-*.js'],
+  };
+  const result = await pruneEmptyBuildJavaScript(dist, manifest);
+  assert.deepEqual(result.removedPaths, ['private.js']);
+  for (const name of protectedNames) assert.equal(await readFile(path.join(dist, `${name}.js`), 'utf8'), 'export {};\n', `${name}: protected runtime route`);
+  assert.match(await readFile(path.join(dist, 'private.d.ts'), 'utf8'), /Retained type contract/);
+  assert.match(await readFile(path.join(dist, 'effect.js'), 'utf8'), /pruneEffect/);
+  assert.deepEqual((await pruneEmptyBuildJavaScript(dist, manifest)).removedPaths, [], 'idempotent pruning');
+
+  // Unknown dynamic module names cannot prove an empty file unreachable.
+  await writeFile(path.join(dist, 'private.js'), 'export {};\n');
+  await writeFile(path.join(dist, 'unknown.js'), 'export const load = name => import(name);\n');
+  assert.deepEqual((await pruneEmptyBuildJavaScript(dist, manifest)).removedPaths, []);
+  await writeFile(path.join(dist, 'unknown.js'), 'export const asset = name => new URL(name, import.meta.url);\n');
+  assert.deepEqual((await pruneEmptyBuildJavaScript(dist, manifest)).removedPaths, []);
+  await writeFile(path.join(dist, 'unknown.js'), 'export const load = name => require.resolve(name);\n');
+  assert.deepEqual((await pruneEmptyBuildJavaScript(dist, manifest)).removedPaths, []);
+  await writeFile(path.join(dist, 'unknown.js'), 'export const validate = name => new URL(name, document.baseURI);\n');
+  assert.deepEqual((await pruneEmptyBuildJavaScript(dist, manifest)).removedPaths, ['private.js'], 'ordinary URL validation is not a module loader');
+  await writeFile(path.join(dist, 'private.js'), 'export {};\n');
+  await rm(path.join(dist, 'unknown.js'));
+  assert.deepEqual((await pruneEmptyBuildJavaScript(dist, { ...manifest, sideEffects: true })).removedPaths, []);
+
+  // Parse all modules before removing any; an unsupported/broken module fails closed.
+  await writeFile(path.join(dist, 'broken.js'), 'export const = ;');
+  await assert.rejects(pruneEmptyBuildJavaScript(dist, manifest), /cannot parse/);
+  assert.equal(await readFile(path.join(dist, 'private.js'), 'utf8'), 'export {};\n');
+} finally {
+  await rm(pruneFixture, { recursive: true, force: true });
 }
 
 console.log('published JavaScript compaction test passed.');
