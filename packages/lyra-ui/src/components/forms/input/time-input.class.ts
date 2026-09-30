@@ -1,3 +1,4 @@
+import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import type { Placement } from '@floating-ui/dom';
 import {
   html,
@@ -438,6 +439,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
 
   constructor() {
     super();
+    new GlassScrollLayer(this, '[part="popup"]', () => this.open);
     this.addEventListener('invalid', () => {
       this.touched = true;
     });
@@ -1645,6 +1647,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
           aria-label=${this.localize('timeInputPopup')}
           ?data-hidden=${!this.open || !this.popupPositioned}
         >
+          <span class="glass-scroll-layer" aria-hidden="true"></span>
           <div part="columns">
             ${this.segmentOrder.map((name) => this.renderColumn(name))}
           </div>

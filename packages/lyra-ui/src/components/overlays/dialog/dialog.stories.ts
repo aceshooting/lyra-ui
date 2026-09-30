@@ -3,6 +3,26 @@ import { html } from 'lit';
 import './dialog.js';
 import type { LyraDialog } from './dialog.js';
 import { confirm } from './confirm.js';
+import '../overlay/popover.js';
+
+export const GlassAndSolid = {
+  render: () => html`<div style="display:flex;flex-wrap:wrap;gap:var(--lr-space-l);padding:var(--lr-space-l);min-block-size:16rem;background:linear-gradient(125deg,var(--lr-color-brand-quiet),var(--lr-color-surface),var(--lr-color-brand-quiet))">
+    ${(['glass', 'solid'] as const).map(surface => html`<section data-lr-surface=${surface}>
+      <button @click=${(event: Event) => {
+        void ((event.currentTarget as HTMLElement).parentElement!.querySelector('lr-dialog') as LyraDialog).show();
+      }}>Open ${surface} dialog</button>
+      <lr-dialog label=${`${surface === 'glass' ? 'Glass' : 'Solid'} dialog`} style="--lr-dialog-width:32rem;--lr-dialog-height:24rem">
+        <p>The shell follows the surface choice. Long content scrolls inside the stationary material.</p>
+        <label>Name <input value="Project" style="background:var(--lr-color-surface-raised);color:var(--lr-color-text);border:var(--lr-border-width-thin) solid var(--lr-color-border)" /></label>
+        <lr-popover top-layer><button slot="trigger">More options</button><p>This floating panel opens as its own material.</p></lr-popover>
+        <div style="min-block-size:30rem"><p>Scroll to the footer.</p></div>
+        <button slot="footer" @click=${(event: Event) => {
+          void ((event.currentTarget as HTMLElement).closest('lr-dialog') as LyraDialog).hide();
+        }}>Done</button>
+      </lr-dialog>
+    </section>`)}
+  </div>`,
+};
 
 const meta: Meta = {
   title: 'Dialog',

@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { glassSurface, glassScrollLayerStyles, glassIndependentRootStyles } from '../../../internal/glass-surface.styles.js';
 import {
   formControlFocusHalo,
   formControlRequiredMarker,
@@ -248,6 +249,7 @@ export const styles = css`
     z-index: var(--lr-layer-dropdown);
     box-sizing: border-box;
     max-block-size: var(--lr-positioner-available-block-size);
+    overflow: auto;
     padding: var(--lr-space-s);
     /* Anchored overlay: a positioner-placed picker panel floating over page content, not a modal
        layer. It reads the shared overlay-surface family (internal/overlay-surface.styles.ts), so
@@ -423,4 +425,8 @@ export const styles = css`
       transition-duration: var(--_lr-motion-duration, var(--lr-duration-fast));
     }
   }
+
+  ${glassScrollLayerStyles}
+  ${glassIndependentRootStyles}
+  ${glassSurface('[part="popup"]', css`var(--lr-overlay-surface, var(--lr-color-surface-raised))`, undefined, true)}
 `;

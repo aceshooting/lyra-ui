@@ -72,7 +72,9 @@ assert.ok(dtcg.theme.color.surface.default.$extensions['com.aceshooting.lyra.mod
 const lookInterchange = dtcg.$extensions['com.aceshooting.lyra.looks'];
 assert.equal(lookInterchange.schemaVersion, 1);
 assert.equal(lookInterchange.base, 'lyra');
+assert.deepEqual(lookInterchange.defaultStyle, { look: 'shadcn', surface: 'glass', density: 'comfortable', mode: 'system', accent: 'emerald' });
 assert.deepEqual(lookInterchange.definitions.lyra, { id: 'lyra', tokens: {} });
+assert.equal(dtcg.theme.color.surface.default.$extensions['com.aceshooting.lyra.modes'].dark.hex, '#1a1a1a');
 assert.deepEqual(Object.keys(lookInterchange.definitions), ['lyra', 'data', 'high-contrast', 'material', 'shadcn', 'terminal']);
 for (const id of Object.keys(lookInterchange.definitions).filter(id => id !== 'lyra')) {
   const authored = JSON.parse(readFileSync(path.join(packageDir, 'tokens', 'looks', `${id}.json`), 'utf8'));
@@ -239,6 +241,10 @@ try {
   }
   writeFileSync(path.join(layerFixture, 'tokens', 'looks', 'sparse.json'), JSON.stringify(sparseLook));
   writeFileSync(path.join(layerFixture, 'tokens', 'canonical-tokens.json'), JSON.stringify(source));
+  writeFileSync(path.join(layerFixture, 'tokens', 'default-style.json'), readFileSync(path.join(packageDir, 'tokens', 'default-style.json')));
+  mkdirSync(path.join(layerFixture, 'src', 'theme'), { recursive: true });
+  writeFileSync(path.join(layerFixture, 'src', 'theme', 'gemstones-data.ts'), readFileSync(path.join(packageDir, 'src', 'theme', 'gemstones-data.ts')));
+
   mkdirSync(path.join(layerFixture, 'tokens', 'options'), { recursive: true });
   for (const kind of ['shape', 'typography', 'elevation']) {
     writeFileSync(path.join(layerFixture, 'tokens', 'options', `${kind}.json`),

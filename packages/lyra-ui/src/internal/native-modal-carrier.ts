@@ -68,8 +68,14 @@ export class NativeModalCarrier {
   /** Promote after render, before the overlay manager applies its cancellable initial focus. */
   show(): boolean {
     const carrier = this.element;
-    if (!this.requested || !carrier || !this.host.isConnected) return false;
-    if (carrier.matches(':modal')) return true;
+    if (!this.requested || !carrier || !this.host.isConnected) {
+      this.host.removeAttribute('data-native-modal-active');
+      return false;
+    }
+    if (carrier.matches(':modal')) {
+      this.host.setAttribute('data-native-modal-active', '');
+      return true;
+    }
     if (carrier.open) carrier.close();
     this.releaseContext?.();
     this.helperMountElement?.remove();
@@ -82,7 +88,9 @@ export class NativeModalCarrier {
     carrier.inert = true;
     try {
       carrier.showModal();
+      this.host.setAttribute('data-native-modal-active', '');
     } catch (error) {
+      this.host.removeAttribute('data-native-modal-active');
       this.releaseContext?.();
       this.releaseContext = undefined;
       this.helperMountElement.remove();
@@ -97,6 +105,7 @@ export class NativeModalCarrier {
 
   /** Call after any exit animation, and on disconnect. This leaves the render mode intact. */
   hide(): void {
+    this.host.removeAttribute('data-native-modal-active');
     this.releaseContext?.();
     this.releaseContext = undefined;
     this.helperMountElement?.remove();
@@ -119,6 +128,7 @@ export class NativeModalCarrier {
 
   private closed = (): void => {
     if (!this.releaseContext || !this.host.isConnected || !this.element || this.element.open) return;
+    this.host.removeAttribute('data-native-modal-active');
     this.options.onUnexpectedClose(this.element);
   };
 }

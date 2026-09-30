@@ -1,3 +1,4 @@
+import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
@@ -221,6 +222,7 @@ export class LyraNavigationMenuItem extends LyraElement<LyraNavigationMenuItemEv
 
   constructor() {
     super();
+    new GlassScrollLayer(this, '[part="panel"]', () => this.open);
     registerNavigationMenuItemController(this, {
       isTrigger: () => this.isTrigger,
       isLink: () => this.isLink,
@@ -769,7 +771,7 @@ export class LyraNavigationMenuItem extends LyraElement<LyraNavigationMenuItemEv
         id=${this.panelId}
         ?hidden=${!panelVisible}
         data-layout=${floating ? 'floating' : 'flow'}
-      ><div class="panel-content"><slot name="panel"></slot></div></div
+      ><span class="glass-scroll-layer" aria-hidden="true"></span><div class="panel-content"><slot name="panel"></slot></div></div
       >${floating && this._open && panelVisible
         ? html`<span class="hover-bridge" aria-hidden="true"></span>`
         : nothing}`;

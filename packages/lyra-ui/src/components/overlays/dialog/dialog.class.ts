@@ -1,3 +1,4 @@
+import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
 import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
@@ -271,6 +272,11 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     close: LYRA_DEFAULT_close,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  constructor() {
+    super();
+    new GlassScrollLayer(this, '[part~="panel"]', () => this.open);
+  }
 
   static override styles = [LyraElement.styles, styles, nativeModalCarrierStyles];
 
@@ -1032,6 +1038,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
           aria-labelledby=${!this.nativeModal.requested && useHeadingForName ? this.headingId : nothing}
           tabindex="-1"
         >
+          <span class="glass-scroll-layer" aria-hidden="true"></span>
           ${showHeader
             ? html`
                 <div part="header">

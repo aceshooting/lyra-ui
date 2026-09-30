@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { concreteThemeCss, validateLook } from './style-axes-model.mjs';
+import { concreteThemeCss, validateLook, readStyleModel, defaultStyleInputs, replaceStyleFallbacks } from './style-axes-model.mjs';
 import { isMainModule } from './is-main-module.mjs';
 import { buildOptionPresetInterchange, readOptionPresetSources } from './generate-option-presets.mjs';
 
@@ -209,6 +209,7 @@ export function verifyRuntimeTokenParity(source, packageDir = defaultPackageDir)
   const errors = [];
   const runtime = readRuntimeTokenValues(packageDir);
   const canonical = new Map(Object.entries(source.tokens ?? {}));
+  const profileInputs = defaultStyleInputs(readStyleModel(packageDir));
   for (const [name, actual] of runtime) {
     const expected = canonical.get(name);
     if (!expected) {
@@ -217,7 +218,10 @@ export function verifyRuntimeTokenParity(source, packageDir = defaultPackageDir)
     }
     if (expected.scope !== actual.scope) errors.push(`${name}: scope differs from runtime`);
     for (const mode of MODES) {
-      const expectedValue = expected.values?.[mode];
+      const authoredValue = expected.values?.[mode];
+      const expectedValue = ['light', 'dark'].includes(mode) && authoredValue !== undefined
+        ? expected.scope === 'theme-input' ? profileInputs[name]?.[mode] ?? profileInputs[name]?.light ?? authoredValue : replaceStyleFallbacks(authoredValue, profileInputs, mode)
+        : authoredValue;
       const actualValue = actual.values?.[mode];
       if (expectedValue !== actualValue) {
         errors.push(`${name}: ${mode} is ${JSON.stringify(actualValue)}, expected ${JSON.stringify(expectedValue)}`);
@@ -744,16 +748,35 @@ function buildEditorInput(source) {
       properties.set(name, { name, description: token.description, references: [] });
     }
   }
+  properties.set('--lr-surface-background', { name: '--lr-surface-background', description: 'Base fill for the opt-in lr-surface-chrome native utility; falls back to the local semantic overlay surface.', references: [] });
   return { schemaVersion: 1, properties: [...properties.values()].sort((a, b) => a.name.localeCompare(b.name)) };
 }
 
+/** Design exports describe the effective default profile; authored Lyra remains a selectable look. */
+export function projectDefaultTokenSource(source, packageDir = defaultPackageDir) {
+  const projected = structuredClone(source);
+  const inputs = defaultStyleInputs(readStyleModel(packageDir));
+  for (const [name, token] of Object.entries(projected.tokens)) {
+    for (const mode of ['light', 'dark']) {
+      const value = token.values[mode];
+      if (value === undefined) continue;
+      token.values[mode] = token.scope === 'theme-input' ? inputs[name]?.[mode] ?? inputs[name]?.light ?? value : replaceStyleFallbacks(value, inputs, mode);
+    }
+  }
+  return projected;
+}
+
 export function buildDesignTokenArtifacts(source, packageDir = defaultPackageDir) {
+  const canonicalSource = source;
+  source = projectDefaultTokenSource(source, packageDir);
   const repoDir = path.resolve(packageDir, '..', '..');
   const layerOrder = readLayerOrderStatement(packageDir);
   const looks = readLookInterchange(packageDir);
+  const profile = readStyleModel(packageDir).defaults;
+  looks.defaultStyle = profile;
   const options = buildOptionPresetInterchange(readOptionPresetSources(packageDir));
   return [
-    [path.join(packageDir, 'design-tokens.json'), publishedJson(buildDtcg(source, looks, options))],
+    [path.join(packageDir, 'design-tokens.json'), publishedJson(buildDtcg(canonicalSource, looks, options))],
     [path.join(packageDir, 'src', 'styles', 'design-tokens.css'), buildCss(source, layerOrder)],
     [path.join(packageDir, 'src', 'styles', 'tokens-root.css'), buildRootTokensCss(source, layerOrder)],
     [path.join(repoDir, '.storybook', 'token-preview.generated.js'), buildPreview(source)],

@@ -153,12 +153,12 @@ function contrast(left: string, right: string): number {
 describe('theme runtime', () => {
   afterEach(resetRoot);
 
-  it('changes nothing on import, and reports the auto/no-accent default when unset', () => {
+  it('changes nothing on import, and reports the built-in profile when unset', () => {
     expect(stateAfterImport.dataTheme).to.equal(null);
     expect(stateAfterImport.dataLrTheme).to.equal(null);
     expect(stateAfterImport.accent).to.equal('');
     expect(stateAfterImport.stored).to.equal(null);
-    expect(legacyFixtureSnapshot()).to.deep.equal({ mode: 'auto', accent: null, surface: null });
+    expect(legacyFixtureSnapshot()).to.deep.equal({ mode: 'auto', accent: 'emerald', surface: null });
   });
 
   it('round-trips mode through localStorage and reflects it on the root', () => {
@@ -540,9 +540,9 @@ describe('theme runtime', () => {
 
   it('falls back to the default for malformed or unknown stored values', () => {
     localStorage.setItem(STORAGE_KEY, '{not json');
-    expect(legacyFixtureSnapshot()).to.deep.equal({ mode: 'auto', accent: null, surface: null });
+    expect(legacyFixtureSnapshot()).to.deep.equal({ mode: 'auto', accent: 'emerald', surface: null });
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: 'sepia', accent: 42 }));
-    expect(legacyFixtureSnapshot()).to.deep.equal({ mode: 'auto', accent: null, surface: null });
+    expect(legacyFixtureSnapshot()).to.deep.equal({ mode: 'auto', accent: 'emerald', surface: null });
   });
 
   it('does not throw when localStorage is unavailable, and still applies the theme', () => {
@@ -863,7 +863,7 @@ describe('lyraThemeBootstrap', () => {
     }
   });
 
-  it('leaves the document untouched when bootstrap storage access is blocked', () => {
+  it('paints the built-in profile when bootstrap storage access is blocked', () => {
     const originalGetItem = Storage.prototype.getItem;
     Storage.prototype.getItem = () => {
       throw new DOMException('Storage is unavailable', 'SecurityError');
@@ -872,8 +872,12 @@ describe('lyraThemeBootstrap', () => {
     document.documentElement.setAttribute('data-lr-theme', 'application');
     try {
       expect(() => new Function(lyraThemeBootstrap)()).to.not.throw();
-      expect(document.documentElement.getAttribute('data-theme')).to.equal('application');
-      expect(document.documentElement.getAttribute('data-lr-theme')).to.equal('application');
+      const resolved = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      expect(document.documentElement.getAttribute('data-theme')).to.equal(resolved);
+      expect(document.documentElement.getAttribute('data-lr-theme')).to.equal(resolved);
+      expect(document.documentElement.getAttribute('data-lr-look')).to.equal('shadcn');
+      expect(document.documentElement.getAttribute('data-lr-surface')).to.equal('glass');
+      expect(document.documentElement.getAttribute('data-lr-accent')).to.equal('emerald');
     } finally {
       Storage.prototype.getItem = originalGetItem;
     }
@@ -1812,9 +1816,10 @@ describe('lyraThemeBootstrap token maps', () => {
     expect(lyraThemeBootstrap.includes(String.fromCharCode(0x2029))).to.equal(false);
   });
 
-  it('writes no accent and no ramp for a stored unbalanced accent', () => {
+  it('uses the named default without an inline ramp for a stored unbalanced accent', () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: 'light', accent: 'rgb(0 0 0' }));
     new Function(lyraThemeBootstrap)();
+    expect(document.documentElement.getAttribute('data-lr-accent')).to.equal('emerald');
     expect(inlineThemeProperties()).to.deep.equal({});
   });
 

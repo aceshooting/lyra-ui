@@ -1032,6 +1032,13 @@ keyboard activation, compass rotation, zoom limits, scale units and viewport upd
 are created until the application explicitly adds them. This is a supported imperative peer-control
 integration; there is no declarative controls property.
 
+Navigation, scale, attribution and the legend follow the surrounding Glass or Solid surface
+treatment. Their decorative filtering leaves native control behavior and map data paint intact.
+The legend keeps its material stationary while its public surface scrolls. Solid, unsupported
+filtering, reduced transparency, increased contrast and forced colors use opaque surfaces.
+Remove opaque `background` overrides on these parts to allow the shared material to paint;
+geometry and foreground overrides remain available through the existing public parts and tokens.
+
 **Themeable custom properties:**
 
 - `--lr-map-height` (default `var(--lr-size-24rem)`) — host block size, shared with the optional

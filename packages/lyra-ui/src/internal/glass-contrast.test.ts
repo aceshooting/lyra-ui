@@ -35,7 +35,7 @@ describe('rendered glass foreground qualification', () => {
   let previous: CSSStyleSheet[];
   let sheets: CSSStyleSheet[];
   before(async () => {
-    sheets = await Promise.all(['theme.css', 'looks/shadcn.css', 'looks/material.css', 'accents.css', 'surfaces/glass.css'].map(async path => {
+    sheets = await Promise.all(['theme.css', 'looks/shadcn.css', 'looks/material.css', 'looks/data.css', 'looks/terminal.css', 'looks/high-contrast.css', 'accents.css', 'surfaces/glass.css'].map(async path => {
       const response = await fetch(new URL(`../${path}`, import.meta.url));
       if (!response.ok) throw new Error(`Missing fixture ${path}`);
       const sheet = new CSSStyleSheet();
@@ -46,7 +46,7 @@ describe('rendered glass foreground qualification', () => {
   beforeEach(() => { previous = document.adoptedStyleSheets; document.adoptedStyleSheets = [...previous, ...sheets]; });
   afterEach(async () => { document.adoptedStyleSheets = previous; await resetMouse(); });
 
-  for (const look of ['lyra', 'shadcn', 'material']) for (const mode of ['light', 'dark']) for (const treatment of ['solid', 'glass']) {
+  for (const look of ['lyra', 'shadcn', 'material', 'data', 'terminal', 'high-contrast']) for (const mode of ['light', 'dark']) for (const treatment of ['solid', 'glass']) {
     it(`qualifies ${look}/${mode}/${treatment} chrome with every named accent over both extreme backdrops`, async () => {
       const host = await fixture<GlassContrastFixture>(html`<test-glass-contrast data-lr-look=${look} data-lr-mode=${mode} data-lr-surface=${treatment}><lr-button appearance="plain" variant="brand">Action</lr-button><lr-button appearance="accent" variant="brand">Filled</lr-button></test-glass-contrast>`);
       const [plain, filled] = [...host.children] as LyraButton[];
@@ -58,10 +58,10 @@ describe('rendered glass foreground qualification', () => {
       for (const accent of ['', ...GEMSTONE_KEYS]) {
         if (accent) host.setAttribute('data-lr-accent', accent);
         else host.removeAttribute('data-lr-accent');
-        for (const surfaceToken of ['--lr-color-surface', '--lr-color-surface-raised', '--lr-color-surface-overlay']) {
+        for (const surfaceToken of ['--lr-color-surface', '--lr-color-surface-raised', '--lr-color-surface-overlay', '--lr-color-surface-container-high', '--lr-color-surface-container-highest']) {
           surface.style.setProperty('--test-surface', `var(${surfaceToken})`);
           const paint = getComputedStyle(surface).backgroundColor;
-          if (treatment === 'glass') expect(toRgba(paint)[3]).to.be.within(229, 231);
+          if (treatment === 'glass') expect(toRgba(paint)[3]).to.be.within(203, 205);
           else expect(toRgba(paint)[3]).to.equal(255);
           for (const backdrop of ['black', 'white']) {
             const background = composite(paint, backdrop);
@@ -79,7 +79,7 @@ describe('rendered glass foreground qualification', () => {
       }
     });
   }
-  for (const look of ['lyra', 'shadcn', 'material']) for (const mode of ['light', 'dark']) for (const treatment of ['solid', 'glass']) {
+  for (const look of ['lyra', 'shadcn', 'material', 'data', 'terminal', 'high-contrast']) for (const mode of ['light', 'dark']) for (const treatment of ['solid', 'glass']) {
     it(`keeps ${look}/${mode}/${treatment} hover, press, selected and keyboard focus qualified for every accent`, async function () {
       this.timeout(30000);
       const host = await fixture<GlassContrastFixture>(html`<test-glass-contrast data-lr-look=${look} data-lr-mode=${mode} data-lr-surface=${treatment} style="--lr-theme-transition-fast:0s"><lr-button appearance="plain" variant="brand">Action</lr-button><lr-button appearance="accent" variant="brand">Filled</lr-button><lr-tree><lr-tree-item selected>Selected row</lr-tree-item></lr-tree></test-glass-contrast>`);
@@ -95,7 +95,7 @@ describe('rendered glass foreground qualification', () => {
         for (const accent of ['', ...GEMSTONE_KEYS]) {
           if (accent) host.setAttribute('data-lr-accent', accent);
           else host.removeAttribute('data-lr-accent');
-          for (const surfaceToken of ['--lr-color-surface', '--lr-color-surface-raised', '--lr-color-surface-overlay']) {
+          for (const surfaceToken of ['--lr-color-surface', '--lr-color-surface-raised', '--lr-color-surface-overlay', '--lr-color-surface-container-high', '--lr-color-surface-container-highest']) {
             surface.style.setProperty('--test-surface', `var(${surfaceToken})`);
             for (const backdrop of ['black', 'white']) {
               const behind = composite(getComputedStyle(surface).backgroundColor, backdrop);
@@ -156,7 +156,7 @@ describe('rendered glass foreground qualification', () => {
     }
   });
 
-  for (const look of ['lyra', 'shadcn', 'material']) for (const mode of ['light', 'dark']) {
+  for (const look of ['lyra', 'shadcn', 'material', 'data', 'terminal', 'high-contrast']) for (const mode of ['light', 'dark']) {
     it(`uses paired text fills for ${look}/${mode} step numbers and interactive legend rows`, async () => {
       const host = await fixture<HTMLElement>(html`<div data-lr-look=${look} data-lr-mode=${mode} style="--lr-theme-transition-fast:0s"><lr-stepper .steps=${[{ stepId: 'next', label: 'Next', state: 'pending' }]}></lr-stepper><lr-context-meter interactive with-legend total="100" .segments=${[{ label: 'Used', value: 50, tone: 'brand' }]}></lr-context-meter></div>`);
       const stepper = host.firstElementChild as LyraStepper;

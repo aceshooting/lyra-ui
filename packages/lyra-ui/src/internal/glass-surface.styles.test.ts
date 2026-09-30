@@ -103,11 +103,12 @@ describe('glass surface composition', () => {
     expect(backgroundPixel(outer)).to.deep.equal([250, 250, 250, 255]);
   });
 
-  it('preserves the opaque default when no surface stylesheet scope is selected', async () => {
+  it('uses the built-in Glass default when no surface scope is selected', async function () {
+    if (!CSS.supports('backdrop-filter', 'blur(1px)')) this.skip();
     const { outer } = await surfaces();
-    expect(backgroundPixel(outer)).to.deep.equal([250, 250, 250, 255]);
-    expect(getComputedStyle(outer, '::before').content).to.equal('none');
-    expect(getComputedStyle(outer, '::before').backdropFilter).to.equal('none');
+    expect(backgroundPixel(outer)[3]).to.be.within(203, 205);
+    expect(getComputedStyle(outer, '::before').content).to.not.equal('none');
+    expect(getComputedStyle(outer, '::before').backdropFilter).to.include('blur(12px)');
   });
 
   it('resolves component-local glass controls at the painted surface', async function () {
@@ -130,7 +131,7 @@ describe('glass surface composition', () => {
     outer.scrollTop = 240;
     expect(outer.scrollTop).to.equal(240);
     expect(backgroundPixel(outer)).to.deep.equal(fill);
-    expect(fill[3]).to.be.within(229, 231);
+    expect(fill[3]).to.be.within(203, 205);
     expect(getComputedStyle(outer, '::before').backgroundColor).to.equal('rgba(0, 0, 0, 0)');
   });
 

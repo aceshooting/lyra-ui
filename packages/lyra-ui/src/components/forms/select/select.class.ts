@@ -1,3 +1,4 @@
+import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { acquireNativeControlDescription, type NativeControlDescriptionLease } from '../../../internal/native-control-description.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
@@ -890,6 +891,7 @@ export class LyraSelect<
 
   constructor() {
     super();
+    new GlassScrollLayer(this, '[part="listbox"]', () => this.open);
     installInvalidEventAlias(this, (init: { cancelable: true }) =>
       this.emit('lr-invalid', null, init)
     );
@@ -2923,6 +2925,7 @@ export class LyraSelect<
           @mousedown=${this.onListboxMouseDown}
           @click=${this.onListboxClick}
         >
+          <span class="glass-scroll-layer" aria-hidden="true"></span>
           ${this.renderRows(options, activeId)}
         </div>
         <div id="select-error" part="error" ?hidden=${!hasError}>

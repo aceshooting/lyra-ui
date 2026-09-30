@@ -1,12 +1,20 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readStyleModel, renderTheme, renderLook, renderDensity, renderGlass, renderAccents, renderRuntimeLook, referenceSurfaces, contrastSurfaces, modeResolverDeclarations, quote, STYLE_VERSION } from './style-axes-model.mjs';
+import { readStyleModel, renderTheme, renderLook, renderDensity, renderGlass, renderAccents, renderRuntimeLook, referenceSurfaces, contrastSurfaces, modeResolverDeclarations, defaultStyleInputs, replaceStyleFallbacks, quote, STYLE_VERSION } from './style-axes-model.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const model = readStyleModel(packageDir);
 const outputs = new Map();
 outputs.set('src/theme.css', renderTheme(model));
+const profileInputs = defaultStyleInputs(model);
+const tokenPath = 'src/internal/tokens.styles.ts';
+const tokenSource = readFileSync(join(packageDir, tokenPath), 'utf8');
+const darkMarker = tokenSource.indexOf('/* @media (prefers-color-scheme: dark) */');
+const auxiliaryMarker = tokenSource.indexOf('const auxTokens');
+if (darkMarker < 0 || auxiliaryMarker < darkMarker) throw new Error('Token fallback mode markers changed');
+outputs.set(tokenPath, replaceStyleFallbacks(tokenSource.slice(0, darkMarker), profileInputs, 'light') + replaceStyleFallbacks(tokenSource.slice(darkMarker, auxiliaryMarker), profileInputs, 'dark') + tokenSource.slice(auxiliaryMarker));
+
 outputs.set('src/density.css', renderDensity(JSON.parse(readFileSync(join(packageDir, 'tokens/density.json'), 'utf8'))));
 outputs.set('src/surfaces/glass.css', renderGlass(JSON.parse(readFileSync(join(packageDir, 'tokens/surfaces/glass.json'), 'utf8'))));
 for (const look of model.looks) {
@@ -27,7 +35,7 @@ export const LOOK_SLOTTED_INPUTS: readonly string[] = ${array(model.slotted)};
 export const LOOK_MODE_RESOLVER = ${quote(modeResolverDeclarations(model).map(([name, value]) => `    ${name}: ${value};`).join('\n'))};
 `);
 const object = values => `{\n${Object.entries(values).map(([key, value]) => `  ${quote(key)}: ${typeof value === 'string' ? quote(value) : `{ light: ${quote(value.light)}, dark: ${quote(value.dark)} }`},`).join('\n')}\n}`;
-const generated = `// GENERATED STYLE MODEL: START\nconst STYLE_SLOTTED: readonly string[] = ${array(model.slotted)};\nconst STYLE_DENSITY: readonly string[] = ${array(model.density)};\nconst STYLE_FOLLOW: readonly string[] = ${array(model.follow)};\nconst STYLE_REFERENCE_SURFACES: Readonly<Record<string, { light: string; dark: string }>> = ${object(references)};\nconst STYLE_CONTRAST_SURFACES: Readonly<Record<'light' | 'dark', readonly string[]>> = {\n  light: ${array(contrastReferences.light)},\n  dark: ${array(contrastReferences.dark)},\n};\nconst STYLE_GEMSTONES: Readonly<Record<string, string>> = ${object(gemstones)};\n// GENERATED STYLE MODEL: END`;
+const generated = `// GENERATED STYLE MODEL: START\nconst STYLE_DEFAULTS = Object.freeze(${object(model.defaults)} as const);\nconst STYLE_SLOTTED: readonly string[] = ${array(model.slotted)};\nconst STYLE_DENSITY: readonly string[] = ${array(model.density)};\nconst STYLE_FOLLOW: readonly string[] = ${array(model.follow)};\nconst STYLE_REFERENCE_SURFACES: Readonly<Record<string, { light: string; dark: string }>> = ${object(references)};\nconst STYLE_CONTRAST_SURFACES: Readonly<Record<'light' | 'dark', readonly string[]>> = {\n  light: ${array(contrastReferences.light)},\n  dark: ${array(contrastReferences.dark)},\n};\nconst STYLE_GEMSTONES: Readonly<Record<string, string>> = ${object(gemstones)};\n// GENERATED STYLE MODEL: END`;
 const runtimePath = 'src/theme/theme.ts';
 const runtime = readFileSync(join(packageDir, runtimePath), 'utf8');
 if (!runtime.includes('// GENERATED STYLE MODEL: START')) throw new Error('Style model marker missing');

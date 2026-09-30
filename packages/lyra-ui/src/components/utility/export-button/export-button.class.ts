@@ -1,3 +1,4 @@
+import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import { maxCssTime } from '../../../internal/css-motion-time.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
@@ -213,6 +214,11 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     statusError: LYRA_DEFAULT_statusError,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  constructor() {
+    super();
+    new GlassScrollLayer(this, '[part="menu"]', () => this.open);
+  }
 
   static override styles = [LyraElement.styles, sizes, styles];
 
@@ -931,6 +937,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
               label: accessibleLabel,
             })}
           >
+            <span class="glass-scroll-layer" aria-hidden="true"></span>
             ${repeat(
               this.formats,
               (format) => this.formatId(format),

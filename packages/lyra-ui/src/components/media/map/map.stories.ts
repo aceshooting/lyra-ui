@@ -606,6 +606,12 @@ export const NavigationAndScale: Story = {
     }}></lr-map>`,
 };
 
+export const GlassNavigationAndScale: Story = {
+  ...NavigationAndScale,
+  decorators: [(story) => html`<div data-lr-surface="glass">${story()}</div>`],
+  parameters: { docs: { description: { story: 'Navigation, scale, attribution and legend share the surrounding Glass material. The map keeps its data colors and native controls. Choose Solid or increased contrast for opaque chrome.' } } },
+};
+
 export const ClassifiedPoints: Story = {
   args: { zoom: 13 },
   argTypes: { zoom: { control: { type: 'range', min: 10, max: 18, step: 1 } } },

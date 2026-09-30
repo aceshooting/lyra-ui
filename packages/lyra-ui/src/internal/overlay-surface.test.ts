@@ -139,7 +139,7 @@ function applyDarkTheme(root: HTMLElement): void {
 }
 
 function mountIn(wrapperStyle: string, content: TemplateResult): Promise<HTMLElement> {
-  return fixture<HTMLElement>(html`<div style=${wrapperStyle}>${content}</div>`);
+  return fixture<HTMLElement>(html`<div data-lr-surface="solid" style=${wrapperStyle}>${content}</div>`);
 }
 
 async function hostIn(

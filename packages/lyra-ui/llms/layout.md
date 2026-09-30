@@ -5977,6 +5977,9 @@ These named interfaces and helper signatures are available to typed integrations
 
 ## `lr-navigation-menu`
 
+Floating navigation disclosures follow the [shared surface treatment](shared/styles-and-tokens.md);
+inline disclosures retain their flow presentation.
+
 Site-header navigation following the WAI-ARIA **disclosure navigation** pattern (first-party, no
 `wa-*`/`sl-*` counterpart): a `nav` landmark holding a `role="list"` row of
 `<lr-navigation-menu-item>` links and disclosure buttons. A disclosure's flyout panel opens in one

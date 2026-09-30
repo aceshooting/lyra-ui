@@ -1,3 +1,4 @@
+import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -610,6 +611,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
 
   constructor() {
     super();
+    new GlassScrollLayer(this, '[part~="panel"]', () => !this.inline && this.open);
     // FormAssociated registers its focusout interaction marker in its own constructor, before
     // this listener. Requesting here therefore projects the newly-synced user-invalid state in
     // the next render; the internal blur listener runs too early because blur precedes focusout.
@@ -1453,6 +1455,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
       aria-describedby=${describedBy || nothing}
       ?hidden=${!this.inline && !this.open}
     >
+      <span class="glass-scroll-layer" aria-hidden="true"></span>
       ${this.renderGrid()}
       <div class="row">
         <div

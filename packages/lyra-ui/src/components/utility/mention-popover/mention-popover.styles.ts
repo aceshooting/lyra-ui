@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { glassSurface, glassScrollLayerStyles, glassIndependentRootStyles } from '../../../internal/glass-surface.styles.js';
 import {
   overlaySurface,
   overlaySurfaceControlEdge,
@@ -141,4 +142,8 @@ export const styles = css`
     font-size: var(--lr-font-size-md-sm);
     overflow-wrap: anywhere;
   }
+
+  ${glassScrollLayerStyles}
+  ${glassIndependentRootStyles}
+  ${glassSurface('[part="listbox"]', css`var(--lr-overlay-surface, var(--_lr-overlay-surface, var(--lr-color-surface-container-high)))`, undefined, true)}
 `;

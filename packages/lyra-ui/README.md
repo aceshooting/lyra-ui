@@ -62,7 +62,10 @@ v24 publication.
 For new apps, use the [Lyra signature starter](./llms/shared/styles-and-tokens.md#lyra-signature-starter):
 Shadcn, glass, Emerald, theme-aware spotlights, compact gemstones and country-flag language controls.
 The recipe preserves saved choices and explicit branding and covers first paint, persistence and
-accessible controls. Lyra's runtime defaults remain independently configurable.
+accessible controls. The built-in profile is Shadcn/Glass/Emerald/System with comfortable density;
+saved choices override each axis independently. To retain the earlier appearance, select
+`look: 'lyra'`, `surface: 'solid'`, and `accent: null` explicitly. Clearing an accent with `null`
+remains supported; `resetLyraStyle()` restores Emerald.
 
 See the [changelog](CHANGELOG.md) for version-by-version changes and historical upgrade notes.
 
@@ -505,26 +508,26 @@ matching `data-lr-theme` attribute) on an ancestor:
 @import "@aceshooting/lyra-ui/theme.css";
 ```
 
-**shadcn/ui look.** Add one more import to restyle every component after shadcn/ui's default
-("new-york", Neutral) — monochrome primary, `0.5rem` radii, `text-sm`, `h-9` controls, a 3px focus
-ring. It layers over `theme.css` whatever the load order, also answers to shadcn's `.dark`/`.light`
-classes, and keeps gemstone accents working. A few values deliberately differ from shadcn to keep
-WCAG contrast (control borders, focus colour, danger red, chart colours); see
-[The shadcn look](./llms/shared.md#the-shadcn-look--looksshadcncss).
-
-```css
-@import "@aceshooting/lyra-ui/theme.css";
-@import "@aceshooting/lyra-ui/looks/shadcn.css";
-@import "@aceshooting/lyra-ui/accents.css";
-```
-
-Select the same look through the canonical style API after importing its stylesheet:
+**Appearance defaults.** Shadcn, Glass, Emerald, System mode and comfortable density are built in.
+`theme.css` supplies the document-level profile, including the default look, accent and material;
+granular components also carry these visual defaults. Select a different look or accent through
+the canonical style API, preserving each valid saved choice at startup:
 
 ```js
 import { setLyraStyle } from '@aceshooting/lyra-ui/theme.js';
 
-setLyraStyle({ look: 'shadcn', mode: 'system', accent: 'sapphire' });
+setLyraStyle({}); // Restore saved choices; missing or invalid fields use the built-in profile.
 ```
+
+To retain the earlier Lyra/Solid appearance without an accent:
+
+```js
+setLyraStyle({ look: 'lyra', surface: 'solid', accent: null });
+```
+
+`accent: null` clears the accent. `resetLyraStyle()` restores the built-in profile, including
+Emerald; pass a field list to reset only those axes. See [The shadcn look](./llms/shared.md#the-shadcn-look--looksshadcncss)
+for the look's typography, geometry and contrast adjustments.
 
 The style API persists the independent look, surface, density, mode and accent choices. See the
 [style API guide](./llms/shared/styles-and-tokens.md#composing-looks-surfaces-and-density) for

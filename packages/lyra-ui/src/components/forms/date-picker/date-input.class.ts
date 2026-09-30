@@ -1,3 +1,4 @@
+import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import { observeReactivePropertyWrites } from '../../../internal/reactive-property-writes.js';
 import {
   html,
@@ -689,6 +690,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
 
   constructor() {
     super();
+    new GlassScrollLayer(this, '[part="popup"]', () => this.open);
     this.addEventListener('invalid', () => {
       this.touched = true;
     });
@@ -2230,6 +2232,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
               aria-hidden=${this.open ? 'false' : 'true'}
               aria-label=${this.dialogLabelAuthored ? this.dialogLabel : this.localize('chooseDate')}
             >
+              <span class="glass-scroll-layer" aria-hidden="true"></span>
               <lr-date-picker
                 part="date-picker"
                 .value=${this.value}

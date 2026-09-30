@@ -27,7 +27,7 @@ describe('glass surface keyboard focus paint', () => {
   let previous: CSSStyleSheet[];
   let sheets: CSSStyleSheet[];
   before(async () => {
-    sheets = await Promise.all(['theme.css', 'looks/shadcn.css', 'looks/material.css', 'accents.css', 'surfaces/glass.css'].map(async path => {
+    sheets = await Promise.all(['theme.css', 'looks/shadcn.css', 'looks/material.css', 'looks/data.css', 'looks/terminal.css', 'looks/high-contrast.css', 'accents.css', 'surfaces/glass.css'].map(async path => {
       const response = await fetch(new URL(`../${path}`, import.meta.url));
       if (!response.ok) throw new Error(`Missing fixture ${path}`);
       const sheet = new CSSStyleSheet();
@@ -61,7 +61,7 @@ describe('glass surface keyboard focus paint', () => {
     }
   }
 
-  for (const look of ['lyra', 'shadcn', 'material']) for (const mode of ['light', 'dark']) {
+  for (const look of ['lyra', 'shadcn', 'material', 'data', 'terminal', 'high-contrast']) for (const mode of ['light', 'dark']) {
     it(`keeps the default ${look}/${mode} glass outline visible over extreme backdrops for every accent`, async () => {
       const host = await fixture<GlassFocusFixture>(html`<test-glass-focus data-lr-look=${look} data-lr-mode=${mode} data-lr-surface="glass"></test-glass-focus>`);
       const target = host.shadowRoot!.querySelector('button')!;

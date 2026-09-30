@@ -14,13 +14,22 @@ export function glassSurface(selector: string, fill: CSSResult, restingFill: CSS
   const children = unsafeCSS(selector.split(',').map(part => `${part.trim()} > *`).join(', '));
   const layer = unsafeCSS(selector.split(',').map(part => `${part.trim()}${scrolling ? ' > .glass-scroll-layer' : ''}::before`).join(', '));
   return css`
+    :host([data-lr-surface='solid']) {
+      --_lr-surface-enabled: 0;
+      --_lr-glass-blocker: none;
+      --_lr-surface-content: none;
+      --_lr-surface-isolation: auto;
+      --_lr-surface-child-filter: initial;
+      --_lr-surface-child-opacity: 0;
+      --_lr-glass-parent-opacity: 0;
+    }
     ${surface} {
       background: ${restingFill};
-      --_lr-glass-filter-value: blur(clamp(0px, var(--lr-theme-surface-blur, 0px), var(--_lr-surface-maximum-blur))) saturate(clamp(0, var(--lr-theme-surface-saturation, 1), 2));
+      --_lr-glass-filter-value: blur(calc(clamp(0px, var(--lr-theme-surface-blur, 12px), var(--_lr-surface-maximum-blur, 16px)) * (1 - var(--_lr-glass-parent-opacity, 0)))) saturate(calc(1 + (clamp(0, var(--lr-theme-surface-saturation, 1.1), 2) - 1) * (1 - var(--_lr-glass-parent-opacity, 0))));
       --_lr-glass-current-filter: var(--_lr-preference-glass-filter, var(--_lr-glass-blocker, var(--_lr-glass-filter-value, none)));
       --_lr-glass-foreground-weight: initial;
-      --_lr-next-glass-blocker: var(--_lr-surface-child-filter, initial);
-      --_lr-next-glass-opacity: var(--_lr-surface-child-opacity, initial);
+      --_lr-next-glass-blocker: var(--_lr-surface-child-filter, none);
+      --_lr-next-glass-opacity: var(--_lr-surface-child-opacity, 1);
     }
     ${children} {
       --_lr-glass-blocker: var(--_lr-next-glass-blocker, initial);
@@ -33,12 +42,12 @@ export function glassSurface(selector: string, fill: CSSResult, restingFill: CSS
         --_lr-glass-qualified-focus-ring-color: color-mix(
           in srgb,
           var(--_lr-glass-original-focus-ring-color, var(--lr-color-text)),
-          var(--lr-color-text) calc(var(--_lr-surface-foreground-weight) * var(--_lr-surface-enabled) * (1 - var(--_lr-glass-parent-opacity, 0)) * (1 - var(--_lr-preference-glass-opacity, 0)))
+          var(--lr-color-text) calc(var(--_lr-surface-foreground-weight, 80%) * var(--_lr-surface-enabled, 1) * (1 - var(--_lr-glass-parent-opacity, 0)) * (1 - var(--_lr-preference-glass-opacity, 0)))
         );
       }
       ${surface} {
-        isolation: var(--_lr-surface-isolation, auto);
-        --_lr-glass-foreground-weight: calc(var(--_lr-surface-foreground-weight) * var(--_lr-surface-enabled) * (1 - var(--_lr-glass-parent-opacity, 0)) * (1 - var(--_lr-preference-glass-opacity, 0)));
+        isolation: var(--_lr-surface-isolation, isolate);
+        --_lr-glass-foreground-weight: calc(var(--_lr-surface-foreground-weight, 80%) * var(--_lr-surface-enabled, 1) * (1 - var(--_lr-glass-parent-opacity, 0)) * (1 - var(--_lr-preference-glass-opacity, 0)));
         --_lr-glass-qualified-text-quiet: color-mix(in srgb, var(--_lr-glass-original-text-quiet, var(--lr-color-text)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
         --lr-color-text-quiet: var(--_lr-glass-qualified-text-quiet, var(--_lr-glass-original-text-quiet));
         --_lr-glass-qualified-border: color-mix(in srgb, var(--_lr-glass-original-border, var(--lr-color-text)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
@@ -47,17 +56,17 @@ export function glassSurface(selector: string, fill: CSSResult, restingFill: CSS
         --_lr-glass-danger-text: color-mix(in srgb, var(--lr-color-danger), var(--lr-color-text) var(--_lr-glass-foreground-weight));
         --_lr-glass-background: color-mix(
           in srgb,
-          ${restingFill} calc((1 - var(--_lr-surface-enabled) * (1 - var(--_lr-preference-glass-opacity, 0))) * 100%),
+          ${restingFill} calc((1 - var(--_lr-surface-enabled, 1) * (1 - var(--_lr-preference-glass-opacity, 0))) * 100%),
           color-mix(
             in srgb,
-            ${fill} calc(var(--_lr-preference-glass-opacity, var(--_lr-glass-parent-opacity, clamp(var(--_lr-surface-min-opacity, 1), var(--lr-theme-surface-opacity, 1), 1))) * 100%),
+            ${fill} calc(var(--_lr-preference-glass-opacity, max(var(--_lr-glass-parent-opacity, 0), clamp(var(--_lr-surface-min-opacity, 0.8), var(--lr-theme-surface-opacity, 0.8), 1))) * 100%),
             transparent
           )
         );
         background: var(--_lr-glass-background, ${restingFill});
       }
       ${layer} {
-        content: var(--_lr-surface-content, none);
+        content: var(--_lr-surface-content, '');
         position: absolute;
         inset: 0;
         inline-size: ${scrolling ? css`var(--_lr-glass-viewport-width, 100%)` : css`auto`};
@@ -68,7 +77,7 @@ export function glassSurface(selector: string, fill: CSSResult, restingFill: CSS
         border-radius: inherit;
         -webkit-backdrop-filter: var(--_lr-glass-current-filter);
         backdrop-filter: var(--_lr-glass-current-filter);
-        box-shadow: inset 0 var(--lr-border-width-thin) 0 var(--lr-theme-surface-highlight, transparent);
+        box-shadow: inset 0 var(--lr-border-width-thin) 0 var(--lr-theme-surface-highlight, rgb(255 255 255 / 0.12));
       }
     }
     @media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) {
@@ -109,5 +118,16 @@ export const glassScrollLayerStyles = css`
   }
   :host(:dir(rtl)) .glass-scroll-layer {
     transform: translate(calc(var(--_lr-glass-scroll-offset, 0px) + var(--_lr-glass-padding-inline-start, 0px)), calc(-1 * var(--_lr-glass-padding-top, 0px)));
+  }
+`;
+
+/** Independently promoted surfaces start a material root; ordinary contained surfaces keep nesting guards. */
+export const glassIndependentRootStyles = css`
+  :host(:popover-open),
+  :host([data-native-modal-active]),
+  [popover]:popover-open,
+  dialog[data-native-modal-carrier]:modal {
+    --_lr-glass-parent-opacity: initial;
+    --_lr-glass-blocker: initial;
   }
 `;

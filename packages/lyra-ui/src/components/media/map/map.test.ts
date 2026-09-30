@@ -24,6 +24,7 @@ import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { setMapCanvasReadyCallback } from '../../../internal/map-canvas-ready.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
+import { toRgba } from '../../../../test/color-contrast.js';
 // Registers the real 'ar'/'fr' catalogs so the lang="ar"/"fr-FR" tests below -- which exercise
 // RTL layout containment and localized-ownership plumbing, not string-catalog completeness --
 // resolve the keys their renders incidentally touch (loading, mapStyleRequired, zoomIn, zoomOut,
@@ -6698,6 +6699,34 @@ describe('descriptor-safe map data projections', () => {
 });
 
 describe('standard peer navigation and scale controls', () => {
+  it('applies shared Glass and Solid to actual peer controls without changing native control geometry', async function () {
+    if (!hasWebGL2) this.skip();
+    const el = await fixture<LyraMap>(html`<lr-map data-lr-surface="glass" .mapStyle=${LOCAL_STYLE}
+      .legendGradient=${[[0, 'blue'], [100, 'red']]}></lr-map>`);
+    await waitUntil(() => !!el.map && el.map.isStyleLoaded(), 'map ready', { timeout: 5000 });
+    const peer = await import('maplibre-gl');
+    const map = el.map as unknown as import('maplibre-gl').Map;
+    map.addControl(new peer.NavigationControl(), 'bottom-right');
+    map.addControl(new peer.ScaleControl(), 'bottom-left');
+    map.addControl(new peer.AttributionControl({ customAttribution: 'Example map data' }), 'bottom-right');
+    await waitUntil(() => el.shadowRoot!.querySelector('[part~="scale"]') !== null);
+    for (const direction of ['ltr', 'rtl']) {
+      el.dir = direction;
+      el.setAttribute('data-lr-surface', 'glass');
+      await el.updateComplete;
+      const surfaces = ['navigation', 'scale', 'attribution', 'legend'].map(part =>
+        el.shadowRoot!.querySelector<HTMLElement>(`[part~="${part}"]`)!,
+      );
+      const geometry = surfaces.map(surface => [surface.clientWidth, surface.clientHeight]);
+      for (const surface of surfaces) expect(toRgba(getComputedStyle(surface).backgroundColor)[3]).to.be.within(203, 205);
+      const scale = surfaces[1]!;
+      expect(getComputedStyle(scale, '::after').borderBottomStyle).to.equal('solid');
+      el.setAttribute('data-lr-surface', 'solid');
+      for (const surface of surfaces) expect(toRgba(getComputedStyle(surface).backgroundColor)[3]).to.equal(255);
+      expect(surfaces.map(surface => [surface.clientWidth, surface.clientHeight])).to.deep.equal(geometry);
+    }
+  });
+
   it('keeps expanded attribution, opposite controls and legends separate in narrow layouts', async function () {
     if (!hasWebGL2) this.skip();
     const el = await fixture<LyraMap>(html`<lr-map style="inline-size: 320px"

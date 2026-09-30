@@ -1,5 +1,5 @@
 import { css } from 'lit';
-import { glassSurface, glassScrollLayerStyles } from '../../../internal/glass-surface.styles.js';
+import { glassSurface, glassScrollLayerStyles, glassIndependentRootStyles } from '../../../internal/glass-surface.styles.js';
 import {
   overlaySurface,
   overlaySurfaceFill,
@@ -92,6 +92,7 @@ export const styles = css`
 `;
 
 export const glassPopoverStyles = css`
+  ${glassIndependentRootStyles}
   ${glassScrollLayerStyles}
   ${glassSurface(
   '[part~="popup"]',

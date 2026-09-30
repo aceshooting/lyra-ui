@@ -41,16 +41,68 @@ export function validateLook(look) {
 }
 
 export function readStyleModel(packageDir) {
+  const defaults = JSON.parse(readFileSync(join(packageDir, 'tokens/default-style.json'), 'utf8'));
+  if (Object.keys(defaults).sort().join(',') !== 'accent,density,look,mode,surface' || !['solid', 'glass'].includes(defaults.surface) || !['comfortable', 'compact', 'touch'].includes(defaults.density) || !['light', 'dark', 'system'].includes(defaults.mode)) throw new Error('Invalid built-in style profile');
   const canonical = JSON.parse(readFileSync(join(packageDir, 'tokens/canonical-tokens.json'), 'utf8'));
   const base = Object.fromEntries(Object.entries(canonical.tokens).filter(([, value]) => value.scope === 'theme-input').map(([name, value]) => [name, value.values]));
   const looks = readdirSync(join(packageDir, 'tokens/looks')).filter(file => file.endsWith('.json')).sort().map(file => JSON.parse(readFileSync(join(packageDir, 'tokens/looks', file), 'utf8')));
   looks.forEach(validateLook);
+  const gemstones = [...readFileSync(join(packageDir, 'src/theme/gemstones-data.ts'), 'utf8').matchAll(/(\w+): \{ key: '\w+', fill: '([^']+)'/g)].map(match => match[1]);
+  if (!looks.some(look => look.id === defaults.look) || !gemstones.includes(defaults.accent)) throw new Error('Unknown built-in profile look or accent');
   const names = [...new Set([...Object.keys(base), ...looks.flatMap(look => Object.keys(look.tokens))])].sort();
   const paired = names.filter(name => base[name]?.dark !== undefined || looks.some(look => typeof look.tokens[name] === 'object'));
   const density = densityNames.filter(name => names.includes(name));
   const slotted = [...new Set([...paired, ...density])].sort();
   const follow = names.filter(name => /^--lr-theme-color-(?:success|warning|danger|neutral)-(?:fill|border|on)-(?:quiet|normal|loud)$/.test(name));
-  return { base, looks, names, paired, density, slotted, follow, version: STYLE_VERSION };
+  return { base, looks, names, paired, density, slotted, follow, defaults, canonical, packageDir, version: STYLE_VERSION };
+}
+
+/** The built-in profile is projected into fallback values without changing the selectable Lyra palette. */
+export function defaultStyleInputs(model) {
+  const look = model.looks.find(entry => entry.id === model.defaults.look);
+  const result = Object.fromEntries(Object.entries(model.base).map(([name, values]) => [name, { ...values }]));
+  for (const [name, value] of Object.entries(look.tokens)) {
+    result[name] = typeof value === 'string' ? { light: value, ...(model.paired.includes(name) ? { dark: value } : {}) } : { ...result[name], ...value };
+  }
+  const gemstones = Object.fromEntries([...readFileSync(join(model.packageDir, 'src/theme/gemstones-data.ts'), 'utf8').matchAll(/(\w+): \{ key: '\w+', fill: '([^']+)'/g)].map(match => [match[1], match[2]]));
+  const accent = renderAccents(model, { [model.defaults.accent]: gemstones[model.defaults.accent] });
+  for (const match of accent.matchAll(/--_lr-a([ld])-([a-z0-9-]+): ([^;]+);/g)) {
+    const [, mode, suffix, value] = match;
+    (result[`--lr-theme-${suffix}`] ??= {})[mode === 'l' ? 'light' : 'dark'] = value;
+  }
+  const authored = structuredClone(result);
+  for (const mode of ['light', 'dark']) {
+    const resolve = (name, seen = new Set()) => {
+      const value = authored[name]?.[mode] ?? authored[name]?.light;
+      const reference = typeof value === 'string' && value.match(/^var\((--lr-theme-[a-z0-9-]+)\)$/)?.[1];
+      if (!reference) return value;
+      if (seen.has(name)) throw new Error(`Cyclic built-in fallback ${name}`);
+      return resolve(reference, new Set([...seen, name]));
+    };
+    for (const name of Object.keys(result)) if (result[name][mode] !== undefined) result[name][mode] = resolve(name);
+  }
+  return result;
+}
+
+/** Replace only theme-input fallbacks; nested aliases remain balanced. */
+export function replaceStyleFallbacks(source, inputs, mode) {
+  const expression = /var\((--lr-theme-[a-z0-9-]+),\s*/g;
+  let output = '', previous = 0, match;
+  while ((match = expression.exec(source))) {
+    const value = inputs[match[1]]?.[mode] ?? inputs[match[1]]?.light;
+    if (!value || value === 'initial') continue;
+    let end = expression.lastIndex, depth = 1;
+    while (end < source.length && depth) {
+      if (source[end] === '(') depth++;
+      else if (source[end] === ')') depth--;
+      end++;
+    }
+    if (depth) throw new Error(`Unclosed theme fallback ${match[1]}`);
+    output += source.slice(previous, expression.lastIndex) + value + ')';
+    previous = end;
+    expression.lastIndex = end;
+  }
+  return output + source.slice(previous);
 }
 
 function branch(model, name, mode) {
@@ -149,8 +201,10 @@ export function contrastSurfaces(model) {
 
 export function renderTheme(model) {
   const base = [];
+  const defaultLook = model.looks.find(look => look.id === model.defaults.look);
+  const lookBase = { ...model.base, ...Object.fromEntries(Object.entries(defaultLook.tokens).map(([name, value]) => [name, typeof value === 'string' ? { light: value } : { ...model.base[name], ...value }])) };
   for (const name of model.names) {
-    const value = model.base[name];
+    const value = lookBase[name];
     if (model.slotted.includes(name)) {
       base.push(
         [slot(name, 'light'), value?.light ?? 'initial', value?.light === 'initial' ? 'declared optional input' : undefined],
@@ -159,10 +213,11 @@ export function renderTheme(model) {
     } else base.push([name, value?.light ?? 'initial', value?.light === 'initial' ? 'declared optional input' : undefined]);
   }
   for (const name of model.follow) for (const key of ['l', 'd']) base.push([`--_lr-f${key}-${short(name)}`, 'initial'], [`--_lr-o${key}-${short(name)}`, '']);
-  base.push(['--_lr-look-installed', `lyra-${STYLE_VERSION}`]);
+  base.push(['--_lr-look-installed', `${model.defaults.look}-${STYLE_VERSION}`]);
   const boundaries = ':root, .lr-light, .lr-dark, [data-lr-theme], [data-lr-mode], [data-lr-look], [data-lr-accent], [data-lr-theme-scope]';
   let css = `/* GENERATED by scripts/generate-style-axes.mjs; edit tokens/canonical-tokens.json and tokens/looks/. */\n${LAYERS}@layer lr-theme {\n`;
   css += rule(':root, [data-lr-look]', base);
+  css += rule('[data-lr-look]', lookDeclarations(model, Object.fromEntries(model.names.map(name => [name, model.base[name] === undefined ? 'initial' : model.base[name].dark === undefined ? model.base[name].light : model.base[name]]))));
   css += rule(':root', [['--_lr-dense-on', 'initial'], ['--_lr-dense-off', ''], ['--_lr-style-resolver', STYLE_VERSION]]);
   css += rule("[data-lr-accent]", model.names.filter(accentOwned).flatMap(name => [[slot(name, 'light', 'a'), 'initial'], [slot(name, 'dark', 'a'), 'initial']]).concat([['--lr-theme-accent', 'initial']]));
   css += rule(boundaries, modeResolverDeclarations(model));
@@ -170,11 +225,20 @@ export function renderTheme(model) {
   css += rule(':root, [data-lr-look], [data-lr-density], [data-lr-theme-scope]', model.density.map(name => [name, resolvedInput(model, name)]));
   css += '}\n@layer lr-theme-preset.mode {\n';
   css += rule(":where(:root), [data-lr-mode='light'], [data-lr-mode='system']", modeRule(false));
-  css += "  @media (prefers-color-scheme: dark) {\n" + rule("[data-lr-mode='system']", modeRule(true)) + '  }\n';
+  css += "  @media (prefers-color-scheme: dark) {\n" + rule(":where(:root:not([data-lr-mode]):not([data-lr-theme]):not(.lr-light):not(.lr-dark)), [data-lr-mode='system']", modeRule(true)) + '  }\n';
   css += rule("[data-lr-mode='dark']", modeRule(true));
   css += rule(".lr-light, [data-lr-theme='light']", modeRule(false));
   css += rule(".lr-dark, [data-lr-theme='dark']", modeRule(true));
-  return css + '}\n';
+  css += '}\n';
+  css += renderLook(model, defaultLook);
+  css += renderLook(model, { id: 'lyra', tokens: {} });
+  const gemstoneFill = readFileSync(join(model.packageDir, 'src/theme/gemstones-data.ts'), 'utf8').match(new RegExp(`${model.defaults.accent}: \\{ key: '[^']+', fill: '([^']+)'`))?.[1];
+  const defaultAccentCss = renderAccents(model, { [model.defaults.accent]: gemstoneFill });
+  const defaultAccent = [...defaultAccentCss.matchAll(/(--[a-z0-9-]+): ([^;]+);/g)].map(match => [match[1], match[2]]);
+  css += '@layer lr-theme {\n' + rule(':root:not([data-lr-accent])', defaultAccent) + '}\n';
+  css += defaultAccentCss;
+  const glass = JSON.parse(readFileSync(join(model.packageDir, 'tokens/surfaces/glass.json'), 'utf8'));
+  return css + renderGlass(glass, { defaults: true });
 }
 
 export function renderDensity(data) {
@@ -186,8 +250,40 @@ export function renderDensity(data) {
   return css + '}\n';
 }
 
-export function renderGlass(data) {
-  if (!(data.foregroundWeight >= 0.55 && data.foregroundWeight <= 1) || !(data.minimumOpacity >= 0.9 && data.minimumOpacity <= 1) || !(data.opacity >= data.minimumOpacity && data.opacity <= 1) || !(data.saturation >= 0 && data.saturation <= 2)) throw new Error('Invalid glass bounds');
+/** The native utility consumes the same protected material template as shadow chrome. */
+export function renderNativeChrome() {
+  const helper = readFileSync(new URL('../src/internal/glass-surface.styles.ts', import.meta.url), 'utf8');
+  const template = helper.split('return css`')[1]?.split('\n  `;\n}')[0];
+  if (!template) throw new Error('Shared glass template boundary changed');
+  const selector = ':where(.lr-surface-chrome)';
+  const fill = 'var(--lr-surface-background, var(--lr-theme-color-surface-container-high, var(--lr-theme-color-surface-overlay, Canvas)))';
+  const placeholders = new Map([
+    ['surface', selector], ['children', `${selector} > *`], ['layer', `${selector}::before`],
+    ['fill', fill], ['restingFill', fill],
+    ["scrolling ? css`var(--_lr-glass-viewport-width, 100%)` : css`auto`", 'auto'],
+    ["scrolling ? css`var(--_lr-glass-viewport-height, 100%)` : css`auto`", 'auto'],
+  ]);
+  const recipe = template.replace(/\$\{([^}]+)\}/g, (_, expression) => {
+    if (!placeholders.has(expression)) throw new Error(`Unrecognized shared glass placeholder ${expression}`);
+    return placeholders.get(expression);
+  }).replaceAll(":host([data-lr-surface='solid'])", `${selector}[data-lr-surface='solid']`).replaceAll(':host', selector)
+    .replaceAll('calc(var(--lr-layer-base) - var(--lr-layer-content))', '-1')
+    .replaceAll('var(--lr-border-width-thin)', 'var(--lr-border-width-thin, 1px)');
+  return `\n@layer lr-theme-preset.surface {\n${rule(selector, [
+    ['position', 'relative'], ['color', 'var(--lr-color-text)'],
+    ['--lr-color-text', 'var(--lr-theme-color-text-normal, CanvasText)'],
+    ['--_lr-glass-original-text-quiet', 'var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, CanvasText))'],
+    ['--_lr-glass-original-border', 'var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, CanvasText))'],
+    ['--_lr-glass-original-focus-ring-color', 'var(--lr-theme-color-focus, Highlight)'],
+    ['--lr-focus-ring-width', 'max(var(--lr-theme-focus-ring-width, 2px), var(--_lr-preference-focus-min, 0px))'],
+    ['--lr-focus-ring-color', 'var(--_lr-glass-qualified-focus-ring-color, var(--_lr-glass-original-focus-ring-color))'],
+    ['--lr-focus-ring-offset', 'var(--lr-theme-focus-ring-offset, 2px)'],
+    ['--lr-focus-ring', 'var(--lr-focus-ring-width) solid var(--lr-focus-ring-color)'],
+  ])}${recipe}\n${rule(`${selector}:popover-open, ${selector}:modal`, [['--_lr-glass-parent-opacity', 'initial'], ['--_lr-glass-blocker', 'initial']])}}\n`;
+}
+
+export function renderGlass(data, { defaults = false } = {}) {
+  if (!(data.foregroundWeight >= 0.8 && data.foregroundWeight <= 1) || !(data.minimumOpacity >= 0.8 && data.minimumOpacity <= 1) || !(data.opacity >= data.minimumOpacity && data.opacity <= 1) || !(data.saturation >= 0 && data.saturation <= 2)) throw new Error('Invalid glass bounds');
   for (const name of ['blur', 'maximumBlur', 'highlight']) if (unsafeValueReason(data[name])) throw new Error(`Invalid glass ${name}`);
   const radius = value => typeof value === 'string' && /^(?:\d+|\d+\.\d+)px$/.test(value) ? Number.parseFloat(value) : NaN;
   if (!(radius(data.blur) >= 0 && radius(data.blur) <= radius(data.maximumBlur) && radius(data.maximumBlur) <= 16)) throw new Error('Invalid glass blur radius bound');
@@ -195,11 +291,16 @@ export function renderGlass(data) {
   if (!(highlightAlpha >= 0 && highlightAlpha <= 0.12)) throw new Error('Invalid glass highlight bound');
   const clear = data.clearMedia;
   if (!clear || !(clear.scrimStart >= 0.78 && clear.scrimStart <= 1) || !(clear.scrimEnd >= clear.scrimStart && clear.scrimEnd <= 1) || !(clear.fillOpacity >= 0 && clear.fillOpacity <= 0.08)) throw new Error('Invalid clear media bounds');
+  const helper = readFileSync(new URL('../src/internal/glass-surface.styles.ts', import.meta.url), 'utf8');
+  for (const [name, value] of [['--_lr-surface-min-opacity', data.minimumOpacity], ['--lr-theme-surface-opacity', data.opacity], ['--lr-theme-surface-blur', data.blur], ['--_lr-surface-maximum-blur', data.maximumBlur], ['--_lr-surface-foreground-weight', `${data.foregroundWeight * 100}%`], ['--lr-theme-surface-saturation', data.saturation], ['--lr-theme-surface-highlight', data.highlight]]) {
+    if (!helper.includes(`var(${name}, ${value})`)) throw new Error(`Intrinsic glass fallback differs from canonical ${name}`);
+  }
+
   let css = LAYERS + '@layer lr-theme-preset.surface {\n';
   css += rule(':root, :host', [['--_lr-media-clear-scrim-start', clear.scrimStart], ['--_lr-media-clear-scrim-end', clear.scrimEnd], ['--_lr-media-clear-fill', `rgb(255 255 255 / ${clear.fillOpacity})`], ['--_lr-media-clear-text', '#ffffff']]);
-  css += rule("[data-lr-surface='glass']", [['--_lr-surface-installed', STYLE_VERSION], ['--_lr-surface-enabled', '1'], ['--_lr-surface-content', "''"], ['--_lr-surface-isolation', 'isolate'], ['--_lr-surface-min-opacity', data.minimumOpacity], ['--_lr-surface-maximum-blur', data.maximumBlur], ['--_lr-surface-foreground-weight', `${data.foregroundWeight * 100}%`], ['--_lr-surface-child-filter', 'none'], ['--_lr-surface-child-opacity', '1'], ['--lr-theme-surface-opacity', data.opacity], ['--lr-theme-surface-blur', data.blur], ['--lr-theme-surface-saturation', data.saturation], ['--lr-theme-surface-highlight', data.highlight]]);
-  css += rule("[data-lr-surface='solid']", [['--_lr-surface-installed', STYLE_VERSION], ['--_lr-surface-enabled', 'initial'], ['--_lr-surface-maximum-blur', 'initial'], ['--_lr-surface-content', 'none'], ['--_lr-surface-isolation', 'auto'], ['--_lr-surface-child-filter', 'initial'], ['--_lr-surface-child-opacity', 'initial']]);
-  return css + '}\n';
+  css += rule(defaults ? ":root:not([data-lr-surface]), [data-lr-surface='glass']" : "[data-lr-surface='glass']", [['--_lr-surface-installed', STYLE_VERSION], ['--_lr-surface-enabled', '1'], ['--_lr-glass-blocker', 'initial'], ['--_lr-surface-content', "''"], ['--_lr-surface-isolation', 'isolate'], ['--_lr-surface-min-opacity', data.minimumOpacity], ['--_lr-surface-maximum-blur', data.maximumBlur], ['--_lr-surface-foreground-weight', `${data.foregroundWeight * 100}%`], ['--_lr-surface-child-filter', 'none'], ['--_lr-surface-child-opacity', '1'], ['--lr-theme-surface-opacity', data.opacity], ['--lr-theme-surface-blur', data.blur], ['--lr-theme-surface-saturation', data.saturation], ['--lr-theme-surface-highlight', data.highlight]]);
+  css += rule("[data-lr-surface='solid']", [['--_lr-surface-installed', STYLE_VERSION], ['--_lr-surface-enabled', '0'], ['--_lr-glass-blocker', 'none'], ['--_lr-surface-maximum-blur', 'initial'], ['--_lr-surface-content', 'none'], ['--_lr-surface-isolation', 'auto'], ['--_lr-surface-child-filter', 'initial'], ['--_lr-surface-child-opacity', '0'], ['--_lr-glass-parent-opacity', '0']]);
+  return css + '}\n' + renderNativeChrome();
 }
 
 /** Read concrete base values from the generated asset so static color gates measure shipped data. */
@@ -230,6 +331,26 @@ export function concreteThemeCss(css) {
   for (const name of fallbacks) {
     if (dark.get(name) !== light.get(name)) throw new Error(`Generated fallback differs from light input ${name}`);
     dark.delete(name);
+  }
+  const authoredLight = new Map(light);
+  const authoredDark = new Map(dark);
+  const accentBody = css.match(/:root:not\(\[data-lr-accent\]\) \{([^}]+)\}/)?.[1];
+  for (const match of (accentBody ?? '').matchAll(/--_lr-a([ld])-([a-z0-9-]+):\s*([^;]+);/g)) {
+    (match[1] === 'l' ? light : dark).set(`--lr-theme-${match[2]}`, match[3].trim());
+  }
+  const resolve = (name, mode, seen = new Set()) => {
+    const own = mode === 'light' ? light : dark;
+    const value = own.get(name) ?? authoredLight.get(name);
+    const reference = value?.match(/^var\((--lr-theme-[a-z0-9-]+)\)$/)?.[1];
+    if (!reference) return value;
+    if (seen.has(name)) throw new Error(`Cyclic concrete theme ${name}`);
+    return resolve(reference, mode, new Set([...seen, name]));
+  };
+  for (const name of authoredLight.keys()) {
+    const lightValue = resolve(name, 'light');
+    const darkValue = resolve(name, 'dark');
+    light.set(name, lightValue);
+    if (authoredDark.has(name) || dark.has(name) || darkValue !== lightValue) dark.set(name, darkValue);
   }
   return rule(':root', [...light]) + rule(".lr-dark,\n  [data-lr-theme='dark']", [...dark]);
 }

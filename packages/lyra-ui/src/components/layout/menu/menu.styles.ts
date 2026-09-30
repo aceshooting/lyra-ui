@@ -1,5 +1,5 @@
 import { css } from 'lit';
-import { glassSurface } from '../../../internal/glass-surface.styles.js';
+import { glassSurface, glassIndependentRootStyles } from '../../../internal/glass-surface.styles.js';
 import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
 
 export const styles = css`
@@ -156,5 +156,6 @@ export const styles = css`
     margin: var(--lr-space-xs) var(--lr-space-xs);
   }
 
+  ${glassIndependentRootStyles}
   ${glassSurface(':host(:not([data-contained]):not([data-submenu])), .submenu-surface', css`var(--lr-overlay-surface, var(--_lr-overlay-surface, var(--lr-color-surface-container-high)))`)}
 `;

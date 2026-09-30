@@ -44,6 +44,8 @@ for (const failure of [false, true]) {
     const scratch = mkdtempSync(join(tmpdir(), 'lyra-palette-restore-'));
     try {
       cpSync(join(packageDir, 'tokens'), join(scratch, 'tokens'), { recursive: true });
+      mkdirSync(join(scratch, 'src/theme'), { recursive: true });
+      cpSync(join(packageDir, 'src/theme/gemstones-data.ts'), join(scratch, 'src/theme/gemstones-data.ts'));
       for (const file of PALETTE_ARTIFACTS) {
         mkdirSync(join(scratch, file, '..'), { recursive: true });
         writeFileSync(join(scratch, file), file === 'src/theme.css' ? renderTheme(readStyleModel(scratch)) : file);

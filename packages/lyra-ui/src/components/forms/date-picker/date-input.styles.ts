@@ -1,4 +1,6 @@
 import { css } from 'lit';
+import { overlaySurface, overlaySurfaceControlEdge } from '../../../internal/overlay-surface.styles.js';
+import { glassSurface, glassScrollLayerStyles, glassIndependentRootStyles } from '../../../internal/glass-surface.styles.js';
 import {
   formControlFocusHalo,
   formControlRequiredMarker,
@@ -250,6 +252,11 @@ export const styles = css`
   }
   [part="popup"] {
     position: fixed;
+    ${overlaySurface}
+    ${overlaySurfaceControlEdge}
+    box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
+    max-block-size: var(--lr-positioner-available-block-size, 100vb);
+    overflow: auto;
     z-index: var(--lr-overlay-stack-index, var(--lr-layer-dropdown));
     max-inline-size: min(
       var(--lr-popover-viewport-clamp),
@@ -263,6 +270,11 @@ export const styles = css`
     transform: translateY(var(--lr-size-neg-0-25rem));
     transition-property: opacity, transform, visibility;
     transition-duration: var(--_lr-motion-duration, var(--hide-duration, var(--lr-transition-fast)));
+  }
+  [part="date-picker"]::part(base) {
+    background: transparent;
+    border: none;
+    border-radius: inherit;
   }
   :host([open]) [part="popup"][data-positioned] {
     visibility: visible;
@@ -302,4 +314,8 @@ export const styles = css`
     max-inline-size: 100%;
     overflow-wrap: anywhere;
   }
+
+  ${glassScrollLayerStyles}
+  ${glassIndependentRootStyles}
+  ${glassSurface('[part="popup"]', css`var(--lr-overlay-surface, var(--_lr-overlay-surface, var(--lr-color-surface-container-high)))`, undefined, true)}
 `;

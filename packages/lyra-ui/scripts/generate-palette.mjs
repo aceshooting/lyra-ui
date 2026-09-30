@@ -18,11 +18,13 @@
 
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { assertCanonicalPalette, readCanonicalPalette } from './palette-canonical.mjs';
+import { readStyleModel, defaultStyleInputs, replaceStyleFallbacks } from './style-axes-model.mjs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const outputPath = join(packageDir, 'src', 'internal', 'tokens', 'palette.styles.ts');
+const defaultInputs = defaultStyleInputs(readStyleModel(packageDir));
 
 // --- colour maths -------------------------------------------------------------------------------
 // sRGB <-> OKLab per Björn Ottosson's published derivation. Kept inline and dependency-free: this
@@ -311,7 +313,10 @@ assertCanonicalPalette(readCanonicalPalette(packageDir), Object.fromEntries(
   )]),
 ));
 mkdirSync(dirname(outputPath), { recursive: true });
-writeFileSync(outputPath, output, 'utf8');
+const darkMarker = output.indexOf(":host([data-lr-theme='dark'])");
+if (darkMarker < 0) throw new Error('Palette fallback mode marker changed');
+const projected = replaceStyleFallbacks(output.slice(0, darkMarker), defaultInputs, 'light') + replaceStyleFallbacks(output.slice(darkMarker), defaultInputs, 'dark');
+writeFileSync(outputPath, projected, 'utf8');
 
 const slots = Object.keys(VARIANTS).length * 9;
 console.log(

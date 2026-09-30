@@ -1,3 +1,4 @@
+import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import { maxCssTime } from '../../../internal/css-motion-time.js';
 import {
   html,
@@ -342,6 +343,11 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     noMatches: LYRA_DEFAULT_noMatches,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  constructor() {
+    super();
+    new GlassScrollLayer(this, '[part="listbox"]', () => this.open);
+  }
 
   static override styles = [LyraElement.styles, styles];
 
@@ -1328,6 +1334,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
         @click=${this.onListboxClick}
         @keydown=${this.onListboxKeyDown}
       >
+        <span class="glass-scroll-layer" aria-hidden="true"></span>
         ${rows.length === 0
           ? html`<div part="empty" role="option" aria-selected="false" aria-disabled="true">${this.effectiveEmptyText}</div>`
           : rows.map((item, i) => this.renderRow(item, i, activeId))}

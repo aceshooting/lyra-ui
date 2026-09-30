@@ -4,6 +4,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import type { Feature, FeatureCollection } from 'geojson';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
@@ -2687,6 +2688,9 @@ export interface LyraMapEventMap {
  *
  * No style or tile provider is selected implicitly. Set `mapStyle` explicitly before connection;
  * this prevents a bare component from making an undeclared third-party request.
+ * Navigation, scale, attribution and the legend follow the surrounding Glass or Solid treatment.
+ * The legend material remains stationary while its public surface scrolls. Opaque accessibility
+ * fallbacks preserve native peer controls and map data paint.
  * @status stable
  * @since 4.0.0
  */
@@ -2757,6 +2761,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   constructor() {
     super();
     new ThemeWatcher(this, () => this.refreshThemePaint());
+    new GlassScrollLayer(this, '[part="legend"]');
   }
 
   /** Initial and controlled map center as `[longitude, latitude]`. Once the camera settles after
@@ -5250,6 +5255,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
               data-truncated=${String(this.legendProjection.truncated)}
             >
               <slot name="legend-start" @slotchange=${this.onLegendSlotChange}></slot>
+              <div class="glass-scroll-layer" aria-hidden="true"></div>
               ${this.renderLegendDisclosure()}
               ${this.renderLegendGradient()}
               <div

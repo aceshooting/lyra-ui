@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { glassSurface, glassScrollLayerStyles, glassIndependentRootStyles } from '../../../internal/glass-surface.styles.js';
 import {
   formControlFocusHalo,
   formControlRequiredMarker,
@@ -360,4 +361,8 @@ export const styles = css`
     max-inline-size: 100%;
     overflow-wrap: anywhere;
   }
+
+  ${glassScrollLayerStyles}
+  ${glassIndependentRootStyles}
+  ${glassSurface('[part="listbox"]', css`var(--lr-overlay-surface, var(--_lr-overlay-surface, var(--lr-color-surface-container-high)))`, undefined, true)}
 `;

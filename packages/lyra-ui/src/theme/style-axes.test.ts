@@ -70,7 +70,7 @@ describe('independent style axes', () => {
     expect(getLyraStyle()).to.include({ look: 'shadcn', surface: 'glass', density: 'compact', accent: 'sapphire', mode: 'dark' });
     const accent = input(document.documentElement, 'color-brand-fill-loud');
     resetLyraStyle(['look']);
-    expect(getLyraStyle()).to.include({ look: 'lyra', surface: 'glass', density: 'compact', accent: 'sapphire', mode: 'dark' });
+    expect(getLyraStyle()).to.include({ look: 'shadcn', surface: 'glass', density: 'compact', accent: 'sapphire', mode: 'dark' });
     expect(input(document.documentElement, 'color-brand-fill-loud')).to.equal(accent);
   });
 
@@ -123,13 +123,13 @@ describe('independent style axes', () => {
     setLyraStyle({ look: LYRA_SHADCN_LOOK });
     expect(getLyraStyle()).to.include({ look: 'shadcn', surface: 'glass', density: 'compact', mode: 'dark' });
     resetLyraStyle(['look']);
-    expect(input(document.documentElement, 'color-surface-default')).to.equal('#1a1a1a');
+    expect(input(document.documentElement, 'color-surface-default')).to.equal('#0a0a0a');
   });
 
   it('defaults a malformed saved record instead of reporting a previous valid record', () => {
     setLyraStyle({ look: 'material', mode: 'dark' });
     localStorage.setItem('lyra-theme', '{broken');
-    expect(getLyraStyle()).to.include({ look: 'lyra', mode: 'system' });
+    expect(getLyraStyle()).to.include({ look: 'shadcn', mode: 'system' });
   });
 
   it('applies stylesheet and runtime look definitions to the same rendered values', async () => {
@@ -321,14 +321,14 @@ describe('independent style axes', () => {
   it('reports missing optional stylesheets once in development and stays silent without its signal', async () => {
     const frame = await isolatedFrame();
     const root = frame.contentDocument!.documentElement;
-    const choices = { look: 'shadcn', surface: 'glass', density: 'compact', accent: 'sapphire', mode: 'dark' } as const;
+    const choices = { look: 'material', surface: 'glass', density: 'compact', accent: 'sapphire', mode: 'dark' } as const;
     try {
       const messages = captureStyleDiagnostics(() => {
         applyLyraStyleScope(root, choices);
         applyLyraStyleScope(root, choices);
       });
-      expect(messages.length).to.equal(5);
-      for (const expected of ['theme.css', "look 'shadcn'", 'surfaces/glass.css', 'density.css', 'accents.css']) {
+      expect(messages.length).to.equal(4);
+      for (const expected of ['theme.css', "look 'material'", 'density.css', 'accents.css']) {
         expect(messages.some(message => message.includes(expected)), expected).to.equal(true);
       }
       const production = captureStyleDiagnostics(() => applyLyraStyleScope(root, choices), false);
@@ -416,7 +416,7 @@ describe('portable style definitions', () => {
     const look = defineLyraLook({ id: 'sample', tokens: { '--lr-theme-border-radius-m': '0.75rem' } });
     expect(Object.isFrozen(look.tokens)).to.equal(true);
     expect(lyraLookCss(look)).to.include("[data-lr-look='sample']");
-    expect(getLyraStyle().look).to.equal('lyra');
+    expect(getLyraStyle().look).to.equal('shadcn');
   });
 
   it('rejects accessor inputs without executing them', () => {
@@ -431,7 +431,7 @@ describe('portable style definitions', () => {
   it('validates raw runtime definitions before selecting their id', () => {
     setLyraStyle({ surface: 'glass', density: 'compact' });
     setLyraStyle({ look: { id: 'invalid', tokens: { '--lr-theme-unknown-input': { light: '1rem' } } } });
-    expect(getLyraStyle()).to.include({ look: 'lyra', surface: 'glass', density: 'compact' });
+    expect(getLyraStyle()).to.include({ look: 'shadcn', surface: 'glass', density: 'compact' });
   });
 
   it('does not reinterpret a saved CSS color keyword as a named palette during SSR', () => {

@@ -14,6 +14,8 @@ TypeScript-only renames (no attribute/property/default change) across the `lr-fo
 CSV/JSON download button with extensible event-driven formats — either single-format (click exports
 immediately) or multi-format (click opens a small menu).
 
+The format menu follows the [shared surface treatment](shared/styles-and-tokens.md).
+
 **Properties:**
 
 - `rows: readonly Readonly<Record<string, unknown>>[] = []` (attribute: false) — assignment takes
@@ -893,6 +895,9 @@ called. Phase transitions ("Paused.", "Resumed.", "Refreshing now.") are announc
 ---
 
 ## `lr-mention-popover`
+
+Suggestion listboxes follow the [shared surface treatment](shared/styles-and-tokens.md);
+the caller-owned message field retains its fill.
 
 A caret-anchored, keyboard-navigable popover for `@`-mention and `/`-slash-command autocomplete
 inside a plain-text `<textarea>`/`<input>` the host owns. First-party invention (no Web Awesome

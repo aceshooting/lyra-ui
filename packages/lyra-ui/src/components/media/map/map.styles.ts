@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { glassScrollLayerStyles, glassSurface } from '../../../internal/glass-surface.styles.js';
 
 export const styles = css`
   :host {
@@ -231,6 +232,7 @@ export const styles = css`
     gap: var(--lr-space-xs);
     padding: var(--lr-space-xs) var(--lr-space-s);
     background: var(--lr-color-surface);
+    color: var(--lr-color-text);
     border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     /* The legend is pinned over the tiles, so it reads as a layer above the map, not a panel
@@ -528,6 +530,7 @@ export const styles = css`
     transform: translate(0);
   }
   .maplibregl-ctrl-attrib {
+    position: relative;
     padding: 0 var(--lr-space-xs);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
@@ -535,6 +538,7 @@ export const styles = css`
     font-size: var(--lr-font-size-xs);
   }
   .maplibregl-ctrl-group {
+    position: relative;
     display: flex;
     flex-direction: column;
     inline-size: fit-content;
@@ -688,6 +692,10 @@ export const styles = css`
   .maplibregl-ctrl-attrib summary::marker {
     content: '';
   }
+
+  ${glassSurface('.maplibregl-ctrl-group, .maplibregl-ctrl-scale, .maplibregl-ctrl-attrib', css`var(--lr-color-surface)`)}
+  ${glassScrollLayerStyles}
+  ${glassSurface('[part="legend"]', css`var(--lr-color-surface)`, css`var(--lr-color-surface)`, true)}
 
   @media (forced-colors: active) {
     .maplibregl-ctrl-attrib-button {

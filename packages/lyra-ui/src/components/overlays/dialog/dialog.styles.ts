@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { glassSurface, glassScrollLayerStyles, glassIndependentRootStyles } from '../../../internal/glass-surface.styles.js';
 import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
 
 export const styles = css`
@@ -283,4 +284,8 @@ export const styles = css`
   [part="footer"][hidden] {
     display: none;
   }
+
+  ${glassScrollLayerStyles}
+  ${glassIndependentRootStyles}
+  ${glassSurface('[part~="panel"]', css`var(--lr-overlay-surface, var(--_lr-overlay-surface, var(--lr-color-surface-container-highest)))`, undefined, true)}
 `;

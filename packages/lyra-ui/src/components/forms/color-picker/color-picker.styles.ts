@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { glassSurface, glassScrollLayerStyles, glassIndependentRootStyles } from '../../../internal/glass-surface.styles.js';
 import {
   formControlFocusHalo,
   formControlRequiredMarker,
@@ -294,6 +295,8 @@ export const styles = css`
     /* Anchored overlay: a positioner-placed picker panel floating over page content. */
     box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
     max-inline-size: var(--lr-positioner-available-inline-size, none);
+    max-block-size: var(--lr-positioner-available-block-size, none);
+    overflow: auto;
   }
   [part~="panel"][hidden] {
     display: none;
@@ -302,6 +305,10 @@ export const styles = css`
     position: static;
     inset: auto;
     box-shadow: none;
+  }
+  :host([inline]) .glass-scroll-layer { display: none; }
+  :host(:not([inline])) .glass-scroll-layer {
+    margin-block-end: calc(-1 * var(--lr-color-picker-gap, var(--_lr-color-picker-gap)));
   }
   .row {
     display: flex;
@@ -716,4 +723,8 @@ export const styles = css`
     max-inline-size: 100%;
     overflow-wrap: anywhere;
   }
+
+  ${glassScrollLayerStyles}
+  ${glassIndependentRootStyles}
+  ${glassSurface(':host(:not([inline])) [part~="panel"]', css`var(--lr-overlay-surface, var(--_lr-overlay-surface, var(--lr-color-surface-container-high)))`, undefined, true)}
 `;

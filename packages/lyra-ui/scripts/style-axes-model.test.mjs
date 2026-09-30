@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { readStyleModel, renderRuntimeLook, renderTheme, concreteThemeCss, referenceSurfaces, renderAccents, contrastSurfaces, validateLook, renderGlass } from './style-axes-model.mjs';
+import { readStyleModel, renderRuntimeLook, renderTheme, concreteThemeCss, referenceSurfaces, renderAccents, contrastSurfaces, validateLook, renderGlass, defaultStyleInputs, replaceStyleFallbacks, renderNativeChrome } from './style-axes-model.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 
@@ -12,7 +12,7 @@ test('concrete theme extraction retains both generated mode slots and shared inp
   const css = concreteThemeCss(renderTheme(model));
   const [light, dark] = css.split('  .lr-dark,');
   assert.ok(dark, 'a dark projection is present independently of resolver selector syntax');
-  for (const [name, values] of Object.entries(model.base)) {
+  for (const [name, values] of Object.entries(defaultStyleInputs(model))) {
     assert.ok(light.includes(`${name}: ${values.light};`), `${name}: concrete light value`);
     if (values.dark !== undefined) {
       assert.ok(dark.includes(`${name}: ${values.dark};`), `${name}: concrete dark value`);
@@ -85,12 +85,13 @@ test('glass qualifies text, control edges and focus across all built-in looks an
       const override = accent.css.match(new RegExp(`--_lr-a${mode === 'light' ? 'l' : 'd'}-color-${suffix}: ([^;]+);`))?.[1];
       const authored = look.tokens[name];
       const value = override ?? (typeof authored === 'string' ? authored : authored?.[mode]) ?? model.base[name]?.[mode] ?? model.base[name]?.light;
+      if (value === 'initial' || value === undefined) return read('surface-overlay');
       if (value?.startsWith('var(')) return read(value.slice(4, -1).replace('--lr-theme-color-', ''));
       return rgb(value);
     };
     const normal = read('text-normal');
     const qualify = color => mix(color, normal, glass.foregroundWeight);
-    for (const surface of ['surface-default', 'surface-raised', 'surface-overlay']) {
+    for (const surface of ['surface-default', 'surface-raised', 'surface-overlay', 'surface-container-high', 'surface-container-highest']) {
       const backgrounds = [0, 255].map(backdrop => mix([backdrop, backdrop, backdrop], read(surface), glass.minimumOpacity));
       const roles = [['text-normal', normal, 4.5], ['text-quiet', qualify(read('text-quiet')), 4.5], ['action', qualify(read('brand-fill-loud')), 4.5], ['control', qualify(read('surface-border')), 3], ['focus', qualify(read('focus')), 3]];
       for (const [role, color, minimum] of roles) {
@@ -167,4 +168,39 @@ test('clear media scrim plus fill qualifies white controls over black and white'
       assert.ok(1.05 / (luminance(background) + 0.05) >= 4.5, 'white text and controls preserve their contrast through hover and press');
     }
   }
+});
+
+
+test('profile projection is idempotent and can restore a previous fallback without changing the Lyra source', () => {
+  const model = readStyleModel(packageDir);
+  const inputs = defaultStyleInputs(model);
+  assert.deepEqual(model.defaults, { look: 'shadcn', surface: 'glass', density: 'comfortable', mode: 'system', accent: 'emerald' });
+  assert.equal(inputs['--lr-theme-color-neutral-fill-loud'].dark, inputs['--lr-theme-color-brand-fill-loud'].dark);
+  assert.equal(inputs['--lr-theme-color-neutral-on-loud'].dark, inputs['--lr-theme-color-brand-on-loud'].dark);
+  const expression = 'var(--lr-theme-color-surface-default, var(--lr-color-surface, rgb(1 2 3)))';
+  const projected = replaceStyleFallbacks(expression, inputs, 'light');
+  assert.equal(replaceStyleFallbacks(projected, inputs, 'light'), projected);
+  assert.equal(replaceStyleFallbacks(projected, model.base, 'light'), `var(--lr-theme-color-surface-default, ${model.base['--lr-theme-color-surface-default'].light})`);
+  assert.equal(model.base['--lr-theme-color-surface-default'].dark, '#1a1a1a');
+  assert.throws(() => replaceStyleFallbacks('var(--lr-theme-color-surface-default, broken(', inputs, 'light'), /Unclosed/);
+});
+
+test('theme alone contains only the built-in profile and explicit Lyra restoration, with named Emerald startup paint', () => {
+  const model = readStyleModel(packageDir);
+  const css = renderTheme(model);
+  assert.match(css, /\[data-lr-look='shadcn'\]/);
+  assert.match(css, /\[data-lr-look='lyra'\]/);
+  assert.match(css, /\[data-lr-accent='emerald'\]/);
+  assert.match(css, /:root:not\(\[data-lr-surface\]\)/);
+  for (const look of ['material', 'data', 'terminal', 'high-contrast']) assert.equal(css.includes(`[data-lr-look='${look}']`), false);
+});
+
+test('native chrome compiles the shared protected surface without unresolved template expressions', () => {
+  const css = renderNativeChrome();
+  assert.match(css, /:where\(\.lr-surface-chrome\)::before/);
+  assert.match(css, /--lr-surface-background/);
+  assert.match(css, /prefers-reduced-transparency/);
+  assert.match(css, /forced-colors/);
+  assert.equal(css.includes('$' + '{'), false);
+  assert.equal(css.includes(':host'), false);
 });

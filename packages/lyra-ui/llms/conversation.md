@@ -1342,6 +1342,9 @@ duration of an edit rather than just visually swapping content (a row mid-edit _
 
 ## `lr-model-select`
 
+The model list follows the [shared surface treatment](shared/styles-and-tokens.md);
+its editing field retains an opaque fill.
+
 A provider/model picker that renders as a closed dropdown when a fixed `catalog` is available, or as a
 filterable free-text combobox when it isn't (or when `allow-custom` explicitly permits typing something
 outside the catalog). Form-associated (hand-rolled internals via `attachInternals()` directly, not the
@@ -3669,6 +3672,9 @@ route supplies the same default type mappings while leaving component registrati
 consumer's control.
 
 ## `lr-voice-picker`
+
+The voice list follows the [shared surface treatment](shared/styles-and-tokens.md);
+its editing field retains an opaque fill.
 
 A TTS voice selector over a host-supplied `catalog`, mirroring `lr-model-select`'s
 closed-dropdown/free-text-combobox dual mode, stale-value handling, and form-association verbatim

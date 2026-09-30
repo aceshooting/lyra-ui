@@ -15,15 +15,16 @@ custom elements use the `lr-` prefix and ship with design tokens, localization, 
 (for form controls) native form association. The current element count and complete tag list live
 in `references/index.md`; do not repeat a remembered count.
 
-## New application defaults
+## Appearance defaults
 
-For a new application, apply the [Lyra signature starter](references/shared/styles-and-tokens.md#lyra-signature-starter)
-unless explicit project branding or the user's choices override it: Shadcn look, glass surfaces,
-Emerald accent, theme-aware spotlights, compact single-row gemstones, and separate 44px gemstone,
-mode, design, and country-flag language controls. Language menus retain flags and readable localized
-names. Read the recipe before implementing startup and persistence; prefer the installed package's
-matching guide. Preserve valid saved style and locale choices. This recommendation changes no
-library defaults and grants no permission to retheme an existing application.
+The built-in profile is Shadcn look, Glass surfaces, Emerald accent, System mode and comfortable
+density. Use the [Lyra signature starter](references/shared/styles-and-tokens.md#lyra-signature-starter)
+for optional spotlights, compact gemstones and 44px gemstone/mode/design/flag-language controls.
+Preserve saved style and locale choices and explicit project branding. Read the installed package's
+matching guide before changing startup or persistence; older releases have different defaults.
+To retain the earlier appearance, select `look: 'lyra'`, `surface: 'solid'`, `accent: null` explicitly.
+`accent: null` still clears; `resetLyraStyle()` restores Emerald. Existing-app restyling needs an
+authorized migration or redesign.
 
 ## Look up the exact API before writing any `lr-*` markup
 
@@ -96,7 +97,8 @@ lookups. Equivalent resources are `lyra://catalog`, `lyra://component/{tag}`, an
 - **Use documented style axes and tokens.** Compose look, surface, density, mode and accent through
   the style API or scope attributes; customize with the documented `--lr-theme-*` inputs.
   `references/shared/styles-and-tokens.md` explains the API and `references/tokens.md` lists exact
-  tokens. `@aceshooting/lyra-ui/theme.css` is an optional light/dark base.
+  tokens. `@aceshooting/lyra-ui/theme.css` supplies the document-level default profile and style scopes;
+  granular components also carry the built-in visual defaults.
 
 - **Lyra-specific events are `lr-*`-prefixed `CustomEvent`s** (`lr-change`, `lr-input`, …),
   bubbling and composed, with payload on `event.detail`; they are non-cancelable unless the

@@ -1,3 +1,4 @@
+import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -474,6 +475,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
 
   constructor() {
     super();
+    new GlassScrollLayer(this, '[part="listbox"]', () => this.open);
     // `<lr-voice-picker>` manages ElementInternals directly (its value is a catalog id, not the
     // plain string the `FormAssociated` mixin's contract assumes), but shares the mixin's
     // attach-or-degrade helper so both paths handle a missing *and* a throwing `attachInternals()`.
@@ -1164,6 +1166,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
         @mousedown=${this.onListboxMouseDown}
         @click=${this.onListboxClick}
       >
+        <span class="glass-scroll-layer" aria-hidden="true"></span>
         ${rows.length === 0
           ? html`<div part="empty" role="option" aria-selected="false" aria-disabled="true">${emptyText}</div>`
           : this.renderRows(rows, activeId)}

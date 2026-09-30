@@ -1,3 +1,4 @@
+import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -351,6 +352,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
 
   constructor() {
     super();
+    new GlassScrollLayer(this, '[part="listbox"]', () => this.open);
     this.internals = attachInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
@@ -892,6 +894,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
         @mousedown=${this.onListboxMouseDown}
         @click=${this.onListboxClick}
       >
+        <span class="glass-scroll-layer" aria-hidden="true"></span>
         ${rows.length === 0
           ? html`<div part="empty" role="option" aria-selected="false" aria-disabled="true">${emptyText}</div>`
           : this.renderRows(rows, activeId)}

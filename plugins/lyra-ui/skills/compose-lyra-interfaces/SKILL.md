@@ -9,13 +9,14 @@ Turn product intent into a small, coherent Lyra component hierarchy, then implem
 Use the separate `$lyra-ui` API skill or the installed package's `llms.txt` reference for exact
 properties, events, slots, parts, custom properties, peers, and import paths before writing code.
 
-For new applications, use the [Lyra signature starter](../lyra-ui/references/shared/styles-and-tokens.md#lyra-signature-starter)
-unless explicit branding or user choices override it: Shadcn, glass, Emerald, theme-aware spotlights,
-compact single-row gemstones, and separate 44px gemstone/mode/design/country-flag language controls.
-Language menus retain flags and readable localized names. Prefer the installed
-`llms/shared/styles-and-tokens.md` recipe for exact startup, persistence, and component contracts.
-Preserve valid saved style and locale choices; retheme existing applications only within an
-authorized migration or redesign. Keep the canonical recipe in that guide, rather than copying it here.
+Shadcn, Glass, Emerald, System mode and comfortable density are the built-in appearance defaults.
+Use the [Lyra signature starter](../lyra-ui/references/shared/styles-and-tokens.md#lyra-signature-starter)
+for optional spotlights, compact gemstones and separate 44px gemstone/mode/design/flag-language
+controls. Language menus retain flags and readable localized names. Prefer the installed
+`llms/shared/styles-and-tokens.md` guide for exact startup and persistence; older releases have
+different defaults. Preserve saved preferences and branding, and keep the canonical recipe in
+that guide. Select Lyra/Solid/`accent: null` explicitly to retain the earlier appearance. Retheme an
+existing application only within an authorized migration or redesign.
 
 ## Workflow
 

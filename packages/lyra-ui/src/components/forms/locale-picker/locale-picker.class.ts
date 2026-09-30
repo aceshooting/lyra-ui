@@ -1,3 +1,4 @@
+import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import type { LyraLocaleLoader } from '../../../internal/locale-loader.js';
 import { acquireNativeControlDescription, type NativeControlDescriptionLease } from '../../../internal/native-control-description.js';
@@ -476,6 +477,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
 
   constructor() {
     super();
+    new GlassScrollLayer(this, '[part="listbox"]', () => this.open);
     this.internals = attachInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
@@ -1384,6 +1386,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
           @mousedown=${this.onListboxMouseDown}
           @click=${this.onListboxClick}
         >
+          <span class="glass-scroll-layer" aria-hidden="true"></span>
           ${this.renderRows(rows, activeId)}
         </div>
         ${this.loadingTag !== undefined || this.loadFailureTag !== undefined ? html`
