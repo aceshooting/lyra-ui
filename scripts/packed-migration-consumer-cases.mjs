@@ -2,6 +2,15 @@ import assert from 'node:assert/strict';
 import { compatibilityKey } from '../packages/lyra-ui/scripts/published-compatibility.mjs';
 
 const templateHandlerExpression = '${handler}';
+
+/** A retirement cohort remains applicable in every later stable package release. */
+export function assertMigrationPackageVersion(version, minimumMajor = 24) {
+  const match = typeof version === 'string' && /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/u.exec(version);
+  assert.ok(match && match.slice(1).every(part => Number.isSafeInteger(Number(part))), 'Installed migration package version must be a stable semantic version');
+  const major = Number(match[1]);
+  assert.ok(major >= minimumMajor, `Migration cohort requires an installed v${minimumMajor} or later package`);
+  return major;
+}
 // These target events are also dispatched by nested components. The migration scanner
 // requires an owner/target review before moving a listener, even though the ledger names
 // the replacement event.
@@ -140,9 +149,9 @@ export function assertMemberMigrationReport(report, cases, origin) {
   }
 }
 
-/** Build executable, source-bound diagnostics for the current next-major member cohort. */
+/** Build executable, source-bound diagnostics for the historical v24 member cohort. */
 export function createV24MemberMigrationCases(context, ledger) {
-  assert.match(context.packageVersion, /^24\.\d+\.\d+$/u, 'The v24 member cohort requires an installed v24 package');
+  assertMigrationPackageVersion(context.packageVersion);
   const profile = ledger?.profiles?.find(item => item.origin === 'lyra-v22');
   assert.ok(profile, 'Missing authored v22 migration profile');
   const records = Object.values(context.records).filter(record => record.key.scope === 'member' && record.policy.removalNotBefore === '24.0.0');
@@ -202,9 +211,9 @@ export function selectMemberMigrationStage(context, cases) {
   return cases.every(item => item.record.state === 'retired') ? 'all-retirements' : 'exports-and-geojson';
 }
 
-/** Derive the next-major module cohort from the verified installed-package context. */
+/** Derive the historical v24 module cohort from the verified installed-package context. */
 export function createV24ExportMigrationCases(context) {
-  assert.match(context.packageVersion, /^24\.\d+\.\d+$/u, 'The v24 module cohort requires an installed v24 package');
+  assertMigrationPackageVersion(context.packageVersion);
   const records = Object.values(context.records).filter(record => record.policy.removalNotBefore === '24.0.0');
   assert.equal(records.length, 654, 'The v24 cohort must contain exactly654 published identities');
   const members = records.filter(record => record.key.scope === 'member');

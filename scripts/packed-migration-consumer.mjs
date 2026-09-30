@@ -10,7 +10,7 @@ import { promisify } from 'node:util';
 import { compatibilityKey } from '../packages/lyra-ui/scripts/published-compatibility.mjs';
 import { fieldDeclarationKey, fieldExposureKey, validateFieldEvidenceIndex, verifyPublishedFieldContinuity } from '../packages/lyra-ui/scripts/published-field-compatibility.mjs';
 import { jsonBytes as evidenceJsonBytes, sha256 as evidenceSha256 } from '../packages/lyra-ui/scripts/published-compatibility-io.mjs';
-import { createMemberMigrationCases, createV24MemberMigrationCases, createV24ExportMigrationCases, assertMemberMigrationReport, selectMemberMigrationStage } from './packed-migration-consumer-cases.mjs';
+import { assertMigrationPackageVersion, createMemberMigrationCases, createV24MemberMigrationCases, createV24ExportMigrationCases, assertMemberMigrationReport, selectMemberMigrationStage } from './packed-migration-consumer-cases.mjs';
 import { X_CASES, RETAINED_ROOT } from '../packages/lyra-ui/scripts/fixtures/lyra-renames/consumer/x-cases.mjs';
 
 const fixtures = fileURLToPath(new URL('../packages/lyra-ui/scripts/fixtures/lyra-renames/consumer/', import.meta.url));
@@ -76,7 +76,7 @@ export async function preservePackedTarball({ tarballPath, artifactsDir }) {
 /** Bind authored examples to the checked historical authority, without copying policy records. */
 export function selectMigrationCases(context, installedVersion, cases = X_CASES) {
   assert.equal(installedVersion, context.packageVersion, 'Installed package version differs from verified context version');
-  assert.match(installedVersion, /^(?:23|24)\.\d+\.\d+$/u, 'This consumer cohort requires an actual 23 or 24 package');
+  const installedMajor = assertMigrationPackageVersion(installedVersion, 23);
   const keys = cases.map(item => compatibilityKey(item.key));
   assert.equal(new Set(keys).size, keys.length, 'duplicate consumer case key');
   const expected = Object.values(context.records).filter(record =>
@@ -87,9 +87,9 @@ export function selectMigrationCases(context, installedVersion, cases = X_CASES)
   const retained = context.records[compatibilityKey(RETAINED_ROOT.key)];
   assert.ok(retained, 'Root GeoJSON class policy is missing');
   assert.equal(retained.policy.removalNotBefore, '24.0.0', 'Root class retirement floor changed');
-  if (installedVersion.startsWith('23.')) assert.equal(retained.state, 'current', 'Root class must remain available in v23');
+  if (installedMajor === 23) assert.equal(retained.state, 'current', 'Root class must remain available in v23');
   else {
-    assert.equal(retained.state, 'retired', 'Root class must be removed from the actual v24 package');
+    assert.equal(retained.state, 'retired', 'Root class must remain removed in v24 and later packages');
     assert.equal(retained.removedIn, '24.0.0');
   }
   return cases.map((item, index) => {
@@ -294,7 +294,7 @@ export async function verifyPackedMigrationConsumers({ fixtureDir, compatibility
   const installed = JSON.parse(await readFile(join(installedRoot, 'package.json'), 'utf8'));
   assert.equal(installed.name, packageName);
   const cases = selectMigrationCases(compatibilityContext, installed.version);
-  if (installed.version.startsWith('24.')) return verifyActualV24MigrationConsumers({ fixtureDir, compatibilityContext, tarballPath, fieldAuthority, fieldMode, artifactsDir, installed, cases });
+  if (assertMigrationPackageVersion(installed.version, 23) >= 24) return verifyActualV24MigrationConsumers({ fixtureDir, compatibilityContext, tarballPath, fieldAuthority, fieldMode, artifactsDir, installed, cases });
   const tarballSha256 = createHash('sha256').update(await readFile(tarballPath)).digest('hex');
   const scratch = join(fixtureDir, 'migration-x');
   const inputDir = join(scratch, 'input'); const resolvedDir = join(scratch, 'resolved');
@@ -506,7 +506,7 @@ async function verifyInstalledFieldDeclarations({ fixtureDir, facts, mode = 'ret
   const installedRoot = join(fixtureDir, 'node_modules', '@aceshooting', 'lyra-ui');
   const packageJson = JSON.parse(await readFile(join(installedRoot, 'package.json'), 'utf8'));
   assert.equal(packageJson.name, packageName);
-  assert.match(packageJson.version, /^24\.\d+\.\d+$/u, 'Field candidate must be the actually installed v24 package');
+  assertMigrationPackageVersion(packageJson.version);
   const declarationByKey = new Map(facts.declarations.map(item => [fieldDeclarationKey(item.key), item]));
   const publicTypeRouteByDeclaration = new Map();
   const seenExposures = new Set();

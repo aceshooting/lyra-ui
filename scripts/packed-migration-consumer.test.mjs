@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { X_CASES, RETAINED_ROOT } from '../packages/lyra-ui/scripts/fixtures/lyra-renames/consumer/x-cases.mjs';
 import { compatibilityKey } from '../packages/lyra-ui/scripts/published-compatibility.mjs';
-import { assertInstalledRetainedField, createV24SemanticMigrationCases, selectMigrationCases, assertMigrationReport, assertBrowserProof, runMigrationProcess, writeResolvedMigrationEntry } from './packed-migration-consumer.mjs';
+import { assertInstalledRetainedField, createV24SemanticMigrationCases, selectMigrationCases, assertMigrationReport, assertBrowserProof, runMigrationProcess, verifyPackedMigrationConsumers, writeResolvedMigrationEntry } from './packed-migration-consumer.mjs';
 
 function context() {
   const records = Object.fromEntries(X_CASES.map(item => [compatibilityKey(item.key), {
@@ -74,7 +74,7 @@ test('actual v24 module diagnostics require exact removed-in-24 wording', () => 
   result.warnings[0].message = 'function ./theme.js#setLyraTheme was removed in 23.0.0; review it.';
   assert.throws(() => assertMigrationReport(result, [item], 'lyra-v22'));
 });
-test('actual v24 selection requires the installed version and retires the formerly retained root class', async () => {
+test('v24 retirement cohorts retain exact identities in v24 and later installed releases', async () => {
   const { createV24ExportMigrationCases, createV24MemberMigrationCases } = await import('./packed-migration-consumer-cases.mjs');
   const source = context();
   source.packageVersion = '24.0.0';
@@ -95,9 +95,51 @@ test('actual v24 selection requires the installed version and retires the former
     .filter(record => record.key.scope === 'member' && record.policy.removalNotBefore === '24.0.0')
     .map(record => ({ tag: record.key.tag, kind: record.key.kind, name: record.key.name })) }] };
   assert.equal(createV24MemberMigrationCases(source, syntheticLedger).length, 44);
+  const exports = createV24ExportMigrationCases(source);
+  const members = createV24MemberMigrationCases(source, syntheticLedger);
+  for (const packageVersion of ['24.0.0', '24.2.0', '25.0.0', '26.1.2', '100.0.0']) {
+    const candidate = { ...source, packageVersion };
+    assert.equal(selectMigrationCases(candidate, packageVersion).length, 9);
+    assert.deepEqual(createV24ExportMigrationCases(candidate), exports, packageVersion);
+    assert.deepEqual(createV24MemberMigrationCases(candidate, syntheticLedger), members, packageVersion);
+    for (const build of [
+      context => createV24ExportMigrationCases(context),
+      context => createV24MemberMigrationCases(context, syntheticLedger),
+    ]) {
+      const changed = structuredClone(candidate);
+      const member = Object.values(changed.records).find(record => record.key.scope === 'member' && record.policy.removalNotBefore === '24.0.0');
+      member.removedIn = '25.0.0';
+      assert.throws(() => build(changed), /Unexpected v24 retirement/u);
+      member.removedIn = '24.0.0'; member.state = 'current';
+      assert.throws(() => build(changed), /did not retire/u);
+      delete changed.records[compatibilityKey(member.key)];
+      assert.throws(() => build(changed), /exactly/u);
+    }
+  }
+  for (const packageVersion of ['22.0.0', '23.99.0', '24.0', '25', 'v25.0.0', '025.0.0', '25.00.0', '25.0.0-beta.1', '25.0.0+build', '999999999999999999.0.0', '', null]) {
+    const candidate = { ...source, packageVersion };
+    assert.throws(() => createV24ExportMigrationCases(candidate));
+    assert.throws(() => createV24MemberMigrationCases(candidate, syntheticLedger));
+  }
   assert.throws(() => selectMigrationCases(source, '23.0.0'));
   assert.throws(() => createV24ExportMigrationCases({ ...source, packageVersion: '23.0.0' }), /installed v24/u);
   assert.throws(() => createV24ExportMigrationCases({ ...source, records: Object.fromEntries(Object.entries(source.records).filter(([, item]) => item.policy.removalNotBefore !== '24.0.0')) }), /exactly654/u);
+});
+test('packed releases after v24 still dispatch the complete v24 retirement stage', async () => {
+  const fixtureDir = await mkdtemp(join(tmpdir(), 'packed-migration-stage-'));
+  try {
+    const packageDir = join(fixtureDir, 'node_modules', '@aceshooting', 'lyra-ui');
+    await mkdir(packageDir, { recursive: true });
+    for (const packageVersion of ['24.0.0', '25.0.0', '26.1.2']) {
+      const source = context();
+      source.packageVersion = packageVersion;
+      const retained = source.records[compatibilityKey(RETAINED_ROOT.key)];
+      retained.state = 'retired'; retained.removedIn = '24.0.0';
+      await writeFile(join(packageDir, 'package.json'), JSON.stringify({ name: '@aceshooting/lyra-ui', version: packageVersion }));
+      // A structural-only fixture must fail the complete cohort check before any CLI runs.
+      await assert.rejects(verifyPackedMigrationConsumers({ fixtureDir, compatibilityContext: source, tarballPath: join(fixtureDir, 'unused.tgz') }), /exactly654/u);
+    }
+  } finally { await rm(fixtureDir, { recursive: true, force: true }); }
 });
 test('the real v24 ledger identifies exactly two automatic member rewrites and checks their report witnesses', async () => {
   const { readCurrentCompatibilityContextSync } = await import('../packages/lyra-ui/scripts/check-published-compatibility.mjs');
