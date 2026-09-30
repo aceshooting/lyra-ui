@@ -34,15 +34,6 @@ export interface SwatchPickerItem {
   readonly gemstone?: GemstoneKey;
 }
 
-interface SwatchSnapshotQueue {
-  items: SwatchPickerItem[];
-  index: number;
-}
-
-function snapshotKey(item: SwatchPickerItem): string {
-  return JSON.stringify([item.value, item.color, item.label]);
-}
-
 export type LyraSwatchPickerMode = 'swatch' | 'gemstone';
 
 const SWATCH_PICKER_MODE = literalSetConverter<LyraSwatchPickerMode>(
@@ -163,67 +154,72 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
   set items(next: readonly SwatchPickerItem[]) {
     const old = this._items;
     const snapshots: SwatchPickerItem[] = [];
-    const entries: { raw: object; item: SwatchPickerItem; cached?: SwatchPickerItem }[] = [];
-    const reserved = new Set<SwatchPickerItem>();
+    const rows: SwatchPickerItem[] = [];
+    // Reserve surviving raw identities before fresh equivalents can consume their snapshots.
+    const reserved = new Set<SwatchPickerItem | undefined>();
     if (Array.isArray(next)) {
-      for (let index = 0; index < Math.min(next.length, 512); index += 1) {
+      for (let index = 0; index < Math.min(next.length, 512); index++) {
         try {
           const raw = next[index];
           if (raw === null || typeof raw !== 'object') continue;
-          const cached = this.itemSnapshots.get(raw);
-          if (cached) {
-            entries.push({ raw, item: cached, cached });
-            reserved.add(cached);
-            continue;
-          }
-          const value = raw.value;
-          const color = raw.color;
-          const label = raw.label;
+          rows.push(raw);
+          reserved.add(this.itemSnapshots.get(raw));
+        } catch {
+          // A hostile index getter invalidates only that row.
+        }
+      }
+    }
+    const identities = new Map<unknown, number>();
+    const identity = (value: unknown): number => {
+      if (!identities.has(value)) identities.set(value, identities.size);
+      return identities.get(value)!;
+    };
+    const snapshotKey = (item: SwatchPickerItem): string => JSON.stringify([
+      item.value,
+      item.color,
+      item.label,
+      identity(item.gemstone),
+      identity(item.icon),
+    ]);
+    const buckets = new Map<string, SwatchPickerItem[]>();
+    // Reverse candidates so pop() consumes equivalent duplicate occurrences in their old order.
+    for (const item of [...old].reverse()) {
+      if (reserved.has(item)) continue;
+      const key = snapshotKey(item);
+      let queue = buckets.get(key);
+      if (!queue) buckets.set(key, queue = []);
+      queue.push(item);
+    }
+    for (const raw of rows) {
+      try {
+        let item = this.itemSnapshots.get(raw);
+        if (item && reserved.delete(item)) {
+          snapshots.push(item);
+          continue;
+        }
+        if (!item) {
+          const { value, color, label } = raw;
           if (
             typeof value !== 'string' ||
             typeof color !== 'string' ||
             typeof label !== 'string' ||
             label.trim() === ''
-          )
-            continue;
-          const icon = raw.icon;
-          const gemstone = raw.gemstone;
-          entries.push({ raw, item: {
+          ) continue;
+          const { icon, gemstone } = raw;
+          item = {
             value,
             color,
             label,
             ...(icon === undefined ? {} : { icon }),
             ...(gemstone === undefined ? {} : { gemstone }),
-          } });
-        } catch {
-          // A hostile getter invalidates only that row; later valid swatches remain available.
+          };
         }
+        const snapshot = buckets.get(snapshotKey(item))?.pop() ?? Object.freeze({ ...item });
+        if (!this.itemSnapshots.has(raw)) this.itemSnapshots.set(raw, snapshot);
+        snapshots.push(snapshot);
+      } catch {
+        // A hostile getter invalidates only that row; later valid swatches remain available.
       }
-    }
-    // Reserve surviving object identities before matching fresh equivalents, so a duplicate
-    // appearing earlier cannot take the identity of an original occurrence later in the list.
-    const buckets = new Map<string, Map<GemstoneKey | undefined, Map<unknown, SwatchSnapshotQueue>>>();
-    for (const item of old) {
-      if (reserved.has(item)) continue;
-      const key = snapshotKey(item);
-      let gemstones = buckets.get(key);
-      if (!gemstones) buckets.set(key, gemstones = new Map());
-      let icons = gemstones.get(item.gemstone);
-      if (!icons) gemstones.set(item.gemstone, icons = new Map());
-      let queue = icons.get(item.icon);
-      if (!queue) icons.set(item.icon, queue = { items: [], index: 0 });
-      queue.items.push(item);
-    }
-    const used = new Set<SwatchPickerItem>();
-    for (const { raw, item, cached } of entries) {
-      let snapshot = cached && !used.has(cached) ? cached : undefined;
-      if (!snapshot) {
-        const queue = buckets.get(snapshotKey(item))?.get(item.gemstone)?.get(item.icon);
-        snapshot = queue?.items[queue.index++] ?? Object.freeze({ ...item });
-      }
-      used.add(snapshot);
-      if (!this.itemSnapshots.has(raw)) this.itemSnapshots.set(raw, snapshot);
-      snapshots.push(snapshot);
     }
     this._items = Object.freeze(snapshots);
     this.requestUpdate('items', old);
@@ -278,33 +274,22 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
   // unique. Retain occurrence identity separately so duplicate values do
   // not create multiple checked/tabbable radios or collapse repeat keys.
   private selectedOption?: SwatchPickerItem;
-  private selectedIndex = -1;
   private fallbackTabbableIndex = 0;
   private pendingFocusIndex?: number;
 
   private resolveSelectedIndex(): number {
     if (this.value === null) {
       this.selectedOption = undefined;
-      this.selectedIndex = -1;
       return -1;
     }
-    if (
-      this.selectedIndex >= 0 &&
-      this.items[this.selectedIndex] === this.selectedOption &&
-      this.selectedOption?.value === this.value
-    ) {
-      return this.selectedIndex;
-    }
-    const identityIndex = this.selectedOption
+    const identityIndex = this.selectedOption?.value === this.value
       ? this.items.indexOf(this.selectedOption)
       : -1;
-    this.selectedIndex =
-      identityIndex >= 0 && this.items[identityIndex]?.value === this.value
-        ? identityIndex
-        : this.items.findIndex((option) => option.value === this.value);
-    this.selectedOption =
-      this.selectedIndex >= 0 ? this.items[this.selectedIndex] : undefined;
-    return this.selectedIndex;
+    const selectedIndex = identityIndex >= 0
+      ? identityIndex
+      : this.items.findIndex((option) => option.value === this.value);
+    this.selectedOption = this.items[selectedIndex];
+    return selectedIndex;
   }
 
   private select(option: SwatchPickerItem, index: number): void {
@@ -313,7 +298,6 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
     if (index !== previousIndex || option.value !== this.value) {
       const previousValue = this.value;
       this.selectedOption = option;
-      this.selectedIndex = index;
       this.value = option.value;
       if (previousValue === option.value) this.requestUpdate();
       this.emit('lr-change', { value: option.value });

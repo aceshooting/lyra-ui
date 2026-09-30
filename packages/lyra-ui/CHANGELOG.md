@@ -1,5 +1,16 @@
 # Changelog
 
+## 24.1.0
+
+### Minor Changes
+
+- c3ed27e: Expose approval finalization and retry methods on `lr-agent-workspace` for its built-in tool timeline.
+
+### Patch Changes
+
+- c3ed27e: Correct the table sort listener example and v24 event detail and global event type guidance.
+- c3ed27e: Keep swatch radios and keyboard focus stable when applications assign equivalent fresh palette items, while preserving distinct duplicate occurrences and original item identities during reordering.
+
 ## 24.0.0
 
 ### Major Changes

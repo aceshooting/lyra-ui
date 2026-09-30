@@ -443,12 +443,12 @@ and the release flow below.
 Releases run in four steps; nothing is tagged or published from a workstation.
 
 1. **Prepare locally.** `pnpm release:prepare` (`scripts/release-prepare.mjs`) requires the exact
-   `.nvmrc` Node patch, a clean tree, and a HEAD containing `origin/main`. It consumes every pending
-   changeset with `pnpm changeset version`, refreshes the lockfile with `pnpm install`, and for each
-   package whose version changed runs, in order: `package-metadata`, `manifest`,
-   `component-metadata`, `manifest` again, `component-inventory` (it records the deprecations the
-   bump just stamped), `default-string-slices`, `framework-types`, `design-tokens`,
-   `generate-editor-data`, `llms`, `build`, and `component-quality`. A lyra-ui release then syncs
+   `.nvmrc` Node patch, a clean tree, and a HEAD containing `origin/main`. It fetches `origin/main`
+   and published tags before bumping, refusing to overwrite conflicting local tags. It consumes every
+   pending changeset with `pnpm changeset version` and refreshes the lockfile with `pnpm install`.
+   The script's `PACKAGE_GENERATORS` defines the exact generation order: preserve immutable tagged
+   history, stamp metadata, regenerate API and consumer references, then build and measure each
+   released package. A lyra-ui release then syncs
    the Claude/Codex plugin versions, runs `./package.sh`, and rebuilds and remeasures because
    `package.sh` writes source. `node scripts/update-readme-status.mjs` runs last. The script never
    lints, tests, packs, commits, tags, or pushes. Changesets can auto-expand a release to a

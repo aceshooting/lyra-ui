@@ -197,8 +197,11 @@ Use a fastest-in-category claim only for the specific workload and versions the 
 ## Design completion through v24
 
 v24 is the completion milestone for the styling, localization and cleanup scope below. The v22
-foundation is published, and v23 delivers the additional looks, builder and localization tooling;
-its release workflow has completed. V24 integration, qualification and publication remain pending.
+foundation is published, and v23 delivers the additional looks, builder and localization tooling.
+[V24.0.0](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4024.0.0) is published;
+subsequent corrections follow the [release gates](agents/ci-and-gates.md#release-integrity).
+Website, admin and consumer integration remains in the
+[post-publication rollout](roadmap/post-v24-rollout.md).
 The table records acceptance criteria; passed gates must be confirmed against the exact candidate
 and release evidence.
 

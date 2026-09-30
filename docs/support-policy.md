@@ -160,10 +160,11 @@ Concretely:
    is cheaper and it fails in the right direction.
 
 Do not add a `@supports` guard for a feature every in-window engine already has: it is dead weight
-that reads as a live compatibility concern. The single guard in the library today
-(`@supports (max-block-size: 1dvh)` in `lr-responsive-panel`) exists because the `dvh` unit fails at
-computed-value time on engines that lack it, which resets `max-block-size` to `none` rather than
-falling back gracefully — that is the shape of case the guard is for.
+that reads as a live compatibility concern. Feature guards preserve usable fallbacks:
+`lr-responsive-panel` retains a viewport-height cap when `dvh` is unavailable, and glass surfaces
+retain an opaque fill unless standard or prefixed backdrop filtering is supported. The `dvh` unit
+fails at computed-value time on engines that lack it, resetting `max-block-size` to `none` rather
+than falling back gracefully.
 
 ---
 

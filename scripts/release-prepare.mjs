@@ -20,8 +20,9 @@ const PRIMARY_PACKAGE = '@aceshooting/lyra-ui';
 
 /**
  * Per-package post-bump generators, in dependency order. The bump stamps `since: 'unreleased'`
- * deprecation records with the new version, so the manifest is regenerated after component
- * metadata and the component inventory (which records each deprecation) follows both. LLM
+ * deprecation records with the new version. The metadata history refresh retains immutable
+ * published-release snapshots from the fetched tags before regenerating the manifest and inventory.
+ * The component inventory records each stamped deprecation. LLM
  * references read the regenerated manifest and package metadata, and the built component-quality
  * evidence measures the build that embeds the new version.
  */
@@ -29,7 +30,7 @@ export const PACKAGE_GENERATORS = Object.freeze([
   'archive-changelog',
   'package-metadata',
   'manifest',
-  'component-metadata',
+  'component-metadata:history',
   'manifest',
   'component-inventory',
   'visual-manifest',
@@ -137,7 +138,7 @@ async function main(argv) {
   await checkNodeVersionAtRoot(repoRoot);
   assertCleanWorktree(git(['status', '--porcelain']));
 
-  git(['fetch', 'origin', 'main', '--quiet']);
+  git(['fetch', 'origin', 'main', '--tags', '--quiet']);
   const upToDate = spawnSync('git', ['merge-base', '--is-ancestor', 'origin/main', 'HEAD'], {
     cwd: repoRoot,
   });

@@ -11,7 +11,8 @@ latest published `@aceshooting/lyra-ui`.
 
 1. **Check version drift.** Read the target project's installed `@aceshooting/lyra-ui` version from
    its `package.json`/lockfile. Compare against the latest published version
-   (`npm view @aceshooting/lyra-ui version`). If behind, bump the dependency and reinstall
+   (`npm view @aceshooting/lyra-ui version`). If behind, read the release notes below before bumping
+   the dependency and reinstalling
    (`npm install`/`pnpm install`/`yarn install` — match whichever the project already uses).
 
    Before bumping, fetch `https://www.lyra-ui.com/changelog.json` and read every release between
@@ -25,15 +26,16 @@ latest published `@aceshooting/lyra-ui`.
    project is already current because the feed says so; and say plainly in your report that the
    feed was behind, naming both versions.
 
-   A stale feed is also missing the release notes the paragraph above just told you to read, so the
-   pre-bump read has a fallback: `node_modules/@aceshooting/lyra-ui/CHANGELOG.md` ships inside the
-   installed package and documents every published release, including ones absent from the feed
-   entirely. When the feed is behind, read the notes there — before bumping from the currently
-   installed copy, and again from the new one in step 2 — instead of treating the feed's silence as
-   "nothing changed". Consumers have twice skipped a released bug fix by trusting a stale `latest`.
+   When the feed is stale or incomplete, read the target version's `packages/lyra-ui/CHANGELOG.md`
+   from its published Git tag (`lyra-ui@<version>`) before bumping. The packaged changelog retains
+   only its own major release line; an older installed copy cannot contain newer release notes.
+   Follow its release-history archive link and read `docs/changelog/v<major>.md` for every earlier
+   major crossed by the upgrade, covering all releases between the installed and target versions.
+   Read every intervening major's breaking changes; missing feed entries do not mean nothing changed.
 
 2. **Read what changed.** After bumping, read `node_modules/@aceshooting/lyra-ui/CHANGELOG.md`
-   between the old and new version. Note anything that could affect this project: breaking changes,
+   and follow its archive link for earlier majors between the old and new version. Confirm the
+   notes match the pre-bump review. Note anything that could affect this project: breaking changes,
    deprecations, or behavior changes to components the project already uses.
 
 3. **Report back.** Summarize the version bumped from and to, the breaking changes (if any) the
