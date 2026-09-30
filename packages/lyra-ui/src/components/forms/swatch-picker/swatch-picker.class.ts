@@ -276,6 +276,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
   private selectedOption?: SwatchPickerItem;
   private fallbackTabbableIndex = 0;
   private pendingFocusIndex?: number;
+  private focusRevealFrame?: number;
 
   private resolveSelectedIndex(): number {
     if (this.value === null) {
@@ -312,7 +313,27 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
     const button = this.renderRoot.querySelector(
       `[part="swatch"][data-index="${index}"]`
     ) as HTMLElement | null;
-    button?.focus();
+    this.cancelFocusReveal();
+    this.focusRevealFrame = requestAnimationFrame(() => {
+      this.focusRevealFrame = undefined;
+      if (!this.isConnected || this.disabled) return;
+      const focused = activeElementIn(this.shadowRoot);
+      if (!(focused instanceof HTMLElement) || focused.getAttribute('part') !== 'swatch') return;
+      // Native focus can leave a partially visible radio clipped when its center already fits.
+      // Resolve the current node after consumer updates and focus restoration have settled.
+      focused.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+    });
+    button?.focus({ preventScroll: true });
+  }
+
+  private cancelFocusReveal(): void {
+    if (this.focusRevealFrame !== undefined) cancelAnimationFrame(this.focusRevealFrame);
+    this.focusRevealFrame = undefined;
+  }
+
+  override disconnectedCallback(): void {
+    this.cancelFocusReveal();
+    super.disconnectedCallback();
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
@@ -381,12 +402,14 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
 
   /** Moves focus to the tabbable swatch. */
   override focus(options?: FocusOptions): void {
+    this.cancelFocusReveal();
     if (this.disabled) return;
     this.tabbableSwatch()?.focus(options);
   }
 
   /** Removes focus from the tabbable swatch. */
   override blur(): void {
+    this.cancelFocusReveal();
     this.tabbableSwatch()?.blur();
   }
 

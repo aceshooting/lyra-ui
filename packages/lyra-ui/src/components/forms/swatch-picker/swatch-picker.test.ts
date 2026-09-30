@@ -1,3 +1,4 @@
+import { sendKeys } from '@web/test-runner-commands';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { setReducedMotion } from "../../../../test/wtr-media.js";
@@ -948,6 +949,103 @@ describe("lr-swatch-picker", () => {
     )) as LyraSwatchPicker;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(getComputedStyle(base).flexWrap).to.equal("nowrap");
+  });
+
+  for (const direction of ['ltr', 'rtl']) {
+    for (const freshItems of [false, true]) {
+      it(`reveals the complete keyboard-focused nowrap swatch in ${direction} with ${freshItems ? 'fresh' : 'stable'} items`, async () => {
+        const palette = Array.from({ length: 9 }, (_, index) => ({
+          value: String(index), color: '#34d399', label: `Color ${index}`,
+        }));
+        const wrapper = await fixture<HTMLDivElement>(html`
+          <div dir=${direction} style="position:fixed;top:150px;left:30px;width:240px;padding:9.6px;box-sizing:border-box;overflow-x:auto">
+            <lr-swatch-picker aria-label="Colors" value="0"
+              style="padding:9.6px;--lr-swatch-picker-wrap:nowrap;--lr-swatch-picker-hit-size:24px;--lr-swatch-picker-gap:2px"
+              .items=${palette}></lr-swatch-picker>
+          </div>
+        `);
+        const el = wrapper.querySelector('lr-swatch-picker') as LyraSwatchPicker;
+        await el.updateComplete;
+        if (freshItems) el.addEventListener('lr-change', () => { el.items = palette.map(item => ({ ...item })); });
+        await focusByKeyboard(swatches(el)[0]!);
+        const documentScroll = [window.scrollX, window.scrollY];
+        for (const [key, index] of [['End', 8], ['Home', 0]] as const) {
+          await sendKeys({ press: key });
+          await el.updateComplete;
+          await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+          const radio = swatches(el)[index]!;
+          expect(el.shadowRoot!.activeElement === radio).to.equal(true);
+          const bounds = radio.getBoundingClientRect();
+          const viewport = wrapper.getBoundingClientRect();
+          expect(bounds.left, 'full left border is visible').to.be.at.least(viewport.left - 0.5);
+          expect(bounds.right, 'full right border is visible').to.be.at.most(viewport.right + 0.5);
+          expect([window.scrollX, window.scrollY]).to.deep.equal(documentScroll);
+        }
+      });
+    }
+  }
+
+  for (const action of ['preventScroll', 'focusEvent', 'leave'] as const) {
+    it(`cancels a pending keyboard reveal when focus ${action === 'leave' ? 'leaves' : action === 'focusEvent' ? 'prevents scrolling during the synchronous focus event' : 'explicitly prevents scrolling'}`, async () => {
+      const wrapper = await fixture<HTMLDivElement>(html`
+        <div style="position:fixed;top:150px;left:30px;width:240px;padding:9.6px;box-sizing:border-box;overflow-x:auto">
+          <lr-swatch-picker aria-label="Colors" value="0"
+            style="padding:9.6px;--lr-swatch-picker-wrap:nowrap;--lr-swatch-picker-hit-size:24px;--lr-swatch-picker-gap:2px"
+            .items=${Array.from({ length: 9 }, (_, index) => ({ value: String(index), color: '#34d399', label: `Color ${index}` }))}>
+          </lr-swatch-picker>
+        </div>
+      `);
+      const outside = document.createElement('button');
+      outside.textContent = 'Outside';
+      outside.style.cssText = 'position:fixed;top:0;left:0';
+      document.body.append(outside);
+      try {
+        const el = wrapper.querySelector('lr-swatch-picker') as LyraSwatchPicker;
+        await el.updateComplete;
+        await focusByKeyboard(swatches(el)[0]!);
+        if (action === 'focusEvent') {
+          swatches(el)[8]!.addEventListener('focus', () => {
+            el.focus({ preventScroll: true });
+            wrapper.scrollLeft = 0;
+          }, { once: true });
+        }
+        // The real key has reached the internal handler before bubbling to this host listener.
+        el.addEventListener('keydown', () => {
+          if (action === 'preventScroll') el.focus({ preventScroll: true });
+          else if (action === 'leave') outside.focus({ preventScroll: true });
+          wrapper.scrollLeft = 0;
+        }, { once: true });
+        await sendKeys({ press: 'End' });
+        await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+        expect(wrapper.scrollLeft).to.equal(0);
+        expect(action === 'leave' ? document.activeElement === outside : el.shadowRoot!.activeElement === swatches(el)[8]).to.equal(true);
+      } finally {
+        outside.remove();
+      }
+    });
+  }
+
+  it('does not scroll a wide container or override public preventScroll focus', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div style="position:fixed;top:150px;left:30px;width:400px;overflow-x:auto">
+        <lr-swatch-picker aria-label="Colors" value="blue" style="--lr-swatch-picker-wrap:nowrap"
+          .items=${options()}></lr-swatch-picker>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-swatch-picker') as LyraSwatchPicker;
+    await el.updateComplete;
+    await focusByKeyboard(swatches(el)[0]!);
+    const documentScroll = [window.scrollX, window.scrollY];
+    await sendKeys({ press: 'End' });
+    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    expect(wrapper.scrollLeft).to.equal(0);
+    expect([window.scrollX, window.scrollY]).to.deep.equal(documentScroll);
+    el.blur();
+    wrapper.style.width = '60px';
+    wrapper.scrollLeft = 0;
+    el.focus({ preventScroll: true });
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    expect(wrapper.scrollLeft).to.equal(0);
   });
 
   it("draws the selected ring through the --lr-swatch-picker-selected-color token", () => {

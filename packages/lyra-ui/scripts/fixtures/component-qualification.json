@@ -46230,7 +46230,7 @@
           "evidence": [
             {
               "file": "src/components/forms/swatch-picker/swatch-picker.test.ts",
-              "test": "keeps duplicate-valued swatches as distinct occurrences for selection and navigation",
+              "line": 1,
               "kind": "component keyboard assertion signal"
             }
           ]
