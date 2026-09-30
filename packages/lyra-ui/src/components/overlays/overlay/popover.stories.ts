@@ -217,21 +217,21 @@ export const FocusTrigger: Story = {
 };
 
 export const TriggerList: Story = {
-  name: 'trigger="hover focus" on an external for= trigger',
+  name: 'trigger="hover focus click" on an external for= trigger',
   parameters: {
     docs: {
       description: {
         story:
-          '`trigger` is a space-separated list over the same four keywords `<lr-tooltip>` accepts, so `trigger="hover focus"` reads identically on both and a pointer user and a keyboard user reach the same surface. Every keyword also works on the `for=` shape, where the interaction owner is a real element outside the popover: the listeners bind to that element, not to the host it is not inside. Unrecognized keywords are dropped, `manual` wins over anything beside it, and a list left with nothing recognized falls back to `click` rather than stranding the content.',
+          '`trigger` is a space-separated list over the same four keywords `<lr-tooltip>` accepts, so a pointer user and a keyboard user reach the same surface. With `trigger="hover focus click"`, clicking a surface already revealed by hover or focus pins it without hiding it or moving focus; a second click closes it. Every keyword also works on the `for=` shape, where the interaction owner is a real element outside the popover: the listeners bind to that element, not to the host it is not inside. Unrecognized keywords are dropped, `manual` wins over anything beside it, and a list left with nothing recognized falls back to `click` rather than stranding the content.',
       },
     },
   },
   render: (_args, context) => html`
-    <button id="popover-list-trigger" type="button">Hover or focus me</button>
+    <button id="popover-list-trigger" type="button">Hover or focus, then click to pin</button>
     <lr-popover
       .open=${context.viewMode !== 'docs'}
       for="popover-list-trigger"
-      trigger="hover focus"
+      trigger="hover focus click"
       hide-delay="200"
       placement="bottom-start"
     >

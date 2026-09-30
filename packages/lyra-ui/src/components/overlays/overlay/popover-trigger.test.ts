@@ -679,3 +679,164 @@ describe('lr-popover focus keyword follows keyboard focus', () => {
     expect(el.open).to.equal(false, 'the pending close still ran');
   });
 });
+
+describe('mixed transient and click popover triggers', () => {
+  for (const mode of ['hover click', 'click hover', 'focus click', 'click focus', 'hover focus click', 'click focus hover']) {
+    for (const ownership of ['slotted', 'external']) {
+      it(`${mode} ${ownership} pins a transient reveal without hiding or moving focus`, async () => {
+        const external = ownership === 'external' ? await buildFor(`trigger="${mode}"`) : undefined;
+        const el = external?.el ?? await build(`trigger="${mode}"`, '<button autofocus>Inside</button>');
+        const button = external?.trigger ?? triggerOf(el);
+        const outside = external?.outside ?? document.createElement('button');
+        if (!external) el.parentElement!.append(outside);
+        try {
+          await focusByKeyboard(outside);
+          if (mode.includes('hover')) enter(button);
+          else await focusByKeyboard(button);
+          await waitUntil(() => el.open, 'the transient interaction reveals the surface');
+          const focusBefore = document.activeElement;
+          let hides = 0;
+          el.addEventListener('lr-hide', () => { hides += 1; });
+          button.click();
+          await settlePointer();
+          expect(hides).to.equal(0, 'clicking transient content pins it without a hide lifecycle');
+          expect(document.activeElement === focusBefore).to.equal(true, 'pinning does not steal focus');
+          leave(button);
+          await focusByKeyboard(outside);
+          await settlePointer();
+          expect(el.open).to.equal(true, 'the pin survives pointer leave and focus departure');
+          button.click();
+          await waitUntil(() => !el.open, 'the second click closes the pinned surface');
+          expect(hides).to.equal(1);
+        } finally {
+          if (!external) outside.remove();
+        }
+      });
+    }
+  }
+
+  it('a click opening a closed mixed surface survives pointer leave and focus departure', async () => {
+    const { el, trigger, outside } = await buildFor('trigger="hover focus click"');
+    trigger.click();
+    await waitUntil(() => el.open, 'the click opens it');
+    leave(trigger);
+    await focusByKeyboard(outside);
+    await settlePointer();
+    expect(el.open).to.equal(true);
+    trigger.click();
+    await waitUntil(() => !el.open, 'the next click closes it');
+  });
+
+  it('pinning cancels a hide already waiting for its delay', async () => {
+    const el = await build('trigger="hover click" hide-delay="100"');
+    enter(triggerOf(el));
+    await waitUntil(() => el.open, 'hover opens it');
+    leave(triggerOf(el));
+    triggerOf(el).click();
+    await aTimeout(180);
+    expect(el.open).to.equal(true, 'the delayed hide was canceled by the explicit pin');
+  });
+
+  for (const refusal of ['veto', 'disabled']) {
+    it(`a ${refusal} click opening does not pin the next transient reveal`, async () => {
+      const el = await build(`trigger="hover" ${refusal === 'disabled' ? 'disabled' : ''}`);
+      const veto = (event: Event): void => { event.preventDefault(); };
+      if (refusal === 'veto') el.addEventListener('lr-show', veto);
+      triggerOf(el).click();
+      await settlePointer();
+      expect(el.open).to.equal(false);
+      el.removeEventListener('lr-show', veto);
+      el.disabled = false;
+      await el.updateComplete;
+      enter(triggerOf(el));
+      await waitUntil(() => el.open, 'a later hover successfully opens');
+      leave(triggerOf(el));
+      await waitUntil(() => !el.open, 'that unpinned reveal closes when the pointer leaves');
+    });
+  }
+
+  it('a vetoed hide keeps the existing pin until a later dismissal succeeds', async () => {
+    const el = await build('trigger="hover click"');
+    const veto = (event: Event): void => { event.preventDefault(); };
+    triggerOf(el).click();
+    await waitUntil(() => el.open, 'click opens pinned');
+    el.addEventListener('lr-hide', veto);
+    triggerOf(el).click();
+    await settlePointer();
+    expect(el.open).to.equal(true);
+    el.removeEventListener('lr-hide', veto);
+    leave(triggerOf(el));
+    await settlePointer();
+    expect(el.open).to.equal(true, 'refusing to close preserves explicit pin ownership');
+    triggerOf(el).click();
+    await waitUntil(() => !el.open, 'the next allowed click dismisses it');
+  });
+
+  it('a mixed dropdown focus reveal pins without moving focus to its menu', async () => {
+    const el = await fixture<LyraDropdown>(`<lr-dropdown trigger="focus click" style="--lr-duration-base: 0ms">
+      <button slot="trigger">Trigger</button><lr-menu><lr-menu-item>Item</lr-menu-item></lr-menu>
+    </lr-dropdown>`);
+    const button = triggerOf(el);
+    await focusByKeyboard(button);
+    await waitUntil(() => el.open, 'focus reveals the dropdown');
+    button.click();
+    await settlePointer();
+    expect(el.open).to.equal(true);
+    expect(document.activeElement === button).to.equal(true, 'pinning retains trigger focus');
+    button.click();
+    await waitUntil(() => !el.open, 'another click dismisses the dropdown');
+  });
+});
+
+describe('mixed pinned popover dismissal', () => {
+  it('Escape dismisses a pinned focus/click surface without reopening on restored focus', async () => {
+    const el = await build('trigger="focus click"');
+    await focusByKeyboard(triggerOf(el));
+    await waitUntil(() => el.open, 'keyboard focus reveals it');
+    triggerOf(el).click();
+    await sendKeys({ press: 'Escape' });
+    await waitUntil(() => !el.open, 'Escape dismisses the pinned surface');
+    await settlePointer();
+    expect(el.open).to.equal(false);
+    expect(document.activeElement === triggerOf(el)).to.equal(true);
+  });
+
+  it('an outside pointer press dismisses a pinned mixed surface', async () => {
+    const { el, trigger, outside } = await buildFor('trigger="hover focus click"');
+    enter(trigger);
+    await waitUntil(() => el.open, 'hover reveals it');
+    trigger.click();
+    try {
+      const rect = outside.getBoundingClientRect();
+      await sendMouse({ type: 'click', position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)] });
+      await waitUntil(() => !el.open, 'an outside click dismisses the pinned surface');
+    } finally {
+      await resetMouse();
+    }
+  });
+});
+
+it('a real hover/click gesture pins mixed popover content without focusing its autofocus target', async () => {
+  const el = await build('trigger="hover focus click"', '<button autofocus>Inside</button>');
+  const button = triggerOf(el);
+  const inside = el.querySelector<HTMLButtonElement>('button[autofocus]')!;
+  let hides = 0;
+  el.addEventListener('lr-hide', () => { hides += 1; });
+  try {
+    await hoverUntilMatched(button, 'the real pointer opens the mixed surface');
+    await waitUntil(() => el.open, 'hover reveals content');
+    const rect = button.getBoundingClientRect();
+    await sendMouse({ type: 'click', position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)] });
+    await settlePointer();
+    expect(el.open).to.equal(true);
+    expect(hides).to.equal(0);
+    expect(document.activeElement === inside).to.equal(false, 'pinning does not run pending autofocus');
+    await sendMouse({ type: 'move', position: [0, 0] });
+    await settlePointer();
+    expect(el.open).to.equal(true, 'the explicit pin survives real pointer departure');
+    button.click();
+    await waitUntil(() => !el.open, 'the next activation dismisses it');
+  } finally {
+    await resetMouse();
+  }
+});

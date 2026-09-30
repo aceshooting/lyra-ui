@@ -387,7 +387,8 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
    * reads back as a canonical list. `focus` means keyboard focus: the focused element must match
    * `:focus-visible` and the last input must not have been a pointer press; use `show()` for
    * scripted reveals. A click that opens a closed transient surface pins it and moves focus like
-   * click mode; a click on an already-open one only pins it.
+   * click mode; a click on an already-open one only pins it. This pinning also applies when the
+   * trigger list explicitly combines `click` with `hover` or `focus`.
    * @type {string}
    * @default 'click'
    */
@@ -1207,7 +1208,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     this.syncTriggerA11y();
     if (this.isManualTrigger) return;
     this.cancelPendingTransition();
-    if (this.opensOn('click')) {
+    if (this.opensOn('click') && !this.opensOn('hover') && !this.opensOn('focus')) {
       if (this.open) void this.hide();
       else void this.show();
       return;
@@ -1218,9 +1219,13 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
       void this.hide();
       return;
     }
-    this.pinned = true;
-    this.openedByInteraction = false;
-    if (!this.open) void this.show();
+    if (!this.open) {
+      this.openedByInteraction = false;
+      void this.show();
+    }
+    // Opening commits synchronously after its preflight. A veto or disabled surface must not
+    // leave a pin behind for a later hover/focus reveal.
+    this.pinned = this.open;
   };
 
   private onTriggerPointerEnter = (): void => {

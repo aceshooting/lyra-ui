@@ -25714,10 +25714,13 @@ If the import fails, leave the native disclosure visible and usable.
   focus rests anywhere inside it. `focus` means keyboard focus: the focused element must match
   `:focus-visible` and the last input must not have been a pointer press, so pointer, touch and
   scripted focus that follows them do not open it; call `show()` for scripted reveals. A click on
-  the trigger pins a transient surface open; the next click releases the pin and closes it. A click
+  the trigger pins a transient surface open, including a list that explicitly contains `click`
+  alongside `hover` or `focus`; the next click releases the pin and closes it. A click
   that opens a *closed* transient surface opens it pinned like click mode, including pulling
-  `[autofocus]` (and, for `lr-dropdown`, focusing the active menu item); a click on a surface hover
-  already opened only pins it. Migrating from `wa-popover`/`wa-dropdown`/`sl-dropdown`: the same
+  `[autofocus]` (and, for `lr-dropdown`, focusing the active menu item); a click on a surface
+  already opened by hover or focus only pins it, without a hide lifecycle or moving focus. A disabled or vetoed
+  click opening leaves no pin behind for a later transient reveal; a vetoed close preserves an
+  existing pin. Migrating from `wa-popover`/`wa-dropdown`/`sl-dropdown`: the same
   keyboard-focus narrowing as `lr-tooltip` applies. `manual` refuses every interaction, leaves the surface to `show()`/`hide()`/`open`,
   and wins over any keyword beside it. Unrecognized tokens are dropped and the property reads back
   as the canonical list; unlike `<lr-tooltip>`, a list left with no recognized keyword resolves to
