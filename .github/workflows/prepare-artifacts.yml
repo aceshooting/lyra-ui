@@ -33,8 +33,17 @@ jobs:
           cache: pnpm
       - name: Check generation toolchain
         run: |
-          test "$(node --version)" = v22.23.2
-          test "$(pnpm --version)" = 12.6.0
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          import { execFileSync } from 'node:child_process';
+          const node = readFileSync('.nvmrc', 'utf8').trim().replace(/^v/, '');
+          const manager = JSON.parse(readFileSync('package.json', 'utf8')).packageManager;
+          const pnpm = /^pnpm@(\d+\.\d+\.\d+)$/.exec(manager)?.[1];
+          const actualPnpm = execFileSync('pnpm', ['--version'], { encoding: 'utf8' }).trim();
+          if (process.versions.node !== node || !pnpm || actualPnpm !== pnpm) {
+            throw new Error(`Expected Node ${node} and ${manager}; got Node ${process.versions.node} and pnpm@${actualPnpm}`);
+          }
+          NODE
       - run: pnpm install --frozen-lockfile
       - name: Capture an explicitly pinned publication
         env:
