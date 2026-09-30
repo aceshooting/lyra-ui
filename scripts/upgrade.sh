@@ -4,6 +4,9 @@
 # separately because npm-check-updates does not include them by default. The curated
 # libphonenumber-js, MapLibre and postal-mime peer ranges keep their compatibility bounds; their dev
 # dependencies are still upgraded by the first pass.
+# Set VERIFY=0 to refresh dependency manifests, lockfile, package-manager documentation, and
+# current peer versions without running artifact generators, workspace builds, or quality checks.
+# The default runs the complete existing regeneration and build workflow.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -135,6 +138,12 @@ pnpm install --no-prod --no-frozen-lockfile
 echo
 echo "==> Synchronizing peer-compatibility current versions"
 node scripts/check-peer-compatibility.mjs --write-current-versions
+
+if [[ "${VERIFY:-1}" == "0" ]]; then
+  echo
+  echo "Dependencies upgraded; generation, builds, and quality checks skipped because VERIFY=0."
+  exit 0
+fi
 
 # A dependency bump (Lit, the CEM analyzer, esbuild/vite, shiki, etc.) can shift the manifest,
 # framework type declarations, measured bundle/gzip sizes, or the upstream parity pins even when no

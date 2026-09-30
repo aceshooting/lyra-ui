@@ -2460,6 +2460,49 @@ test('upgrade protects managed peer floors before synchronizing package-manager 
   );
 });
 
+test('upgrade dependency-only mode installs and synchronizes peers without generation or builds', () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'lyra-upgrade-mode-'));
+  try {
+    mkdirSync(path.join(root, 'scripts'), { recursive: true });
+    mkdirSync(path.join(root, 'packages/lyra-ui'), { recursive: true });
+    mkdirSync(path.join(root, 'bin'));
+    copyFileSync(path.join(repoRoot, 'scripts/upgrade.sh'), path.join(root, 'scripts/upgrade.sh'));
+    writeFileSync(path.join(root, '.nvmrc'), '22.23.2\n');
+    writeFileSync(path.join(root, 'packages/lyra-ui/package.json'), '{}\n');
+    const commandLog = path.join(root, 'commands.log');
+    for (const command of ['node', 'pnpm']) {
+      const binary = path.join(root, 'bin', command);
+      writeFileSync(binary, `#!/usr/bin/env bash\nif [[ "$1" == '-p' ]]; then echo '22.23.2'; exit 0; fi\nprintf '%s\\n' '${command} '"$*" >> "$UPGRADE_TEST_LOG"\n`);
+      chmodSync(binary, 0o755);
+    }
+    writeFileSync(path.join(root, 'package.sh'), '#!/usr/bin/env bash\necho package.sh >> "$UPGRADE_TEST_LOG"\n');
+    chmodSync(path.join(root, 'package.sh'), 0o755);
+    const run = (verify) => {
+      writeFileSync(commandLog, '');
+      const env = { ...process.env, PATH: `${path.join(root, 'bin')}:/usr/bin:/bin`, UPGRADE_TEST_LOG: commandLog };
+      delete env.VERIFY;
+      if (verify !== undefined) env.VERIFY = verify;
+      const result = spawnSync('bash', ['scripts/upgrade.sh'], { cwd: root, encoding: 'utf8', env });
+      assert.equal(result.status, 0, result.stderr);
+      return { output: result.stdout, commands: readFileSync(commandLog, 'utf8') };
+    };
+    const dependencyOnly = run('0');
+    assert.match(dependencyOnly.commands, /pnpm install --no-prod --no-frozen-lockfile/u);
+    assert.match(dependencyOnly.commands, /check-managed-peer-rewrites/u);
+    assert.match(dependencyOnly.commands, /sync-package-manager-docs\.mjs --write/u);
+    assert.match(dependencyOnly.commands, /check-peer-compatibility\.mjs --write-current-versions/u);
+    assert.doesNotMatch(dependencyOnly.commands, /pnpm manifest|pnpm build|package\.sh|generate-component-quality|run archive-changelog/u);
+    assert.match(dependencyOnly.output, /skipped because VERIFY=0/u);
+    const full = run(undefined);
+    assert.match(full.commands, /pnpm manifest/u);
+    assert.match(full.commands, /package\.sh/u);
+    assert.match(full.commands, /pnpm build/u);
+    assert.match(full.commands, /generate-component-quality\.mjs --write --measure-gzip/u);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 /** Run one helper from upgrade.sh's exact-Node activation block against a fixture tree. The block
  *  is extracted rather than re-implemented so the test fails when the script's own resolution
  *  changes, and the ambient host's real version-manager directories are replaced by the fixture. */
