@@ -1,4 +1,4 @@
-import type { LyraThemeTokens, LyraThemeTokenValue } from './theme.js';
+import type { LyraThemeTokens, LyraThemeTokenValue } from '../internal/theme-token-types.js';
 
 /** @internal Pure saved-field resolution; serialized unchanged into the self-contained prepaint script. */
 export function resolveStyleStartup(
