@@ -56,6 +56,8 @@ beforeEach(() => {
   setLyraStyle({ mode: 'light' });
 });
 afterEach(() => {
+  // Runtime cleanup needs its resolver even after a fixture models startup without stylesheets.
+  document.adoptedStyleSheets = [...previousSheets, ...sheets];
   setLyraStyle({ mode: 'unset', look: null, surface: null, density: null, accent: null, overrides: null, accentBackground: null });
   applyLyraStyleScope(document.documentElement, null);
   document.adoptedStyleSheets = previousSheets;

@@ -733,8 +733,8 @@ describe('hit area', () => {
     for (const part of ['retry-button', 'preview-button', 'remove-button']) {
       const btn = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
       expect((btn) != null, `[part="${part}"] should render`).to.equal(true);
-      expect(getComputedStyle(btn).minInlineSize, `${part} minInlineSize`).to.equal('40px');
-      expect(getComputedStyle(btn).minBlockSize, `${part} minBlockSize`).to.equal('40px');
+      expect(getComputedStyle(btn).minInlineSize, `${part} minInlineSize`).to.equal('36px');
+      expect(getComputedStyle(btn).minBlockSize, `${part} minBlockSize`).to.equal('36px');
     }
   });
 
@@ -751,8 +751,8 @@ describe('hit area', () => {
       const btn = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
       // The size="s" thumbnail is smaller, but every interactive action still keeps the shared
       // --lr-icon-button-size hit-area floor.
-      expect(getComputedStyle(btn).minInlineSize, `${part} minInlineSize`).to.equal('40px');
-      expect(getComputedStyle(btn).minBlockSize, `${part} minBlockSize`).to.equal('40px');
+      expect(getComputedStyle(btn).minInlineSize, `${part} minInlineSize`).to.equal('36px');
+      expect(getComputedStyle(btn).minBlockSize, `${part} minBlockSize`).to.equal('36px');
     }
   });
 });

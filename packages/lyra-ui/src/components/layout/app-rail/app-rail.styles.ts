@@ -403,7 +403,6 @@ export const styles = css`
   }
 
   ${glassScrollLayerStyles}
-  ${glassSurface('[part="base"]', css`var(--lr-app-rail-bg, var(--lr-color-surface))`, undefined, true)}
-  ${glassSurface(':host([frame="plain"]) [part="base"]', css`var(--lr-app-rail-bg, var(--lr-color-surface))`, css`var(--lr-app-rail-bg, transparent)`, true)}
+  ${glassSurface(':host(:not([frame="plain"])) [part="base"]', css`var(--lr-app-rail-bg, var(--lr-color-surface))`, undefined, true)}
   ${glassSurface('[part="panel"]', css`var(--lr-app-rail-panel-bg, var(--lr-color-surface-overlay))`, undefined, true)}
 `;

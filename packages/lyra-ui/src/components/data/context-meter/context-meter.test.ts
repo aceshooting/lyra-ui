@@ -612,14 +612,14 @@ describe('track and seam cssprops', () => {
     { label: 'Reserved', value: 20, tone: 'neutral' as const },
   ];
 
-  it('preserves the pre-existing computed track size, radius and background by default', async () => {
+  it('renders the shared default track size, radius and background', async () => {
     const el = (await fixture(html`
       <lr-context-meter total="100" .segments=${segments()}></lr-context-meter>
     `)) as LyraContextMeter;
     const track = el.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
     const computed = getComputedStyle(track);
     expect(computed.blockSize).to.equal('8px');
-    expect(computed.borderRadius).to.equal('3px');
+    expect(computed.borderRadius).to.equal('4px');
     expect(computed.backgroundColor).to.not.equal('');
   });
 

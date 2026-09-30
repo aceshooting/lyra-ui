@@ -145,8 +145,8 @@ describe('row chrome cssprops', () => {
     const chrome = getComputedStyle(base(el));
 
     expect(chrome.gap).to.equal('4px');
-    expect(chrome.borderRadius).to.equal('6px');
-    expect(getComputedStyle(el).borderRadius).to.equal('6px');
+    expect(chrome.borderRadius).to.equal('8px');
+    expect(getComputedStyle(el).borderRadius).to.equal('8px');
   });
 
   it('inherits row gap and radius overrides from an ancestor without a ::part(base) rule', async () => {

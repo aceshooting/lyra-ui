@@ -1813,8 +1813,8 @@ describe("resizable", () => {
     const track = resizer.querySelector(
       '[part="resizer-track"]'
     ) as HTMLElement;
-    expect(getComputedStyle(resizer).minInlineSize).to.equal("40px");
-    expect(getComputedStyle(resizer).minBlockSize).to.equal("40px");
+    expect(getComputedStyle(resizer).minInlineSize).to.equal("36px");
+    expect(getComputedStyle(resizer).minBlockSize).to.equal("36px");
     // The visible drag line itself stays a slim 3px bar, not blown up to 40px -- the handle's own
     // box grows around it via flex centering instead.
     expect(getComputedStyle(track).inlineSize).to.equal("3px");
@@ -1837,9 +1837,9 @@ describe("resizable", () => {
         --lr-theme-color-surface-border: rgb(4, 5, 6);
         --lr-theme-color-surface-border-subtle: rgb(1, 2, 3);
       ">
-        <lr-app-rail></lr-app-rail>
-        <lr-app-rail resizable></lr-app-rail>
-        <lr-app-rail resizable force-mode="icon-only"></lr-app-rail>
+        <lr-app-rail data-lr-surface="solid"></lr-app-rail>
+        <lr-app-rail data-lr-surface="solid" resizable></lr-app-rail>
+        <lr-app-rail data-lr-surface="solid" resizable force-mode="icon-only"></lr-app-rail>
       </div>
     `);
     const rails = [...wrapper.querySelectorAll<LyraAppRail>("lr-app-rail")];
@@ -3249,7 +3249,7 @@ describe("panel/backdrop inset, radius, overflow, and background hooks", () => {
 
   it("renders --lr-app-rail-bg/--lr-app-rail-panel-bg byte-identical to their prior tokens when unset", async () => {
     const el = (await fixture(
-      html`<lr-app-rail><button>a</button></lr-app-rail>`
+      html`<lr-app-rail data-lr-surface="solid"><button>a</button></lr-app-rail>`
     )) as LyraAppRail;
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -3273,7 +3273,7 @@ describe("panel/backdrop inset, radius, overflow, and background hooks", () => {
 
   it("recolors the base and panel surfaces independently via --lr-app-rail-bg/--lr-app-rail-panel-bg", async () => {
     const el = (await fixture(
-      html`<lr-app-rail
+      html`<lr-app-rail data-lr-surface="solid"
         open
         style="--lr-app-rail-bg: rgb(10, 20, 30); --lr-app-rail-panel-bg: rgb(40, 50, 60);"
         ><button>a</button></lr-app-rail
@@ -3770,7 +3770,7 @@ describe("app-rail canonical names and their deprecated aliases", () => {
 
   it("does not recolor the base and panel through the deprecated -background custom properties", async () => {
     const el = (await fixture(
-      html`<lr-app-rail
+      html`<lr-app-rail data-lr-surface="solid"
         open
         style="--lr-app-rail-background: rgb(10, 20, 30); --lr-app-rail-panel-background: rgb(40, 50, 60);"
         ><button>a</button></lr-app-rail

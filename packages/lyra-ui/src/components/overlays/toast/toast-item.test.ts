@@ -564,8 +564,9 @@ it("covers the whole shared six-step ladder, including the 2xs step the local un
     const box = getComputedStyle(el.shadowRoot!.querySelector('[part="toast-item"]') as HTMLElement);
     measured.push({ font: parseFloat(box.fontSize), padding: parseFloat(box.paddingBlockStart) });
   }
+  expect(measured.map(tier => tier.font)).to.deep.equal([10, 12, 14, 14, 18, 20]);
   for (let i = 1; i < measured.length; i += 1) {
-    expect(measured[i]!.font, `font tier ${i}`).to.be.greaterThan(measured[i - 1]!.font);
+    expect(measured[i]!.font, `font tier ${i}`).to.be.at.least(measured[i - 1]!.font);
     expect(measured[i]!.padding, `padding tier ${i}`).to.be.at.least(measured[i - 1]!.padding);
   }
 });
@@ -720,8 +721,8 @@ it("gives the close button the shared minimum hit area", async () => {
   const button = el.shadowRoot!.querySelector(
     '[part="close-button"]'
   ) as HTMLElement;
-  expect(getComputedStyle(button).minInlineSize).to.equal("40px");
-  expect(getComputedStyle(button).minBlockSize).to.equal("40px");
+  expect(getComputedStyle(button).minInlineSize).to.equal("36px");
+  expect(getComputedStyle(button).minBlockSize).to.equal("36px");
 });
 
 it('keeps a visible gap between the message text and a slotted action button, even under a page-level layered CSS reset', async () => {

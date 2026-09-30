@@ -1210,16 +1210,16 @@ describe('lr-input', () => {
     expect(getComputedStyle(row(el)).minBlockSize).to.equal('20px');
   });
 
-  it('keeps m and up on the 40px hit-area floor, but yields to a smaller tier\'s own control height below that', async () => {
-    // Below m, --lr-form-control-height is smaller than the 40px --lr-icon-button-size: the clear
+  it('keeps m and up on the shared hit-area floor, but yields to a smaller tier\'s own control height below that', async () => {
+    // Below m, --lr-form-control-height is smaller than the 36px --lr-icon-button-size: the clear
     // button's own icon+padding content (not the floor being widened here) still exceeds a 2xs/xs
     // field's bare control height, so this is a smaller, tier-scaled jump rather than none at all --
-    // m and up are untouched because their own control height already covers the 40px target.
+    // m and up are untouched because their own control height already covers the 36px target.
     // 2xs/xs land on this content-driven height rather than a round --lr-form-control-height
     // token, so it's subject to ordinary cross-engine font-metric rounding (observed up to ~1.5px
     // under Firefox); closeTo matches this file's other rect-measurement assertions (see e.g.
     // scroll-lock.test.ts, positioner.test.ts).
-    const expected: Record<string, number> = { '2xs': 29, xs: 29, s: 32, m: 42, l: 48, xl: 56 };
+    const expected: Record<string, number> = { '2xs': 26, xs: 26, s: 32, m: 38, l: 40, xl: 56 };
     for (const [size, height] of Object.entries(expected)) {
       const el = (await fixture(html`
         <lr-input size=${size} clearable value="content" aria-label="Name"></lr-input>
@@ -1470,8 +1470,8 @@ describe('lr-input', () => {
     it('keeps the per-size min-height floor when --lr-input-control-height is unset', async () => {
       const mEl = (await fixture(html`<lr-input aria-label="Name"></lr-input>`)) as LyraInput;
       const sEl = (await fixture(html`<lr-input size="s" aria-label="Name"></lr-input>`)) as LyraInput;
-      expect(getComputedStyle(wrapper(mEl)).minBlockSize).to.equal('40px');
-      expect(getComputedStyle(wrapper(sEl)).minBlockSize).to.equal('30px');
+      expect(getComputedStyle(wrapper(mEl)).minBlockSize).to.equal('36px');
+      expect(getComputedStyle(wrapper(sEl)).minBlockSize).to.equal('32px');
     });
 
     it('pins an exact control height with no ::part() rule, at the default and non-default sizes', async () => {
@@ -1492,11 +1492,11 @@ describe('lr-input', () => {
     const wrapper = (el: LyraInput) =>
       el.shadowRoot!.querySelector('[part~="input-wrapper"]') as HTMLElement;
 
-    it('exposes --lr-input-gap and --lr-input-radius, defaulting to the pre-existing literals', async () => {
+    it('exposes --lr-input-gap and --lr-input-radius, defaulting to the shared token defaults', async () => {
       const el = (await fixture(html`<lr-input aria-label="Name"></lr-input>`)) as LyraInput;
       const cs = getComputedStyle(wrapper(el));
       expect(cs.gap).to.equal('4px');
-      expect(cs.borderRadius).to.equal('6px');
+      expect(cs.borderRadius).to.equal('8px');
     });
 
     it('retunes the input-wrapper gap and corner radius with no ::part() rule', async () => {
@@ -1517,9 +1517,9 @@ describe('lr-input', () => {
       // The adornment gap is deliberately outside the ladder -- it never varied by tier.
       expect(getComputedStyle(wrapperOf(mEl)).gap).to.equal('4px');
       expect(getComputedStyle(wrapperOf(xsEl)).gap).to.equal('4px');
-      // The radius does vary: a 6px corner on a 24px-tall control reads as a lozenge.
-      expect(getComputedStyle(wrapperOf(mEl)).borderTopLeftRadius).to.equal('6px');
-      expect(getComputedStyle(wrapperOf(xsEl)).borderTopLeftRadius).to.equal('2px');
+      // The radius does vary: an 8px corner on a 24px-tall control reads as a lozenge.
+      expect(getComputedStyle(wrapperOf(mEl)).borderTopLeftRadius).to.equal('8px');
+      expect(getComputedStyle(wrapperOf(xsEl)).borderTopLeftRadius).to.equal('4px');
     });
   });
 });
@@ -1644,7 +1644,7 @@ describe('lr-input appearance', () => {
     expect(plainEl.pill).to.be.false;
     expect(pillEl.pill).to.be.true;
     expect(pillEl.getAttribute('pill')).to.equal('');
-    expect(getComputedStyle(wrapper(plainEl)).borderRadius).to.equal('6px');
+    expect(getComputedStyle(wrapper(plainEl)).borderRadius).to.equal('8px');
     expect(getComputedStyle(wrapper(pillEl)).borderRadius).to.equal('999px');
   });
 });
@@ -1993,8 +1993,8 @@ describe('lr-input unset-regression for the 8.0 opt-ins', () => {
     expect(native.hasAttribute('data-without-spin-buttons')).to.be.false;
     const cs = getComputedStyle(wrapper);
     expect(cs.borderTopWidth).to.equal('1px');
-    expect(cs.borderRadius).to.equal('6px');
-    expect(cs.minBlockSize).to.equal('40px');
+    expect(cs.borderRadius).to.equal('8px');
+    expect(cs.minBlockSize).to.equal('36px');
     // The control row is the only element between the wrapper and the end adornment, exactly as
     // before renderControls() existed.
     expect(wrapper.querySelectorAll('button').length).to.equal(0);
@@ -2053,7 +2053,7 @@ describe('lr-input — the shared size ladder', () => {
   // The ladder's whole promise: an input and a button of the same tier sit at the same height in
   // a toolbar row. Before 8.0.0 the l and xl tiers overshot their own floor by 2px and 5px.
   it('sits at the shared form-control height at every tier', async () => {
-    const expected: Record<string, number> = { '2xs': 20, xs: 24, s: 30, m: 40, l: 48, xl: 56 };
+    const expected: Record<string, number> = { '2xs': 20, xs: 24, s: 32, m: 36, l: 40, xl: 56 };
     for (const [size, px] of Object.entries(expected)) {
       const el = (await fixture(html`<lr-input size=${size} aria-label="Name"></lr-input>`)) as LyraInput;
       expect(height(el), `size=${size}`).to.equal(px);

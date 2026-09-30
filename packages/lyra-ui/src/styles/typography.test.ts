@@ -694,8 +694,8 @@ describe('typography tokens, themes and environments', () => {
         </div>
       `);
       const expected = {
-        light: ['rgb(237, 238, 241)', 'rgb(26, 26, 26)', 'rgb(246, 248, 250)', 'rgb(138, 138, 144)', 'rgb(26, 26, 26)', 'rgb(3, 94, 198)'],
-        dark: ['rgb(44, 46, 49)', 'rgb(242, 242, 242)', 'rgb(34, 39, 46)', 'rgb(120, 120, 129)', 'rgb(242, 242, 242)', 'rgb(91, 158, 255)'],
+        light: ['rgb(245, 245, 245)', 'rgb(10, 10, 10)', 'rgb(250, 250, 250)', 'rgb(229, 229, 229)', 'rgb(10, 10, 10)', 'rgb(26, 106, 77)'],
+        dark: ['rgb(38, 38, 38)', 'rgb(250, 250, 250)', 'rgb(23, 23, 23)', 'rgba(255, 255, 255, 0.1)', 'rgb(250, 250, 250)', 'rgb(52, 211, 153)'],
       } as const;
       for (const [mode, [codeBg, codeText, stripe, rule, heading, link]] of Object.entries(expected)) {
         const scope = pick(el, `#${mode}`);

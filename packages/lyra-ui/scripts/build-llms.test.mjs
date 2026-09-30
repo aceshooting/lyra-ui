@@ -917,19 +917,19 @@ assert.match(
 // Keep the complete shared token inventory visible in the generated reference.
 assert.match(tokens, /## Direct theme-backed tokens \(288\)/);
 assert.match(tokens, /## Derived and fixed tokens \(77\)/);
-// The decorative border tier documents its derived fallback, not a literal.
-assert.match(
-  tokens,
-  /\| `--lr-color-border-subtle` \| `--lr-theme-color-surface-border-subtle` \| `var\(--lr-color-border\)` \|/,
+// The effective Shadcn defaults keep decorative edges separate from control borders.
+assert.equal(
+  tokens.split('\n').find(line => line.startsWith('| `--lr-color-border-subtle` |')),
+  '| `--lr-color-border-subtle` | `--lr-theme-color-surface-border-subtle` | `#e5e5e5` | dark: `var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, rgb(255 255 255 / 0.1)))`<br>forcedColors: `ButtonText` |',
 );
 assert.match(tokens, /Aliases and computed values still follow/);
 assert.match(tokens, /fixed contract constants are intentionally\nnot theme inputs/);
 assert.doesNotMatch(tokens, /Each reads one `--lr-theme-\*` input/);
 assert.match(tokens, /\| `--lr-color-brand` \| `var\(--lr-color-brand-fill-loud\)` \| forcedColors: `LinkText` \|/);
 assert.match(tokens, /\| `--lr-mask-opaque` \| `#000` \| — \|/);
-assert.match(
-  tokens,
-  /\| `--lr-color-surface` \| `--lr-theme-color-surface-default` \| `#fff` \| dark: `var\(--lr-theme-color-surface-default, #1a1a1a\)`<br>forcedColors: `Canvas` \|/,
+assert.equal(
+  tokens.split('\n').find(line => line.startsWith('| `--lr-color-surface` |')),
+  '| `--lr-color-surface` | `--lr-theme-color-surface-default` | `#ffffff` | dark: `var(--lr-theme-color-surface-default, #0a0a0a)`<br>forcedColors: `Canvas` |',
 );
 
 // 29 since chartjs-plugin-annotation joined as lr-chart's optional annotations peer.

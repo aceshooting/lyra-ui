@@ -10,25 +10,150 @@
   [data-lr-surface='glass'] {
     --_lr-surface-installed: 1;
     --_lr-surface-enabled: 1;
+    --_lr-surface-root-filter: initial;
+    --_lr-glass-blocker: initial;
     --_lr-surface-content: '';
     --_lr-surface-isolation: isolate;
-    --_lr-surface-min-opacity: 0.9;
+    --_lr-surface-min-opacity: 0.8;
     --_lr-surface-maximum-blur: 16px;
-    --_lr-surface-foreground-weight: 55.00000000000001%;
+    --_lr-surface-foreground-weight: 80%;
     --_lr-surface-child-filter: none;
     --_lr-surface-child-opacity: 1;
-    --lr-theme-surface-opacity: 0.9;
+    --lr-theme-surface-opacity: 0.8;
     --lr-theme-surface-blur: 12px;
     --lr-theme-surface-saturation: 1.1;
     --lr-theme-surface-highlight: rgb(255 255 255 / 0.12);
   }
   [data-lr-surface='solid'] {
     --_lr-surface-installed: 1;
-    --_lr-surface-enabled: initial;
+    --_lr-surface-enabled: 0;
+    --_lr-surface-root-filter: none;
+    --_lr-glass-blocker: none;
     --_lr-surface-maximum-blur: initial;
     --_lr-surface-content: none;
     --_lr-surface-isolation: auto;
     --_lr-surface-child-filter: initial;
-    --_lr-surface-child-opacity: initial;
+    --_lr-surface-child-opacity: 0;
+    --_lr-glass-parent-opacity: 0;
+    --_lr-next-glass-opacity: 0;
+  }
+}
+
+@layer lr-theme-preset.surface {
+  :where(.lr-surface-chrome) {
+    position: relative;
+    color: var(--lr-color-text);
+    --_lr-surface-default-blur: 12px;
+    --_lr-surface-default-maximum-blur: 16px;
+    --_lr-surface-default-highlight: rgb(255 255 255 / 0.12);
+    --lr-color-text: var(--lr-theme-color-text-normal, CanvasText);
+    --_lr-glass-original-text-quiet: var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, CanvasText));
+    --_lr-glass-original-border: var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, CanvasText));
+    --_lr-glass-original-focus-ring-color: var(--lr-theme-color-focus, Highlight);
+    --lr-focus-ring-width: max(var(--lr-theme-focus-ring-width, 2px), var(--_lr-preference-focus-min, 0px));
+    --lr-focus-ring-color: var(--_lr-glass-qualified-focus-ring-color, var(--_lr-glass-original-focus-ring-color));
+    --lr-focus-ring-offset: var(--lr-theme-focus-ring-offset, 2px);
+    --lr-focus-ring: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+  }
+
+    :where(.lr-surface-chrome)[data-lr-surface='solid'] {
+      --_lr-surface-enabled: 0;
+      --_lr-surface-root-filter: none;
+      --_lr-surface-content: none;
+      --_lr-surface-isolation: auto;
+      --_lr-surface-child-filter: initial;
+      --_lr-surface-child-opacity: 0;
+    }
+    :where(.lr-surface-chrome) {
+      background: var(--lr-surface-background, var(--lr-theme-color-surface-container-high, var(--lr-theme-color-surface-overlay, Canvas)));
+      --_lr-glass-filter-value: blur(calc(clamp(0px, var(--lr-theme-surface-blur, var(--_lr-surface-default-blur)), var(--_lr-surface-maximum-blur, var(--_lr-surface-default-maximum-blur))) * (1 - var(--_lr-glass-parent-opacity, 0)))) saturate(calc(1 + (clamp(0, var(--lr-theme-surface-saturation, 1.1), 2) - 1) * (1 - var(--_lr-glass-parent-opacity, 0))));
+      --_lr-glass-current-filter: var(--_lr-preference-glass-filter, var(--_lr-glass-blocker, var(--_lr-glass-filter-value, none)));
+      --_lr-glass-foreground-weight: initial;
+      --_lr-next-glass-blocker: var(--_lr-surface-child-filter, none);
+    }
+    :where(.lr-surface-chrome) {
+      --_lr-next-glass-opacity: var(--_lr-surface-child-opacity, 1);
+    }
+    :where(.lr-surface-chrome[data-lr-surface='glass']) {
+      /* Read the ancestor's captured opacity before this painted scope establishes its own. */
+      --_lr-next-glass-opacity: inherit;
+    }
+    :where(.lr-surface-chrome[data-lr-surface='glass'] > *) {
+      --_lr-next-glass-opacity: 1;
+    }
+    :where(.lr-surface-chrome > *) {
+      --_lr-glass-blocker: var(--_lr-next-glass-blocker, initial);
+      --_lr-glass-parent-opacity: var(--_lr-next-glass-opacity, initial);
+    }
+    :where(.lr-surface-chrome)[data-lr-surface='solid'], [data-lr-surface='solid'] {
+      --_lr-glass-parent-opacity: 0;
+      --_lr-next-glass-opacity: 0;
+      --_lr-glass-blocker: none;
+    }
+    :where(.lr-surface-chrome)[data-lr-surface='glass'], [data-lr-surface='glass'] {
+      --_lr-glass-blocker: initial;
+    }
+    @supports ((backdrop-filter: blur(0)) or (-webkit-backdrop-filter: blur(0))) {
+      :where(.lr-surface-chrome) {
+        /* Resolve the default on the host where public focus aliases and the shorthand are
+           composed. Resetting either public token on the surface would mask host overrides. */
+        --_lr-glass-qualified-focus-ring-color: color-mix(
+          in srgb,
+          var(--_lr-glass-original-focus-ring-color, var(--lr-color-text)),
+          var(--lr-color-text) calc(var(--_lr-surface-foreground-weight, 80%) * var(--_lr-surface-enabled, 1) * (1 - var(--_lr-glass-parent-opacity, 0)) * (1 - var(--_lr-preference-glass-opacity, 0)))
+        );
+      }
+      :where(.lr-surface-chrome) {
+        isolation: var(--_lr-surface-isolation, isolate);
+        --_lr-glass-foreground-weight: calc(var(--_lr-surface-foreground-weight, 80%) * var(--_lr-surface-enabled, 1) * (1 - var(--_lr-glass-parent-opacity, 0)) * (1 - var(--_lr-preference-glass-opacity, 0)));
+        --_lr-glass-qualified-text-quiet: color-mix(in srgb, var(--_lr-glass-original-text-quiet, var(--lr-color-text)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
+        --lr-color-text-quiet: var(--_lr-glass-qualified-text-quiet, var(--_lr-glass-original-text-quiet));
+        --_lr-glass-qualified-border: color-mix(in srgb, var(--_lr-glass-original-border, var(--lr-color-text)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
+        --lr-color-border: var(--_lr-glass-qualified-border, var(--_lr-glass-original-border));
+        --_lr-glass-brand-text: color-mix(in srgb, var(--lr-color-brand), var(--lr-color-text) var(--_lr-glass-foreground-weight));
+        --_lr-glass-danger-text: color-mix(in srgb, var(--lr-color-danger), var(--lr-color-text) var(--_lr-glass-foreground-weight));
+        --_lr-glass-background: color-mix(
+          in srgb,
+          var(--lr-surface-background, var(--lr-theme-color-surface-container-high, var(--lr-theme-color-surface-overlay, Canvas))) calc((1 - var(--_lr-surface-enabled, 1) * (1 - var(--_lr-preference-glass-opacity, 0))) * 100%),
+          color-mix(
+            in srgb,
+            var(--lr-surface-background, var(--lr-theme-color-surface-container-high, var(--lr-theme-color-surface-overlay, Canvas))) calc(var(--_lr-preference-glass-opacity, max(var(--_lr-glass-parent-opacity, 0), clamp(var(--_lr-surface-min-opacity, 0.8), var(--lr-theme-surface-opacity, 0.8), 1))) * 100%),
+            transparent
+          )
+        );
+        background: var(--_lr-glass-background, var(--lr-surface-background, var(--lr-theme-color-surface-container-high, var(--lr-theme-color-surface-overlay, Canvas))));
+      }
+      :where(.lr-surface-chrome)::before {
+        content: var(--_lr-surface-content, '');
+        position: absolute;
+        inset: 0;
+        inline-size: auto;
+        block-size: auto;
+        /* The filter layer sits one shared content level below the surface. */
+        z-index: -1;
+        pointer-events: none;
+        border-radius: inherit;
+        -webkit-backdrop-filter: var(--_lr-glass-current-filter);
+        backdrop-filter: var(--_lr-glass-current-filter);
+        box-shadow: inset 0 var(--lr-border-width-thin, 1px) 0 var(--lr-theme-surface-highlight, var(--_lr-surface-default-highlight));
+      }
+    }
+    @media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) {
+      :where(.lr-surface-chrome) {
+        background: var(--lr-surface-background, var(--lr-theme-color-surface-container-high, var(--lr-theme-color-surface-overlay, Canvas)));
+        --_lr-glass-foreground-weight: initial;
+      }
+      :where(.lr-surface-chrome)::before {
+        content: none;
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+      }
+    }
+    @media (forced-colors: active) {
+      :where(.lr-surface-chrome) { background: Canvas; }
+    }
+  :where(.lr-surface-chrome):popover-open, :where(.lr-surface-chrome):modal {
+    --_lr-glass-parent-opacity: initial !important;
+    --_lr-glass-blocker: var(--_lr-surface-root-filter, initial) !important;
   }
 }

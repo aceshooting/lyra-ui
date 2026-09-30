@@ -58,7 +58,7 @@ export function LyraDocsContainer({ context, children }) {
   const [docsTheme, setDocsTheme] = useState(() => productionDocsTheme(themeName));
 
   useLayoutEffect(() => {
-    setLyraStyle({ mode: themeName, accent: null });
+    setLyraStyle({ mode: themeName });
     setDocsTheme(productionDocsTheme(themeName));
   }, [themeName]);
 

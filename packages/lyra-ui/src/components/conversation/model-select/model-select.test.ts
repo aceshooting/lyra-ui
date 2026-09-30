@@ -2838,8 +2838,8 @@ describe("size", () => {
     const expected: Record<string, string> = {
       "2xs": "20px",
       xs: "24px",
-      s: "30px",
-      l: "48px",
+      s: "32px",
+      l: "40px",
       xl: "56px",
     };
     for (const [size, px] of Object.entries(expected)) {
@@ -2856,11 +2856,11 @@ describe("size", () => {
     }
   });
 
-  it('enforces --lr-model-select-trigger-min-height at the default "m" size too (40px)', async () => {
+  it('enforces --lr-model-select-trigger-min-height at the default "m" size too (36px)', async () => {
     const el = (await fixture(
       html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`
     )) as LyraModelSelect;
-    expect(getComputedStyle(trigger(el)).minBlockSize).to.equal("40px");
+    expect(getComputedStyle(trigger(el)).minBlockSize).to.equal("36px");
   });
 
   it("accepts the small/medium/large spellings as aliases of s/m/l", async () => {

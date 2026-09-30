@@ -349,6 +349,12 @@ state hooks are `--lr-date-input-action-hover-color`, `--lr-date-input-action-ho
 `--lr-date-input-action-active-radius` for the pressed state. They inherit from theme ancestors;
 direct values on `lr-date-input` win without retuning library-wide tokens.
 
+The calendar popup uses the shared floating-surface hooks: `--lr-overlay-surface` (default
+`var(--lr-color-surface-container-high)`), `--lr-overlay-border` (default
+`var(--lr-color-border)`) and `--lr-overlay-radius` (default `var(--lr-radius-container)`).
+Set them on the control or an ancestor to retune the calendar popup without changing the input
+row. Its default border retains the form control's boundary contrast.
+
 `--lr-positioning-strategy` (16.0.0) — the calendar popup reads this same cascading
 `absolute`/`fixed` override documented on `<lr-popover>` when it is (re)positioned, falling back to
 its own `fixed` default when nothing is set. There is no per-instance `positioning-strategy`

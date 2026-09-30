@@ -181,6 +181,7 @@ it('draws popup and legend edges in the subtle border tier but keeps the control
   const { el } = await connectedMapWithoutMaplibre(
     '--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9)',
   );
+  el.setAttribute('data-lr-surface', 'solid');
   const popup = document.createElement('div');
   popup.className = 'maplibregl-popup-content';
   const legend = document.createElement('div');
@@ -198,8 +199,8 @@ it('draws popup and legend edges in the subtle border tier but keeps the control
   expect(getComputedStyle(legend).borderTopColor).to.equal('rgb(1, 2, 3)');
   expect(getComputedStyle(limit).borderBlockStartColor).to.equal('rgb(1, 2, 3)');
   // The group edge and the divider between its borderless buttons are those buttons' only boundary.
-  expect(getComputedStyle(group).borderTopColor).to.equal('rgb(7, 8, 9)');
-  expect(getComputedStyle(second).borderBlockStartColor).to.equal('rgb(7, 8, 9)');
+  expect(toRgba(getComputedStyle(group).borderTopColor)).to.deep.equal([7, 8, 9, 255]);
+  expect(toRgba(getComputedStyle(second).borderBlockStartColor)).to.deep.equal([7, 8, 9, 255]);
 });
 
 it('retunes the scale-bar bracket border from the shared border-width-medium token', async () => {
@@ -211,24 +212,28 @@ it('retunes the scale-bar bracket border from the shared border-width-medium tok
   expect(getComputedStyle(scale, '::after').borderBottomWidth).to.equal('6px');
 });
 
-it('gives an interactive marker a pointer cursor and a themed focus ring', async () => {
-  const { el } = await connectedMapWithoutMaplibre(
-    '--lr-theme-focus-ring-width: 5px; --lr-theme-color-focus: rgb(9, 8, 7)'
-  );
-  const marker = document.createElement('div');
-  marker.className = 'maplibregl-marker';
-  marker.setAttribute('role', 'button');
-  marker.tabIndex = 0;
-  el.shadowRoot!.append(marker);
+for (const treatment of ['solid', 'glass'] as const) {
+  it(`gives an interactive marker a pointer cursor and ${treatment === 'solid' ? 'an ancestor theme focus input' : 'a direct public focus override under Glass'}`, async () => {
+    const { el } = await connectedMapWithoutMaplibre(
+      '--lr-theme-focus-ring-width: 5px; --lr-theme-color-focus: rgb(9, 8, 7)',
+    );
+    el.setAttribute('data-lr-surface', treatment);
+    if (treatment === 'glass') el.style.setProperty('--lr-focus-ring-color', 'rgb(9, 8, 7)');
+    const marker = document.createElement('div');
+    marker.className = 'maplibregl-marker';
+    marker.setAttribute('role', 'button');
+    marker.tabIndex = 0;
+    el.shadowRoot!.append(marker);
 
-  expect(getComputedStyle(marker).cursor).to.equal('pointer');
-  await sendKeys({ press: 'Tab' });
-  marker.focus();
-  await waitUntil(
-    () => getComputedStyle(marker).outlineWidth === '5px' && getComputedStyle(marker).outlineColor === 'rgb(9, 8, 7)',
-    'the interactive marker focus ring never painted',
-  );
-});
+    expect(getComputedStyle(marker).cursor).to.equal('pointer');
+    await sendKeys({ press: 'Tab' });
+    marker.focus();
+    await waitUntil(() => marker.matches(':focus-visible'), 'the interactive marker did not receive keyboard focus');
+    const paint = getComputedStyle(marker);
+    expect(paint.outlineWidth).to.equal('5px');
+    expect(toRgba(paint.outlineColor)).to.deep.equal([9, 8, 7, 255]);
+  });
+}
 
 it('shows a loading skeleton and aria-busy while maplibre-gl loads, then swaps to the container', async function () {
   if (!hasWebGL2) this.skip();
@@ -395,6 +400,77 @@ it('resizes only the current connected map when its allocated container changes'
       configurable: true,
       value: OriginalResizeObserver,
     });
+  }
+});
+
+it('coalesces peer-control size deliveries and cancels stale work across disconnect and adoption', async () => {
+  const { el } = await connectedMapWithoutMaplibre();
+  const base = document.createElement('div');
+  const container = document.createElement('div');
+  container.setAttribute('part', 'container');
+  const corner = document.createElement('div');
+  corner.className = 'maplibregl-ctrl-bottom-right';
+  corner.style.height = '40px';
+  container.append(corner); base.append(container); el.shadowRoot!.append(base);
+  const privateMap = el as unknown as { observePeerChrome(): void; stopObservingPeerChrome(): void };
+  const originalObserver = window.ResizeObserver;
+  const originalRequest = window.requestAnimationFrame;
+  const originalCancel = window.cancelAnimationFrame;
+  const callbacks: ResizeObserverCallback[] = [];
+  const frames = new Map<number, FrameRequestCallback>();
+  let sequence = 0;
+  let canceled = 0;
+  class FakeResizeObserver {
+    constructor(callback: ResizeObserverCallback) { callbacks.push(callback); }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+  window.ResizeObserver = FakeResizeObserver as unknown as typeof ResizeObserver;
+  window.requestAnimationFrame = callback => { frames.set(++sequence, callback); return sequence; };
+  window.cancelAnimationFrame = handle => { if (frames.delete(handle)) canceled += 1; };
+  const deliver = (index: number) => callbacks[index]!([], {} as ResizeObserver);
+  const flush = () => {
+    const pending = [...frames]; frames.clear();
+    for (const [, callback] of pending) callback(0);
+  };
+  try {
+    privateMap.observePeerChrome();
+    expect(base.style.getPropertyValue('--_lr-map-controls-bottom')).to.equal('40px');
+    corner.style.height = '60px'; deliver(0); deliver(0);
+    expect(frames.size).to.equal(1);
+    expect(base.style.getPropertyValue('--_lr-map-controls-bottom')).to.equal('40px');
+    corner.style.height = '80px'; flush();
+    expect(base.style.getPropertyValue('--_lr-map-controls-bottom')).to.equal('80px');
+
+    corner.style.height = '100px'; deliver(0);
+    const stale = [...frames.values()][0]!;
+    el.remove();
+    expect(canceled).to.equal(1); expect(frames.size).to.equal(0);
+    stale(0); deliver(0);
+    expect(frames.size).to.equal(0);
+    expect(base.style.getPropertyValue('--_lr-map-controls-bottom')).to.equal('80px');
+    document.body.append(el); await el.updateComplete;
+    privateMap.observePeerChrome();
+    const replacementIndex = callbacks.length - 1;
+    deliver(0); expect(frames.size).to.equal(0);
+    corner.style.height = '120px'; deliver(replacementIndex);
+    expect(frames.size).to.equal(1); flush();
+    expect(base.style.getPropertyValue('--_lr-map-controls-bottom')).to.equal('120px');
+
+    corner.style.height = '140px'; deliver(replacementIndex);
+    const adoptedStale = [...frames.values()][0]!;
+    const foreign = document.implementation.createHTMLDocument('Observer adoption');
+    foreign.adoptNode(el);
+    expect(canceled).to.equal(2); expect(frames.size).to.equal(0);
+    adoptedStale(0); deliver(replacementIndex);
+    expect(frames.size).to.equal(0);
+    expect(base.style.getPropertyValue('--_lr-map-controls-bottom')).to.equal('120px');
+  } finally {
+    privateMap.stopObservingPeerChrome(); el.remove();
+    window.ResizeObserver = originalObserver;
+    window.requestAnimationFrame = originalRequest;
+    window.cancelAnimationFrame = originalCancel;
   }
 });
 
@@ -3914,8 +3990,8 @@ it('synchronizes popup-capable marker disclosure semantics and localized popup o
   expect(marker.getAttribute('aria-expanded')).to.equal('true');
   const popupClose = popup.querySelector('.maplibregl-popup-close-button') as HTMLButtonElement;
   expect(popupClose.getAttribute('part')).to.equal('popup-close-button');
-  expect(getComputedStyle(popupClose).minInlineSize).to.equal('40px');
-  expect(getComputedStyle(popupClose).minBlockSize).to.equal('40px');
+  expect(getComputedStyle(popupClose).minInlineSize).to.equal('36px');
+  expect(getComputedStyle(popupClose).minBlockSize).to.equal('36px');
   expect(
     popupClose.getAttribute('aria-label'),
   ).to.equal('Fermer');

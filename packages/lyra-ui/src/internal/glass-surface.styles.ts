@@ -12,17 +12,22 @@ import { css, unsafeCSS, type CSSResult } from 'lit';
 export function glassSurface(selector: string, fill: CSSResult, restingFill: CSSResult = fill, scrolling = false): CSSResult {
   const surface = unsafeCSS(selector);
   const selectors = selector.split(',').map(part => part.trim());
-  const children = unsafeCSS(selectors.map(part => `${part} > *`).join(', '));
+  const children = unsafeCSS(`:where(${selectors.map(part => `${part} > *`).join(', ')})`);
   const layer = unsafeCSS(selectors.map(part => `${part}${scrolling ? ' > .glass-scroll-layer' : ''}::before`).join(', '));
+  const captureSurface = unsafeCSS(`:where(${selector})`);
+  const scopedSelectors = selectors.map(part => /^:host\((.*)\)$/.test(part)
+    ? part.replace(/^:host\((.*)\)$/, ':host($1[data-lr-surface=\'glass\'])')
+    : `${part}[data-lr-surface='glass']`);
+  const captureScope = unsafeCSS(`:where(${scopedSelectors.join(', ')})`);
+  const captureChildren = unsafeCSS(`:where(${scopedSelectors.map(part => `${part} > *`).join(', ')})`);
   return css`
     :host([data-lr-surface='solid']) {
       --_lr-surface-enabled: 0;
-      --_lr-glass-blocker: none;
+      --_lr-surface-root-filter: none;
       --_lr-surface-content: none;
       --_lr-surface-isolation: auto;
       --_lr-surface-child-filter: initial;
       --_lr-surface-child-opacity: 0;
-      --_lr-glass-parent-opacity: 0;
     }
     ${surface} {
       background: ${restingFill};
@@ -30,11 +35,28 @@ export function glassSurface(selector: string, fill: CSSResult, restingFill: CSS
       --_lr-glass-current-filter: var(--_lr-preference-glass-filter, var(--_lr-glass-blocker, var(--_lr-glass-filter-value, none)));
       --_lr-glass-foreground-weight: initial;
       --_lr-next-glass-blocker: var(--_lr-surface-child-filter, none);
+    }
+    ${captureSurface} {
       --_lr-next-glass-opacity: var(--_lr-surface-child-opacity, 1);
+    }
+    ${captureScope} {
+      /* Read the ancestor's captured opacity before this painted scope establishes its own. */
+      --_lr-next-glass-opacity: inherit;
+    }
+    ${captureChildren} {
+      --_lr-next-glass-opacity: 1;
     }
     ${children} {
       --_lr-glass-blocker: var(--_lr-next-glass-blocker, initial);
       --_lr-glass-parent-opacity: var(--_lr-next-glass-opacity, initial);
+    }
+    :host([data-lr-surface='solid']), [data-lr-surface='solid'] {
+      --_lr-glass-parent-opacity: 0;
+      --_lr-next-glass-opacity: 0;
+      --_lr-glass-blocker: none;
+    }
+    :host([data-lr-surface='glass']), [data-lr-surface='glass'] {
+      --_lr-glass-blocker: initial;
     }
     @supports ((backdrop-filter: blur(0)) or (-webkit-backdrop-filter: blur(0))) {
       :host {

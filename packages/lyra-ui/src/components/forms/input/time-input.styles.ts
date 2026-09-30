@@ -335,7 +335,8 @@ export const styles = css`
   }
   :where([part~='column-item']):focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * var(--lr-focus-ring-offset));
+    /* Column scrollports clip an outward ring; preserve its full width inside the option. */
+    outline-offset: calc(-1 * max(var(--lr-focus-ring-width), calc(var(--lr-focus-ring-width) + var(--lr-focus-ring-offset))));
   }
   [part~='column-item-selected'] {
     background: var(--lr-time-input-column-selected-bg, var(--lr-color-brand));

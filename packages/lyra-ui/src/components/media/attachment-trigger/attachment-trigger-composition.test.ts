@@ -203,8 +203,8 @@ describe('lr-attachment-trigger: appearance and size', () => {
     expect(largeGlyph, 'the ladder scales the glyph').to.be.greaterThan(smallGlyph);
     for (const el of [small, large]) {
       const style = getComputedStyle(nativeControl(el, 'trigger'));
-      expect(style.minInlineSize, 'every tier keeps the shared tappable floor').to.equal('40px');
-      expect(style.minBlockSize).to.equal('40px');
+      expect(style.minInlineSize, 'every tier keeps the shared tappable floor').to.equal('36px');
+      expect(style.minBlockSize).to.equal('36px');
     }
   });
 

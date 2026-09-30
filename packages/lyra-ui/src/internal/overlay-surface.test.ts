@@ -1,6 +1,7 @@
 import { setFlagUrlResolver } from '../components/media/flag/flag.class.js';
 import { fixtureCleanup, expect, fixture, waitUntil } from '@open-wc/testing';
 import { html, type TemplateResult } from 'lit';
+import { toRgba } from '../../test/color-contrast.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../test/wtr-mouse.js';
 import '../components/overlays/overlay/popover.js';
 import '../components/overlays/overlay/dropdown.js';
@@ -19,9 +20,19 @@ import '../components/conversation/voice-picker/voice-picker.js';
 
 const TEST_FLAG_SRC = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3 2"%3E%3Cpath fill="%23005" d="M0 0h3v2H0z"/%3E%3Cpath fill="white" d="M1 0h1v2H1zM0 .5h3v1H0z"/%3E%3C/svg%3E';
 before(() => setFlagUrlResolver(async () => TEST_FLAG_SRC));
+let previousSheets: CSSStyleSheet[];
+before(async () => {
+  const response = await fetch(new URL('../surfaces/glass.css', import.meta.url));
+  if (!response.ok) throw new Error('Missing surface scope stylesheet');
+  const sheet = new CSSStyleSheet();
+  sheet.replaceSync(await response.text());
+  previousSheets = document.adoptedStyleSheets;
+  document.adoptedStyleSheets = [...previousSheets, sheet];
+});
 after(() => {
   fixtureCleanup();
   setFlagUrlResolver(null);
+  document.adoptedStyleSheets = previousSheets;
 });
 
 /**
@@ -72,12 +83,13 @@ function shadowPart(host: HTMLElement, selector: string, description: string): H
  * on formatting alone, on every engine, for a perfectly correct implementation.
  */
 function resolveColor(value: string): string {
+  expect(CSS.supports('color', value.trim()), `valid color: ${value}`).to.equal(true);
   const probe = document.createElement('div');
   probe.style.color = value.trim();
   document.body.append(probe);
-  const resolved = getComputedStyle(probe).color;
+  const [red, green, blue, alpha] = toRgba(getComputedStyle(probe).color);
   probe.remove();
-  return resolved;
+  return alpha === 255 ? `rgb(${red}, ${green}, ${blue})` : `rgba(${red}, ${green}, ${blue}, ${alpha / 255})`;
 }
 
 function token(el: HTMLElement, name: string): string {
@@ -87,8 +99,8 @@ function token(el: HTMLElement, name: string): string {
 function paint(box: HTMLElement): { fill: string; edge: string; corner: string } {
   const computed = getComputedStyle(box);
   return {
-    fill: computed.backgroundColor,
-    edge: computed.borderTopColor,
+    fill: resolveColor(computed.backgroundColor),
+    edge: resolveColor(computed.borderTopColor),
     corner: computed.getPropertyValue('border-top-left-radius').trim(),
   };
 }
@@ -574,15 +586,15 @@ it('lets a consumer --lr-overlay-border outrank both edge tiers', async () => {
   expect(wrong.join('\n'), 'surfaces that ignored the consumer edge colour').to.equal('');
 });
 
-it('resolves both edge tiers to the control border while the subtle input is unset', async () => {
-  // Unset-regression: the subtle tier is opt-in. With only the control input set, a panel edge
-  // must still land on it, so the split is invisible until a theme sets the subtle input.
+it('keeps the Shadcn decorative border independent of a control-only override', async () => {
+  // Shadcn supplies an independent decorative border. Retuning control boundaries must not
+  // overwrite it; the explicit subtle-input test above covers deliberate panel retheming.
   const controlOnly = `--lr-theme-color-surface-border: ${CONTROL_EDGE};`;
   const wrong = [
-    await edgeMismatches(PANEL_BUILDERS, controlOnly, CONTROL_EDGE),
+    await edgeMismatches(PANEL_BUILDERS, controlOnly, 'rgb(229, 229, 229)'),
     await edgeMismatches(CONTROL_POPUP_BUILDERS, controlOnly, CONTROL_EDGE),
   ].filter((text) => text !== '');
-  expect(wrong.join('\n'), 'surfaces that diverged with the subtle input unset').to.equal('');
+  expect(wrong.join('\n'), 'surfaces that lost their independent border role').to.equal('');
 });
 
 it('keeps the edge tiers apart under dir="rtl"', async () => {

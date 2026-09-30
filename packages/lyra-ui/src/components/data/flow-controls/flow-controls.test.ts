@@ -18,8 +18,8 @@ it('gives every toolbar button the shared minimum hit area', async () => {
   const el = (await fixture(html`<lr-flow-controls></lr-flow-controls>`)) as LyraFlowControls;
   for (const part of ['zoom-in', 'zoom-out', 'fit', 'lock']) {
     const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
-    expect(getComputedStyle(button).minInlineSize).to.equal('40px');
-    expect(getComputedStyle(button).minBlockSize).to.equal('40px');
+    expect(getComputedStyle(button).minInlineSize).to.equal('36px');
+    expect(getComputedStyle(button).minBlockSize).to.equal('36px');
   }
 });
 
@@ -489,8 +489,8 @@ describe('frame', () => {
     const el = (await fixture(html`<lr-flow-controls frame="plain"></lr-flow-controls>`)) as LyraFlowControls;
     for (const part of ['zoom-in', 'zoom-out', 'fit', 'lock']) {
       const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
-      expect(getComputedStyle(button).minInlineSize).to.equal('40px');
-      expect(getComputedStyle(button).minBlockSize).to.equal('40px');
+      expect(getComputedStyle(button).minInlineSize).to.equal('36px');
+      expect(getComputedStyle(button).minBlockSize).to.equal('36px');
     }
   });
 
@@ -522,8 +522,8 @@ describe('frame', () => {
     expect(controls.shadowRoot!.activeElement === button).to.be.true;
     const focused = getComputedStyle(button);
     expect(focused.outlineStyle).to.equal('solid');
-    expect(focused.outlineWidth).to.equal('2px'); // --lr-focus-ring-width
-    expect(focused.outlineOffset).to.equal('2px'); // --lr-focus-ring-offset
+    expect(focused.outlineWidth).to.equal('3px'); // --lr-focus-ring-width
+    expect(focused.outlineOffset).to.equal('0px'); // --lr-focus-ring-offset
   });
 
   it('is accessible under frame="plain" with a resolved canvas', async () => {

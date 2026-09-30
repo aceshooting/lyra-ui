@@ -12,6 +12,7 @@ import './csv-viewer.js';
 import '../../../translations/fr/viewers.js';
 import type { LyraCsvViewer } from './csv-viewer.js';
 import { LyraResourceLimitError } from '../../../internal/resource-loader.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 // These fixtures deliberately verify that retired attributes remain inert.
@@ -837,7 +838,7 @@ describe('lr-csv-viewer', () => {
         ) as HTMLElement;
         expect(action !== null).to.be.true;
         expect(getComputedStyle(highlighted).outlineStyle).to.equal('solid');
-        expect(getComputedStyle(action).minBlockSize).to.equal('40px');
+        expect(getComputedStyle(action).minBlockSize).to.equal('36px');
       } finally {
         restore();
       }
@@ -1302,7 +1303,7 @@ describe('lr-csv-viewer', () => {
 
     it('tints the active highlight apart from an inactive one', async () => {
       injectStyle(
-        'lr-csv-viewer { --lr-theme-color-brand-fill-loud: rgb(1, 2, 3); --lr-theme-color-warning-fill-loud: rgb(4, 5, 6); }'
+        'lr-csv-viewer { --lr-theme-color-focus: rgb(1, 2, 3); --lr-theme-color-warning-fill-loud: rgb(4, 5, 6); }'
       );
       const el = (await fixture(
         html`<lr-csv-viewer></lr-csv-viewer>`
@@ -1348,7 +1349,7 @@ describe('lr-csv-viewer', () => {
       // simply swallow the focus ring on this focusable cell -- indistinguishable from an unfocused
       // highlight. Probing the active (warning-tinted) highlight makes the swap unambiguous.
       injectStyle(
-        'lr-csv-viewer { --lr-theme-color-brand-fill-loud: rgb(1, 2, 3); --lr-theme-color-warning-fill-loud: rgb(4, 5, 6); }'
+        'lr-csv-viewer { --lr-theme-color-focus: rgb(1, 2, 3); --lr-theme-color-warning-fill-loud: rgb(4, 5, 6); }'
       );
       const el = (await fixture(
         html`<lr-csv-viewer></lr-csv-viewer>`
@@ -1362,7 +1363,9 @@ describe('lr-csv-viewer', () => {
         const action = highlighted.querySelector(
           '[part="cell-highlight-action"]'
         ) as HTMLElement;
-        action.focus();
+        await focusByKeyboard(action);
+        expect(getComputedStyle(action).outlineStyle).to.equal('solid');
+        expect(getComputedStyle(action).outlineWidth).to.equal('3px');
         expect(getComputedStyle(action).outlineColor).to.equal('rgb(1, 2, 3)');
       } finally {
         restore();

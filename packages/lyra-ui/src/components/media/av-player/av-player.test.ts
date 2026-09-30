@@ -1497,8 +1497,8 @@ describe('timeline marker activation', () => {
     const rect = el.shadowRoot!
       .querySelector('[part="timeline-marker"]')!
       .getBoundingClientRect();
-    expect(rect.width).to.be.at.least(40);
-    expect(rect.height).to.be.at.least(40);
+    expect(rect.width).to.be.at.least(36);
+    expect(rect.height).to.be.at.least(36);
   });
 });
 
@@ -1583,6 +1583,31 @@ describe('hover feedback for click-to-seek/clickable parts', () => {
 });
 
 describe('focus-visible feedback for keyboard-operable parts', () => {
+  for (const direction of ['ltr', 'rtl']) for (const offset of [0, 4]) {
+    it(`keeps the first transcript cue's keyboard outline inside its clipping scrollport in ${direction} with offset ${offset}`, async () => {
+      const el = await fixture<LyraAvPlayer>(html`<lr-av-player
+        dir=${direction} style="inline-size:320px;--lr-theme-focus-ring-width:5px;--lr-theme-focus-ring-offset:${offset}px"
+        .cues=${CUES}
+      ></lr-av-player>`);
+      await waitUntil(() => cueRows(el).length > 0);
+      const cue = cueRows(el)[0]!;
+      await focusByKeyboard(cue);
+      expect(cue.matches(':focus-visible')).to.equal(true);
+      const paint = getComputedStyle(cue);
+      expect(paint.outlineStyle).to.equal('solid');
+      expect(paint.outlineWidth).to.equal('5px');
+      expect(paint.outlineOffset).to.equal(`${-(5 + offset)}px`);
+      const viewport = transcriptList(el).shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+      const clip = viewport.getBoundingClientRect();
+      const bounds = cue.getBoundingClientRect();
+      const outset = Number.parseFloat(paint.outlineWidth) + Number.parseFloat(paint.outlineOffset);
+      expect(bounds.left - outset).to.be.at.least(clip.left + viewport.clientLeft);
+      expect(bounds.right + outset).to.be.at.most(clip.left + viewport.clientLeft + viewport.clientWidth);
+      expect(bounds.top - outset).to.be.at.least(clip.top + viewport.clientTop);
+      expect(bounds.bottom + outset).to.be.at.most(clip.top + viewport.clientTop + viewport.clientHeight);
+    });
+  }
+
   it('honors the composite focus-ring shorthand on every AV keyboard target', async () => {
     const el = await fixture<LyraAvPlayer>(html`
       <lr-av-player

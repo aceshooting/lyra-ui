@@ -50,6 +50,10 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-offset));
   }
+  [part='code-block']:focus-visible,
+  [part='table-wrapper']:focus-visible {
+    outline-offset: calc(-1 * max(var(--lr-focus-ring-width), calc(var(--lr-focus-ring-width) + var(--lr-focus-ring-offset))));
+  }
   /* Shared by the streaming, still-loading and failure-fallback states. The template keeps its
      binding flush (markdown-shared.ts renderMarkdownContent), so this state shows exactly content. */
   [part='content'][data-fallback] {
@@ -348,7 +352,7 @@ export const styles = css`
   }
   [part~='code-block-copy']:where([data-lr-code-chrome]):focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * var(--lr-focus-ring-offset));
+    outline-offset: calc(-1 * max(var(--lr-focus-ring-width), calc(var(--lr-focus-ring-width) + var(--lr-focus-ring-offset))));
   }
   @media (forced-colors: active) {
     [part~='code-block-copy']:where([data-lr-code-chrome]) {

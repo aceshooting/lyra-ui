@@ -44,8 +44,8 @@ describe('shadcn look', () => {
       const inputWrapper = input.shadowRoot!.querySelector<HTMLElement>('[part~="input-wrapper"]')!;
       const cardBase = card.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
       const expected = mode === 'light'
-        ? { primary: 'rgb(23, 23, 23)', control: 'rgb(145, 145, 145)', card: 'rgb(229, 229, 229)' }
-        : { primary: 'rgb(229, 229, 229)', control: 'rgb(100, 100, 100)', card: 'rgba(255, 255, 255, 0.1)' };
+        ? { primary: 'rgb(26, 106, 77)', control: 'rgb(145, 145, 145)', card: 'rgb(229, 229, 229)' }
+        : { primary: 'rgb(52, 211, 153)', control: 'rgb(100, 100, 100)', card: 'rgba(255, 255, 255, 0.1)' };
 
       expect(getComputedStyle(buttonBase).backgroundColor).to.equal(expected.primary);
       expect(getComputedStyle(inputWrapper).borderTopColor).to.equal(expected.control);

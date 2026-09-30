@@ -355,10 +355,10 @@ it("gives the month-navigation buttons the shared minimum hit area", async () =>
     '[part="previous"]'
   ) as HTMLElement;
   const next = el.shadowRoot!.querySelector('[part="next"]') as HTMLElement;
-  expect(getComputedStyle(previous).minInlineSize).to.equal("40px");
-  expect(getComputedStyle(previous).minBlockSize).to.equal("40px");
-  expect(getComputedStyle(next).minInlineSize).to.equal("40px");
-  expect(getComputedStyle(next).minBlockSize).to.equal("40px");
+  expect(getComputedStyle(previous).minInlineSize).to.equal("36px");
+  expect(getComputedStyle(previous).minBlockSize).to.equal("36px");
+  expect(getComputedStyle(next).minInlineSize).to.equal("36px");
+  expect(getComputedStyle(next).minBlockSize).to.equal("36px");
 });
 
 it("resolves the nav-button labels through a .strings override when the label props are left at their defaults", async () => {

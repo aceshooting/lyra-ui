@@ -19,6 +19,8 @@
 CSV/JSON download button with extensible event-driven formats — either single-format (click exports
 immediately) or multi-format (click opens a small menu).
 
+The format menu follows the [shared surface treatment](shared/styles-and-tokens.md).
+
 **Properties:**
 
 - `rows: readonly Readonly<Record<string, unknown>>[] = []` (attribute: false) — assignment takes

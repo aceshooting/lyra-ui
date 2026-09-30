@@ -16,6 +16,9 @@
 
 ## `lr-voice-picker`
 
+The voice list follows the [shared surface treatment](shared/styles-and-tokens.md);
+its editing field retains an opaque fill.
+
 A TTS voice selector over a host-supplied `catalog`, mirroring `lr-model-select`'s
 closed-dropdown/free-text-combobox dual mode, stale-value handling, and form-association verbatim
 (see that section for the full mode-switching contract this one shares), extended with a

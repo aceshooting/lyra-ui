@@ -8,7 +8,7 @@ const imageSrc = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1
 
 async function loadedViewer(direction = 'ltr', theme = 'light'): Promise<LyraImageViewer> {
   const el = await fixture<LyraImageViewer>(html`<lr-image-viewer
-    dir=${direction} data-lr-theme=${theme} src=${imageSrc} annotatable fit="width"
+    dir=${direction} data-lr-mode=${theme} src=${imageSrc} annotatable fit="width"
     style="inline-size: 320px; --lr-theme-transition-normal: 0s linear;"
     .highlights=${[{ id: 'region', label: 'Region', anchor: { kind: 'region', rect: { x: 10, y: 10, width: 25, height: 25 } } }]}
   ></lr-image-viewer>`);
@@ -84,20 +84,21 @@ for (const theme of ['light', 'dark']) {
     context.fillStyle = 'rgb(220, 230, 240)';
     context.fillRect(0, 0, 320, 240);
     const el = await fixture<LyraImageViewer>(html`<lr-image-viewer
-      data-lr-theme=${theme} .src=${canvas.toDataURL()} fit="actual" annotatable
+      data-lr-mode=${theme} .src=${canvas.toDataURL()} fit="actual" annotatable
       style="inline-size: 320px; --lr-theme-transition-normal: 0s linear;"
     ></lr-image-viewer>`);
     await waitUntil(() => el.shadowRoot!.querySelector<HTMLImageElement>('[part="image"]')?.naturalWidth === 320);
     await el.updateComplete;
     const wrapper = el.shadowRoot!.querySelector<HTMLElement>('[part="image-wrapper"]')!;
-    el.style.setProperty('--lr-theme-focus-ring-width', '3px');
+    el.style.setProperty('--lr-theme-focus-ring-width', '5px');
+    el.style.setProperty('--lr-theme-border-width-thin', '2px');
     el.style.setProperty('--lr-theme-color-focus', 'rgb(21, 42, 63)');
     await sendKeys({ press: 'Tab' });
     wrapper.focus();
     await waitUntil(() => wrapper.matches(':focus-visible'));
     const style = getComputedStyle(wrapper);
     expect(style.outlineStyle).to.equal('solid');
-    expect(style.outlineWidth).to.equal('3px');
+    expect(style.outlineWidth).to.equal('5px');
     expect(style.outlineColor).to.equal('rgb(21, 42, 63)');
     const rect = wrapper.getBoundingClientRect();
     const viewport = el.shadowRoot!.querySelector('lr-pan-zoom')!.shadowRoot!.querySelector('[part="viewport"]')!.getBoundingClientRect();

@@ -503,8 +503,8 @@ describe('follow / stick-to-bottom contract', () => {
     )) as LyraTranscriptFeed;
     const button = el.shadowRoot!.querySelector('[part="jump-button"]') as HTMLButtonElement;
     const style = getComputedStyle(button);
-    expect(style.minInlineSize).to.equal('40px');
-    expect(style.minBlockSize).to.equal('40px');
+    expect(style.minInlineSize).to.equal('36px');
+    expect(style.minBlockSize).to.equal('36px');
   });
 
   it('inherits a 20px consumer font into the jump control', async () => {

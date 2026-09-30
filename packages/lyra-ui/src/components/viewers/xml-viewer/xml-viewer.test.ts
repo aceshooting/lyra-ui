@@ -995,11 +995,11 @@ describe('toggle geometry', () => {
     await el.updateComplete;
     const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
     const style = getComputedStyle(toggle);
-    expect(style.minInlineSize).to.equal('40px');
-    expect(style.minBlockSize).to.equal('40px');
+    expect(style.minInlineSize).to.equal('36px');
+    expect(style.minBlockSize).to.equal('36px');
     const box = toggle.getBoundingClientRect();
-    expect(box.width).to.be.at.least(40);
-    expect(box.height).to.be.at.least(40);
+    expect(box.width).to.be.at.least(36);
+    expect(box.height).to.be.at.least(36);
   });
 
   it('keeps the chevron box at its own size when --lr-icon-button-size is themed below it', async () => {

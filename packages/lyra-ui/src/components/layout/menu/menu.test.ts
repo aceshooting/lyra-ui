@@ -1351,6 +1351,7 @@ it('applies the same two names to a submenu surface', async () => {
   const menu = wrapper.querySelector('lr-menu') as LyraMenu;
   const share = byId<LyraMenuItem>(menu, 'share');
   const child = byId<LyraMenu>(menu, 'share-menu');
+  child.querySelector('#link')!.textContent = 'Copy an exceptionally long link';
   await share.openSubmenu('none');
   await settle(menu, child);
   const surface = submenuSurface(child);

@@ -21,7 +21,7 @@ import '../components/conversation/model-select/model-select.js';
 import '../components/conversation/voice-picker/voice-picker.js';
 import '../components/utility/export-button/export-button.js';
 import type { LyraDialog } from '../components/overlays/dialog/dialog.class.js';
-import type { LyraPopover } from '../components/overlays/overlay/popover.class.js';
+import type { LyraDropdown } from '../components/overlays/overlay/dropdown.class.js';
 
 type SurfaceFixture = { name: string; template: TemplateResult; selector: string; part: string };
 const surfaces: SurfaceFixture[] = [
@@ -94,7 +94,7 @@ describe('shared glass menu and modal surfaces', () => {
               && bounds.width > 0 && bounds.height > 0;
           }, `${surface.name} must be open and visibly rendered`);
           if (surface.name === 'navigation panel') {
-            expect(box.dataset.layout).to.equal('floating');
+            expect(box.dataset['layout']).to.equal('floating');
             expect(box.matches(':popover-open')).to.equal(true);
           }
           const alpha = toRgba(getComputedStyle(box).backgroundColor)[3];
@@ -118,20 +118,20 @@ describe('shared glass menu and modal surfaces', () => {
   it('lets independently promoted overlays escape an ancestor Glass material', async () => {
     const wrapper = await fixture<HTMLDivElement>(html`<div class="lr-surface-chrome" data-lr-surface="glass">
       <lr-dialog label="Details" style="--lr-dialog-height:200px;--lr-dialog-width:300px;--lr-duration-base:0ms">
-        <lr-popover top-layer style="--show-duration:0ms;--hide-duration:0ms"><button slot="trigger">Actions</button><lr-menu><lr-menu-item>Share</lr-menu-item></lr-menu></lr-popover>
+        <lr-dropdown top-layer style="--show-duration:0ms;--hide-duration:0ms"><button slot="trigger">Actions</button><lr-menu><lr-menu-item>Share</lr-menu-item></lr-menu></lr-dropdown>
       </lr-dialog></div>`);
     const dialog = wrapper.querySelector<LyraDialog>('lr-dialog')!;
     await dialog.show();
     const panel = dialog.shadowRoot!.querySelector<HTMLElement>('[part~="panel"]')!;
     expect(toRgba(getComputedStyle(panel).backgroundColor)[3]).to.equal(204);
-    const popover = dialog.querySelector<LyraPopover>('lr-popover')!;
-    await popover.show();
-    const popup = popover.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+    const dropdown = dialog.querySelector<LyraDropdown>('lr-dropdown')!;
+    await dropdown.show();
+    const popup = dropdown.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
     expect(popup.matches(':popover-open')).to.equal(true);
     expect(toRgba(getComputedStyle(popup).backgroundColor)[3]).to.equal(204);
-    const menu = popover.querySelector<HTMLElement>('lr-menu')!;
+    const menu = dropdown.querySelector<HTMLElement>('lr-menu')!;
     expect(toRgba(getComputedStyle(menu).backgroundColor)[3]).to.equal(0);
-    await popover.hide();
+    await dropdown.hide();
     await dialog.hide();
   });
 

@@ -899,7 +899,7 @@ it("contains long view labels in a narrow header and floors toggles at the share
     '[part="view-toggle"]'
   ) as HTMLButtonElement;
   expect(header.scrollWidth).to.be.at.most(header.clientWidth + 1);
-  expect(toggle.getBoundingClientRect().height).to.be.at.least(40);
+  expect(toggle.getBoundingClientRect().height).to.be.at.least(36);
 });
 
 it("contains unbroken title, view-label, and action content at an exact 320px allocation in LTR and RTL", async () => {
@@ -987,7 +987,7 @@ it("contains unbroken title, view-label, and action content at an exact 320px al
       expect(bounds.right, `${direction} control end`).to.be.at.most(
         headerBounds.right + 1
       );
-      expect(bounds.height, `${direction} control hit area`).to.be.at.least(40);
+      expect(bounds.height, `${direction} control hit area`).to.be.at.least(36);
     }
   }
 });

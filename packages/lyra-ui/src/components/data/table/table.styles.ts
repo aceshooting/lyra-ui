@@ -224,7 +224,7 @@ export const styles = css`
   }
   [part='resize-handle']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * var(--lr-focus-ring-offset));
+    outline-offset: calc(-1 * max(var(--lr-focus-ring-width), calc(var(--lr-focus-ring-width) + var(--lr-focus-ring-offset))));
   }
   /* :where() zeroes the attribute qualifiers to (0,1,0), matching the :hover rule below -- at
      (0,3,0) a consumer's own ::part(header-cell) cursor override ((0,1,1)) would lose without

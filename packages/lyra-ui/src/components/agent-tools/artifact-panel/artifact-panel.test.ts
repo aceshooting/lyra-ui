@@ -186,10 +186,10 @@ describe('lr-artifact-panel', () => {
     await el.updateComplete;
     const previous = el.shadowRoot!.querySelector('[part="version-previous"]') as HTMLElement;
     const next = el.shadowRoot!.querySelector('[part="version-next"]') as HTMLElement;
-    expect(getComputedStyle(previous).minInlineSize).to.equal('40px');
-    expect(getComputedStyle(previous).minBlockSize).to.equal('40px');
-    expect(getComputedStyle(next).minInlineSize).to.equal('40px');
-    expect(getComputedStyle(next).minBlockSize).to.equal('40px');
+    expect(getComputedStyle(previous).minInlineSize).to.equal('36px');
+    expect(getComputedStyle(previous).minBlockSize).to.equal('36px');
+    expect(getComputedStyle(next).minInlineSize).to.equal('36px');
+    expect(getComputedStyle(next).minBlockSize).to.equal('36px');
   });
 
   it('gives the view/restore/copy/download header buttons the WCAG 24px minimum hit area', async () => {

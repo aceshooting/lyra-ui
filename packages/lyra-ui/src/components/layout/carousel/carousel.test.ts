@@ -1058,8 +1058,8 @@ it("gives each indicator the shared minimum hit area without inflating the visib
     '[part~="pagination-item"]'
   ) as HTMLElement;
   const dot = indicator.querySelector('[part="indicator-dot"]') as HTMLElement;
-  expect(getComputedStyle(indicator).minInlineSize).to.equal("40px");
-  expect(getComputedStyle(indicator).minBlockSize).to.equal("40px");
+  expect(getComputedStyle(indicator).minInlineSize).to.equal("36px");
+  expect(getComputedStyle(indicator).minBlockSize).to.equal("36px");
   // The visible dot itself stays compact (--lr-size-0-5rem = 8px), not blown up to 40px -- the
   // button's own box grows around it via flex centering instead.
   expect(getComputedStyle(dot).inlineSize).to.equal("8px");

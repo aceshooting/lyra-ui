@@ -80,7 +80,7 @@ export const styles = css`
   }
   [part="header"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * var(--lr-focus-ring-offset));
+    outline-offset: calc(-1 * max(var(--lr-focus-ring-width), calc(var(--lr-focus-ring-width) + var(--lr-focus-ring-offset))));
   }
   [part="toggle"] {
     display: inline-flex;
@@ -178,7 +178,7 @@ export const styles = css`
   [part="body"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     /* Inward so the ring isn't clipped by this element's overflow-block:auto, as lr-code-block. */
-    outline-offset: calc(-1 * var(--lr-focus-ring-offset));
+    outline-offset: calc(-1 * max(var(--lr-focus-ring-width), calc(var(--lr-focus-ring-width) + var(--lr-focus-ring-offset))));
   }
   /* A subtler preview for mouse users, who otherwise get no cue this is a separately
      scrollable/focusable region. Plain border color, not the focus ring's brand, so the eventual

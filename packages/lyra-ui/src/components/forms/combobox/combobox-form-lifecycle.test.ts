@@ -273,7 +273,7 @@ it("exposes --lr-combobox-gap and --lr-combobox-radius, defaulting to the shared
   ) as HTMLElement;
   const cs = getComputedStyle(combobox);
   expect(cs.gap).to.equal("4px");
-  expect(cs.borderRadius).to.equal("6px");
+  expect(cs.borderRadius).to.equal("8px");
 });
 
 it("reflects an invalid state only after the field has been interacted with once", async () => {

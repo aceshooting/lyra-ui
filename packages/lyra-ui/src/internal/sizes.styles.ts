@@ -23,17 +23,23 @@ export const sizes = css`
   :host {
     --lr-form-control-height-2xs: var(--lr-theme-form-control-height-2xs, 1.25rem);
     --lr-form-control-height-xs: var(--lr-theme-form-control-height-xs, 1.5rem);
-    --lr-form-control-height-s: var(--lr-theme-form-control-height-s, 1.875rem);
-    --lr-form-control-height-m: var(--lr-theme-form-control-height-m, 2.5rem);
-    --lr-form-control-height-l: var(--lr-theme-form-control-height-l, 3rem);
+    --lr-form-control-height-s: var(--lr-theme-form-control-height-s, 2rem);
+    --lr-form-control-height-m: var(--lr-theme-form-control-height-m, 2.25rem);
+    --lr-form-control-height-l: var(--lr-theme-form-control-height-l, 2.5rem);
     --lr-form-control-height-xl: var(--lr-theme-form-control-height-xl, 3.5rem);
 
     /* The default tier is "m"; these :host declarations ARE that tier, so a :host([size='m']) block
        would only restate them. */
     --lr-form-control-height: var(--lr-form-control-height-m);
+    /* Cap default padding against the consumer's live line box. Rows retain auto height, so
+       larger authored content still grows instead of being clipped to the tier's floor. */
+    --_lr-form-control-padding-block-limit: max(
+      0px,
+      calc((var(--lr-form-control-height) - 1lh - 2 * var(--lr-border-width-thin)) / 2)
+    );
     --lr-form-control-font-size: var(--lr-font-size-m);
     --lr-form-control-padding-inline: var(--lr-space-m);
-    --lr-form-control-padding-block: var(--lr-space-xs);
+    --lr-form-control-padding-block: min(var(--lr-space-xs), var(--_lr-form-control-padding-block-limit));
     --lr-form-control-gap: var(--lr-space-2xs);
     --lr-form-control-radius: var(--lr-theme-form-control-radius, var(--lr-radius));
   }
@@ -56,33 +62,33 @@ export const sizes = css`
     --lr-form-control-height: var(--lr-form-control-height-s);
     --lr-form-control-font-size: var(--lr-font-size-sm);
     --lr-form-control-padding-inline: var(--lr-space-s);
-    --lr-form-control-padding-block: var(--lr-space-2xs);
+    --lr-form-control-padding-block: min(var(--lr-space-2xs), var(--_lr-form-control-padding-block-limit));
   }
   :host([size='medium']) {
     --lr-form-control-height: var(--lr-form-control-height-m);
     --lr-form-control-font-size: var(--lr-font-size-m);
     --lr-form-control-padding-inline: var(--lr-space-m);
-    --lr-form-control-padding-block: var(--lr-space-xs);
+    --lr-form-control-padding-block: min(var(--lr-space-xs), var(--_lr-form-control-padding-block-limit));
   }
   :host([size='l']),
   :host([size='large']) {
     --lr-form-control-height: var(--lr-form-control-height-l);
     --lr-form-control-font-size: var(--lr-font-size-lg);
     --lr-form-control-padding-inline: var(--lr-space-l);
-    --lr-form-control-padding-block: var(--lr-space-s);
+    --lr-form-control-padding-block: min(var(--lr-space-s), var(--_lr-form-control-padding-block-limit));
   }
   :host([size='xl']) {
     --lr-form-control-height: var(--lr-form-control-height-xl);
     --lr-form-control-font-size: var(--lr-font-size-xl);
     --lr-form-control-padding-inline: var(--lr-space-l);
-    --lr-form-control-padding-block: var(--lr-space-s);
+    --lr-form-control-padding-block: min(var(--lr-space-s), var(--_lr-form-control-padding-block-limit));
   }
 
   /* Coarse-pointer touch-target floor, paired with the identical --lr-icon-button-size rule in
      tokens.styles.ts's baseTokens -- the two token systems the density-axis request named as "the
      only lever". Every tier's tappable height floors at 2.75rem (44px, the iOS HIG / Android
      Material touch-target convention) once the pointer that reaches it is a finger rather than a
-     mouse; 'l' and 'xl' are already at or above that and so are untouched by max(). Font size and
+     mouse; a tier grows only when its resolved height is below that floor. Font size and
      padding are deliberately left alone -- only the tappable box itself grows, so a coarse-pointer
      '2xs' row still reads as dense, it just is not finger-hostile. Selector-for-selector against
      every rule above (not one generic :host rule): :host([size='2xs']) outranks a bare :host on

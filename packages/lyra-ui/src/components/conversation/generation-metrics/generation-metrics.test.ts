@@ -73,8 +73,8 @@ it("gives the stop button the shared minimum hit area", async () => {
   const stopButton = el.shadowRoot!.querySelector(
     '[part="stop-button"]'
   ) as HTMLElement;
-  expect(getComputedStyle(stopButton).minInlineSize).to.equal("40px");
-  expect(getComputedStyle(stopButton).minBlockSize).to.equal("40px");
+  expect(getComputedStyle(stopButton).minInlineSize).to.equal("36px");
+  expect(getComputedStyle(stopButton).minBlockSize).to.equal("36px");
 });
 
 it('inherits a 20px consumer font into the stop control and its glyph', async () => {

@@ -1195,8 +1195,8 @@ describe("data mode", () => {
     const buttons = [...actionsSlot.querySelectorAll("button")];
     expect(buttons.length).to.equal(3);
     for (const button of buttons) {
-      expect(getComputedStyle(button).minInlineSize).to.equal("40px");
-      expect(getComputedStyle(button).minBlockSize).to.equal("40px");
+      expect(getComputedStyle(button).minInlineSize).to.equal("36px");
+      expect(getComputedStyle(button).minBlockSize).to.equal("36px");
     }
   });
 

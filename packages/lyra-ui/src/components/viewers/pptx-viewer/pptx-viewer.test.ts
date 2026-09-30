@@ -712,10 +712,10 @@ describe("lr-pptx-viewer", () => {
         '[part="next-button"]'
       ) as HTMLElement;
 
-      expect(getComputedStyle(previous).minInlineSize).to.equal("40px");
-      expect(getComputedStyle(previous).minBlockSize).to.equal("40px");
-      expect(getComputedStyle(next).minInlineSize).to.equal("40px");
-      expect(getComputedStyle(next).minBlockSize).to.equal("40px");
+      expect(getComputedStyle(previous).minInlineSize).to.equal("36px");
+      expect(getComputedStyle(previous).minBlockSize).to.equal("36px");
+      expect(getComputedStyle(next).minInlineSize).to.equal("36px");
+      expect(getComputedStyle(next).minBlockSize).to.equal("36px");
     } finally {
       restore();
     }

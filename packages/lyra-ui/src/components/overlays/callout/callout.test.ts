@@ -863,20 +863,20 @@ it('gives the close button the shared minimum hit area in both the default and i
   // The floor moved one shadow boundary deeper with the lr-icon-button composition; the rendered
   // box is what the contract is about, so both the declared floor and the laid-out size are read.
   const control = closeControl(el);
-  expect(getComputedStyle(control).minInlineSize).to.equal('40px');
-  expect(getComputedStyle(control).minBlockSize).to.equal('40px');
-  expect(control.getBoundingClientRect().width).to.be.at.least(40);
-  expect(control.getBoundingClientRect().height).to.be.at.least(40);
+  expect(getComputedStyle(control).minInlineSize).to.equal('36px');
+  expect(getComputedStyle(control).minBlockSize).to.equal('36px');
+  expect(control.getBoundingClientRect().width).to.be.at.least(36);
+  expect(control.getBoundingClientRect().height).to.be.at.least(36);
 
   const inlineEl = (await fixture(
     html`<lr-callout inline closable>Message</lr-callout>`,
   )) as LyraCallout;
   const inlineControl = closeControl(inlineEl);
   const inlineIcon = inlineEl.shadowRoot!.querySelector('[part="close-icon"]') as HTMLElement;
-  expect(getComputedStyle(inlineControl).minInlineSize).to.equal('40px');
-  expect(getComputedStyle(inlineControl).minBlockSize).to.equal('40px');
-  expect(inlineControl.getBoundingClientRect().width).to.be.at.least(40);
-  expect(inlineControl.getBoundingClientRect().height).to.be.at.least(40);
+  expect(getComputedStyle(inlineControl).minInlineSize).to.equal('36px');
+  expect(getComputedStyle(inlineControl).minBlockSize).to.equal('36px');
+  expect(inlineControl.getBoundingClientRect().width).to.be.at.least(36);
+  expect(inlineControl.getBoundingClientRect().height).to.be.at.least(36);
   // The visible "×" glyph shrinks to the compact inline size, not the button's own hit target.
   expect(getComputedStyle(inlineIcon).inlineSize).to.equal('24px');
   expect(getComputedStyle(inlineIcon).blockSize).to.equal('24px');

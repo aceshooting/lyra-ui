@@ -13,7 +13,7 @@ const composite = (paint: string, backdrop: string): string => {
 /** Native peer nodes exercise the component's CSS even where WebGL2 is unavailable. */
 async function chromeFixture(look = 'shadcn', mode = 'light', treatment = 'glass') {
   const host = await fixture<LyraMap>(html`<lr-map data-lr-look=${look} data-lr-mode=${mode}
-    data-lr-surface=${treatment} .legend=${[{ label: 'Category', color: 'red' }]}></lr-map>`);
+    data-lr-surface=${treatment} .legend=${[{ label: 'Category', color: 'red', pattern: 'solid' }]}></lr-map>`);
   const base = host.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
   const controls = ['maplibregl-ctrl-group', 'maplibregl-ctrl-scale', 'maplibregl-ctrl-attrib'].map((name) => {
     const element = document.createElement('div');

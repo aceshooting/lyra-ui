@@ -343,8 +343,8 @@ it('contains unbroken localized reset labels inside 320px LTR and RTL allocation
     expect(controls.scrollWidth, `${direction} controls scroll width`).to.be.at.most(controls.clientWidth);
     expect(resetBounds.left, `${direction} reset start`).to.be.at.least(allocation.left);
     expect(resetBounds.right, `${direction} reset end`).to.be.at.most(allocation.right);
-    expect(zoomOut.getBoundingClientRect().width, `${direction} zoom-out hit area`).to.be.at.least(40);
-    expect(zoomIn.getBoundingClientRect().width, `${direction} zoom-in hit area`).to.be.at.least(40);
+    expect(zoomOut.getBoundingClientRect().width, `${direction} zoom-out hit area`).to.be.at.least(36);
+    expect(zoomIn.getBoundingClientRect().width, `${direction} zoom-in hit area`).to.be.at.least(36);
     expect(resetStyle.textOverflow, `${direction} reset label truncation`).to.equal('ellipsis');
     expect(reset.textContent).to.contain('100');
     wrapper.remove();

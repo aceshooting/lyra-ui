@@ -296,7 +296,7 @@ it("exposes --lr-combobox-tag-bg/-color/-radius, defaulting to the pre-existing 
   const sharedBrandQuiet = getComputedStyle(probe).color;
   probe.remove();
   expect(getComputedStyle(tag).backgroundColor).to.equal(sharedBrandQuiet);
-  expect(getComputedStyle(tag).borderRadius).to.equal("6px");
+  expect(getComputedStyle(tag).borderRadius).to.equal("8px");
 });
 
 it("lets a consumer retint the tag background/text/radius with no ::part(tag) rule", async () => {
@@ -362,7 +362,7 @@ it("gives the clear button and expand icon a real touch target instead of collap
   expect(expandIcon.getBoundingClientRect().width).to.be.greaterThan(24);
 });
 
-it("meets the shared 40px hit-area floor on the tag remove button and clear button", async () => {
+it("meets the shared hit-area floor on the tag remove button and clear button", async () => {
   const el = (await fixture(basic())) as LyraCombobox;
   el.multiple = true;
   el.withClear = true;
@@ -372,14 +372,14 @@ it("meets the shared 40px hit-area floor on the tag remove button and clear butt
   const removeBtn = el.shadowRoot!.querySelector(
     '[part="tag__remove-button"]'
   ) as HTMLElement;
-  expect(getComputedStyle(removeBtn).minInlineSize).to.equal("40px");
-  expect(getComputedStyle(removeBtn).minBlockSize).to.equal("40px");
+  expect(getComputedStyle(removeBtn).minInlineSize).to.equal("36px");
+  expect(getComputedStyle(removeBtn).minBlockSize).to.equal("36px");
 
   const clearBtn = el.shadowRoot!.querySelector(
     '[part="clear-button"]'
   ) as HTMLElement;
-  expect(getComputedStyle(clearBtn).minInlineSize).to.equal("40px");
-  expect(getComputedStyle(clearBtn).minBlockSize).to.equal("40px");
+  expect(getComputedStyle(clearBtn).minInlineSize).to.equal("36px");
+  expect(getComputedStyle(clearBtn).minBlockSize).to.equal("36px");
 });
 
 it("renders errorText in var(--lr-color-danger), distinct from and alongside the hint", async () => {
@@ -1006,13 +1006,13 @@ describe("size", () => {
   const TIER_HEIGHTS: ReadonlyArray<readonly [string, string]> = [
     ["2xs", "20px"],
     ["xs", "24px"],
-    ["s", "30px"],
-    ["m", "40px"],
-    ["l", "48px"],
+    ["s", "32px"],
+    ["m", "36px"],
+    ["l", "40px"],
     ["xl", "56px"],
   ];
 
-  it("renders the same trigger height at every tier as before the shared ladder", async () => {
+  it("renders the shared trigger height at every tier", async () => {
     for (const [size, px] of TIER_HEIGHTS) {
       const el = await fixture(
         html`<lr-combobox size=${size} label="Tags"></lr-combobox>`
@@ -1039,9 +1039,9 @@ describe("size", () => {
     const expected: ReadonlyArray<readonly [string, number]> = [
       ["2xs", 20],
       ["xs", 24],
-      ["s", 30],
-      ["m", 40],
-      ["l", 48],
+      ["s", 32],
+      ["m", 36],
+      ["l", 40],
       ["xl", 56],
     ];
     for (const [size, px] of expected) {
@@ -1296,8 +1296,8 @@ describe("exact-height escape hatch", () => {
     const sEl = (await fixture(html`
       <lr-combobox size="s"><lr-option value="a">Apple</lr-option></lr-combobox>
     `)) as LyraCombobox;
-    expect(getComputedStyle(combo(mEl)).minBlockSize).to.equal("40px");
-    expect(getComputedStyle(combo(sEl)).minBlockSize).to.equal("30px");
+    expect(getComputedStyle(combo(mEl)).minBlockSize).to.equal("36px");
+    expect(getComputedStyle(combo(sEl)).minBlockSize).to.equal("32px");
   });
 
   it("pins an exact trigger height with no ::part() rule, at the default and non-default sizes", async () => {
@@ -2861,4 +2861,38 @@ describe("--lr-combobox-color and its deprecated --lr-combobox-text-color alias"
       expect(getComputedStyle(box).color === "rgb(1, 2, 3)").to.equal(!name.startsWith('deprecated'));
     });
   }
+});
+
+describe('shared row content-aware decoration', () => {
+  const cases = [
+    { markup: html`<lr-select label="Role"><lr-option value="a">Editor</lr-option></lr-select>`, row: '[part="trigger"]', name: 'select' },
+    { markup: html`<lr-combobox label="Role"><lr-option value="a">Editor</lr-option></lr-combobox>`, row: '[part="combobox"]', name: 'combobox' },
+  ];
+
+  it('fits each default decorative indicator inside the medium row content box', async () => {
+    for (const testCase of cases) {
+      const el = await fixture<HTMLElement>(testCase.markup);
+      const row = el.shadowRoot!.querySelector<HTMLElement>(testCase.row)!;
+      const indicator = el.shadowRoot!.querySelector<HTMLElement>('[part="expand-icon"]')!;
+      const rowStyle = getComputedStyle(row);
+      const contentHeight = row.getBoundingClientRect().height
+        - parseFloat(rowStyle.paddingTop) - parseFloat(rowStyle.paddingBottom)
+        - parseFloat(rowStyle.borderTopWidth) - parseFloat(rowStyle.borderBottomWidth);
+      expect(row.getBoundingClientRect().height, testCase.name).to.equal(36);
+      expect(indicator.getBoundingClientRect().height, testCase.name).to.be.at.most(contentHeight);
+    }
+  });
+
+  it('honors authored decorative sizes and row padding while letting their content grow', async () => {
+    for (const testCase of cases) {
+      const el = await fixture<HTMLElement>(testCase.markup);
+      const row = el.shadowRoot!.querySelector<HTMLElement>(testCase.row)!;
+      const indicator = el.shadowRoot!.querySelector<HTMLElement>('[part="expand-icon"]')!;
+      el.style.setProperty(`--lr-${testCase.name}-trigger-padding`, '12px');
+      el.style.setProperty(`--lr-${testCase.name}-expand-size`, '32px');
+      expect(getComputedStyle(row).paddingBlock, testCase.name).to.equal('12px');
+      expect(getComputedStyle(indicator).minBlockSize, testCase.name).to.equal('32px');
+      expect(row.getBoundingClientRect().height, testCase.name).to.be.at.least(58);
+    }
+  });
 });

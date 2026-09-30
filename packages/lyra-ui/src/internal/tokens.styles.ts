@@ -73,25 +73,28 @@ import { css } from 'lit';
 const baseTokens = css`
   :host {
     /* glass defaults: generated */
+    --_lr-surface-default-blur: 12px;
+    --_lr-surface-default-maximum-blur: 16px;
+    --_lr-surface-default-highlight: rgb(255 255 255 / 0.12);
     /* glass defaults: end */
-    --lr-color-surface: var(--lr-theme-color-surface-default, #fff);
-    --lr-color-surface-raised: var(--lr-theme-color-surface-raised, #f6f8fa);
+    --lr-color-surface: var(--lr-theme-color-surface-default, #ffffff);
+    --lr-color-surface-raised: var(--lr-theme-color-surface-raised, #fafafa);
     --lr-color-surface-container-lowest: var(--lr-theme-color-surface-container-lowest, var(--lr-color-surface));
     --lr-color-surface-container-low: var(--lr-theme-color-surface-container-low, var(--lr-color-surface));
     --lr-color-surface-container: var(--lr-theme-color-surface-container, var(--lr-color-surface-raised));
     --lr-color-surface-container-high: var(--lr-theme-color-surface-container-high, var(--lr-color-surface-overlay));
     --lr-color-surface-container-highest: var(--lr-theme-color-surface-container-highest, var(--lr-color-surface-overlay));
-    --lr-color-text: var(--lr-theme-color-text-normal, #1a1a1a);
-    --_lr-glass-original-text-quiet: var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, #6b7280));
-    --_lr-glass-qualified-text-quiet: color-mix(in srgb, var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, #6b7280)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
-    --lr-color-text-quiet: var(--_lr-glass-qualified-text-quiet, var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, #6b7280)));
-    --_lr-glass-original-border: var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #8a8a90));
-    --_lr-glass-qualified-border: color-mix(in srgb, var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #8a8a90)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
-    --lr-color-border: var(--_lr-glass-qualified-border, var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #8a8a90)));
-    --_lr-glass-original-border-strong: var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #4b5563));
-    --_lr-glass-qualified-border-strong: color-mix(in srgb, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #4b5563)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
-    --lr-color-border-strong: var(--_lr-glass-qualified-border-strong, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #4b5563)));
-    --lr-color-border-subtle: var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, var(--lr-color-border)));
+    --lr-color-text: var(--lr-theme-color-text-normal, #0a0a0a);
+    --_lr-glass-original-text-quiet: var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, #737373));
+    --_lr-glass-qualified-text-quiet: color-mix(in srgb, var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, #737373)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
+    --lr-color-text-quiet: var(--_lr-glass-qualified-text-quiet, var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, #737373)));
+    --_lr-glass-original-border: var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #919191));
+    --_lr-glass-qualified-border: color-mix(in srgb, var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #919191)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
+    --lr-color-border: var(--_lr-glass-qualified-border, var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #919191)));
+    --_lr-glass-original-border-strong: var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #919191));
+    --_lr-glass-qualified-border-strong: color-mix(in srgb, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #919191)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
+    --lr-color-border-strong: var(--_lr-glass-qualified-border-strong, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #919191)));
+    --lr-color-border-subtle: var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, #e5e5e5));
     --_lr-glass-brand-text: color-mix(in srgb, var(--lr-color-brand), var(--lr-color-text) var(--_lr-glass-foreground-weight));
     --_lr-glass-danger-text: color-mix(in srgb, var(--lr-color-danger), var(--lr-color-text) var(--_lr-glass-foreground-weight));
     --lr-color-brand: var(--lr-color-brand-fill-loud);
@@ -108,12 +111,12 @@ const baseTokens = css`
     --lr-color-on-warning: var(--lr-color-warning-on-loud);
     --lr-color-on-danger: var(--lr-color-danger-on-loud);
     --lr-color-on-neutral: var(--lr-color-neutral-on-loud);
-    --lr-color-on-strong-overlay: var(--lr-theme-color-on-strong-overlay, #fff);
-    --lr-color-surface-overlay: var(--lr-theme-color-surface-overlay, var(--lr-color-surface));
+    --lr-color-on-strong-overlay: var(--lr-theme-color-on-strong-overlay, #ffffff);
+    --lr-color-surface-overlay: var(--lr-theme-color-surface-overlay, #ffffff);
     --lr-color-overlay: var(--lr-theme-color-overlay, rgb(0 0 0 / 0.5));
-    --lr-color-overlay-strong: var(--lr-theme-color-overlay-strong, var(--lr-theme-color-overlay, rgb(0 0 0 / 0.92)));
+    --lr-color-overlay-strong: var(--lr-theme-color-overlay-strong, rgb(0 0 0 / 0.92));
     --lr-color-no-data: var(--lr-theme-color-no-data, rgb(128 128 128 / 25%));
-    --lr-font-mono: var(--lr-theme-font-family-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+    --lr-font-mono: var(--lr-theme-font-family-mono, 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
     --lr-space-xs: var(--lr-theme-space-xs, 0.25rem);
     --lr-space-s: var(--lr-theme-space-s, 0.5rem);
     --lr-space-m: var(--lr-theme-space-m, 0.75rem);
@@ -124,7 +127,7 @@ const baseTokens = css`
     --lr-font-size-2xs: var(--lr-theme-font-size-2xs, 0.625rem);
     --lr-font-size-xs: var(--lr-theme-font-size-xs, 0.75rem);
     --lr-font-size-sm: var(--lr-theme-font-size-sm, 0.8125rem);
-    --lr-font-size-m: var(--lr-theme-font-size-m, 1rem);
+    --lr-font-size-m: var(--lr-theme-font-size-m, 0.875rem);
     --lr-font-size-md-sm: var(--lr-theme-font-size-md-sm, 0.875rem);
     --lr-font-size-lg: var(--lr-theme-font-size-lg, 1.125rem);
     --lr-font-size-xl: var(--lr-theme-font-size-xl, 1.25rem);
@@ -145,7 +148,7 @@ const baseTokens = css`
     --lr-border-width-thin: var(--lr-theme-border-width-thin, 1px);
     --lr-border-width-medium: var(--lr-theme-border-width-medium, 2px);
     --lr-border-width-thick: var(--lr-theme-border-width-thick, 3px);
-    --lr-radius-xs: var(--lr-theme-border-radius-xs, 2px);
+    --lr-radius-xs: var(--lr-theme-border-radius-xs, 0.25rem);
     --lr-radius-pill: var(--lr-theme-border-radius-pill, 999px);
     --lr-color-shadow: var(--lr-theme-color-shadow, #000);
     --lr-mask-opaque: #000;
@@ -249,7 +252,7 @@ const baseTokens = css`
     --lr-size-7rem: var(--lr-theme-size-7rem, 7rem);
     --lr-size-8em: var(--lr-theme-size-8em, 8em);
     --lr-size-8rem: var(--lr-theme-size-8rem, 8rem);
-    --lr-radius: var(--lr-theme-border-radius-m, 0.375rem);
+    --lr-radius: var(--lr-theme-border-radius-m, 0.5rem);
     --lr-radius-button: var(--lr-theme-border-radius-button, var(--lr-form-control-radius, var(--lr-radius)));
     --lr-radius-container: var(--lr-theme-border-radius-container, var(--lr-radius));
     --lr-table-row-min-height: var(--lr-theme-table-row-height, 0px);
@@ -259,13 +262,13 @@ const baseTokens = css`
        rgb(0 0 0 / 0.15), which is invisible against a dark surface, so dark mode effectively had no
        elevation. --lr-shadow stays as the mid step, so every existing use keeps rendering. */
     --lr-shadow-color: var(--lr-theme-shadow-color, 0 0 0);
-    --lr-shadow-xs: var(--lr-theme-shadow-xs, 0 1px 2px rgb(var(--lr-shadow-color) / 0.12));
-    --lr-shadow-s: var(--lr-theme-shadow-s, 0 1px 4px rgb(var(--lr-shadow-color) / 0.14));
-    --lr-shadow-m: var(--lr-theme-shadow-m, 0 2px 8px rgb(var(--lr-shadow-color) / 0.15));
-    --lr-shadow-l: var(--lr-theme-shadow-l, 0 6px 16px rgb(var(--lr-shadow-color) / 0.18));
-    --lr-shadow-xl: var(--lr-theme-shadow-xl, 0 12px 32px rgb(var(--lr-shadow-color) / 0.22));
+    --lr-shadow-xs: var(--lr-theme-shadow-xs, 0 1px 2px 0 rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.05));
+    --lr-shadow-s: var(--lr-theme-shadow-s, 0 1px 3px 0 rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.1), 0 1px 2px -1px rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.1));
+    --lr-shadow-m: var(--lr-theme-shadow-m, 0 4px 6px -1px rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.1), 0 2px 4px -2px rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.1));
+    --lr-shadow-l: var(--lr-theme-shadow-l, 0 10px 15px -3px rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.1), 0 4px 6px -4px rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.1));
+    --lr-shadow-xl: var(--lr-theme-shadow-xl, 0 20px 25px -5px rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.1), 0 8px 10px -6px rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.1));
     --lr-shadow: var(--lr-shadow-m);
-    --lr-font: var(--lr-theme-font-family-body, system-ui, sans-serif);
+    --lr-font: var(--lr-theme-font-family-body, 'Geist', 'Inter', ui-sans-serif, system-ui, sans-serif);
     --lr-font-heading: var(--lr-theme-font-family-heading, inherit);
 
     /* Motion — every component that animates (popovers, gauge fill, toast)
@@ -291,9 +294,9 @@ const baseTokens = css`
     --lr-easing-emphasized: var(--_lr-motion-easing, var(--lr-theme-easing-emphasized, ease-in-out));
     --lr-easing-linear: var(--lr-theme-easing-linear, linear);
 
-    --lr-transition-fast: var(--_lr-motion-transition, var(--lr-theme-transition-fast, var(--lr-duration-fast) var(--lr-easing-standard)));
-    --lr-transition-base: var(--_lr-motion-transition, var(--lr-theme-transition-normal, var(--lr-duration-base) var(--lr-easing-standard)));
-    --lr-transition-ambient: var(--_lr-motion-transition, var(--lr-theme-transition-slow, var(--lr-duration-ambient) var(--lr-easing-emphasized)));
+    --lr-transition-fast: var(--_lr-motion-transition, var(--lr-theme-transition-fast, 120ms ease-out));
+    --lr-transition-base: var(--_lr-motion-transition, var(--lr-theme-transition-normal, 180ms ease-out));
+    --lr-transition-ambient: var(--_lr-motion-transition, var(--lr-theme-transition-slow, 1.8s ease-in-out));
 
     /* The one pointer-interaction transition. Ninety-odd rules across the library had each
        re-typed the same three-property list against --lr-transition-fast, so "what does a
@@ -332,7 +335,7 @@ const baseTokens = css`
     /* What each state mixes TOWARD. Following the text colour makes the direction automatic: on a
        light surface the text is dark, so a hover darkens; on a dark surface it is light, so the
        same declaration lightens. That is the property filter: brightness() never had. */
-    --lr-color-mix-partner: var(--lr-theme-color-mix-partner, var(--lr-color-text));
+    --lr-color-mix-partner: var(--lr-theme-color-mix-partner, #737373);
 
     --lr-hover-brightness: var(--lr-theme-hover-brightness, 1.08);
 
@@ -345,11 +348,11 @@ const baseTokens = css`
        hand-expanding every site (and silently dropping the style keyword, which yields
        an outline that renders in some engines and not others). Offset stays separate
        because outline-offset is its own property, not part of the outline shorthand. */
-    --lr-focus-ring-width: max(var(--lr-theme-focus-ring-width, 2px), var(--_lr-preference-focus-min, 0px));
-    --_lr-glass-original-focus-ring-color: var(--lr-theme-color-focus, var(--lr-color-brand));
-    --_lr-glass-qualified-focus-ring-color: color-mix(in srgb, var(--lr-theme-color-focus, var(--lr-color-brand)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
-    --lr-focus-ring-color: var(--_lr-glass-qualified-focus-ring-color, var(--lr-theme-color-focus, var(--lr-color-brand)));
-    --lr-focus-ring-offset: var(--lr-theme-focus-ring-offset, 2px);
+    --lr-focus-ring-width: max(var(--lr-theme-focus-ring-width, 3px), var(--_lr-preference-focus-min, 0px));
+    --_lr-glass-original-focus-ring-color: var(--lr-theme-color-focus, rgb(31 127 92));
+    --_lr-glass-qualified-focus-ring-color: color-mix(in srgb, var(--lr-theme-color-focus, rgb(31 127 92)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
+    --lr-focus-ring-color: var(--_lr-glass-qualified-focus-ring-color, var(--lr-theme-color-focus, rgb(31 127 92)));
+    --lr-focus-ring-offset: var(--lr-theme-focus-ring-offset, 0px);
     --lr-focus-ring: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
 
     /* Minimum tappable box for an icon-only button (close/dismiss/nav
@@ -359,7 +362,7 @@ const baseTokens = css`
        lr-date-input, lr-combobox, lr-input and lr-select, and anything smaller
        fails WCAG 2.2 SC 2.5.8 (Target Size (Minimum)).
        ICON_BUTTON_SIZE_SCOPE -- why there are two ancestor inputs here. */
-    --lr-icon-button-size: var(--lr-icon-button-size-scope, var(--lr-theme-icon-button-size, 2.5rem));
+    --lr-icon-button-size: var(--lr-icon-button-size-scope, var(--lr-theme-icon-button-size, 2.25rem));
 
     font-family: var(--lr-font);
     line-break: var(--lr-line-break);
@@ -382,7 +385,7 @@ const baseTokens = css`
   /* TOUCH_TARGET_FLOOR -- keep icon-only controls at least 44px on coarse pointers. */
   @media (hover: none), (pointer: coarse) {
     :host {
-      --lr-icon-button-size: max(var(--lr-icon-button-size-scope, var(--lr-theme-icon-button-size, 2.5rem)), 2.75rem);
+      --lr-icon-button-size: max(var(--lr-icon-button-size-scope, var(--lr-theme-icon-button-size, 2.25rem)), 2.75rem);
     }
   }
 `;
@@ -438,37 +441,37 @@ const baseTokens = css`
  */
 /* @media (prefers-color-scheme: dark) */
 const darkTokens = css`
-      --lr-color-surface: var(--lr-theme-color-surface-default, #1a1a1a);
-      --lr-color-surface-raised: var(--lr-theme-color-surface-raised, #22272e);
-      --lr-color-text: var(--lr-theme-color-text-normal, #f2f2f2);
-      --_lr-glass-original-text-quiet: var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, #9aa1ac));
-    --_lr-glass-qualified-text-quiet: color-mix(in srgb, var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, #9aa1ac)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
-    --lr-color-text-quiet: var(--_lr-glass-qualified-text-quiet, var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, #9aa1ac)));
-      --_lr-glass-original-border: var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #787881));
-    --_lr-glass-qualified-border: color-mix(in srgb, var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #787881)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
-    --lr-color-border: var(--_lr-glass-qualified-border, var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #787881)));
-      --_lr-glass-original-border-strong: var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #c4c9d1));
-    --_lr-glass-qualified-border-strong: color-mix(in srgb, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #c4c9d1)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
-    --lr-color-border-strong: var(--_lr-glass-qualified-border-strong, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #c4c9d1)));
-      --lr-color-border-subtle: var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, var(--lr-color-border)));
+      --lr-color-surface: var(--lr-theme-color-surface-default, #0a0a0a);
+      --lr-color-surface-raised: var(--lr-theme-color-surface-raised, #171717);
+      --lr-color-text: var(--lr-theme-color-text-normal, #fafafa);
+      --_lr-glass-original-text-quiet: var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, #a1a1a1));
+    --_lr-glass-qualified-text-quiet: color-mix(in srgb, var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, #a1a1a1)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
+    --lr-color-text-quiet: var(--_lr-glass-qualified-text-quiet, var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, #a1a1a1)));
+      --_lr-glass-original-border: var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #646464));
+    --_lr-glass-qualified-border: color-mix(in srgb, var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #646464)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
+    --lr-color-border: var(--_lr-glass-qualified-border, var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #646464)));
+      --_lr-glass-original-border-strong: var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #646464));
+    --_lr-glass-qualified-border-strong: color-mix(in srgb, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #646464)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
+    --lr-color-border-strong: var(--_lr-glass-qualified-border-strong, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #646464)));
+      --lr-color-border-subtle: var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, rgb(255 255 255 / 0.1)));
       /* A modal panel cannot share the page surface token in dark mode: both resolve to the same
          near-black, so an open dialog reads as a scrim with text floating on it and no panel at
          all. Light mode keeps the page surface deliberately -- a white dialog on a white page is
          separated by the scrim around it, and changing it would be churn for no legibility gain.
          DARK_OVERLAY_SURFACE (above) -- why the delta is mixed rather than pinned to a literal. */
-      --lr-color-surface-overlay: var(--lr-theme-color-surface-overlay, color-mix(in srgb, var(--lr-color-surface) 85%, #8bade2));
+      --lr-color-surface-overlay: var(--lr-theme-color-surface-overlay, #171717);
       /* A 50% black scrim over an already-dark page barely darkens it, so the modal/non-modal
          boundary the scrim exists to draw disappears. Both scrims go heavier in dark mode. */
       --lr-color-overlay: var(--lr-theme-color-overlay, rgb(0 0 0 / 0.72));
-      --lr-color-overlay-strong: var(--lr-theme-color-overlay-strong, var(--lr-theme-color-overlay, rgb(0 0 0 / 0.95)));
+      --lr-color-overlay-strong: var(--lr-theme-color-overlay-strong, rgb(0 0 0 / 0.95));
       /* Elevation is a luminance difference, and a 12%-alpha black shadow against a near-black
          surface is not one -- dark mode shipped with no elevation at all. The alphas roughly
          triple so each step stays a visible step. */
-      --lr-shadow-xs: var(--lr-theme-shadow-xs, 0 1px 2px rgb(var(--lr-shadow-color) / 0.34));
-      --lr-shadow-s: var(--lr-theme-shadow-s, 0 1px 4px rgb(var(--lr-shadow-color) / 0.4));
-      --lr-shadow-m: var(--lr-theme-shadow-m, 0 2px 8px rgb(var(--lr-shadow-color) / 0.46));
-      --lr-shadow-l: var(--lr-theme-shadow-l, 0 8px 20px rgb(var(--lr-shadow-color) / 0.56));
-      --lr-shadow-xl: var(--lr-theme-shadow-xl, 0 16px 40px rgb(var(--lr-shadow-color) / 0.66));
+      --lr-shadow-xs: var(--lr-theme-shadow-xs, 0 1px 2px 0 rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.15));
+      --lr-shadow-s: var(--lr-theme-shadow-s, 0 1px 3px 0 rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.3), 0 1px 2px -1px rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.3));
+      --lr-shadow-m: var(--lr-theme-shadow-m, 0 4px 6px -1px rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.3), 0 2px 4px -2px rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.3));
+      --lr-shadow-l: var(--lr-theme-shadow-l, 0 10px 15px -3px rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.3), 0 4px 6px -4px rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.3));
+      --lr-shadow-xl: var(--lr-theme-shadow-xl, 0 20px 25px -5px rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.3), 0 8px 10px -6px rgb(var(--lr-theme-shadow-color, 0 0 0) / 0.3));
 `;
 
 const auxTokens = css`

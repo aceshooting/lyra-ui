@@ -1380,12 +1380,12 @@ it("marks a blocked native submission attempt as interaction, but never a bare c
   ).to.be.true;
 });
 
-it("widens the thumb hit/drag area past the visible 16px dot via a transparent ::before", async () => {
+it("widens the thumb hit/drag area past the visible dot via a transparent ::before", async () => {
   const el = (await fixture(
     html`<lr-slider value="20"></lr-slider>`
   )) as LyraSlider;
   const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
-  expect(getComputedStyle(thumb).width).to.equal("16px");
+  expect(parseFloat(getComputedStyle(thumb).width)).to.be.closeTo(14.4, 0.1);
   const before = getComputedStyle(thumb, "::before");
   expect(before.content).to.not.equal("none");
   expect(before.width).to.equal("28px");

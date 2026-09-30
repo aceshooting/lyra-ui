@@ -1375,9 +1375,9 @@ describe('per-tier field min-height and exact-height hatch', () => {
     // s=24px, m=32px, l=40px, xl=48px, an 8px/25% mismatch at the shared default tier).
     const expected: Record<string, string> = {
       xs: '24px',
-      s: '30px',
-      m: '40px',
-      l: '48px',
+      s: '32px',
+      m: '36px',
+      l: '40px',
       xl: '56px',
     };
     for (const [size, px] of Object.entries(expected)) {

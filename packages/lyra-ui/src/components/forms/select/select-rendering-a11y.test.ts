@@ -385,13 +385,13 @@ it("leaves today's min-height-floor-only behavior unchanged when the override is
 
 describe("per-size min-height floor", () => {
   it("actually enforces --lr-select-trigger-min-height at each non-default size", async () => {
-    // --lr-select-trigger-min-height is declared per size tier (xs=1.5rem, s=1.875rem,
-    // l=3rem, xl=3.5rem) but was never wired to min-block-size for those tiers -- this is the
+    // --lr-select-trigger-min-height is declared per size tier (xs=1.5rem, s=2rem,
+    // l=2.5rem, xl=3.5rem) but was never wired to min-block-size for those tiers -- this is the
     // regression test for that fix.
     const expected: Record<string, string> = {
       xs: "24px",
-      s: "30px",
-      l: "48px",
+      s: "32px",
+      l: "40px",
       xl: "56px",
     };
     for (const [size, px] of Object.entries(expected)) {
@@ -412,7 +412,7 @@ describe("per-size min-height floor", () => {
       >`
     )) as LyraSelect;
     const t = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
-    expect(getComputedStyle(t).minBlockSize).to.equal("40px");
+    expect(getComputedStyle(t).minBlockSize).to.equal("36px");
   });
 
   it("lets a consumer raise --lr-select-trigger-min-height at the default tier", async () => {
@@ -434,7 +434,7 @@ describe("per-size min-height floor", () => {
       >`
     )) as LyraSelect;
     const t = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
-    expect(getComputedStyle(t).minBlockSize).to.equal("30px");
+    expect(getComputedStyle(t).minBlockSize).to.equal("32px");
     el.style.setProperty("--lr-select-trigger-min-height", "33px");
     await el.updateComplete;
     expect(getComputedStyle(t).minBlockSize).to.equal("33px");
@@ -456,11 +456,11 @@ describe("per-size min-height floor", () => {
 
 
 describe("trigger gap/radius cssprops", () => {
-  it("exposes --lr-select-gap and --lr-select-radius, defaulting to the pre-existing literals", async () => {
+  it("exposes --lr-select-gap and --lr-select-radius, defaulting to the shared token defaults", async () => {
     const el = (await fixture(basic())) as LyraSelect;
     const cs = getComputedStyle(trigger(el));
     expect(cs.gap).to.equal("4px");
-    expect(cs.borderRadius).to.equal("6px");
+    expect(cs.borderRadius).to.equal("8px");
   });
 
   it("retunes the trigger gap and corner radius with no ::part(trigger) rule", async () => {
@@ -483,12 +483,12 @@ describe("trigger gap/radius cssprops", () => {
     // The trigger's adornment gap is deliberately outside the ladder -- it never varied by tier.
     expect(getComputedStyle(triggerOf(mEl)).gap).to.equal("4px");
     expect(getComputedStyle(triggerOf(xsEl)).gap).to.equal("4px");
-    // The radius does vary: a 6px corner on a 24px-tall trigger reads as a lozenge.
+    // The radius does vary: an 8px corner on a 24px-tall trigger reads as a lozenge.
     expect(getComputedStyle(triggerOf(mEl)).borderTopLeftRadius).to.equal(
-      "6px"
+      "8px"
     );
     expect(getComputedStyle(triggerOf(xsEl)).borderTopLeftRadius).to.equal(
-      "2px"
+      "4px"
     );
   });
 });
@@ -1479,9 +1479,9 @@ describe("lr-select — the shared size ladder", () => {
     const expected: Record<string, number> = {
       "2xs": 20,
       xs: 24,
-      s: 30,
-      m: 40,
-      l: 48,
+      s: 32,
+      m: 36,
+      l: 40,
       xl: 56,
     };
     for (const [size, px] of Object.entries(expected)) {

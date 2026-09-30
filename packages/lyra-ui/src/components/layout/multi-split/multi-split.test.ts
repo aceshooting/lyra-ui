@@ -1703,7 +1703,7 @@ for (const direction of ["ltr", "rtl"] as const) {
     const aRect = panelA.getBoundingClientRect();
     const bRect = panelB.getBoundingClientRect();
 
-    expect(dividerRect.width).to.be.at.least(40);
+    expect(dividerRect.width).to.be.at.least(36);
     expect(dividerRect.left).to.be.at.least(baseRect.left - 0.5);
     expect(dividerRect.right).to.be.at.most(baseRect.right + 0.5);
     const overlapA =
@@ -1761,7 +1761,7 @@ it("reserves a contained vertical divider gutter and paints only its center", as
   const baseRect = base.getBoundingClientRect();
   const dividerRect = divider.getBoundingClientRect();
 
-  expect(dividerRect.height).to.be.at.least(40);
+  expect(dividerRect.height).to.be.at.least(36);
   expect(dividerRect.top).to.be.at.least(baseRect.top - 0.5);
   expect(dividerRect.bottom).to.be.at.most(baseRect.bottom + 0.5);
   for (const panel of [panelA, panelB]) {
@@ -1910,7 +1910,7 @@ it("separates the painted hairline's thickness (--lr-multi-split-divider-thickne
   expect(parseFloat(paintedRule.width)).to.be.closeTo(9, 0.5);
   // ...but the pointer target track is untouched -- it's still governed solely by
   // --lr-multi-split-divider-target-size (unset here, so its own default floor).
-  expect(dividerRect.width).to.be.at.least(39.5);
+  expect(dividerRect.width).to.be.at.least(36);
 });
 
 it("never shrinks the divider's pointer target even when the painted thickness is set larger than the target track", async () => {
@@ -1926,9 +1926,9 @@ it("never shrinks the divider's pointer target even when the painted thickness i
   ) as HTMLElement;
   const dividerRect = divider.getBoundingClientRect();
 
-  // The default target-size floor (max(--lr-icon-button-size, --lr-size-3px), 40px today) is
+  // The default target-size floor (max(--lr-icon-button-size, --lr-size-3px), 36px today) is
   // unaffected by an oversized thickness hook -- the two are read by disjoint declarations.
-  expect(dividerRect.width).to.be.at.least(39.5);
+  expect(dividerRect.width).to.be.at.least(36);
 });
 
 it("reconciles panelCount and sizes when a panel is added after connect (slotchange)", async () => {

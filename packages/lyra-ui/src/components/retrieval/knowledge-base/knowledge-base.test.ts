@@ -691,10 +691,10 @@ it('forwards every documented table part and renders the actual nested action tr
     const glyph = trigger.querySelector<SVGElement>('svg')!;
     const style = getComputedStyle(trigger);
     const rect = trigger.getBoundingClientRect();
-    expect(parseFloat(style.minInlineSize) >= 40).to.equal(true);
-    expect(parseFloat(style.minBlockSize) >= 40).to.equal(true);
-    expect(rect.width >= 40).to.equal(true);
-    expect(rect.height >= 40).to.equal(true);
+    expect(parseFloat(style.minInlineSize) >= 36).to.equal(true);
+    expect(parseFloat(style.minBlockSize) >= 36).to.equal(true);
+    expect(rect.width >= 36).to.equal(true);
+    expect(rect.height >= 36).to.equal(true);
     expect(style.cursor).to.equal('pointer');
     expect(style.fontSize).to.equal('20px');
     expect(glyph.getAttribute('width')).to.equal('1em');

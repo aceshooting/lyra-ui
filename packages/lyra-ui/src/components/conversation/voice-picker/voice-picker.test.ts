@@ -60,10 +60,10 @@ function syntheticRow(el: LyraVoicePicker): HTMLElement {
   return row;
 }
 
-function resolvedColor(el: LyraVoicePicker, value: string): string {
+function resolvedColor(el: LyraVoicePicker, value: string, scope: HTMLElement = el): string {
   const probe = document.createElement('span');
   probe.style.color = value;
-  el.shadowRoot!.append(probe);
+  (scope === el ? el.shadowRoot! : scope).append(probe);
   const color = getComputedStyle(probe).color;
   probe.remove();
   return color;
@@ -664,7 +664,7 @@ describe('open and synthetic stale-row theme cssprops', () => {
     );
     expect(getComputedStyle(stale).borderTopStyle).to.equal('dashed');
     expect(getComputedStyle(stale).borderTopColor).to.equal(
-      resolvedColor(el, 'var(--lr-color-border)'),
+      resolvedColor(el, 'var(--lr-color-border)', stale),
     );
     expect(getComputedStyle(label).fontStyle).to.equal('italic');
   });
@@ -705,7 +705,7 @@ describe('open and synthetic stale-row theme cssprops', () => {
     );
     expect(getComputedStyle(defaultedStale).borderTopStyle).to.equal('dashed');
     expect(getComputedStyle(defaultedStale).borderTopColor).to.equal(
-      resolvedColor(defaulted, 'var(--lr-color-border)'),
+      resolvedColor(defaulted, 'var(--lr-color-border)', defaultedStale),
     );
     expect(getComputedStyle(defaultedLabel).fontStyle).to.equal('italic');
   });
@@ -940,8 +940,8 @@ it('gives the standalone preview-button the shared minimum tappable size', async
   )) as LyraVoicePicker;
   await el.updateComplete;
   const btn = previewButton(el);
-  expect(getComputedStyle(btn).minInlineSize).to.equal('40px');
-  expect(getComputedStyle(btn).minBlockSize).to.equal('40px');
+  expect(getComputedStyle(btn).minInlineSize).to.equal('36px');
+  expect(getComputedStyle(btn).minBlockSize).to.equal('36px');
 });
 
 describe('size', () => {
@@ -962,9 +962,9 @@ describe('size', () => {
     const expected: Record<string, string> = {
       '2xs': '20px',
       xs: '24px',
-      s: '30px',
-      m: '40px',
-      l: '48px',
+      s: '32px',
+      m: '36px',
+      l: '40px',
       xl: '56px',
     };
 
@@ -1003,7 +1003,7 @@ describe('size', () => {
       html`<lr-voice-picker size="xl" value="alloy" .catalog=${CATALOG}></lr-voice-picker>`
     )) as LyraVoicePicker;
 
-    expect(getComputedStyle(previewButton(compact)).blockSize).to.equal('40px');
+    expect(getComputedStyle(previewButton(compact)).blockSize).to.equal('36px');
     expect(getComputedStyle(previewButton(extraLarge)).blockSize).to.equal('56px');
   });
 });

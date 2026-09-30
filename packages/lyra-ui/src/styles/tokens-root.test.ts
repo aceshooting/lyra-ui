@@ -172,7 +172,7 @@ it('re-derives the resolved layer on a subtree that carries a mode scope', async
   expect(getComputedStyle(card).getPropertyValue('--lr-color-brand').trim()).to.equal('rgb(4, 5, 6)');
 });
 
-it('resolves the decorative border tier to --lr-color-border until its own input is set', async () => {
+it('keeps the default decorative border role independent and accepts its own input', async () => {
   const scope = await fixture<HTMLElement>(html`
     <div>
       <div id="dark" class="lr-dark"></div>
@@ -183,8 +183,10 @@ it('resolves the decorative border tier to --lr-color-border until its own input
   const root = document.documentElement;
   const dark = scope.querySelector('#dark')!;
   const themed = scope.querySelector('#themed')!;
-  expect(read(root, '--lr-color-border-subtle')).to.equal(read(root, '--lr-color-border'));
-  expect(read(dark, '--lr-color-border-subtle')).to.equal(read(dark, '--lr-color-border'));
+  expect(read(root, '--lr-color-border-subtle')).to.equal('#e5e5e5');
+  expect(read(root, '--lr-color-border')).to.equal('#919191');
+  expect(read(dark, '--lr-color-border-subtle')).to.equal('rgb(255 255 255 / 0.1)');
+  expect(read(dark, '--lr-color-border')).to.equal('#646464');
   expect(read(dark, '--lr-color-border'), 'the dark scope must really be a different mode').to.not.equal(
     read(root, '--lr-color-border'),
   );

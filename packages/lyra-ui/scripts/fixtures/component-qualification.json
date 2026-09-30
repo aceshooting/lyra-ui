@@ -2186,7 +2186,7 @@
           "evidence": [
             {
               "file": "src/components/layout/app-rail/app-rail-sidebar.test.ts",
-              "line": 352,
+              "line": 368,
               "kind": "320px allocation test signal"
             }
           ]
@@ -2621,7 +2621,7 @@
           "evidence": [
             {
               "file": "src/components/layout/app-rail/app-rail-sidebar.test.ts",
-              "line": 352,
+              "line": 368,
               "kind": "320px allocation test signal"
             }
           ]
@@ -3834,7 +3834,7 @@
           "evidence": [
             {
               "file": "src/components/media/av-player/av-player.test.ts",
-              "test": "contains unbroken transcript text inside a 320px allocation",
+              "test": "keeps the first transcript cue's keyboard outline inside its clipping scrollport in ${direction} with offset ${offset}",
               "kind": "320px allocation test signal"
             }
           ]
@@ -10772,7 +10772,7 @@
           "evidence": [
             {
               "file": "src/components/forms/color-picker/color-picker.class.ts",
-              "line": 1171,
+              "line": 1173,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -11002,7 +11002,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2758,
+              "line": 2760,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -17373,7 +17373,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1100,
+              "line": 1101,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27807,7 +27807,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.class.ts",
-              "line": 1221,
+              "line": 1228,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27846,6 +27846,7 @@
           "src/components/forms/locale-picker/locale-picker-loader.test.ts",
           "src/components/forms/locale-picker/locale-picker-option-display.test.ts",
           "src/components/forms/locale-picker/locale-picker-remediation.test.ts",
+          "src/components/forms/locale-picker/locale-picker-retry-layout.test.ts",
           "src/components/forms/locale-picker/locale-picker.test.ts",
           "src/components/forms/locale-picker/positioning-strategy.test.ts",
           "src/components/forms/locale-picker/top-layer.test.ts"
@@ -27961,7 +27962,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "test": "gives an interactive marker a pointer cursor and a themed focus ring",
+              "test": "gives an interactive marker a pointer cursor and ${treatment === 'solid' ? 'an ancestor theme focus input' : 'a direct public focus override under Glass'}",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -28069,7 +28070,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.class.ts",
-              "line": 3548,
+              "line": 3553,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -28105,6 +28106,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/media/map/map-data-layers.test.ts",
+          "src/components/media/map/map-glass.test.ts",
           "src/components/media/map/map-legend-icon-border.test.ts",
           "src/components/media/map/map-legend-icon.test.ts",
           "src/components/media/map/map-legend-scroll.test.ts",
@@ -29196,7 +29198,7 @@
           "evidence": [
             {
               "file": "src/components/utility/mention-popover/mention-popover.class.ts",
-              "line": 982,
+              "line": 988,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -30899,7 +30901,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/mind-map/mind-map.test.ts",
-              "test": "keeps compact node pointer targets at the 40px floor and activates through the focus-ring annulus",
+              "test": "keeps compact node pointer targets at the 36px floor and activates through the focus-ring annulus",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -30927,7 +30929,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/mind-map/mind-map.test.ts",
-              "test": "keeps compact node pointer targets at the 40px floor and activates through the focus-ring annulus",
+              "test": "keeps compact node pointer targets at the 36px floor and activates through the focus-ring annulus",
               "kind": "320px allocation test signal"
             }
           ]
@@ -33174,7 +33176,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2758,
+              "line": 2760,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -35930,7 +35932,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1100,
+              "line": 1101,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -43768,7 +43770,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/span-waterfall/span-waterfall.test.ts",
-              "test": "keeps even a tiny-duration bar at the shared 40px icon-button floor in both axes",
+              "test": "keeps even a tiny-duration bar at the shared 36px icon-button floor in both axes",
               "kind": "320px allocation test signal"
             }
           ]
@@ -51951,7 +51953,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1100,
+              "line": 1101,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -54176,7 +54178,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/voice-picker/voice-picker.class.ts",
-              "line": 973,
+              "line": 975,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

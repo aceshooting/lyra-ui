@@ -626,8 +626,8 @@ describe("lr-button", () => {
     const baseEl = el.shadowRoot!.querySelector(
       '[part~="base"]'
     ) as HTMLElement;
-    expect(getComputedStyle(baseEl).fontSize).to.equal("16px");
-    expect(getComputedStyle(baseEl).minBlockSize).to.equal("40px");
+    expect(getComputedStyle(baseEl).fontSize).to.equal("14px");
+    expect(getComputedStyle(baseEl).minBlockSize).to.equal("36px");
     // The per-tier floor still reaches min-block-size through --lr-button-size-*, so overriding one
     // tier for buttons alone stays a one-property change rather than a ::part(base) rule.
     el.style.setProperty("--lr-button-size-m", "52px");
@@ -641,9 +641,9 @@ describe("lr-button", () => {
     const expected: Record<string, string> = {
       "2xs": "20px",
       xs: "24px",
-      s: "30px",
-      m: "40px",
-      l: "48px",
+      s: "32px",
+      m: "36px",
+      l: "40px",
       xl: "56px",
     };
     for (const [size, px] of Object.entries(expected)) {
@@ -675,8 +675,8 @@ describe("lr-button", () => {
           '[part~="base"]'
         ) as HTMLElement;
         const rect = base.getBoundingClientRect();
-        expect(rect.width, `${size} compact target width`).to.be.at.least(40);
-        expect(rect.height, `${size} compact target height`).to.be.at.least(40);
+        expect(rect.width, `${size} compact target width`).to.be.at.least(36);
+        expect(rect.height, `${size} compact target height`).to.be.at.least(36);
       }
     }
   });
@@ -860,21 +860,21 @@ describe("lr-button", () => {
         padInline: "8px",
         padBlock: "2px",
         fontSize: "13px",
-        minHeight: "30px",
+        minHeight: "32px",
       },
       {
         size: "m",
         padInline: "12px",
         padBlock: "4px",
-        fontSize: "16px",
-        minHeight: "40px",
+        fontSize: "14px",
+        minHeight: "36px",
       },
       {
         size: "l",
         padInline: "16px",
         padBlock: "8px",
         fontSize: "18px",
-        minHeight: "48px",
+        minHeight: "40px",
       },
       {
         size: "xl",
@@ -900,11 +900,21 @@ describe("lr-button", () => {
         expect(cs.paddingRight, `size=${tier.size} padding-inline`).to.equal(
           tier.padInline
         );
-        expect(cs.paddingTop, `size=${tier.size} padding-block`).to.equal(
-          tier.padBlock
+        const lineBox = document.createElement('span');
+        lineBox.style.cssText = 'position: absolute; block-size: 1lh; font: inherit; visibility: hidden';
+        base(el).append(lineBox);
+        const availablePadding = Math.max(
+          0,
+          (parseFloat(cs.minHeight) - parseFloat(getComputedStyle(lineBox).blockSize)
+            - parseFloat(cs.borderTopWidth) - parseFloat(cs.borderBottomWidth)) / 2
         );
-        expect(cs.paddingBottom, `size=${tier.size} padding-block`).to.equal(
-          tier.padBlock
+        lineBox.remove();
+        const expectedPadding = Math.min(parseFloat(tier.padBlock), availablePadding);
+        expect(parseFloat(cs.paddingTop), `size=${tier.size} padding-block`).to.be.closeTo(
+          expectedPadding, 0.05
+        );
+        expect(parseFloat(cs.paddingBottom), `size=${tier.size} padding-block`).to.be.closeTo(
+          expectedPadding, 0.05
         );
         expect(cs.fontSize, `size=${tier.size} font-size`).to.equal(
           tier.fontSize
@@ -965,11 +975,11 @@ describe("lr-button", () => {
       }
     });
 
-    it("exposes --lr-button-gap and --lr-button-radius, defaulting to the pre-existing literals", async () => {
+    it("exposes --lr-button-gap and --lr-button-radius, defaulting to the shared token defaults", async () => {
       const el = (await fixture(html`<lr-button>Go</lr-button>`)) as LyraButton;
       const cs = getComputedStyle(base(el));
       expect(cs.gap).to.equal("2px");
-      expect(cs.borderRadius).to.equal("6px");
+      expect(cs.borderRadius).to.equal("8px");
     });
 
     it("retunes the icon/label gap and corner radius with no ::part(base) rule", async () => {
@@ -1000,9 +1010,9 @@ describe("lr-button", () => {
       )) as LyraButton;
       expect(getComputedStyle(base(mEl)).gap).to.equal("2px");
       expect(getComputedStyle(base(xsEl)).gap).to.equal("2px");
-      // The radius does vary: a 6px corner on a 24px-tall button reads as a lozenge.
-      expect(getComputedStyle(base(mEl)).borderTopLeftRadius).to.equal("6px");
-      expect(getComputedStyle(base(xsEl)).borderTopLeftRadius).to.equal("2px");
+      // The radius does vary: an 8px corner on a 24px-tall button reads as a lozenge.
+      expect(getComputedStyle(base(mEl)).borderTopLeftRadius).to.equal("8px");
+      expect(getComputedStyle(base(xsEl)).borderTopLeftRadius).to.equal("4px");
     });
 
     it("uses the min-height fallback until --lr-button-height is explicitly pinned", async () => {
@@ -1797,8 +1807,8 @@ describe("lr-button: pill", () => {
     expect(el.pill).to.be.false;
     expect(el.hasAttribute("pill")).to.be.false;
     const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
-    // --lr-radius (0.375rem) at the default 16px root font size, exactly as before pill existed.
-    expect(getComputedStyle(base).borderRadius).to.equal("6px");
+    // --lr-radius (0.5rem) at the default 16px root font size.
+    expect(getComputedStyle(base).borderRadius).to.equal("8px");
   });
 
   it("drops back to the default radius when pill is turned off again", async () => {
@@ -1808,7 +1818,7 @@ describe("lr-button: pill", () => {
     el.pill = false;
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
-    expect(getComputedStyle(base).borderRadius).to.equal("6px");
+    expect(getComputedStyle(base).borderRadius).to.equal("8px");
   });
 
   it('keeps appearance="link" at zero radius even while pill is set', async () => {
@@ -2390,9 +2400,9 @@ describe("lr-button — the shared styling vocabulary", () => {
     const expected: Record<string, number> = {
       "2xs": 20,
       xs: 24,
-      s: 30,
-      m: 40,
-      l: 48,
+      s: 32,
+      m: 36,
+      l: 40,
       xl: 56,
     };
     for (const [size, px] of Object.entries(expected)) {
@@ -3303,4 +3313,39 @@ it('forwards host aria-keyshortcuts through button/link changes and removal', as
   expect(control().localName).to.equal('button'); expect(control().getAttribute('aria-keyshortcuts')).to.equal('Control+B');
   el.removeAttribute('aria-keyshortcuts'); await el.updateComplete;
   expect(control().hasAttribute('aria-keyshortcuts')).to.equal(false);
+});
+
+describe('lr-button content-aware shared padding', () => {
+  it('keeps the legacy large tier padding while honoring authored padding and larger text', async () => {
+    const legacy = await fixture<LyraButton>(html`
+      <lr-button size="l" style="--lr-theme-form-control-height-l: 3rem">Save</lr-button>
+    `);
+    const legacyBase = legacy.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+    expect(legacyBase.getBoundingClientRect().height).to.equal(48);
+    expect(getComputedStyle(legacyBase).paddingBlock).to.equal('8px');
+
+    const padded = await fixture<LyraButton>(html`
+      <lr-button size="l" style="--lr-button-padding-block: 12px">Save</lr-button>
+    `);
+    const paddedBase = padded.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+    expect(getComputedStyle(paddedBase).paddingBlock).to.equal('12px');
+    expect(paddedBase.getBoundingClientRect().height).to.be.greaterThan(40);
+
+    const enlarged = await fixture<LyraButton>(html`
+      <lr-button size="l" style="--lr-button-font-size: 2rem; line-height: 2">Save</lr-button>
+    `);
+    const enlargedBase = enlarged.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+    expect(getComputedStyle(enlargedBase).fontSize).to.equal('32px');
+    expect(enlargedBase.getBoundingClientRect().height).to.be.at.least(64);
+  });
+
+  it('grows for wrapping localized labels without clipping the content to its tier', async () => {
+    const el = await fixture<LyraButton>(html`
+      <lr-button size="l" wrap style="inline-size: 100px" lang="de">Einstellungen dauerhaft speichern</lr-button>
+    `);
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+    expect(base.getBoundingClientRect().height).to.be.greaterThan(40);
+    expect(base.scrollHeight).to.be.at.most(base.clientHeight);
+    expect(getComputedStyle(base).overflowY).to.equal('visible');
+  });
 });

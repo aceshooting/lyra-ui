@@ -150,7 +150,7 @@ it('shows a tokenized hover outline on the interactive SVG surface', async () =>
     const computed = getComputedStyle(svg);
     expect(computed.outlineStyle).to.equal('solid');
     expect(computed.outlineWidth).to.not.equal('0px');
-    expect(computed.outlineOffset).to.not.equal('0px');
+    expect(computed.outlineOffset).to.equal('0px');
   } finally {
     await resetMouse();
   }

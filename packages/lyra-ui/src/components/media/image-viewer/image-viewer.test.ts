@@ -1416,8 +1416,8 @@ describe("accessibility", () => {
       '[part="highlight"]'
     ) as HTMLElement;
     const style = getComputedStyle(box);
-    expect(parseFloat(style.minInlineSize)).to.be.at.least(40);
-    expect(parseFloat(style.minBlockSize)).to.be.at.least(40);
+    expect(parseFloat(style.minInlineSize)).to.be.at.least(36);
+    expect(parseFloat(style.minBlockSize)).to.be.at.least(36);
   });
 
   it("gives the toolbar fit/rotate/annotate controls the shared minimum hit-area on both axes", async () => {
@@ -1432,11 +1432,11 @@ describe("accessibility", () => {
       expect(
         parseFloat(style.minInlineSize),
         `${part} minInlineSize`
-      ).to.be.at.least(40);
+      ).to.be.at.least(36);
       expect(
         parseFloat(style.minBlockSize),
         `${part} minBlockSize`
-      ).to.be.at.least(40);
+      ).to.be.at.least(36);
     }
   });
 

@@ -619,8 +619,8 @@ describe("inline rename", () => {
     const btn = el.shadowRoot!.querySelector(
       '[part="rename-button"]'
     ) as HTMLElement;
-    expect(getComputedStyle(btn).minInlineSize).to.equal("40px");
-    expect(getComputedStyle(btn).minBlockSize).to.equal("40px");
+    expect(getComputedStyle(btn).minInlineSize).to.equal("36px");
+    expect(getComputedStyle(btn).minBlockSize).to.equal("36px");
   });
 
   it("swaps the label for a focused, pre-filled input when the rename button is activated", async () => {
@@ -1388,12 +1388,12 @@ describe("dense size tier", () => {
     const floor = getComputedStyle(el)
       .getPropertyValue("--lr-icon-button-size")
       .trim();
-    expect(floor).to.equal("2.5rem");
+    expect(floor).to.equal("2.25rem");
 
     const compactButton = partStyle(el, "rename-button");
     const comfortableButton = partStyle(comfortable, "rename-button");
-    expect(compactButton.minInlineSize).to.equal("40px");
-    expect(compactButton.minBlockSize).to.equal("40px");
+    expect(compactButton.minInlineSize).to.equal("36px");
+    expect(compactButton.minBlockSize).to.equal("36px");
     // Density must never silently opt a row out of the shared icon target-size floor.
     expect(compactButton.minInlineSize).to.equal(
       comfortableButton.minInlineSize

@@ -1,3 +1,4 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './activity-feed.js';
@@ -573,12 +574,12 @@ it('renders a visible focus ring on [part="body"] when it is the tabbable scroll
   const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
   expect(body.getAttribute('tabindex')).to.equal('0');
   expect(getComputedStyle(body).outlineStyle).to.equal('none');
-  body.focus();
+  await focusByKeyboard(body);
   expect(el.shadowRoot!.activeElement === body).to.be.true;
   const focused = getComputedStyle(body);
   expect(focused.outlineStyle).to.equal('solid');
-  expect(focused.outlineWidth).to.equal('2px'); // --lr-focus-ring-width
-  expect(focused.outlineOffset).to.equal('-2px'); // inset: -1 * --lr-focus-ring-offset
+  expect(focused.outlineWidth).to.equal('3px'); // --lr-focus-ring-width
+  expect(focused.outlineOffset).to.equal('-3px'); // The complete ring stays inside the clipped panel.
 });
 
 describe('withTimestamps', () => {
@@ -1785,3 +1786,20 @@ describe('lr-activity-feed deprecated --lr-activity-feed-background alias', () =
     expect(fill(both)).to.equal('rgb(4, 5, 6)');
   });
 });
+
+for (const [offset, expected] of [['0px', '-3px'], ['5px', '-8px'], ['-5px', '-3px']]) {
+  it(`keeps the clipped focus ring inward with authored offset ${offset}`, async () => {
+    const el = await fixture<LyraActivityFeed>(html`
+      <lr-activity-feed expanded .entries=${makeEntries(3)} style=${`--lr-focus-ring-width: 3px; --lr-focus-ring-offset: ${offset}`}></lr-activity-feed>
+    `);
+    for (const part of ['header', 'body']) {
+      const target = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;
+      await focusByKeyboard(target);
+      expect(el.shadowRoot!.activeElement === target).to.equal(true);
+      const computed = getComputedStyle(target);
+      expect(computed.outlineStyle).to.equal('solid');
+      expect(computed.outlineWidth).to.equal('3px');
+      expect(computed.outlineOffset).to.equal(expected);
+    }
+  });
+}

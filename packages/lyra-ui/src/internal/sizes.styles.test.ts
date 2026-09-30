@@ -38,15 +38,15 @@ customElements.define(tag('size-ladder-probe'), SizeLadderProbe);
 const TIERS = [
   { size: '2xs', px: 20 },
   { size: 'xs', px: 24 },
-  { size: 's', px: 30 },
-  { size: 'small', px: 30 },
-  { size: 'medium', px: 40 },
-  { size: 'l', px: 48 },
-  { size: 'large', px: 48 },
+  { size: 's', px: 32 },
+  { size: 'small', px: 32 },
+  { size: 'medium', px: 36 },
+  { size: 'l', px: 40 },
+  { size: 'large', px: 40 },
   { size: 'xl', px: 56 },
 ] as const;
 
-it('renders the pre-existing per-tier heights byte-identically with no coarse pointer', async () => {
+it('renders the default Shadcn height ladder and its tier aliases with no coarse pointer', async () => {
   for (const tier of TIERS) {
     const el = (await fixture(
       html`<lr-size-ladder-probe size=${tier.size}></lr-size-ladder-probe>`,
@@ -56,15 +56,14 @@ it('renders the pre-existing per-tier heights byte-identically with no coarse po
   }
 });
 
-it('renders the unset (m) default byte-identically with no coarse pointer', async () => {
+it('renders the unset medium Shadcn height with no coarse pointer', async () => {
   const el = (await fixture(html`<lr-size-ladder-probe></lr-size-ladder-probe>`)) as SizeLadderProbe;
   const box = el.shadowRoot!.querySelector('[part="box"]') as HTMLElement;
-  expect(getComputedStyle(box).blockSize).to.equal('40px');
+  expect(getComputedStyle(box).blockSize).to.equal('36px');
 });
 
 it('floors every tier at the platform touch-target size under a coarse pointer', async () => {
-  // Only the tiers already under 44px are expected to move; 'l'/'large' (48px) and 'xl' (56px)
-  // are already at or above the floor and max() must leave them alone.
+  // Every tier below 44px grows; the 56px xl tier remains above the touch floor.
   for (const tier of TIERS) {
     const el = (await fixture(
       html`<lr-size-ladder-probe size=${tier.size}></lr-size-ladder-probe>`,

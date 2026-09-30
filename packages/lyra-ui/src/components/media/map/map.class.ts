@@ -4852,6 +4852,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   private stopObservingPeerChrome(): void {
+    const pending = this.peerControlsResizeFrame;
+    this.peerControlsResizeFrame = undefined;
+    if (pending) pending.view.cancelAnimationFrame(pending.handle);
     this.peerControlsResizeObserver?.disconnect();
     this.peerControlsResizeObserver = undefined;
     this.peerChromeObserver?.disconnect();
@@ -4860,6 +4863,35 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   private peerControlsResizeObserver?: ResizeObserver;
+  private peerControlsResizeFrame?: { view: Window; handle: number };
+
+  private schedulePeerControlInsets(observer: ResizeObserver, container: HTMLElement): void {
+    if (
+      this.peerControlsResizeObserver !== observer ||
+      this.observedPeerContainer !== container ||
+      this.containerEl !== container ||
+      !this.isConnected ||
+      this.peerControlsResizeFrame
+    ) return;
+    const view = container.ownerDocument.defaultView;
+    if (!view) return;
+    // Updating the legend from a deeper corner observer would resize a shallower observed
+    // surface during the same delivery. Measure after that delivery has finished instead.
+    const pending = { view, handle: 0 };
+    this.peerControlsResizeFrame = pending;
+    pending.handle = view.requestAnimationFrame(() => {
+      if (this.peerControlsResizeFrame !== pending) return;
+      this.peerControlsResizeFrame = undefined;
+      if (
+        this.peerControlsResizeObserver !== observer ||
+        this.observedPeerContainer !== container ||
+        this.containerEl !== container ||
+        container.ownerDocument.defaultView !== view ||
+        !this.isConnected
+      ) return;
+      this.measurePeerControlInsets(container);
+    });
+  }
 
   private measurePeerControlInsets(container: HTMLElement): void {
     if (!this.isConnected || this.containerEl !== container) return;
@@ -4875,7 +4907,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       const height = Math.max(0, ...[...container.querySelectorAll<HTMLElement>(
         `.maplibregl-ctrl-${edge}-left, .maplibregl-ctrl-${edge}-right`,
       )].map((corner) => corner.getBoundingClientRect().height));
-      container.parentElement?.style.setProperty(`--_lr-map-controls-${edge}`, `${height}px`);
+      const base = container.parentElement;
+      const name = `--_lr-map-controls-${edge}`;
+      const value = `${height}px`;
+      if (base && base.style.getPropertyValue(name) !== value) base.style.setProperty(name, value);
     }
   }
 
@@ -4922,7 +4957,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.observedPeerContainer = container;
     const ResizeObserverCtor = container.ownerDocument.defaultView?.ResizeObserver;
     if (ResizeObserverCtor) {
-      this.peerControlsResizeObserver = new ResizeObserverCtor(() => this.measurePeerControlInsets(container));
+      const observer = new ResizeObserverCtor(() => this.schedulePeerControlInsets(observer, container));
+      this.peerControlsResizeObserver = observer;
       for (const corner of container.querySelectorAll<HTMLElement>(
         '.maplibregl-ctrl-top-left, .maplibregl-ctrl-top-right, .maplibregl-ctrl-bottom-left, .maplibregl-ctrl-bottom-right',
       )) this.peerControlsResizeObserver.observe(corner);

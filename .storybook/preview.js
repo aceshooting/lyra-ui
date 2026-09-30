@@ -4,7 +4,7 @@ import { setCustomElementsManifest } from '@storybook/web-components';
 import { LyraDocsContainer } from './docs-container.js';
 import { LyraDocsPage } from './docs-page.js';
 import { publicStorybookManifest } from './storybook-manifest.js';
-import { normalizeStoryThemeName } from './theme-contract.js';
+import { normalizeStoryPresentation, STORY_PRESENTATION_DEFAULTS } from './theme-contract.js';
 import { installDocsPreloadRecovery } from './docs-load-boundaries.js';
 import { setLyraStyle } from '../packages/lyra-ui/src/theme/theme.js';
 // The preview uses the exact stylesheet consumers import. Storybook-specific colors stay in the
@@ -55,17 +55,12 @@ setCustomElementsManifest(publicStorybookManifest(customElements));
 // broken deploy. A mounted builder handles lazy-load errors locally to preserve its draft.
 installDocsPreloadRecovery(window);
 
-const LYRA_STORY_LOOKS = Object.freeze(['lyra', 'shadcn']);
 const LOOK_STYLE_ID = 'lr-storybook-look';
-
-function normalizeStoryLook(look) {
-  return LYRA_STORY_LOOKS.includes(look) ? look : 'lyra';
-}
 
 /** Adds or removes the shadcn stylesheet required by the selected look. */
 function applyLyraLook(look) {
   const existing = document.getElementById(LOOK_STYLE_ID);
-  if (normalizeStoryLook(look) !== 'shadcn') {
+  if (look !== 'shadcn') {
     existing?.remove();
     return;
   }
@@ -77,18 +72,16 @@ function applyLyraLook(look) {
 }
 
 function applyLyraPresentation(globals) {
-  const theme = normalizeStoryThemeName(globals.theme);
-  const look = normalizeStoryLook(globals.look);
-  const direction = globals.direction === 'rtl' ? 'rtl' : 'ltr';
+  const { theme, look, surface, accent, direction } = normalizeStoryPresentation(globals);
   const root = document.documentElement;
 
   applyLyraLook(look);
   setLyraStyle({
     look,
-    surface: 'solid',
+    surface,
     density: 'comfortable',
     mode: theme,
-    accent: null,
+    accent,
   });
   root.dir = direction;
   root.dataset.lyraDirection = direction;
@@ -135,7 +128,7 @@ const preview = {
     },
     look: {
       name: 'Look',
-      description: 'Lyra\'s own look or the optional shadcn look stylesheet.',
+      description: 'The default shadcn look or Lyra\'s original look.',
       toolbar: {
         title: 'Look',
         icon: 'component',
@@ -145,6 +138,14 @@ const preview = {
           { value: 'shadcn', title: 'shadcn/ui' },
         ],
       },
+    },
+    surface: {
+      name: 'Surface',
+      description: 'Glass by default; the surface global accepts glass or solid.',
+    },
+    accent: {
+      name: 'Accent',
+      description: 'Emerald by default; the accent global accepts emerald or none.',
     },
     direction: {
       name: 'Direction',
@@ -160,11 +161,7 @@ const preview = {
       },
     },
   },
-  initialGlobals: {
-    theme: 'dark',
-    look: 'lyra',
-    direction: 'ltr',
-  },
+  initialGlobals: STORY_PRESENTATION_DEFAULTS,
   decorators: [withLyraTheme],
   parameters: {
     controls: {

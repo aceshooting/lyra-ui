@@ -28,7 +28,12 @@ export const styles = css`
     --_lr-combobox-font-size: var(--lr-form-control-font-size);
     --_lr-combobox-tag-padding: var(--lr-size-0-1rem) var(--lr-size-0-4rem);
     --_lr-combobox-tag-font-size: var(--lr-font-size-sm);
-    --_lr-combobox-expand-size: var(--lr-size-1-75rem);
+    /* The decorative indicator fits the row's content box; explicit expand-size overrides
+       remain authoritative and can grow the row. */
+    --_lr-combobox-expand-size: min(
+      var(--lr-size-1-75rem),
+      max(0px, calc(var(--lr-form-control-height) - 2 * var(--lr-form-control-padding-block) - 2 * var(--lr-border-width-thin)))
+    );
     /* Gap and radius do not vary by size tier, so each is declared once here rather than per
        :host([size='...']) block -- mirrors lr-button's --lr-button-gap/--lr-button-radius. */
     --_lr-combobox-gap: var(--lr-space-xs);

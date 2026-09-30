@@ -169,11 +169,14 @@ async function componentStoryFiles(directory) {
 
 let currentStoryId;
 
-async function waitForStory(page, baseUrl, id, viewport, theme = 'light') {
+async function waitForStory(page, baseUrl, id, viewport, theme = 'light', presentationGlobals = '') {
   currentStoryId = id;
   try {
     await page.setViewportSize(viewport);
-    const url = `${baseUrl}/iframe.html?id=${id}&viewMode=story&globals=theme:${theme}`;
+    const url = new URL(`${baseUrl}/iframe.html`);
+    url.searchParams.set('id', id);
+    url.searchParams.set('viewMode', 'story');
+    url.searchParams.set('globals', [`theme:${theme}`, presentationGlobals].filter(Boolean).join(';'));
     await page.goto(url.toString(), { waitUntil: 'domcontentloaded', timeout: 20_000 });
     await page.waitForFunction(
       () => Boolean(document.querySelector('#storybook-root')?.firstElementChild),
@@ -593,6 +596,10 @@ async function main() {
       const checkboxLabel = checkbox?.shadowRoot?.querySelector('[part="label"]');
       return {
         dataset: document.documentElement.dataset.lrMode,
+        look: document.documentElement.dataset.lrLook,
+        surface: document.documentElement.dataset.lrSurface,
+        accent: document.documentElement.dataset.lrAccent,
+        accentColor: getComputedStyle(document.documentElement).getPropertyValue('--lr-theme-accent').trim(),
         wrapperBackground: wrapper ? getComputedStyle(wrapper).backgroundColor : '',
         headingColor: heading ? getComputedStyle(heading).color : '',
         checkboxColor: checkboxLabel ? getComputedStyle(checkboxLabel).color : '',
@@ -607,8 +614,10 @@ async function main() {
     const checkboxContrast = contrastRatio(darkDocsTheme.checkboxColor, darkDocsTheme.wrapperBackground);
     if (
       darkDocsTheme.dataset !== 'dark' ||
-      darkDocsTheme.wrapperBackground !== 'rgb(26, 26, 26)' ||
-      darkDocsTheme.headingColor !== 'rgb(242, 242, 242)' ||
+      darkDocsTheme.look !== 'shadcn' || darkDocsTheme.surface !== 'glass' || darkDocsTheme.accent !== 'emerald' ||
+      darkDocsTheme.accentColor !== '#34d399' ||
+      darkDocsTheme.wrapperBackground !== 'rgb(10, 10, 10)' ||
+      darkDocsTheme.headingColor !== 'rgb(250, 250, 250)' ||
       !(checkboxContrast >= 4.5)
     ) {
       throw new Error(
@@ -634,11 +643,15 @@ async function main() {
       return {
         wrapperBackground: wrapper ? getComputedStyle(wrapper).backgroundColor : '',
         headingColor: heading ? getComputedStyle(heading).color : '',
+        look: document.documentElement.dataset.lrLook,
+        surface: document.documentElement.dataset.lrSurface,
+        accent: document.documentElement.dataset.lrAccent,
       };
     });
     if (
       lightDocsTheme.wrapperBackground !== 'rgb(255, 255, 255)' ||
-      lightDocsTheme.headingColor !== 'rgb(26, 26, 26)'
+      lightDocsTheme.headingColor !== 'rgb(10, 10, 10)' ||
+      lightDocsTheme.look !== 'shadcn' || lightDocsTheme.surface !== 'glass' || lightDocsTheme.accent !== 'emerald'
     ) {
       throw new Error(`light Docs theme did not follow the toolbar: ${JSON.stringify(lightDocsTheme)}`);
     }
@@ -806,16 +819,38 @@ async function main() {
       const styles = getComputedStyle(document.documentElement);
       return {
         mode: document.documentElement.dataset.lrMode,
+        look: document.documentElement.dataset.lrLook,
+        treatment: document.documentElement.dataset.lrSurface,
+        accent: document.documentElement.dataset.lrAccent,
+        accentColor: styles.getPropertyValue('--lr-theme-accent').trim(),
+        lookInstalled: styles.getPropertyValue('--_lr-look-installed').trim(),
+        glassEnabled: styles.getPropertyValue('--_lr-surface-enabled').trim(),
         scheme: styles.colorScheme,
         surface: styles.getPropertyValue('--lr-theme-color-surface-default').trim(),
       };
     });
-    // #1a1a1a is theme.css's shipped dark surface. The former #0d1117 was Storybook's own preview
-    // palette, which no longer exists.
-    if (darkTheme.mode !== 'dark' || !darkTheme.scheme.includes('dark') || darkTheme.surface !== '#1a1a1a') {
+    if (darkTheme.mode !== 'dark' || !darkTheme.scheme.includes('dark') || darkTheme.surface !== '#0a0a0a' ||
+        darkTheme.look !== 'shadcn' || darkTheme.treatment !== 'glass' || darkTheme.accent !== 'emerald' ||
+        darkTheme.accentColor !== '#34d399' || darkTheme.lookInstalled !== 'shadcn-1' || darkTheme.glassEnabled !== '1') {
       throw new Error(`dark Storybook theme did not apply semantic tokens: ${JSON.stringify(darkTheme)}`);
     }
     await runA11y(page, 'checkbox--default/dark');
+
+    await waitForStory(page, baseUrl, 'checkbox--default', { width: 1280, height: 800 }, 'dark',
+      'look:lyra;surface:solid;accent:none');
+    const referenceTheme = await page.evaluate(() => {
+      const root = document.documentElement;
+      const styles = getComputedStyle(root);
+      return {
+        look: root.dataset.lrLook, surface: root.dataset.lrSurface, accent: root.dataset.lrAccent,
+        background: styles.getPropertyValue('--lr-theme-color-surface-default').trim(),
+        glassEnabled: styles.getPropertyValue('--_lr-surface-enabled').trim(),
+      };
+    });
+    if (referenceTheme.look !== 'lyra' || referenceTheme.surface !== 'solid' || referenceTheme.accent !== 'none' ||
+        referenceTheme.background !== '#1a1a1a' || referenceTheme.glassEnabled !== '0') {
+      throw new Error(`Explicit Storybook reference profile was lost: ${JSON.stringify(referenceTheme)}`);
+    }
 
     await waitForCheckedStory(page, baseUrl, 'dialog--open-initially', { width: 1280, height: 800 });
     await runA11y(page, 'dialog--open-initially');

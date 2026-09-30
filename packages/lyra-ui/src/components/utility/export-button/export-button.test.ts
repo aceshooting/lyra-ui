@@ -993,8 +993,8 @@ it('shows a focus ring on the trigger via :focus-visible', async () => {
   trigger.focus();
   await el.updateComplete;
   const style = getComputedStyle(trigger);
-  expect(style.outlineWidth).to.equal('2px');
-  expect(style.outlineOffset).to.equal('2px');
+  expect(style.outlineWidth).to.equal('3px');
+  expect(style.outlineOffset).to.equal('0px');
 });
 
 it('shows a focus ring on menu items via :focus-visible', async () => {
@@ -1009,8 +1009,8 @@ it('shows a focus ring on menu items via :focus-visible', async () => {
   menuItem.focus();
   await el.updateComplete;
   const style = getComputedStyle(menuItem);
-  expect(style.outlineWidth).to.equal('2px');
-  expect(style.outlineOffset).to.equal('2px');
+  expect(style.outlineWidth).to.equal('3px');
+  expect(style.outlineOffset).to.equal('0px');
 });
 
 it('links the trigger to the menu via aria-controls/id only when a menu exists', async () => {
@@ -1238,8 +1238,8 @@ it('gives the trigger and menu items the shared minimum hit area', async () => {
     '[part="trigger"], [part="menu-item"]',
   )) {
     const computed = getComputedStyle(control);
-    expect(computed.minInlineSize).to.equal('40px');
-    expect(computed.minBlockSize).to.equal('40px');
+    expect(computed.minInlineSize).to.equal('36px');
+    expect(computed.minBlockSize).to.equal('36px');
   }
 });
 
@@ -1261,7 +1261,7 @@ it('supports opt-in compact density and outlined or quiet trigger treatments', a
   expect(compactStyle.fontSize).to.not.equal(legacyStyle.fontSize);
   expect(compactStyle.paddingInline).to.not.equal(legacyStyle.paddingInline);
   expect(compactStyle.backgroundColor).to.not.equal(legacyStyle.backgroundColor);
-  expect(compactStyle.minBlockSize).to.equal('40px');
+  expect(compactStyle.minBlockSize).to.equal('36px');
 
   el.appearance = 'quiet';
   await el.updateComplete;
@@ -1284,7 +1284,7 @@ it('keeps compact size and outlined/quiet appearance intact inside a narrow RTL 
 
   expect(el.size).to.equal('s');
   expect(el.appearance).to.equal('outlined');
-  expect(getComputedStyle(trigger).minBlockSize).to.equal('40px');
+  expect(getComputedStyle(trigger).minBlockSize).to.equal('36px');
   expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
 
   el.appearance = 'quiet';
@@ -1855,13 +1855,13 @@ describe('trigger paint custom properties', () => {
       .to.not.equal(getComputedStyle(trigger(outlined)).color);
   });
 
-  it('exposes --lr-export-button-gap and --lr-export-button-radius, defaulting to the pre-existing literals', async () => {
+  it('exposes --lr-export-button-gap and --lr-export-button-radius, defaulting to the shared Shadcn tokens', async () => {
     const el = (await fixture(html`
       <lr-export-button .rows=${rows} .columns=${columns}></lr-export-button>
     `)) as LyraExportButton;
     const styles = getComputedStyle(trigger(el));
     expect(styles.gap).to.equal('4px');
-    expect(styles.borderRadius).to.equal('6px');
+    expect(styles.borderRadius).to.equal('8px');
   });
 
   it('retunes the trigger gap and corner radius with no ::part(trigger) rule', async () => {

@@ -1924,8 +1924,8 @@ describe("size", () => {
     const trackBounds = track.getBoundingClientRect();
 
     expect(base.getAttribute("role")).to.equal("switch");
-    expect(baseBounds.width).to.be.at.least(40);
-    expect(baseBounds.height).to.be.at.least(40);
+    expect(baseBounds.width).to.be.at.least(36);
+    expect(baseBounds.height).to.be.at.least(36);
     expect(trackBounds.width).to.be.closeTo(18, 0.5);
     expect(trackBounds.height).to.be.closeTo(10, 0.5);
     expect(trackBounds.left + trackBounds.width / 2).to.be.closeTo(

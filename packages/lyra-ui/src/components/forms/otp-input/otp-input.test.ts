@@ -568,8 +568,8 @@ it('honors a compact segment-size exactly while keeping the combined input targe
   const inputRect = controlOf(compact).getBoundingClientRect();
   expect(cellRect.width).to.be.closeTo(16, 1);
   expect(cellRect.height).to.be.closeTo(16, 1);
-  expect(targetRect.width).to.be.at.least(40);
-  expect(targetRect.height).to.be.at.least(40);
+  expect(targetRect.width).to.be.at.least(36);
+  expect(targetRect.height).to.be.at.least(36);
   expect(inputRect.width).to.be.closeTo(targetRect.width, 1);
   expect(inputRect.height).to.be.closeTo(targetRect.height, 1);
   expect(segmentOf(medium).getBoundingClientRect().height).to.be.greaterThan(
@@ -583,6 +583,7 @@ it('contains a long RTL fixed-cell row in a 320px allocation while keeping every
       <lr-otp-input
         label="InternationalizedUnbrokenVerificationCodeLabelThatMustWrapInsideItsAllocatedContainer"
         hint="A very long supporting hint that must also wrap without widening the containing page"
+        style="--segment-size: 3rem"
         length="8"
       ></lr-otp-input>
     </div>

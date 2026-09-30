@@ -23,18 +23,19 @@ const [
   { publicStorybookManifest },
   { FAMILY_LABELS, createGroupedStoryIndexer, groupedStoryTitle },
   { transformStoryTitle },
+  { normalizeStoryPresentation, STORY_PRESENTATION_DEFAULTS },
 ] = await Promise.all([
   import('../.storybook/story-theme.js'),
   import('../.storybook/storybook-manifest.js'),
   import('../.storybook/story-indexer.js'),
   import('../.storybook/story-title-plugin.js'),
+  import('../.storybook/theme-contract.js'),
 ]);
 
 for (const required of [
   'globalTypes: {',
   'theme: {',
-  'initialGlobals: {',
-  `theme: 'dark'`,
+  'initialGlobals: STORY_PRESENTATION_DEFAULTS',
   `title: 'Theme'`,
   'dynamicTitle: true',
   `{ value: 'light', title: 'Light' }`,
@@ -42,11 +43,12 @@ for (const required of [
   `import '../packages/lyra-ui/src/theme.css';`,
   `import '../packages/lyra-ui/src/all.js';`,
   `import { setLyraStyle } from '../packages/lyra-ui/src/theme/theme.js';`,
-  `import { normalizeStoryThemeName } from './theme-contract.js';`,
-  "surface: 'solid',",
+  `import { normalizeStoryPresentation, STORY_PRESENTATION_DEFAULTS } from './theme-contract.js';`,
+  'normalizeStoryPresentation(globals)',
+  'surface,',
   "density: 'comfortable',",
   'mode: theme,',
-  'accent: null,',
+  'accent,',
   'setLyraStyle({',
   'bootstrapLyraPresentationFromUrl();',
   'decorators: [withLyraTheme]',
@@ -56,6 +58,14 @@ for (const required of [
     throw new Error(`Storybook theme configuration is missing ${required}`);
   }
 }
+
+assert.deepEqual(STORY_PRESENTATION_DEFAULTS, {
+  theme: 'dark', look: 'shadcn', surface: 'glass', accent: 'emerald', direction: 'ltr',
+});
+assert.deepEqual(normalizeStoryPresentation({}), STORY_PRESENTATION_DEFAULTS);
+assert.deepEqual(normalizeStoryPresentation({ look: 'lyra', surface: 'solid', accent: 'none' }), {
+  ...STORY_PRESENTATION_DEFAULTS, look: 'lyra', surface: 'solid', accent: null,
+});
 
 if (preview.includes('backgrounds:')) {
   throw new Error('Storybook must use the semantic theme toolbar instead of a canvas-only background switch');
@@ -132,7 +142,8 @@ if (docsContainerSource.includes('setLyraTheme') || docsContainerSource.includes
 if (
   !docsContainerSource.includes("import { setLyraStyle } from '../packages/lyra-ui/src/theme/theme.js';") ||
   !docsContainerSource.includes('dataset.lrMode') ||
-  !docsContainerSource.includes('setLyraStyle({ mode: themeName, accent: null })')
+  !docsContainerSource.includes('setLyraStyle({ mode: themeName })') ||
+  docsContainerSource.includes('accent: null')
 ) {
   throw new Error('Storybook docs container must synchronize the docs theme through canonical style state');
 }

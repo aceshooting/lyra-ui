@@ -706,7 +706,7 @@ describe('size ladder', () => {
     { size: '2xs', fontSize: 10 },
     { size: 'xs', fontSize: 12 },
     { size: 's', fontSize: 13 },
-    { size: 'm', fontSize: 16 },
+    { size: 'm', fontSize: 14 },
     { size: 'l', fontSize: 18 },
     { size: 'xl', fontSize: 20 },
   ] as const;
@@ -741,7 +741,7 @@ describe('size ladder', () => {
   it('accepts the Web Awesome and Shoelace long-form tier spellings without normalizing them away', async () => {
     const aliases = [
       { alias: 'small', fontSize: 13 },
-      { alias: 'medium', fontSize: 16 },
+      { alias: 'medium', fontSize: 14 },
       { alias: 'large', fontSize: 18 },
     ] as const;
 
@@ -897,7 +897,7 @@ describe('linear caption sizing scales with the host font, not the document root
       { size: '2xs', fontSize: 10 },
       { size: 'xs', fontSize: 12 },
       { size: 's', fontSize: 13 },
-      { size: 'm', fontSize: 16 },
+      { size: 'm', fontSize: 14 },
       { size: 'l', fontSize: 18 },
       { size: 'xl', fontSize: 20 },
     ] as const;

@@ -79,7 +79,7 @@ describe('script typography and line breaking', function () {
           await nextFrame();
           const style = getComputedStyle(field);
           expect(style.fontFamily).to.include('Noto Nastaliq Urdu');
-          expect(Number.parseFloat(style.fontSize)).to.be.closeTo(Number.parseFloat(fontSize), 0.1);
+          expect(Number.parseFloat(style.fontSize)).to.be.closeTo(Number.parseFloat(fontSize) * 0.875, 0.1);
           expect(Number.parseFloat(style.lineHeight)).to.be.closeTo(Number.parseFloat(style.fontSize) * 2.5, 0.1);
           expect(style.direction).to.equal('rtl');
           expect(field.scrollWidth).to.be.at.most(field.clientWidth + 1);

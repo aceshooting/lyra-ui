@@ -9,6 +9,7 @@ import {
 import * as XLSX from 'xlsx';
 import './spreadsheet-viewer.js';
 import type { LyraSpreadsheetViewer } from './spreadsheet-viewer.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { LYRA_DEFAULT_STRINGS, registerLyraLocale } from '../../../internal/localization.js';
 
@@ -1841,7 +1842,7 @@ describe('lr-spreadsheet-viewer', () => {
 
     it('tints the active highlight apart from an inactive one', async () => {
       injectStyle(
-        'lr-spreadsheet-viewer { --lr-theme-color-brand-fill-loud: rgb(1, 2, 3); --lr-theme-color-warning-fill-loud: rgb(4, 5, 6); }'
+        'lr-spreadsheet-viewer { --lr-theme-color-focus: rgb(1, 2, 3); --lr-theme-color-warning-fill-loud: rgb(4, 5, 6); }'
       );
       const el = (await fixture(
         html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`
@@ -1886,7 +1887,7 @@ describe('lr-spreadsheet-viewer', () => {
 
     it('shows the shared focus ring while the nested highlight action is focused', async () => {
       injectStyle(
-        'lr-spreadsheet-viewer { --lr-theme-color-brand-fill-loud: rgb(1, 2, 3); --lr-theme-color-warning-fill-loud: rgb(4, 5, 6); }'
+        'lr-spreadsheet-viewer { --lr-theme-color-focus: rgb(1, 2, 3); --lr-theme-color-warning-fill-loud: rgb(4, 5, 6); }'
       );
       const el = (await fixture(
         html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`
@@ -1900,7 +1901,9 @@ describe('lr-spreadsheet-viewer', () => {
         expect(getComputedStyle(highlighted).outlineColor).to.equal(
           'rgb(4, 5, 6)'
         );
-        action.focus();
+        await focusByKeyboard(action);
+        expect(getComputedStyle(action).outlineStyle).to.equal('solid');
+        expect(getComputedStyle(action).outlineWidth).to.equal('3px');
         expect(getComputedStyle(action).outlineColor).to.equal('rgb(1, 2, 3)');
       } finally {
         restore();

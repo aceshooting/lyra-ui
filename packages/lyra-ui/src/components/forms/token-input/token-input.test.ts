@@ -834,9 +834,9 @@ it("matches lr-input's own row height at every shared size tier when empty", asy
   const expected: Record<string, string> = {
     "2xs": "20px",
     xs: "24px",
-    s: "30px",
-    m: "40px",
-    l: "48px",
+    s: "32px",
+    m: "36px",
+    l: "40px",
     xl: "56px",
   };
   for (const [size, px] of Object.entries(expected)) {
@@ -862,9 +862,9 @@ it("renders the laid-out row box at the ladder floor, not the ambient font metri
   const expected: ReadonlyArray<readonly [string, number]> = [
     ["2xs", 20],
     ["xs", 24],
-    ["s", 30],
-    ["m", 40],
-    ["l", 48],
+    ["s", 32],
+    ["m", 36],
+    ["l", 40],
     ["xl", 56],
   ];
   for (const [size, px] of expected) {
@@ -957,7 +957,7 @@ it("keeps the remove-button hit-area fixed across every size tier", async () => 
       '[part="remove"]'
     ) as HTMLElement;
     expect(getComputedStyle(remove).minBlockSize, `size=${size}`).to.equal(
-      "40px"
+      "36px"
     );
   }
 });
@@ -969,8 +969,8 @@ it("gives the per-token remove button the shared minimum hit area", async () => 
   const removeBtn = el.shadowRoot!.querySelector(
     '[part="remove"]'
   ) as HTMLElement;
-  expect(getComputedStyle(removeBtn).minInlineSize).to.equal("40px");
-  expect(getComputedStyle(removeBtn).minBlockSize).to.equal("40px");
+  expect(getComputedStyle(removeBtn).minInlineSize).to.equal("36px");
+  expect(getComputedStyle(removeBtn).minBlockSize).to.equal("36px");
 });
 
 it("renders label/hint/error content passed through named slots", async () => {

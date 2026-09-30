@@ -386,8 +386,8 @@ it("gives the resize-handle the shared minimum hit area", async () => {
   const handle = header(element, "name").querySelector(
     '[part="resize-handle"]'
   ) as HTMLElement;
-  expect(getComputedStyle(handle).minInlineSize).to.equal("40px");
-  expect(getComputedStyle(handle).minBlockSize).to.equal("40px");
+  expect(getComputedStyle(handle).minInlineSize).to.equal("36px");
+  expect(getComputedStyle(handle).minBlockSize).to.equal("36px");
 });
 
 it("leaves disabled sort, resize, and movement capabilities inert", async () => {

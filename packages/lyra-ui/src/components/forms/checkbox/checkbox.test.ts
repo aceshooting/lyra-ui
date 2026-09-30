@@ -1463,12 +1463,12 @@ describe("checked-state cssprop escape hatch", () => {
   });
 });
 
-it("exposes --lr-checkbox-box-radius, defaulting to the pre-existing calc()", async () => {
+it("exposes --lr-checkbox-box-radius, defaulting to the shared radius calculation", async () => {
   const el = (await fixture(
     html`<lr-checkbox>Label</lr-checkbox>`
   )) as LyraCheckbox;
   const box = el.shadowRoot!.querySelector('[part~="box"]') as HTMLElement;
-  expect(getComputedStyle(box).borderRadius).to.equal("3.6px");
+  expect(getComputedStyle(box).borderRadius).to.equal("4.8px");
 });
 
 it("lets a consumer retune the box corner radius with no ::part(box) rule", async () => {
@@ -1661,10 +1661,10 @@ describe("size", () => {
 
       expect(label.hidden, `${size} label remains absent`).to.be.true;
       expect(targetRect.width, `${size} compact target width`).to.be.at.least(
-        40
+        36
       );
       expect(targetRect.height, `${size} compact target height`).to.be.at.least(
-        40
+        36
       );
       expect(
         boxRect.width,

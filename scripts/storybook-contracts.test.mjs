@@ -11,6 +11,24 @@ import {
 } from './storybook-contracts.mjs';
 import { transformStoryTitle } from '../.storybook/story-title-plugin.js';
 import { createGroupedStoryIndexer } from '../.storybook/story-indexer.js';
+import { normalizeStoryPresentation, STORY_PRESENTATION_DEFAULTS } from '../.storybook/theme-contract.js';
+
+test('public preview starts with Shadcn, Glass and Emerald', () => {
+  assert.deepEqual(normalizeStoryPresentation({}), {
+    theme: 'dark', look: 'shadcn', surface: 'glass', accent: 'emerald', direction: 'ltr',
+  });
+  assert.deepEqual(normalizeStoryPresentation({ look: 'missing', surface: 'missing', accent: 'missing' }),
+    STORY_PRESENTATION_DEFAULTS);
+});
+
+test('explicit reference choices and independent axes survive preview normalization', () => {
+  assert.deepEqual(normalizeStoryPresentation({ theme: 'light', look: 'lyra', surface: 'solid', accent: 'none', direction: 'rtl' }), {
+    theme: 'light', look: 'lyra', surface: 'solid', accent: null, direction: 'rtl',
+  });
+  assert.deepEqual(normalizeStoryPresentation({ look: 'lyra' }), { ...STORY_PRESENTATION_DEFAULTS, look: 'lyra' });
+  assert.deepEqual(normalizeStoryPresentation({ surface: 'solid' }), { ...STORY_PRESENTATION_DEFAULTS, surface: 'solid' });
+  assert.deepEqual(normalizeStoryPresentation({ accent: null }), { ...STORY_PRESENTATION_DEFAULTS, accent: null });
+});
 
 test('extracts the component owner only from the default Meta object', () => {
   const source = `

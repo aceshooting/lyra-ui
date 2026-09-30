@@ -901,8 +901,8 @@ it('gives the expand/collapse toggle the shared minimum tappable size', async ()
   const el = (await fixture(html`<lr-tree-item .item=${withChildren}></lr-tree-item>`)) as LyraTreeItem;
   await el.updateComplete;
   const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
-  expect(getComputedStyle(toggle).minInlineSize).to.equal('40px');
-  expect(getComputedStyle(toggle).minBlockSize).to.equal('40px');
+  expect(getComputedStyle(toggle).minInlineSize).to.equal('36px');
+  expect(getComputedStyle(toggle).minBlockSize).to.equal('36px');
 });
 
 it('inherits the host font size into the disclosure toggle and its 1em glyph', async () => {

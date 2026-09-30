@@ -1648,7 +1648,7 @@ it("contains an unbroken end adornment in a 320px LTR or RTL allocation", async 
 });
 
 it('keeps date rows on the shared height ladder with calendar and clear targets of at least 24px', async () => {
-  for (const [size, height] of [['2xs', 26], ['xs', 26], ['s', 30], ['m', 40], ['l', 48], ['xl', 56]] as const) {
+  for (const [size, height] of [['2xs', 26], ['xs', 26], ['s', 32], ['m', 36], ['l', 40], ['xl', 56]] as const) {
     const el = await fixture<LyraDateInput>(html`<lr-date-input size=${size} value="2026-09-07" with-clear></lr-date-input>`);
     const row = el.shadowRoot!.querySelector<HTMLElement>('[part="input-wrapper"]')!;
     expect(row.getBoundingClientRect().height, size).to.be.closeTo(height, 0.1);

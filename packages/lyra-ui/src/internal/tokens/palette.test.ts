@@ -37,14 +37,14 @@ describe('the semantic grid is live, not inert', () => {
     expect(empty, empty.join(', ')).to.have.length(0);
   });
 
-  it('resolves each slot through the ramp, so swapping one ramp step moves the slot', async () => {
-    // The whole point of a ramp under a grid: a consumer re-points one step and every slot built on
-    // it follows. If a slot inlined a literal instead, this would silently keep the old colour.
+  it('preserves the default palette when an unused ramp changes and accepts a public slot override', async () => {
     const el = await probe();
     const before = read(el, '--lr-color-brand-fill-loud');
     el.style.setProperty('--lr-ramp-brand-50', 'rgb(1, 2, 3)');
-    expect(read(el, '--lr-color-brand-fill-loud')).to.not.equal(before);
-    expect(read(el, '--lr-color-brand-fill-loud')).to.equal('rgb(1, 2, 3)');
+    expect(read(el, '--lr-color-brand-fill-loud')).to.equal(before);
+    el.style.setProperty('--lr-theme-color-brand-fill-loud', 'rgb(4, 5, 6)');
+    expect(read(el, '--lr-color-brand-fill-loud')).to.equal('rgb(4, 5, 6)');
+    expect(read(el, '--lr-color-brand')).to.equal('rgb(4, 5, 6)');
   });
 
   it('keeps each flat token and its grid slot the same colour', async () => {

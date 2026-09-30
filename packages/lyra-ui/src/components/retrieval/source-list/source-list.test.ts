@@ -1,3 +1,4 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { fixture, fixtureSync, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { contrastRatio, effectiveBackground, resolvedColorToken } from '../../../../test/color-contrast.js';
@@ -589,3 +590,20 @@ describe('lr-source-list size and the retired compact alias', () => {
     expect(warnings).to.have.length(0);
   });
 });
+
+for (const [offset, expected] of [['0px', '-3px'], ['5px', '-8px'], ['-5px', '-3px']]) {
+  it(`keeps the clipped focus ring inward with authored offset ${offset}`, async () => {
+    const el = await fixture<LyraSourceList>(html`
+      <lr-source-list  style=${`--lr-focus-ring-width: 3px; --lr-focus-ring-offset: ${offset}`}></lr-source-list>
+    `);
+    for (const part of ['header']) {
+      const target = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;
+      await focusByKeyboard(target);
+      expect(el.shadowRoot!.activeElement === target).to.equal(true);
+      const computed = getComputedStyle(target);
+      expect(computed.outlineStyle).to.equal('solid');
+      expect(computed.outlineWidth).to.equal('3px');
+      expect(computed.outlineOffset).to.equal(expected);
+    }
+  });
+}

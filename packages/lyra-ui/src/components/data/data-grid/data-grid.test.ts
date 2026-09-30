@@ -878,10 +878,10 @@ describe("grid-line colour tier", () => {
     expect(Object.values(controls(element))).to.deep.equal(Array(2).fill("rgb(40, 50, 60)"));
   });
 
-  it("renders exactly the former colours when the subtle input is unset", async () => {
+  it("uses the Shadcn subtle grid-line default independently of the control border", async () => {
     const element = await dataGrid(html`
       <lr-data-grid paginate with-search label="People" style="--lr-theme-color-surface-border: rgb(10, 20, 30)" .columns=${columns} .data=${rows}></lr-data-grid>
     `);
-    expect(Object.values(lines(element))).to.deep.equal(Array(5).fill("rgb(10, 20, 30)"));
+    expect(Object.values(lines(element))).to.deep.equal(Array(5).fill("rgb(229, 229, 229)"));
   });
 });

@@ -240,12 +240,12 @@ it('forwards host focus, blur, and click to the live search control with disable
   expect(clicks).to.equal(1);
 });
 
-it('scales every emoji tier while keeping the shared 40px hit-area floor', async () => {
+it('scales every emoji tier while keeping the shared hit-area floor', async () => {
   const expected: Record<string, string> = {
-    '2xs': '40px',
-    xs: '40px',
-    s: '40px',
-    m: '40px',
+    '2xs': '36px',
+    xs: '36px',
+    s: '36px',
+    m: '36px',
     l: '48px',
     xl: '56px',
   };
@@ -461,8 +461,8 @@ describe('windowed geometry token resolution', () => {
     el.groups = largeGroups();
     await el.updateComplete;
 
-    // calc(var(--lr-emoji-picker-item-size) + var(--lr-space-l)) = 2.5rem + 1rem.
-    const expected = 3.5 * rootFontSize();
+    // calc(var(--lr-emoji-picker-item-size) + var(--lr-space-l)) = 2.25rem + 1rem.
+    const expected = 3.25 * rootFontSize();
     expect(renderedRowHeight(el)).to.be.closeTo(expected, 0.5);
     const spacer = el.shadowRoot!.querySelector<HTMLElement>('[part="virtual-spacer"]')!;
     const rows = Math.ceil(500 / firstRowButtons(el).length);
@@ -488,7 +488,7 @@ describe('windowed geometry token resolution', () => {
     el.style.inlineSize = '320px';
     el.groups = largeGroups();
     await el.updateComplete;
-    expect(renderedRowHeight(el)).to.be.closeTo(3.5 * rootFontSize(), 0.5);
+    expect(renderedRowHeight(el)).to.be.closeTo(3.25 * rootFontSize(), 0.5);
 
     el.style.setProperty('--lr-emoji-picker-row-height', '6rem');
     await waitUntil(
@@ -575,10 +575,10 @@ it('gives each emoji button the shared minimum hit area without enlarging the gl
   el.style.setProperty('--lr-emoji-picker-glyph-size', '0.75rem');
   await el.updateComplete;
   const button = el.shadowRoot!.querySelector('[part="emoji"]') as HTMLElement;
-  expect(getComputedStyle(button).minInlineSize).to.equal('40px');
-  expect(getComputedStyle(button).minBlockSize).to.equal('40px');
-  expect(getComputedStyle(button).inlineSize).to.equal('40px');
-  expect(getComputedStyle(button).blockSize).to.equal('40px');
+  expect(getComputedStyle(button).minInlineSize).to.equal('36px');
+  expect(getComputedStyle(button).minBlockSize).to.equal('36px');
+  expect(getComputedStyle(button).inlineSize).to.equal('36px');
+  expect(getComputedStyle(button).blockSize).to.equal('36px');
   expect(getComputedStyle(button).fontSize).to.equal('12px');
 });
 

@@ -906,8 +906,8 @@ describe('collision="cluster"', () => {
       'listitem'
     );
     const hitArea = buttons[0]!.getBoundingClientRect();
-    expect(hitArea.width).to.be.at.least(40);
-    expect(hitArea.height).to.be.at.least(40);
+    expect(hitArea.width).to.be.at.least(36);
+    expect(hitArea.height).to.be.at.least(36);
     expect(
       getComputedStyle(el.querySelector<HTMLElement>('#a')!).display
     ).to.not.equal('none');

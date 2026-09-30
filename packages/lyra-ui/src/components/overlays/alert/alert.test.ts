@@ -1131,7 +1131,7 @@ describe('size ladder', () => {
     { size: '2xs', padding: '2px', fontSize: '10px' },
     { size: 'xs', padding: '4px', fontSize: '12px' },
     { size: 's', padding: '8px', fontSize: '13px' },
-    { size: 'm', padding: '12px', fontSize: '16px' },
+    { size: 'm', padding: '12px', fontSize: '14px' },
     { size: 'l', padding: '16px', fontSize: '18px' },
     { size: 'xl', padding: '16px', fontSize: '20px' },
   ] as const;
@@ -1157,7 +1157,7 @@ describe('size ladder', () => {
   it('accepts the Web Awesome and Shoelace long-form tier spellings without normalizing them away', async () => {
     const aliases = [
       { alias: 'small', padding: '8px', fontSize: '13px' },
-      { alias: 'medium', padding: '12px', fontSize: '16px' },
+      { alias: 'medium', padding: '12px', fontSize: '14px' },
       { alias: 'large', padding: '16px', fontSize: '18px' },
     ] as const;
 
@@ -1256,8 +1256,8 @@ describe('size ladder', () => {
       ).to.equal(true);
       // The hit area itself is a WCAG 2.5.8 floor, not a density knob, so it does not shrink with
       // the tier, staying at 2.5rem against a 16px root.
-      expect(close.height >= 40, `size=${size} tappable height holds the floor`).to.equal(true);
-      expect(close.width >= 40, `size=${size} tappable width holds the floor`).to.equal(true);
+      expect(close.height >= 36, `size=${size} tappable height holds the floor`).to.equal(true);
+      expect(close.width >= 36, `size=${size} tappable width holds the floor`).to.equal(true);
     }
   });
 

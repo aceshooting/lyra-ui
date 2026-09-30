@@ -182,8 +182,8 @@ it('keeps both chevron actions at the shared icon-button hit-area floor', async 
   const buttons = Array.from(el.shadowRoot!.querySelectorAll('button'));
   for (const button of buttons) {
     const rect = button.getBoundingClientRect();
-    expect(rect.width).to.be.at.least(40);
-    expect(rect.height).to.be.at.least(40);
+    expect(rect.width).to.be.at.least(36);
+    expect(rect.height).to.be.at.least(36);
   }
 });
 

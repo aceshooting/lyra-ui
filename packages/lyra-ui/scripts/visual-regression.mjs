@@ -32,7 +32,7 @@ import {
   shardVisualCaptures,
   visualCapturePlan,
 } from './visual-regression-shard.mjs';
-import { loadVisualStory } from './visual-story-readiness.mjs';
+import { loadVisualStory, visualStoryUrl } from './visual-story-readiness.mjs';
 import { assembleVisualManifest, readVisualManifestSources } from './visual-manifest-source.mjs';
 
 const packageRoot = fileURLToPath(new URL('..', import.meta.url));
@@ -425,15 +425,13 @@ async function assertForcedColorsPaintedPixels(page, story) {
 
 async function captureStory(page, baseUrl, story, axis) {
   const { id } = story;
-  const theme = axis.globals?.theme ?? 'light';
-  const direction = axis.globals?.direction ?? 'ltr';
   const viewport = axis.viewport ?? VIEWPORT_OVERRIDES[id] ?? VIEWPORT;
   await page.setViewportSize(viewport);
   await page.emulateMedia({
     forcedColors: axis.emulation?.forcedColors ?? 'none',
     reducedMotion: 'reduce',
   });
-  const url = `${baseUrl}/iframe.html?id=${id}&viewMode=story&globals=theme:${theme};direction:${direction}`;
+  const url = visualStoryUrl(baseUrl, id, axis);
   // Applied before the story's first component upgrade so canvas painters that measure text
   // during their initial render (e.g. word-cloud's spiral-search layout) see the forced font on
   // their very first pass rather than re-measuring after a live custom-property change.

@@ -334,10 +334,10 @@ it('gives both node and relation pills the shared minimum hit area', async () =>
     '[part="relation"]'
   ) as HTMLElement;
 
-  expect(getComputedStyle(node).minInlineSize).to.equal('40px');
-  expect(getComputedStyle(node).minBlockSize).to.equal('40px');
-  expect(getComputedStyle(relation).minInlineSize).to.equal('40px');
-  expect(getComputedStyle(relation).minBlockSize).to.equal('40px');
+  expect(getComputedStyle(node).minInlineSize).to.equal('36px');
+  expect(getComputedStyle(node).minBlockSize).to.equal('36px');
+  expect(getComputedStyle(relation).minInlineSize).to.equal('36px');
+  expect(getComputedStyle(relation).minBlockSize).to.equal('36px');
 });
 
 it('is accessible with a full path', async () => {

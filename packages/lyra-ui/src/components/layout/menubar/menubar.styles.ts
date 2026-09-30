@@ -29,6 +29,5 @@ export const styles = css`
     border-color: transparent;
     box-shadow: none;
   }
-  ${glassSurface('[part="base"]', css`var(--lr-color-surface)`)}
-  ${glassSurface(':host([frame="plain"]) [part="base"]', css`var(--lr-color-surface)`, css`transparent`)}
+  ${glassSurface(':host(:not([frame="plain"])) [part="base"]', css`var(--lr-color-surface)`)}
 `;

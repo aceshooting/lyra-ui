@@ -1,5 +1,14 @@
 const MAX_STORY_LOAD_ATTEMPTS = 2;
 
+/** Serialize every authored capture axis so public preview defaults cannot change its profile. */
+export function visualStoryUrl(baseUrl, id, axis) {
+  const url = new URL(`${baseUrl.replace(/\/$/, '')}/iframe.html`);
+  url.searchParams.set('id', id);
+  url.searchParams.set('viewMode', 'story');
+  url.searchParams.set('globals', Object.entries(axis.globals ?? {}).map(([name, value]) => `${name}:${value}`).join(';'));
+  return url.toString();
+}
+
 /**
  * Loads a Storybook story and waits for its first rendered child.
  *

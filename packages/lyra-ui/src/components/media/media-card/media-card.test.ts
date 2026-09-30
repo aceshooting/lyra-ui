@@ -406,8 +406,8 @@ describe('kind="video"', () => {
       html`<lr-media-card src="https://example.test/a.mp4" kind="video"></lr-media-card>`,
     )) as LyraMediaCard;
     const openButton = el.shadowRoot!.querySelector('[part="open-button"]') as HTMLElement;
-    expect(getComputedStyle(openButton).minInlineSize).to.equal('40px');
-    expect(getComputedStyle(openButton).minBlockSize).to.equal('40px');
+    expect(getComputedStyle(openButton).minInlineSize).to.equal('36px');
+    expect(getComputedStyle(openButton).minBlockSize).to.equal('36px');
   });
 
   it('the video aria-label falls back from alt -> filename -> generic description', async () => {
@@ -1181,8 +1181,8 @@ describe('narrow chat-message attachment compositions', () => {
       expect(openRect.right, `${dir} video open action stays inside the video card`).to.be.at.most(videoRect.right + 0.5);
       expect(openRect.top, `${dir} video open action stays inside the video card`).to.be.at.least(videoRect.top - 0.5);
       expect(openRect.bottom, `${dir} video open action stays inside the video card`).to.be.at.most(videoRect.bottom + 0.5);
-      expect(getComputedStyle(openButton).minInlineSize, `${dir} video open action keeps its hit floor`).to.equal('40px');
-      expect(getComputedStyle(openButton).minBlockSize, `${dir} video open action keeps its hit floor`).to.equal('40px');
+      expect(getComputedStyle(openButton).minInlineSize, `${dir} video open action keeps its hit floor`).to.equal('36px');
+      expect(getComputedStyle(openButton).minBlockSize, `${dir} video open action keeps its hit floor`).to.equal('36px');
     }
   });
 });

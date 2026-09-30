@@ -426,11 +426,11 @@ it("keeps previous and next actions at the shared hit-area floor in every size",
       expect(
         button.getBoundingClientRect().width,
         `${size} ${part}`
-      ).to.be.at.least(40);
+      ).to.be.at.least(36);
       expect(
         button.getBoundingClientRect().height,
         `${size} ${part}`
-      ).to.be.at.least(40);
+      ).to.be.at.least(36);
     }
   }
 });
@@ -1806,11 +1806,11 @@ describe("numbered page list", () => {
         expect(
           box.width,
           `${size} ${node.getAttribute("part")}`
-        ).to.be.at.least(40);
+        ).to.be.at.least(36);
         expect(
           box.height,
           `${size} ${node.getAttribute("part")}`
-        ).to.be.at.least(40);
+        ).to.be.at.least(36);
       }
     }
   });
@@ -2192,8 +2192,8 @@ describe("the shared size ladder", () => {
       const button = el.shadowRoot!.querySelector(
         `[part~="${part}"]`
       ) as HTMLElement;
-      expect(button.getBoundingClientRect().width, part).to.be.at.least(40);
-      expect(button.getBoundingClientRect().height, part).to.be.at.least(40);
+      expect(button.getBoundingClientRect().width, part).to.be.at.least(36);
+      expect(button.getBoundingClientRect().height, part).to.be.at.least(36);
     }
   });
 
@@ -2210,8 +2210,8 @@ describe("the shared size ladder", () => {
       '[part~="ellipsis"]'
     )) {
       const box = ellipsis.getBoundingClientRect();
-      expect(box.width, "ellipsis width").to.be.at.least(40);
-      expect(box.height, "ellipsis height").to.be.at.least(40);
+      expect(box.width, "ellipsis width").to.be.at.least(36);
+      expect(box.height, "ellipsis height").to.be.at.least(36);
     }
 
     const compact = await pagination(html`
@@ -2227,8 +2227,8 @@ describe("the shared size ladder", () => {
       '[part="page-input"]'
     )!;
     const box = field.getBoundingClientRect();
-    expect(box.width, "page input width").to.be.at.least(40);
-    expect(box.height, "page input height").to.be.at.least(40);
+    expect(box.width, "page input width").to.be.at.least(36);
+    expect(box.height, "page input height").to.be.at.least(36);
   });
 });
 

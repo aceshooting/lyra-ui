@@ -24,6 +24,9 @@ nested and `slot=""` headings remain outside automatic discovery.
 
 ### `lr-dialog`
 
+Dialog and drawer panels follow the [shared surface treatment](shared/styles-and-tokens.md).
+The public panel and body retain their scrolling and focus behavior.
+
 A modal/overlay: `role="dialog"`, focus-trapped while open, dismissible via Escape or (opt-in) a
 backdrop click, and scroll-locks the document for as long as it's open. Mapped chrome is present by
 default: `label` renders as a visible title and a localized close button renders unless

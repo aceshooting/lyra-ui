@@ -1,8 +1,27 @@
 const LYRA_STORY_THEME_NAMES = Object.freeze(['light', 'dark']);
 
+export const STORY_PRESENTATION_DEFAULTS = Object.freeze({
+  theme: 'dark',
+  look: 'shadcn',
+  surface: 'glass',
+  accent: 'emerald',
+  direction: 'ltr',
+});
+
 /** Normalize preview/manager globals without importing Storybook's manager-only theme bundle. */
 export function normalizeStoryThemeName(themeName) {
   return LYRA_STORY_THEME_NAMES.includes(themeName) ? themeName : 'dark';
+}
+
+/** Resolve independent preview axes, including the explicit cleared-accent URL value. */
+export function normalizeStoryPresentation(globals = {}) {
+  return {
+    theme: normalizeStoryThemeName(globals.theme),
+    look: globals.look === 'lyra' || globals.look === 'shadcn' ? globals.look : STORY_PRESENTATION_DEFAULTS.look,
+    surface: globals.surface === 'solid' || globals.surface === 'glass' ? globals.surface : STORY_PRESENTATION_DEFAULTS.surface,
+    accent: globals.accent === 'none' || globals.accent === null ? null : STORY_PRESENTATION_DEFAULTS.accent,
+    direction: globals.direction === 'rtl' ? 'rtl' : 'ltr',
+  };
 }
 
 const COLOR_PROPERTIES = {

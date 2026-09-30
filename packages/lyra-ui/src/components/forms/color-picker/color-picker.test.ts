@@ -526,9 +526,9 @@ it('defaults to size "m", scales the visible swatch, and keeps every trigger at 
   const expected: Record<string, string> = {
     "2xs": "20px",
     xs: "24px",
-    s: "30px",
-    m: "40px",
-    l: "48px",
+    s: "32px",
+    m: "36px",
+    l: "40px",
     xl: "56px",
   };
   const defaultEl = (await fixture(
@@ -544,11 +544,11 @@ it('defaults to size "m", scales the visible swatch, and keeps every trigger at 
     expect(
       trigger.getBoundingClientRect().width,
       `target width size=${size}`
-    ).to.be.at.least(40);
+    ).to.be.at.least(36);
     expect(
       trigger.getBoundingClientRect().height,
       `target height size=${size}`
-    ).to.be.at.least(40);
+    ).to.be.at.least(36);
     expect(
       getComputedStyle(trigger, "::before").blockSize,
       `visible block-size size=${size}`

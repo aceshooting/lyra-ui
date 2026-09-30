@@ -10994,7 +10994,8 @@ export interface LyraComponentTypeMap {
     events: LyraSwatchPickerEventMap;
     eventNames:       | 'lr-activate'
       | 'lr-change';
-    cssNames:       | '--lr-swatch-picker-fill-size'
+    cssNames:       | '--lr-gemstone-selected-animation'
+      | '--lr-swatch-picker-fill-size'
       | '--lr-swatch-picker-gap'
       | '--lr-swatch-picker-gemstone-selected-blur'
       | '--lr-swatch-picker-gemstone-shine-duration'

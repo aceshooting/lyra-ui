@@ -3551,7 +3551,7 @@ describe('edge interaction target', () => {
     await el.updateComplete;
     const hitArea = el.shadowRoot!.querySelector('[part="edge-hit-area"]') as SVGPathElement;
     expect((hitArea) != null).to.equal(true);
-    expect(Number.parseFloat(getComputedStyle(hitArea).strokeWidth)).to.be.at.least(40);
+    expect(Number.parseFloat(getComputedStyle(hitArea).strokeWidth)).to.be.at.least(36);
     let detail: { edgeId: string } | undefined;
     el.addEventListener('lr-edge-activate', (event) => {
       detail = (event as CustomEvent).detail;

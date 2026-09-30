@@ -142,22 +142,22 @@ describe('lr-heatmap calendar cell spacing', () => {
     await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="cell"]').length > 0);
     await el.updateComplete;
     const geometry = el.calendarGeometry!;
-    expect(geometry).to.include({ cellSize: 40, cellGapX: 6, cellGapY: 5 });
+    expect(geometry).to.include({ cellSize: 36, cellGapX: 6, cellGapY: 5 });
     const first = el.shadowRoot!.querySelector<HTMLElement>('[part="cell"][data-cell-key="calendar-0-0"]')!;
     const cells = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')];
     const lefts = [...new Set(cells.map(cell => Math.round(cell.getBoundingClientRect().left)))].sort((a, b) => a - b);
     const tops = [...new Set(cells.map(cell => Math.round(cell.getBoundingClientRect().top)))].sort((a, b) => a - b);
-    expect(lefts[1]! - lefts[0]!).to.equal(46);
-    expect(tops[1]! - tops[0]!).to.equal(45);
-    expect(Math.round(first.getBoundingClientRect().width)).to.equal(40);
+    expect(lefts[1]! - lefts[0]!).to.equal(42);
+    expect(tops[1]! - tops[0]!).to.equal(41);
+    expect(Math.round(first.getBoundingClientRect().width)).to.equal(36);
 
     const proposals: unknown[] = [];
     el.addEventListener('lr-selection-change', event => proposals.push(event.detail.selectedCells));
-    // Week 2, weekday 3: x = 28 + 2 * 46 + 10, y = 16 + 3 * 45 + 10.
-    click(el, 130, 161);
+    // Week 2, weekday 3: x = 28 + 2 * 42 + 10, y = 16 + 3 * 41 + 10.
+    click(el, 122, 149);
     expect(proposals).to.deep.equal([[{ date: '2026-01-21' }]]);
-    // The gap between weeks 1 and 2 (x 114..120) selects nothing.
-    click(el, 116, 161);
+    // The gap between weeks 1 and 2 (x 106..112) selects nothing.
+    click(el, 109, 149);
     expect(proposals.length).to.equal(1);
     await expect(el).to.be.accessible();
   });

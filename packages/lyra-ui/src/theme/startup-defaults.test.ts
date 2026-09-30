@@ -254,7 +254,7 @@ describe('built-in appearance defaults', () => {
 async function isolatedAppearance(withSheet: boolean) {
   const frame = document.createElement('iframe');
   const loaded = oneEvent(frame, 'load');
-  frame.srcdoc = '<!doctype html><html><head></head><body><div id="scope"><div class="lr-surface-chrome" id="chrome">Chrome</div><div id="brand" style="background:var(--lr-color-brand-fill-loud)">Brand</div></div></body></html>';
+  frame.srcdoc = '<!doctype html><html><head></head><body><div id="scope"><div class="lr-surface-chrome" id="chrome">Chrome</div><div id="brand" style="background:var(--lr-theme-color-brand-fill-loud)">Brand</div></div></body></html>';
   document.body.append(frame);
   await loaded;
   const doc = frame.contentDocument!;
@@ -321,6 +321,7 @@ describe('standalone appearance assets', () => {
     try {
       const scope = doc.getElementById('scope')!;
       const rail = doc.createElement('lr-app-rail') as HTMLElement & { updateComplete: Promise<unknown> };
+      rail.setAttribute('force-mode', 'full');
       scope.append(rail);
       await rail.updateComplete;
       expect(rail.shadowRoot!.querySelectorAll('[part~="base"]').length).to.equal(1);

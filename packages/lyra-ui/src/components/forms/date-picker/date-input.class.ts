@@ -352,6 +352,9 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  *   this pins a shorter row.
  * @cssprop [--show-duration=var(--lr-transition-fast)] - Popup enter-transition duration.
  * @cssprop [--hide-duration=var(--lr-transition-fast)] - Popup exit-transition duration.
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-high)] - Calendar popup background, shared with other floating surfaces.
+ * @cssprop [--lr-overlay-border=var(--lr-color-border)] - Calendar popup border color, retaining the form control's boundary contrast.
+ * @cssprop [--lr-overlay-radius=var(--lr-radius-container)] - Calendar popup corner radius, shared with other floating surfaces.
  * @cssprop [--lr-date-input-fill=var(--lr-color-surface)] - Resting background of the input row.
  * The `filled`/`filled-outlined` treatments default it to `--lr-color-surface-raised`; a value set
  * here wins over every treatment.

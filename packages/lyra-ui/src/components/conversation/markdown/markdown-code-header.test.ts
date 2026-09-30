@@ -459,8 +459,8 @@ describe('code-block header: locale, geometry, pointer and media', () => {
       const { host, el } = await mountHeader(name, '```ts\nconst a = 1;\n```');
       const button = copyButtons(el)[0]!;
       const rect = button.getBoundingClientRect();
-      expect(rect.width).to.be.at.least(40);
-      expect(rect.height).to.be.at.least(40);
+      expect(rect.width).to.be.at.least(36);
+      expect(rect.height).to.be.at.least(36);
       host.style.setProperty('--lr-icon-button-size-scope', '3.5rem');
       await waitUntil(() => button.getBoundingClientRect().height >= 55, 'hit area ignored --lr-icon-button-size-scope');
       host.style.removeProperty('--lr-icon-button-size-scope');

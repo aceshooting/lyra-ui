@@ -1,3 +1,4 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import {
   fixture,
   expect,
@@ -303,10 +304,10 @@ it("gives compact header controls the shared minimum hit area", async () => {
   // shadow boundary deeper.
   const copyControl = copy.shadowRoot!.querySelector('[part~="button"]') as HTMLElement;
 
-  expect(getComputedStyle(toggle).minInlineSize).to.equal("40px");
-  expect(getComputedStyle(toggle).minBlockSize).to.equal("40px");
-  expect(getComputedStyle(copyControl).minInlineSize).to.equal("40px");
-  expect(getComputedStyle(copyControl).minBlockSize).to.equal("40px");
+  expect(getComputedStyle(toggle).minInlineSize).to.equal("36px");
+  expect(getComputedStyle(toggle).minBlockSize).to.equal("36px");
+  expect(getComputedStyle(copyControl).minInlineSize).to.equal("36px");
+  expect(getComputedStyle(copyControl).minBlockSize).to.equal("36px");
 });
 
 it('inherits live host font size into the collapse toggle and its 1em glyph', async () => {
@@ -2690,3 +2691,20 @@ describe("lr-code-block under a right-to-left document", () => {
     await expect(rtl).to.be.accessible();
   });
 });
+
+for (const [offset, expected] of [['0px', '-3px'], ['5px', '-8px'], ['-5px', '-3px']]) {
+  it(`keeps the clipped focus ring inward with authored offset ${offset}`, async () => {
+    const el = await fixture<LyraCodeBlock>(html`
+      <lr-code-block .code=${'const synthetic = 1;'} style=${`--lr-focus-ring-width: 3px; --lr-focus-ring-offset: ${offset}`}></lr-code-block>
+    `);
+    for (const part of ['body']) {
+      const target = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;
+      await focusByKeyboard(target);
+      expect(el.shadowRoot!.activeElement === target).to.equal(true);
+      const computed = getComputedStyle(target);
+      expect(computed.outlineStyle).to.equal('solid');
+      expect(computed.outlineWidth).to.equal('3px');
+      expect(computed.outlineOffset).to.equal(expected);
+    }
+  });
+}

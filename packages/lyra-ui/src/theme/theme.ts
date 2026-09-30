@@ -905,10 +905,14 @@ function styleMaterial(desired: Map<string, string>, surface: LyraSurface): void
   const glass = surface === 'glass';
   for (const [name, value] of Object.entries({
     enabled: glass ? '1' : '0', content: glass ? '\'\'' : 'none', isolation: glass ? 'isolate' : 'auto',
+    'root-filter': glass ? 'initial' : 'none',
     'child-filter': glass ? 'none' : 'initial', 'child-opacity': glass ? '1' : '0',
   })) desired.set(`--_lr-surface-${name}`, value);
   desired.set('--_lr-glass-blocker', glass ? 'initial' : 'none');
-  if (!glass) desired.set('--_lr-glass-parent-opacity', '0');
+  if (!glass) {
+    desired.set('--_lr-glass-parent-opacity', '0');
+    desired.set('--_lr-next-glass-opacity', '0');
+  }
 }
 
 /** Self-contained v2 adapter around the shared pre-paint contrast pipeline. */
@@ -1177,6 +1181,13 @@ declare global {
 }
 
 // GENERATED STYLE MODEL: START
+const STYLE_DEFAULTS = Object.freeze({
+  'look': 'shadcn',
+  'surface': 'glass',
+  'density': 'comfortable',
+  'mode': 'system',
+  'accent': 'emerald',
+} as const);
 const STYLE_SLOTTED: readonly string[] = [
   '--lr-theme-color-border-strong',
   '--lr-theme-color-brand-border-loud',

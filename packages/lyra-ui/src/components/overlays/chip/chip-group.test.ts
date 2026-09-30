@@ -683,8 +683,8 @@ it('keeps the overflow indicator at the shared minimum target size', async () =>
   `)) as LyraChipGroup;
   const indicator = el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLButtonElement;
   const rect = indicator.getBoundingClientRect();
-  expect(rect.width).to.be.at.least(40);
-  expect(rect.height).to.be.at.least(40);
+  expect(rect.width).to.be.at.least(36);
+  expect(rect.height).to.be.at.least(36);
 });
 
 it('localizes the overflow-toggle aria-label and collapsed text via this.localize(), not hardcoded English', async () => {

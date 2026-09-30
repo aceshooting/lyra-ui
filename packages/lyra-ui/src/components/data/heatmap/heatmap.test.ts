@@ -1048,8 +1048,8 @@ it("gives adjacent accessible matrix and calendar cells non-overlapping shared m
   ];
   const firstMatrixRect = matrixCells[0]!.getBoundingClientRect();
   const secondMatrixRect = matrixCells[1]!.getBoundingClientRect();
-  expect(firstMatrixRect.width).to.be.at.least(40);
-  expect(firstMatrixRect.height).to.be.at.least(40);
+  expect(firstMatrixRect.width).to.be.at.least(36);
+  expect(firstMatrixRect.height).to.be.at.least(36);
   expect(secondMatrixRect.left).to.be.at.least(firstMatrixRect.right);
 
   const calendar = (await fixture(html`
@@ -1066,8 +1066,8 @@ it("gives adjacent accessible matrix and calendar cells non-overlapping shared m
   ];
   const firstCalendarRect = calendarCells[0]!.getBoundingClientRect();
   const secondCalendarRect = calendarCells[1]!.getBoundingClientRect();
-  expect(firstCalendarRect.width).to.be.at.least(40);
-  expect(firstCalendarRect.height).to.be.at.least(40);
+  expect(firstCalendarRect.width).to.be.at.least(36);
+  expect(firstCalendarRect.height).to.be.at.least(36);
   expect(secondCalendarRect.top).to.be.at.least(firstCalendarRect.bottom);
 });
 

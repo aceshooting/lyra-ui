@@ -672,8 +672,8 @@ it('centers retained enlarged selection action hit floors', async () => {
 
   expect(style.alignItems).to.equal('center');
   expect(style.justifyContent).to.equal('center');
-  expect(action.getBoundingClientRect().width).to.be.at.least(40);
-  expect(action.getBoundingClientRect().height).to.be.at.least(40);
+  expect(action.getBoundingClientRect().width).to.be.at.least(36);
+  expect(action.getBoundingClientRect().height).to.be.at.least(36);
 });
 
 it('keeps every placement value finite and intersects the owner viewport for extreme rects in LTR and RTL', async () => {

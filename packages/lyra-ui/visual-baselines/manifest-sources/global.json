@@ -4,7 +4,10 @@
       "name": "light",
       "globals": {
         "theme": "light",
-        "direction": "ltr"
+        "direction": "ltr",
+        "look": "lyra",
+        "surface": "solid",
+        "accent": "none"
       },
       "artifactPolicy": "tracked-baseline"
     },
@@ -12,7 +15,10 @@
       "name": "dark",
       "globals": {
         "theme": "dark",
-        "direction": "ltr"
+        "direction": "ltr",
+        "look": "lyra",
+        "surface": "solid",
+        "accent": "none"
       },
       "artifactPolicy": "tracked-baseline"
     },
@@ -20,7 +26,10 @@
       "name": "rtl",
       "globals": {
         "theme": "light",
-        "direction": "rtl"
+        "direction": "rtl",
+        "look": "lyra",
+        "surface": "solid",
+        "accent": "none"
       },
       "artifactPolicy": "tracked-baseline"
     },
@@ -28,7 +37,10 @@
       "name": "forced-colors",
       "globals": {
         "theme": "light",
-        "direction": "ltr"
+        "direction": "ltr",
+        "look": "lyra",
+        "surface": "solid",
+        "accent": "none"
       },
       "emulation": {
         "forcedColors": "active"
@@ -39,7 +51,10 @@
       "name": "narrow",
       "globals": {
         "theme": "light",
-        "direction": "ltr"
+        "direction": "ltr",
+        "look": "lyra",
+        "surface": "solid",
+        "accent": "none"
       },
       "viewport": {
         "width": 320,

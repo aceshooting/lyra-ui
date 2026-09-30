@@ -1085,7 +1085,7 @@ it("keeps the gap and radius hooks opt-in, inheritable, and subordinate to the s
 
   // These are the pre-hook defaults: --lr-space-xs and --lr-radius.
   expect(dropzoneGap(defaultEl)).to.equal("4px");
-  expect(dropzoneRadius(defaultEl)).to.equal("6px");
+  expect(dropzoneRadius(defaultEl)).to.equal("8px");
   expect(dropzoneGap(themedEl)).to.equal("19px");
   expect(dropzoneRadius(themedEl)).to.equal("23px");
   expect(dropzoneGap(compactEl)).to.equal("7px");

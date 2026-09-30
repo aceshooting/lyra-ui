@@ -737,8 +737,8 @@ describe('lr-trace-tree', () => {
     const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
     await el.updateComplete;
     const toggle = el.shadowRoot!.querySelector('[data-id="root"] [part="toggle"]') as HTMLElement;
-    expect(getComputedStyle(toggle).minInlineSize).to.equal('40px');
-    expect(getComputedStyle(toggle).minBlockSize).to.equal('40px');
+    expect(getComputedStyle(toggle).minInlineSize).to.equal('36px');
+    expect(getComputedStyle(toggle).minBlockSize).to.equal('36px');
   });
 
   it('renders the embedding- and retriever-kind icons, and formats a >=1s duration in seconds', async () => {

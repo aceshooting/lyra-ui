@@ -1158,8 +1158,8 @@ it('exposes tree levels and a separate pointer disclosure affordance for folders
   expect(disclosure.tagName).to.equal('SPAN');
   expect(disclosure.getAttribute('role')).to.equal(null);
   expect(disclosure.getAttribute('aria-hidden')).to.equal('true');
-  expect(getComputedStyle(disclosure).minInlineSize).to.equal('40px');
-  expect(getComputedStyle(disclosure).minBlockSize).to.equal('40px');
+  expect(getComputedStyle(disclosure).minInlineSize).to.equal('36px');
+  expect(getComputedStyle(disclosure).minBlockSize).to.equal('36px');
   disclosure.click();
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[role="treeitem"]').length).to.equal(

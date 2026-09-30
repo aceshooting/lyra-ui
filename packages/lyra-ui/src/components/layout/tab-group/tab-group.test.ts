@@ -2426,8 +2426,8 @@ it("each scroll control meets the shared 40px minimum hit area", async () => {
   await el.updateComplete;
   for (const edge of ["start", "end"] as const) {
     const box = scrollControl(el, edge).getBoundingClientRect();
-    expect(Math.round(box.width), `${edge} control width`).to.be.at.least(40);
-    expect(Math.round(box.height), `${edge} control height`).to.be.at.least(40);
+    expect(Math.round(box.width), `${edge} control width`).to.be.at.least(36);
+    expect(Math.round(box.height), `${edge} control height`).to.be.at.least(36);
   }
 });
 

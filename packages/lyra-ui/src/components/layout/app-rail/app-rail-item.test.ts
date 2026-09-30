@@ -327,16 +327,19 @@ it("floors the row at the shared target size without inflating it from the icon 
     </lr-app-rail-item>
   `)) as LyraAppRailItem;
   const icon = el.shadowRoot!.querySelector('[part="icon"]')!;
-  expect(getComputedStyle(icon).minInlineSize).to.equal("40px");
-  expect(icon.getBoundingClientRect().width).to.be.at.least(40);
+  expect(getComputedStyle(icon).minInlineSize).to.equal("36px");
+  expect(icon.getBoundingClientRect().width).to.be.at.least(36);
   // The row's tappable height comes from [part='base']'s own min-block-size, not from the icon.
   // Flooring the icon's block axis too would add nothing for target size while forcing every row
-  // to --lr-icon-button-size + 2x --lr-space-s (56px at defaults) -- a density regression.
+  // to --lr-icon-button-size + 2x --lr-space-s (52px at defaults) -- a density regression.
   expect(getComputedStyle(icon).minBlockSize).to.equal("auto");
-  expect(
-    el.shadowRoot!.querySelector('[part="base"]')!.getBoundingClientRect()
-      .height
-  ).to.equal(40);
+  const row = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  const rowStyle = getComputedStyle(row);
+  expect(rowStyle.minBlockSize).to.equal('36px');
+  expect(row.getBoundingClientRect().height).to.equal(Math.max(
+    36,
+    icon.getBoundingClientRect().height + Number.parseFloat(rowStyle.paddingTop) + Number.parseFloat(rowStyle.paddingBottom),
+  ));
 });
 
 it("is accessible", async () => {

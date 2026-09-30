@@ -467,8 +467,8 @@ it("keeps the 2xs label-less radio role owner at the shared target floor while c
   const circleBounds = circle.getBoundingClientRect();
 
   expect(base.getAttribute("role")).to.equal("radio");
-  expect(baseBounds.width).to.be.at.least(40);
-  expect(baseBounds.height).to.be.at.least(40);
+  expect(baseBounds.width).to.be.at.least(36);
+  expect(baseBounds.height).to.be.at.least(36);
   expect(circleBounds.width).to.be.closeTo(14, 0.5);
   expect(circleBounds.height).to.be.closeTo(14, 0.5);
   expect(circleBounds.left + circleBounds.width / 2).to.be.closeTo(

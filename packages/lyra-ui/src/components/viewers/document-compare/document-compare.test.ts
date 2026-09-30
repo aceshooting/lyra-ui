@@ -683,26 +683,31 @@ describe('lr-document-compare', () => {
   });
 
   describe('responsive and RTL', () => {
-    it('paints a rendered hover treatment on each keyboard-focusable pane', async () => {
-      const el = (await fixture(html`
-        <lr-document-compare
-          view="side-by-side"
-          .oldVersion=${{ id: 'old', name: 'Old', text: 'before' }}
-          .newVersion=${{ id: 'new', name: 'New', text: 'after' }}
-        ></lr-document-compare>
-    `)) as LyraDocumentCompare;
-    const pane = el.shadowRoot!.querySelector('[part="pane-old"]') as HTMLElement;
-    const before = getComputedStyle(pane).borderColor;
-    try {
-      await hoverUntilMatched(pane, 'document-compare pane never registered :hover');
-      await waitUntil(
-        () => getComputedStyle(pane).borderColor !== before,
-        'document-compare pane hover treatment never painted',
-      );
-    } finally {
-      await resetMouse();
+    for (const mode of ['light', 'dark']) {
+      it(`paints a rendered hover treatment on each keyboard-focusable pane in ${mode} mode`, async () => {
+        const el = await fixture<LyraDocumentCompare>(html`
+          <lr-document-compare
+            data-lr-theme=${mode}
+            view="side-by-side"
+            .oldVersion=${{ id: 'old', name: 'Old', text: 'before' }}
+            .newVersion=${{ id: 'new', name: 'New', text: 'after' }}
+          ></lr-document-compare>
+        `);
+        for (const part of ['pane-old', 'pane-new']) {
+          const pane = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;
+          const before = getComputedStyle(pane).borderColor;
+          try {
+            await hoverUntilMatched(pane, 'document-compare pane never registered :hover');
+            await waitUntil(
+              () => getComputedStyle(pane).borderColor !== before,
+              'document-compare pane hover treatment never painted',
+            );
+          } finally {
+            await resetMouse();
+          }
+        }
+      });
     }
-  });
 
     it('keeps each keyboard-focusable pane on the control border, not the subtle tier', async () => {
       // The pane is a tabindex="0" scroll region with no fill of its own, so its border is the only

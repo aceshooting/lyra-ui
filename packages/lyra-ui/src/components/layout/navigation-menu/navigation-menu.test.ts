@@ -1,3 +1,4 @@
+import { toRgba } from '../../../../test/color-contrast.js';
 import { aTimeout, expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import type { TemplateResult } from 'lit';
@@ -1689,7 +1690,7 @@ describe('<lr-navigation-menu> styling', () => {
     menu.shadowRoot!.append(probe);
     const floor = probe.getBoundingClientRect().width;
     probe.remove();
-    expect(floor).to.be.at.least(40);
+    expect(floor).to.be.at.least(36);
     for (const entry of itemsOf(menu)) {
       const style = getComputedStyle(base(entry));
       expect(Number.parseFloat(style.minBlockSize)).to.be.at.least(floor - 0.5);
@@ -1733,7 +1734,7 @@ describe('<lr-navigation-menu> styling', () => {
     dark.shadowRoot!.append(probe);
     const expected = getComputedStyle(probe).backgroundColor;
     probe.remove();
-    expect(getComputedStyle(panel(dark)).backgroundColor).to.equal(expected);
+    expect(toRgba(getComputedStyle(panel(dark)).backgroundColor)).to.deep.equal(toRgba(expected));
   });
 });
 

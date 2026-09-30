@@ -16,6 +16,9 @@
 
 ## `lr-mention-popover`
 
+Suggestion listboxes follow the [shared surface treatment](shared/styles-and-tokens.md);
+the caller-owned message field retains its fill.
+
 A caret-anchored, keyboard-navigable popover for `@`-mention and `/`-slash-command autocomplete
 inside a plain-text `<textarea>`/`<input>` the host owns. First-party invention (no Web Awesome
 equivalent). A textarea keeps its native textbox semantics while open and, after a consumed

@@ -76,8 +76,8 @@ it("floors the collapse toggle at the shared minimum hit target", async () => {
   const toggle = el.shadowRoot!.querySelector(
     '[part="collapse-toggle"]'
   ) as HTMLButtonElement;
-  expect(toggle.getBoundingClientRect().width).to.be.at.least(40);
-  expect(toggle.getBoundingClientRect().height).to.be.at.least(40);
+  expect(toggle.getBoundingClientRect().width).to.be.at.least(36);
+  expect(toggle.getBoundingClientRect().height).to.be.at.least(36);
 });
 
 it("contains long RTL dock and main content through collapse/expand in an exact 320px allocation", async () => {
@@ -150,7 +150,7 @@ it("contains long RTL dock and main content through collapse/expand in an exact 
   toggle.click();
   await elementUpdated(panel);
   expect(panel.collapsed).to.equal(true);
-  expect(panel.getBoundingClientRect().width).to.be.closeTo(40, 1);
+  expect(panel.getBoundingClientRect().width).to.be.closeTo(36, 1);
   assertContained();
 
   toggle.click();

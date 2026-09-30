@@ -1,3 +1,4 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './table.js';
@@ -440,15 +441,15 @@ it('applies the shared focus-ring outline to a sortable header cell, a row, and 
 
   await tabTo(header);
   expect(getComputedStyle(header).outlineStyle).to.equal('solid');
-  expect(getComputedStyle(header).outlineWidth).to.equal('2px');
+  expect(getComputedStyle(header).outlineWidth).to.equal('3px');
 
   await tabTo(row);
   expect(getComputedStyle(row).outlineStyle).to.equal('solid');
-  expect(getComputedStyle(row).outlineWidth).to.equal('2px');
+  expect(getComputedStyle(row).outlineWidth).to.equal('3px');
 
   await tabTo(moreButton);
   expect(getComputedStyle(moreButton).outlineStyle).to.equal('solid');
-  expect(getComputedStyle(moreButton).outlineWidth).to.equal('2px');
+  expect(getComputedStyle(moreButton).outlineWidth).to.equal('3px');
 });
 
 it('does not emit lr-sort when a non-sortable header is clicked or activated via keyboard', async () => {
@@ -1258,3 +1259,24 @@ describe("lr-table contains the composed lr-pagination's lr-before-page-change",
     expect(el.page).to.equal(1);
   });
 });
+
+for (const [offset, expected] of [['0px', '-3px'], ['5px', '-8px'], ['-5px', '-3px']]) {
+  it(`keeps the clipped focus ring inward with authored offset ${offset}`, async () => {
+    const el = await fixture<LyraTable<{ label: string }>>(html`
+      <lr-table  style=${`--lr-focus-ring-width: 3px; --lr-focus-ring-offset: ${offset}`}></lr-table>
+    `);
+    el.columns = [{ key: 'label', label: 'Synthetic', resizable: true, cell: row => row.label }];
+    el.rows = [{ label: 'Synthetic entry' }];
+    await el.updateComplete;
+
+    for (const part of ['resize-handle']) {
+      const target = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;
+      await focusByKeyboard(target);
+      expect(el.shadowRoot!.activeElement === target).to.equal(true);
+      const computed = getComputedStyle(target);
+      expect(computed.outlineStyle).to.equal('solid');
+      expect(computed.outlineWidth).to.equal('3px');
+      expect(computed.outlineOffset).to.equal(expected);
+    }
+  });
+}

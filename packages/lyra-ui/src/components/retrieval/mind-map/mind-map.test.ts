@@ -58,7 +58,7 @@ it('emits lr-topic-select when a leaf node is clicked', async () => {
   expect(event.detail).to.deep.equal({ topicId: 'kg' });
 });
 
-it('keeps compact node pointer targets at the 40px floor and activates through the focus-ring annulus', async () => {
+it('keeps compact node pointer targets at the 36px floor and activates through the focus-ring annulus', async () => {
   const dense = (await fixture(
     html`<lr-mind-map
       style="inline-size: 320px; block-size: 320px"
@@ -93,7 +93,7 @@ it('keeps compact node pointer targets at the 40px floor and activates through t
     expect(
       Number.parseFloat(getComputedStyle(hit).strokeWidth),
       'the target diameter'
-    ).to.be.at.least(40);
+    ).to.be.at.least(36);
   }
 
   const el = (await fixture(

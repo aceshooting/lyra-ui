@@ -205,7 +205,7 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     /* Negative (inward) so the ring isn't clipped by this element's own
        overflow:auto -- same reasoning as lr-virtual-list's [part="base"]. */
-    outline-offset: calc(-1 * var(--lr-focus-ring-offset));
+    outline-offset: calc(-1 * max(var(--lr-focus-ring-width), calc(var(--lr-focus-ring-width) + var(--lr-focus-ring-offset))));
   }
   [part='body'] lr-skeleton {
     display: block;

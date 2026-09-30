@@ -284,13 +284,13 @@ describe('lr-number-input steppers', () => {
     const el = (await fixture(html`<lr-number-input label="Qty"></lr-number-input>`)) as LyraNumberInput;
     for (const button of [upOf(el), downOf(el)]) {
       const box = button.getBoundingClientRect();
-      expect(box.width).to.be.at.least(40);
-      expect(box.height).to.be.at.least(40);
+      expect(box.width).to.be.at.least(36);
+      expect(box.height).to.be.at.least(36);
     }
   });
 
   it('keeps stepper-bearing rows on the shared hit-floor-aware height ladder', async () => {
-    const expected: Record<string, number> = { '2xs': 42, xs: 42, s: 42, m: 42, l: 48, xl: 56 };
+    const expected: Record<string, number> = { '2xs': 38, xs: 38, s: 38, m: 38, l: 40, xl: 56 };
     for (const [size, height] of Object.entries(expected)) {
       const el = (await fixture(html`<lr-number-input size=${size} label="Qty"></lr-number-input>`)) as LyraNumberInput;
       const row = el.shadowRoot!.querySelector<HTMLElement>('[part~="input-wrapper"]')!;

@@ -4,6 +4,11 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Theming
 
+Lyra's built-in profile is Shadcn, Glass and Emerald. These docs use that profile, with the Theme
+toolbar selecting Light or Dark. The Look toolbar also keeps Lyra's original look available.
+Style choices are independent: `globals=look:lyra;surface:solid;accent:none` in a Storybook URL
+explicitly selects the original look, a solid surface and a cleared accent.
+
 Use the [theme builder](?path=/story/theming-theme-builder--editor) to edit optional design choices, inspect contrast diagnostics and export validated runtime data or CSS. See the [builder guide](?path=/docs/guides-theme-builder--docs) for import formats and scoped integration.
 
 Every visual value in the library resolves through a CSS custom property. No provider or build step

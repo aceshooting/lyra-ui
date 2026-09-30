@@ -1269,10 +1269,10 @@ it("gives the up/down thumb buttons the shared minimum hit area", async () => {
     '[part="down-button"]'
   ) as HTMLElement;
 
-  expect(getComputedStyle(up).minInlineSize).to.equal("40px");
-  expect(getComputedStyle(up).minBlockSize).to.equal("40px");
-  expect(getComputedStyle(down).minInlineSize).to.equal("40px");
-  expect(getComputedStyle(down).minBlockSize).to.equal("40px");
+  expect(getComputedStyle(up).minInlineSize).to.equal("36px");
+  expect(getComputedStyle(up).minBlockSize).to.equal("36px");
+  expect(getComputedStyle(down).minInlineSize).to.equal("36px");
+  expect(getComputedStyle(down).minBlockSize).to.equal("36px");
 });
 
 it('inherits a 20px host font for both thumbs and their one-em glyphs', async () => {
@@ -1288,8 +1288,8 @@ it('inherits a 20px host font for both thumbs and their one-em glyphs', async ()
     expect(getComputedStyle(button).fontSize).to.equal('20px');
     expect(getComputedStyle(button.querySelector('svg')!).width).to.equal('20px');
     const rect = button.getBoundingClientRect();
-    expect(rect.width).to.be.at.least(40);
-    expect(rect.height).to.be.at.least(40);
+    expect(rect.width).to.be.at.least(36);
+    expect(rect.height).to.be.at.least(36);
   }
 });
 

@@ -40,6 +40,12 @@ pending-review exemption all fail. Evidence-only pixels are written to the ignor
 and never silently promoted. If a reviewed baseline starts flaking with no corresponding source
 change, chase down the determinism gap rather than weakening the comparison.
 
+Public Storybook previews start with Shadcn, Glass and Emerald. The retained visual matrix instead
+pins its historical reference through each authored axis's `look: lyra`, `surface: solid` and
+`accent: none` globals; the runner serializes all of those choices alongside theme and direction.
+Those comparisons verify the reference profile and do not establish the new default's pixel
+correctness. Public startup is checked separately in the Storybook browser contracts.
+
 ## Reviewing and promoting baselines
 
 1. Build the docs site once: `pnpm docs:build` (from the repo root).

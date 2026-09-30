@@ -1394,8 +1394,8 @@ describe("with-clear", () => {
     const button = clearButton(el)!;
     expect(button.getAttribute("aria-label")).to.equal("Alles löschen");
     const box = button.getBoundingClientRect();
-    expect(box.width).to.be.at.least(40);
-    expect(box.height).to.be.at.least(40);
+    expect(box.width).to.be.at.least(36);
+    expect(box.height).to.be.at.least(36);
   });
 
   it("disables the clear button alongside the rest of the control", async () => {
@@ -1413,7 +1413,7 @@ describe("with-clear", () => {
     el.withClear = true;
     el.value = "b";
     await el.updateComplete;
-    expect(getComputedStyle(trigger(el)).paddingInlineEnd).to.equal("40px");
+    expect(getComputedStyle(trigger(el)).paddingInlineEnd).to.equal("36px");
     expect(base).to.not.equal("40px");
   });
 

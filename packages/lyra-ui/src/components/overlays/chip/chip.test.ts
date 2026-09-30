@@ -278,14 +278,14 @@ it('keeps a removable/toggleable 3xs chip at the WCAG 2.5.8 minimum tap target',
     <lr-chip size="3xs" removable><span slot="start">●</span>Tag</lr-chip>
   `)) as LyraChip;
   const removeButton = removable.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
-  expect(Number.parseFloat(getComputedStyle(removeButton).minBlockSize)).to.be.at.least(40);
+  expect(Number.parseFloat(getComputedStyle(removeButton).minBlockSize)).to.be.at.least(36);
   await expect(removable).to.be.accessible();
 
   const toggleable = (await fixture(html`
     <lr-chip size="3xs" toggleable><span slot="start">●</span>Tag</lr-chip>
   `)) as LyraChip;
   const toggleButton = toggleable.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLElement;
-  expect(Number.parseFloat(getComputedStyle(toggleButton).minBlockSize)).to.be.at.least(40);
+  expect(Number.parseFloat(getComputedStyle(toggleButton).minBlockSize)).to.be.at.least(36);
   expect(toggleButton.localName).to.equal('button');
   await expect(toggleable).to.be.accessible();
 });
@@ -296,14 +296,14 @@ it('keeps compact removable and toggleable chips keyboard-accessible with adequa
       <lr-chip size=${size} removable><span slot="start">●</span>Tag</lr-chip>
     `)) as LyraChip;
     const removeButton = removable.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
-    expect(Number.parseFloat(getComputedStyle(removeButton).minBlockSize), `${size} remove target`).to.be.at.least(40);
+    expect(Number.parseFloat(getComputedStyle(removeButton).minBlockSize), `${size} remove target`).to.be.at.least(36);
     await expect(removable).to.be.accessible();
 
     const toggleable = (await fixture(html`
       <lr-chip size=${size} toggleable><span slot="start">●</span>Tag</lr-chip>
     `)) as LyraChip;
     const toggleButton = toggleable.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLElement;
-    expect(Number.parseFloat(getComputedStyle(toggleButton).minBlockSize), `${size} toggle target`).to.be.at.least(40);
+    expect(Number.parseFloat(getComputedStyle(toggleButton).minBlockSize), `${size} toggle target`).to.be.at.least(36);
     expect(toggleButton.localName).to.equal('button');
     await expect(toggleable).to.be.accessible();
   }
@@ -740,8 +740,8 @@ describe('remove affordance', () => {
   it('gives the remove button the shared minimum hit area', async () => {
     const el = (await fixture(html`<lr-chip removable>Tag</lr-chip>`)) as LyraChip;
     const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
-    expect(getComputedStyle(btn).minInlineSize).to.equal('40px');
-    expect(getComputedStyle(btn).minBlockSize).to.equal('40px');
+    expect(getComputedStyle(btn).minInlineSize).to.equal('36px');
+    expect(getComputedStyle(btn).minBlockSize).to.equal('36px');
   });
 });
 
@@ -1304,14 +1304,14 @@ describe('per-tier min-height and exact-height hatch', () => {
   });
 
   it('wires --lr-chip-min-height per tier onto interactive chips (rendered min-block-size)', async () => {
-    // Toggle controls all use the shared 40px icon-button target floor.
+    // Toggle controls all use the shared 36px icon-button target floor.
     const expected: Record<string, string> = {
-      '2xs': '40px',
-      xs: '40px',
-      s: '40px',
-      m: '40px',
-      l: '40px',
-      xl: '40px',
+      '2xs': '36px',
+      xs: '36px',
+      s: '36px',
+      m: '36px',
+      l: '36px',
+      xl: '36px',
     };
     for (const [size, px] of Object.entries(expected)) {
       const el = (await fixture(html`<lr-chip size=${size} toggleable>Tag</lr-chip>`)) as LyraChip;
@@ -1320,14 +1320,14 @@ describe('per-tier min-height and exact-height hatch', () => {
     }
   });
 
-  it('keeps every interactive tier at or above the shared 40px target', async () => {
+  it('keeps every interactive tier at or above the shared 36px target', async () => {
     for (const size of ['2xs', 'xs', 's', 'm', 'l', 'xl'] as const) {
       const el = (await fixture(html`<lr-chip size=${size} toggleable>Tag</lr-chip>`)) as LyraChip;
       await el.updateComplete;
       expect(
         Number.parseFloat(getComputedStyle(base(el)).minBlockSize),
         `size=${size}`,
-      ).to.be.at.least(40);
+      ).to.be.at.least(36);
     }
   });
 
@@ -1336,7 +1336,7 @@ describe('per-tier min-height and exact-height hatch', () => {
     await el.updateComplete;
     const b = base(el);
     const natural = getComputedStyle(b).blockSize;
-    expect(Number.parseFloat(natural)).to.be.at.least(40);
+    expect(Number.parseFloat(natural)).to.be.at.least(36);
     el.style.setProperty('--lr-chip-height', '52px');
     await el.updateComplete;
     expect(getComputedStyle(b).blockSize).to.equal('52px');

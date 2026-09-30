@@ -738,8 +738,8 @@ it("keeps the slider base at least 40px in both axes when max is zero or one", a
     )) as LyraRating;
     const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     const rect = base.getBoundingClientRect();
-    expect(rect.width, `max=${max}`).to.be.at.least(40);
-    expect(rect.height, `max=${max}`).to.be.at.least(40);
+    expect(rect.width, `max=${max}`).to.be.at.least(36);
+    expect(rect.height, `max=${max}`).to.be.at.least(36);
   }
 });
 

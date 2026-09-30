@@ -39602,6 +39602,24 @@
             "default": 0
           },
           {
+            "name": "--lr-overlay-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
+            "name": "--lr-overlay-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius-container)"
+          },
+          {
+            "name": "--lr-overlay-surface",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface-container-high)"
+          },
+          {
             "name": "--lr-positioning-strategy",
             "deprecated": null,
             "hasDefault": false
@@ -123483,6 +123501,11 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-gemstone-selected-animation",
+            "deprecated": null,
+            "hasDefault": false
+          },
           {
             "name": "--lr-swatch-picker-fill-size",
             "deprecated": null,

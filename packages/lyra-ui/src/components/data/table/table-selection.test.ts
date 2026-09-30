@@ -293,8 +293,8 @@ describe('expandable rows', () => {
     el.expandedContent = (r) => html`<p>${r.name} details</p>`;
     await el.updateComplete;
     const toggle = el.shadowRoot!.querySelector('[part="row-expand-toggle"]') as HTMLElement;
-    expect(getComputedStyle(toggle).minInlineSize).to.equal('40px');
-    expect(getComputedStyle(toggle).minBlockSize).to.equal('40px');
+    expect(getComputedStyle(toggle).minInlineSize).to.equal('36px');
+    expect(getComputedStyle(toggle).minBlockSize).to.equal('36px');
   });
 
   it('inherits a live host font size into the row-expand toggle and its 1em glyph', async () => {

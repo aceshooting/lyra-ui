@@ -5,6 +5,7 @@ import "./drawer.js";
 import type { LyraDrawer } from "./drawer.js";
 import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { setAnimation } from "../../../utilities/animation-registry.js";
+import { toRgba } from '../../../../test/color-contrast.js';
 
 // These fixtures deliberately verify that retired attributes remain inert.
 expectStaleAttribute('lr-drawer', 'accessible-label');
@@ -35,8 +36,9 @@ it("renders an open drawer with the requested placement and accessible panel", a
 
 it('includes a prose body in the drawer Tab order when narrowing makes it overflow', async () => {
   const prose = Array.from({ length: 18 }, () => 'Long drawer prose wraps across multiple lines at a narrow width.').join(' ');
+  // Override the inherited dialog size cap as well, so the wide phase is not held at 32rem.
   const el = (await fixture(html`
-    <lr-drawer open label="Filters" style="--lr-drawer-width: 70rem">
+    <lr-drawer open label="Filters" style="--lr-drawer-width: 70rem; --lr-dialog-max-width: 70rem">
       <span>${prose}</span><button slot="footer">Done</button>
     </lr-drawer>
   `)) as LyraDrawer;
@@ -567,15 +569,15 @@ async function withThemeCss<T>(run: () => Promise<T>): Promise<T> {
   }
 }
 
-// Custom properties resolve to their authored syntax (#1a1a1a), while backgroundColor resolves to
-// rgb(). Round-tripping the token value through a real element normalizes both into the same space
-// so the two colour STRINGS are actually comparable.
-function toComputedColor(rawTokenValue: string): string {
+// Resolve token syntax through CSS, then compare RGBA bytes independently of color serialization.
+function toComputedColor(rawTokenValue: string): [number, number, number, number] {
+  expect(rawTokenValue, 'color token resolved').to.not.equal('');
+  expect(CSS.supports('background-color', rawTokenValue), 'color token is valid').to.equal(true);
   const probe = document.createElement("div");
   probe.style.backgroundColor = rawTokenValue;
   document.body.append(probe);
   try {
-    return getComputedStyle(probe).backgroundColor;
+    return toRgba(getComputedStyle(probe).backgroundColor);
   } finally {
     probe.remove();
   }
@@ -600,19 +602,18 @@ it("paints its panel a surface distinct from the page surface in dark mode", asy
     const overlaySurface = toComputedColor(
       getComputedStyle(el).getPropertyValue("--lr-color-surface-overlay").trim()
     );
-    const panelBackground = getComputedStyle(panel).backgroundColor;
+    const panelBackground = toRgba(getComputedStyle(panel).backgroundColor);
 
-    // Guards a mistyped token name resolving to the empty string, which would make every
-    // comparison below vacuous.
-    expect(pageSurface, "page surface resolved").to.match(/^rgba?\(/);
-    expect(overlaySurface, "overlay surface resolved").to.match(/^rgba?\(/);
+    expect(pageSurface[3], 'page surface is opaque').to.equal(255);
+    expect(overlaySurface[3], 'overlay surface is opaque').to.equal(255);
+    expect(panelBackground[3], 'Solid panel is opaque').to.equal(255);
     expect(
       overlaySurface,
       "dark mode moves the overlay surface off the page surface"
-    ).to.not.equal(pageSurface);
+    ).to.not.deep.equal(pageSurface);
 
-    expect(panelBackground).to.equal(overlaySurface);
-    expect(panelBackground).to.not.equal(pageSurface);
+    expect(panelBackground).to.deep.equal(overlaySurface);
+    expect(panelBackground).to.not.deep.equal(pageSurface);
     el.close("api");
   });
 });

@@ -261,3 +261,41 @@ and opacity tokens first. These additional hooks customize only the light-DOM bu
 | `--lr-native-legend-padding`              | `--lr-space-xs`; legend inline padding                                       |
 | `--lr-native-table-cell-padding`          | `--lr-space-s`; caption and table-cell padding                               |
 | `--lr-native-rule-space`                  | `--lr-space-l`; horizontal-rule block margin                                 |
+
+
+### Native navigation and floating chrome
+
+The opt-in `.lr-surface-chrome` class uses the same protected Glass material as Lyra navigation,
+menus and modal panels. It is shipped by `theme.css` for the built-in profile and by the separate
+`surfaces/glass.css` asset for applications composing their own stylesheet set:
+
+```css
+@import "@aceshooting/lyra-ui/theme.css";
+@import "@aceshooting/lyra-ui/tokens-root.css";
+```
+
+```html
+<nav class="lr-surface-chrome" aria-label="Primary navigation">…</nav>
+<section class="lr-surface-chrome" aria-labelledby="settings-title">
+  <h2 id="settings-title">Settings</h2>
+  <div class="settings-scrollport">…</div>
+</section>
+```
+
+Localize the example's names. Keep the material wrapper non-scrolling and put overflow on an inner
+scrollport. The decorative pseudo-element filters the backdrop without changing fixed descendant
+coordinates. The wrapper reserves `::before` and supplies a low-specificity `position: relative`;
+application fixed, sticky or absolute positioning still wins. Avoid an extra opaque wrapper inside
+an already treated Lyra popup.
+
+`--lr-surface-background` optionally supplies this native wrapper's base fill. It falls back to the
+local high container surface, then the overlay surface, and resolves on the painted wrapper, so nearer
+theme inputs work.
+The existing `--lr-theme-surface-opacity`, `--lr-theme-surface-blur`,
+`--lr-theme-surface-saturation` and `--lr-theme-surface-highlight` controls apply. Glass uses 80%
+opacity with an 80% floor, 12px blur with a 16px ceiling, and qualified text, edges and focus.
+Explicit `data-lr-surface="solid"`, unsupported backdrop filtering, reduced transparency, increased
+contrast and forced colors retain opaque fills. Load `preferences.css` for explicit inherited
+contrast/motion choices. Nested chrome suppresses repeated blur; independently presented top-layer
+surfaces begin their own material root. Keep cards, data tables, charts, map layers and editing
+fields outside the automatic chrome class.

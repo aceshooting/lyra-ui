@@ -1,4 +1,4 @@
-import { expect, fixture, html } from '@open-wc/testing';
+import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { contrastRatio, resolvedColorToken, toRgba } from '../../test/color-contrast.js';
 import '../components/forms/button/button.js';
 import type { LyraButton } from '../components/forms/button/button.class.js';
@@ -87,6 +87,70 @@ describe('native chrome material', () => {
     expect(getComputedStyle(child, '::before').backdropFilter).to.include('blur(0px)');
   });
 
+  const nestingCases = [
+    ['direct Solid parent', html`<div class="lr-surface-chrome" data-lr-surface="solid"><div data-probe class="lr-surface-chrome" data-lr-surface="glass"></div></div>`, true],
+    ['inherited Solid parent', html`<div data-lr-surface="solid"><div class="lr-surface-chrome"><div data-probe class="lr-surface-chrome" data-lr-surface="glass"></div></div></div>`, true],
+    ['Solid parent through a wrapper', html`<div data-lr-surface="solid"><div class="lr-surface-chrome"><div><div data-probe class="lr-surface-chrome" data-lr-surface="glass"></div></div></div></div>`, true],
+    ['ordinary nested Glass', html`<div class="lr-surface-chrome" data-lr-surface="glass"><div data-probe class="lr-surface-chrome"></div></div>`, false],
+    ['explicit nested Glass', html`<div class="lr-surface-chrome" data-lr-surface="glass"><div data-probe class="lr-surface-chrome" data-lr-surface="glass"></div></div>`, false],
+    ['painted Solid island', html`<div class="lr-surface-chrome" data-lr-surface="glass"><div class="lr-surface-chrome" data-lr-surface="solid"><div data-probe class="lr-surface-chrome" data-lr-surface="glass"></div></div></div>`, true],
+    ['Solid scope through wrappers', html`<div class="lr-surface-chrome" data-lr-surface="glass"><section data-lr-surface="solid"><div><div data-probe class="lr-surface-chrome" data-lr-surface="glass"></div></div></section></div>`, true],
+    ['nested explicit Glass below Solid', html`<div class="lr-surface-chrome" data-lr-surface="solid"><div class="lr-surface-chrome" data-lr-surface="glass"><div data-probe class="lr-surface-chrome" data-lr-surface="glass"></div></div></div>`, false],
+  ] as const;
+  for (const [name, content, frosted] of nestingCases) {
+    it(`captures ancestor material for ${name}`, async function () {
+      if (!CSS.supports('backdrop-filter', 'blur(1px)')) this.skip();
+      const scope = await fixture<HTMLDivElement>(html`<div>${content}</div>`);
+      const probe = scope.querySelector('[data-probe]')!;
+      const alpha = toRgba(getComputedStyle(probe).backgroundColor)[3];
+      if (frosted) {
+        expect(alpha).to.be.within(203, 205);
+        expect(getComputedStyle(probe, '::before').backdropFilter).to.include('blur(12px)');
+      } else {
+        expect(alpha).to.equal(255);
+        expect(getComputedStyle(probe, '::before').backdropFilter).to.match(/^(none|blur\(0px\))/);
+      }
+    });
+  }
+
+  for (const carrier of ['popover', 'modal'] as const) {
+    it(`keeps promoted native ${carrier} Solid and lets its explicit Glass choice escape nesting`, async function () {
+      if (!CSS.supports('backdrop-filter', 'blur(1px)')) this.skip();
+      const outer = await fixture<HTMLDivElement>(html`<div class="lr-surface-chrome" data-lr-surface="solid"></div>`);
+      const promoted = document.createElement(carrier === 'modal' ? 'dialog' : 'div');
+      promoted.className = 'lr-surface-chrome';
+      promoted.textContent = 'Details';
+      if (carrier === 'popover') promoted.setAttribute('popover', 'manual');
+      outer.append(promoted);
+      try {
+        if (carrier === 'modal') (promoted as HTMLDialogElement).showModal();
+        else promoted.showPopover();
+        expect(toRgba(getComputedStyle(promoted).backgroundColor)[3]).to.equal(255);
+        expect(getComputedStyle(promoted, '::before').content).to.equal('none');
+        expect(getComputedStyle(promoted, '::before').backdropFilter).to.equal('none');
+        promoted.setAttribute('data-lr-surface', 'glass');
+        expect(toRgba(getComputedStyle(promoted).backgroundColor)[3]).to.be.within(203, 205);
+        expect(getComputedStyle(promoted, '::before').backdropFilter).to.include('blur(12px)');
+        promoted.setAttribute('data-lr-contrast', 'more');
+        expect(toRgba(getComputedStyle(promoted).backgroundColor)[3]).to.equal(255);
+        expect(getComputedStyle(promoted, '::before').backdropFilter).to.equal('none');
+        promoted.removeAttribute('data-lr-contrast');
+        expect(toRgba(getComputedStyle(promoted).backgroundColor)[3]).to.be.within(203, 205);
+        expect(getComputedStyle(promoted, '::before').backdropFilter).to.include('blur(12px)');
+        outer.setAttribute('data-lr-surface', 'glass');
+        expect(toRgba(getComputedStyle(promoted).backgroundColor)[3]).to.be.within(203, 205);
+        expect(getComputedStyle(promoted, '::before').backdropFilter).to.include('blur(12px)');
+        promoted.removeAttribute('data-lr-surface');
+        outer.setAttribute('data-lr-surface', 'solid');
+        expect(toRgba(getComputedStyle(promoted).backgroundColor)[3]).to.equal(255);
+        expect(getComputedStyle(promoted, '::before').backdropFilter).to.equal('none');
+      } finally {
+        if (carrier === 'modal') (promoted as HTMLDialogElement).close();
+        else promoted.hidePopover();
+      }
+    });
+  }
+
   it('theme.css alone paints the same Emerald before and after explicit default attributes', async () => {
     document.adoptedStyleSheets = [...previous, theme];
     const scope = await fixture<HTMLDivElement>(html`<div><lr-button appearance="accent" variant="brand">Action</lr-button><div class="lr-surface-chrome">Chrome</div></div>`);
@@ -94,11 +158,14 @@ describe('native chrome material', () => {
     await button.updateComplete;
     const base = button.shadowRoot!.querySelector('[part~="base"]')!;
     const before = getComputedStyle(base).backgroundColor;
+    const beforeBrand = resolvedColorToken(button, '--lr-color-brand-fill-loud');
     scope.setAttribute('data-lr-look', 'shadcn');
     scope.setAttribute('data-lr-surface', 'glass');
     scope.setAttribute('data-lr-accent', 'emerald');
     expect(getComputedStyle(base).backgroundColor).to.equal(before);
     scope.setAttribute('data-lr-accent', 'none');
+    expect(resolvedColorToken(button, '--lr-color-brand-fill-loud')).to.not.equal(beforeBrand);
+    await waitUntil(() => getComputedStyle(base).backgroundColor !== before, 'accent removal should change the rendered button fill');
     expect(getComputedStyle(base).backgroundColor).to.not.equal(before);
     scope.setAttribute('data-lr-surface', 'solid');
     expect(toRgba(getComputedStyle(scope.lastElementChild!).backgroundColor)[3]).to.equal(255);

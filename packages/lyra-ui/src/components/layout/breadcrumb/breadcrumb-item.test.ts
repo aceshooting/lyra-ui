@@ -246,8 +246,8 @@ it('shows a focus ring on the link via :focus-visible', async () => {
   base.focus();
   await el.updateComplete;
   const style = getComputedStyle(base);
-  expect(style.outlineWidth).to.equal('2px');
-  expect(style.outlineOffset).to.equal('2px');
+  expect(style.outlineWidth).to.equal('3px');
+  expect(style.outlineOffset).to.equal('0px');
 });
 
 it('gives the current-page span a distinct font-weight from a plain link', async () => {

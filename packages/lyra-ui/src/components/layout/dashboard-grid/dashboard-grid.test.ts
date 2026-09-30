@@ -2610,7 +2610,7 @@ describe("narrow allocation", () => {
       expect(cells.length).to.equal(2);
       expect(handles.length).to.equal(2);
       for (let index = 0; index < cells.length; index += 1) {
-        expect(cells[index]!.getBoundingClientRect().height).to.be.at.least(40);
+        expect(cells[index]!.getBoundingClientRect().height).to.be.at.least(36);
         expect(cells[index]!.getBoundingClientRect().height).to.be.at.least(
           handles[index]!.getBoundingClientRect().height
         );

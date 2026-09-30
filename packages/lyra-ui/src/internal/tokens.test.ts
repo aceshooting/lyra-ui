@@ -1,5 +1,5 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import { LitElement } from 'lit';
+import { LitElement, css } from 'lit';
 import { setForcedColors } from '../../test/wtr-media.js';
 import { forceCoarsePointer } from '../../test/coarse-pointer-media.js';
 import { tag } from './prefix.js';
@@ -8,6 +8,7 @@ import { sizes } from './sizes.styles.js';
 import { contextualSizes } from './contextual-vocabulary.styles.js';
 import { tokens } from './tokens.styles.js';
 import { palette } from './tokens/palette.styles.js';
+import { glassSurface } from './glass-surface.styles.js';
 
 class TokenProbe extends LitElement {
   static override styles = [palette, tokens];
@@ -300,10 +301,10 @@ it('defines an otp-input-segment-size token, themeable via --lr-theme-otp-input-
   );
 });
 
-it('defines the focus-ring tokens, with color aliasing the existing brand token', async () => {
-  expect(resolvedPx(await nestedProbe(), '--lr-focus-ring-width')).to.equal(2);
-  expect(await probeVar('--lr-focus-ring-offset')).to.equal('2px');
-  expect(await probeVar('--lr-focus-ring-color')).to.equal(await probeVar('--lr-color-brand'));
+it('defines the Shadcn focus ring with the Emerald focus role', async () => {
+  expect(resolvedPx(await nestedProbe(), '--lr-focus-ring-width')).to.equal(3);
+  expect(await probeVar('--lr-focus-ring-offset')).to.equal('0px');
+  expect(resolvedColor(await nestedProbe(), '--lr-focus-ring-color')).to.deep.equal([31, 127, 92]);
 });
 
 it('defines a composite --lr-focus-ring shorthand built from the three parts', async () => {
@@ -320,13 +321,13 @@ it('tracks the --lr-theme-focus-ring-* inputs through the composite shorthand', 
 });
 
 it('defines an icon-button-size token', async () => {
-  expect(await probeVar('--lr-icon-button-size')).to.equal('2.5rem');
+  expect(await probeVar('--lr-icon-button-size')).to.equal('2.25rem');
 });
 
 it('keeps the focus-ring, icon-button, otp-input, and popover-clamp defaults inside a nested shadow root with no override', async () => {
-  expect(await probeNestedVar('--lr-icon-button-size')).to.equal('2.5rem');
-  expect(resolvedPx(await nestedProbe(), '--lr-focus-ring-width')).to.equal(2);
-  expect(await probeNestedVar('--lr-focus-ring-offset')).to.equal('2px');
+  expect(await probeNestedVar('--lr-icon-button-size')).to.equal('2.25rem');
+  expect(resolvedPx(await nestedProbe(), '--lr-focus-ring-width')).to.equal(3);
+  expect(await probeNestedVar('--lr-focus-ring-offset')).to.equal('0px');
   expect(await probeNestedVar('--lr-otp-input-segment-size')).to.equal('2.5em');
   expect(await probeNestedVar('--lr-popover-viewport-clamp')).to.equal('92vw');
 });
@@ -384,8 +385,8 @@ it('still honours --lr-icon-button-size-scope when the theme tier is declared at
 });
 
 it('leaves --lr-icon-button-size at its default when neither ancestor input is set', async () => {
-  expect(await probeNestedVar('--lr-icon-button-size')).to.equal('2.5rem');
-  expect(resolvedPx(await nestedProbe(), '--lr-icon-button-size')).to.be.closeTo(remPx(2.5), 0.5);
+  expect(await probeNestedVar('--lr-icon-button-size')).to.equal('2.25rem');
+  expect(resolvedPx(await nestedProbe(), '--lr-icon-button-size')).to.be.closeTo(remPx(2.25), 0.5);
 });
 
 it('lets the --lr-theme-focus-ring-* inputs set on an ancestor reach a component nested below another host', async () => {
@@ -406,9 +407,9 @@ it('cannot be rethemed through the --lr-* token itself, which is why the --lr-th
   // that the PUBLISHED per-component name keeps its element-scoped meaning -- setting
   // --lr-icon-button-size on the icon button itself is authoritative, and cannot be overridden
   // from a wrapper -- so nothing that relies on that today changes.
-  expect(await probeNestedVar('--lr-icon-button-size', '--lr-icon-button-size: 3rem')).to.equal('2.5rem');
-  expect(resolvedPx(await nestedProbe('--lr-focus-ring-width: 4px'), '--lr-focus-ring-width')).to.equal(2);
-  expect(await probeNestedVar('--lr-focus-ring-offset', '--lr-focus-ring-offset: 5px')).to.equal('2px');
+  expect(await probeNestedVar('--lr-icon-button-size', '--lr-icon-button-size: 3rem')).to.equal('2.25rem');
+  expect(resolvedPx(await nestedProbe('--lr-focus-ring-width: 4px'), '--lr-focus-ring-width')).to.equal(3);
+  expect(await probeNestedVar('--lr-focus-ring-offset', '--lr-focus-ring-offset: 5px')).to.equal('0px');
   expect(await probeNestedVar('--lr-otp-input-segment-size', '--lr-otp-input-segment-size: 4em')).to.equal('2.5em');
   expect(await probeNestedVar('--lr-popover-viewport-clamp', '--lr-popover-viewport-clamp: 50vw')).to.equal('92vw');
 });
@@ -447,7 +448,7 @@ it('grows --lr-icon-button-size to the platform touch-target floor under a coars
   try {
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     expect(getComputedStyle(el).getPropertyValue('--lr-icon-button-size').trim()).to.equal(
-      'max(2.5rem, 2.75rem)',
+      'max(2.25rem, 2.75rem)',
     );
   } finally {
     restore();
@@ -522,24 +523,17 @@ async function darkProbe(style = ''): Promise<TokenProbe> {
   return el;
 }
 
-it("keeps the derived dark overlay surface at today's panel colour on the stock base surface", async () => {
+it('keeps the default Shadcn dark overlay above its page surface', async () => {
   const overlay = resolvedColor(await darkProbe(), '--lr-color-surface-overlay');
-  const expected = [0x2b, 0x30, 0x38];
+  const expected = [0x17, 0x17, 0x17];
   const drift = Math.max(...overlay.map((channel, index) => Math.abs(channel - expected[index]!)));
-  expect(drift, `resolved ${toHex(overlay)}, expected about #2b3038`).to.be.at.most(2);
+  expect(drift, `resolved ${toHex(overlay)}, expected about #171717`).to.be.at.most(2);
 });
 
-it('moves the dark overlay surface with a re-skinned --lr-theme-color-surface-default', async () => {
+it('keeps the Shadcn dark panel role independent of a page-surface override', async () => {
   const el = await darkProbe('--lr-theme-color-surface-default: #101820');
-  const surface = toHex(resolvedColor(el, '--lr-color-surface'));
-  const overlay = toHex(resolvedColor(el, '--lr-color-surface-overlay'));
-  expect(surface).to.equal('#101820');
-  expect(overlay, 'the overlay must follow the re-skinned base, not stay at the stock panel colour').to.not.equal(
-    '#2b3038',
-  );
-  // Following it is only worth anything while the elevation delta survives: a panel the same
-  // colour as the page it floats over is the exact failure the pinned literal existed to prevent.
-  expect(contrastRatio(overlay, surface), `${overlay} on ${surface}`).to.be.greaterThan(1.15);
+  expect(toHex(resolvedColor(el, '--lr-color-surface'))).to.equal('#101820');
+  expect(toHex(resolvedColor(el, '--lr-color-surface-overlay'))).to.equal('#171717');
 });
 
 it('lets an explicit --lr-theme-color-surface-overlay win outright in dark mode', async () => {
@@ -650,7 +644,7 @@ it('reaches its dark values through every dark route while forced colors are off
   // indistinguishable from "this route never changed anything in the first place".
   const names = ['--lr-color-surface', '--lr-color-chart-1'];
   const light = await probeTokensUnder(names, 'none');
-  expect(light.get('--lr-color-surface'), 'the no-signal default must still be the light surface').to.equal('#fff');
+  expect(light.get('--lr-color-surface'), 'the no-signal default must still be the light surface').to.equal('#ffffff');
 
   const routes: DarkRoute[] = hostContextSupported
     ? ['os-preference', 'attribute', 'ancestor']
@@ -658,8 +652,8 @@ it('reaches its dark values through every dark route while forced colors are off
   const failures: string[] = [];
   for (const route of routes) {
     const dark = await probeTokensUnder(names, route);
-    if (dark.get('--lr-color-surface') !== '#1a1a1a') {
-      failures.push(`${route}: surface is ${dark.get('--lr-color-surface')}, expected #1a1a1a`);
+    if (dark.get('--lr-color-surface') !== '#0a0a0a') {
+      failures.push(`${route}: surface is ${dark.get('--lr-color-surface')}, expected #0a0a0a`);
     }
     if (dark.get('--lr-color-chart-1') === light.get('--lr-color-chart-1')) {
       failures.push(`${route}: chart-1 never left its light value`);
@@ -706,43 +700,32 @@ it('substitutes system colours in forced colors under a dark ancestor', async fu
 });
 
 it('darkens the border fallback to clear WCAG 1.4.11 non-text 3:1 contrast against white', async () => {
-  expect(await probeVar('--lr-color-border')).to.equal('#8a8a90');
+  expect(await probeVar('--lr-color-border')).to.equal('#919191');
 });
 
 // --- the decorative border tier -------------------------------------------------------
 //
-// --lr-color-border-subtle is the edge colour for decoration nothing has to be identified by: a
-// divider, a card or table edge, a separator between items. Its own input is declared nowhere by
-// default -- not even in theme.css -- so until an application opts in it must resolve to EXACTLY
-// --lr-color-border on every route into every mode. That is what lets stylesheets be re-pointed to
-// it without moving a single rendered pixel for anyone who never sets the input. It is never a
-// control boundary (WCAG 2.2 SC 1.4.11); check:border-subtle keeps it out of the form controls.
+// Shadcn gives decorative boundaries their own mode-specific role, separate from the
+// control boundary. Both remain independently themeable through their documented inputs.
 
 const BORDER_TIERS = ['--lr-color-border', '--lr-color-border-subtle'] as const;
 
-it('resolves --lr-color-border-subtle to exactly --lr-color-border on every mode route while its input is unset', async () => {
+it('keeps the default decorative and control boundary roles distinct on every mode route', async () => {
   const routes: DarkRoute[] = hostContextSupported
     ? ['none', 'os-preference', 'attribute', 'ancestor']
     : ['none', 'os-preference', 'attribute'];
-  const failures: string[] = [];
-  const borders = new Set<string>();
   for (const route of routes) {
     const values = await probeTokensUnder(BORDER_TIERS, route);
-    const border = values.get('--lr-color-border') ?? '';
-    const subtle = values.get('--lr-color-border-subtle') ?? '';
-    if (border === '') failures.push(`${route}: --lr-color-border resolved to nothing`);
-    if (subtle !== border) failures.push(`${route}: --lr-color-border-subtle is ${subtle}, --lr-color-border is ${border}`);
-    borders.add(border);
+    const dark = route !== 'none';
+    expect(values.get('--lr-color-border'), route).to.equal(dark ? '#646464' : '#919191');
+    expect(values.get('--lr-color-border-subtle'), route).to.equal(dark ? 'rgb(255 255 255 / 0.1)' : '#e5e5e5');
   }
-  expect(failures.join('\n'), 'routes on which the unset decorative tier diverged').to.equal('');
-  // The routes really changed mode, so "equal" is not merely two copies of the light value.
-  expect([...borders]).to.include.members(['#8a8a90', '#787881']);
 });
 
-it('keeps --lr-color-border-subtle following a retuned --lr-theme-color-surface-border until its own input is set', async () => {
+it('keeps the Shadcn decorative role independent of a control-boundary override', async () => {
   expect(
     await probeNestedVar('--lr-color-border-subtle', '--lr-theme-color-surface-border: rgb(7, 8, 9)'),
-  ).to.equal('rgb(7, 8, 9)');
+  ).to.equal('#e5e5e5');
 });
 
 it('lets --lr-theme-color-surface-border-subtle set on an ancestor reach a component nested below another host', async () => {
@@ -750,12 +733,12 @@ it('lets --lr-theme-color-surface-border-subtle set on an ancestor reach a compo
   const read = (name: string) => getComputedStyle(inner).getPropertyValue(name).trim();
   expect(read('--lr-color-border-subtle')).to.equal('rgb(1, 2, 3)');
   // Decorative only: the control boundary must not move with it.
-  expect(read('--lr-color-border')).to.equal('#8a8a90');
+  expect(read('--lr-color-border')).to.equal('#919191');
 
   // The dark declaration reads the same input; a literal there would silently ignore the theme.
   inner.setAttribute('data-lr-theme', 'dark');
   expect(read('--lr-color-border-subtle')).to.equal('rgb(1, 2, 3)');
-  expect(read('--lr-color-border')).to.equal('#787881');
+  expect(read('--lr-color-border')).to.equal('#646464');
 });
 
 it('replaces a set --lr-theme-color-surface-border-subtle with the system border colour in forced colors', async function () {
@@ -841,10 +824,8 @@ it('chains filled-content and border tokens through the matching lyra theme-inpu
   const read = (name: string) => getComputedStyle(el).getPropertyValue(name).trim();
   const cases: Array<[input: string, reaches: string]> = [
     ['--lr-theme-color-surface-border', '--lr-color-border'],
-    // The decorative tier answers to its own input, and -- while that is unset -- to the control
-    // border's, so a theme that retunes only the border still moves every divider with it.
+    // The default decorative role has its own independently inherited input.
     ['--lr-theme-color-surface-border-subtle', '--lr-color-border-subtle'],
-    ['--lr-theme-color-surface-border', '--lr-color-border-subtle'],
     ['--lr-theme-color-focus', '--lr-focus-ring-color'],
     ['--lr-theme-color-on-strong-overlay', '--lr-color-on-strong-overlay'],
     // `neutral` belongs here for the same reason as the other four: it declares a real
@@ -948,13 +929,15 @@ it('declares every bridged theme input in theme.css', async () => {
   expect(missing.join('\n')).to.equal('');
 });
 
-it('keeps the decorative boundary derived from an authored control boundary unless explicitly overridden', async () => {
+it('keeps the default decorative boundary independent until its own input is overridden', async () => {
   await withThemeCss(async () => {
     const wrapper = await fixture<HTMLElement>(html`<div style="--lr-theme-color-surface-border: #123456"><lr-token-probe></lr-token-probe></div>`);
     const probe = wrapper.querySelector('lr-token-probe')!;
-    expect(resolvedColor(probe, '--lr-color-border-subtle')).to.deep.equal([18, 52, 86]);
+    expect(resolvedColor(probe, '--lr-color-border')).to.deep.equal([18, 52, 86]);
+    expect(resolvedColor(probe, '--lr-color-border-subtle')).to.deep.equal([229, 229, 229]);
     wrapper.style.setProperty('--lr-theme-color-surface-border', '#654321');
-    expect(resolvedColor(probe, '--lr-color-border-subtle')).to.deep.equal([101, 67, 33]);
+    expect(resolvedColor(probe, '--lr-color-border')).to.deep.equal([101, 67, 33]);
+    expect(resolvedColor(probe, '--lr-color-border-subtle')).to.deep.equal([229, 229, 229]);
     wrapper.style.setProperty('--lr-theme-color-surface-border-subtle', '#abcdef');
     expect(resolvedColor(probe, '--lr-color-border-subtle')).to.deep.equal([171, 205, 239]);
   });
@@ -969,7 +952,7 @@ it('names only theme inputs that a component token layer actually reads', async 
   // ladder itself and `contextualSizes` re-reads it for the density-scoped variants.
   const utilityResponse = await fetch(new URL('../styles/utilities.css', import.meta.url));
   expect(utilityResponse.ok).to.equal(true);
-  const read = [tokens, palette, specialistTokens, sizes, contextualSizes]
+  const read = [tokens, palette, specialistTokens, sizes, contextualSizes, glassSurface('[part="probe"]', css`var(--lr-color-surface-overlay)`)]
     .map((sheet) => sheet.cssText)
     .join('\n');
   const consumers = read + await utilityResponse.text();
@@ -978,10 +961,10 @@ it('names only theme inputs that a component token layer actually reads', async 
   expect(unused.join('\n')).to.equal('');
 });
 
-it('keeps the theme interaction-mix partner aligned with text in both modes', async () => {
+it('keeps the neutral Shadcn interaction-mix partner in both modes', async () => {
   await withThemeCss(async () => {
-    expect(await probeVarUnder('lr-light', '--lr-color-mix-partner')).to.equal('#1a1a1a');
-    expect(await probeVarUnder('lr-dark', '--lr-color-mix-partner')).to.equal('#f2f2f2');
+    expect(await probeVarUnder('lr-light', '--lr-color-mix-partner')).to.equal('#737373');
+    expect(await probeVarUnder('lr-dark', '--lr-color-mix-partner')).to.equal('#737373');
   });
 });
 
@@ -992,10 +975,10 @@ it('leaves every bridged token at its built-in value when theme.css is imported'
   // prevents the drift this test detects; regenerating the ramp therefore means updating these
   // four values from the generator's output, not hand-picking new ones.
   const expected: Array<[name: string, value: string]> = [
-    ['--lr-icon-button-size', '2.5rem'],
-    ['--lr-focus-ring-offset', '2px'],
+    ['--lr-icon-button-size', '2.25rem'],
+    ['--lr-focus-ring-offset', '0px'],
     ['--lr-color-surface', '#ffffff'],
-    ['--lr-color-surface-raised', '#f6f8fa'],
+    ['--lr-color-surface-raised', '#fafafa'],
     ['--lr-color-overlay', 'rgb(0 0 0 / 0.5)'],
     // The strong overlay must not collapse onto the plain one: both once shared a single
     // --lr-theme-color-overlay input, so defining that input flattened 0.92 down to 0.5.
@@ -1021,11 +1004,11 @@ it('leaves every bridged token at its built-in value when theme.css is imported'
     // Elevation, sampled at both ends. A custom property's computed value is its token stream after
     // var() substitution, not a box-shadow serialization, so the shadow COLOUR appears here already
     // resolved from the --lr-shadow-color triplet.
-    ['--lr-shadow-xs', '0 1px 2px rgb(0 0 0 / 0.12)'],
-    ['--lr-shadow-xl', '0 12px 32px rgb(0 0 0 / 0.22)'],
+    ['--lr-shadow-xs', '0 1px 2px 0 rgb(0 0 0 / 0.05)'],
+    ['--lr-shadow-xl', '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)'],
   ];
   await withThemeCss(async () => {
-    expect(resolvedPx(await nestedProbe(), '--lr-focus-ring-width')).to.equal(2);
+    expect(resolvedPx(await nestedProbe(), '--lr-focus-ring-width')).to.equal(3);
     const failures: string[] = [];
     for (const [name, value] of expected) {
       const actual = await probeVarUnder('lr-light', name);
@@ -1040,26 +1023,23 @@ it('mirrors every dark-mode fallback value in theme.css .lr-dark', async () => {
     // .lr-dark must not disagree with the prefers-color-scheme: dark fallback blocks in the base
     // and specialist token sheets — a raised surface or chart series left at its light value on a
     // dark page is the visible symptom.
-    expect(await probeVarUnder('lr-dark', '--lr-color-surface')).to.equal('#1a1a1a');
-    expect(await probeVarUnder('lr-dark', '--lr-color-surface-raised')).to.equal('#22272e');
+    expect(await probeVarUnder('lr-dark', '--lr-color-surface')).to.equal('#0a0a0a');
+    expect(await probeVarUnder('lr-dark', '--lr-color-surface-raised')).to.equal('#171717');
     expect(await probeVarUnder('lr-dark', '--lr-color-chart-1')).to.equal('#bbff94');
     expect(await probeVarUnder('lr-dark', '--lr-color-chart-8')).to.equal('#555de3');
   });
 });
 
-it('keeps --lr-color-border-subtle equal to --lr-color-border in both modes when theme.css is imported', async () => {
+it('keeps both default boundary roles when theme.css is imported', async () => {
   await withThemeCss(async () => {
-    const failures: string[] = [];
-    for (const [themeClass, expected] of [
-      ['lr-light', '#8a8a90'],
-      ['lr-dark', '#787881'],
+    for (const [themeClass, border, subtle] of [
+      ['lr-light', '#919191', '#e5e5e5'],
+      ['lr-dark', '#646464', 'rgb(255 255 255 / 0.1)'],
     ] as const) {
       const values = await probeVarsUnder(themeClass, BORDER_TIERS);
-      for (const name of BORDER_TIERS) {
-        if (values.get(name) !== expected) failures.push(`${themeClass} ${name}: ${values.get(name)} !== ${expected}`);
-      }
+      expect(values.get('--lr-color-border'), themeClass).to.equal(border);
+      expect(values.get('--lr-color-border-subtle'), themeClass).to.equal(subtle);
     }
-    expect(failures.join('\n')).to.equal('');
   });
 });
 

@@ -915,13 +915,13 @@ it('reflects size="2xs" as a host attribute', async () => {
   expect(el.getAttribute('size')).to.equal('2xs');
 });
 
-it('renders the same trigger height at every tier as before the shared ladder', async () => {
+it('renders the shared trigger height at every tier', async () => {
   const expected: ReadonlyArray<readonly [string, string]> = [
     ['2xs', '20px'],
     ['xs', '24px'],
-    ['s', '30px'],
-    ['m', '40px'],
-    ['l', '48px'],
+    ['s', '32px'],
+    ['m', '36px'],
+    ['l', '40px'],
     ['xl', '56px'],
   ];
   for (const [size, px] of expected) {

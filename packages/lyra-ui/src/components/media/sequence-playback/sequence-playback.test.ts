@@ -484,8 +484,8 @@ it('shows a focus ring on the play button when it receives keyboard/programmatic
 
   const style = getComputedStyle(button);
   expect(style.outlineStyle).to.equal('solid');
-  expect(style.outlineWidth).to.equal('2px');
-  expect(style.outlineOffset).to.equal('2px');
+  expect(style.outlineWidth).to.equal('3px');
+  expect(style.outlineOffset).to.equal('0px');
 });
 
 it('forwards public focus and blur to the play button', async () => {
@@ -645,8 +645,8 @@ it('shows a focus ring on the slider when it receives keyboard/programmatic focu
 
   const style = getComputedStyle(slider);
   expect(style.outlineStyle).to.equal('solid');
-  expect(style.outlineWidth).to.equal('2px');
-  expect(style.outlineOffset).to.equal('2px');
+  expect(style.outlineWidth).to.equal('3px');
+  expect(style.outlineOffset).to.equal('0px');
 });
 
 it('starts the real timer when `playing` is set directly, not just via play()', async () => {
@@ -727,9 +727,8 @@ it('derives the play/pause icon size from --lr-icon-button-size via a token, not
   const el = (await fixture(html`<lr-sequence-playback item-count="3"></lr-sequence-playback>`)) as LyraSequencePlayback;
   const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
 
-  // Default rendering is unchanged from the pre-refactor bare 0.875rem (14px)
-  // literal.
-  expect(getComputedStyle(button).fontSize).to.equal('14px');
+  // The glyph tracks 35% of the default 36px shared target.
+  expect(getComputedStyle(button).fontSize).to.equal('12.6px');
 
   // Overriding the icon-button-size token must move the icon size with it --
   // proof the icon size is now backed by a design token instead of a bare
@@ -743,8 +742,8 @@ it('gives the play/pause button the shared minimum hit area', async () => {
   const el = (await fixture(html`<lr-sequence-playback item-count="3"></lr-sequence-playback>`)) as LyraSequencePlayback;
   const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLElement;
 
-  expect(getComputedStyle(button).minInlineSize).to.equal('40px');
-  expect(getComputedStyle(button).minBlockSize).to.equal('40px');
+  expect(getComputedStyle(button).minInlineSize).to.equal('36px');
+  expect(getComputedStyle(button).minBlockSize).to.equal('36px');
 });
 
 it('gives the enabled range slider a pointer cursor and rendered hover and pressed affordances', async () => {

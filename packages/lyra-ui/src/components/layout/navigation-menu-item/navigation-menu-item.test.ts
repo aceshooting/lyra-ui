@@ -311,7 +311,7 @@ describe('<lr-navigation-menu-item>', () => {
     const floor = probe.getBoundingClientRect().width;
     probe.remove();
     const style = getComputedStyle(base(el));
-    expect(floor).to.be.at.least(40);
+    expect(floor).to.be.at.least(36);
     expect(Number.parseFloat(style.minBlockSize)).to.be.at.least(floor - 0.5);
     expect(Number.parseFloat(style.minInlineSize)).to.be.at.least(floor - 0.5);
     const rect = base(el).getBoundingClientRect();

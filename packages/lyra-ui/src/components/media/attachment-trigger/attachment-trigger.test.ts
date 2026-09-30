@@ -489,14 +489,14 @@ it('gives the multi-capability trigger its own stylable part and a disclosure ch
 
 it('gives both the single-capability and multi-capability trigger buttons the shared minimum hit area', async () => {
   const el = (await fixture(html`<lr-attachment-trigger></lr-attachment-trigger>`)) as LyraAttachmentTrigger;
-  expect(getComputedStyle(composedControl(trigger(el))).minInlineSize).to.equal('40px');
-  expect(getComputedStyle(composedControl(trigger(el))).minBlockSize).to.equal('40px');
+  expect(getComputedStyle(composedControl(trigger(el))).minInlineSize).to.equal('36px');
+  expect(getComputedStyle(composedControl(trigger(el))).minBlockSize).to.equal('36px');
 
   el.capabilities = ['files', 'image'];
   await el.updateComplete;
   const menuBtn = composedControl(menuTriggerButton(el));
-  expect(getComputedStyle(menuBtn).minInlineSize).to.equal('40px');
-  expect(getComputedStyle(menuBtn).minBlockSize).to.equal('40px');
+  expect(getComputedStyle(menuBtn).minInlineSize).to.equal('36px');
+  expect(getComputedStyle(menuBtn).minBlockSize).to.equal('36px');
 });
 
 it('selecting the files menu item clicks the hidden native input', async () => {

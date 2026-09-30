@@ -7,6 +7,7 @@ import {
   settlePointer,
 } from '../../../../test/wtr-mouse.js';
 import { readScrollbarWidth } from '../../../../test/scrollbar-reporting.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './time-input.js';
 import type { LyraTimeInput } from './time-input.class.js';
 
@@ -229,7 +230,7 @@ describe('lr-time-input segmented field', () => {
   });
 
   it('keeps picker-bearing rows on the shared hit-floor-aware height ladder', async () => {
-    const expected: Record<string, number> = { '2xs': 42, xs: 42, s: 42, m: 42, l: 48, xl: 56 };
+    const expected: Record<string, number> = { '2xs': 38, xs: 38, s: 38, m: 38, l: 40, xl: 56 };
     for (const [size, height] of Object.entries(expected)) {
       const el = await fixture<LyraTimeInput>(html`<lr-time-input size=${size} value="10:00"></lr-time-input>`);
       const row = el.shadowRoot!.querySelector<HTMLElement>('[part~="time-input"]')!;
@@ -2200,4 +2201,35 @@ describe('lr-time-input control height hooks', () => {
     expect(getComputedStyle(row(el)).blockSize).to.equal('56px');
     expect(getComputedStyle(row(el)).minBlockSize).to.equal('56px');
   });
+});
+
+describe('lr-time-input clipped column focus', () => {
+  for (const offset of [0, 2, -4]) {
+    it(`keeps the first keyboard-focused option ring inside its column with offset ${offset}px`, async () => {
+      const el = await fixture<LyraTimeInput>(html`
+        <lr-time-input value="01:00" style=${`--lr-theme-focus-ring-width: 3px; --lr-theme-focus-ring-offset: ${offset}px; --lr-theme-color-focus: rgb(255, 0, 0)`}></lr-time-input>
+      `);
+      await el.show();
+      await el.updateComplete;
+      const column = el.shadowRoot!.querySelector<HTMLElement>('[part="column"]')!;
+      const option = column.querySelector<HTMLElement>('[part~="column-item"]')!;
+      await focusByKeyboard(option);
+      await waitUntil(() => option.matches(':focus-visible'), 'the first hour option never gained keyboard focus');
+      const columnBounds = column.getBoundingClientRect();
+      const optionBounds = option.getBoundingClientRect();
+      const computed = getComputedStyle(option);
+      const width = parseFloat(computed.outlineWidth);
+      const renderedOffset = parseFloat(computed.outlineOffset);
+      const outerExtent = width + renderedOffset;
+
+      expect(el.open).to.equal(true);
+      expect(column.scrollTop).to.equal(0);
+      expect(width).to.equal(3);
+      expect(computed.outlineStyle).to.equal('solid');
+      expect(renderedOffset).to.equal(-Math.max(width, width + offset));
+      expect(optionBounds.left - outerExtent).to.be.at.least(columnBounds.left);
+      expect(optionBounds.right + outerExtent).to.be.at.most(columnBounds.left + column.clientWidth);
+      expect(optionBounds.top - outerExtent).to.be.at.least(columnBounds.top);
+    });
+  }
 });

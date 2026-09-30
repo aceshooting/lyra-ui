@@ -25,12 +25,22 @@ describe('av-player owned clear controls', () => {
   beforeEach(() => { previous = document.adoptedStyleSheets; document.adoptedStyleSheets = [...previous, ...sheets]; });
   afterEach(async () => { document.adoptedStyleSheets = previous; await setForcedColors('none'); });
 
-  it('leaves the unselected control bar transparent and native controls intact', async () => {
-    const player = await fixture<LyraAvPlayer>(html`<lr-av-player></lr-av-player>`);
+  it('leaves regular Solid controls transparent and native controls intact', async () => {
+    const player = await fixture<LyraAvPlayer>(html`<lr-av-player data-lr-surface="solid"></lr-av-player>`);
     expect(player.controlsSurface).to.equal('regular');
     const toolbar = player.shadowRoot!.querySelector('[part="toolbar"]')!;
     expect(toRgba(getComputedStyle(toolbar).backgroundColor)[3]).to.equal(0);
     expect(getComputedStyle(toolbar).backgroundImage).to.equal('none');
+    expect(player.shadowRoot!.querySelector('[part="media"]')!.hasAttribute('controls')).to.equal(true);
+  });
+
+  it('applies the default Glass material to regular owned controls without changing native controls', async () => {
+    const player = await fixture<LyraAvPlayer>(html`<lr-av-player></lr-av-player>`);
+    expect(player.controlsSurface).to.equal('regular');
+    const toolbar = player.shadowRoot!.querySelector('[part="toolbar"]')!;
+    expect(toRgba(getComputedStyle(toolbar).backgroundColor)[3]).to.equal(204);
+    expect(getComputedStyle(toolbar).backgroundImage).to.equal('none');
+    expect(getComputedStyle(toolbar, '::before').backdropFilter).to.include('blur(12px)');
     expect(player.shadowRoot!.querySelector('[part="media"]')!.hasAttribute('controls')).to.equal(true);
   });
 

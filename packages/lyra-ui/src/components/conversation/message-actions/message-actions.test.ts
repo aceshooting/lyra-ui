@@ -1004,8 +1004,8 @@ it("gives the regenerate/edit built-in buttons the shared minimum hit area", asy
   ) as HTMLElement;
 
   for (const control of [composedControl(regenerate), composedControl(edit)]) {
-    expect(getComputedStyle(control).minInlineSize).to.equal("40px");
-    expect(getComputedStyle(control).minBlockSize).to.equal("40px");
+    expect(getComputedStyle(control).minInlineSize).to.equal("36px");
+    expect(getComputedStyle(control).minBlockSize).to.equal("36px");
   }
 });
 
@@ -1351,13 +1351,13 @@ describe('dense-row hit-area override and its coarse-pointer safety net', () => 
   const regenerateButton = (el: LyraMessageActions): Element =>
     el.shadowRoot!.querySelector('[part~="regenerate-button"]')!;
 
-  it('renders the ordinary 40px floor on a built-in action with no override', async () => {
+  it('renders the ordinary 36px floor on a built-in action with no override', async () => {
     const el = (await fixture(
       html`<lr-message-actions .controls=${['regenerate']}></lr-message-actions>`,
     )) as LyraMessageActions;
     const control = composedControl(regenerateButton(el));
-    expect(control.getBoundingClientRect().width).to.equal(40);
-    expect(control.getBoundingClientRect().height).to.equal(40);
+    expect(control.getBoundingClientRect().width).to.equal(36);
+    expect(control.getBoundingClientRect().height).to.equal(36);
   });
 
   it('shrinks below the ordinary floor when an ancestor lowers --lr-theme-icon-button-size, for a dense toolbar', async () => {

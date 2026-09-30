@@ -243,8 +243,8 @@ it('keeps the full-bleed range hit surface at the icon floor and fills an explic
   await Promise.all([empty.updateComplete, oneLine.updateComplete, fixedHeight.updateComplete]);
 
   const inputFor = (el: LyraImageComparer) => el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
-  expect(inputFor(empty).getBoundingClientRect().height, 'an empty comparer keeps a usable drag surface').to.be.at.least(40);
-  expect(inputFor(oneLine).getBoundingClientRect().height, 'one-line content cannot shrink the drag surface').to.be.at.least(40);
+  expect(inputFor(empty).getBoundingClientRect().height, 'an empty comparer keeps a usable drag surface').to.be.at.least(36);
+  expect(inputFor(oneLine).getBoundingClientRect().height, 'one-line content cannot shrink the drag surface').to.be.at.least(36);
 
   const base = fixedHeight.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   const input = inputFor(fixedHeight);
@@ -374,11 +374,11 @@ it('contains long unbroken 320px comparisons in LTR and Arabic RTL and mirrors t
     expectContained(beforeContentRect, beforeRect, `${direction} before content`);
     expectContained(afterContentRect, afterRect, `${direction} after content`);
     expectContained(inputRect, baseRect, `${direction} native range`);
-    expect(inputRect.width, `${direction} native range keeps a 40px inline interaction floor`).to.be.at.least(
-      40,
+    expect(inputRect.width, `${direction} native range keeps a 36px inline interaction floor`).to.be.at.least(
+      36,
     );
-    expect(inputRect.height, `${direction} native range keeps a 40px block interaction floor`).to.be.at.least(
-      40,
+    expect(inputRect.height, `${direction} native range keeps a 36px block interaction floor`).to.be.at.least(
+      36,
     );
   }
 

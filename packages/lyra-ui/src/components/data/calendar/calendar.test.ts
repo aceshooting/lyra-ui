@@ -197,8 +197,8 @@ it('gives the previous/next month nav buttons the shared minimum hit area and ma
   const previous = el.shadowRoot!.querySelector('button[part~="previous-button"]') as HTMLElement;
   const next = el.shadowRoot!.querySelector('button[part~="next-button"]') as HTMLElement;
   for (const button of [previous, next]) {
-    expect(getComputedStyle(button).minInlineSize).to.equal('40px');
-    expect(getComputedStyle(button).minBlockSize).to.equal('40px');
+    expect(getComputedStyle(button).minInlineSize).to.equal('36px');
+    expect(getComputedStyle(button).minBlockSize).to.equal('36px');
   }
   const previousStyle = getComputedStyle(previous);
   const nextStyle = getComputedStyle(next);

@@ -790,15 +790,15 @@ it("floors the circle with min-* sizing instead of hard-sizing it, so the indica
   ) as HTMLElement;
 
   // Default tokens at the default "m" tier:
-  // min(--lr-icon-button-size 2.5rem, --lr-form-control-height 2.5rem * 0.7) === 1.75rem === 28px,
+  // min(--lr-icon-button-size 2.25rem, --lr-form-control-height 2.25rem * 0.7) === 1.575rem === 25.2px,
   // comfortably above the WCAG 2.2 SC 2.5.8 24x24 minimum. A label-less radio keeps the compact
   // circle inside its role owner's shared target floor.
   const floored = circle.getBoundingClientRect();
-  expect(floored.width).to.be.closeTo(28, 0.5);
-  expect(floored.height).to.be.closeTo(28, 0.5);
+  expect(floored.width).to.be.closeTo(25.2, 0.5);
+  expect(floored.height).to.be.closeTo(25.2, 0.5);
 
   // A hard `inline-size`/`block-size` cannot grow for its own content: enlarging the dot would clip
-  // it and leave the circle at 28px. `min-inline-size`/`min-block-size` (the form <lr-checkbox>'s
+  // it and leave the circle at 25.2px. `min-inline-size`/`min-block-size` (the form <lr-checkbox>'s
   // [part='box'] already uses) is a floor, so the circle grows to contain the indicator instead.
   el.style.setProperty("--lr-radio-dot-size", "3rem");
   const grown = circle.getBoundingClientRect();

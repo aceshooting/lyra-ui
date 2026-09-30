@@ -357,7 +357,7 @@ describe('per-size initials font-size', () => {
       await renderedFontSize('medium'),
       await renderedFontSize('large'),
     ];
-    expect(small, 'small < medium').to.be.lessThan(medium);
+    expect([small, medium, large]).to.deep.equal([14, 14, 18]);
     expect(large, 'large > medium').to.be.greaterThan(medium);
   });
 
@@ -467,7 +467,7 @@ describe('lr-avatar shape', () => {
       await renderedRadius('square'),
     ];
     expect(circle).to.equal('999px');
-    expect(rounded).to.equal('6px');
+    expect(rounded).to.equal('8px');
     expect(square).to.equal('0px');
   });
 

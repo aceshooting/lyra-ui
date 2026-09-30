@@ -2139,6 +2139,11 @@
       ]
     },
     {
+      "name": "--lr-surface-background",
+      "description": "Base fill for the opt-in lr-surface-chrome native utility; falls back to the local semantic overlay surface.",
+      "references": []
+    },
+    {
       "name": "--lr-table-row-min-height",
       "description": "Optional table and data-grid row minimum before local density scaling; zero preserves each component baseline.",
       "references": [
@@ -2716,7 +2721,7 @@
     },
     {
       "name": "--lr-theme-color-surface-border-subtle",
-      "description": "Application input for --lr-color-border-subtle; falls back to the shared token default.",
+      "description": "Optional application theme input for subtle surface borders.",
       "references": []
     },
     {
@@ -3017,6 +3022,11 @@
     {
       "name": "--lr-theme-graph-cat-8",
       "description": "Canonical application theme input for graph cat 8.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-heading-letter-spacing",
+      "description": "Optional application theme input for heading letter spacing.",
       "references": []
     },
     {

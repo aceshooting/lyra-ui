@@ -137,7 +137,7 @@ export const styles = css`
   [part="image-wrapper"]:focus-visible {
     outline: var(--lr-focus-ring);
     /* Keep the ring inside an image that fills the clipping pan/zoom viewport. */
-    outline-offset: calc(-1 * max(var(--lr-focus-ring-width), var(--lr-focus-ring-width) + var(--lr-focus-ring-offset)));
+    outline-offset: calc(-1 * max(var(--lr-focus-ring-width) + 2 * var(--lr-border-width-thin), var(--lr-focus-ring-width) + var(--lr-focus-ring-offset)));
   }
   /* 'actual' keeps the image at its natural pixel dimensions -- undo the 100% cap above and the
      'width'/'contain' image constraints below for that mode. */

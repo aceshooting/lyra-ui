@@ -272,7 +272,9 @@ export function renderNativeChrome(data = JSON.parse(readFileSync(new URL('../to
   const selector = ':where(.lr-surface-chrome)';
   const fill = 'var(--lr-surface-background, var(--lr-theme-color-surface-container-high, var(--lr-theme-color-surface-overlay, Canvas)))';
   const placeholders = new Map([
-    ['surface', selector], ['children', `${selector} > *`], ['layer', `${selector}::before`],
+    ['surface', selector], ['children', ':where(.lr-surface-chrome > *)'], ['layer', `${selector}::before`],
+    ['captureSurface', selector], ['captureScope', ":where(.lr-surface-chrome[data-lr-surface='glass'])"],
+    ['captureChildren', ":where(.lr-surface-chrome[data-lr-surface='glass'] > *)"],
     ['fill', fill], ['restingFill', fill],
     ["scrolling ? css`var(--_lr-glass-viewport-width, 100%)` : css`auto`", 'auto'],
     ["scrolling ? css`var(--_lr-glass-viewport-height, 100%)` : css`auto`", 'auto'],
@@ -280,7 +282,8 @@ export function renderNativeChrome(data = JSON.parse(readFileSync(new URL('../to
   const recipe = template.replace(/\$\{([^}]+)\}/g, (_, expression) => {
     if (!placeholders.has(expression)) throw new Error(`Unrecognized shared glass placeholder ${expression}`);
     return placeholders.get(expression);
-  }).replaceAll(":host([data-lr-surface='solid'])", `${selector}[data-lr-surface='solid']`).replaceAll(':host', selector)
+  }).replaceAll(":host([data-lr-surface='solid'])", `${selector}[data-lr-surface='solid']`)
+    .replaceAll(":host([data-lr-surface='glass'])", `${selector}[data-lr-surface='glass']`).replaceAll(':host', selector)
     .replaceAll('calc(var(--lr-layer-base) - var(--lr-layer-content))', '-1')
     .replaceAll('var(--lr-border-width-thin)', 'var(--lr-border-width-thin, 1px)');
   return `\n@layer lr-theme-preset.surface {\n${rule(selector, [
@@ -296,7 +299,7 @@ export function renderNativeChrome(data = JSON.parse(readFileSync(new URL('../to
     ['--lr-focus-ring-color', 'var(--_lr-glass-qualified-focus-ring-color, var(--_lr-glass-original-focus-ring-color))'],
     ['--lr-focus-ring-offset', 'var(--lr-theme-focus-ring-offset, 2px)'],
     ['--lr-focus-ring', 'var(--lr-focus-ring-width) solid var(--lr-focus-ring-color)'],
-  ])}${recipe}\n${rule(`${selector}:popover-open, ${selector}:modal`, [['--_lr-glass-parent-opacity', 'initial'], ['--_lr-glass-blocker', 'initial']])}}\n`;
+  ])}${recipe}\n${rule(`${selector}:popover-open, ${selector}:modal`, [['--_lr-glass-parent-opacity', 'initial !important'], ['--_lr-glass-blocker', 'var(--_lr-surface-root-filter, initial) !important']])}}\n`;
 }
 
 export function renderGlass(data, { defaults = false } = {}) {
@@ -315,8 +318,8 @@ export function renderGlass(data, { defaults = false } = {}) {
 
   let css = LAYERS + '@layer lr-theme-preset.surface {\n';
   css += rule(':root, :host', [['--_lr-media-clear-scrim-start', clear.scrimStart], ['--_lr-media-clear-scrim-end', clear.scrimEnd], ['--_lr-media-clear-fill', `rgb(255 255 255 / ${clear.fillOpacity})`], ['--_lr-media-clear-text', '#ffffff']]);
-  css += rule(defaults ? ":root:not([data-lr-surface]), [data-lr-surface='glass']" : "[data-lr-surface='glass']", [['--_lr-surface-installed', STYLE_VERSION], ['--_lr-surface-enabled', '1'], ['--_lr-glass-blocker', 'initial'], ['--_lr-surface-content', "''"], ['--_lr-surface-isolation', 'isolate'], ['--_lr-surface-min-opacity', data.minimumOpacity], ['--_lr-surface-maximum-blur', data.maximumBlur], ['--_lr-surface-foreground-weight', `${data.foregroundWeight * 100}%`], ['--_lr-surface-child-filter', 'none'], ['--_lr-surface-child-opacity', '1'], ['--lr-theme-surface-opacity', data.opacity], ['--lr-theme-surface-blur', data.blur], ['--lr-theme-surface-saturation', data.saturation], ['--lr-theme-surface-highlight', data.highlight]]);
-  css += rule("[data-lr-surface='solid']", [['--_lr-surface-installed', STYLE_VERSION], ['--_lr-surface-enabled', '0'], ['--_lr-glass-blocker', 'none'], ['--_lr-surface-maximum-blur', 'initial'], ['--_lr-surface-content', 'none'], ['--_lr-surface-isolation', 'auto'], ['--_lr-surface-child-filter', 'initial'], ['--_lr-surface-child-opacity', '0'], ['--_lr-glass-parent-opacity', '0']]);
+  css += rule(defaults ? ":root:not([data-lr-surface]), [data-lr-surface='glass']" : "[data-lr-surface='glass']", [['--_lr-surface-installed', STYLE_VERSION], ['--_lr-surface-enabled', '1'], ['--_lr-surface-root-filter', 'initial'], ['--_lr-glass-blocker', 'initial'], ['--_lr-surface-content', "''"], ['--_lr-surface-isolation', 'isolate'], ['--_lr-surface-min-opacity', data.minimumOpacity], ['--_lr-surface-maximum-blur', data.maximumBlur], ['--_lr-surface-foreground-weight', `${data.foregroundWeight * 100}%`], ['--_lr-surface-child-filter', 'none'], ['--_lr-surface-child-opacity', '1'], ['--lr-theme-surface-opacity', data.opacity], ['--lr-theme-surface-blur', data.blur], ['--lr-theme-surface-saturation', data.saturation], ['--lr-theme-surface-highlight', data.highlight]]);
+  css += rule("[data-lr-surface='solid']", [['--_lr-surface-installed', STYLE_VERSION], ['--_lr-surface-enabled', '0'], ['--_lr-surface-root-filter', 'none'], ['--_lr-glass-blocker', 'none'], ['--_lr-surface-maximum-blur', 'initial'], ['--_lr-surface-content', 'none'], ['--_lr-surface-isolation', 'auto'], ['--_lr-surface-child-filter', 'initial'], ['--_lr-surface-child-opacity', '0'], ['--_lr-glass-parent-opacity', '0'], ['--_lr-next-glass-opacity', '0']]);
   return css + '}\n' + renderNativeChrome(data);
 }
 

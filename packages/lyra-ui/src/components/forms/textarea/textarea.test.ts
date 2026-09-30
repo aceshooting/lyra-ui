@@ -1276,7 +1276,7 @@ describe("lr-textarea size", () => {
     // The default tier's values now come from the shared form-control ladder rather than this
     // component's own copy of the scale, so they match lr-input's `m` tier exactly.
     expect(m.paddingTop).to.equal("12px");
-    expect(m.fontSize).to.equal("16px");
+    expect(m.fontSize).to.equal("14px");
     expect(parseFloat(xs.paddingTop)).to.be.below(parseFloat(m.paddingTop));
     expect(parseFloat(xs.fontSize)).to.be.below(parseFloat(m.fontSize));
   });
@@ -1731,7 +1731,7 @@ describe("lr-textarea unset-regression for the 8.0 opt-ins", () => {
     ).to.equal("none");
     const cs = getComputedStyle(textarea);
     expect(cs.paddingTop).to.equal("12px");
-    expect(cs.fontSize).to.equal("16px");
+    expect(cs.fontSize).to.equal("14px");
     expect(cs.borderTopWidth).to.equal("1px");
     expect(textarea.style.resize).to.equal("vertical");
   });
@@ -1983,7 +1983,7 @@ describe("lr-textarea — the shared size ladder and pill", () => {
       html`<lr-textarea aria-label="Notes"></lr-textarea>`
     );
     expect(plain.pill).to.equal(false);
-    expect(getComputedStyle(field(plain)).borderTopLeftRadius).to.equal("6px");
+    expect(getComputedStyle(field(plain)).borderTopLeftRadius).to.equal("8px");
 
     const pilled = await fixture<LyraTextarea>(
       html`<lr-textarea pill aria-label="Notes"></lr-textarea>`

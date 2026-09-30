@@ -390,10 +390,10 @@ describe("<lr-scroller>", () => {
     ) as HTMLElement;
     const next = el.shadowRoot!.querySelector('[part~="next"]') as HTMLElement;
 
-    expect(getComputedStyle(previous).minInlineSize).to.equal("40px");
-    expect(getComputedStyle(previous).minBlockSize).to.equal("40px");
-    expect(getComputedStyle(next).minInlineSize).to.equal("40px");
-    expect(getComputedStyle(next).minBlockSize).to.equal("40px");
+    expect(getComputedStyle(previous).minInlineSize).to.equal("36px");
+    expect(getComputedStyle(previous).minBlockSize).to.equal("36px");
+    expect(getComputedStyle(next).minInlineSize).to.equal("36px");
+    expect(getComputedStyle(next).minBlockSize).to.equal("36px");
   });
 
   it('inherits the host font size through each native control and glyph', async () => {

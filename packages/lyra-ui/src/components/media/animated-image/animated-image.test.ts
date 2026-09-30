@@ -181,8 +181,8 @@ it('keeps the rendered play control at the icon-button hit-area floor when contr
 
   const button = el.shadowRoot!.querySelector<HTMLElement>('[part="play-button"]')!;
   const { width, height } = button.getBoundingClientRect();
-  expect(width).to.be.at.least(40);
-  expect(height).to.be.at.least(40);
+  expect(width).to.be.at.least(36);
+  expect(height).to.be.at.least(36);
 });
 
 it('reconciles playing against a reduced-motion preference that changed while detached', async () => {

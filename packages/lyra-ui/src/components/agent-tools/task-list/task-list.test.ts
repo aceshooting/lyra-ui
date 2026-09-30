@@ -1,3 +1,4 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './task-list.js';
@@ -889,3 +890,20 @@ describe('lr-task-list deprecated --lr-task-list-background alias', () => {
     expect(fill(both)).to.equal('rgb(4, 5, 6)');
   });
 });
+
+for (const [offset, expected] of [['0px', '-3px'], ['5px', '-8px'], ['-5px', '-3px']]) {
+  it(`keeps the clipped focus ring inward with authored offset ${offset}`, async () => {
+    const el = await fixture<LyraTaskList>(html`
+      <lr-task-list .items=${items} style=${`--lr-focus-ring-width: 3px; --lr-focus-ring-offset: ${offset}`}></lr-task-list>
+    `);
+    for (const part of ['header']) {
+      const target = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;
+      await focusByKeyboard(target);
+      expect(el.shadowRoot!.activeElement === target).to.equal(true);
+      const computed = getComputedStyle(target);
+      expect(computed.outlineStyle).to.equal('solid');
+      expect(computed.outlineWidth).to.equal('3px');
+      expect(computed.outlineOffset).to.equal(expected);
+    }
+  });
+}

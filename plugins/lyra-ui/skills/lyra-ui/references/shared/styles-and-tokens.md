@@ -75,49 +75,35 @@ hooks, layer 3, which do inherit through wrappers).
 
 ### Lyra signature starter
 
-Use this application profile for new projects unless explicit branding or user choices override it.
-It is a composition recommendation, not a change to Lyra's runtime defaults. Existing applications
-adopt it only during an authorized migration or redesign; valid saved style and locale choices win.
+Lyra's built-in profile is Shadcn, Glass, Emerald, System mode and comfortable density. Plain
+component imports receive these defaults and a host-level Solid opt-out; `theme.css` provides the
+full look/accent/mode resolver and the same profile for document scopes, including native chrome.
+Explicit saved choices remain independent and win over missing or invalid fields. Use the existing style API to opt into Solid, the Lyra look, another accent or
+mode; `accent: null` explicitly clears the accent, while `resetLyraStyle()` restores Emerald.
 
 ```css
 @layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;
 @layer lr-theme-preset.look, lr-theme-preset.density, lr-theme-preset.surface, lr-theme-preset.accent, lr-theme-preset.mode;
 @import "@aceshooting/lyra-ui/theme.css";
 @import "@aceshooting/lyra-ui/tokens-root.css";
-@import "@aceshooting/lyra-ui/looks/shadcn.css";
-@import "@aceshooting/lyra-ui/surfaces/glass.css";
-@import "@aceshooting/lyra-ui/accents.css";
 ```
 
 Keep both layer-order statements before these imports. Bundlers can hoist statements from imported
-stylesheets; declaring the master order and preset sublayers first preserves the look, surface and
-accent when the imports are flattened. See [Cascade layers](#cascade-layers).
+stylesheets; the declarations preserve the order when imports are flattened. See
+[Cascade layers](#cascade-layers). Separate Shadcn, Glass and Emerald imports remain compatible,
+but are unnecessary for this profile. Import other optional looks, accents and densities when
+exposing those choices.
 
-The first-use choices are independent axes:
-
-```ts
-import { setLyraStyle } from '@aceshooting/lyra-ui/theme.js';
-
-// Apply only when initializing the application's unsaved choices.
-setLyraStyle({ look: 'shadcn', surface: 'glass', accent: 'emerald', mode: 'system' });
-```
-
-Do not run that assignment unconditionally on every visit. Restore saved choices through the
-published style runtime; use `parseLyraStyleRecord()` when validating a persisted record, and
-`setLyraStyle()` to normalize browser color inputs. Preserve valid custom accents, semantic-role
-palettes, runtime looks, overrides, and historical v1 records. Fill missing or invalid choices from
-the application profile without overwriting independently saved axes. An application Reset action
-restores this profile: `resetLyraStyle()` alone restores the library's defaults instead.
-
-For first paint, run the synchronous `lyraThemeBootstrap`, then apply the application's unsaved-axis
-fallback attributes, then load the blocking stylesheets. Use the documented CSP-safe embedding or
-classic-script asset. With empty storage, the bootstrap writes Lyra's library defaults and would
-overwrite earlier Shadcn/glass/Emerald attributes; it has no application-defaults option. With
-denied storage, still apply the application fallbacks after it. Retain valid restored axes and
-record which fallbacks were used, then apply those same choices through `setLyraStyle()` during
-runtime initialization. A later module assignment alone cannot prevent a color flash. Test fresh,
-malformed, partial, legacy, and storage-denied records before modules load and after hydration,
-alongside valid saved choices. Do not copy Lyra's bootstrap, normalizer, or ownership internals.
+For first paint, run the synchronous `lyraThemeBootstrap` before blocking stylesheets, using the
+[CSP-safe embedding or classic-script asset](#style-runtime--aceshootinglyra-uithemejs). It restores
+valid saved axes and fills missing or invalid choices with the built-in profile. Keep the
+application's legacy-key precedence in an application adapter, and retain saved Solid, Lyra,
+custom accents, runtime looks, overrides and historical records. Do not reconstruct a saved record
+from the normalized `parseLyraStyleRecord()` snapshot: it is not a lossless persistence format.
+`getLyraStyle()` reads the same choices at runtime; user changes use `setLyraStyle()`. An application
+Reset can call `resetLyraStyle()` and restore any separate application preferences. Selectable
+alternate looks and an explicitly cleared accent require `theme.css`; the intrinsic component
+profile does not replace that scope resolver.
 
 Keep spotlights in application CSS, independent of the chosen control look. The public root-token
 stylesheet makes this static recipe follow both light/dark mode and the current accent:
@@ -140,6 +126,12 @@ html[data-lr-contrast='more'] body::before { background: var(--lr-color-surface)
 @media (forced-colors: active) { body::before { background: Canvas; } }
 ```
 
+Keep an existing application's multicolor spotlight palette when adopting a control look. For
+example, an accent/violet/pink canvas should retain all three gradient colors across Lyra, Shadcn,
+and Material; changing `look` must not replace those colors with the same-accent starter above.
+Keep application background rules outside look selectors, while letting mode and accent update
+their own inputs.
+
 These are decorative application backgrounds, not an `accentBackground` value: that style field
 accepts absolute colors used as contrast reference surfaces, not gradients or image URLs. Use
 semantic surface/text pairings for content and keep the decorative layer behind it.
@@ -150,12 +142,27 @@ with its localized caption, nine canonical gemstones, and shared selected-glyph 
 `30rem`, hit size `1.5rem` and gap `.125rem` (28/4px and 24/2px at a 16px root). Leave its fill size
 unset. Bound the palette to the viewport and provide horizontal overflow for unusually narrow
 allocations or enlarged text; keyboard focus must bring every swatch into view. Do not shrink
-below the component's 24px floor or replace its Arrow/Home/End and RTL behavior.
+below the component's 24px floor or replace its Arrow/Home/End and RTL behavior. For an independent
+Shine preference, set `--lr-gemstone-selected-animation: none` on the scope shared by the trigger
+and picker; remove that declaration for Shine ON. OFF preserves the halo and selected accent.
+Application and OS reduced motion still take precedence; persist Shine independently from motion.
+See the composition guide for the controlled picker and preference wiring.
 
 The four separate topbar controls—gemstone, mode, design, language—stay square `2.75rem` targets
 (44px at a 16px root), with localized names and tooltips. Use gemstone, sun/moon and horizontal-slider
 icons, and a country flag for language. Dense gemstone options do not reduce
-those launcher targets. Set the locale picker's `--lr-locale-picker-trigger-height: 2.75rem` and
+those launcher targets. Size icon launchers directly and keep their slotted glyphs bounded:
+
+```css
+.appearance-launcher { --lr-icon-button-size: 2.75rem; }
+.appearance-launcher::part(button) { inline-size: 2.75rem; block-size: 2.75rem; }
+.appearance-launcher > svg,
+.appearance-launcher > lr-icon { inline-size: 1.125rem; block-size: 1.125rem; }
+```
+
+Apply `appearance-launcher` to each `lr-icon-button`, including buttons slotted through a popover.
+Keep the mode action separate from the design fields. Set the locale picker's
+`--lr-locale-picker-trigger-height: 2.75rem` and
 use its public flag-only trigger with readable menu entries:
 
 ```ts
@@ -175,6 +182,83 @@ country for regional entries when known, such as `en-US` → `US`. Keep flags as
 never the only accessible names, and preserve a valid saved locale in the controlled `value`.
 Use the component's flag resolver rather than emoji, invented flag SVGs, or guessed display APIs.
 Verify 320px and desktop, light/dark, RTL, enlarged text, keyboard focus, and saved preferences.
+
+#### Two-column design panel
+
+Compose a settings form inside `lr-popover`; use its dialog behavior rather than assigning menu or
+ARIA grid roles to form fields. Import the existing native utility stylesheet and granular controls:
+
+```css
+@import "@aceshooting/lyra-ui/utilities.css";
+
+.design-popover { --lr-overlay-max-inline-size: min(29rem, calc(100dvw - 1rem)); }
+.design-popover::part(content) { padding: 0; }
+.design-panel {
+  box-sizing: border-box;
+  inline-size: 29rem;
+  max-inline-size: calc(100dvw - 1rem);
+  padding: var(--lr-space-l);
+  max-block-size: min(75dvh, 40rem);
+  overflow: auto;
+  overflow-wrap: anywhere;
+}
+.design-fields { --lr-grid-min-inline-size: 12rem; }
+.design-fields > * { min-inline-size: 0; max-inline-size: 100%; }
+.design-reset { inline-size: 100%; margin-block-start: var(--lr-space-l); }
+```
+
+```ts
+import '@aceshooting/lyra-ui/components/lr-popover.js';
+import '@aceshooting/lyra-ui/components/lr-icon-button.js';
+import '@aceshooting/lyra-ui/components/lr-select.js';
+import '@aceshooting/lyra-ui/components/lr-option.js';
+import '@aceshooting/lyra-ui/components/lr-button.js';
+```
+
+```html
+<lr-popover class="design-popover" top-layer placement="bottom-end" aria-label="Design settings">
+  <lr-icon-button slot="trigger" class="appearance-launcher" label="Design settings">
+    <!-- Application's decorative horizontal-slider glyph -->
+  </lr-icon-button>
+  <section class="design-panel">
+    <div class="design-fields lr-grid-auto lr-gap-s">
+      <lr-select label="Look" value="shadcn">
+        <lr-option value="shadcn">Shadcn</lr-option>
+        <lr-option value="lyra">Lyra</lr-option>
+        <lr-option value="material">Material</lr-option>
+      </lr-select>
+      <lr-select label="Surface" value="glass">
+        <lr-option value="glass">Glass</lr-option>
+        <lr-option value="solid">Solid</lr-option>
+      </lr-select>
+      <lr-select label="Density" value="comfortable">
+        <lr-option value="compact">Compact</lr-option>
+        <lr-option value="comfortable">Comfortable</lr-option>
+        <lr-option value="touch">Touch</lr-option>
+      </lr-select>
+      <!-- Further independent settings in their reading order -->
+    </div>
+    <lr-button class="design-reset" type="button">Reset appearance</lr-button>
+  </section>
+</lr-popover>
+```
+
+Localize the example's labels and options, bind values to the current application state, and handle
+each select's `lr-change` through the relevant public style or preference API. Reset restores the
+application profile and any separate application preferences.
+
+`lr-grid-auto` already uses `auto-fit` with a `min(100%, minimum)` track floor. A bounded `29rem`
+panel and `12rem` minimum give two columns when both fit, then one in narrow allocations; a third
+column would need at least `36rem` before gaps. Keep those bounds together when customizing the
+recipe. The existing `lr-gap-s` supplies the gap; no extra grid component or layout controller is
+needed. The minimum is measured in rem, so enlarged text can also reduce the column count.
+
+Keep every field in one row-major source list. Default grid placement and native Tab order then
+agree: first row, second row, and so on; inherited RTL starts each row on the right. Do not split
+fields into separate column wrappers, reorder with CSS, or add positive tabindex values. Leave the
+full-width Reset action outside the field grid. Verify two columns at desktop allocation, one at
+320px and enlarged text, long translated labels, RTL reading order, and Escape/focus return to the
+design launcher. Keep these layout rules shared across application headers and administrative views.
 
 ### Reading the resolved tokens from your own components — `tokens-root.css`
 
@@ -731,7 +815,7 @@ resetLyraStyle(["look"]); // reset only the look axis
 setLyraStyle({ mode: "unset", accent: null, accentBackground: null, overrides: null });
 ~~~
 
-setLyraStyle() accepts independent choices for look, surface, density, mode, accent, accentBackground, and overrides. Omitted axes keep their current selection; null resets an axis. The returned LyraStyle snapshot includes the selected values, a resolved mode when the choice is system, and lookForm to distinguish a stylesheet look from a runtime look.
+setLyraStyle() accepts independent choices for look, surface, density, mode, accent, accentBackground, and overrides. Omitted axes keep their current selection. Null restores the built-in value for look, surface, density and mode; `accent: null` explicitly clears the accent, and null clears accentBackground or overrides. `resetLyraStyle()` restores Shadcn/Glass/Emerald/System/comfortable; a field list resets only those fields. The returned LyraStyle snapshot includes the selected values, a resolved mode when the choice is system, and lookForm to distinguish a stylesheet look from a runtime look.
 
 mode is light, dark, system, or unset. Explicit modes set both data-lr-theme and data-theme; system follows the operating system and updates both attributes when it changes; unset removes Lyra's mode attributes. The lr-style-change event carries { style, changed }, where changed lists the affected fields. Applications can listen to this one event for document style changes.
 
@@ -805,10 +889,8 @@ The complete native CSS and utility contract is in the [native styles guide](./n
 
 ### Composing looks, surfaces and density
 
-The independent style API is exported from `@aceshooting/lyra-ui/theme.js`.
-A scope selects one look, one surface, one density, one mode and one accent. These choices compose:
-shadcn with glass and compact density is valid. Selecting another look replaces that scope's look;
-it does not stack two competing look definitions.
+`@aceshooting/lyra-ui/theme.js` exports the API. Each scope selects one look, surface, density,
+mode and accent; the axes compose independently.
 
 ```js
 import '@aceshooting/lyra-ui/theme.css';
@@ -820,60 +902,48 @@ import '@aceshooting/lyra-ui/accents.css';
 import { setLyraStyle, resetLyraStyle, applyLyraStyleScope } from '@aceshooting/lyra-ui/theme.js';
 
 setLyraStyle({ look: 'shadcn', mode: 'system', accent: 'sapphire' });
-setLyraStyle({ surface: 'glass' }); // keeps the other choices
-applyLyraStyleScope(tableRegion, { density: 'compact' }); // other axes inherit
+setLyraStyle({ surface: 'glass' }); // keeps others
+applyLyraStyleScope(tableRegion, { density: 'compact' }); // others inherit
 applyLyraStyleScope(previewRegion, { look: 'material', mode: 'dark' });
-resetLyraStyle(['look']); // restores the Lyra look, retaining the other fields
-applyLyraStyleScope(tableRegion, null); // restores the element's previous authored values
+resetLyraStyle(['look']); // resets look only
+applyLyraStyleScope(tableRegion, null); // restores authored values
 ```
 
-`setLyraStyle()` merges omitted fields and persists the whole-page selection. `null` resets a field.
-`applyLyraStyleScope()` replaces the element's complete selection: omitted fields inherit. It neither
-persists nor dispatches global events. Author changes made after the helper's last write are preserved
-when the scope is cleared. `getLyraStyle()` reports requested axes and the resolved mode.
+`setLyraStyle()` persists supplied fields and retains omitted ones; null resets profile axes, while
+`accent: null` clears it. `applyLyraStyleScope()` replaces an element's selection (omitted fields
+inherit), without persistence or global events; clearing preserves later author changes. `getLyraStyle()`
+reports requested axes and resolved mode.
 
-Each attribute can also be authored directly: `data-lr-look`, `data-lr-surface`, `data-lr-density`,
-`data-lr-mode` and `data-lr-accent`. A stylesheet look id requires its stylesheet; setting an arbitrary
-id does not load or register a look. Use `defineLyraLook({ id, tokens })` for a validated, immutable
-runtime definition, then pass it as `look`. `lyraLookCss()` from `theme/look-css.js` produces the
-stylesheet form without accessing the DOM. Install `theme.css` and the selected optional sheets in
-an application-owned shadow root that contains its own style boundaries; document selectors do not
-cross shadow roots. Inherited values do cross them.
+Set `data-lr-look`, `data-lr-surface`, `data-lr-density`, `data-lr-mode` and `data-lr-accent`
+directly if needed. Stylesheet look ids need their sheet; arbitrary ids neither load nor register.
+`defineLyraLook({ id, tokens })` defines a validated immutable runtime look;
+`lyraLookCss()` from `theme/look-css.js` creates CSS without DOM access. In app-owned shadow roots
+with local boundaries, install `theme.css` and selected sheets; selectors stop at roots, inheritance
+crosses.
 
-For design-tool interchange, `@aceshooting/lyra-ui/design-tokens.json` includes
-`$extensions['com.aceshooting.lyra.looks']` with `schemaVersion: 1`, `base: 'lyra'`, and a
-`definitions` map for the shipped looks, including `lyra`, `material`, `shadcn`, `data`, `terminal`
-and `high-contrast`. Each entry is a portable `{ id, tokens }`
-definition accepted by `defineLyraLook()`. Sparse and null branches remain sparse; omitted values
-come from the canonical base token tree, and the empty Lyra definition restores that base. Load the
-artifact explicitly only in tooling or flows that need it; ordinary components do not import it.
+`@aceshooting/lyra-ui/design-tokens.json` exports `$extensions['com.aceshooting.lyra.looks']`
+(schemaVersion 1, base `lyra`), definitions `lyra`, `material`, `shadcn`, `data`, `terminal`,
+`high-contrast`, and `defaultStyle`: Shadcn/Glass/Emerald/System/comfortable. The original token tree remains
+authoritative; empty `lyra` restores it. Runtime CSS/editor/preview project the default separately.
+Portable `{ id, tokens }` works with `defineLyraLook()`; sparse/null branches stay sparse. Load its
+resolver to apply a look.
 
-### Documentation theme builder
+The [theme builder](https://www.lyra-ui.com/docs/?path=/story/theming-theme-builder--editor) previews
+modes and edits contrast/motion, fonts, shape, elevation and chart palettes. It is documentation only,
+not an entry point or element; component imports do not load it.
 
-The optional [theme builder](https://www.lyra-ui.com/docs/?path=/story/theming-theme-builder--editor)
-composes existing style APIs and portable token maps. It previews both modes, supports individual
-and complete resets, and edits contrast/motion preferences, local-font pairing, shape, elevation
-and categorical/sequential/diverging palettes. The editor is documentation code, not a package
-entry point or a new custom element; importing components never imports the builder.
+Import/export uses `LyraLook`, `LyraThemeTokens`, version-2 saved-style records and separate
+`LyraPreferences`. Preserve runtime look tokens; `getLyraStyle()` snapshots omit them. Imports are
+atomic (256 KiB max), reject network-bearing/executable CSS and preserve the last preview on error.
+Group reset removes its writes; resetting a token to its look value removes it from every group.
 
-Import/export uses the existing `LyraLook`, `LyraThemeTokens`, version-2 saved style record and
-`LyraPreferences` formats. Preferences remain separate from the saved style record. Runtime look
-tokens are retained explicitly; `getLyraStyle()` snapshots alone do not contain those tokens.
-Imports validate atomically, are bounded to 256 KiB, and reject network-bearing or executable CSS.
-Errors leave the last valid preview intact. A group reset removes that group's writes; resetting
-one token to its look value removes it from every override group.
+`lyraLookCss()` exports only look CSS (requires `theme.css`, selected sheets and axis attributes).
+Use the runtime recipe for custom accent derivation or separate style/preference files. SSR helpers
+`lyraStyleAttributes()` and `lyraPreferenceAttributes()` leave system mode unresolved. Install CSS
+in every app-owned shadow root with a local boundary.
 
-Exported look CSS comes from `lyraLookCss()` and requires `theme.css`, the selected optional sheets
-and axis attributes. It is not an export of every axis or preference. Use the complete runtime
-recipe for custom accent derivation, or the separate style/preference files to retain those choices.
-Server-rendered attributes use `lyraStyleAttributes()` and `lyraPreferenceAttributes()`; system mode
-is not falsely resolved on the server. Install the required CSS in each application-owned shadow
-root that contains a local style boundary.
-
-Diagnostics describe measured specimen colors and states, not universal accessibility
-certification. Unknown/dynamic backgrounds remain unmeasured. Chart series keep text and non-color
-cues; color-vision simulation does not replace them. Font availability, physical blur and native
-platform accessibility settings still require evidence on the relevant platform.
+Diagnostics measure specimens, not certify accessibility; dynamic backgrounds are unmeasured. Keep
+chart text/non-color cues. See [contrast guidance](#scoped-contrast-and-motion-preferences).
 
 ### Optional shape, typography and elevation presets
 
@@ -1040,18 +1110,20 @@ lyraStyleAttributes() provide DOM-free server-rendering helpers; render the retu
 through the framework's normal HTML escaping.
 
 Glass is a treatment for eligible navigation and floating chrome. It does not make content panels,
-forms, charts or dialogs translucent. Unsupported blur, reduced transparency, increased contrast and
+editing controls, charts or base map layers translucent. Dialog and drawer panels, menus and
+control-owned listboxes share the chrome treatment; their input interiors stay opaque. Unsupported blur, reduced transparency, increased contrast and
 forced colors retain solid fills. Solid surfaces use `backdrop-filter: none`; forced colours paint
 `Canvas`. Offer a solid choice wherever the application offers glass, since reduced-transparency
 media-query support varies between browsers.
 
-Regular glass defaults to 90% opacity, with a 90% minimum and a 12px blur clamped to 16px.
+Regular glass defaults to 80% opacity, with an 80% minimum and a 12px blur clamped to 16px.
 Quiet text, necessary control edges, focus indicators and transparent actions gain a local
 contrast-qualified foreground; opaque accent fills retain their own on-colours. Supported chrome
 includes app rails, navigation menus, menubars, menus and their context-menu composition, popovers,
 selection toolbars, toast items and the owned playback-rate toolbar of `lr-av-player`. Nested glass
-chrome is opaque, preventing repeated blur. Content cards and modal dialogs remain solid.
-Scrolling rail, popover and selection-toolbar surfaces keep a stationary decorative blur layer;
+chrome is opaque, preventing repeated blur. Independently promoted menus and modal panels start a
+new material root. Content cards and editing fields remain opaque.
+Scrolling rail, popup, modal-panel and selection-toolbar surfaces keep a stationary decorative blur layer;
 the public surface continues to own scrolling, focus and author overflow hooks.
 
 `lr-av-player` additionally offers `controls-surface="clear"`, restricted to its owned toolbar and

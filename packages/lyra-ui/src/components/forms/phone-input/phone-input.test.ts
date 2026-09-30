@@ -819,9 +819,9 @@ it("matches lr-input's own row height at every shared size tier", async () => {
   const expected: Record<string, string> = {
     '2xs': '20px',
     xs: '24px',
-    s: '30px',
-    m: '40px',
-    l: '48px',
+    s: '32px',
+    m: '36px',
+    l: '40px',
     xl: '56px',
   };
   for (const [size, px] of Object.entries(expected)) {
@@ -832,7 +832,7 @@ it("matches lr-input's own row height at every shared size tier", async () => {
 });
 
 it('keeps country-selector rows on the shared hit-floor-aware height ladder', async () => {
-  const expected: Record<string, number> = { '2xs': 42, xs: 42, s: 42, m: 42, l: 48, xl: 56 };
+  const expected: Record<string, number> = { '2xs': 38, xs: 38, s: 38, m: 38, l: 40, xl: 56 };
   for (const [size, height] of Object.entries(expected)) {
     const el = await fixture(html`<lr-phone-input size=${size}></lr-phone-input>`);
     const wrapper = el.shadowRoot!.querySelector<HTMLElement>('[part="input-wrapper"]')!;

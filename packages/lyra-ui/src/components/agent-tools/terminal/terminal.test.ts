@@ -1475,7 +1475,7 @@ describe('lr-terminal', () => {
       expect((button) != null, `${part} must be rendered for this fixture`).to.equal(true);
       button.focus();
       expect(getComputedStyle(button).outlineStyle, `${part} :focus-visible outlineStyle`).to.equal('solid');
-      expect(getComputedStyle(button).outlineWidth, `${part} :focus-visible outlineWidth`).to.equal('2px');
+      expect(getComputedStyle(button).outlineWidth, `${part} :focus-visible outlineWidth`).to.equal('3px');
     });
   }
 
@@ -1492,7 +1492,7 @@ describe('lr-terminal', () => {
     expect(line.getAttribute('tabindex')).to.equal('0');
     line.focus();
     expect(getComputedStyle(line).outlineStyle, 'line :focus-visible outlineStyle').to.equal('solid');
-    expect(getComputedStyle(line).outlineWidth, 'line :focus-visible outlineWidth').to.equal('2px');
+    expect(getComputedStyle(line).outlineWidth, 'line :focus-visible outlineWidth').to.equal('3px');
   });
 
   it('uses inherited toolbar and line hover/active background tokens in their live pointer states', async () => {

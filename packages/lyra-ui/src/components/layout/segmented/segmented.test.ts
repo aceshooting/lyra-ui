@@ -958,7 +958,7 @@ it("exposes --lr-segmented-segment-radius, defaulting to the pre-existing calc()
     <lr-segmented .items=${items()}></lr-segmented>
   `)) as LyraSegmented;
   const segment = el.shadowRoot!.querySelector('[part="segment"]') as HTMLElement;
-  expect(getComputedStyle(segment).borderRadius).to.equal("4.2px");
+  expect(getComputedStyle(segment).borderRadius).to.equal("5.6px");
 });
 
 it("lets a consumer retune the segment corner radius with no ::part(segment) rule", async () => {
@@ -1397,9 +1397,9 @@ describe("track height", () => {
     const floors = new Map([
       ["2xs", "20px"],
       ["xs", "24px"],
-      ["s", "30px"],
-      ["m", "40px"],
-      ["l", "48px"],
+      ["s", "32px"],
+      ["m", "36px"],
+      ["l", "40px"],
       ["xl", "56px"],
     ]);
     for (const size of sizes) {
@@ -1438,14 +1438,14 @@ describe("size", () => {
     return el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   }
 
-  it('defaults to size="m", matching lr-input/lr-select/lr-combobox\'s shared 40px default-tier floor', async () => {
+  it('defaults to size="m", matching lr-input/lr-select/lr-combobox\'s shared 36px default-tier floor', async () => {
     const el = (await fixture(
       html`<lr-segmented .items=${items()} value="day"></lr-segmented>`
     )) as LyraSegmented;
     expect(el.size).to.equal("m");
     expect(el.getAttribute("size")).to.equal("m");
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    expect(getComputedStyle(base).minBlockSize).to.equal("40px");
+    expect(getComputedStyle(base).minBlockSize).to.equal("36px");
   });
 
   it('matches <lr-select size="s">\'s control height at size="s"', async () => {

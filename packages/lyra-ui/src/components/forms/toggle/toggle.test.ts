@@ -383,8 +383,8 @@ describe('<lr-toggle>', () => {
       html`<lr-toggle size="2xs" aria-label="Bold"><lr-icon name="check"></lr-icon></lr-toggle>`,
     );
     const box = (el: LyraToggle): DOMRect => control(el).getBoundingClientRect();
-    expect(box(m).height).to.be.at.least(40);
-    expect(box(m).width).to.be.at.least(40);
+    expect(box(m).height).to.be.at.least(36);
+    expect(box(m).width).to.be.at.least(36);
     expect(box(icon).width).to.be.closeTo(box(icon).height, 0.5);
     expect(box(tiny).height).to.be.at.least(24);
     expect(box(tiny).width).to.be.at.least(24);

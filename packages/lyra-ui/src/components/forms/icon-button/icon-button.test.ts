@@ -112,8 +112,8 @@ it('keeps the visual glyph independent from the icon button hit target', async (
 
   // --lr-icon-button-size is a tappable-target *floor*, not a fixed size: a small glyph pads
   // out to it on both axes.
-  expect(button.getBoundingClientRect().width).to.equal(40);
-  expect(button.getBoundingClientRect().height).to.equal(40);
+  expect(button.getBoundingClientRect().width).to.equal(36);
+  expect(button.getBoundingClientRect().height).to.equal(36);
   expect(getComputedStyle(icon).inlineSize).to.equal('20px');
 });
 
@@ -314,16 +314,16 @@ it('still floors slotted content at the tappable target size on both axes', asyn
     </lr-icon-button>
   `);
   const box = el.shadowRoot!.querySelector('button')!.getBoundingClientRect();
-  expect(box.width).to.equal(40);
-  expect(box.height).to.equal(40);
+  expect(box.width).to.equal(36);
+  expect(box.height).to.equal(36);
 });
 
-it('exposes --lr-icon-button-radius, defaulting to the pre-existing literal', async () => {
+it('exposes --lr-icon-button-radius, defaulting to the shared token default', async () => {
   const el = await fixture<LyraIconButton>(
     html`<lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button>`,
   );
   const cs = getComputedStyle(el.shadowRoot!.querySelector('button')!);
-  expect(cs.borderRadius).to.equal('6px');
+  expect(cs.borderRadius).to.equal('8px');
 });
 
 it('retunes the corner radius via --lr-icon-button-radius with no element-selector override', async () => {

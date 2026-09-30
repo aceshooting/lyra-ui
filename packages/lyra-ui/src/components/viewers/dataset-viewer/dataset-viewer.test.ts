@@ -951,7 +951,7 @@ describe('lr-dataset-viewer', () => {
         ) as HTMLElement;
         expect(action !== null).to.be.true;
         expect(getComputedStyle(highlighted).outlineStyle).to.equal('solid');
-        expect(getComputedStyle(action).minBlockSize).to.equal('40px');
+        expect(getComputedStyle(action).minBlockSize).to.equal('36px');
       } finally {
         restore();
       }
@@ -1225,8 +1225,8 @@ describe('lr-dataset-viewer', () => {
         expect(action != null).to.equal(true);
         expect(action!.tagName).to.equal('BUTTON');
         // A real action button (not a plain grid cell) -- gets the shared minimum hit area.
-        expect(getComputedStyle(action!).minInlineSize).to.equal('40px');
-        expect(getComputedStyle(action!).minBlockSize).to.equal('40px');
+        expect(getComputedStyle(action!).minInlineSize).to.equal('36px');
+        expect(getComputedStyle(action!).minBlockSize).to.equal('36px');
         const listener = oneEvent(el, 'lr-highlight-activate');
         action!.click();
         const event = (await listener) as CustomEvent<{ highlightId: string }>;

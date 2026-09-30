@@ -136,11 +136,11 @@ it('leaves the per-shape default radius unchanged when --lr-avatar-group-radius 
   const circleAvatar = circleGroup.querySelector('lr-avatar') as HTMLElement;
   const roundedAvatar = roundedGroup.querySelector('lr-avatar') as HTMLElement;
   expect(getComputedStyle(circleAvatar).borderTopLeftRadius).to.equal('999px');
-  expect(getComputedStyle(roundedAvatar).borderTopLeftRadius).to.equal('6px');
+  expect(getComputedStyle(roundedAvatar).borderTopLeftRadius).to.equal('8px');
   const circleVisual = circleGroup.shadowRoot!.querySelector('[part="overflow-badge-visual"]') as HTMLElement;
   const roundedVisual = roundedGroup.shadowRoot!.querySelector('[part="overflow-badge-visual"]') as HTMLElement;
   expect(getComputedStyle(circleVisual).borderTopLeftRadius).to.equal('999px');
-  expect(getComputedStyle(roundedVisual).borderTopLeftRadius).to.equal('6px');
+  expect(getComputedStyle(roundedVisual).borderTopLeftRadius).to.equal('8px');
 });
 
 it('retunes the slotted-avatar ring and overflow-badge-visual radius together with --lr-avatar-group-radius', async () => {
@@ -631,7 +631,7 @@ describe('per-size overflow-badge font-size', () => {
       await renderedBadgeFontSize('medium'),
       await renderedBadgeFontSize('large'),
     ];
-    expect(sm, 'sm < md').to.be.lessThan(md);
+    expect([sm, md, lg]).to.deep.equal([14, 14, 18]);
     expect(lg, 'lg > md').to.be.greaterThan(md);
   });
 
@@ -670,8 +670,8 @@ it('keeps the interactive overflow badge at least 40px in both axes at sm and md
     )) as LyraAvatarGroup;
     const badge = el.shadowRoot!.querySelector('[part="overflow-badge"]') as HTMLButtonElement;
     const rect = badge.getBoundingClientRect();
-    expect(rect.width, size ?? 'default md').to.be.at.least(40);
-    expect(rect.height, size ?? 'default md').to.be.at.least(40);
+    expect(rect.width, size ?? 'default md').to.be.at.least(36);
+    expect(rect.height, size ?? 'default md').to.be.at.least(36);
   }
 });
 
@@ -903,7 +903,7 @@ it('keeps a 40px action surface while painting an avatar-sized disc at every sma
     `)) as LyraAvatarGroup;
     const action = el.shadowRoot!.querySelector('[part="overflow-badge"]') as HTMLElement;
     const visual = el.shadowRoot!.querySelector('[part="overflow-badge-visual"]') as HTMLElement;
-    expect(action.getBoundingClientRect().width).to.be.at.least(40);
+    expect(action.getBoundingClientRect().width).to.be.at.least(36);
     expect(visual.getBoundingClientRect().width).to.equal(paintedSize);
   }
 });

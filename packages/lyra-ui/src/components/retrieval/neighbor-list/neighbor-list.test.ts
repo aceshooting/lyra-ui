@@ -353,8 +353,8 @@ it('gives the per-row expand button the shared minimum hit area', async () => {
   const expandButton = el.shadowRoot!.querySelector(
     '[part="expand-button"]'
   ) as HTMLElement;
-  expect(getComputedStyle(expandButton).minInlineSize).to.equal('40px');
-  expect(getComputedStyle(expandButton).minBlockSize).to.equal('40px');
+  expect(getComputedStyle(expandButton).minInlineSize).to.equal('36px');
+  expect(getComputedStyle(expandButton).minBlockSize).to.equal('36px');
 });
 
 it('renders the direction as an aria-hidden glyph plus localized text folded into the row name', async () => {
@@ -660,8 +660,8 @@ describe('row part styling reaches both rendering paths', () => {
       const expand = rowRoot(el).querySelector(
         '[part="expand-button"]'
       ) as HTMLElement;
-      expect(getComputedStyle(expand).minInlineSize).to.equal('40px');
-      expect(getComputedStyle(expand).minBlockSize).to.equal('40px');
+      expect(getComputedStyle(expand).minInlineSize).to.equal('36px');
+      expect(getComputedStyle(expand).minBlockSize).to.equal('36px');
     });
 
     it(`inherits the host font through the expand button and its 1em glyph in the ${label} path`, async () => {

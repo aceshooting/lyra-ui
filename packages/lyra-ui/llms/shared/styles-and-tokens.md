@@ -889,10 +889,8 @@ The complete native CSS and utility contract is in the [native styles guide](./n
 
 ### Composing looks, surfaces and density
 
-The independent style API is exported from `@aceshooting/lyra-ui/theme.js`.
-A scope selects one look, one surface, one density, one mode and one accent. These choices compose:
-shadcn with glass and compact density is valid. Selecting another look replaces that scope's look;
-it does not stack two competing look definitions.
+`@aceshooting/lyra-ui/theme.js` exports the API. Each scope selects one look, surface, density,
+mode and accent; the axes compose independently.
 
 ```js
 import '@aceshooting/lyra-ui/theme.css';
@@ -904,60 +902,48 @@ import '@aceshooting/lyra-ui/accents.css';
 import { setLyraStyle, resetLyraStyle, applyLyraStyleScope } from '@aceshooting/lyra-ui/theme.js';
 
 setLyraStyle({ look: 'shadcn', mode: 'system', accent: 'sapphire' });
-setLyraStyle({ surface: 'glass' }); // keeps the other choices
-applyLyraStyleScope(tableRegion, { density: 'compact' }); // other axes inherit
+setLyraStyle({ surface: 'glass' }); // keeps others
+applyLyraStyleScope(tableRegion, { density: 'compact' }); // others inherit
 applyLyraStyleScope(previewRegion, { look: 'material', mode: 'dark' });
-resetLyraStyle(['look']); // restores Shadcn, retaining the other fields
-applyLyraStyleScope(tableRegion, null); // restores the element's previous authored values
+resetLyraStyle(['look']); // resets look only
+applyLyraStyleScope(tableRegion, null); // restores authored values
 ```
 
-`setLyraStyle()` merges omitted fields and persists the whole-page selection. Null resets a profile axis;
-`accent: null` explicitly clears the accent.
-`applyLyraStyleScope()` replaces the element's complete selection: omitted fields inherit. It neither
-persists nor dispatches global events. Author changes made after the helper's last write are preserved
-when the scope is cleared. `getLyraStyle()` reports requested axes and the resolved mode.
+`setLyraStyle()` persists supplied fields and retains omitted ones; null resets profile axes, while
+`accent: null` clears it. `applyLyraStyleScope()` replaces an element's selection (omitted fields
+inherit), without persistence or global events; clearing preserves later author changes. `getLyraStyle()`
+reports requested axes and resolved mode.
 
-Each attribute can also be authored directly: `data-lr-look`, `data-lr-surface`, `data-lr-density`,
-`data-lr-mode` and `data-lr-accent`. A stylesheet look id requires its stylesheet; setting an arbitrary
-id does not load or register a look. Use `defineLyraLook({ id, tokens })` for a validated, immutable
-runtime definition, then pass it as `look`. `lyraLookCss()` from `theme/look-css.js` produces the
-stylesheet form without accessing the DOM. Install `theme.css` and the selected optional sheets in
-an application-owned shadow root that contains its own style boundaries; document selectors do not
-cross shadow roots. Inherited values do cross them.
+Set `data-lr-look`, `data-lr-surface`, `data-lr-density`, `data-lr-mode` and `data-lr-accent`
+directly if needed. Stylesheet look ids need their sheet; arbitrary ids neither load nor register.
+`defineLyraLook({ id, tokens })` defines a validated immutable runtime look;
+`lyraLookCss()` from `theme/look-css.js` creates CSS without DOM access. In app-owned shadow roots
+with local boundaries, install `theme.css` and selected sheets; selectors stop at roots, inheritance
+crosses.
 
-For design-tool interchange, `@aceshooting/lyra-ui/design-tokens.json` includes
-`$extensions['com.aceshooting.lyra.looks']` with `schemaVersion: 1`, `base: 'lyra'`, and a
-`definitions` map for `lyra`, `material`, `shadcn`, `data`, `terminal` and `high-contrast`.
-The additive `defaultStyle` member records Shadcn/Glass/Emerald/System/comfortable. The JSON's
-authoritative base remains the original Lyra token tree; its empty `lyra` definition restores that
-base. Runtime CSS, editor and preview views project the default profile separately. Each entry is
-a portable `{ id, tokens }` definition accepted by `defineLyraLook()`. Sparse and null branches
-remain sparse. Load the matching style resolver when applying a portable look.
+`@aceshooting/lyra-ui/design-tokens.json` exports `$extensions['com.aceshooting.lyra.looks']`
+(schemaVersion 1, base `lyra`), definitions `lyra`, `material`, `shadcn`, `data`, `terminal`,
+`high-contrast`, and `defaultStyle`: Shadcn/Glass/Emerald/System/comfortable. The original token tree remains
+authoritative; empty `lyra` restores it. Runtime CSS/editor/preview project the default separately.
+Portable `{ id, tokens }` works with `defineLyraLook()`; sparse/null branches stay sparse. Load its
+resolver to apply a look.
 
-The optional [theme builder](https://www.lyra-ui.com/docs/?path=/story/theming-theme-builder--editor)
-composes existing style APIs and portable token maps. It previews both modes, supports individual
-and complete resets, and edits contrast/motion preferences, local-font pairing, shape, elevation
-and categorical/sequential/diverging palettes. The editor is documentation code, not a package
-entry point or a new custom element; importing components never imports the builder.
+The [theme builder](https://www.lyra-ui.com/docs/?path=/story/theming-theme-builder--editor) previews
+modes and edits contrast/motion, fonts, shape, elevation and chart palettes. It is documentation only,
+not an entry point or element; component imports do not load it.
 
-Import/export uses the existing `LyraLook`, `LyraThemeTokens`, version-2 saved style record and
-`LyraPreferences` formats. Preferences remain separate from the saved style record. Runtime look
-tokens are retained explicitly; `getLyraStyle()` snapshots alone do not contain those tokens.
-Imports validate atomically, are bounded to 256 KiB, and reject network-bearing or executable CSS.
-Errors leave the last valid preview intact. A group reset removes that group's writes; resetting
-one token to its look value removes it from every override group.
+Import/export uses `LyraLook`, `LyraThemeTokens`, version-2 saved-style records and separate
+`LyraPreferences`. Preserve runtime look tokens; `getLyraStyle()` snapshots omit them. Imports are
+atomic (256 KiB max), reject network-bearing/executable CSS and preserve the last preview on error.
+Group reset removes its writes; resetting a token to its look value removes it from every group.
 
-Exported look CSS comes from `lyraLookCss()` and requires `theme.css`, the selected optional sheets
-and axis attributes. It is not an export of every axis or preference. Use the complete runtime
-recipe for custom accent derivation, or the separate style/preference files to retain those choices.
-Server-rendered attributes use `lyraStyleAttributes()` and `lyraPreferenceAttributes()`; system mode
-is not falsely resolved on the server. Install the required CSS in each application-owned shadow
-root that contains a local style boundary.
+`lyraLookCss()` exports only look CSS (requires `theme.css`, selected sheets and axis attributes).
+Use the runtime recipe for custom accent derivation or separate style/preference files. SSR helpers
+`lyraStyleAttributes()` and `lyraPreferenceAttributes()` leave system mode unresolved. Install CSS
+in every app-owned shadow root with a local boundary.
 
-Diagnostics describe measured specimen colors and states, not universal accessibility
-certification. Unknown/dynamic backgrounds remain unmeasured. Chart series keep text and non-color
-cues; color-vision simulation does not replace them. Font availability, physical blur and native
-platform accessibility settings still require evidence on the relevant platform.
+Diagnostics measure specimens, not certify accessibility; dynamic backgrounds are unmeasured. Keep
+chart text/non-color cues. See [contrast guidance](#scoped-contrast-and-motion-preferences).
 
 ### Optional shape, typography and elevation presets
 

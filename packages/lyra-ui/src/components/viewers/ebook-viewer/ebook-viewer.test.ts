@@ -318,10 +318,10 @@ describe("lr-ebook-viewer", () => {
       '[part="next-button"]'
     ) as HTMLElement;
 
-    expect(getComputedStyle(previous).minInlineSize).to.equal("40px");
-    expect(getComputedStyle(previous).minBlockSize).to.equal("40px");
-    expect(getComputedStyle(next).minInlineSize).to.equal("40px");
-    expect(getComputedStyle(next).minBlockSize).to.equal("40px");
+    expect(getComputedStyle(previous).minInlineSize).to.equal("36px");
+    expect(getComputedStyle(previous).minBlockSize).to.equal("36px");
+    expect(getComputedStyle(next).minInlineSize).to.equal("36px");
+    expect(getComputedStyle(next).minBlockSize).to.equal("36px");
   });
 
   it("loads a book, enables navigation, and destroys it when disconnected", async () => {

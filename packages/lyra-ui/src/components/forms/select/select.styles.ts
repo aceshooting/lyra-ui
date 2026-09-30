@@ -22,7 +22,12 @@ export const styles = css`
       var(--lr-form-control-padding-inline);
     --_lr-select-trigger-min-height: var(--lr-form-control-height);
     --_lr-select-font-size: var(--lr-form-control-font-size);
-    --_lr-select-expand-size: var(--lr-size-1-75rem);
+    /* The decorative indicator fits the row's content box; explicit expand-size overrides
+       remain authoritative and can grow the row. */
+    --_lr-select-expand-size: min(
+      var(--lr-size-1-75rem),
+      max(0px, calc(var(--lr-form-control-height) - 2 * var(--lr-form-control-padding-block) - 2 * var(--lr-border-width-thin)))
+    );
     /* The trigger's adornment gap deliberately skips the ladder: it does not vary by tier, and the
        ladder's value is tuned for button icon-beside-label spacing, tighter than a field wants. */
     --_lr-select-gap: var(--lr-space-xs);

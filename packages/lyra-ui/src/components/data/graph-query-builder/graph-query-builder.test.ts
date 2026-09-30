@@ -1271,7 +1271,7 @@ describe('lr-graph-query-builder', () => {
 
     for (const part of ['run-button', 'save-button', 'saved-load-button'] as const) {
       const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
-      expect(button.getBoundingClientRect().height, part).to.be.at.least(40);
+      expect(button.getBoundingClientRect().height, part).to.be.at.least(36);
     }
   });
 

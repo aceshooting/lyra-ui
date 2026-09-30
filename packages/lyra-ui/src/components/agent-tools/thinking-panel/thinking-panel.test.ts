@@ -6,6 +6,7 @@ import '../../conversation/streaming-text/streaming-text.js';
 import '../../conversation/markdown/markdown.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { contrastRatio, effectiveBackground, resolvedColorToken } from '../../../../test/color-contrast.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
@@ -948,11 +949,11 @@ describe('the tabbable scroll region\'s own affordances', () => {
     const expectedColor = resolvedInShadow(el, 'outline-color: var(--lr-focus-ring-color)', 'outline-color');
     const expectedOffset = resolvedInShadow(
       el,
-      'outline-offset: calc(-1 * var(--lr-focus-ring-offset))',
+      'outline-offset: calc(-1 * max(var(--lr-focus-ring-width), calc(var(--lr-focus-ring-width) + var(--lr-focus-ring-offset))))',
       'outline-offset',
     );
 
-    body.focus();
+    await focusByKeyboard(body);
     expect(el.shadowRoot!.activeElement === body).to.equal(true);
     const focused = getComputedStyle(body);
     expect(focused.outlineStyle).to.equal('solid');
@@ -960,9 +961,27 @@ describe('the tabbable scroll region\'s own affordances', () => {
     expect(focused.outlineColor).to.equal(expectedColor);
     // Inward, or the ring is clipped by the region's own overflow-block: auto.
     expect(focused.outlineOffset).to.equal(expectedOffset);
-    expect(Number.parseFloat(focused.outlineOffset)).to.be.lessThan(0);
+    expect(Number.parseFloat(focused.outlineOffset)).to.be.at.most(-Number.parseFloat(focused.outlineWidth));
     body.blur();
   });
+
+  for (const [offset, expected] of [['0px', '-3px'], ['5px', '-8px'], ['-5px', '-3px']]) {
+    it(`keeps header and scroll-region focus rings inward with authored offset ${offset}`, async () => {
+      const el = await fixture<LyraThinkingPanel>(html`
+        <lr-thinking-panel expanded style=${`--lr-focus-ring-width: 3px; --lr-focus-ring-offset: ${offset}`}>
+          Long reasoning transcript
+        </lr-thinking-panel>
+      `);
+      for (const part of ['header', 'body']) {
+        const target = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;
+        await focusByKeyboard(target);
+        expect(el.shadowRoot!.activeElement === target).to.equal(true);
+        expect(getComputedStyle(target).outlineStyle).to.equal('solid');
+        expect(getComputedStyle(target).outlineWidth).to.equal('3px');
+        expect(getComputedStyle(target).outlineOffset).to.equal(expected);
+      }
+    });
+  }
 
   it('previews the same treatment in a plain border colour on pointer hover', async () => {
     const { el, body } = await panelBody();

@@ -254,8 +254,8 @@ it('keeps custom semantic cell targets separated and frozen until the next paint
   const cells = () => [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="cell"]')];
   const first = cells()[0]!.getBoundingClientRect();
   const second = cells()[1]!.getBoundingClientRect();
-  expect(first.width).to.be.at.least(40);
-  expect(first.height).to.be.at.least(40);
+  expect(first.width).to.be.at.least(36);
+  expect(first.height).to.be.at.least(36);
   expect(second.left - first.right).to.equal(3);
   const previous = el.matrixGeometry;
   const internals = el as unknown as { canvasVisible: boolean };

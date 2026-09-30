@@ -1,5 +1,16 @@
 export type StoryThemeName = 'light' | 'dark';
 
+export interface StoryPresentation {
+  theme: StoryThemeName;
+  look: 'lyra' | 'shadcn';
+  surface: 'solid' | 'glass';
+  accent: 'emerald' | null;
+  direction: 'ltr' | 'rtl';
+}
+
+export const STORY_PRESENTATION_DEFAULTS: Readonly<StoryPresentation>;
+export function normalizeStoryPresentation(globals?: Record<string, unknown>): StoryPresentation;
+
 export type StoryColorName =
   | 'surface'
   | 'text'

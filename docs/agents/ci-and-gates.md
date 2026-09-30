@@ -769,6 +769,17 @@ tighter ceilings remain unchanged, while stale standalone ceilings tighten, incl
 2,038 bytes. Updated allowances use no more than 2% headroom; the existing 4% policy maximum,
 entry inventory, exclusion checks and measurement method are unchanged.
 
+The built-in Shadcn/Glass/Emerald profile and shared material correctness review updates only eight
+failing direct JavaScript ceilings and eleven failing initial-route ceilings, with
+`floor(measuredBytes * 1.02)` headroom. Costs include independent and promoted Glass scopes,
+native map chrome, bounded control geometry and visible focus inside clipped content. The nine
+affected CSS ceilings follow the CSS policy's exact `floor(measuredBytes * 1.04)` allowance;
+standalone Glass now includes its native material rules as well as variables. Measurements and
+reviewed byte counts are recorded in the budget files. All passing ceilings, peer exclusions,
+initial-route imports and measurement settings remain unchanged. The complete JavaScript entry
+measures 1,198,776 gzip bytes against 1,196,595 in 24.2.0 and retains its existing ceiling; the
+charts, component P95 and component maximum canaries also retain their tighter ceilings.
+
 `check:border-subtle` (blocking, in `contract-policy` next to `check:hit-area`) fails any literal
 `--lr-color-border-subtle` or `--lr-theme-color-surface-border-subtle` in `src/components/forms/**`
 or `src/internal/form-control.styles.ts`: that tier is decorative and may sit below the 3:1 a

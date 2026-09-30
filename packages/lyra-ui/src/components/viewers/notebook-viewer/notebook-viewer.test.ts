@@ -1785,7 +1785,11 @@ describe('virtualized cell part styling', () => {
     expect(getComputedStyle(cell).gridTemplateColumns.split(' ').length, 'two grid columns at a wide allocation').to.equal(2);
     const gutter = vlistRoot.querySelector('[part="cell-gutter"]') as HTMLElement;
     expect(getComputedStyle(gutter).textAlign).to.equal('end');
-    expect(getComputedStyle(gutter).fontFamily).to.equal(getComputedStyle(cell).getPropertyValue('--lr-font-mono').trim());
+    const fontProbe = document.createElement('span');
+    fontProbe.style.fontFamily = 'var(--lr-font-mono)';
+    cell.append(fontProbe);
+    expect(getComputedStyle(gutter).fontFamily).to.equal(getComputedStyle(fontProbe).fontFamily);
+    fontProbe.remove();
   });
 
   it('collapses the cell grid to one column in a narrow container', async () => {

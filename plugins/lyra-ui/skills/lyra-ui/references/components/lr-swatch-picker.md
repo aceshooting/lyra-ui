@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -124,7 +124,8 @@ gemstone mode, same aliasing and scope as `--lr-swatch-picker-gemstone-selected-
 plus shared tokens — `--lr-color-border`/`-brand`, `--lr-space-xs`,
 `--lr-border-width-thin`/`-thick`, `--lr-radius`, `--lr-transition-fast`, `--lr-focus-ring-*`,
 and the per-tier `--lr-size-*` tokens. The automatic gemstone glyph's own checked-state halo/shine
-is themed independently, through `--lr-gemstone-selected-color`/`-blur`/`-shine-duration` — see
+is themed independently, through `--lr-gemstone-selected-color`/`-blur`/`-shine-duration` and
+`--lr-gemstone-selected-animation` — see
 `theme/gemstones.js`'s `gemstoneSelectedGlyphStyles` below, the exact stylesheet this picker
 includes in its own `static styles` for that glyph.
 
@@ -204,7 +205,7 @@ class AccentTrigger extends LitElement {
 - the semantic `radiogroup` lives inside shadow DOM. Set `accessibleLabel` or a host `aria-label`;
   the component deliberately forwards the resulting name to that internal role.
 - the automatic gemstone glyph's checked-state halo/shine is themed through
-  `--lr-gemstone-selected-color`/`-blur`/`-shine-duration`, not through
+  `--lr-gemstone-selected-color`/`-blur`/`-shine-duration`/`-animation`, not through
   `--lr-swatch-picker-selected-*`/`-gemstone-*` — those style a plain color-fill swatch or a
   consumer-supplied `icon` override instead, even while `mode="gemstone"`.
 
@@ -250,7 +251,12 @@ import {
 `--lr-overlay-max-inline-size` lifts the popup's default 20rem cap so the 20rem palette plus the
 popover's own padding fits. Both `--lr-gemstone-selected-*` values reach the trigger glyph and the
 picker's checked glyph alike: a 0.42rem halo at 92% of the accent. Leave
-`--lr-gemstone-selected-shine-duration` unset to keep the default 1.8s shine. The
+`--lr-gemstone-selected-shine-duration` unset to keep the default 1.8s shine. For an independent
+**Shine OFF** choice, set `--lr-gemstone-selected-animation: none` on the common popover scope or
+another ancestor of both glyphs. This stops the animation while preserving the static halo,
+selected accent, and checked semantics. Remove the property to restore the default shine;
+do not use a zero duration or pause an infinite animation as an OFF setting. Persistence of
+this choice stays with the application, separately from its motion preference. The
 `--lr-icon-button-*` values keep the trigger free of a rectangular fill at rest, on hover, and
 while pressed:
 
@@ -341,7 +347,9 @@ The parts already supply the behavior, so do not re-implement it. The picker is 
 `radiogroup` with `aria-checked` and a `:focus-visible` ring per swatch, and its Arrow keys swap
 under RTL. The popover keeps `bottom-end` on the logical end under RTL and returns focus to the
 trigger on Escape. `gemstoneSelectedGlyphStyles` stops the shine under
-`prefers-reduced-motion: reduce`. Verify 320px and desktop layouts, enlarged text, and both color
+`prefers-reduced-motion: reduce` and under application `motion: 'reduce'` with `preferences.css`
+loaded, even when the public animation hook explicitly requests a loop. Verify 320px and desktop
+layouts, enlarged text, and both color
 modes. In a sidebar or settings panel, the caption and row may appear inline with the same glow
 and spacing; use the compact tier when the container is narrow and allow wrapping if even that
 tier cannot fit. Never shrink targets below 24px. Application theme application, default accent,

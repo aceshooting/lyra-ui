@@ -8,6 +8,8 @@ import type { LyraPage } from '../page/page.class.js';
 import { detectPlatform } from '../../../internal/platform.js';
 import './app-rail.js';
 import './app-rail-item.js';
+import '../menubar/menubar.js';
+import { toRgba } from '../../../../test/color-contrast.js';
 import '../app-rail-group/app-rail-group.js';
 import '../page/page.js';
 import '../command-palette/command-palette.js';
@@ -57,7 +59,9 @@ describe('app rail sidebar frame', () => {
     expect(style.marginTop).to.equal('0px'); expect(style.boxShadow).to.equal('none');
     expect(style.borderInlineEndWidth).to.equal(resolvedInShadow(el, 'border: var(--lr-border-width-thin) solid', 'border-top-width'));
     expect(parseFloat(style.borderInlineEndWidth)).to.be.greaterThan(0);
-    expect(style.backgroundColor).to.equal(resolvedInShadow(el, 'background-color: var(--lr-color-surface)', 'background-color'));
+    const expectedFill = toRgba(resolvedInShadow(el, 'background-color: var(--lr-color-surface)', 'background-color'));
+    expectedFill[3] = 204;
+    expect(toRgba(style.backgroundColor)).to.deep.equal(expectedFill);
     expect(getComputedStyle(el).display).to.equal('block');
     el.setAttribute('frame', 'floating'); await el.updateComplete;
     expect(el.frame).to.equal(undefined); expect(el.hasAttribute('frame')).to.equal(false);
@@ -90,10 +94,22 @@ describe('app rail sidebar frame', () => {
     el.style.setProperty('--lr-color-border-subtle', 'rgb(20, 40, 60)'); expect(getComputedStyle(base(el)).borderTopColor).to.equal('rgb(20, 40, 60)');
   });
 
-  it('makes plain frames transparent with an explicit background override', async () => {
-    const el = await fixture<LyraAppRail>(html`<lr-app-rail frame="plain"></lr-app-rail>`);
-    expect(getComputedStyle(base(el)).backgroundColor).to.equal('rgba(0, 0, 0, 0)'); expect(getComputedStyle(base(el)).borderInlineEndWidth).to.equal('0px');
-    el.style.setProperty('--lr-app-rail-bg', 'rgb(12, 34, 56)'); expect(getComputedStyle(base(el)).backgroundColor).to.equal('rgb(12, 34, 56)');
+  it('keeps plain frames unpainted without suppressing nested Glass and accepts an explicit background', async () => {
+    const el = await fixture<LyraAppRail>(html`<lr-app-rail frame="plain"><lr-menubar label="Nested"></lr-menubar></lr-app-rail>`);
+    const surface = base(el);
+    expect(getComputedStyle(surface).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+    expect(getComputedStyle(surface).borderInlineEndWidth).to.equal('0px');
+    const layer = surface.querySelector('.glass-scroll-layer')!;
+    expect(getComputedStyle(layer, '::before').backdropFilter).to.equal('none');
+    const nested = el.querySelector('lr-menubar')!;
+    await (nested as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
+    const nestedSurface = nested.shadowRoot!.querySelector('[part="base"]')!;
+    expect(toRgba(getComputedStyle(nestedSurface).backgroundColor)[3]).to.equal(204);
+    expect(getComputedStyle(nestedSurface, '::before').backdropFilter).to.include('blur(12px)');
+    el.style.setProperty('--lr-app-rail-bg', 'rgb(12, 34, 56)');
+    expect(getComputedStyle(surface).backgroundColor).to.equal('rgb(12, 34, 56)');
+    mobile(el); el.open = true; await el.updateComplete;
+    expect(toRgba(getComputedStyle(el.shadowRoot!.querySelector('[part="panel"]')!).backgroundColor)[3]).to.equal(204);
   });
 
   for (const direction of ['ltr', 'rtl']) it(`aligns the resizer with the card edge in ${direction}`, async () => {

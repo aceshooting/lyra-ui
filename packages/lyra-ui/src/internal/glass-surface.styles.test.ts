@@ -98,6 +98,58 @@ describe('glass surface composition', () => {
     expect(backgroundPixel(inner)).to.deep.equal([250, 250, 250, 255]);
   });
 
+  it('captures material for a painted host and class selectors without suppressing Glass below Solid', async function () {
+    if (!CSS.supports('backdrop-filter', 'blur(1px)')) this.skip();
+    const scope = await fixture<HTMLDivElement>(html`<div data-lr-surface="solid"><div data-lr-surface="glass"></div></div>`);
+    const host = scope.firstElementChild as HTMLDivElement;
+    const shadow = host.attachShadow({ mode: 'open' });
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(css`
+      ${tokens}
+      :host, .surface { position: relative; display: block; min-block-size: 20px; }
+      ${glassSurface(':host(:not([data-contained])), .surface', css`rgb(250 250 250)`)}
+    `.cssText);
+    shadow.adoptedStyleSheets = [surfaceSheet, sheet];
+    const inner = document.createElement('div');
+    inner.className = 'surface';
+    inner.setAttribute('data-lr-surface', 'glass');
+    shadow.append(inner);
+    expect(backgroundPixel(host)[3]).to.be.within(203, 205);
+    expect(getComputedStyle(host, '::before').backdropFilter).to.include('blur(12px)');
+    expect(backgroundPixel(inner)[3]).to.equal(255);
+    expect(getComputedStyle(inner, '::before').backdropFilter).to.match(/^(none|blur\(0px\))/);
+    host.setAttribute('data-lr-surface', 'solid');
+    expect(backgroundPixel(host)[3]).to.equal(255);
+    expect(backgroundPixel(inner)[3]).to.be.within(203, 205);
+    expect(getComputedStyle(inner, '::before').backdropFilter).to.include('blur(12px)');
+  });
+
+  it('lets wrapper scopes reset nested material while accessibility preferences remain authoritative', async function () {
+    if (!CSS.supports('backdrop-filter', 'blur(1px)')) this.skip();
+    const { host, outer, inner } = await surfaces('glass');
+    const shadow = host.shadowRoot!;
+    shadow.adoptedStyleSheets = [surfaceSheet, preferenceSheet, ...shadow.adoptedStyleSheets];
+    const wrapper = document.createElement('section');
+    wrapper.setAttribute('data-lr-surface', 'solid');
+    inner.setAttribute('data-lr-surface', 'glass');
+    outer.append(wrapper);
+    wrapper.append(inner);
+    expect(backgroundPixel(inner)[3]).to.be.within(203, 205);
+    expect(getComputedStyle(inner, '::before').backdropFilter).to.include('blur(12px)');
+    wrapper.setAttribute('data-lr-surface', 'glass');
+    expect(backgroundPixel(inner)[3]).to.equal(255);
+    expect(getComputedStyle(inner, '::before').backdropFilter).to.include('blur(0px)');
+    host.setAttribute('data-lr-surface', 'solid');
+    expect(backgroundPixel(inner)[3]).to.be.within(203, 205);
+    expect(getComputedStyle(inner, '::before').backdropFilter).to.include('blur(12px)');
+    wrapper.setAttribute('data-lr-contrast', 'more');
+    expect(backgroundPixel(inner)[3]).to.equal(255);
+    expect(getComputedStyle(inner, '::before').backdropFilter).to.equal('none');
+    wrapper.removeAttribute('data-lr-contrast');
+    expect(backgroundPixel(inner)[3]).to.be.within(203, 205);
+    expect(getComputedStyle(inner, '::before').backdropFilter).to.include('blur(12px)');
+  });
+
   it('removes the glass layer when the scope switches to solid', async () => {
     const { host, outer } = await surfaces('glass');
     host.setAttribute('data-lr-surface', 'solid');

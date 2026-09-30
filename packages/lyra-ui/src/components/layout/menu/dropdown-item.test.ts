@@ -160,8 +160,8 @@ describe('<lr-dropdown-item>', () => {
       defaultItem.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
     const defaultChrome = getComputedStyle(defaultBase);
     expect(defaultChrome.gap).to.equal('4px');
-    expect(defaultChrome.borderRadius).to.equal('6px');
-    expect(getComputedStyle(defaultItem).borderRadius).to.equal('6px');
+    expect(defaultChrome.borderRadius).to.equal('8px');
+    expect(getComputedStyle(defaultItem).borderRadius).to.equal('8px');
 
     const wrapper = (await fixture(html`
       <div style="--lr-menu-item-gap: 12px; --lr-menu-item-radius: 3px;">

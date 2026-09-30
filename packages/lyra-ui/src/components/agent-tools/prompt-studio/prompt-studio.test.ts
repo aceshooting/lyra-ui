@@ -386,9 +386,9 @@ it('renders light and dark native option palettes, resets select appearance, and
   const lightOption = select.querySelector('option')!;
   const darkOption = dark!.shadowRoot!.querySelector<HTMLSelectElement>('[part="message-role"]')!.querySelector('option')!;
   expect(getComputedStyle(lightOption).backgroundColor).to.equal('rgb(255, 255, 255)');
-  expect(getComputedStyle(lightOption).color).to.equal('rgb(26, 26, 26)');
-  expect(getComputedStyle(darkOption).backgroundColor).to.equal('rgb(26, 26, 26)');
-  expect(getComputedStyle(darkOption).color).to.equal('rgb(242, 242, 242)');
+  expect(getComputedStyle(lightOption).color).to.equal('rgb(10, 10, 10)');
+  expect(getComputedStyle(darkOption).backgroundColor).to.equal('rgb(10, 10, 10)');
+  expect(getComputedStyle(darkOption).color).to.equal('rgb(250, 250, 250)');
 });
 
 it('paints hover and active feedback on toolbar and direct action buttons', async () => {

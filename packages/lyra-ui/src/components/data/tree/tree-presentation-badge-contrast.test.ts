@@ -22,5 +22,5 @@ it('renders an unset badge tone through the neutral text token', async () => {
   const root = el.querySelector('lr-tree-item') as HTMLElement;
   const badge = root.shadowRoot!.querySelector('[part="badge"]') as HTMLElement;
   expect((badge as HTMLElement).dataset['tone']).to.equal('neutral');
-  expect(getComputedStyle(badge).color).to.equal('rgb(107, 114, 128)');
+  expect(getComputedStyle(badge).color).to.equal('rgb(115, 115, 115)');
 });

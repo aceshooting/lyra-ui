@@ -230,7 +230,7 @@ export const styles = css`
   }
   lr-virtual-list::part(cue):focus-visible {
     outline: var(--lr-focus-ring);
-    outline-offset: calc(-1 * var(--lr-focus-ring-offset));
+    outline-offset: calc(-1 * max(var(--lr-focus-ring-width), var(--lr-focus-ring-width) + var(--lr-focus-ring-offset)));
   }
   lr-virtual-list::part(cue-time) {
     color: var(--lr-color-text);

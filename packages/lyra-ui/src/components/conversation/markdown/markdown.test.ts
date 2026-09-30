@@ -1,3 +1,4 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import {
   fixture,
   fixtureSync,
@@ -180,7 +181,7 @@ it("uses logical size containment and an internal overflow surface at a narrow a
 
   expect(getComputedStyle(el).minInlineSize).to.equal("0px");
   expect(getComputedStyle(el).maxInlineSize).to.equal("100%");
-  expect(getComputedStyle(content).minInlineSize).to.equal("40px");
+  expect(getComputedStyle(content).minInlineSize).to.equal("36px");
   expect(getComputedStyle(content).maxInlineSize).to.equal("100%");
   expect(getComputedStyle(content).overflowInline).to.equal("auto");
   // Paired-axis overflow: leaving the block axis unset would force it to the browser's own
@@ -3871,3 +3872,30 @@ describe('top-layer escape in trusted content', () => {
     await popover.hide({ focusTrigger: false });
   });
 });
+
+for (const part of ['code-block', 'table-wrapper', 'code-block-copy']) {
+  for (const [offset, expected] of [['0px', '-3px'], ['5px', '-8px'], ['-5px', '-3px']]) {
+    it(`keeps the clipped ${part} focus ring inward with authored offset ${offset}`, async () => {
+      await loadMarkdownDeps();
+      const content = part === 'table-wrapper'
+        ? '| A |\n| --- |\n| Synthetic |'
+        : '```\nconst synthetic = 1;\n```';
+      const el = await fixture<LyraMarkdown>(html`
+        <lr-markdown
+          .content=${content}
+          .codeBlockHeader=${part === 'code-block-copy'}
+          style=${`--lr-focus-ring-width: 3px; --lr-focus-ring-offset: ${offset}`}
+        ></lr-markdown>
+      `);
+      const selector = `[part~="${part}"]`;
+      await waitUntil(() => el.shadowRoot!.querySelector(selector) !== null);
+      const target = el.shadowRoot!.querySelector<HTMLElement>(selector)!;
+      await focusByKeyboard(target);
+      expect(el.shadowRoot!.activeElement === target).to.equal(true);
+      const computed = getComputedStyle(target);
+      expect(computed.outlineStyle).to.equal('solid');
+      expect(computed.outlineWidth).to.equal('3px');
+      expect(computed.outlineOffset).to.equal(expected);
+    });
+  }
+}

@@ -63,7 +63,11 @@ export const styles = css`
      scroll, and a mousedown has nothing to acknowledge. */
   [part="pane-old"]:hover,
   [part="pane-new"]:hover {
-    border-color: var(--lr-color-border-strong);
+    border-color: color-mix(
+      in oklab,
+      var(--lr-color-border-strong),
+      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+    );
   }
 
   [part="pane-header"] {

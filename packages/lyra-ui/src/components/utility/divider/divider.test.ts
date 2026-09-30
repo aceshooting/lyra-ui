@@ -44,14 +44,14 @@ function separatorColors(wrapper: HTMLElement): string[] {
   });
 }
 
-it('defaults to the decorative subtle border, which falls back to the control border when unset', async () => {
+it('defaults to the Shadcn subtle border independently of the control border', async () => {
   const wrapper = await fixture<HTMLElement>(html`
     <div style="--lr-theme-color-surface-border: rgb(10, 20, 30)">
       <lr-divider></lr-divider>
       <lr-divider orientation="vertical"></lr-divider>
     </div>
   `);
-  expect(separatorColors(wrapper)).to.deep.equal(['rgb(10, 20, 30)', 'rgb(10, 20, 30)']);
+  expect(separatorColors(wrapper)).to.deep.equal(['rgb(229, 229, 229)', 'rgb(229, 229, 229)']);
 });
 
 it('follows a theme-level subtle border, and --color still wins over it', async () => {

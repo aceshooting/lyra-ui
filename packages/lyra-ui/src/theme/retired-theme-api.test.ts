@@ -1,6 +1,18 @@
 import { expect } from '@open-wc/testing';
 import { setLyraStyle } from './theme.js';
 
+let originalSheets: CSSStyleSheet[];
+let themeSheet: CSSStyleSheet;
+before(async () => {
+  originalSheets = [...document.adoptedStyleSheets];
+  const response = await fetch(new URL('../theme.css', import.meta.url));
+  if (!response.ok) throw new Error('Missing theme stylesheet fixture');
+  themeSheet = new CSSStyleSheet();
+  themeSheet.replaceSync(await response.text());
+});
+beforeEach(() => { document.adoptedStyleSheets = [...originalSheets, themeSheet]; });
+afterEach(() => { document.adoptedStyleSheets = originalSheets; });
+
 describe('retired theme compatibility API', () => {
   it('exposes only the canonical style API and emits only the style event', async () => {
     const theme = await import('./theme.js');
@@ -21,6 +33,7 @@ describe('retired theme compatibility API', () => {
       expect(document.documentElement.hasAttribute('data-lr-theme-preset')).to.equal(false);
     } finally {
       for (const event of legacyEvents) window.removeEventListener(event, onLegacyEvent);
+      document.adoptedStyleSheets = [...originalSheets, themeSheet];
       setLyraStyle({ mode: 'unset', look: null, surface: null, density: null, accent: null, accentBackground: null, overrides: null });
       localStorage.removeItem('lyra-theme');
     }

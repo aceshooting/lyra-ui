@@ -699,9 +699,9 @@ describe("control min-height knob and exact-height hatch", () => {
     const expected: Record<string, string> = {
       "2xs": "20px",
       xs: "24px",
-      s: "30px",
-      m: "40px",
-      l: "48px",
+      s: "32px",
+      m: "36px",
+      l: "40px",
       xl: "56px",
     };
     for (const [size, px] of Object.entries(expected)) {

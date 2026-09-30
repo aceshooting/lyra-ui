@@ -283,7 +283,7 @@ describe('lr-span-waterfall', () => {
     expect(el.shadowRoot!.querySelector('[data-id="early"]')!.getAttribute('tabindex')).to.equal('-1');
   });
 
-  it('keeps even a tiny-duration bar at the shared 40px icon-button floor in both axes', async () => {
+  it('keeps even a tiny-duration bar at the shared 36px icon-button floor in both axes', async () => {
     const spans: LyraSpan[] = [
       { id: 'tiny', name: 'Tiny span', kind: 'tool', startMs: 10, endMs: 11, status: 'success' },
     ];
@@ -300,12 +300,12 @@ describe('lr-span-waterfall', () => {
     expect(bars.length).to.be.greaterThan(0);
     for (const bar of bars) {
       const rect = bar.getBoundingClientRect();
-      expect(rect.width, `${bar.dataset['id'] ?? ''} width`).to.be.at.least(40);
-      expect(rect.height, `${bar.dataset['id'] ?? ''} height`).to.be.at.least(40);
+      expect(rect.width, `${bar.dataset['id'] ?? ''} width`).to.be.at.least(36);
+      expect(rect.height, `${bar.dataset['id'] ?? ''} height`).to.be.at.least(36);
     }
   });
 
-  it('keeps 40px first and last targets inside a 320px track in LTR and RTL without changing activation', async () => {
+  it('keeps 36px first and last targets inside a 320px track in LTR and RTL without changing activation', async () => {
     for (const dir of ['ltr', 'rtl'] as const) {
       const container = document.createElement('div');
       container.dir = dir;
@@ -328,7 +328,7 @@ describe('lr-span-waterfall', () => {
           const track = bar.parentElement as HTMLElement;
           const barRect = bar.getBoundingClientRect();
           const trackRect = track.getBoundingClientRect();
-          expect(barRect.width, `${dir} ${id} target width`).to.be.at.least(40);
+          expect(barRect.width, `${dir} ${id} target width`).to.be.at.least(36);
           expect(barRect.left, `${dir} ${id} left edge`).to.be.at.least(trackRect.left - 1);
           expect(barRect.right, `${dir} ${id} right edge`).to.be.at.most(trackRect.right + 1);
 

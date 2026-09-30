@@ -1259,10 +1259,10 @@ describe('lr-copy-button clipboard failure', () => {
 });
 
 describe('dense-row hit-area override and its coarse-pointer safety net', () => {
-  it('renders the ordinary 40px floor with no override', async () => {
+  it('renders the ordinary 36px floor with no override', async () => {
     const el = (await fixture(html`<lr-copy-button value="hello"></lr-copy-button>`)) as LyraCopyButton;
-    expect(paintedControl(el).getBoundingClientRect().width).to.equal(40);
-    expect(paintedControl(el).getBoundingClientRect().height).to.equal(40);
+    expect(paintedControl(el).getBoundingClientRect().width).to.equal(36);
+    expect(paintedControl(el).getBoundingClientRect().height).to.equal(36);
   });
 
   it('shrinks below the ordinary floor when an ancestor lowers --lr-theme-icon-button-size, for a dense row', async () => {

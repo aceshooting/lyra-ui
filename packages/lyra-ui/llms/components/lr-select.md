@@ -16,6 +16,9 @@
 
 ## `lr-select`
 
+Floating form-control panels follow the [shared surface treatment](shared/styles-and-tokens.md).
+Editing fields and inline color editors retain opaque interiors.
+
 A plain closed-list dropdown — a direct `<lr-*>` counterpart to `<wa-select>`/`<wa-option>`.
 **Form-associated** (hand-rolled internals, not the shared `FormAssociated` mixin — same reasoning
 as `lr-combobox`: `multiple` re-shapes the committed `value` into a `string[]`, which the shared

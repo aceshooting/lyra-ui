@@ -328,10 +328,10 @@ it("gives tree toggles and copy controls the shared minimum hit area", async () 
   const copy = el.shadowRoot!.querySelector(
     '[part="copy-button"]'
   ) as HTMLElement;
-  expect(getComputedStyle(toggle).minInlineSize).to.equal("40px");
-  expect(getComputedStyle(toggle).minBlockSize).to.equal("40px");
-  expect(getComputedStyle(copy).minInlineSize).to.equal("40px");
-  expect(getComputedStyle(copy).minBlockSize).to.equal("40px");
+  expect(getComputedStyle(toggle).minInlineSize).to.equal("36px");
+  expect(getComputedStyle(toggle).minBlockSize).to.equal("36px");
+  expect(getComputedStyle(copy).minInlineSize).to.equal("36px");
+  expect(getComputedStyle(copy).minBlockSize).to.equal("36px");
 });
 
 it('applies the interactive transition token to toggle and copy controls', async () => {

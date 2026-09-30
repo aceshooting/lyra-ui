@@ -101,8 +101,8 @@ it('contains a removable long-label chip without clipping its focusable hit targ
   expectContained(frame, 'removable chip');
   expect(removeRect.left).to.be.at.least(baseRect.left - 1);
   expect(removeRect.right).to.be.at.most(baseRect.right + 1);
-  expect(removeRect.width).to.be.at.least(40);
-  expect(removeRect.height).to.be.at.least(40);
+  expect(removeRect.width).to.be.at.least(36);
+  expect(removeRect.height).to.be.at.least(36);
 });
 
 for (const direction of ['ltr', 'rtl'] as const) {
@@ -152,8 +152,8 @@ it('keeps compact chip and tag targets inside disjoint adjacent owner boxes', as
   )!);
   targets.forEach((target, index) => {
     expectRectContained(hosts[index]!, target, `target ${index}`);
-    expect(target.getBoundingClientRect().width).to.be.at.least(40);
-    expect(target.getBoundingClientRect().height).to.be.at.least(40);
+    expect(target.getBoundingClientRect().width).to.be.at.least(36);
+    expect(target.getBoundingClientRect().height).to.be.at.least(36);
   });
   for (let index = 0; index < targets.length - 1; index += 1) {
     expect(targets[index]!.getBoundingClientRect().right).to.be.at.most(

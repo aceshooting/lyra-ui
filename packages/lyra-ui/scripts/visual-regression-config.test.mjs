@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { access, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { loadVisualStory } from './visual-story-readiness.mjs';
+import { loadVisualStory, visualStoryUrl } from './visual-story-readiness.mjs';
 import { validateVisualQualificationManifest } from './qualification-ledger.mjs';
 import { assembleVisualManifest, readVisualManifestSources } from './visual-manifest-source.mjs';
 
@@ -53,6 +53,16 @@ assert.deepEqual(validateVisualQualificationManifest(manifest, componentInventor
 assert.ok(manifest.stories.length >= 80);
 
 const axes = new Map(manifest.axes.map((axis) => [axis.name, axis]));
+for (const axis of axes.values()) {
+  assert.equal(axis.globals.look, 'lyra', `${axis.name} must pin the retained reference look`);
+  assert.equal(axis.globals.surface, 'solid', `${axis.name} must pin the retained reference surface`);
+  assert.equal(axis.globals.accent, 'none', `${axis.name} must pin the retained cleared accent`);
+  const url = new URL(visualStoryUrl('https://example.test/docs', 'checkbox--default', axis));
+  assert.equal(url.pathname, '/docs/iframe.html');
+  assert.equal(url.searchParams.get('id'), 'checkbox--default');
+  assert.equal(url.searchParams.get('viewMode'), 'story');
+  assert.deepEqual(Object.fromEntries(url.searchParams.get('globals').split(';').map(value => value.split(':'))), axis.globals);
+}
 assert.equal(axes.get('forced-colors')?.emulation?.forcedColors, 'active');
 assert.ok(axes.get('narrow')?.viewport?.width <= 320);
 assert.ok(axes.get('narrow')?.viewport?.height >= 640);
@@ -257,6 +267,7 @@ assert.match(runner, /baselineReview\.status !== 'complete'/, 'snapshot promotio
 assert.match(runner, /promoteReviewedCandidates/, 'promotion must use the exact previously reviewed candidates');
 assert.match(runner, /candidateSha256/, 'candidate pixels must be hash-bound before promotion');
 assert.match(runner, /visualCapturePlan/, 'the runner must expand the manifest into axis-level captures');
+assert.match(runner, /visualStoryUrl\(baseUrl, id, axis\)/, 'captures must serialize the complete authored reference profile');
 assert.match(runner, /shardVisualCaptures/, 'the runner must apply deterministic capture sharding');
 assert.ok(
   packageJson.scripts['test:tooling'].includes('visual-regression-config.test.mjs'),

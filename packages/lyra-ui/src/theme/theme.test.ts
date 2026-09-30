@@ -77,9 +77,21 @@ const ALL_RAMP_PROPERTIES = [
 const stateAfterImport = {
   dataTheme: document.documentElement.getAttribute('data-theme'),
   dataLrTheme: document.documentElement.getAttribute('data-lr-theme'),
-  accent: document.documentElement.style.getPropertyValue('--lr-theme-accent'),
+  accent: appliedThemeValue('--lr-theme-accent'),
   stored: localStorage.getItem(STORAGE_KEY),
 };
+
+let originalSheets: CSSStyleSheet[] = [];
+let themeSheet: CSSStyleSheet;
+before(async () => {
+  originalSheets = [...document.adoptedStyleSheets];
+  const response = await fetch(new URL('../theme.css', import.meta.url));
+  if (!response.ok) throw new Error('Missing theme stylesheet fixture');
+  themeSheet = new CSSStyleSheet();
+  themeSheet.replaceSync(await response.text());
+});
+beforeEach(() => { document.adoptedStyleSheets = [...originalSheets, themeSheet]; });
+afterEach(() => { document.adoptedStyleSheets = originalSheets; });
 
 /** The shared token-ownership expando the runtime and the bootstrap keep on `<html>`. */
 const OWNERSHIP_KEY = Symbol.for('@aceshooting/lyra-ui.theme-tokens.v1');
@@ -95,18 +107,27 @@ function deleteOwnershipList(): void {
   delete (document.documentElement as unknown as Record<symbol, unknown>)[OWNERSHIP_KEY];
 }
 
-/** Every inline `--lr-theme-*` declaration on `<html>`, by name. */
+/** Resolve an owned input now; an absent inline input remains absent rather than borrowing defaults. */
+function appliedThemeValue(name: string): string {
+  const root = document.documentElement;
+  if (root.style.getPropertyValue(name) === '') return '';
+  return getComputedStyle(root).getPropertyValue(name).trim();
+}
+
+/** Every inline-owned theme input, paired with its currently resolved value. */
 function inlineThemeProperties(): Record<string, string> {
   const style = document.documentElement.style;
   const result: Record<string, string> = {};
   for (let index = 0; index < style.length; index += 1) {
     const name = style.item(index);
-    if (name.startsWith('--lr-theme-')) result[name] = style.getPropertyValue(name);
+    if (name.startsWith('--lr-theme-')) result[name] = appliedThemeValue(name);
   }
   return result;
 }
 
 function resetRoot(): void {
+  // Restore the resolver before runtime cleanup, including after startup fixtures remove it.
+  document.adoptedStyleSheets = [...originalSheets, themeSheet];
   // This also detaches a live prefers-color-scheme listener installed by mode="auto".
   setStyleForTest({ mode: 'unset', accent: null, surface: null, tokens: null });
   localStorage.removeItem(STORAGE_KEY);
@@ -176,9 +197,9 @@ describe('theme runtime', () => {
 
   it('applies the accent as --lr-theme-accent and removes it again when cleared', () => {
     setStyleForTest({ mode: 'light', accent: '#e63950' });
-    expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal('#e63950');
+    expect(appliedThemeValue('--lr-theme-accent')).to.equal('#e63950');
     setStyleForTest({ accent: null });
-    expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal('');
+    expect(appliedThemeValue('--lr-theme-accent')).to.equal('');
     expect(legacyFixtureSnapshot().accent).to.equal(null);
   });
 
@@ -265,9 +286,9 @@ describe('theme runtime', () => {
   it('persists an accent without a visual ramp when mode is unset, since there is no known surface to contrast against', () => {
     setStyleForTest({ mode: 'unset', accent: '#e63950' });
     expect(legacyFixtureSnapshot()).to.deep.equal({ mode: 'unset', accent: '#e63950', surface: null });
-    expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal('');
+    expect(appliedThemeValue('--lr-theme-accent')).to.equal('');
     for (const property of BRAND_RAMP_PROPERTIES) {
-      expect(document.documentElement.style.getPropertyValue(property), property).to.equal('');
+      expect(appliedThemeValue(property), property).to.equal('');
     }
   });
 
@@ -277,19 +298,18 @@ describe('theme runtime', () => {
     for (const accent of ['inherit', 'initial', 'revert', 'revert-layer', 'unset', 'var(--brand)']) {
       setStyleForTest({ mode: 'light', accent });
       expect(legacyFixtureSnapshot().accent, accent).to.equal(null);
-      expect(document.documentElement.style.getPropertyValue('--lr-theme-accent'), accent).to.equal('');
+      expect(appliedThemeValue('--lr-theme-accent'), accent).to.equal('');
     }
   });
 
   it('turns a valid accent into a complete contrast-checked semantic brand ramp', () => {
     setStyleForTest({ mode: 'light', accent: '#e63950' });
-    const rootStyle = document.documentElement.style;
     for (const property of BRAND_RAMP_PROPERTIES) {
-      expect(rootStyle.getPropertyValue(property), property).to.not.equal('');
+      expect(appliedThemeValue(property), property).to.not.equal('');
     }
     for (const tier of ['quiet', 'normal', 'loud'] as const) {
-      const fill = rootStyle.getPropertyValue(`--lr-theme-color-brand-fill-${tier}`);
-      const foreground = rootStyle.getPropertyValue(`--lr-theme-color-brand-on-${tier}`);
+      const fill = appliedThemeValue(`--lr-theme-color-brand-fill-${tier}`);
+      const foreground = appliedThemeValue(`--lr-theme-color-brand-on-${tier}`);
       expect(contrast(fill, foreground), `${tier} brand contrast`).to.be.at.least(4.5);
     }
   });
@@ -300,13 +320,12 @@ describe('theme runtime', () => {
       ['dark', '#1a1a1a', '#1a1a1a'],
     ] as const) {
       setStyleForTest({ mode, accent });
-      const rootStyle = document.documentElement.style;
-      for (const tier of ['normal', 'loud'] as const) {
-        const border = rootStyle.getPropertyValue(`--lr-theme-color-brand-border-${tier}`);
+        for (const tier of ['normal', 'loud'] as const) {
+        const border = appliedThemeValue(`--lr-theme-color-brand-border-${tier}`);
         expect(contrast(border, surface), `${mode} ${tier} border contrast`).to.be.at.least(3);
       }
       expect(
-        contrast(rootStyle.getPropertyValue('--lr-theme-color-focus'), surface),
+        contrast(appliedThemeValue('--lr-theme-color-focus'), surface),
         `${mode} focus contrast`,
       ).to.be.at.least(3);
     }
@@ -314,25 +333,24 @@ describe('theme runtime', () => {
 
   it('derives a contrast-checked semantic ramp for a role beyond brand, e.g. danger', () => {
     setStyleForTest({ mode: 'light', accent: { danger: '#c81e3a' } });
-    const rootStyle = document.documentElement.style;
     const dangerRampProperties = BRAND_RAMP_PROPERTIES
       .filter((property) => property !== '--lr-theme-color-focus')
       .map((property) => property.replace('-brand-', '-danger-'));
     for (const property of dangerRampProperties) {
-      expect(rootStyle.getPropertyValue(property), property).to.not.equal('');
+      expect(appliedThemeValue(property), property).to.not.equal('');
     }
     for (const tier of ['quiet', 'normal', 'loud'] as const) {
-      const fill = rootStyle.getPropertyValue(`--lr-theme-color-danger-fill-${tier}`);
-      const foreground = rootStyle.getPropertyValue(`--lr-theme-color-danger-on-${tier}`);
+      const fill = appliedThemeValue(`--lr-theme-color-danger-fill-${tier}`);
+      const foreground = appliedThemeValue(`--lr-theme-color-danger-on-${tier}`);
       expect(contrast(fill, foreground), `${tier} danger contrast`).to.be.at.least(4.5);
     }
     for (const tier of ['normal', 'loud'] as const) {
-      const border = rootStyle.getPropertyValue(`--lr-theme-color-danger-border-${tier}`);
+      const border = appliedThemeValue(`--lr-theme-color-danger-border-${tier}`);
       expect(contrast(border, '#ffffff'), `${tier} danger border contrast`).to.be.at.least(3);
     }
     // A role beyond brand never touches the brand ramp or the (brand-only) focus token.
-    expect(rootStyle.getPropertyValue('--lr-theme-color-brand-fill-loud')).to.equal('');
-    expect(rootStyle.getPropertyValue('--lr-theme-color-focus')).to.equal('');
+    expect(appliedThemeValue('--lr-theme-color-brand-fill-loud')).to.equal('');
+    expect(appliedThemeValue('--lr-theme-color-focus')).to.equal('');
     expect(legacyFixtureSnapshot().accent).to.deep.equal({ danger: '#c81e3a' });
   });
 
@@ -340,18 +358,18 @@ describe('theme runtime', () => {
     const lightBrand = '#2563eb';
     const darkBrand = '#f59e0b';
     setStyleForTest({ mode: 'light', accent: lightBrand });
-    const expectedLight = document.documentElement.style.getPropertyValue('--lr-theme-color-brand-fill-loud');
+    const expectedLight = appliedThemeValue('--lr-theme-color-brand-fill-loud');
     setStyleForTest({ mode: 'dark', accent: darkBrand });
-    const expectedDark = document.documentElement.style.getPropertyValue('--lr-theme-color-brand-fill-loud');
+    const expectedDark = appliedThemeValue('--lr-theme-color-brand-fill-loud');
     setStyleForTest({ mode: 'light', accent: { brand: { light: lightBrand, dark: darkBrand } } });
-    expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal(lightBrand);
-    const lightLoud = document.documentElement.style.getPropertyValue('--lr-theme-color-brand-fill-loud');
+    expect(appliedThemeValue('--lr-theme-accent')).to.equal(lightBrand);
+    const lightLoud = appliedThemeValue('--lr-theme-color-brand-fill-loud');
     expect(parseColor(lightLoud)).to.deep.equal(parseColor(expectedLight));
 
     // Same stored record, only the mode changes -- the OTHER base color must now paint.
     setStyleForTest({ mode: 'dark' });
-    expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal(darkBrand);
-    const darkLoud = document.documentElement.style.getPropertyValue('--lr-theme-color-brand-fill-loud');
+    expect(appliedThemeValue('--lr-theme-accent')).to.equal(darkBrand);
+    const darkLoud = appliedThemeValue('--lr-theme-color-brand-fill-loud');
     expect(parseColor(darkLoud)).to.deep.equal(parseColor(expectedDark));
 
     // Prove this is a hue change, not merely a different tint weight of the same base color.
@@ -380,12 +398,12 @@ describe('theme runtime', () => {
     window.matchMedia = (() => media) as typeof window.matchMedia;
     try {
       setStyleForTest({ mode: 'auto', accent: { brand: { light: '#2563eb', dark: '#f59e0b' } } });
-      expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal(
+      expect(appliedThemeValue('--lr-theme-accent')).to.equal(
         matches ? '#f59e0b' : '#2563eb',
       );
       matches = !matches;
       for (const listener of listeners) listener({ matches } as MediaQueryListEvent);
-      expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal(
+      expect(appliedThemeValue('--lr-theme-accent')).to.equal(
         matches ? '#f59e0b' : '#2563eb',
       );
     } finally {
@@ -396,22 +414,21 @@ describe('theme runtime', () => {
   it('mixes every role\'s ramp against a supplied surface reference instead of the hardcoded default background', () => {
     const customSurface = '#123456';
     setStyleForTest({ mode: 'light', accent: '#e63950', surface: customSurface });
-    const rootStyle = document.documentElement.style;
     expect(legacyFixtureSnapshot().surface).to.equal(customSurface);
     for (const tier of ['normal', 'loud'] as const) {
-      const border = rootStyle.getPropertyValue(`--lr-theme-color-brand-border-${tier}`);
+      const border = appliedThemeValue(`--lr-theme-color-brand-border-${tier}`);
       expect(contrast(border, customSurface), `${tier} border contrast against the supplied surface`)
         .to.be.at.least(3);
     }
     expect(
-      contrast(rootStyle.getPropertyValue('--lr-theme-color-focus'), customSurface),
+      contrast(appliedThemeValue('--lr-theme-color-focus'), customSurface),
       'focus contrast against the supplied surface',
     ).to.be.at.least(3);
-    const withSurfaceQuiet = rootStyle.getPropertyValue('--lr-theme-color-brand-fill-quiet');
+    const withSurfaceQuiet = appliedThemeValue('--lr-theme-color-brand-fill-quiet');
 
     resetRoot();
     setStyleForTest({ mode: 'light', accent: '#e63950' });
-    const withDefaultQuiet = document.documentElement.style.getPropertyValue(
+    const withDefaultQuiet = appliedThemeValue(
       '--lr-theme-color-brand-fill-quiet',
     );
     expect(withSurfaceQuiet, 'a supplied surface must change the mix base').to.not.equal(
@@ -422,7 +439,7 @@ describe('theme runtime', () => {
   it('resolves modern absolute CSS colors through their painted sRGB pixels', () => {
     setStyleForTest({ mode: 'light', accent: 'color(display-p3 1 0 0)' });
     const loud = parseColor(
-      document.documentElement.style.getPropertyValue('--lr-theme-color-brand-fill-loud'),
+      appliedThemeValue('--lr-theme-color-brand-fill-loud'),
     );
     expect(loud[0]).to.be.greaterThan(loud[1]);
     expect(loud[0]).to.be.greaterThan(loud[2]);
@@ -431,9 +448,9 @@ describe('theme runtime', () => {
   it('fails a malformed accent closed instead of persisting an inert CSS hook', () => {
     setStyleForTest({ mode: 'light', accent: 'definitely-not-a-color' });
     expect(legacyFixtureSnapshot().accent).to.equal(null);
-    expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal('');
+    expect(appliedThemeValue('--lr-theme-accent')).to.equal('');
     for (const property of BRAND_RAMP_PROPERTIES) {
-      expect(document.documentElement.style.getPropertyValue(property), property).to.equal('');
+      expect(appliedThemeValue(property), property).to.equal('');
     }
   });
 
@@ -446,7 +463,7 @@ describe('theme runtime', () => {
       expect(() => setStyleForTest({ mode: 'light', accent: '#e63950' })).to.not.throw();
       expect(document.documentElement.getAttribute('data-theme')).to.equal('light');
       expect(legacyFixtureSnapshot().accent).to.equal(null);
-      expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal('');
+      expect(appliedThemeValue('--lr-theme-accent')).to.equal('');
     } finally {
       CanvasRenderingContext2D.prototype.getImageData = originalGetImageData;
     }
@@ -461,7 +478,7 @@ describe('theme runtime', () => {
       expect(() => setStyleForTest({ mode: 'light', accent: '#e63950' })).to.not.throw();
       expect(document.documentElement.getAttribute('data-theme')).to.equal('light');
       expect(legacyFixtureSnapshot().accent).to.equal(null);
-      expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal('');
+      expect(appliedThemeValue('--lr-theme-accent')).to.equal('');
     } finally {
       HTMLCanvasElement.prototype.getContext = originalGetContext;
     }
@@ -482,7 +499,7 @@ describe('theme runtime', () => {
       // fallback, so the "resolved" accent degrades to the mode's own background color instead
       // of throwing or leaving a stale ramp; the cross-look contrast floor still applies.
       expect(
-        document.documentElement.style.getPropertyValue('--lr-theme-color-brand-fill-loud'),
+        appliedThemeValue('--lr-theme-color-brand-fill-loud'),
       ).to.equal('rgb(102 102 102)');
     } finally {
       CanvasRenderingContext2D.prototype.getImageData = originalGetImageData;
@@ -499,7 +516,7 @@ describe('theme runtime', () => {
     ]) {
       setStyleForTest({ mode: 'light', accent });
       expect(legacyFixtureSnapshot().accent, accent).to.equal(null);
-      expect(document.documentElement.style.getPropertyValue('--lr-theme-accent'), accent).to.equal(
+      expect(appliedThemeValue('--lr-theme-accent'), accent).to.equal(
         '',
       );
     }
@@ -516,7 +533,7 @@ describe('theme runtime', () => {
     setStyleForTest({ mode: 'dark', accent: '#4f8ff7' });
     setStyleForTest({ mode: 'light' });
     expect(legacyFixtureSnapshot()).to.deep.equal({ mode: 'light', accent: '#4f8ff7', surface: null });
-    expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal('#4f8ff7');
+    expect(appliedThemeValue('--lr-theme-accent')).to.equal('#4f8ff7');
   });
 
   it('dispatches lr-style-change on window', async () => {
@@ -571,7 +588,7 @@ describe('theme runtime', () => {
       setStyleForTest({ accent: '#e63950' });
       expect(legacyFixtureSnapshot()).to.deep.equal({ mode: 'dark', accent: '#e63950', surface: null });
       expect(document.documentElement.getAttribute('data-lr-theme')).to.equal('dark');
-      expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal(
+      expect(appliedThemeValue('--lr-theme-accent')).to.equal(
         '#e63950',
       );
     } finally {
@@ -672,7 +689,7 @@ describe('theme runtime', () => {
       expect(Object.isFrozen(detail.style)).to.equal(true);
       matches = true;
       for (const listener of listeners) listener({ matches } as MediaQueryListEvent);
-      expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal(
+      expect(appliedThemeValue('--lr-theme-accent')).to.equal(
         '#4f8ff7',
       );
     } finally {
@@ -702,7 +719,7 @@ describe('lyraThemeBootstrap', () => {
     new Function(lyraThemeBootstrap)();
     expect(document.documentElement.getAttribute('data-theme')).to.equal('dark');
     expect(document.documentElement.getAttribute('data-lr-theme')).to.equal('dark');
-    expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal('#e63950');
+    expect(appliedThemeValue('--lr-theme-accent')).to.equal('#e63950');
   });
 
   it('applies the same complete ramp as the production runtime', () => {
@@ -711,7 +728,7 @@ describe('lyraThemeBootstrap', () => {
     const expected = Object.fromEntries(
       ['--lr-theme-accent', ...BRAND_RAMP_PROPERTIES].map((property) => [
         property,
-        document.documentElement.style.getPropertyValue(property),
+        appliedThemeValue(property),
       ]),
     );
     document.documentElement.removeAttribute('data-theme');
@@ -725,7 +742,7 @@ describe('lyraThemeBootstrap', () => {
     const actual = Object.fromEntries(
       Object.keys(expected).map((property) => [
         property,
-        document.documentElement.style.getPropertyValue(property),
+        appliedThemeValue(property),
       ]),
     );
     expect(actual).to.deep.equal(expected);
@@ -741,7 +758,7 @@ describe('lyraThemeBootstrap', () => {
     const expected = Object.fromEntries(
       ['--lr-theme-accent', ...ALL_RAMP_PROPERTIES].map((property) => [
         property,
-        document.documentElement.style.getPropertyValue(property),
+        appliedThemeValue(property),
       ]),
     );
     document.documentElement.removeAttribute('data-theme');
@@ -755,7 +772,7 @@ describe('lyraThemeBootstrap', () => {
     const actual = Object.fromEntries(
       Object.keys(expected).map((property) => [
         property,
-        document.documentElement.style.getPropertyValue(property),
+        appliedThemeValue(property),
       ]),
     );
     expect(actual).to.deep.equal(expected);
@@ -775,7 +792,7 @@ describe('lyraThemeBootstrap', () => {
       const snapshot = Object.fromEntries(
         ['--lr-theme-accent', ...BRAND_RAMP_PROPERTIES].map((property) => [
           property,
-          document.documentElement.style.getPropertyValue(property),
+          appliedThemeValue(property),
         ]),
       );
       document.documentElement.removeAttribute('data-theme');
@@ -791,7 +808,7 @@ describe('lyraThemeBootstrap', () => {
     const actualLight = Object.fromEntries(
       Object.keys(expectedLight).map((property) => [
         property,
-        document.documentElement.style.getPropertyValue(property),
+        appliedThemeValue(property),
       ]),
     );
     expect(actualLight).to.deep.equal(expectedLight);
@@ -807,7 +824,7 @@ describe('lyraThemeBootstrap', () => {
     const actualDark = Object.fromEntries(
       Object.keys(expectedDark).map((property) => [
         property,
-        document.documentElement.style.getPropertyValue(property),
+        appliedThemeValue(property),
       ]),
     );
     expect(actualDark).to.deep.equal(expectedDark);
@@ -829,7 +846,7 @@ describe('lyraThemeBootstrap', () => {
 
     expect(document.documentElement.getAttribute('data-theme')).to.equal('dark');
     expect(document.documentElement.getAttribute('data-lr-theme')).to.equal('dark');
-    expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal(
+    expect(appliedThemeValue('--lr-theme-accent')).to.equal(
       '#4f8ff7',
     );
   });
@@ -908,7 +925,7 @@ describe('lyraThemeBootstrap', () => {
       const expected = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
       expect(document.documentElement.getAttribute('data-theme')).to.equal(expected);
       expect(document.documentElement.getAttribute('data-lr-theme')).to.equal(expected);
-      expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal(
+      expect(appliedThemeValue('--lr-theme-accent')).to.equal(
         '#4f8ff7',
       );
     }
@@ -925,11 +942,11 @@ describe('lyraThemeBootstrap', () => {
     ]) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: 'light', accent }));
       new Function(lyraThemeBootstrap)();
-      expect(document.documentElement.style.getPropertyValue('--lr-theme-accent'), accent).to.equal(
+      expect(appliedThemeValue('--lr-theme-accent'), accent).to.equal(
         '',
       );
       for (const property of BRAND_RAMP_PROPERTIES) {
-        expect(document.documentElement.style.getPropertyValue(property), `${accent}: ${property}`)
+        expect(appliedThemeValue(property), `${accent}: ${property}`)
           .to.equal('');
       }
     }
@@ -1091,7 +1108,7 @@ async function tokenGrammar(): Promise<TokenGrammarFixture> {
   return fixture;
 }
 
-const inline = (name: string): string => document.documentElement.style.getPropertyValue(name);
+const inline = (name: string): string => appliedThemeValue(name);
 const T = (name: string): LyraThemeTokenName => `--lr-theme-${name}`;
 
 function storedRecord(): Record<string, unknown> {
@@ -1415,7 +1432,7 @@ describe('theme token maps', () => {
   });
 
   it('floors boundaries, chart series and terminal colours, and leaves decorative tokens verbatim', () => {
-    setStyleForTest({ mode: 'light', tokens: FLOOR_MAP });
+    setStyleForTest({ mode: 'light', accent: null, tokens: FLOOR_MAP });
     for (const name of ['color-brand-border-normal', 'color-surface-border', 'color-border-strong', 'color-focus', 'color-chart-3']) {
       expect(contrast(inline(T(name)), '#ffffff'), name).to.be.at.least(3);
       expect(inline(T(name)), name).to.match(/^rgb\(/);
@@ -1444,7 +1461,7 @@ describe('theme token maps', () => {
       [T('color-focus')]: 'light-dark(#eeeeee, #111111)',
       [T('color-chart-1')]: 'oklch(0.3 0.1 250)',
     };
-    setStyleForTest({ mode: 'light', tokens });
+    setStyleForTest({ mode: 'light', accent: null, tokens });
     for (const [name, value] of Object.entries(tokens)) expect(inline(name), name).to.equal(value);
   });
 
@@ -1503,7 +1520,7 @@ describe('theme token maps', () => {
         expect(inline(T('x'))).to.equal('1px');
         expect(legacyFixtureSnapshot().tokens).to.deep.equal({ [T('x')]: '1px' });
         setStyleForTest({ tokens: null });
-        expect(legacyFixtureSnapshot()).to.deep.equal({ mode: 'dark', accent: null, surface: null });
+        expect(legacyFixtureSnapshot()).to.deep.equal({ mode: 'dark', accent: 'emerald', surface: null });
         expect(Object.keys(details[details.length - 1]?.style ?? {})).to.not.include('overrides');
       } finally {
         window.removeEventListener('lr-style-change', onChange);
@@ -1593,7 +1610,7 @@ describe('theme token maps', () => {
     copy.setAttribute('style', document.documentElement.getAttribute('style') ?? '');
     const names = [...ownershipList(), ...ALL_RAMP_PROPERTIES, '--lr-theme-accent'];
     expect(ownershipList()).to.have.members([...Object.keys(tokens), ...BRAND_RAMP_PROPERTIES]);
-    for (const name of names) expect(copy.style.getPropertyValue(name), name).to.equal(inline(name));
+    for (const name of names) expect(copy.style.getPropertyValue(name), name).to.equal(document.documentElement.style.getPropertyValue(name));
   });
 
   it('fails an unbalanced accent, surface or accent branch closed', () => {
@@ -1691,7 +1708,7 @@ describe('theme token maps', () => {
       setStyleForTest({ tokens: null });
       expect(calls).to.deep.equal({ set: 0, remove: 5 });
       for (const name of [T('b'), T('color-text-normal'), T('font-family-body'), '--_lr-ll-color-text-normal', '--_lr-ld-color-text-normal']) {
-        expect(rootStyle.getPropertyValue(name), name).to.equal('');
+        expect(appliedThemeValue(name), name).to.equal('');
       }
     } finally {
       observer.disconnect();

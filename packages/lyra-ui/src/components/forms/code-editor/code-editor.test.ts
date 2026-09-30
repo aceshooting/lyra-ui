@@ -379,10 +379,10 @@ two"
   const el = wrapper.querySelector('lr-code-editor') as LyraCodeEditor;
   const second =
     el.shadowRoot!.querySelectorAll<HTMLElement>('.gutter-line')[1]!;
-  expect(getComputedStyle(second).insetBlockStart).to.equal('32px');
+  expect(getComputedStyle(second).insetBlockStart).to.equal('28px');
 
   el.style.setProperty('--lr-code-editor-line-height', '3');
-  expect(getComputedStyle(second).insetBlockStart).to.equal('48px');
+  expect(getComputedStyle(second).insetBlockStart).to.equal('42px');
 });
 
 // Regression test for a confirmed crash: `tabSize` fed `' '.repeat(Math.max(1, this.tabSize))`
@@ -1702,10 +1702,9 @@ describe('lr-code-editor size', () => {
     );
     const m = getComputedStyle(textareaOf(mEl));
     const xs = getComputedStyle(textareaOf(xsEl));
-    // Today's exact rendering at the untouched default tier -- 0.5rem padding, 1rem font-size --
-    // must survive the addition of the `size` property unchanged.
+    // The untouched medium tier uses the shared padding and 0.875rem font size.
     expect(m.paddingTop).to.equal('8px');
-    expect(m.fontSize).to.equal('16px');
+    expect(m.fontSize).to.equal('14px');
     expect(parseFloat(xs.paddingTop)).to.be.below(parseFloat(m.paddingTop));
     expect(parseFloat(xs.fontSize)).to.be.below(parseFloat(m.fontSize));
   });
