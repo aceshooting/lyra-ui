@@ -154,7 +154,7 @@ assert.ok(
   'design-tokens.css must repeat theme.css\'s layer order statement exactly',
 );
 assert.ok(
-  bySuffix('/src/styles/tokens-root.css').includes('--lr-color-border-subtle: var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, var(--lr-color-border)));'),
+  bySuffix('/src/styles/tokens-root.css').includes('--lr-color-border-subtle: var(--_lr-dark-on,var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, color-mix(in srgb, #e5e5e5 var(--_lr-subtle-mix,100%), var(--lr-color-border)))))var(--_lr-light-on,var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, color-mix(in srgb, rgb(255 255 255 / 0.1) var(--_lr-subtle-mix,100%), var(--lr-color-border)))));'),
   'the decorative border tier is published at document scope, still derived from --lr-color-border',
 );
 

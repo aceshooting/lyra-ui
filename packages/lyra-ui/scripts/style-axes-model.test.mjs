@@ -3,9 +3,32 @@ import { readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { readStyleModel, renderRuntimeLook, renderTheme, concreteThemeCss, referenceSurfaces, renderAccents, contrastSurfaces, validateLook, renderGlass, defaultStyleInputs, replaceStyleFallbacks, renderNativeChrome } from './style-axes-model.mjs';
+import { readStyleModel, renderRuntimeLook, renderLook, renderDensity, renderTheme, concreteThemeCss, referenceSurfaces, renderAccents, contrastSurfaces, validateLook, renderGlass, defaultStyleInputs, replaceStyleFallbacks, renderNativeChrome } from './style-axes-model.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
+
+test('aggregate theme declares layer order once while standalone assets retain their preludes', () => {
+  const model = readStyleModel(packageDir);
+  const glass = JSON.parse(readFileSync(new URL('../tokens/surfaces/glass.json', import.meta.url), 'utf8'));
+  const density = JSON.parse(readFileSync(new URL('../tokens/density.json', import.meta.url), 'utf8'));
+  const order = '@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;';
+  const suborder = '@layer lr-theme-preset.look, lr-theme-preset.density, lr-theme-preset.surface, lr-theme-preset.accent, lr-theme-preset.mode;';
+  const standalone = [
+    ...model.looks.map(look => renderLook(model, look)),
+    renderAccents(model, { emerald: '#34d399' }),
+    renderGlass(glass),
+    renderDensity(density),
+  ];
+  for (const css of standalone) {
+    assert.ok(css.startsWith(`${order}\n${suborder}\n`), 'standalone asset establishes its layer order before rules');
+    assert.equal(css.split(order).length - 1, 1, 'standalone top-level prelude occurs once');
+    assert.equal(css.split(suborder).length - 1, 1, 'standalone sublayer prelude occurs once');
+  }
+  const aggregate = renderTheme(model);
+  assert.equal(aggregate.split(order).length - 1, 1, 'aggregate top-level prelude occurs once');
+  assert.equal(aggregate.split(suborder).length - 1, 1, 'aggregate sublayer prelude occurs once');
+  assert.ok(aggregate.indexOf(order) < aggregate.indexOf('@layer lr-theme {'), 'aggregate prelude precedes the first rule block');
+});
 
 test('concrete theme extraction retains both generated mode slots and shared inputs', () => {
   const model = readStyleModel(packageDir);

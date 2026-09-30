@@ -3,6 +3,12 @@ import { join } from 'node:path';
 import { isLyraThemeTokenName, unsafeValueReason } from './theme-token-grammar.mjs';
 
 const LAYERS = '@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;\n@layer lr-theme-preset.look, lr-theme-preset.density, lr-theme-preset.surface, lr-theme-preset.accent, lr-theme-preset.mode;\n';
+// Standalone styles establish the order; aggregate composition retains its own prelude.
+function layerBody(css) {
+  if (!css.startsWith(LAYERS)) throw new Error('Missing generated layer prelude');
+  return css.slice(LAYERS.length);
+}
+
 export const STYLE_VERSION = '1';
 const short = name => name.slice('--lr-theme-'.length);
 const slot = (name, mode, kind = 'l') => `--_lr-${kind}${mode === 'light' ? 'l' : 'd'}-${short(name)}`;
@@ -256,15 +262,15 @@ export function renderTheme(model) {
   css += rule(".lr-light, [data-lr-theme='light']", modeRule(false));
   css += rule(".lr-dark, [data-lr-theme='dark']", modeRule(true));
   css += '}\n';
-  css += renderLook(model, defaultLook);
-  css += renderLook(model, { id: 'lyra', tokens: {} });
+  css += layerBody(renderLook(model, defaultLook));
+  css += layerBody(renderLook(model, { id: 'lyra', tokens: {} }));
   const gemstoneFill = readFileSync(join(model.packageDir, 'src/theme/gemstones-data.ts'), 'utf8').match(new RegExp(`${model.defaults.accent}: \\{ key: '[^']+', fill: '([^']+)'`))?.[1];
   const defaultAccentCss = renderAccents(model, { [model.defaults.accent]: gemstoneFill });
   const defaultAccent = [...defaultAccentCss.matchAll(/(--[_a-z0-9-]+): ([^;]+);/g)].map(match => [match[1], match[2]]);
   css += '@layer lr-theme {\n' + rule(':root:not([data-lr-accent])', defaultAccent) + '}\n';
-  css += defaultAccentCss;
+  css += layerBody(defaultAccentCss);
   const glass = JSON.parse(readFileSync(join(model.packageDir, 'tokens/surfaces/glass.json'), 'utf8'));
-  return css + renderGlass(glass, { defaults: true });
+  return css + layerBody(renderGlass(glass, { defaults: true }));
 }
 
 export function renderDensity(data) {

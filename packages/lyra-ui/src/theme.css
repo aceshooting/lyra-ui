@@ -952,8 +952,6 @@
     --_lr-light-on: initial;
   }
 }
-@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;
-@layer lr-theme-preset.look, lr-theme-preset.density, lr-theme-preset.surface, lr-theme-preset.accent, lr-theme-preset.mode;
 @layer lr-theme-preset.look {
   [data-lr-look='shadcn'] {
     --_lr-look-installed: shadcn-1;
@@ -1095,8 +1093,6 @@
     --_lr-ld-color-chart-diverging-3: #7dd3fc;
   }
 }
-@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;
-@layer lr-theme-preset.look, lr-theme-preset.density, lr-theme-preset.surface, lr-theme-preset.accent, lr-theme-preset.mode;
 @layer lr-theme-preset.look {
   [data-lr-look='lyra'] {
     --_lr-look-installed: lyra-1;
@@ -1128,8 +1124,6 @@
     --_lr-ad-color-focus: rgb(52 211 153);
   }
 }
-@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;
-@layer lr-theme-preset.look, lr-theme-preset.density, lr-theme-preset.surface, lr-theme-preset.accent, lr-theme-preset.mode;
 @layer lr-theme-preset.accent {
   [data-lr-accent='emerald'] {
     --_lr-accent-installed: emerald-1;
@@ -1156,8 +1150,6 @@
     --_lr-ad-color-focus: rgb(52 211 153);
   }
 }
-@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;
-@layer lr-theme-preset.look, lr-theme-preset.density, lr-theme-preset.surface, lr-theme-preset.accent, lr-theme-preset.mode;
 @layer lr-theme-preset.surface {
   :root {
     --lr-theme-surface-opacity: 0.7;
