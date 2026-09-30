@@ -695,6 +695,10 @@ export const styles = css`
 
   ${glassSurface('.maplibregl-ctrl-group, .maplibregl-ctrl-scale, .maplibregl-ctrl-attrib', css`var(--lr-color-surface)`)}
   ${glassScrollLayerStyles}
+  [part='legend'] > .glass-scroll-layer {
+    /* The zero-size anchor must not add a flex gap before the visible legend content. */
+    margin-block-end: calc(-1 * var(--lr-space-xs));
+  }
   ${glassSurface('[part="legend"]', css`var(--lr-color-surface)`, css`var(--lr-color-surface)`, true)}
 
   @media (forced-colors: active) {

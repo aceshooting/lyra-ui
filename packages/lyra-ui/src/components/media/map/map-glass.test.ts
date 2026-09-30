@@ -79,6 +79,25 @@ describe('map floating chrome material', () => {
     });
   }
 
+  it('keeps legend content geometry unchanged when its decorative layer is inserted', async () => {
+    const { host, legend } = await chromeFixture();
+    const layer = legend.querySelector<HTMLElement>(':scope > .glass-scroll-layer')!;
+    const list = legend.querySelector<HTMLElement>('.legend-list')!;
+    const geometry = () => ({
+      height: legend.getBoundingClientRect().height,
+      contentTop: list.getBoundingClientRect().top,
+      contentHeight: list.getBoundingClientRect().height,
+    });
+    for (const treatment of ['solid', 'glass']) {
+      host.setAttribute('data-lr-surface', treatment);
+      const next = layer.nextSibling;
+      layer.remove();
+      const before = geometry();
+      legend.insertBefore(layer, next);
+      expect(geometry()).to.deep.equal(before);
+    }
+  });
+
   it('keeps the legend material stationary through scrolling, resizing and reconnecting in both directions', async () => {
     const { host, legend } = await chromeFixture();
     legend.style.maxBlockSize = '80px';
