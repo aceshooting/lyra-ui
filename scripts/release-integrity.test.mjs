@@ -476,7 +476,18 @@ function exerciseRealPnpmLifecycle(selectedNode) {
       env: process.env,
     });
     assert.equal(pnpmResolution.status, 0, pnpmResolution.stderr);
-    const selectedPnpm = pnpmResolution.stdout.trim();
+    const pnpmLauncher = pnpmResolution.stdout.trim();
+    assert.ok(path.isAbsolute(pnpmLauncher), 'real pnpm fixture requires one absolute launcher');
+    // A global pnpm launcher can dispatch to the repository's pinned version.
+    // Resolve that effective executable before run_with_toolchain deliberately
+    // disables automatic package-manager switching for nested lifecycle calls.
+    const effectivePnpm = spawnSync(
+      pnpmLauncher,
+      ['exec', selectedNode, '-p', 'process.env.npm_execpath'],
+      { cwd: repoRoot, encoding: 'utf8', env: process.env },
+    );
+    assert.equal(effectivePnpm.status, 0, effectivePnpm.stderr);
+    const selectedPnpm = effectivePnpm.stdout.trim();
     assert.ok(path.isAbsolute(selectedPnpm), 'real pnpm fixture requires one absolute executable');
     const packageManager = JSON.parse(readFileSync(path.join(repoRoot, 'package.json'), 'utf8')).packageManager;
 
@@ -540,7 +551,10 @@ function exerciseRealPnpmLifecycle(selectedNode) {
       execPath: selectedRuntime,
       selectedPathFirst: true,
     });
-    assert.ok(result.stdout.split('\n').includes(packageManager.replace(/^pnpm@/u, '')));
+    assert.ok(
+      result.stdout.split('\n').includes(packageManager.replace(/^pnpm@/u, '')),
+      `nested pnpm must report ${packageManager}:\n${result.stdout}${result.stderr}`,
+    );
     assert.deepEqual(
       readdirSync(transactionTemp).filter((entry) => entry.startsWith('lyra-ci-selected-node.')),
       [],
