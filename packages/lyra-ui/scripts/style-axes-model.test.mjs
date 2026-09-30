@@ -195,6 +195,29 @@ test('theme alone contains only the built-in profile and explicit Lyra restorati
   for (const look of ['material', 'data', 'terminal', 'high-contrast']) assert.equal(css.includes(`[data-lr-look='${look}']`), false);
 });
 
+test('startup look projects a delta over one canonical scope base without changing cascade priority', () => {
+  const model = readStyleModel(packageDir);
+  const css = renderTheme(model);
+  const base = css.match(/:root, \[data-lr-look\] \{([^}]+)\}/)?.[1];
+  assert.ok(base);
+  assert.match(base, /--_lr-ld-color-surface-default: #1a1a1a;/);
+  assert.equal(css.includes('  [data-lr-look] {'), false, 'an explicit look uses the shared canonical base once');
+  const defaults = css.match(/:root:where\(:not\(\[data-lr-look\]\)\) \{([^}]+)\}/)?.[1];
+  assert.ok(defaults);
+  assert.match(defaults, /--_lr-ld-color-surface-default: #0a0a0a;/);
+  assert.equal(defaults.includes('--lr-theme-line-height-normal:'), false, 'unchanged inputs inherit the shared base');
+  assert.ok(css.indexOf(':root:where(:not([data-lr-look]))') < css.indexOf('@layer lr-theme-preset.mode {'), 'startup overrides remain in the base theme layer');
+});
+
+test('concrete startup projection retains an explicit dark branch equal to the canonical light fallback', () => {
+  const model = readStyleModel(packageDir);
+  model.base['--lr-theme-color-text-quiet'] = { light: '#111111' };
+  model.looks.find(look => look.id === model.defaults.look).tokens['--lr-theme-color-text-quiet'] = { light: '#222222', dark: '#111111' };
+  const [light, dark] = concreteThemeCss(renderTheme(model)).split('  .lr-dark,');
+  assert.match(light, /--lr-theme-color-text-quiet: #222222;/);
+  assert.match(dark, /--lr-theme-color-text-quiet: #111111;/);
+});
+
 test('native chrome compiles the shared protected surface without unresolved template expressions', () => {
   const css = renderNativeChrome();
   assert.match(css, /:where\(\.lr-surface-chrome\)::before/);

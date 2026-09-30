@@ -1,5 +1,7 @@
 import { css } from 'lit';
-import { glassSurface, glassScrollLayerStyles, glassIndependentRootStyles } from '../../../internal/glass-surface.styles.js';
+import { glassSurface } from '../../../internal/glass-surface.styles.js';
+import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
+import { glassIndependentRootStyles } from '../../../internal/glass-independent-root.styles.js';
 import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
 
 export const styles = css`

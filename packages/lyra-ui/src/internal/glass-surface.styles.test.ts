@@ -3,7 +3,8 @@ import { css } from 'lit';
 import { LyraElement } from './lyra-element.js';
 import { tokens } from './tokens.styles.js';
 import { GlassScrollLayer } from './glass-scroll-layer.js';
-import { glassSurface, glassScrollLayerStyles } from './glass-surface.styles.js';
+import { glassSurface } from './glass-surface.styles.js';
+import { glassScrollLayerStyles } from './glass-scroll-layer.styles.js';
 
 class GlassScrollFixture extends LyraElement {
   constructor() { super(); new GlassScrollLayer(this, '.surface'); }

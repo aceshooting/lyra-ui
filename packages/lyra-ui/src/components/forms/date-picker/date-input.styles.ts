@@ -1,6 +1,8 @@
 import { css } from 'lit';
 import { overlaySurface, overlaySurfaceControlEdge } from '../../../internal/overlay-surface.styles.js';
-import { glassSurface, glassScrollLayerStyles, glassIndependentRootStyles } from '../../../internal/glass-surface.styles.js';
+import { glassSurface } from '../../../internal/glass-surface.styles.js';
+import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
+import { glassIndependentRootStyles } from '../../../internal/glass-independent-root.styles.js';
 import {
   formControlFocusHalo,
   formControlRequiredMarker,

@@ -64,6 +64,51 @@ afterEach(() => {
 });
 
 describe('independent style axes', () => {
+  it('theme.css alone restores canonical nested and explicit root looks from the startup profile', async () => {
+    const frame = await isolatedFrame();
+    try {
+      const document = frame.contentDocument!;
+      const root = document.documentElement;
+      const style = document.createElement('style');
+      style.textContent = await (await fetch(new URL('../theme.css', import.meta.url))).text();
+      document.head.append(style);
+      root.setAttribute('data-lr-mode', 'dark');
+      document.body.innerHTML = '<div id="inherited"></div><section data-lr-look="lyra"><div id="lyra"></div><div data-lr-look="shadcn" id="shadcn"></div></section>';
+      const read = (element: Element) => frame.contentWindow!.getComputedStyle(element).getPropertyValue('--lr-theme-color-surface-default').trim();
+      expect(read(root)).to.equal('#0a0a0a');
+      expect(read(document.getElementById('inherited')!)).to.equal('#0a0a0a');
+      expect(read(document.getElementById('lyra')!)).to.equal('#1a1a1a');
+      expect(read(document.getElementById('shadcn')!)).to.equal('#0a0a0a');
+      root.setAttribute('data-lr-look', 'lyra');
+      expect(read(root)).to.equal('#1a1a1a');
+      root.setAttribute('data-lr-look', 'shadcn');
+      expect(read(root)).to.equal('#0a0a0a');
+      root.removeAttribute('data-lr-look');
+      expect(read(root)).to.equal('#0a0a0a');
+    } finally { frame.remove(); }
+  });
+
+  it('keeps application lr-theme overrides above implicit root defaults', async () => {
+    const frame = await isolatedFrame();
+    try {
+      const document = frame.contentDocument!;
+      const theme = document.createElement('style');
+      theme.textContent = await (await fetch(new URL('../theme.css', import.meta.url))).text();
+      const author = document.createElement('style');
+      author.textContent = '@layer lr-theme { :root { --lr-theme-font-family-body: serif; --lr-theme-color-text-normal: rgb(10 20 30); } }';
+      document.head.append(theme, author);
+      const root = document.documentElement;
+      root.setAttribute('data-lr-mode', 'dark');
+      const read = (name: string) => frame.contentWindow!.getComputedStyle(root).getPropertyValue(name).trim();
+      expect(read('--lr-theme-font-family-body')).to.equal('serif');
+      expect(read('--lr-theme-color-text-normal')).to.equal('rgb(10 20 30)');
+      root.setAttribute('data-lr-look', 'shadcn');
+      expect(read('--lr-theme-font-family-body')).to.include('Geist');
+      root.removeAttribute('data-lr-look');
+      expect(read('--lr-theme-font-family-body')).to.equal('serif');
+    } finally { frame.remove(); }
+  });
+
   it('composes shadcn, glass, density and accent and resets only the requested field', () => {
     setLyraStyle({ look: 'shadcn', accent: 'sapphire', mode: 'dark' });
     setLyraStyle({ surface: 'glass', density: 'compact' });

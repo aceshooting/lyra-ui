@@ -47,7 +47,8 @@ import {
   resolveOverlayAnchor,
   type OverlayVirtualRect,
 } from './overlay-shared.js';
-import { styles, glassPopoverStyles } from './overlay.styles.js';
+import { styles } from './overlay.styles.js';
+import { glassPopoverStyles } from './popover-glass.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_menuLabel, LYRA_DEFAULT_popover } from '../../../internal/default-strings.generated.js';

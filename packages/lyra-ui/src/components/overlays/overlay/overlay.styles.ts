@@ -1,5 +1,4 @@
 import { css } from 'lit';
-import { glassSurface, glassScrollLayerStyles, glassIndependentRootStyles } from '../../../internal/glass-surface.styles.js';
 import {
   overlaySurface,
   overlaySurfaceFill,
@@ -89,17 +88,6 @@ export const styles = css`
        other two sit under the panel. */
     clip-path: polygon(100% 0, 100% 100%, 0 100%);
   }
-`;
-
-export const glassPopoverStyles = css`
-  ${glassIndependentRootStyles}
-  ${glassScrollLayerStyles}
-  ${glassSurface(
-  '[part~="popup"]',
-  css`var(--lr-overlay-surface, var(--_lr-overlay-surface, var(--lr-color-surface-container-high)))`,
-  undefined,
-  true,
-  )}
 `;
 
 export const tooltipStyles = css`

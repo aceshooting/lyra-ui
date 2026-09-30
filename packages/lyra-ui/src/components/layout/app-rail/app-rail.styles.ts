@@ -1,5 +1,6 @@
 import { css } from 'lit';
-import { glassSurface, glassScrollLayerStyles } from '../../../internal/glass-surface.styles.js';
+import { glassSurface } from '../../../internal/glass-surface.styles.js';
+import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
 
 export const styles = css`
   :host {
