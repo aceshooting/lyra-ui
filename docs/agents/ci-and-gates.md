@@ -173,11 +173,10 @@ the PR checks list tells you which of these to reproduce locally:
    move when the inventory changes. A stable `lint` aggregate runs with `always()` and fails unless
    the entire matrix concluded `success`.
 
-   The reference run's sequential `pnpm lint` step took 8m22s. Its three estimated lane weights are
-   170/170/170, bounded by the 163-unit component-inventory test, so a fourth worker would add setup
-   and concurrency pressure without shortening the critical path. Local `pnpm lint`, `scripts/ci.sh`,
-   and release generation remain complete and sequential; the shard entry is CI-only. No lint lane
-   needs Playwright or a build because every command is static analysis.
+   Hosted command costs are periodically remeasured for the weighted partition; the tests require
+   every current command to occur exactly once and keep estimated lane weights balanced. Local
+   `pnpm lint`, `scripts/ci.sh`, and release generation remain complete and sequential. The shard
+   entry is CI-only. No lint lane needs Playwright or a build because every command is static analysis.
 2. **`static-checks`** — everything needing neither a library build nor a docs build. Its inputs are
    already-committed files except for one read-only, content-addressed npm fetch. It validates
    workflow syntax and the generated release-qualification manifest; runs the release-integrity,
@@ -223,10 +222,9 @@ the PR checks list tells you which of these to reproduce locally:
    workers run concurrently. The prior coverage step took 14m05s in the reference run, while its
    four sequential browser shards took 2m52s, 3m56s, 3m22s, and 3m49s. Hosting those same shards
    independently moves the expected `build-and-coverage` critical path from about 17 minutes to
-   roughly 7–8 minutes after fixed checkout/install/artifact overhead, making the roughly
-   nine-minute lint job the likely long pole. Four is the useful split: finer shards would add
-   another full runner bootstrap per slice and compete with the workflow's other matrices for the
-   public-runner concurrency cap.
+   roughly 7–8 minutes after fixed checkout/install/artifact overhead. Four is the useful split:
+   finer shards would add another full runner bootstrap per slice and compete with the workflow's
+   other matrices for the public-runner concurrency cap.
 
    The ordinary local `pnpm --filter @aceshooting/lyra-ui test:coverage` remains complete and
    sequential: it runs all four shards, merges, enforces the same floors when followed by

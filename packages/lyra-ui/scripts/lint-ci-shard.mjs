@@ -20,11 +20,13 @@ const LINT_SUFFIX = [
 // material costs makes the schedule understandable while a unit-cost fallback ensures a new,
 // valid policy command is assigned rather than silently omitted.
 const COMMAND_WEIGHTS = new Map([
-  ['pnpm run test:component-inventory', 163],
-  ['pnpm run check:qualification', 68],
+  ['pnpm run test:tooling', 455],
+  ['pnpm run test:component-inventory', 265],
+  ['pnpm run test:registration-graph', 165],
+  ['pnpm run check:qualification', 120],
+  ['pnpm run test:published-compatibility', 115],
   ['pnpm run check:component-quality', 44],
   ['pnpm run check:test-assertions', 33],
-  ['pnpm run test:tooling', 24],
   ['pnpm run check:default-string-slices', 20],
   ['pnpm run manifest:check', 16],
   ['pnpm run test:component-metadata', 15],
