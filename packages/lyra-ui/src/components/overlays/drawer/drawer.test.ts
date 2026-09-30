@@ -584,7 +584,7 @@ function toComputedColor(rawTokenValue: string): string {
 it("paints its panel a surface distinct from the page surface in dark mode", async () => {
   await withThemeCss(async () => {
     const wrapper = (await fixture(
-      html`<div class="lr-dark">
+      html`<div class="lr-dark" data-lr-surface="solid">
         <lr-drawer heading="Filters" open><p>Body</p></lr-drawer>
       </div>`
     )) as HTMLElement;

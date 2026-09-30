@@ -760,7 +760,7 @@ function applyStoredThemeBeforePaint() {
         context.clearRect(0, 0, 1, 1);
         context.fillStyle = value;
         context.fillRect(0, 0, 1, 1);
-        const channelsData = [...context.getImageData(0, 0, 1, 1).data];
+        const channelsData = context.getImageData(0, 0, 1, 1).data;
         const alpha = (channelsData[3] ?? 0) / 255;
         return [0, 1, 2].map((index) =>
           Math.round((channelsData[index] ?? 0) * alpha + (background[index] ?? 0) * (1 - alpha)));
@@ -794,7 +794,7 @@ function applyStoredThemeBeforePaint() {
       const passes = (candidate: number[]) =>
         contrast(candidate, background) >= minimum && contrast(candidate, alsoAgainst) >= minimum && references.every(reference => contrast(candidate, reference) >= minimum);
       if (passes(value)) return value;
-      const target = contrast(background, black) >= contrast(background, white) ? black : white;
+      const target = on(background);
       for (let step = 1; step <= 10; step += 1) {
         const candidate = mix(value, target, step / 10);
         if (passes(candidate)) return candidate;
@@ -814,9 +814,8 @@ function applyStoredThemeBeforePaint() {
     const prefix = '--lr-theme-';
     const resolveToken = (value: string | undefined, over: number[] | null): number[] | null =>
       value !== undefined && over && normalizeColor(value) ? paintRgb(value, over) : null;
-    const reference = (name: string, fallback: number[]): number[] | null =>
-      entries.has(prefix + name) ? resolveToken(entries.get(prefix + name), background) : fallback;
-    const raised = reference('color-surface-raised', defaults.raised);
+    const raisedName = `${prefix}color-surface-raised`;
+    const raised = entries.has(raisedName) ? resolveToken(entries.get(raisedName), background) : defaults.raised;
     const floor = (
       name: string,
       over: number[] | null,
@@ -850,11 +849,10 @@ function applyStoredThemeBeforePaint() {
       }
     }
     const overlayName = `${prefix}color-overlay-strong`;
-    const overlay = entries.has(overlayName)
-      ? resolveToken(entries.get(overlayName), background)
-      : mix(background, black, defaults.overlayStrongAlpha);
     if (entries.has(overlayName) || entries.has(`${prefix}color-on-strong-overlay`)) {
-      pairForeground(`${prefix}color-on-strong-overlay`, overlay);
+      pairForeground(`${prefix}color-on-strong-overlay`, entries.has(overlayName)
+        ? resolveToken(entries.get(overlayName), background)
+        : mix(background, black, defaults.overlayStrongAlpha));
     }
     // Repair only supplied boundary tokens; absent tokens remain the stylesheet's responsibility.
     for (const name of entries.keys()) {
@@ -966,7 +964,9 @@ function applyStoredStyleBeforePaint(
     const resolved = mode === 'unset' ? null : mode === 'system' ? matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light' : mode;
     const desiredAttributes: Record<string, string> = {};
     const resolver = getComputedStyle(root).getPropertyValue('--_lr-style-resolver').trim() === '1';
-    const asMap = (value: unknown): Record<string, unknown> => value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+    // Saved backgrounds and token branches have already passed the shared startup normalizer.
+    const modeValue = (value: unknown, branch: 'light' | 'dark'): unknown =>
+      typeof value === 'string' ? value : (value as Record<string, unknown> | null | undefined)?.[branch];
     const lookTokens = record['tokens'] as LyraThemeTokens | undefined;
     const overrides = record['overrides'] as LyraThemeTokens | undefined;
     const tokens: LyraThemeTokens = { ...lookTokens, ...overrides };
@@ -986,8 +986,8 @@ function applyStoredStyleBeforePaint(
       if (typeof value === 'string') desired.set(name, value);
     }
     for (const branch of ['light', 'dark'] as const) {
-      const background = typeof record['surface'] === 'string' ? record['surface'] : asMap(record['surface'])[branch];
-      const surfaceToken = typeof tokens['--lr-theme-color-surface-default'] === 'string' ? tokens['--lr-theme-color-surface-default'] : asMap(tokens['--lr-theme-color-surface-default'])[branch];
+      const background = modeValue(record['surface'], branch);
+      const surfaceToken = modeValue(tokens['--lr-theme-color-surface-default'], branch);
       const surface = background ?? surfaceToken ?? STYLE_REFERENCE_SURFACES[look]?.[branch];
       // Separate paints preserve accent precedence in nested mode islands without flattening it into the look.
       for (const accentPass of [false, true]) {
