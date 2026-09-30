@@ -1,6 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { css } from 'lit';
 import { LyraElement } from './lyra-element.js';
+import { tokens } from './tokens.styles.js';
 import { GlassScrollLayer } from './glass-scroll-layer.js';
 import { glassSurface, glassScrollLayerStyles } from './glass-surface.styles.js';
 
@@ -52,6 +53,7 @@ describe('glass surface composition', () => {
     const shadow = host.attachShadow({ mode: 'open' });
     const sheet = new CSSStyleSheet();
     sheet.replaceSync(css`
+      ${tokens}
       :host { display: block; margin-block-start: 80px; }
       .surface { position: relative; min-block-size: 100px; border-radius: 8px; }
       .fixed { position: fixed; top: 7px; left: 9px; }

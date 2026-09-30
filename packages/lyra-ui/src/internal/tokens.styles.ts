@@ -72,6 +72,8 @@ import { css } from 'lit';
 // all of them. A comment this long inside it pushed the button bundle over its gzip budget.
 const baseTokens = css`
   :host {
+    /* glass defaults: generated */
+    /* glass defaults: end */
     --lr-color-surface: var(--lr-theme-color-surface-default, #fff);
     --lr-color-surface-raised: var(--lr-theme-color-surface-raised, #f6f8fa);
     --lr-color-surface-container-lowest: var(--lr-theme-color-surface-container-lowest, var(--lr-color-surface));

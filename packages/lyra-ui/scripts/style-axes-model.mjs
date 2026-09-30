@@ -202,7 +202,7 @@ export function contrastSurfaces(model) {
 export function renderTheme(model) {
   const base = [];
   const defaultLook = model.looks.find(look => look.id === model.defaults.look);
-  const lookBase = { ...model.base, ...Object.fromEntries(Object.entries(defaultLook.tokens).map(([name, value]) => [name, typeof value === 'string' ? { light: value } : { ...model.base[name], ...value }])) };
+  const lookBase = { ...model.base, ...Object.fromEntries(Object.entries(defaultLook.tokens).map(([name, value]) => [name, typeof value === 'string' ? { light: value, ...(model.paired.includes(name) ? { dark: value } : {}) } : { ...model.base[name], ...value }])) };
   for (const name of model.names) {
     const value = lookBase[name];
     if (model.slotted.includes(name)) {
@@ -234,7 +234,7 @@ export function renderTheme(model) {
   css += renderLook(model, { id: 'lyra', tokens: {} });
   const gemstoneFill = readFileSync(join(model.packageDir, 'src/theme/gemstones-data.ts'), 'utf8').match(new RegExp(`${model.defaults.accent}: \\{ key: '[^']+', fill: '([^']+)'`))?.[1];
   const defaultAccentCss = renderAccents(model, { [model.defaults.accent]: gemstoneFill });
-  const defaultAccent = [...defaultAccentCss.matchAll(/(--[a-z0-9-]+): ([^;]+);/g)].map(match => [match[1], match[2]]);
+  const defaultAccent = [...defaultAccentCss.matchAll(/(--[_a-z0-9-]+): ([^;]+);/g)].map(match => [match[1], match[2]]);
   css += '@layer lr-theme {\n' + rule(':root:not([data-lr-accent])', defaultAccent) + '}\n';
   css += defaultAccentCss;
   const glass = JSON.parse(readFileSync(join(model.packageDir, 'tokens/surfaces/glass.json'), 'utf8'));
@@ -251,7 +251,7 @@ export function renderDensity(data) {
 }
 
 /** The native utility consumes the same protected material template as shadow chrome. */
-export function renderNativeChrome() {
+export function renderNativeChrome(data = JSON.parse(readFileSync(new URL('../tokens/surfaces/glass.json', import.meta.url), 'utf8'))) {
   const helper = readFileSync(new URL('../src/internal/glass-surface.styles.ts', import.meta.url), 'utf8');
   const template = helper.split('return css`')[1]?.split('\n  `;\n}')[0];
   if (!template) throw new Error('Shared glass template boundary changed');
@@ -271,6 +271,9 @@ export function renderNativeChrome() {
     .replaceAll('var(--lr-border-width-thin)', 'var(--lr-border-width-thin, 1px)');
   return `\n@layer lr-theme-preset.surface {\n${rule(selector, [
     ['position', 'relative'], ['color', 'var(--lr-color-text)'],
+    ['--_lr-surface-default-blur', data.blur],
+    ['--_lr-surface-default-maximum-blur', data.maximumBlur],
+    ['--_lr-surface-default-highlight', data.highlight],
     ['--lr-color-text', 'var(--lr-theme-color-text-normal, CanvasText)'],
     ['--_lr-glass-original-text-quiet', 'var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, CanvasText))'],
     ['--_lr-glass-original-border', 'var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, CanvasText))'],
@@ -292,7 +295,7 @@ export function renderGlass(data, { defaults = false } = {}) {
   const clear = data.clearMedia;
   if (!clear || !(clear.scrimStart >= 0.78 && clear.scrimStart <= 1) || !(clear.scrimEnd >= clear.scrimStart && clear.scrimEnd <= 1) || !(clear.fillOpacity >= 0 && clear.fillOpacity <= 0.08)) throw new Error('Invalid clear media bounds');
   const helper = readFileSync(new URL('../src/internal/glass-surface.styles.ts', import.meta.url), 'utf8');
-  for (const [name, value] of [['--_lr-surface-min-opacity', data.minimumOpacity], ['--lr-theme-surface-opacity', data.opacity], ['--lr-theme-surface-blur', data.blur], ['--_lr-surface-maximum-blur', data.maximumBlur], ['--_lr-surface-foreground-weight', `${data.foregroundWeight * 100}%`], ['--lr-theme-surface-saturation', data.saturation], ['--lr-theme-surface-highlight', data.highlight]]) {
+  for (const [name, value] of [['--_lr-surface-min-opacity', data.minimumOpacity], ['--lr-theme-surface-opacity', data.opacity], ['--_lr-surface-foreground-weight', `${data.foregroundWeight * 100}%`], ['--lr-theme-surface-saturation', data.saturation]]) {
     if (!helper.includes(`var(${name}, ${value})`)) throw new Error(`Intrinsic glass fallback differs from canonical ${name}`);
   }
 
@@ -300,7 +303,7 @@ export function renderGlass(data, { defaults = false } = {}) {
   css += rule(':root, :host', [['--_lr-media-clear-scrim-start', clear.scrimStart], ['--_lr-media-clear-scrim-end', clear.scrimEnd], ['--_lr-media-clear-fill', `rgb(255 255 255 / ${clear.fillOpacity})`], ['--_lr-media-clear-text', '#ffffff']]);
   css += rule(defaults ? ":root:not([data-lr-surface]), [data-lr-surface='glass']" : "[data-lr-surface='glass']", [['--_lr-surface-installed', STYLE_VERSION], ['--_lr-surface-enabled', '1'], ['--_lr-glass-blocker', 'initial'], ['--_lr-surface-content', "''"], ['--_lr-surface-isolation', 'isolate'], ['--_lr-surface-min-opacity', data.minimumOpacity], ['--_lr-surface-maximum-blur', data.maximumBlur], ['--_lr-surface-foreground-weight', `${data.foregroundWeight * 100}%`], ['--_lr-surface-child-filter', 'none'], ['--_lr-surface-child-opacity', '1'], ['--lr-theme-surface-opacity', data.opacity], ['--lr-theme-surface-blur', data.blur], ['--lr-theme-surface-saturation', data.saturation], ['--lr-theme-surface-highlight', data.highlight]]);
   css += rule("[data-lr-surface='solid']", [['--_lr-surface-installed', STYLE_VERSION], ['--_lr-surface-enabled', '0'], ['--_lr-glass-blocker', 'none'], ['--_lr-surface-maximum-blur', 'initial'], ['--_lr-surface-content', 'none'], ['--_lr-surface-isolation', 'auto'], ['--_lr-surface-child-filter', 'initial'], ['--_lr-surface-child-opacity', '0'], ['--_lr-glass-parent-opacity', '0']]);
-  return css + '}\n' + renderNativeChrome();
+  return css + '}\n' + renderNativeChrome(data);
 }
 
 /** Read concrete base values from the generated asset so static color gates measure shipped data. */

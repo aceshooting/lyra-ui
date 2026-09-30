@@ -20,6 +20,17 @@ class LazyGlassFixture extends LyraElement {
 customElements.define('test-lazy-glass-layer', LazyGlassFixture);
 
 describe('lazy glass scroll measurements', () => {
+  it('does not round a fractional viewport up for the decorative layer', async () => {
+    const host = await fixture<LazyGlassFixture>(html`<test-lazy-glass-layer visible></test-lazy-glass-layer>`);
+    const surface = host.shadowRoot!.querySelector<HTMLElement>('.surface')!;
+    const layer = surface.querySelector<HTMLElement>('.glass-scroll-layer')!;
+    surface.style.width = '160.75px';
+    surface.style.height = '100.75px';
+    host.material.hostUpdated();
+    await waitUntil(() => layer.style.getPropertyValue('--_lr-glass-viewport-height') === '100.75px');
+    expect(layer.style.getPropertyValue('--_lr-glass-viewport-width')).to.equal('160.75px');
+  });
+
   it('does not allocate observers while closed and releases observation on hide', async () => {
     const original = window.ResizeObserver;
     let created = 0;

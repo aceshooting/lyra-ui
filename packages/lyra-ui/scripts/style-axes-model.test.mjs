@@ -199,6 +199,9 @@ test('native chrome compiles the shared protected surface without unresolved tem
   const css = renderNativeChrome();
   assert.match(css, /:where\(\.lr-surface-chrome\)::before/);
   assert.match(css, /--lr-surface-background/);
+  assert.match(css, /--_lr-surface-default-blur: 12px;/);
+  assert.match(css, /--_lr-surface-default-maximum-blur: 16px;/);
+  assert.match(css, /--_lr-surface-default-highlight: rgb\(255 255 255 \/ 0\.12\);/);
   assert.match(css, /prefers-reduced-transparency/);
   assert.match(css, /forced-colors/);
   assert.equal(css.includes('$' + '{'), false);

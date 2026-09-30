@@ -83,9 +83,17 @@ export class GlassScrollLayer implements ReactiveController {
     this.layer = layer;
     this.handleScroll();
     const styles = view.getComputedStyle(surface);
+    // client dimensions round fractional CSS pixels up in some layouts. A decorative layer
+    // must not extend past the actual viewport and turn a short surface into a scroll region.
+    const viewportSize = (used: string, client: number, offset: number): number => {
+      const length = parseFloat(used);
+      return styles.boxSizing === 'border-box' && Number.isFinite(length)
+        ? Math.max(0, Math.min(client, length - (offset - client)))
+        : client;
+    };
     const values = {
-      '--_lr-glass-viewport-width': `${surface.clientWidth}px`,
-      '--_lr-glass-viewport-height': `${surface.clientHeight}px`,
+      '--_lr-glass-viewport-width': `${viewportSize(styles.width, surface.clientWidth, surface.offsetWidth)}px`,
+      '--_lr-glass-viewport-height': `${viewportSize(styles.height, surface.clientHeight, surface.offsetHeight)}px`,
       '--_lr-glass-padding-inline-start': styles.paddingInlineStart,
       '--_lr-glass-padding-top': styles.paddingTop,
     };

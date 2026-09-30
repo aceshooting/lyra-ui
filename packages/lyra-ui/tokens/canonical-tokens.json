@@ -5674,6 +5674,16 @@
         "dark": "#787881"
       }
     },
+    "--lr-theme-color-surface-border-subtle": {
+      "type": "color",
+      "group": "color",
+      "scope": "theme-input",
+      "description": "Optional application theme input for subtle surface borders.",
+      "values": {
+        "light": "initial",
+        "dark": "initial"
+      }
+    },
     "--lr-theme-color-surface-default": {
       "type": "color",
       "group": "color",
@@ -6171,6 +6181,15 @@
       "values": {
         "light": "#c9d1d9",
         "dark": "#e4e7eb"
+      }
+    },
+    "--lr-theme-heading-letter-spacing": {
+      "type": "dimension",
+      "group": "typography",
+      "scope": "theme-input",
+      "description": "Optional application theme input for heading letter spacing.",
+      "values": {
+        "light": "initial"
       }
     },
     "--lr-theme-hover-brightness": {

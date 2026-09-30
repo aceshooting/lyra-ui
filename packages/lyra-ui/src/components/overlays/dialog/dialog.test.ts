@@ -397,6 +397,11 @@ it('traps Tab focus inside the panel, wrapping last->first and first->last', asy
   const first = el.querySelector('button') as HTMLButtonElement;
   const last = el.querySelector('[slot="footer"] button') as HTMLButtonElement;
 
+  const panel = el.shadowRoot!.querySelector<HTMLElement>('[part~="panel"]')!;
+  await nextFrame();
+  expect(panel.scrollWidth, 'decorative glass must not add horizontal scrolling').to.equal(panel.clientWidth);
+  expect(panel.scrollHeight, 'decorative glass must not add vertical scrolling').to.equal(panel.clientHeight);
+
   last.focus();
   const tabForward = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
   document.dispatchEvent(tabForward);
@@ -1930,7 +1935,7 @@ function toComputedColor(rawTokenValue: string): string {
 it('paints its panel a surface distinct from the page surface in dark mode', async () => {
   await withThemeCss(async () => {
     const wrapper = (await fixture(
-      html`<div class="lr-dark"><lr-dialog label="Untitled" open>body</lr-dialog></div>`,
+      html`<div class="lr-dark" data-lr-surface="solid"><lr-dialog label="Untitled" open>body</lr-dialog></div>`,
     )) as HTMLElement;
     const el = wrapper.querySelector('lr-dialog') as LyraDialog;
     await el.updateComplete;

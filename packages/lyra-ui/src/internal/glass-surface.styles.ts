@@ -25,7 +25,7 @@ export function glassSurface(selector: string, fill: CSSResult, restingFill: CSS
     }
     ${surface} {
       background: ${restingFill};
-      --_lr-glass-filter-value: blur(calc(clamp(0px, var(--lr-theme-surface-blur, 12px), var(--_lr-surface-maximum-blur, 16px)) * (1 - var(--_lr-glass-parent-opacity, 0)))) saturate(calc(1 + (clamp(0, var(--lr-theme-surface-saturation, 1.1), 2) - 1) * (1 - var(--_lr-glass-parent-opacity, 0))));
+      --_lr-glass-filter-value: blur(calc(clamp(0px, var(--lr-theme-surface-blur, var(--_lr-surface-default-blur)), var(--_lr-surface-maximum-blur, var(--_lr-surface-default-maximum-blur))) * (1 - var(--_lr-glass-parent-opacity, 0)))) saturate(calc(1 + (clamp(0, var(--lr-theme-surface-saturation, 1.1), 2) - 1) * (1 - var(--_lr-glass-parent-opacity, 0))));
       --_lr-glass-current-filter: var(--_lr-preference-glass-filter, var(--_lr-glass-blocker, var(--_lr-glass-filter-value, none)));
       --_lr-glass-foreground-weight: initial;
       --_lr-next-glass-blocker: var(--_lr-surface-child-filter, none);
@@ -77,7 +77,7 @@ export function glassSurface(selector: string, fill: CSSResult, restingFill: CSS
         border-radius: inherit;
         -webkit-backdrop-filter: var(--_lr-glass-current-filter);
         backdrop-filter: var(--_lr-glass-current-filter);
-        box-shadow: inset 0 var(--lr-border-width-thin) 0 var(--lr-theme-surface-highlight, rgb(255 255 255 / 0.12));
+        box-shadow: inset 0 var(--lr-border-width-thin) 0 var(--lr-theme-surface-highlight, var(--_lr-surface-default-highlight));
       }
     }
     @media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) {
