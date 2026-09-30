@@ -199,7 +199,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-number-input"></a>`lr-number-input` | forms | `import '@aceshooting/lyra-ui/components/lr-number-input.js';` | none | none | none | 37.5 KiB |
 | <a id="lr-option"></a>`lr-option` | forms | `import '@aceshooting/lyra-ui/components/lr-option.js';` | none | none | none | 29.4 KiB |
 | <a id="lr-otp-input"></a>`lr-otp-input` | forms | `import '@aceshooting/lyra-ui/components/lr-otp-input.js';` | none | none | none | 36.4 KiB |
-| <a id="lr-page"></a>`lr-page` | layout | `import '@aceshooting/lyra-ui/components/lr-page.js';` | none | none | none | 39.2 KiB |
+| <a id="lr-page"></a>`lr-page` | layout | `import '@aceshooting/lyra-ui/components/lr-page.js';` | none | none | none | 39.3 KiB |
 | <a id="lr-page-rail"></a>`lr-page-rail` | viewers | `import '@aceshooting/lyra-ui/components/lr-page-rail.js';` | none | `lr-file-icon`, `lr-skeleton`, `lr-virtual-list` | none | 42.9 KiB |
 | <a id="lr-pagination"></a>`lr-pagination` | data | `import '@aceshooting/lyra-ui/components/lr-pagination.js';` | none | none | none | 32.6 KiB |
 | <a id="lr-pan-zoom"></a>`lr-pan-zoom` | media | `import '@aceshooting/lyra-ui/components/lr-pan-zoom.js';` | none | none | none | 21.9 KiB |

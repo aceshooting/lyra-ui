@@ -1,48 +1,35 @@
 # Changelog
 
-## 24.2.0
-
-### Minor Changes
-
-- 78b333b: Add controlled `loadingMore` and optional `loadingMoreLabel` to tables. Incremental loading keeps existing rows and the focused Load more button in place, communicates localized progress, and suppresses duplicate requests while pending. Initial full-table loading remains separate.
-- 78b333b: Add an optional `interactionBoundary` to `lr-popover.showAt()` so caller-owned virtual targets can toggle a popover without outside-pointer dismissal racing their click handler. The boundary affects only light dismissal and preserves caller-owned positioning, ARIA, and focus return.
-
-### Patch Changes
-
-- 548e61d: Preserve click pinning when popover or dropdown trigger lists combine click with hover or focus. Clicking an already revealed surface keeps it open without moving focus, while a second click dismisses it. Disabled or vetoed click openings no longer leave a stale pin behind.
-- 78b333b: Coalesce element resize positioning updates into the next animation frame to prevent resize-delivery errors when an open anchored surface changes size. Initial placement, scrolling and layout shifts remain immediate; queued resize updates are canceled when placement is disposed.
-
-  Reduce temporary placement allocations while preserving rollback and consumer-owned styles.
-
-## 24.1.0
-
-### Minor Changes
-
-- c3ed27e: Expose approval finalization and retry methods on `lr-agent-workspace` for its built-in tool timeline.
-
-### Patch Changes
-
-- c3ed27e: Correct the table sort listener example and v24 event detail and global event type guidance.
-- c3ed27e: Keep swatch radios and keyboard focus stable when applications assign equivalent fresh palette items, while preserving distinct duplicate occurrences and original item identities during reordering.
-
-## 24.0.0
+## 25.0.0
 
 ### Major Changes
 
-- aa25ee4: Remove the eligible v22 compatibility APIs after their supported v23 transition period. Use granular component registration and class imports, the independent style APIs, and the `lyra-v21` and `lyra-v22` migration profiles when upgrading. Upstream-mirrored aliases and saved style-preference readers remain supported.
+- ad64381: Use Shadcn, Glass, Emerald and System mode as the built-in appearance defaults. First paint, runtime restoration and resets share the same profile while preserving independently saved choices, including explicit Solid surfaces, the Lyra look and cleared accents. `accent: null` remains an explicit clear; `resetLyraStyle()` restores the Emerald default.
 
-  Consolidate component implementations and behavioral tests, refresh library documentation, and qualify styling, localization, package costs and representative compositions for the new release.
+  Use a 70% opaque Glass fill across navigation, menus, listboxes, dialogs and drawers, with foreground contrast protection. Native application chrome can use `.lr-surface-chrome` from `theme.css`. Scrolling surfaces keep their material stationary, nested surfaces avoid repeated blur, and accessibility preferences retain opaque fills.
 
-  Data grids resolve themed row heights once per measurement pass, reducing repeated layout work for large and expanded tree views while preserving live theme changes.
+  Allow `--lr-theme-surface-opacity` to span 0–1 for user-controlled Glass opacity. The default remains 70%; Solid surfaces and increased-contrast or reduced-transparency preferences remain opaque. The design-panel recipe uses the existing slider, the public CSS input and an application preference to save and reset opacity.
 
-  Clearing a component's locale override now observes the inherited locale even when the public locale resolver was called before its next render. Time inputs reuse the active locale's native-digit map across keystrokes while continuing to accept ASCII digits. Media controls share locale-aware time formatting, and animation timing uses a shared CSS time parser; the AV player retains its whole-second rounding behavior.
+  Preserve explicit Solid and Glass scopes across nested and promoted surfaces, and keep plain rail and menubar frames transparent. Align form controls across size tiers while preserving custom sizing and wrapping. Keep keyboard focus visible inside clipped panels and image viewports, and restore visible hover feedback in document comparison panes.
 
-  Map data layers skip unused fallback color resolution when explicit colors are valid. Command palettes project visible result rows plus the active row without filtering every group, and Lite Chart reuses the category-label width it already measured for automatic axis selection. These changes preserve the existing rendered and interaction contracts; no latency claim is implied.
+  Resolve contrast corrections against the selected or inherited look during startup and runtime updates. Preserve the Lyra look's local decorative-border fallback while retaining Shadcn defaults without a theme stylesheet.
 
-  Lite Chart no longer reads the retired `accessibleLabel` property as a fallback. Streaming text documents and types its existing internal-link event, while RAG answers contain their owned markdown child's link events. Buttons share identical slot and focus handlers, and locale resolution shares one cache record per component.
+### Minor Changes
 
-  The package README, migration guides and agent skill now route to focused v24 import, styling, SSR and event-detail guidance. Historical roadmap scope remains available through stable anchors and focused pages.
+- d839991: Add `--lr-gemstone-selected-animation` to disable the selected gemstone shine independently while preserving its static halo. The inherited hook works in gemstone swatch pickers and external glyphs, preserves the default loop when unset, and respects application and OS reduced motion.
 
-  Event-detail migration diagnostics distinguish payload fields from component properties, avoiding conflicting advice for `lr-app-rail-group` listeners. The retained migration profiles continue to report manual changes for consumers upgrading across multiple major versions.
+### Patch Changes
+
+- 29ef483: Keep locale-picker language menus within the viewport when text is enlarged by capping their minimum width by the existing viewport limit.
+- 57d8360: Declare cascade layer order in the signature starter so bundled styles preserve the selected look and accent, and include the supported refresh glyph in the icon reference.
+- ad64381: Apply the shared Glass treatment to map navigation, scale, attribution and legends. Solid and
+  accessibility preferences retain opaque surfaces, and scrolling legends keep their material
+  stationary without changing native peer controls or map data colors.
+
+  Defer resize-observer control measurements to the next animation frame so adjusting a legend's
+  available space cannot interrupt the same resize notification cycle. Cancel pending measurements
+  when the map disconnects or changes containers.
+- 3023260: Keep locale loading Retry reachable beside an open locale picker popup, including top-layer popups. The popup places outside failure guidance while preserving the previous selection until loading succeeds.
+- 6825826: Reveal the complete keyboard-focused swatch in scrolling single-row palettes, including after item updates.
 
 Older major versions: [release history archive](https://github.com/aceshooting/lyra-ui/tree/main/docs/changelog).
