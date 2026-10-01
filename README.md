@@ -297,8 +297,8 @@ for the renderer setup, machine-readable matrix, diagnostics, and capability lim
 
 ### Verified release snapshot
 
-The checks below qualified `@aceshooting/lyra-ui@25.0.0` on
-[`33cff6d`](https://github.com/aceshooting/lyra-ui/commit/33cff6d4baa1efd61766ea888defad31fc69ef73).
+The checks below qualified
+[`@aceshooting/lyra-ui@25.0.0`](https://github.com/aceshooting/lyra-ui/commit/33cff6d4baa1efd61766ea888defad31fc69ef73).
 The workflow badges above report newer commits.
 
 | Scope | Result |

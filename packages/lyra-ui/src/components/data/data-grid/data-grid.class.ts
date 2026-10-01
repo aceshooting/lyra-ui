@@ -1277,6 +1277,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   private rowMeasurementObserverOwner?: Window;
   private rowMeasurementObserverBody?: HTMLElement;
   private readonly observedMeasurementElements = new Map<HTMLElement, string>();
+  private readonly observedMeasurementBlockSizes = new Map<HTMLElement, number>();
   private measurementUpdateQueued = false;
   private measurementScrollSyncQueued = false;
   private bodyScrollStateSyncQueued = false;
@@ -2236,11 +2237,21 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       this.displayItemOffset(items.length, items) - viewportHeight
     );
     top = finiteRange(top, 0, 0, maximumTop);
-    this.lastMeasurementAnchor = this.measurementAnchorAtOffset(top, items);
     if (rendered) {
-      rendered.scrollIntoView({ block: options.align ?? 'nearest' });
+      const delta = this.renderedRowAlignmentDelta(rendered, body, alignment);
+      top = finiteRange(
+        currentTop + delta,
+        currentTop,
+        0,
+        Math.max(0, body.scrollHeight - body.clientHeight)
+      );
+      this.lastMeasurementAnchor = this.measurementAnchorAtOffset(top, items);
+      this.expectedBodyScroll = Object.freeze({ body, top });
+      this.bodyScrollTop = top;
+      body.scrollTo({ top });
       return;
     }
+    this.lastMeasurementAnchor = this.measurementAnchorAtOffset(top, items);
     const targetItem = items[target];
     if (targetItem)
       this.pendingVirtualScroll = Object.freeze({
@@ -3104,6 +3115,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     this.rowMeasurementObserverOwner = undefined;
     this.rowMeasurementObserverBody = undefined;
     this.observedMeasurementElements.clear();
+    this.observedMeasurementBlockSizes.clear();
     this.cancelMeasurementFrame();
     // A realm/container reset can change wrapping even when the body has the same CSS pixel
     // width (for example, a new document's fonts or inherited theme). Preserve the last stable
@@ -3135,6 +3147,14 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
           this.ownerDocument.defaultView !== owner
         )
           return;
+        for (const entry of entries) {
+          const target = entry.target as HTMLElement;
+          if (target !== body && !this.observedMeasurementElements.has(target)) continue;
+          const blockSize = entry.borderBoxSize?.[0]?.blockSize;
+          if (blockSize !== undefined && Number.isFinite(blockSize) && blockSize > 0)
+            this.observedMeasurementBlockSizes.set(target, blockSize);
+          else this.observedMeasurementBlockSizes.delete(target);
+        }
         this.syncBodyScrollState(body);
         for (const entry of entries) {
           if (entry.target !== body) continue;
@@ -3153,7 +3173,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       this.rowMeasurementObserver = observer;
       this.rowMeasurementObserverOwner = owner;
       this.rowMeasurementObserverBody = body;
-      observer.observe(body);
+      observer.observe(body, { box: 'border-box' });
     }
     const observer = this.rowMeasurementObserver;
     if (!observer) return;
@@ -3172,13 +3192,14 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       if (!current.has(element)) {
         observer.unobserve(element);
         this.observedMeasurementElements.delete(element);
+        this.observedMeasurementBlockSizes.delete(element);
       }
     }
     for (const [element, key] of current) {
       if (this.observedMeasurementElements.get(element) === key) continue;
       if (this.observedMeasurementElements.has(element)) observer.unobserve(element);
       this.observedMeasurementElements.set(element, key);
-      observer.observe(element);
+      observer.observe(element, { box: 'border-box' });
     }
   }
 
@@ -3339,7 +3360,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       for (const element of elements) {
         let next: number;
         try {
-          next = element.getBoundingClientRect().height;
+          next = this.layoutBorderBoxHeight(element);
         } catch {
           measurable = false;
           break;
@@ -3362,7 +3383,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         }
         continue;
       }
-      if (previous !== undefined && Math.abs(previous - height) <= 1)
+      if (previous !== undefined && Math.abs(previous - height) <= 0.1)
         continue;
       this.measuredItemHeights.set(key, height);
       changed = true;
@@ -3375,6 +3396,72 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     if (anchor && this.pendingMeasurementAnchor === undefined)
       this.pendingMeasurementAnchor = anchor;
     this.queueMeasurementUpdate();
+  }
+
+  /** Returns fractional layout pixels, independent of ancestor transforms and CSS zoom. */
+  private layoutBorderBoxHeight(element: HTMLElement): number {
+    if (!element.isConnected) return Number.NaN;
+    const style = element.ownerDocument.defaultView?.getComputedStyle(element);
+    if (!style || style.display === 'none') return Number.NaN;
+    const roundedHeight = element.offsetHeight;
+    if (roundedHeight <= 0) return Number.NaN;
+    const observed = this.observedMeasurementBlockSizes.get(element);
+    // A style change can precede the next ResizeObserver delivery. The integer offset height
+    // detects a stale cached border box while retaining the observer's fractional precision.
+    if (observed !== undefined && Math.abs(observed - roundedHeight) <= 0.5)
+      return observed;
+    const height = Number.parseFloat(style.height);
+    if (style.boxSizing === 'border-box') return height;
+    return height +
+      Number.parseFloat(style.paddingTop) + Number.parseFloat(style.paddingBottom) +
+      Number.parseFloat(style.borderTopWidth) + Number.parseFloat(style.borderBottomWidth);
+  }
+
+  /** Returns the measured vertical correction within the body's own viewport. */
+  private renderedRowAlignmentDelta(
+    target: HTMLElement,
+    body: HTMLElement,
+    alignment: 'start' | 'center' | 'end' | 'nearest'
+  ): number {
+    let targetTop: number;
+    let targetBottom: number;
+    const style = target.ownerDocument.defaultView?.getComputedStyle(target);
+    const visuallyTransformed = style && (
+      style.position === 'sticky' ||
+      style.transform !== 'none' ||
+      (style.translate && style.translate !== 'none') ||
+      (style.scale && style.scale !== 'none') ||
+      (style.rotate && style.rotate !== 'none') ||
+      (style.zoom && style.zoom !== '1' && style.zoom !== 'normal')
+    );
+    if (target.offsetParent === body && !visuallyTransformed) {
+      // Rendered rows are direct children of the positioned body. Their offsets stay in the
+      // body's layout pixels even when an ancestor scales or zooms the rendered rectangles.
+      targetTop = target.offsetTop - body.scrollTop;
+      targetBottom = targetTop + target.offsetHeight;
+    } else {
+      const targetRect = target.getBoundingClientRect();
+      const bodyRect = body.getBoundingClientRect();
+      const bodyLayoutHeight = this.layoutBorderBoxHeight(body);
+      const scaleY = bodyLayoutHeight > 0 && bodyRect.height > 0
+        ? finiteRange(bodyRect.height / bodyLayoutHeight, 1, Number.EPSILON)
+        : 1;
+      targetTop = (targetRect.top - bodyRect.top) / scaleY - body.clientTop;
+      targetBottom = (targetRect.bottom - bodyRect.top) / scaleY - body.clientTop;
+    }
+    const viewportBottom = body.clientHeight;
+    if (alignment === 'center')
+      return (targetTop + targetBottom - viewportBottom) / 2;
+    if (alignment === 'end') return targetBottom - viewportBottom;
+    if (alignment === 'start') return targetTop;
+    const outsideTop = targetTop < 0;
+    const outsideBottom = targetBottom > viewportBottom;
+    // Native nearest does not move a row already inside, or one spanning both viewport edges.
+    if (outsideTop === outsideBottom) return 0;
+    const oversized = targetBottom - targetTop > body.clientHeight;
+    if (outsideTop)
+      return oversized ? targetBottom - viewportBottom : targetTop;
+    return oversized ? targetTop : targetBottom - viewportBottom;
   }
 
   /** Replays a virtual scroll command only after its target's measured offsets are stable. */
@@ -3399,18 +3486,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     )].find((element) => element.dataset['virtualItemKey'] === pending.itemKey);
     const body = this.bodyElement;
     if (!target || !body) return;
-    const targetRect = target.getBoundingClientRect();
-    const viewportTop = body.getBoundingClientRect().top + body.clientTop;
-    const viewportBottom = viewportTop + body.clientHeight;
-    const alignmentDelta = pending.align === 'center'
-      ? (targetRect.top + targetRect.bottom - viewportTop - viewportBottom) / 2
-      : pending.align === 'end'
-        ? targetRect.bottom - viewportBottom
-        : pending.align === 'start'
-          ? targetRect.top - viewportTop
-          : targetRect.top < viewportTop
-            ? targetRect.top - viewportTop
-            : Math.max(0, targetRect.bottom - viewportBottom);
+    const alignmentDelta = this.renderedRowAlignmentDelta(target, body, pending.align);
     // CSSOM scroll offsets round fractional pixels differently across engines. A settled
     // subpixel alignment must not alternate adjacent integer offsets indefinitely.
     if (Math.abs(alignmentDelta) <= 1) {
@@ -3418,7 +3494,13 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       return;
     }
     const previousTop = body.scrollTop;
-    target.scrollIntoView({ block: pending.align });
+    const nextTop = finiteRange(
+      previousTop + alignmentDelta,
+      previousTop,
+      0,
+      Math.max(0, body.scrollHeight - body.clientHeight)
+    );
+    body.scrollTo({ top: nextTop });
     // Alignment can change the virtual window itself. Keep the command until that window
     // commits, otherwise replacing overscan rows with estimated spacers shifts the target.
     if (body.scrollTop === previousTop) this.pendingVirtualScroll = undefined;

@@ -690,6 +690,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     scrollTop: number;
     rawScrollTop: number;
     viewportHeight: number;
+    scrollDeltaScale: number;
   } | null {
     const base = this.scrollContainer;
     if (!base) return null;
@@ -700,32 +701,106 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
         scrollTop: base.scrollTop,
         rawScrollTop: base.scrollTop,
         viewportHeight: base.clientHeight,
+        scrollDeltaScale: 1,
       };
     }
-    const spacerTop = (this.spacerElement ?? base).getBoundingClientRect().top;
+    const spacer = this.spacerElement ?? base;
+    const spacerRect = spacer.getBoundingClientRect();
+    const spacerScale = this.visualBlockScale(spacer, spacerRect);
+    const spacerTop = spacerRect.top;
     if (isWindowScroller(external)) {
       // documentElement.clientHeight excludes a classic scrollbar's thickness; innerHeight does not.
       const documentHeight = finiteNumber(
         external.document?.documentElement?.clientHeight ?? 0,
         0
       );
-      const rawScrollTop = finiteNumber(-spacerTop, 0);
+      const rawScrollTop = finiteNumber(-spacerTop / spacerScale, 0);
       return {
         scrollTop: Math.max(0, rawScrollTop),
         rawScrollTop,
         viewportHeight:
-          documentHeight > 0 ? documentHeight : finiteNumber(external.innerHeight, 0),
+          (documentHeight > 0 ? documentHeight : finiteNumber(external.innerHeight, 0)) /
+          spacerScale,
+        scrollDeltaScale: spacerScale,
       };
     }
-    // getBoundingClientRect() begins at the outer border, while rows scroll against the
-    // scroller's inner viewport. clientTop includes that border.
-    const scrollerTop = external.getBoundingClientRect().top + external.clientTop;
-    const rawScrollTop = finiteNumber(scrollerTop - spacerTop, 0);
+    // Rects are visual pixels, while row offsets and scrollTop use layout pixels. The two
+    // elements can have different scales (for example, a transformed list inside a scroller).
+    const scrollerRect = external.getBoundingClientRect();
+    const relativeScale = this.relativeBlockScale(spacer, external);
+    // The spacer's long, explicit height gives a precise visual/layout ratio. A scroller's short
+    // border box does not: zoom can round its borders before painting, even when its content still
+    // scales fractionally. Divide out only transforms and zoom between spacer and scroller.
+    const inferredScrollerScale = relativeScale === null ? 0 : spacerScale / relativeScale;
+    const scrollerScale = Number.isFinite(inferredScrollerScale) && inferredScrollerScale > 0
+      ? inferredScrollerScale : this.visualBlockScale(external, scrollerRect);
+    const scrollerStyle = external.ownerDocument.defaultView?.getComputedStyle(external);
+    const borderTop = Number.parseFloat(scrollerStyle?.borderTopWidth ?? '');
+    const scrollerTop = scrollerRect.top +
+      (Number.isFinite(borderTop) ? borderTop : external.clientTop) * scrollerScale;
+    const rawScrollTop = finiteNumber((scrollerTop - spacerTop) / spacerScale, 0);
     return {
       scrollTop: Math.max(0, rawScrollTop),
       rawScrollTop,
-      viewportHeight: finiteNumber(external.clientHeight, 0),
+      viewportHeight: finiteNumber(external.clientHeight * scrollerScale / spacerScale, 0),
+      scrollDeltaScale: spacerScale / scrollerScale,
     };
+  }
+
+  /** Visual CSS pixels per layout block pixel, retaining fractional CSS sizes that offsetHeight
+   *  rounds away. Computed block size is resolved before transforms and zoom are painted. */
+  private visualBlockScale(element: Element, rect: DOMRect): number {
+    const style = element.ownerDocument.defaultView?.getComputedStyle(element);
+    if (!style) return 1;
+    const borderBoxHeight = Number.parseFloat(style.height) +
+      (style.boxSizing === 'border-box' ? 0 :
+        Number.parseFloat(style.paddingTop) + Number.parseFloat(style.paddingBottom) +
+        Number.parseFloat(style.borderTopWidth) + Number.parseFloat(style.borderBottomWidth));
+    const layoutHeight = borderBoxHeight > 0 && Number.isFinite(borderBoxHeight)
+      ? borderBoxHeight : 'offsetHeight' in element && typeof element.offsetHeight === 'number'
+        ? element.offsetHeight : 0;
+    const scale = rect.height / layoutHeight;
+    return scale > 0 && Number.isFinite(scale) ? scale : 1;
+  }
+
+  /** Positive block-axis scale contributed inside, but not by, an external scroll element. */
+  private relativeBlockScale(descendant: Element, ancestor: Element): number | null {
+    let scale = 1;
+    let current: Element | null = descendant;
+    while (current && current !== ancestor) {
+      const style = current.ownerDocument.defaultView?.getComputedStyle(current);
+      if (!style) return null;
+      const zoom = !style.zoom ? 1 : style.zoom.endsWith('%')
+        ? Number.parseFloat(style.zoom) / 100 : Number.parseFloat(style.zoom);
+      if (!Number.isFinite(zoom) || zoom <= 0) return null;
+      scale *= zoom;
+      // display:contents and ordinary inline elements have no transformable box. A slotted list
+      // passes through the slot in the composed tree, but a scale declared on that slot is inert.
+      const transformable = style.display !== 'contents' && style.display !== 'inline';
+      if (transformable && style.scale && style.scale !== 'none') {
+        const values = style.scale.split(/\s+/).map(Number);
+        const blockScale = values[1] ?? values[0] ?? Number.NaN;
+        if (!Number.isFinite(blockScale) || blockScale <= 0) return null;
+        scale *= blockScale;
+      }
+      if (transformable && style.rotate && style.rotate !== 'none' && style.rotate !== '0deg')
+        return null;
+      if (transformable && style.transform !== 'none') {
+        const Matrix = current.ownerDocument.defaultView?.DOMMatrixReadOnly;
+        if (!Matrix) return null;
+        const matrix = new Matrix(style.transform);
+        if (matrix.m12 !== 0 || matrix.m13 !== 0 || matrix.m14 !== 0 ||
+          matrix.m21 !== 0 || matrix.m23 !== 0 || matrix.m24 !== 0 ||
+          matrix.m31 !== 0 || matrix.m32 !== 0 || matrix.m34 !== 0 || matrix.m44 !== 1 ||
+          matrix.m22 <= 0) return null;
+        scale *= matrix.m22;
+      }
+      const parent: Node | null = current.assignedSlot ?? current.parentNode;
+      current = parent?.nodeType === Node.ELEMENT_NODE ? parent as Element :
+        parent?.nodeType === Node.DOCUMENT_FRAGMENT_NODE && 'host' in parent
+          ? (parent as ShadowRoot).host : null;
+    }
+    return current === ancestor && Number.isFinite(scale) && scale > 0 ? scale : null;
   }
 
   /** Moves whichever element is scrolling so this list's own offset space lands at `top`. Omit
@@ -747,7 +822,8 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     // taken against the UNCLAMPED position: while the scroller is still above the list the true
     // list-space position is negative, and measuring from the clamped zero would move the scroller
     // short by exactly the distance it has yet to travel to reach the list.
-    const delta = finiteNumber(top, metrics.rawScrollTop) - metrics.rawScrollTop;
+    const delta = (finiteNumber(top, metrics.rawScrollTop) - metrics.rawScrollTop) *
+      metrics.scrollDeltaScale;
     if (isWindowScroller(external)) {
       // A Window has no writable scrollTop, so even the instant path goes through scrollTo().
       const options: ScrollToOptions = {

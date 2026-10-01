@@ -1,9 +1,9 @@
 {
-  "$comment": "Hard gzip KiB ceilings for bundled, minified ESM with optional peers externalized. Reviewed byte measurements use Node 22.23.2, production esbuild, and gzip level 9. Each ceiling must satisfy the maximum headroom policy. The shared default-profile and material correctness review updates only failing entries with 2% headroom; all passing canaries retain their tighter ceilings. The theme entry includes canonical per-look contrast references and batched alias ownership after removal of redundant allocations and unused palette fields; its 13,099-byte measurement retains 2% headroom without changing other ceilings.",
+  "$comment": "Hard gzip KiB ceilings for bundled, minified ESM with optional peers externalized. Reviewed byte measurements use Node 22.23.2, production esbuild, and gzip level 9. Each ceiling must satisfy the maximum headroom policy. The shared default-profile and material correctness review updates only failing entries with 2% headroom; all passing canaries retain their tighter ceilings. The theme entry includes canonical per-look contrast references and batched alias ownership after removal of redundant allocations and unused palette fields; its 13,099-byte measurement retains 2% headroom without changing other ceilings. The two component aggregate ceilings include layout-coordinate corrections for scaled scrolling and retain 2% headroom; all other ceilings remain unchanged.",
   "$maximumHeadroomPercent": 4,
   "$reviewedGzipBytes": {
-    "$componentMaxGzipKb": 234305,
-    "$componentP95GzipKb": 115099,
+    "$componentMaxGzipKb": 236067,
+    "$componentP95GzipKb": 116424,
     "dist/all.js": 1196595,
     "dist/autoloader-cdn.js": 1273071,
     "dist/autoloader.js": 1272890,
@@ -32,8 +32,8 @@
     "dist/ssr/all.js": 1271684,
     "dist/theme/theme.js": 13099
   },
-  "$componentP95GzipKb": 113.4853515625,
-  "$componentMaxGzipKb": 230.484375,
+  "$componentP95GzipKb": 115.96875,
+  "$componentMaxGzipKb": 235.14453125,
   "dist/autoloader-cdn.js": 1267.7265625,
   "dist/autoloader.js": 1267.5224609375,
   "dist/hydration.js": 5.43359375,

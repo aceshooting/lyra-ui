@@ -4923,9 +4923,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       }
     }
     for (const edge of ['top', 'bottom']) {
+      // These CSS insets need layout pixels, including when an ancestor scales the map.
       const height = Math.max(0, ...[...container.querySelectorAll<HTMLElement>(
         `.maplibregl-ctrl-${edge}-left, .maplibregl-ctrl-${edge}-right`,
-      )].map((corner) => corner.getBoundingClientRect().height));
+      )].map((corner) => corner.offsetHeight));
       const base = container.parentElement;
       const name = `--_lr-map-controls-${edge}`;
       const value = `${height}px`;

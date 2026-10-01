@@ -474,6 +474,42 @@ it('coalesces peer-control size deliveries and cancels stale work across disconn
   }
 });
 
+it('reserves peer-control height in layout pixels when an ancestor scales the map', async () => {
+  const { wrapper, el } = await connectedMapWithoutMaplibre();
+  el.style.inlineSize = '320px';
+  el.style.setProperty('--lr-map-height', '240px');
+  const base = document.createElement('div');
+  base.setAttribute('part', 'base');
+  const container = document.createElement('div');
+  container.setAttribute('part', 'container');
+  const corner = document.createElement('div');
+  corner.className = 'maplibregl-ctrl-bottom-right';
+  corner.style.cssText = 'inline-size: 40px; block-size: 40px;';
+  const legend = document.createElement('div');
+  legend.setAttribute('part', 'legend');
+  legend.textContent = 'Synthetic map legend';
+  container.append(corner);
+  base.append(container, legend);
+  el.shadowRoot!.append(base);
+  const privateMap = el as unknown as {
+    measurePeerControlInsets(container: HTMLElement): void;
+  };
+  const gap = () => corner.getBoundingClientRect().top - legend.getBoundingClientRect().bottom;
+  privateMap.measurePeerControlInsets(container);
+  const layoutGap = gap();
+  expect(layoutGap).to.be.greaterThan(0);
+  wrapper.style.transformOrigin = 'top left';
+  wrapper.style.transform = 'scale(1.5)';
+  privateMap.measurePeerControlInsets(container);
+  expect(gap() / 1.5).to.be.closeTo(layoutGap, 1);
+  if (CSS.supports('zoom', '1.5')) {
+    wrapper.style.transform = '';
+    wrapper.style.zoom = '1.5';
+    privateMap.measurePeerControlInsets(container);
+    expect(gap() / 1.5).to.be.closeTo(layoutGap, 1);
+  }
+});
+
 it('does not construct the underlying maplibregl.Map (and its WebGL context) until the element is observed intersecting the viewport', async function () {
   if (!hasWebGL2) this.skip();
   // A real IntersectionObserver already reports this test's fixture-mounted

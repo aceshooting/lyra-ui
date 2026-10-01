@@ -1,5 +1,5 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
-import { expect, html, waitUntil } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse, sendMouse, sendWheel } from '../../../../test/wtr-mouse.js';
 import './data-grid.js';
 import type { LyraDataGrid } from './data-grid.js';
@@ -322,6 +322,496 @@ it("aligns a programmatic scroll to the start, center, and end of the viewport",
   expect(body.scrollTop).to.equal(0);
 });
 
+it('keeps ancestor scroll positions when aligning an already-rendered row', async () => {
+  const data = Array.from({ length: 100 }, (_, id) => ({ id, name: `Row ${id}` }));
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div style="height: 2200px">
+      <div style="height: 400px"></div>
+      <div id="outer" style="height: 350px; overflow: auto">
+        <div style="height: 400px"></div>
+        <lr-data-grid
+          label="Contained scroll"
+          row-key="id"
+          style="display: block; inline-size: 500px; --max-height: 180px; --row-height: 40px"
+          .columns=${[{ field: 'name', label: 'Name', width: 1000 }]}
+          .data=${data}
+        ></lr-data-grid>
+        <div style="height: 400px"></div>
+      </div>
+    </div>
+  `);
+  const outer = wrapper.querySelector<HTMLElement>('#outer')!;
+  const element = wrapper.querySelector<LyraDataGrid<(typeof data)[number]>>('lr-data-grid')!;
+  const body = element.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+  const initialWindowY = window.scrollY;
+  try {
+    await waitUntil(() => body.scrollHeight > body.clientHeight && body.scrollWidth > body.clientWidth);
+    for (const align of ['start', 'center', 'end', 'nearest'] as const) {
+      body.scrollTop = 0;
+      body.scrollLeft = 75;
+      body.dispatchEvent(new Event('scroll'));
+      outer.scrollTop = 250;
+      window.scrollTo(0, 250);
+      await aTimeout(40);
+      const target = element.shadowRoot!.querySelector<HTMLElement>('[part~="row"][data-visible-index="2"]')!;
+      expect(target !== null).to.equal(true);
+      const targetRect = target.getBoundingClientRect();
+      const bodyRect = body.getBoundingClientRect();
+      const viewportTop = bodyRect.top + body.clientTop;
+      const viewportBottom = viewportTop + body.clientHeight;
+      const delta = align === 'start' ? targetRect.top - viewportTop
+        : align === 'center' ? (targetRect.top + targetRect.bottom - viewportTop - viewportBottom) / 2
+        : align === 'end' ? targetRect.bottom - viewportBottom
+        : targetRect.top < viewportTop ? targetRect.top - viewportTop
+        : Math.max(0, targetRect.bottom - viewportBottom);
+      const expectedTop = Math.max(0, Math.min(body.scrollHeight - body.clientHeight, body.scrollTop + delta));
+      const pageBefore = window.scrollY;
+      const outerBefore = outer.scrollTop;
+      const horizontalBefore = body.scrollLeft;
+      if (align === 'nearest') element.scrollToIndex(2);
+      else element.scrollToIndex(2, { align });
+      await aTimeout(40);
+      expect(Math.abs(body.scrollTop - expectedTop), `${align} body alignment`).to.be.at.most(1);
+      expect(window.scrollY, `${align} page position`).to.equal(pageBefore);
+      expect(outer.scrollTop, `${align} outer position`).to.equal(outerBefore);
+      expect(body.scrollLeft, `${align} horizontal position`).to.equal(horizontalBefore);
+    }
+  } finally {
+    window.scrollTo(0, initialWindowY);
+  }
+});
+
+it('uses native nearest geometry for an oversized rendered row without scrolling ancestors', async () => {
+  const data = Array.from({ length: 20 }, (_, id) => ({ id, name: `Row ${id}` }));
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div style="height: 2200px">
+      <div style="height: 400px"></div>
+      <div id="outer" style="height: 350px; overflow: auto">
+        <div style="height: 400px"></div>
+        <lr-data-grid
+          label="Oversized contained scroll"
+          row-key="id"
+          style="display: block; inline-size: 500px; --max-height: 180px; --row-height: 32px; --cell-padding: 0px"
+          .columns=${[{
+            field: 'name', label: 'Name',
+            formatter: (_value: unknown, row: (typeof data)[number]) => html`
+              <span style="display: block; block-size: ${row.id === 2 ? 260 : 32}px">${row.name}</span>
+            `,
+          }]}
+          .data=${data}
+        ></lr-data-grid>
+        <div style="height: 400px"></div>
+      </div>
+    </div>
+  `);
+  const outer = wrapper.querySelector<HTMLElement>('#outer')!;
+  const element = wrapper.querySelector<LyraDataGrid<(typeof data)[number]>>('lr-data-grid')!;
+  const body = element.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+  const initialWindowY = window.scrollY;
+  const target = element.shadowRoot!.querySelector<HTMLElement>('[part~="row"][data-visible-index="2"]')!;
+  try {
+    await waitUntil(() => target.getBoundingClientRect().height > body.clientHeight);
+    await waitUntil(() => measurementAccess(element).measuredItemHeights.has('row:number:2'));
+    await aTimeout(40);
+    for (const state of ['spanning', 'bottom-outside', 'top-outside'] as const) {
+      const bodyTop = body.getBoundingClientRect().top + body.clientTop;
+      const rowTop = target.getBoundingClientRect().top - bodyTop + body.scrollTop;
+      const rowHeight = target.getBoundingClientRect().height;
+      body.scrollTop = state === 'spanning' ? rowTop + 50
+        : state === 'bottom-outside' ? rowTop - 20
+        : rowTop + rowHeight - body.clientHeight + 20;
+      body.dispatchEvent(new Event('scroll'));
+      outer.scrollTop = 250;
+      window.scrollTo(0, 250);
+      await aTimeout(40);
+      const before = body.scrollTop;
+      const pageBefore = window.scrollY;
+      const outerBefore = outer.scrollTop;
+      const beforeRect = target.getBoundingClientRect();
+      const viewportTop = body.getBoundingClientRect().top + body.clientTop;
+      const viewportBottom = viewportTop + body.clientHeight;
+      const geometry = `${state}: row ${beforeRect.top}/${beforeRect.bottom}, viewport ${viewportTop}/${viewportBottom}, body scroll ${body.scrollTop}`;
+      if (state === 'spanning')
+        expect(beforeRect.top < viewportTop && beforeRect.bottom > viewportBottom, geometry).to.equal(true);
+      else if (state === 'bottom-outside')
+        expect(beforeRect.top >= viewportTop && beforeRect.bottom > viewportBottom, geometry).to.equal(true);
+      else
+        expect(beforeRect.top < viewportTop && beforeRect.bottom <= viewportBottom, geometry).to.equal(true);
+
+      element.scrollToIndex(2);
+      await aTimeout(40);
+      const afterRect = target.getBoundingClientRect();
+      if (state === 'spanning') expect(Math.abs(body.scrollTop - before)).to.be.at.most(1);
+      else if (state === 'bottom-outside') expect(Math.abs(afterRect.top - viewportTop)).to.be.at.most(1);
+      else expect(Math.abs(afterRect.bottom - viewportBottom)).to.be.at.most(1);
+      expect(window.scrollY, `${state} page position`).to.equal(pageBefore);
+      expect(outer.scrollTop, `${state} outer position`).to.equal(outerBefore);
+    }
+  } finally {
+    window.scrollTo(0, initialWindowY);
+  }
+});
+
+it('aligns rendered rows in a scaled ancestor using the body viewport geometry', async () => {
+  const data = Array.from({ length: 100 }, (_, id) => ({ id, name: `Row ${id}` }));
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div style="transform: scale(0.5); transform-origin: top left">
+      <lr-data-grid
+        label="Scaled contained scroll"
+        row-key="id"
+        style="display: block; inline-size: 500px; --max-height: 180px; --row-height: 40px"
+        .columns=${[{ field: 'name', label: 'Name' }]}
+        .data=${data}
+      ></lr-data-grid>
+    </div>
+  `);
+  const element = wrapper.querySelector<LyraDataGrid<(typeof data)[number]>>('lr-data-grid')!;
+  const body = element.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+  for (const align of ['start', 'center', 'end'] as const) {
+    body.scrollTop = 50;
+    body.dispatchEvent(new Event('scroll'));
+    await aTimeout(40);
+    const target = element.shadowRoot!.querySelector<HTMLElement>('[part~="row"][data-visible-index="4"]')!;
+    expect(target !== null).to.equal(true);
+    element.scrollToIndex(4, { align });
+    const rowRect = target.getBoundingClientRect();
+    const bodyRect = body.getBoundingClientRect();
+    const scale = bodyRect.height / body.offsetHeight;
+    const top = bodyRect.top + body.clientTop * scale;
+    const bottom = top + body.clientHeight * scale;
+    const error = align === 'start' ? Math.abs(rowRect.top - top)
+      : align === 'center' ? Math.abs((rowRect.top + rowRect.bottom - top - bottom) / 2)
+      : Math.abs(rowRect.bottom - bottom);
+    expect(error, `${align} rendered alignment under scale(0.5)`).to.be.at.most(1);
+  }
+  body.scrollTop = 50;
+  body.dispatchEvent(new Event('scroll'));
+  await aTimeout(40);
+  const shifted = element.shadowRoot!.querySelector<HTMLElement>('[part~="row"][data-visible-index="4"]')!;
+  shifted.style.transform = 'translateY(12px)';
+  element.scrollToIndex(4, { align: 'start' });
+  await aTimeout(40);
+  const shiftedViewportTop = body.getBoundingClientRect().top + body.clientTop * 0.5;
+  expect(Math.abs(shifted.getBoundingClientRect().top - shiftedViewportTop)).to.be.at.most(1);
+  shifted.style.transform = '';
+  shifted.style.position = 'sticky';
+  shifted.style.top = '0px';
+  body.scrollTop = 190;
+  body.dispatchEvent(new Event('scroll'));
+  await aTimeout(40);
+  expect(shifted.isConnected).to.equal(true);
+  const stickyViewportTop = body.getBoundingClientRect().top + body.clientTop * 0.5;
+  expect(Math.abs(shifted.getBoundingClientRect().top - stickyViewportTop)).to.be.at.most(1);
+  const beforeStickyScroll = body.scrollTop;
+  element.scrollToIndex(4);
+  await aTimeout(40);
+  expect(body.scrollTop).to.equal(beforeStickyScroll);
+  shifted.style.position = '';
+  shifted.style.top = '';
+  await aTimeout(40);
+  body.scrollTop = 0;
+  body.style.maxBlockSize = '100px';
+  expect(body.clientHeight).to.equal(100);
+  element.scrollToIndex(2, { align: 'start' });
+  await aTimeout(40);
+  const row = element.shadowRoot!.querySelector<HTMLElement>('[part~="row"][data-visible-index="2"]')!;
+  const viewportTop = body.getBoundingClientRect().top + body.clientTop * 0.5;
+  expect(Math.abs(row.getBoundingClientRect().top - viewportTop)).to.be.at.most(1);
+});
+
+it('aligns a rendered row after a fractional viewport resize in the same task', async () => {
+  const data = Array.from({ length: 100 }, (_, id) => ({ id, name: `Row ${id}` }));
+  const element = await fixture<LyraDataGrid<(typeof data)[number]>>(html`
+    <lr-data-grid
+      label="Fractional viewport"
+      row-key="id"
+      style="display: block; inline-size: 500px; --max-height: none; --row-height: 40px"
+      .columns=${[{ field: 'name', label: 'Name' }]}
+      .data=${data}
+    ></lr-data-grid>
+  `);
+  const body = element.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+  body.style.height = '54.55px';
+  await aTimeout(40);
+  const roundedHeight = body.offsetHeight;
+  body.style.height = '55.45px';
+  expect(body.offsetHeight).to.equal(roundedHeight);
+  const row = element.shadowRoot!.querySelector<HTMLElement>('[part~="row"][data-visible-index="2"]')!;
+  expect(row !== null).to.equal(true);
+  element.scrollToIndex(2, { align: 'start' });
+  await aTimeout(40);
+  const viewportTop = body.getBoundingClientRect().top + body.clientTop;
+  expect(Math.abs(row.getBoundingClientRect().top - viewportTop)).to.be.at.most(1);
+});
+
+it('records layout row heights despite an ancestor scale and a fractional expanded detail', async () => {
+  const data = Array.from({ length: 12 }, (_, id) => ({ id, name: `Row ${id}` }));
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div style="transform: scale(0.5); transform-origin: top left">
+      <lr-data-grid
+        label="Scaled row measurements"
+        row-key="id"
+        style="display: block; inline-size: 500px; --max-height: 180px; --row-height: 32px; --cell-padding: 0px"
+        .columns=${[{
+          field: 'name', label: 'Name',
+          formatter: (_value: unknown, row: (typeof data)[number]) => html`
+            <span style="display: block; block-size: ${row.id === 2 ? 72.5 : 32.5}px">${row.name}</span>
+          `,
+        }]}
+        .rowDetail=${() => html`<div style="block-size: 37px">Expanded detail</div>`}
+        .expandedKeys=${[2]}
+        .data=${data}
+      ></lr-data-grid>
+    </div>
+  `);
+  const element = wrapper.querySelector<LyraDataGrid<(typeof data)[number]>>('lr-data-grid')!;
+  const body = element.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+  const row = element.shadowRoot!.querySelector<HTMLElement>('[part~="row"][data-visible-index="2"]')!;
+  const detail = element.shadowRoot!.querySelector<HTMLElement>('[data-virtual-item-detail-for="row:number:2"]')!;
+  await waitUntil(() => measurementAccess(element).measuredItemHeights.has('row:number:2'));
+  const measured = measurementAccess(element).measuredItemHeights.get('row:number:2')!;
+  const layoutHeight = Number.parseFloat(getComputedStyle(row).height) +
+    Number.parseFloat(getComputedStyle(detail).height);
+  expect(detail !== null).to.equal(true);
+  expect(Math.abs(measured - layoutHeight), `measured ${measured} vs layout ${layoutHeight}`).to.be.at.most(0.1);
+
+  element.scrollToIndex(2, { align: 'start' });
+  await aTimeout(40);
+  const scale = body.getBoundingClientRect().height / body.offsetHeight;
+  const viewportTop = body.getBoundingClientRect().top + body.clientTop * scale;
+  expect(Math.abs(row.getBoundingClientRect().top - viewportTop)).to.be.at.most(1);
+});
+
+it('measures a content-box group row in layout pixels under CSS zoom', async () => {
+  const data = Array.from({ length: 12 }, (_, id) => ({ id, name: `Row ${id}`, team: id % 2 ? 'A' : 'B' }));
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div style="zoom: 125%">
+      <lr-data-grid
+        label="Zoomed group measurements"
+        row-key="id"
+        group-by="team"
+        style="display: block; inline-size: 500px; --max-height: 180px; --row-height: 32px"
+        .columns=${[{ field: 'name', label: 'Name' }, { field: 'team', label: 'Team' }]}
+        .data=${data}
+      ></lr-data-grid>
+    </div>
+  `);
+  const element = wrapper.querySelector<LyraDataGrid<(typeof data)[number]>>('lr-data-grid')!;
+  await element.updateComplete;
+  await waitUntil(() => element.shadowRoot!.querySelector('[part="group-row"]') !== null);
+  const group = element.shadowRoot!.querySelector<HTMLElement>('[part="group-row"]')!;
+  expect(group !== null).to.equal(true);
+  group.style.boxSizing = 'content-box';
+  group.style.height = '52.5px';
+  group.style.paddingTop = '3.25px';
+  group.style.paddingBottom = '2.25px';
+  measurementAccess(element).measureRenderedItems();
+  const style = getComputedStyle(group);
+  const layoutHeight = Number.parseFloat(style.height) +
+    Number.parseFloat(style.paddingTop) + Number.parseFloat(style.paddingBottom) +
+    Number.parseFloat(style.borderTopWidth) + Number.parseFloat(style.borderBottomWidth);
+  const key = group.dataset['virtualItemKey']!;
+  const measured = measurementAccess(element).measuredItemHeights.get(key)!;
+  expect(Math.abs(measured - layoutHeight), `group measured ${measured} vs layout ${layoutHeight}`).to.be.at.most(0.1);
+  measurementAccess(element).measuredItemHeights.delete(key);
+  group.style.display = 'none';
+  measurementAccess(element).measureRenderedItems();
+  expect(measurementAccess(element).measuredItemHeights.has(key)).to.equal(false);
+});
+
+it('settles fractional bordered row and detail heights under CSS zoom', async () => {
+  const data = Array.from({ length: 100 }, (_, id) => ({ id, name: `Row ${id}` }));
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div style="height: 2200px">
+      <div style="height: 400px"></div>
+      <div id="outer" style="height: 350px; overflow: auto">
+        <div style="height: 400px"></div>
+        <div id="scaled" style="zoom: 100%">
+          <lr-data-grid
+            label="Zoomed fractional rows"
+            row-key="id"
+            style="display: block; inline-size: 500px; --max-height: none; --row-height: 32px"
+            .columns=${[{
+              field: 'name', label: 'Name', width: 1000,
+              formatter: (_value: unknown, row: (typeof data)[number]) => html`
+                <span style="display: block; block-size: 32.25px">${row.name}</span>
+              `,
+            }]}
+            .rowDetail=${() => html`<div style="block-size: 37.25px">Expanded detail</div>`}
+            .expandedKeys=${[2]}
+            .data=${data}
+          ></lr-data-grid>
+        </div>
+        <div style="height: 400px"></div>
+      </div>
+    </div>
+  `);
+  const element = wrapper.querySelector<LyraDataGrid<(typeof data)[number]>>('lr-data-grid')!;
+  const body = element.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+  body.style.height = '200.25px';
+  body.style.boxSizing = 'content-box';
+  body.style.borderBlock = '1.25px solid transparent';
+  const row = element.shadowRoot!.querySelector<HTMLElement>('[part~="row"][data-visible-index="2"]')!;
+  const detail = element.shadowRoot!.querySelector<HTMLElement>('[data-virtual-item-detail-for="row:number:2"]')!;
+  row.style.boxSizing = 'content-box';
+  row.style.height = '32.25px';
+  row.style.borderBlockEnd = '1.25px solid transparent';
+  detail.style.boxSizing = 'content-box';
+  detail.style.height = '37.25px';
+  detail.style.borderBlockEnd = '1.25px solid transparent';
+  await waitUntil(() => body.scrollHeight > body.clientHeight);
+  await waitUntil(() => measurementAccess(element).measuredItemHeights.has('row:number:2'));
+  const beforeZoom = measurementAccess(element).measuredItemHeights.get('row:number:2')!;
+  wrapper.querySelector<HTMLElement>('#scaled')!.style.zoom = '125%';
+  await aTimeout(40);
+  measurementAccess(element).measureRenderedItems();
+  const measured = measurementAccess(element).measuredItemHeights.get('row:number:2')!;
+  const expected = (row.getBoundingClientRect().height + detail.getBoundingClientRect().height) / 1.25;
+  expect(Math.abs(beforeZoom - expected)).to.be.greaterThan(0.1);
+  expect(Math.abs(measured - expected), `measured ${measured} vs visual/zoom ${expected}`).to.be.at.most(0.1);
+  row.style.borderBlockEnd = '2.25px solid transparent';
+  await aTimeout(40);
+  measurementAccess(element).measureRenderedItems();
+  const borderChanged = (row.getBoundingClientRect().height + detail.getBoundingClientRect().height) / 1.25;
+  const measuredAfterBorder = measurementAccess(element).measuredItemHeights.get('row:number:2')!;
+  expect(Math.abs(borderChanged - expected)).to.be.greaterThan(0.1);
+  expect(Math.abs(measuredAfterBorder - borderChanged), `border-only measured ${measuredAfterBorder} vs ${borderChanged}`).to.be.at.most(0.1);
+  element.scrollToIndex(2, { align: 'start' });
+  await aTimeout(40);
+  const viewportTop = body.getBoundingClientRect().top + body.clientTop * 1.25;
+  expect(Math.abs(row.getBoundingClientRect().top - viewportTop)).to.be.at.most(1);
+  const outer = wrapper.querySelector<HTMLElement>('#outer')!;
+  const initialWindowY = window.scrollY;
+  try {
+    body.scrollLeft = 75;
+    outer.scrollTop = 250;
+    window.scrollTo(0, 250);
+    await aTimeout(40);
+    const pageBefore = window.scrollY;
+    const outerBefore = outer.scrollTop;
+    const horizontalBefore = body.scrollLeft;
+    element.scrollToIndex(70, { align: 'start' });
+    await waitUntil(() => element.shadowRoot!.querySelector('[part~="row"][data-visible-index="70"]') !== null);
+    await aTimeout(40);
+    const target = element.shadowRoot!.querySelector<HTMLElement>('[part~="row"][data-visible-index="70"]')!;
+    const bodyRect = body.getBoundingClientRect();
+    const alignedTop = bodyRect.top + body.clientTop * 1.25;
+    expect(Math.abs(target.getBoundingClientRect().top - alignedTop)).to.be.at.most(1);
+    expect(window.scrollY).to.equal(pageBefore);
+    expect(outer.scrollTop).to.equal(outerBefore);
+    expect(body.scrollLeft).to.equal(horizontalBefore);
+  } finally {
+    window.scrollTo(0, initialWindowY);
+  }
+});
+
+it('contains measured offscreen-row alignment to the grid body', async () => {
+  const data = Array.from({ length: 100 }, (_, id) => ({ id, name: `Row ${id}` }));
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div style="height: 2200px">
+      <div style="height: 400px"></div>
+      <div id="outer" style="height: 350px; overflow: auto">
+        <div style="height: 400px"></div>
+        <lr-data-grid
+          label="Measured contained scroll"
+          row-key="id"
+          style="display: block; inline-size: 500px; --max-height: 180px; --row-height: 32px; --cell-padding: 0px"
+          .columns=${[{
+            field: 'name', label: 'Name', width: 1000,
+            formatter: (_value: unknown, row: (typeof data)[number]) => html`
+              <span style="display: block; block-size: ${row.id % 2 === 0 ? 72 : 32}px">${row.name}</span>
+            `,
+          }]}
+          .data=${data}
+        ></lr-data-grid>
+        <div style="height: 400px"></div>
+      </div>
+    </div>
+  `);
+  const outer = wrapper.querySelector<HTMLElement>('#outer')!;
+  const element = wrapper.querySelector<LyraDataGrid<(typeof data)[number]>>('lr-data-grid')!;
+  const body = element.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+  const initialWindowY = window.scrollY;
+  const targetFor = (index: number): HTMLElement | null =>
+    element.shadowRoot!.querySelector<HTMLElement>(`[part~="row"][data-visible-index="${index}"]`);
+  try {
+    await waitUntil(() => body.scrollHeight > body.clientHeight && body.scrollWidth > body.clientWidth);
+    for (const align of ['start', 'center', 'end', 'default'] as const) {
+      body.scrollTop = 0;
+      body.scrollLeft = 75;
+      body.dispatchEvent(new Event('scroll'));
+      outer.scrollTop = 0;
+      window.scrollTo(0, 250);
+      await aTimeout(40);
+      expect(targetFor(60) === null).to.equal(true);
+      const pageBefore = window.scrollY;
+      const outerBefore = outer.scrollTop;
+      const horizontalBefore = body.scrollLeft;
+      if (align === 'default') element.scrollToIndex(60);
+      else element.scrollToIndex(60, { align });
+      await waitUntil(() => {
+        const target = targetFor(60);
+        if (!target || (measurementAccess(element).measuredItemHeights.get('row:number:60') ?? 0) < 72)
+          return false;
+        const targetRect = target.getBoundingClientRect();
+        const bodyRect = body.getBoundingClientRect();
+        const top = bodyRect.top + body.clientTop;
+        const bottom = top + body.clientHeight;
+        if (align === 'start' || align === 'default') return Math.abs(targetRect.top - top) <= 1;
+        if (align === 'center')
+          return Math.abs((targetRect.top + targetRect.bottom - top - bottom) / 2) <= 1;
+        return Math.abs(targetRect.bottom - bottom) <= 1;
+      }, `${align} measured target did not settle inside the grid body`);
+      expect(window.scrollY, `${align} page position`).to.equal(pageBefore);
+      expect(outer.scrollTop, `${align} outer position`).to.equal(outerBefore);
+      expect(body.scrollLeft, `${align} horizontal position`).to.equal(horizontalBefore);
+    }
+
+    // The pending measurement path also accepts nearest after a target enters the rendered
+    // window. Exercise both clipping directions through its existing test seam.
+    const measurement = measurementAccess(element);
+    for (const clipped of ['above', 'below'] as const) {
+      const rendered = targetFor(60)!;
+      const bodyTop = body.getBoundingClientRect().top + body.clientTop;
+      const rowTop = rendered.getBoundingClientRect().top - bodyTop + body.scrollTop;
+      const rowHeight = rendered.getBoundingClientRect().height;
+      body.scrollTop = clipped === 'above'
+        ? rowTop + 20
+        : rowTop + rowHeight - body.clientHeight - 20;
+      body.scrollLeft = 75;
+      body.dispatchEvent(new Event('scroll'));
+      outer.scrollTop = 0;
+      window.scrollTo(0, 250);
+      await aTimeout(40);
+      const beforeRect = targetFor(60)!.getBoundingClientRect();
+      const viewportTop = body.getBoundingClientRect().top + body.clientTop;
+      const viewportBottom = viewportTop + body.clientHeight;
+      if (clipped === 'above')
+        expect(beforeRect.top < viewportTop && beforeRect.bottom <= viewportBottom).to.equal(true);
+      else
+        expect(beforeRect.top >= viewportTop && beforeRect.bottom > viewportBottom).to.equal(true);
+      const pageBefore = window.scrollY;
+      const outerBefore = outer.scrollTop;
+      const horizontalBefore = body.scrollLeft;
+      measurement.pendingVirtualScroll = { itemKey: 'row:number:60', align: 'nearest' };
+      await waitUntil(() => {
+        measurement.alignPendingVirtualScroll();
+        const target = targetFor(60);
+        if (!target) return false;
+        const rect = target.getBoundingClientRect();
+        return clipped === 'above'
+          ? Math.abs(rect.top - viewportTop) <= 1
+          : Math.abs(rect.bottom - viewportBottom) <= 1;
+      }, `nearest measured target clipped ${clipped} did not settle`);
+      expect(window.scrollY, `${clipped} nearest page position`).to.equal(pageBefore);
+      expect(outer.scrollTop, `${clipped} nearest outer position`).to.equal(outerBefore);
+      expect(body.scrollLeft, `${clipped} nearest horizontal position`).to.equal(horizontalBefore);
+    }
+  } finally {
+    window.scrollTo(0, initialWindowY);
+  }
+});
+
 it("ignores scrollToIndex when there are no rows to scroll to", async () => {
   const element = await dataGrid(
     html`<lr-data-grid label="Empty" .columns=${columns}></lr-data-grid>`
@@ -343,6 +833,7 @@ it("maps scrollToIndex from processed rows through grouped display items", async
     <lr-data-grid
       label="People"
       group-by="team"
+      style="--max-height: 80px; --row-height: 40px"
       .columns=${columns}
       .data=${rows}
     ></lr-data-grid>
@@ -350,12 +841,15 @@ it("maps scrollToIndex from processed rows through grouped display items", async
   element.expandAllRows();
   await element.updateComplete;
   const requested = element.getVisibleRows()[1]!.name;
-  let scrolled = "";
-  for (const row of element.shadowRoot!.querySelectorAll<HTMLElement>('[part~="row"]')) {
-    row.scrollIntoView = () => { scrolled = row.textContent ?? ""; };
-  }
-  element.scrollToIndex(1);
-  expect(scrolled).to.contain(requested);
+  const body = element.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+  element.scrollToIndex(1, { align: 'start' });
+  await element.updateComplete;
+  const target = [...element.shadowRoot!.querySelectorAll<HTMLElement>('[part~="row"]')]
+    .find((row) => row.textContent?.includes(requested));
+  expect(target !== undefined).to.equal(true);
+  expect(body.scrollTop).to.be.greaterThan(0);
+  expect(target!.getBoundingClientRect().top).to.be.at.least(body.getBoundingClientRect().top - 1);
+  expect(target!.getBoundingClientRect().bottom).to.be.at.most(body.getBoundingClientRect().bottom + 1);
 });
 
 it("keeps virtualization active when optional child/detail/group capabilities are fixed-height", async () => {
