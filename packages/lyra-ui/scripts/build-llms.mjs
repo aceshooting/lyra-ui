@@ -548,7 +548,7 @@ export function buildPeers(tagFacts) {
     '|---|---|---|',
     ...rows.map(
       (r) =>
-        `| \`${r.peer}\` | \`${r.range}\` | ${
+        `| \`${r.peer}\` | \`${r.range.replaceAll('|', '\\|')}\` | ${
           r.tags.length
             ? r.tags.map((t) => `\`${t}\``).join(', ')
             : r.declarationEntry

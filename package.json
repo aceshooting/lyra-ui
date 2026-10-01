@@ -70,7 +70,7 @@
     "maplibre-gl": "^6.11.2",
     "pdfjs-dist": "^6.3.289",
     "playwright": "^1.63.0",
-    "publint": "^0.3.24",
+    "publint": "^0.3.25",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "remark-gfm": "^4.0.1",

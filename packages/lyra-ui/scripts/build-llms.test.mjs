@@ -350,6 +350,18 @@ const focusedPeerFacts = new Map(
   }),
 );
 const focusedPeersReference = buildPeers(focusedPeerFacts);
+const parsedPeerTable = (await import('marked')).lexer(focusedPeersReference)
+  .find((token) => token.type === 'table');
+assert.equal(parsedPeerTable?.header.length, 3, 'peer guidance must render a three-column table');
+for (const peer of ['katex', 'postal-mime']) {
+  const row = parsedPeerTable.rows.find((cells) => cells[0].text === `\`${peer}\``);
+  assert.ok(row, `${peer} must have a parsed peer table row`);
+  assert.equal(
+    row[1].text,
+    `\`${packageMetadata.peerDependencies[peer]}\``,
+    `${peer} version unions must remain intact inside the rendered Range column`,
+  );
+}
 const dompurifyPeerRow = focusedPeersReference
   .split('\n')
   .find((line) => line.startsWith('| `dompurify` |'));

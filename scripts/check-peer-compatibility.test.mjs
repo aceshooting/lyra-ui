@@ -28,7 +28,7 @@ const MANAGED_PEER_RANGES = Object.freeze({
   'chartjs-plugin-datalabels': '^2.2.0',
   'chartjs-plugin-zoom': '^2.0.0',
   dompurify: '^3.4.14',
-  katex: '^0.18.4',
+  katex: '^0.18.4 || ^0.19.0',
   mammoth: '^1.12.1',
   marked: '^18.0.11',
   'pdfjs-dist': '^6.3.289',
@@ -380,6 +380,32 @@ test('rejects every resolved profile pin below its managed peer floor', async ()
   assert.throws(
     () => validatePeerCompatibilityDocuments(fixture),
     /profile pin below managed floor.*chart-floor.*katex.*0\.18\.4/u,
+  );
+});
+
+test('accepts KaTeX 0.19 while preserving the 0.18 compatibility floor', async () => {
+  const { validatePeerCompatibilityDocuments, resolvePeerProfiles } = await loadChecker();
+  const fixture = validationFixture();
+  fixture.authority.currentVersions.katex = '0.19.0';
+  fixture.packageManifest = packageManifestFixture(fixture.authority.currentVersions);
+  fixture.lockfileText = lockfileFixture(fixture.authority.currentVersions);
+
+  const validated = validatePeerCompatibilityDocuments(fixture);
+  const profiles = resolvePeerProfiles(validated.authority);
+  assert.equal(profiles.find(({ id }) => id === 'markdown-math-floor').versions.katex, '0.18.4');
+  assert.equal(profiles.find(({ id }) => id === 'current-all').versions.katex, '0.19.0');
+});
+
+test('rejects an unreviewed KaTeX minor beyond the supported compatibility ranges', async () => {
+  const { validatePeerCompatibilityDocuments } = await loadChecker();
+  const fixture = validationFixture();
+  fixture.authority.currentVersions.katex = '0.20.0';
+  fixture.packageManifest = packageManifestFixture(fixture.authority.currentVersions);
+  fixture.lockfileText = lockfileFixture(fixture.authority.currentVersions);
+
+  assert.throws(
+    () => validatePeerCompatibilityDocuments(fixture),
+    /profile pin outside managed range.*katex/u,
   );
 });
 

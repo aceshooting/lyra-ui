@@ -52,14 +52,14 @@ for the page.
 | `emoji-picker-element-data` | `^1.8.0` | `lr-emoji-picker` |
 | `epubjs` | `^0.3.93` | `lr-ebook-viewer` |
 | `ical.js` | `^2.2.1` | `lr-calendar-viewer` |
-| `katex` | `^0.18.4` | `lr-agent-workspace`, `lr-dashboard-grid`, `lr-eval-run`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-streaming-text-core`, `lr-widget-renderer` |
+| `katex` | `^0.18.4 \|\| ^0.19.0` | `lr-agent-workspace`, `lr-dashboard-grid`, `lr-eval-run`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-streaming-text-core`, `lr-widget-renderer` |
 | `libphonenumber-js` | `>=1.11.0 <2` | _(not referenced by any component)_ |
 | `mammoth` | `^1.12.1` | `lr-docx-viewer` |
 | `maplibre-gl` | `>=5 <7` | `lr-geojson-viewer`, `lr-map` |
 | `marked` | `^18.0.11` | `lr-agent-workspace`, `lr-dashboard-grid`, `lr-eval-run`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-streaming-text-core`, `lr-widget-renderer` |
 | `papaparse` | `^5.7.0` | `lr-csv-viewer`, `lr-dataset-viewer` |
 | `pdfjs-dist` | `^6.3.289` | `lr-pdf-viewer` |
-| `postal-mime` | `^3.0.1 || ^4.0.0` | `lr-email-viewer` |
+| `postal-mime` | `^3.0.1 \|\| ^4.0.0` | `lr-email-viewer` |
 | `qrcode` | `^1.5.4` | `lr-qr-code` |
 | `react` | `>=19 <20` | type-only `@aceshooting/lyra-ui/custom-elements-jsx` entry (no runtime import) |
 | `shiki` | `^4.4.3` | `lr-agent-workspace`, `lr-change-review`, `lr-code-block`, `lr-code-block-core`, `lr-dashboard-grid`, `lr-diff-view`, `lr-document-compare`, `lr-eval-result`, `lr-eval-run`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-streaming-text-core`, `lr-widget-renderer` |

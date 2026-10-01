@@ -63,7 +63,7 @@ export const CANONICAL_MANAGED_PEER_RANGES = Object.freeze({
   'chartjs-plugin-datalabels': '^2.2.0',
   'chartjs-plugin-zoom': '^2.0.0',
   dompurify: '^3.4.14',
-  katex: '^0.18.4',
+  katex: '^0.18.4 || ^0.19.0',
   mammoth: '^1.12.1',
   marked: '^18.0.11',
   'pdfjs-dist': '^6.3.289',
@@ -155,20 +155,29 @@ function compareVersions(left, right) {
 }
 
 function floorFromRange(range, name) {
-  if (typeof range !== 'string' || !range.startsWith('^')) {
-    throw new TypeError(`Managed peer range for ${name} must be one caret range.`);
+  if (typeof range !== 'string') {
+    throw new TypeError(`Managed peer range for ${name} must contain caret ranges.`);
   }
-  return stableVersion(range.slice(1), `managed peer floor for ${name}`);
+  const floors = range.split(' || ').map((entry) => {
+    if (!entry.startsWith('^')) {
+      throw new TypeError(`Managed peer range for ${name} must contain caret ranges.`);
+    }
+    return stableVersion(entry.slice(1), `managed peer floor for ${name}`);
+  });
+  return floors.sort(compareVersions)[0];
 }
 
-function versionSatisfiesCaret(version, range, name) {
-  const floor = floorFromRange(range, name);
+function versionSatisfiesManagedRange(version, range, name) {
+  floorFromRange(range, name);
   const [major, minor] = versionParts(version, `profile version for ${name}`);
-  const [floorMajor, floorMinor] = versionParts(floor, `managed peer floor for ${name}`);
-  if (compareVersions(version, floor) < 0) return false;
-  if (floorMajor > 0) return major === floorMajor;
-  if (floorMinor > 0) return major === 0 && minor === floorMinor;
-  return version === floor;
+  return range.split(' || ').some((entry) => {
+    const floor = floorFromRange(entry, name);
+    const [floorMajor, floorMinor] = versionParts(floor, `managed peer floor for ${name}`);
+    if (compareVersions(version, floor) < 0) return false;
+    if (floorMajor > 0) return major === floorMajor;
+    if (floorMinor > 0) return major === 0 && minor === floorMinor;
+    return version === floor;
+  });
 }
 
 function exactRecordEntries(label, value, expected) {
@@ -297,7 +306,7 @@ export function resolvePeerProfiles(authority) {
     for (const name of MANAGED_PEER_NAMES) {
       const version = versions[name];
       const range = authority.managedPeerRanges[name];
-      if (!versionSatisfiesCaret(version, range, name)) {
+      if (!versionSatisfiesManagedRange(version, range, name)) {
         const floor = floorFromRange(range, name);
         const relation = compareVersions(version, floor) < 0 ? 'below managed floor' : 'outside managed range';
         throw new Error(
@@ -1118,7 +1127,7 @@ function deriveCurrentVersions({ authority, packageManifest, lockfileText }) {
   for (const name of MANAGED_PEER_NAMES) {
     const devRange = packageManifest.devDependencies?.[name];
     const base = devRangeBase(devRange, name);
-    if (!versionSatisfiesCaret(base, authority.managedPeerRanges[name], name)) {
+    if (!versionSatisfiesManagedRange(base, authority.managedPeerRanges[name], name)) {
       throw new Error(
         `Updated dev pin for ${name} (${base}) is outside managed range ${authority.managedPeerRanges[name]}.`,
       );
