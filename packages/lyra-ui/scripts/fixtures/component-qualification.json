@@ -17387,7 +17387,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1101,
+              "line": 1113,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -17428,6 +17428,7 @@
           "src/components/overlays/overlay/overlay-public-lifecycle.test.ts",
           "src/components/overlays/overlay/overlay-remediation.test.ts",
           "src/components/overlays/overlay/overlay.test.ts",
+          "src/components/overlays/overlay/popover-dom-boundary.test.ts",
           "src/components/overlays/overlay/popover-trigger.test.ts",
           "src/components/overlays/overlay/popover-virtual-boundary.test.ts",
           "src/components/overlays/overlay/popover.test.ts",
@@ -35849,6 +35850,12 @@
               "state": "populated"
             },
             {
+              "file": "src/components/overlays/overlay/popover-dom-boundary.test.ts",
+              "test": "reanchors inside a DOM collection without a hide/show lifecycle or generated trigger ownership",
+              "target": "popover",
+              "state": "populated"
+            },
+            {
               "file": "src/components/overlays/overlay/popover-trigger.test.ts",
               "test": "passes an accessibility audit while hover-opened with the bridge rendered",
               "target": "el",
@@ -35965,7 +35972,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1101,
+              "line": 1113,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -36006,6 +36013,7 @@
           "src/components/overlays/overlay/overlay-public-lifecycle.test.ts",
           "src/components/overlays/overlay/overlay-remediation.test.ts",
           "src/components/overlays/overlay/overlay.test.ts",
+          "src/components/overlays/overlay/popover-dom-boundary.test.ts",
           "src/components/overlays/overlay/popover-trigger.test.ts",
           "src/components/overlays/overlay/popover-virtual-boundary.test.ts",
           "src/components/overlays/overlay/popover.test.ts",
@@ -52007,7 +52015,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1101,
+              "line": 1113,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -52048,6 +52056,7 @@
           "src/components/overlays/overlay/overlay-public-lifecycle.test.ts",
           "src/components/overlays/overlay/overlay-remediation.test.ts",
           "src/components/overlays/overlay/overlay.test.ts",
+          "src/components/overlays/overlay/popover-dom-boundary.test.ts",
           "src/components/overlays/overlay/popover-trigger.test.ts",
           "src/components/overlays/overlay/popover-virtual-boundary.test.ts",
           "src/components/overlays/overlay/popover.test.ts",

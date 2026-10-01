@@ -26037,6 +26037,16 @@ If the import fails, leave the native disclosure visible and usable.
 - `anchor: Element | null = null` (property only) — positioning-only direct anchor, taking priority
   over `for` and the interaction owner but never receiving click listeners or generated ARIA; a
   `showAt()` virtual anchor still wins
+- `interactionBoundary: Element | null = null` (property only) — additional light-dismiss
+  containment for DOM anchoring. Pointer presses within this connected element and its composed
+  descendants keep the popup open, so a collection's own activation handler can change `.anchor`
+  without a hide/show cycle. Automatic DOM anchor tracking remains active. The boundary must belong
+  to the popover's document; detached or foreign-document elements are ignored. It supplies no
+  positioning, activation, generated ARIA, or focus return. Changes apply live, and configuration
+  persists across close and reconnect. Containment uses the event's composed path; when the
+  collection lives inside a closed shadow tree, supply its exposed host. Unset, existing dismissal
+  behavior is unchanged. Virtual `showAt()` anchors use only their independent per-call
+  `options.interactionBoundary`.
 - `withoutArrow: boolean = false` (attribute `without-arrow`, reflected) — suppresses the arrow
   that otherwise points at the anchor.
 - `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'` (attribute `arrow-placement`) —

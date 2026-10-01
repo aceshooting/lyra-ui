@@ -176,7 +176,9 @@ export interface LyraPopoverEventMap {
  * Live `popupRole`, host-id, target-id, and target-identity changes keep those relationships
  * synchronized. Losing the sole live positioning anchor force-closes the surface; if a slotted or
  * `for` fallback remains, the popover repositions to it and stays open. A deliberate `showAt()`
- * virtual anchor remains open independently of DOM-anchor removal.
+ * virtual anchor remains open independently of DOM-anchor removal. The optional DOM
+ * `interactionBoundary` includes a collection in light-dismiss containment without changing
+ * interaction/ARIA ownership or automatic DOM-anchor tracking.
  *
  * Lifecycle: `show()` emits `lr-show` (cancelable) and then `lr-after-show` once the popup's
  * transition has finished; `hide()` emits `lr-hide` (cancelable) then `lr-after-hide`. Assigning
@@ -374,6 +376,16 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   /** Positioning-only element anchor. Takes precedence over `for` and the interaction owner, but
    *  never receives click listeners or generated ARIA. */
   @property({ attribute: false }) anchor: Element | null = null;
+  /**
+   * Additional light-dismiss containment while using a DOM anchor. Pointer presses within this
+   * connected element and its composed descendants do not dismiss the popup. The boundary must
+   * belong to this popover's document and appear in the event's composed path; use a closed
+   * shadow tree's exposed host. It supplies no positioning, activation, ARIA, or focus
+   * return. Configuration persists across close and reconnect. Virtual `showAt()` anchors use
+   * their independent per-call `options.interactionBoundary` instead.
+   * @default null
+   */
+  @property({ attribute: false }) interactionBoundary: Element | null = null;
   /** Suppresses the arrow that points at the anchor, wherever it would otherwise render. */
   @property({ type: Boolean, attribute: 'without-arrow', reflect: true }) withoutArrow = false;
   /** Where the arrow sits along the popup's edge. `anchor` tracks the anchor's centre. */
@@ -532,7 +544,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
    *  `showAt()`'s doc comment and `activatePopoverOverlay()`'s focus-return configuration. */
   private returnFocusTo?: HTMLElement;
   /** Explicit light-dismiss containment for the current virtual anchor, without trigger ownership. */
-  private interactionBoundary?: Element;
+  private virtualInteractionBoundary?: Element;
   private cleanup?: () => void;
   private positioningGeneration = 0;
   private positioningReady: Promise<boolean> = Promise.resolve(false);
@@ -659,7 +671,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
 
   /** Lets a mapped subclass include a separate containing element in its dismiss boundary. */
   protected isInsideLightDismissBoundary(path: EventTarget[]): boolean {
-    const boundary = this.virtualAnchor ? this.interactionBoundary : undefined;
+    const boundary = this.virtualAnchor ? this.virtualInteractionBoundary : this.interactionBoundary;
     return path.includes(this)
       || (this.triggerElement != null && path.includes(this.triggerElement))
       || (boundary != null && boundary.isConnected
@@ -777,7 +789,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
           this.overlayHandle = undefined;
           this.virtualAnchor = undefined;
           this.returnFocusTo = undefined;
-          this.interactionBoundary = undefined;
+          this.virtualInteractionBoundary = undefined;
           this.syncInteractionTrigger();
         }
       }
@@ -864,7 +876,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     // Transient interaction state, per the library's reset-on-disconnect rule: a pin taken before
     // a drag-and-drop reparent must not outlive the move and strand the surface open.
     this.cancelPendingTransition();
-    this.interactionBoundary = undefined;
+    this.virtualInteractionBoundary = undefined;
     this.pinned = false;
     this.openedByInteraction = false;
     // A pending after-event must not announce a transition the detached element left behind.
@@ -1016,7 +1028,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     if (!normalizedRect) return;
     const previousAnchor = this.virtualAnchor;
     const previousReturnFocusTo = this.returnFocusTo;
-    const previousInteractionBoundary = this.interactionBoundary;
+    const previousInteractionBoundary = this.virtualInteractionBoundary;
     const bounds = new DOMRect(
       normalizedRect.x,
       normalizedRect.y,
@@ -1028,7 +1040,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
       contextElement: normalizedRect.contextElement,
     };
     this.returnFocusTo = options?.returnFocusTo;
-    this.interactionBoundary = options?.interactionBoundary;
+    this.virtualInteractionBoundary = options?.interactionBoundary;
     this.syncInteractionTrigger();
     if (this.open) {
       this.updatePopoverRestoreFocusTarget();
@@ -1039,7 +1051,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     if (this.open) return;
     this.virtualAnchor = previousAnchor;
     this.returnFocusTo = previousReturnFocusTo;
-    this.interactionBoundary = previousInteractionBoundary;
+    this.virtualInteractionBoundary = previousInteractionBoundary;
     this.syncInteractionTrigger();
   }
   /** Resolves what the popup is positioned against: an explicit virtual anchor first, then the
