@@ -1693,10 +1693,13 @@ The token grammar rejects CSS-wide keywords, control characters, unsafe punctuat
 
 **Saved styles and the no-flash bootstrap.** getLyraStyle() re-reads storage on each call, so a value written by another tab is visible. If storage is unavailable, the runtime reports its last applied style and continues applying changes without persistence. lyraThemeBootstrap is a self-contained IIFE string for a script in head before stylesheets; it restores the saved style before first paint. createLyraThemeBootstrap({ storageKey }) produces the same string for an application-owned key. Both runtime and bootstrap safely read v1 records using mode: "auto", surface, and tokens, translating them to the current style axes. Keep this reader when migrating old saved preferences; new writes use the current style record.
 
-The bootstrap string can be inlined with the application's CSP nonce or hash:
+Inline the bootstrap after an early UTF-8 declaration and before stylesheets, with the application's
+CSP nonce or hash. Keep the complete charset declaration within the HTML document's first 1024
+bytes; build plugins must not prepend the bootstrap ahead of it.
 
 ~~~html
 <head>
+  <meta charset="utf-8" />
   <script>
     /* server-inlines lyraThemeBootstrap here */
   </script>
@@ -1704,7 +1707,7 @@ The bootstrap string can be inlined with the application's CSP nonce or hash:
 </head>
 ~~~
 
-For a strict CSP that disallows inline scripts, the package also publishes theme-bootstrap.js, a classic script asset with identical bytes. Load it synchronously before stylesheets. Its optional data-lr-theme-storage-key and data-lr-theme-attributes attributes select an application-owned storage key or mode-attribute list; values are validated and fall back to defaults when invalid.
+For a strict CSP that disallows inline scripts, the package also publishes theme-bootstrap.js, a classic script asset with identical bytes. Load it synchronously after the charset declaration and before stylesheets. Its optional data-lr-theme-storage-key and data-lr-theme-attributes attributes select an application-owned storage key or mode-attribute list; values are validated and fall back to defaults when invalid.
 
 **Migrating the retired theme facade.** New code uses setLyraStyle() and getLyraStyle(). Map old auto mode to system, an old surface reference color to accentBackground, and an old token map to overrides; review custom CSS colors that share a gemstone name before choosing a named accent. Replace preset definitions with a LyraLook plus explicit style choices. Replace selectors for data-lr-theme-preset with the actual axis they need, such as data-lr-look="shadcn". Import looks/shadcn.css in place of the removed fixed themes/shadcn.css facade and select the look with setLyraStyle({ look: "shadcn" }) or a scoped data-lr-look attribute. Listen for lr-style-change and read event.detail.style and event.detail.changed; the old theme and preset events are no longer emitted. For the complete project-by-project sequence, see [Upgrading from v23 to v24](v23-to-v24-migration.md).
 

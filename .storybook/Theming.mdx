@@ -140,14 +140,16 @@ through the same `look` field. Optional look, surface and accent stylesheets mus
 their CSS forms are used.
 
 For a no-flash boot, `lyraThemeBootstrap` is a self-contained IIFE **string** meant to be inlined
-into a `<script>` in `<head>` before any stylesheet, so the persisted style lands on the root element
-before first paint.
+into a `<script>` in `<head>` after `<meta charset="utf-8" />` and before any stylesheet, so the
+persisted style lands on the root element before first paint. Keep the complete charset declaration
+within the document's first 1024 bytes; build-time injection must not prepend the script ahead of it.
 
 `createLyraThemeBootstrap({ storageKey })` produces the same pre-paint script for an
 application-owned storage key. Generated option literals escape HTML script terminators; under a
 Content Security Policy, give the inline script the nonce or hash required by the application.
-An empty or malformed record receives the runtime's system/no-accent default; blocked storage is a
-safe no-op. The reader also preserves supported saved preferences from the earlier record format.
+Missing or invalid preference fields receive the built-in Shadcn/Glass/Emerald/System profile;
+inaccessible storage also uses this profile. Explicit saved choices take precedence. The reader
+preserves supported saved preferences from the earlier record format.
 
 ### Invalidating canvas theme values
 

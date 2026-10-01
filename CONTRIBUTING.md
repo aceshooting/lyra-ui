@@ -32,6 +32,15 @@ pnpm build        # -r: per package -> dist/. For @aceshooting/lyra-ui this is
 pnpm docs         # Storybook docs site at localhost:6006, demos every component live
 ```
 
+`pnpm docs:build` defaults to the standalone GitHub Pages documentation URL. To build for another
+public documentation location, set `LYRA_DOCS_BASE_URL=https://example.com/docs/` for that command.
+The URL must use HTTPS without credentials, a query or a fragment. It supplies the canonical,
+Open Graph, structured-data and crawler URLs together. Official CI and Pages builds select
+`https://www.lyra-ui.com/docs/`, so the Pages copy acts as a mirror. The generated
+`docs-public-base.json` records the artifact's choice; `pnpm docs:check` verifies that recorded
+profile without needing the build environment. Deploy the qualified output unchanged. Storybook's
+query-based guide routes still share one HTML document and canonical URL.
+
 Under the exact Node `22.23.2` from `.nvmrc` with the repository-pinned pnpm, run
 `./scripts/ci.sh` to reproduce the six primary CI jobs as one local aggregate. Use
 `./scripts/ci.sh --platform-matrix` to add all 11

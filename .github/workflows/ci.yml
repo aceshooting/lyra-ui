@@ -733,6 +733,7 @@ jobs:
       - run: pnpm docs:build
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          LYRA_DOCS_BASE_URL: https://www.lyra-ui.com/docs/
       - run: git diff --exit-code -- .storybook/sitemap.xml
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

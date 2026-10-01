@@ -2,6 +2,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { docsPublicMetadataErrors, renderDocsRobots, renderDocsSitemap, resolveDocsPublicBase } from './docs-public-base.mjs';
 
 import {
   rewriteStandaloneComponentReference,
@@ -90,15 +91,29 @@ if (!existsSync(indexPath)) {
     .filter((id) => index.entries[id]?.type === 'docs')
     .sort();
   const sitemap = read('.storybook/sitemap.xml');
-  const sitemapIds = [...sitemap.matchAll(/<loc>https:\/\/aceshooting\.github\.io\/lyra-ui\/\?path=\/docs\/([^<]+)<\/loc>/g)]
-    .map((match) => match[1])
-    .sort();
-  if (JSON.stringify(sitemapIds) !== JSON.stringify(docsIds)) {
+  if (sitemap !== renderDocsSitemap(docsIds)) {
     errors.push(`.storybook/sitemap.xml does not match Storybook's ${docsIds.length} docs entries; run pnpm docs:build`);
   }
-  const builtSitemapPath = join(root, 'storybook-static/sitemap.xml');
-  if (!existsSync(builtSitemapPath) || readFileSync(builtSitemapPath, 'utf8') !== sitemap) {
-    errors.push('storybook-static/sitemap.xml is not synchronized with .storybook/sitemap.xml; run `pnpm docs:build`');
+  if (read('.storybook/robots.txt') !== renderDocsRobots()) {
+    errors.push('.storybook/robots.txt must use the standalone documentation base');
+  }
+  try {
+    const profile = JSON.parse(read('storybook-static/docs-public-base.json'));
+    if (profile.schemaVersion !== 1 || typeof profile.publicBase !== 'string'
+      || resolveDocsPublicBase(profile.publicBase) !== profile.publicBase) {
+      throw new Error('Invalid documentation artifact profile');
+    }
+    if (read('storybook-static/sitemap.xml') !== renderDocsSitemap(docsIds, profile.publicBase)) {
+      errors.push('storybook-static/sitemap.xml does not match its recorded public base and docs index');
+    }
+    if (read('storybook-static/robots.txt') !== renderDocsRobots(profile.publicBase)) {
+      errors.push('storybook-static/robots.txt does not match its recorded public base');
+    }
+    for (const problem of docsPublicMetadataErrors(read('storybook-static/index.html'), profile.publicBase)) {
+      errors.push(`storybook-static/index.html has an incorrect ${problem}`);
+    }
+  } catch {
+    errors.push('Documentation artifact metadata is missing or invalid; run `pnpm docs:build` with the intended LYRA_DOCS_BASE_URL');
   }
 }
 

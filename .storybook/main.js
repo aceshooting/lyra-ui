@@ -9,6 +9,9 @@ import { componentImportsPlugin } from './component-imports.js';
 import { createGroupedStoryIndexer } from './story-indexer.js';
 import { storyTitlePlugin } from './story-title-plugin.js';
 import { builderModulePreload, isDeferredLocaleModule } from './docs-load-boundaries.js';
+import { renderDocsManagerHead, resolveDocsPublicBase } from '../scripts/docs-public-base.mjs';
+
+const docsPublicBase = resolveDocsPublicBase(process.env.LYRA_DOCS_BASE_URL);
 
 /** @type { import('@storybook/web-components-vite').StorybookConfig } */
 const config = {
@@ -52,6 +55,7 @@ const config = {
   // *first* `<title>` in the document, not the last — a `<title>` added there would render into
   // the <head> after this templated one and be silently ignored.
   title: 'Lyra UI — free alternative to Shoelace and Web Awesome',
+  managerHead: (head) => renderDocsManagerHead(head, docsPublicBase),
   // Copies files that must exist at the site root (not under an asset-hashed path) into
   // storybook-static/ verbatim. `llms.txt`/`llms-full.txt` are the coding-assistant-facing API
   // reference this repo's own README/llms.txt point at; robots.txt/sitemap.xml are the standard

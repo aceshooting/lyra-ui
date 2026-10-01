@@ -2,7 +2,7 @@
   Injected into the manager's <head>, after the templated <title> (see template.ejs in the
   installed `storybook` package) — auto-picked up by Storybook's `managerHead` preset purely by
   existing at this path (core-server/presets/common-preset.js reads `<configDir>/manager-head.html`
-  verbatim, no main.js wiring needed). The actual page <title> is set via `title` in main.js, not
+  with public URL tokens rendered by main.js's managerHead hook). The actual page <title> is set via `title` in main.js, not
   here — see the comment there for why a second <title> element in this file wouldn't work.
 -->
 <meta
@@ -10,7 +10,7 @@
   content="Lyra UI is a free, MIT-licensed Lit web component library and an independent alternative to Shoelace and Web Awesome. Accessible forms, dashboards, charts, data visualization, and Conversation & Agent UI with built-in i18n, RTL, and migration guidance."
 />
 <meta name="robots" content="index, follow" />
-<link rel="canonical" href="https://aceshooting.github.io/lyra-ui/" />
+<link rel="canonical" href="__LYRA_DOCS_BASE_HTML__" />
 
 <script type="application/ld+json">
   {
@@ -18,7 +18,7 @@
     "@type": "SoftwareSourceCode",
     "name": "Lyra UI",
     "description": "Free, independent Lit web components: an open-source alternative to Shoelace and Web Awesome for accessible forms, dashboards, charts, data visualization, and AI chat and agent interfaces.",
-    "url": "https://aceshooting.github.io/lyra-ui/",
+    "url": __LYRA_DOCS_BASE_JSON__,
     "codeRepository": "https://github.com/aceshooting/lyra-ui",
     "programmingLanguage": "TypeScript",
     "license": "https://opensource.org/license/mit/",
@@ -28,7 +28,7 @@
 
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Lyra UI" />
-<meta property="og:url" content="https://aceshooting.github.io/lyra-ui/" />
+<meta property="og:url" content="__LYRA_DOCS_BASE_HTML__" />
 <meta property="og:title" content="Lyra UI — free alternative to Shoelace and Web Awesome" />
 <meta
   property="og:description"

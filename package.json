@@ -23,7 +23,7 @@
     "docs:check-show-code": "node --test scripts/docs-diagnostics.test.mjs scripts/check-docs-show-code.test.mjs && node scripts/check-docs-show-code.mjs",
     "docs:check": "node scripts/check-docs-freshness.mjs",
     "storybook:check-theme": "node scripts/check-storybook-theme.mjs",
-    "storybook:check": "node --test scripts/storybook-contracts.test.mjs && node scripts/check-storybook.mjs",
+    "storybook:check": "node --test scripts/storybook-contracts.test.mjs scripts/docs-public-base.test.mjs && node scripts/check-storybook.mjs",
     "readme:check": "node scripts/check-readme-freshness.mjs",
     "plugin:sync": "node scripts/sync-plugin-version.mjs",
     "skill:check": "node --test scripts/sync-plugin-version.test.mjs scripts/skill-reference-context.test.mjs scripts/check-task-context-budgets.test.mjs && node scripts/sync-plugin-version.mjs --check && node scripts/check-skill-manifest.mjs && node scripts/check-task-context-budgets.mjs",

@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Best-effort sitemap: the docs home page plus every component/Introduction "docs" entry's
-  ?path= URL. Storybook is a client-routed SPA (one index.html for every entry — no separate
-  static HTML per story), so these query-string URLs all resolve to the same document; they're
-  still valid, bookmarkable, distinct crawl targets and are the convention other deployed
-  Storybook sites use in their own sitemaps.
-
-  Generated from storybook-static/index.json (entries with type="docs"), not hand-derived from
-  Storybook's title-to-id sanitization. `pnpm docs:build` refreshes this file automatically.
+  Best-effort sitemap: the docs home page plus each indexed docs route.
+  Storybook serves one index.html for all query-based routes, with one shared canonical.
+  The guide URLs are bookmarkable; separate indexing is not implied.
+  Generated from storybook-static/index.json by pnpm docs:build.
 -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://aceshooting.github.io/lyra-ui/</loc></url>
