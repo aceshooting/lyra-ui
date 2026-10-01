@@ -1316,7 +1316,8 @@ page you are on — that is what keeps two overlapping surfaces reading in the c
 
 ### Cascade layers
 
-`theme.css` declares its layer order up front, then puts all of its own tokens in `lr-theme`:
+`theme.css` declares its layer order up front, with base inputs in `lr-theme` and built-in profile
+rules in the `lr-theme-preset` sublayers:
 
 ```css
 @layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;
@@ -1324,9 +1325,10 @@ page you are on — that is what keeps two overlapping surfaces reading in the c
 
 - **`lr-base`** — contains the explicitly scoped native-element rules only when the optional
   `native.css` asset is imported.
-- **`lr-theme`** — where every `--lr-theme-*` token `theme.css` ships is declared.
-- **`lr-theme-preset`** — the compatibility layer name that holds optional look stylesheets, such as
-  [`looks/shadcn.css`](#the-shadcn-look--looksshadcncss). Empty unless one is imported.
+- **`lr-theme`** — contains the base theme inputs and token resolvers.
+- **`lr-theme-preset`** — the compatibility layer name for look, density, surface, accent and mode
+  rules. `theme.css` already supplies the built-in Shadcn, Glass and Emerald profile here; optional
+  look stylesheets add their own rules to the same sublayers.
 - **`lr-utilities`** — contains exact `lr-*` classes only when the optional `utilities.css` asset is
   imported.
 - **`lr-overrides`** — named so an application can opt its own rules into a defined position
@@ -1385,17 +1387,25 @@ reason.
 
 ### The shadcn look — looks/shadcn.css
 
-Import the base resolver and the optional look stylesheet, then select the look on the scope that should receive it:
+`theme.css` already installs Shadcn as the built-in default and supports explicit
+`data-lr-look="shadcn"` scopes. Import it once; the separate Shadcn sheet is unnecessary for this
+profile:
 
 ~~~ts
 import "@aceshooting/lyra-ui/theme.css";
-import "@aceshooting/lyra-ui/looks/shadcn.css";
 import { setLyraStyle } from "@aceshooting/lyra-ui/theme.js";
 
 setLyraStyle({ look: "shadcn" });
 ~~~
 
-The stylesheet declares values only under data-lr-look="shadcn". It composes with the independent mode, surface, density, and accent axes. For a local region, set data-lr-look="shadcn" on that region or use applyLyraStyleScope(). A nested data-lr-mode="dark" still changes mode without changing the look.
+Shadcn composes with the independent mode, surface, density and accent axes. For a local region,
+set data-lr-look="shadcn" on that region or use applyLyraStyleScope(). A nested data-lr-mode="dark"
+still changes mode without changing the look.
+
+The separate `looks/shadcn.css` sheet remains compatible. Besides the same scoped look values, it
+adds legacy `.light` and `.dark` mode aliases inside a Shadcn scope. Import that sheet only when
+those aliases are needed; prefer `data-lr-mode`, `data-lr-theme` or `.lr-light`/`.lr-dark` for new
+code. Explicit Lyra mode selectors on the same element take precedence over the compatibility aliases.
 
 The look sets --lr-theme-* inputs, so no component API changes. Its rules use Lyra's named cascade layers: unlayered application rules still win, and runtime accent ramps still take precedence over look values for the roles they paint. Import order between theme.css and looks/shadcn.css does not change the layer order.
 
@@ -1413,7 +1423,9 @@ Override the look through an unlayered application rule or the lr-overrides laye
 }
 ~~~
 
-The former global themes/shadcn.css facade and its data-lr-theme-preset behavior have been removed. Use looks/shadcn.css and the data-lr-look axis for new styling.
+The former global themes/shadcn.css facade and its data-lr-theme-preset behavior have been removed.
+Use theme.css and the data-lr-look axis for new styling; looks/shadcn.css is needed only for the
+compatibility aliases above.
 
 ### Where an override actually reaches
 
@@ -1656,7 +1668,7 @@ bytes; build plugins must not prepend the bootstrap ahead of it.
 
 For a strict CSP that disallows inline scripts, the package also publishes theme-bootstrap.js, a classic script asset with identical bytes. Load it synchronously after the charset declaration and before stylesheets. Its optional data-lr-theme-storage-key and data-lr-theme-attributes attributes select an application-owned storage key or mode-attribute list; values are validated and fall back to defaults when invalid.
 
-**Migrating the retired theme facade.** New code uses setLyraStyle() and getLyraStyle(). Map old auto mode to system, an old surface reference color to accentBackground, and an old token map to overrides; review custom CSS colors that share a gemstone name before choosing a named accent. Replace preset definitions with a LyraLook plus explicit style choices. Replace selectors for data-lr-theme-preset with the actual axis they need, such as data-lr-look="shadcn". Import looks/shadcn.css in place of the removed fixed themes/shadcn.css facade and select the look with setLyraStyle({ look: "shadcn" }) or a scoped data-lr-look attribute. Listen for lr-style-change and read event.detail.style and event.detail.changed; the old theme and preset events are no longer emitted. For the complete project-by-project sequence, see [Upgrading from v23 to v24](v23-to-v24-migration.md).
+**Migrating the retired theme facade.** New code uses setLyraStyle() and getLyraStyle(). Map old auto mode to system, an old surface reference color to accentBackground, and an old token map to overrides; review custom CSS colors that share a gemstone name before choosing a named accent. Replace preset definitions with a LyraLook plus explicit style choices. Replace selectors for data-lr-theme-preset with the actual axis they need, such as data-lr-look="shadcn". Import theme.css in place of the removed fixed themes/shadcn.css facade and select the look with setLyraStyle({ look: "shadcn" }) or a scoped data-lr-look attribute. Listen for lr-style-change and read event.detail.style and event.detail.changed; the old theme and preset events are no longer emitted. For the complete project-by-project sequence, see [Upgrading from v23 to v24](v23-to-v24-migration.md).
 
 Historical v1 stored records remain readable by the runtime and bootstrap. The removed JavaScript functions, preset subpaths, preset event, root marker, and fixed stylesheet are not available in the current API.
 
@@ -5548,10 +5560,8 @@ mode and accent; the axes compose independently.
 
 ```js
 import '@aceshooting/lyra-ui/theme.css';
-import '@aceshooting/lyra-ui/looks/shadcn.css';
 import '@aceshooting/lyra-ui/looks/material.css';
 import '@aceshooting/lyra-ui/density.css';
-import '@aceshooting/lyra-ui/surfaces/glass.css';
 import '@aceshooting/lyra-ui/accents.css';
 import { setLyraStyle, resetLyraStyle, applyLyraStyleScope } from '@aceshooting/lyra-ui/theme.js';
 
@@ -5569,7 +5579,8 @@ inherit), without persistence or global events; clearing preserves later author 
 reports requested axes and resolved mode.
 
 Set `data-lr-look`, `data-lr-surface`, `data-lr-density`, `data-lr-mode` and `data-lr-accent`
-directly if needed. Stylesheet look ids need their sheet; arbitrary ids neither load nor register.
+directly if needed. Shadcn and Lyra are included in `theme.css`; other stylesheet look ids need
+their optional sheet. Arbitrary ids neither load nor register.
 `defineLyraLook({ id, tokens })` defines a validated immutable runtime look;
 `lyraLookCss()` from `theme/look-css.js` creates CSS without DOM access. In app-owned shadow roots
 with local boundaries, install `theme.css` and selected sheets; selectors stop at roots, inheritance
