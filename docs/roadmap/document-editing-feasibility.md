@@ -71,10 +71,12 @@ non-ZIP/truncated input, missing and duplicate parts, traversal names, excessive
 malformed XML and DTD declarations. Refusal comes from a separate bounded preflight prototype;
 these results do not qualify the engine itself as safe for arbitrary untrusted input.
 
-The seven accepted documents were edited, saved and reopened in Chromium through public selection
-and native input. Independent comparisons passed the chosen preservation checks for all seven
-targeted saves and a separate unchanged save of the unsupported-content fixture: protected payload
+The seven accepted documents were edited, saved and reopened through public selection and native
+input in Chromium, Firefox and WebKit. Each engine passed the selected preservation checks for
+seven targeted edits and an unchanged save of the unsupported-content fixture: protected payload
 hashes, relationship targets, text, control/revision metadata and namespace bindings survived.
+The Firefox/WebKit extension reused the archived production prototype and original fixtures;
+32 output comparisons covered first saves and saves after reopening.
 Initial strict XML comparisons flagged added paragraph tracking IDs and removal of redundant
 `xml:space` attributes; those differences were reviewed separately, with whitespace-sensitive and
 content-loss checks retained. Modeled XML can be normalized, so whole-ZIP byte equality is not a
@@ -92,8 +94,15 @@ On Linux with an Intel Xeon Gold 6226R and eight assigned logical CPUs, one head
 sample opened the large fixture in 2.02 seconds, saved the edited document in 130 milliseconds and
 reopened it in 1.33 seconds. Initial opening included lazy module loading, layout and two animation
 frames. These single samples are a feasibility baseline, not a performance guarantee. Automated
-typing wall time includes driver overhead and is not input-to-paint latency. There is no qualified
-retained-memory result yet.
+typing wall time includes driver overhead and is not input-to-paint latency.
+
+Retained memory remains unqualified. After one warmup, three image-document mount/destroy cycles
+in each browser emptied the mount, released four host subscriptions and revoked each observed live
+image blob URL. No engine dedicated worker was created, so worker cleanup was not exercised.
+Chromium's post-GC page-level DOM and listener counts stayed constant, but used JavaScript heap was
+approximately 0.73, 1.50 and 1.64 MB above the warmed baseline after successive cycles. These
+cumulative differences establish neither their cause nor leak freedom. Equivalent native counters
+were unavailable for Firefox/WebKit; font and shaping resources were not covered.
 
 ## Dependency and asset boundaries
 
