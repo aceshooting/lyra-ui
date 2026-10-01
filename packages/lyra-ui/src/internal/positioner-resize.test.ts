@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys, setViewport } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../test/wtr-focus.js';
 import '../components/overlays/overlay/popover.js';
@@ -159,9 +159,19 @@ it('cleans synchronous initial disposal before observers or viewport listeners s
 });
 
 it('uses the popup owning window for reference resize frames', async () => {
-  const iframe = await fixture<HTMLIFrameElement>(html`<iframe title="Positioning reference" srcdoc="<!doctype html><html><body></body></html>"></iframe>`);
-  if (!iframe.contentDocument?.body) await new Promise<void>((resolve) => iframe.addEventListener('load', () => resolve(), { once: true }));
+  const iframe = await fixture<HTMLIFrameElement>(html`<iframe title="Positioning reference"></iframe>`);
+  const loaded = new Promise<void>(resolve => {
+    const onLoad = () => {
+      if (iframe.contentDocument?.body.id !== 'reference-document') return;
+      iframe.removeEventListener('load', onLoad);
+      resolve();
+    };
+    iframe.addEventListener('load', onLoad);
+  });
+  iframe.srcdoc = '<!doctype html><html><body id="reference-document"></body></html>';
+  await loaded;
   const doc = iframe.contentDocument!;
+  expect(doc.body.id).to.equal('reference-document');
   const view = doc.defaultView!;
   const nativeFrame = view.requestAnimationFrame.bind(view);
   let scheduled = 0;
@@ -173,10 +183,17 @@ it('uses the popup owning window for reference resize frames', async () => {
   doc.body.append(reference, popup);
   const stop = place(reference, popup, { sync: 'width' });
   try {
-    await frames();
+    for (let i = 0; i < 6; i++) {
+      await new Promise<void>(resolve => nativeFrame(() => resolve()));
+    }
+    expect(popup.getBoundingClientRect().width).to.equal(80);
     const initialFrames = scheduled;
     reference.style.width = '120px';
-    await frames(10);
+    await waitUntil(
+      () => scheduled > initialFrames && popup.getBoundingClientRect().width === 120,
+      'The popup owning window did not place the resized reference.',
+    );
+    expect(iframe.contentDocument === doc).to.equal(true);
     expect(scheduled).to.be.greaterThan(initialFrames);
     expect(popup.getBoundingClientRect().width).to.equal(120);
   } finally { stop(); view.requestAnimationFrame = nativeFrame; }
