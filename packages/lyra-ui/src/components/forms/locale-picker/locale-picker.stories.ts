@@ -112,7 +112,7 @@ export const OptionDisplay: Story = {
     docs: {
       description: {
         story:
-          '`option-display="label"` drops each row\'s raw BCP-47 tag line. Rows retain the medium control height floor even with small text or a compact trigger. The tag element is omitted rather than hidden, so it is absent from the row\'s accessible name and `::part(option-tag)` matches nothing — open both lists to compare.',
+          '`option-display="label"` drops each row\'s raw BCP-47 tag line. Rows retain a 3rem (normally 48px) floor even with small text, compact density or a compact trigger; long native labels wrap. The tag element is omitted rather than hidden, so it is absent from the row\'s accessible name and `::part(option-tag)` matches nothing — open both lists to compare.',
       },
     },
   },

@@ -228,8 +228,8 @@ export const styles = css`
     gap: var(--lr-locale-picker-gap, var(--_lr-locale-picker-gap-default));
     inline-size: 100%;
     box-sizing: border-box;
-    min-block-size: max(var(--lr-form-control-height-m), var(--lr-form-control-height));
-    padding: var(--lr-space-xs) var(--lr-space-s);
+    min-block-size: max(var(--lr-size-3rem), var(--lr-form-control-height-m), var(--lr-form-control-height));
+    padding: var(--lr-space-s);
     border: var(--lr-border-width-thin) solid transparent;
     border-radius: var(--lr-locale-picker-radius, var(--_lr-locale-picker-radius-default));
     background: none;
@@ -294,9 +294,8 @@ export const styles = css`
     overflow: hidden;
   }
   [part='option-label'] span:first-child {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
+    white-space: normal;
   }
   [part='option-tag'] {
     font-size: var(--lr-font-size-xs);
