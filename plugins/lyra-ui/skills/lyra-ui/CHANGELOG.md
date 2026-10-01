@@ -1,5 +1,17 @@
 # Changelog
 
+## 25.2.0
+
+### Minor Changes
+
+- a2a7c54: Allow map cluster count labels to use a custom foreground and optional halo so counts remain readable across mixed cluster circle colors. The existing on-tone foreground and halo-free rendering remain the defaults.
+- 41e4606: Allow `lr-map` clusters to set an outline color independently from their unclustered points, with theme-aware paint and the existing layer stroke as the default.
+
+### Patch Changes
+
+- a2a7c54: Avoid repeated descriptor validation when traversing the JSON viewer's owned snapshot, while preserving hostile-input admission checks, sparse-array holes, and bounded rendering and search.
+- 41e4606: Resolve modern CSS colors and theme expressions before applying map paint, so data layers and choropleths render with MapLibre-compatible colors. Invalid paint falls back to the layer tone.
+
 ## 25.1.0
 
 ### Minor Changes

@@ -178,7 +178,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-memory-panel"></a>`lr-memory-panel` | retrieval | `import '@aceshooting/lyra-ui/components/lr-memory-panel.js';` | none | `lr-confirm-bar`, `lr-empty`, `lr-provenance-panel` | `lr-button`, `lr-chip`, `lr-chunk-inspector`, `lr-community-card`, `lr-details`, `lr-entity-chip`, `lr-json-viewer`, `lr-live-region`, `lr-path-strip`, `lr-scroller`, `lr-virtual-list` | 100.1 KiB |
 | <a id="lr-mention-popover"></a>`lr-mention-popover` | utility | `import '@aceshooting/lyra-ui/components/lr-mention-popover.js';` | none | none | none | 42 KiB |
 | <a id="lr-menu"></a>`lr-menu` | layout | `import '@aceshooting/lyra-ui/components/lr-menu.js';` | none | `lr-menu-item` | none | 52.8 KiB |
-| <a id="lr-menu-item"></a>`lr-menu-item` | layout | `import '@aceshooting/lyra-ui/components/lr-menu-item.js';` | none | `lr-menu` | none | 27.8 KiB |
+| <a id="lr-menu-item"></a>`lr-menu-item` | layout | `import '@aceshooting/lyra-ui/components/lr-menu-item.js';` | none | `lr-menu` | none | 27.9 KiB |
 | <a id="lr-menu-label"></a>`lr-menu-label` | layout | `import '@aceshooting/lyra-ui/components/lr-menu-label.js';` | none | none | none | 19.4 KiB |
 | <a id="lr-menubar"></a>`lr-menubar` | layout | `import '@aceshooting/lyra-ui/components/lr-menubar.js';` | none | `lr-menubar-item` | `lr-menu`, `lr-menu-item` | 59.1 KiB |
 | <a id="lr-menubar-item"></a>`lr-menubar-item` | layout | `import '@aceshooting/lyra-ui/components/lr-menubar-item.js';` | none | `lr-menu` | `lr-menu-item` | 55 KiB |
