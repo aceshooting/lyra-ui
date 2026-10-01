@@ -1,4 +1,4 @@
-import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { sendMouse } from '../../../../test/wtr-mouse.js';
 import { deepActiveElement } from '../../../internal/overlay-manager.js';
@@ -235,6 +235,85 @@ describe('native modal interoperability', () => {
     } finally {
       overlay.remove();
       native.close();
+    }
+  });
+
+  it('cleans up a rejected native promotion so a later open can take focus', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div><dialog><button>Native opener</button></dialog>
+        <lr-dialog label="Details" style="--show-duration: 0ms; --hide-duration: 0ms"><button>Apply</button></lr-dialog>
+      </div>
+    `);
+    const native = wrapper.querySelector('dialog')!;
+    const overlay = wrapper.querySelector('lr-dialog') as LyraDialog;
+    const action = overlay.querySelector('button')!;
+    const authoredChildren = overlay.childElementCount;
+    const originalShowModal = HTMLDialogElement.prototype.showModal;
+    const originalConsoleError = console.error;
+    const injectedError = 'Native promotion rejected';
+    const runnerWarning = 'An error was thrown in a Promise outside a test. Did you forget to await a function or assertion?';
+    const injectedDetail = `InvalidStateError: ${injectedError}`;
+    const expectedRejections: string[] = [];
+    const expectedConsoleErrors: string[] = [];
+    const suppressInjectedRejection = (event: PromiseRejectionEvent): void => {
+      if ((event.reason as Error | undefined)?.message !== injectedError) return;
+      expectedRejections.push(injectedError);
+      event.preventDefault();
+    };
+    let rejectedPromotions = 0;
+    let clicks = 0;
+    action.addEventListener('click', () => clicks++);
+    try {
+      native.showModal();
+      // Lit re-reports a failed update when the next one is queued. Keep the injected platform
+      // error from becoming unrelated strict-console noise while forwarding every other error.
+      window.addEventListener('unhandledrejection', suppressInjectedRejection);
+      console.error = (...args: unknown[]) => {
+        const message = args.map(String).join(' ');
+        if (message === runnerWarning || message === injectedDetail) {
+          expectedConsoleErrors.push(message);
+          return;
+        }
+        originalConsoleError(...args);
+      };
+      HTMLDialogElement.prototype.showModal = function () {
+        if (this.hasAttribute('data-native-modal-carrier')) {
+          rejectedPromotions++;
+          throw new DOMException(injectedError, 'InvalidStateError');
+        }
+        return originalShowModal.call(this);
+      };
+      let rejected = false;
+      try {
+        await overlay.show();
+      } catch (error) {
+        rejected = error instanceof DOMException && error.name === 'InvalidStateError' &&
+          error.message === injectedError;
+      } finally {
+        HTMLDialogElement.prototype.showModal = originalShowModal;
+      }
+      expect(rejectedPromotions).to.equal(1);
+      expect(rejected, 'the platform rejection reaches the caller').to.equal(true);
+      expect(overlay.childElementCount, 'no helper mount remains in the authored host').to.equal(authoredChildren);
+      expect(overlay.hasAttribute('data-native-modal-active')).to.equal(false);
+      const carrier = overlay.shadowRoot!.querySelector<HTMLDialogElement>('dialog[data-native-modal-carrier]')!;
+      expect(carrier.inert, 'temporary inertness is released').to.equal(false);
+      expect(native.matches(':modal')).to.equal(true);
+
+      await overlay.hide();
+      await overlay.show();
+      await click(action);
+      expect(clicks, 'the later native carrier accepts pointer input').to.equal(1);
+      expect(deepActiveElement(document) === action, 'focus reaches the retried dialog action').to.equal(true);
+      await aTimeout(50);
+      expect(expectedConsoleErrors, 'each generic runner warning belongs to the injected error')
+        .to.deep.equal(expectedRejections.flatMap(() => [runnerWarning, injectedDetail]));
+    } finally {
+      HTMLDialogElement.prototype.showModal = originalShowModal;
+      console.error = originalConsoleError;
+      window.removeEventListener('unhandledrejection', suppressInjectedRejection);
+      overlay.remove();
+      if (native.open) native.close();
     }
   });
 

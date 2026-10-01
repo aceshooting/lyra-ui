@@ -30607,7 +30607,8 @@ heatmap?: LyraMapHeatmapOptions; cluster?: LyraMapClusterOptions }`. `sourceId` 
   down to the layer ids and the point layer's filter.**
 
   `cluster?: LyraMapClusterOptions { radius?: number; maxZoom?: number; radiusSteps?: [number,
-number][]; colorSteps?: [number, string][]; countFont?: string[] }` turns the entry's source into a
+number][]; colorSteps?: [number, string][]; countFont?: string[]; countColor?: string;
+countHaloColor?: string; countHaloWidth?: number }` turns the entry's source into a
   natively clustered one — `cluster`/`clusterRadius` (default 50)/`clusterMaxZoom` (default 14) on
   the source, plus a `${sourceId}-cluster` circle filtered on `has('point_count')`, a
   `${sourceId}-cluster-count` label, and a `${sourceId}-circle` layer for the points that stayed
@@ -30624,6 +30625,12 @@ number][]; colorSteps?: [number, string][]; countFont?: string[] }` turns the en
   label needs glyphs: a style that declares none gets the graduated circles without the numbers
   (adding a text layer against a glyph-less style paints nothing and only emits peer errors), and
   `countFont` names the font stack when your style's glyph source lacks MapLibre's spec default.
+  `countColor` overrides the on-tone label foreground, which is useful when `colorSteps` mixes light
+  and dark circles. `countHaloColor` adds an outline for contrast; `countHaloWidth` defaults to 1
+  CSS pixel with a halo color and is bounded to 0–3 (one quarter of the 12px label size). An
+  explicit width of 0 disables the outline. Both count colors accept CSS colors or `var(--lr-…)`
+  references resolved against the host on theme repaint. Omitting or removing these options
+  restores the previous on-tone label and halo-free default.
   Cluster options are baked into the source at creation time by MapLibre and have no setter, so
   changing them (or `kind`) rebuilds that one entry's source and layers; every other update still
   reconciles in place.
@@ -33760,6 +33767,9 @@ These named interfaces and helper signatures are available to typed integrations
     readonly radiusSteps?: readonly (readonly [number, number])[];
     readonly colorSteps?: readonly (readonly [number, string])[];
     readonly countFont?: readonly string[];
+    readonly countColor?: string;
+    readonly countHaloColor?: string;
+    readonly countHaloWidth?: number;
   }`
   Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapGeoJsonDataLayer {

@@ -424,6 +424,8 @@ export const FitBounds: Story = {
  * none of, so only the graduated circles paint here; a real basemap style renders the numbers. The
  * count is on `lr-map-click` either way, as `feature.properties.point_count` under
  * `origin: 'cluster'`.
+ * On a glyph-enabled style, countColor and countHaloColor keep the label legible across the
+ * differently colored circle steps; countHaloWidth controls the outline.
  */
 export const ClusteredPoints: Story = {
   name: 'Clustered points (thousands of pins)',
@@ -447,6 +449,9 @@ export const ClusteredPoints: Story = {
             [25, storyColor('warning')],
             [100, storyColor('danger')],
           ],
+          countColor: 'var(--lr-color-on-warning)',
+          countHaloColor: 'var(--lr-color-neutral)',
+          countHaloWidth: 1,
         },
         geojson: {
           type: 'FeatureCollection',

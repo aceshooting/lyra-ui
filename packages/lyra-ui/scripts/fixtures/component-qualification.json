@@ -25936,7 +25936,7 @@
           "evidence": [
             {
               "file": "src/components/utility/json-viewer/json-viewer.test.ts",
-              "line": 1631,
+              "line": 1642,
               "kind": "320px allocation test signal"
             }
           ]
@@ -28092,7 +28092,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.class.ts",
-              "line": 3554,
+              "line": 3612,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

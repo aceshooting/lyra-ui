@@ -64,8 +64,17 @@ interface JsonSnapshotBudget {
   truncated: boolean;
 }
 
+type JsonSnapshotValue = null | undefined | string | number | boolean | bigint |
+  readonly JsonSnapshotValue[] | JsonSnapshotObject;
+
+interface JsonSnapshotObject {
+  readonly [key: string]: JsonSnapshotValue;
+}
+
+type JsonSnapshotContainer = JsonSnapshotObject | JsonSnapshotValue[];
+
 interface JsonSnapshot {
-  readonly value: unknown;
+  readonly value: JsonSnapshotValue;
   readonly truncated: boolean;
 }
 
@@ -86,8 +95,8 @@ function isArrayContainer(value: unknown): value is readonly unknown[] {
   }
 }
 
-function isPlainContainer(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !isArrayContainer(value);
+function isSnapshotArray(value: JsonSnapshotValue): value is readonly JsonSnapshotValue[] {
+  return Array.isArray(value);
 }
 
 /**
@@ -102,7 +111,7 @@ function snapshotJsonData(value: unknown): JsonSnapshot {
     remainingInspections: MAX_JSON_SNAPSHOT_INSPECTIONS,
     truncated: false,
   };
-  const copies = new WeakMap<object, object>();
+  const copies = new WeakMap<object, JsonSnapshotContainer>();
   const projected = snapshotJsonValue(value, budget, copies, 0);
   return Object.freeze({
     value: projected === OMIT_JSON_SNAPSHOT ? undefined : projected,
@@ -113,9 +122,9 @@ function snapshotJsonData(value: unknown): JsonSnapshot {
 function snapshotJsonValue(
   value: unknown,
   budget: JsonSnapshotBudget,
-  copies: WeakMap<object, object>,
+  copies: WeakMap<object, JsonSnapshotContainer>,
   depth: number,
-): unknown | typeof OMIT_JSON_SNAPSHOT {
+): JsonSnapshotValue | typeof OMIT_JSON_SNAPSHOT {
   if (budget.remainingNodes <= 0) {
     budget.truncated = true;
     return OMIT_JSON_SNAPSHOT;
@@ -141,7 +150,7 @@ function snapshotJsonValue(
   const array = isArrayContainer(source);
   if (depth >= MAX_JSON_DEPTH) {
     budget.truncated = true;
-    const shell: object = array ? [] : Object.create(null);
+    const shell: JsonSnapshotContainer = array ? [] : Object.create(null);
     copies.set(source, shell);
     return Object.freeze(shell);
   }
@@ -153,9 +162,9 @@ function snapshotJsonValue(
 function snapshotJsonArray(
   source: readonly unknown[],
   budget: JsonSnapshotBudget,
-  copies: WeakMap<object, object>,
+  copies: WeakMap<object, JsonSnapshotContainer>,
   depth: number,
-): unknown | typeof OMIT_JSON_SNAPSHOT {
+): JsonSnapshotValue | typeof OMIT_JSON_SNAPSHOT {
   const length = getOwnDataDescriptor(source, 'length');
   if (
     length === MISSING_OWN_DATA_DESCRIPTOR ||
@@ -167,7 +176,7 @@ function snapshotJsonArray(
     budget.truncated = true;
     return OMIT_JSON_SNAPSHOT;
   }
-  const projected: unknown[] = [];
+  const projected: JsonSnapshotValue[] = [];
   copies.set(source, projected);
   let retainedLength = 0;
   const count = Math.min(length.value, budget.remainingInspections);
@@ -205,10 +214,10 @@ function snapshotJsonArray(
 function snapshotJsonObject(
   source: object,
   budget: JsonSnapshotBudget,
-  copies: WeakMap<object, object>,
+  copies: WeakMap<object, JsonSnapshotContainer>,
   depth: number,
-): unknown | typeof OMIT_JSON_SNAPSHOT {
-  const projected = Object.create(null) as Record<string, unknown>;
+): JsonSnapshotValue | typeof OMIT_JSON_SNAPSHOT {
+  const projected = Object.create(null) as Record<string, JsonSnapshotValue>;
   copies.set(source, projected);
   let keys: string[];
   try {
@@ -259,123 +268,51 @@ function snapshotJsonObject(
   }
 }
 
-/** A bounded prefix of an object's own enumerable properties or an array's indices. */
+/** A bounded prefix of the owned snapshot; source descriptors were checked at admission. */
 function entriesOf(
-  value: unknown,
+  value: JsonSnapshotValue,
   limit: number,
 ): {
-  entries: [JsonPathSegment, unknown][];
+  entries: [JsonPathSegment, JsonSnapshotValue][];
   truncated: boolean;
   total: number;
   exact: boolean;
 } {
-  const entries: [JsonPathSegment, unknown][] = [];
-  if (isArrayContainer(value)) {
-    const length = getOwnDataDescriptor(value, 'length');
-    if (
-      length === MISSING_OWN_DATA_DESCRIPTOR ||
-      length === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof length.value !== 'number' ||
-      !Number.isSafeInteger(length.value) ||
-      length.value < 0
-    ) {
-      return { entries, truncated: true, total: 0, exact: false };
-    }
-    const total = length.value;
+  const entries: [JsonPathSegment, JsonSnapshotValue][] = [];
+  if (isSnapshotArray(value)) {
+    const total = value.length;
     const count = Math.min(total, limit);
-    let truncated = total > count;
-    let exact = true;
     for (let index = 0; index < count; index += 1) {
-      const descriptor = getOwnDataDescriptor(value, String(index));
-      if (descriptor === MISSING_OWN_DATA_DESCRIPTOR) {
-        // Preserve an ordinary source-index hole as the viewer's historical undefined row.
-        entries.push([index, undefined]);
-        continue;
-      }
-      if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) {
-        truncated = true;
-        exact = false;
-        continue;
-      }
-      entries.push([index, descriptor.value]);
+      // Frozen arrays still inherit Array.prototype. A hole must not read an inherited getter.
+      entries.push([index, Object.hasOwn(value, index) ? value[index] : undefined]);
     }
-    return {
-      entries,
-      truncated,
-      total,
-      exact,
-    };
+    return { entries, truncated: total > count, total, exact: true };
   }
-  if (isPlainContainer(value)) {
-    let truncated = false;
+  if (typeof value === 'object' && value !== null) {
     let total = 0;
-    let exact = true;
-    let inspected = 0;
-    try {
-      for (const key in value) {
-        inspected += 1;
-        if (inspected > MAX_JSON_NODES) {
-          exact = false;
-          truncated = true;
-          break;
-        }
-        const descriptor = getOwnDataDescriptor(value, key);
-        if (descriptor === MISSING_OWN_DATA_DESCRIPTOR) continue;
-        if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR || !descriptor.enumerable) {
-          exact = false;
-          truncated = true;
-          continue;
-        }
-        total += 1;
-        if (entries.length < limit) entries.push([key, descriptor.value]);
-        else truncated = true;
-      }
-    } catch {
-      exact = false;
-      truncated = true;
+    for (const key in value) {
+      total += 1;
+      if (entries.length < limit) entries.push([key, value[key]]);
     }
-    return { entries, truncated, total, exact };
+    return { entries, truncated: total > entries.length, total, exact: true };
   }
   return { entries, truncated: false, total: 0, exact: true };
 }
 
-function valueType(value: unknown): JsonValueType {
+function valueType(value: JsonSnapshotValue): JsonValueType {
   if (value === null) return 'null';
   if (value === undefined) return 'undefined';
-  if (isArrayContainer(value)) return 'array';
+  if (isSnapshotArray(value)) return 'array';
   const t = typeof value;
   if (t === 'string' || t === 'number' || t === 'boolean') return t;
   if (t === 'object') return 'object';
-  // function/symbol/bigint -- not valid JSON, but rendering *something*
-  // sensible beats throwing on a value a caller handed us by mistake.
+  // BigInt is admitted and displayed as its decimal string.
   return 'string';
 }
 
-function formatPrimitive(value: unknown, type: JsonValueType): string {
-  switch (type) {
-    case 'string':
-      // `type` here also covers valueType()'s function/symbol/bigint
-      // fallback (see the comment there) -- JSON.stringify() throws a
-      // TypeError for a BigInt, so only an actual string gets the
-      // quoted/escaped treatment; everything else falls back to a plain
-      // String() coercion, which renders "sensibly" without throwing.
-      if (typeof value === 'string') return JSON.stringify(value);
-      try {
-        return String(value);
-      } catch {
-        return '';
-      }
-    case 'null':
-      return 'null';
-    case 'undefined':
-      return 'undefined';
-    default:
-      try {
-        return String(value);
-      } catch {
-        return '';
-      }
-  }
+function formatPrimitive(value: JsonSnapshotValue, type: JsonValueType): string {
+  if (type === 'string' && typeof value === 'string') return JSON.stringify(value);
+  return String(value);
 }
 
 export interface LyraJsonViewerEventMap {
@@ -494,7 +431,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   private searchState: SearchState = EMPTY_SEARCH;
   private searchLocale = '';
   /** Descriptor-safe, frozen data graph admitted on the most recent `data` write. */
-  private dataSnapshot: unknown = undefined;
+  private dataSnapshot: JsonSnapshotValue = undefined;
   private dataSnapshotTruncated = false;
   private searchAnnouncementSink?: AnnouncementSink;
   private searchAnnouncementsArmed = false;
@@ -575,7 +512,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     this.emit('lr-copy-error', outcome);
   }
 
-  private async copy(value: unknown): Promise<void> {
+  private async copy(value: JsonSnapshotValue): Promise<void> {
     let text = '';
     try {
       text = value === undefined ? 'undefined' : this.stringifyForClipboard(value);
@@ -608,7 +545,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
    * throws the same way formatPrimitive()'s unguarded call used to -- downgraded to its decimal
    * string form instead.
    */
-  private stringifyForClipboard(value: unknown): string {
+  private stringifyForClipboard(value: JsonSnapshotValue): string {
     const circularMarker = this.localize('circularReference');
     const stack: unknown[] = [];
     const serialized = JSON.stringify(
@@ -624,7 +561,14 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
       },
       2,
     );
-    return serialized ?? formatPrimitive(value, valueType(value));
+    if (serialized !== undefined) return serialized;
+    // Realm-installed serialization hooks can suppress an array's JSON result. Its fallback
+    // coercion still crosses the array prototype, unlike admitted primitive display values.
+    try {
+      return formatPrimitive(value, valueType(value));
+    } catch {
+      return '';
+    }
   }
 
   /**
@@ -653,7 +597,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     type WalkFrame =
       | {
           kind: 'visit';
-          value: unknown;
+          value: JsonSnapshotValue;
           path: JsonPathSegment[];
           keyLabel?: string;
         }
@@ -726,7 +670,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     };
   }
 
-  private renderCopyButton(value: unknown, label: string | undefined): TemplateResult | typeof nothing {
+  private renderCopyButton(value: JsonSnapshotValue, label: string | undefined): TemplateResult | typeof nothing {
     if (!this.copyable) return nothing;
     // "Copy {label}" is interpolated via the values arg (not string-concatenated)
     // so word order stays translatable -- label is either caller data (a JSON
@@ -752,7 +696,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   }
 
   private renderNode(
-    value: unknown,
+    value: JsonSnapshotValue,
     path: JsonPathSegment[],
     keyLabel: string | undefined,
     depth: number,

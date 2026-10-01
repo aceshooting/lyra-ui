@@ -506,32 +506,43 @@ it("omits an unsupported toJSON hook from the owned copy snapshot without invoki
   expect(event.detail.text).to.equal(JSON.stringify({ poison: {} }, null, 2));
 });
 
-it("never reports a serialization failure once the element has already disconnected", async () => {
-  let el!: LyraJsonViewer;
-  const poison = {
-    toJSON(): never {
+for (const outcome of ['fulfilled', 'rejected'] as const) {
+  it(`suppresses clipboard outcomes after disconnecting during a ${outcome} write`, async () => {
+    const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    let resolveWrite!: () => void;
+    let rejectWrite!: (error: Error) => void;
+    let writes = 0;
+    const pending = new Promise<void>((resolve, reject) => {
+      resolveWrite = resolve;
+      rejectWrite = reject;
+    });
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: () => { writes += 1; return pending; } },
+    });
+    try {
+      const el = await withData({ safe: 'kept' });
+      el.copyable = true;
+      await el.updateComplete;
+      const events: string[] = [];
+      for (const name of ['lr-copy', 'lr-error', 'lr-copy-error']) {
+        el.addEventListener(name, () => events.push(name));
+      }
+      el.shadowRoot!.querySelector<HTMLButtonElement>('[part="toolbar"] [part="copy-button"]')!.click();
+      expect(writes).to.equal(1);
       el.remove();
-      throw new Error("cannot serialize");
-    },
-  };
-  el = await withData({ poison });
-  el.copyable = true;
-  await el.updateComplete;
-
-  let errors = 0;
-  let failures = 0;
-  el.addEventListener("lr-error", () => errors++);
-  el.addEventListener("lr-copy-error", () => failures++);
-  (
-    el.shadowRoot!.querySelector(
-      '[part="toolbar"] [part="copy-button"]'
-    ) as HTMLButtonElement
-  ).click();
-  // The synchronous toJSON already ran (and disconnected the element) by the time click()
-  // returns, since copy()'s stringify step has no await before the catch block.
-  expect(errors).to.equal(0);
-  expect(failures).to.equal(0);
-});
+      expect(el.isConnected).to.equal(false);
+      if (outcome === 'fulfilled') resolveWrite();
+      else rejectWrite(new Error('deferred clipboard rejection'));
+      await pending.catch(() => undefined);
+      await aTimeout(0);
+      expect(events).to.deep.equal([]);
+    } finally {
+      if (original) Object.defineProperty(navigator, 'clipboard', original);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+    }
+  });
+}
 
 it('copies the literal string "undefined" when the root data is undefined', async () => {
   const el = await withData(undefined);
@@ -1968,4 +1979,47 @@ describe("retired collapsed-depth and search aliases", () => {
     expect(matchCount(canonical)).to.be.greaterThan(0);
     expect(await canonical.runSearch("london")).to.be.greaterThan(0);
   });
+});
+
+
+it('keeps sparse snapshot holes undefined despite an inherited numeric getter', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const view = frame.contentWindow as Window & typeof globalThis;
+  const doc = frame.contentDocument!;
+  const script = doc.createElement('script');
+  script.type = 'module';
+  script.textContent = `import ${JSON.stringify(new URL('./json-viewer.ts', import.meta.url).href)};`;
+  doc.head.append(script);
+  try {
+    await waitUntil(() => Boolean(view.customElements.get('lr-json-viewer')));
+    const viewer = doc.createElement('lr-json-viewer') as LyraJsonViewer;
+    viewer.data = ['first', , 'last'];
+    doc.body.append(viewer);
+    await viewer.updateComplete;
+    let inheritedReads = 0;
+    const prototype = view.Array.prototype;
+    const original = Object.getOwnPropertyDescriptor(prototype, '1');
+    Object.defineProperty(prototype, '1', {
+      configurable: true,
+      get(this: unknown[]) {
+        if (Object.isFrozen(this) && this.length === 3) inheritedReads += 1;
+        return 'inherited poison';
+      },
+      set(this: unknown[], value: unknown) {
+        Object.defineProperty(this, '1', { value, writable: true, enumerable: true, configurable: true });
+      },
+    });
+    try {
+      expect(await viewer.runSearch('inherited poison')).to.equal(0);
+      expect(await viewer.runSearch('undefined')).to.equal(1);
+      expect(viewer.shadowRoot!.textContent).not.to.contain('inherited poison');
+      expect(inheritedReads).to.equal(0);
+    } finally {
+      if (original) Object.defineProperty(prototype, '1', original);
+      else Reflect.deleteProperty(prototype, '1');
+    }
+  } finally {
+    frame.remove();
+  }
 });

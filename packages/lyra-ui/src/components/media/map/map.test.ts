@@ -5712,6 +5712,155 @@ describe('dataLayers clustering and heatmap', () => {
     ]);
   });
 
+  it('pairs mixed cluster fill steps with a public count foreground and halo', async () => {
+    const el = (await fixture(html`<lr-map style="--lr-color-danger: rgb(80, 20, 40); --lr-color-brand: rgb(250, 240, 210)"></lr-map>`)) as LyraMap;
+    const { layers } = stubMaplibreMap(el, { glyphs: 'https://example.invalid/{range}.pbf' });
+    el.dataLayers = entry({
+      cluster: {
+        colorSteps: [[0, '#f5f5dc'], [25, '#243344']],
+        countColor: 'var(--lr-color-danger)',
+        countHaloColor: 'var(--lr-color-brand)',
+        countHaloWidth: 2,
+      },
+    });
+    await el.updateComplete;
+
+    const paint = layers.get(`${dataLayerResourceId(el, 'pins')}-cluster-count`)!.paint!;
+    expect(paint['text-color']).to.equal('rgb(80, 20, 40)');
+    expect(paint['text-halo-color']).to.equal('rgb(250, 240, 210)');
+    expect(paint['text-halo-width']).to.equal(2);
+  });
+
+  it('keeps the default on-tone count with no halo and clears overrides on a retained cluster', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { layers, sources } = stubMaplibreMap(el, { glyphs: 'https://example.invalid/{range}.pbf' });
+    el.dataLayers = entry({ cluster: {} });
+    await el.updateComplete;
+    const sourceId = dataLayerResourceId(el, 'pins');
+    const source = sources.get(sourceId);
+    const paint = () => layers.get(`${sourceId}-cluster-count`)!.paint!;
+    const defaultColor = paint()['text-color'];
+    expect(paint()['text-halo-color']).to.equal(null);
+    expect(paint()['text-halo-width']).to.equal(null);
+
+    el.dataLayers = entry({ cluster: { countColor: '#123456', countHaloColor: '#abcdef' } });
+    await el.updateComplete;
+    expect(sources.get(sourceId)).to.equal(source);
+    expect(paint()['text-color']).to.equal('rgb(18, 52, 86)');
+    expect(paint()['text-halo-color']).to.equal('rgb(171, 205, 239)');
+    expect(paint()['text-halo-width']).to.equal(1);
+
+    el.dataLayers = entry({ cluster: {} });
+    await el.updateComplete;
+    expect(sources.get(sourceId)).to.equal(source);
+    expect(paint()['text-color']).to.equal(defaultColor);
+    expect(paint()['text-halo-color']).to.equal(null);
+    expect(paint()['text-halo-width']).to.equal(null);
+  });
+
+  it('bounds count halo width and rejects unsafe or inaccessible count paint', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { layers } = stubMaplibreMap(el, { glyphs: 'https://example.invalid/{range}.pbf' });
+    el.dataLayers = entry({ cluster: {} });
+    await el.updateComplete;
+    const paint = () => layers.get(`${dataLayerResourceId(el, 'pins')}-cluster-count`)!.paint!;
+    const defaultColor = paint()['text-color'];
+    el.dataLayers = entry({ cluster: {
+      countColor: 'url(https://example.invalid/x)',
+      countHaloColor: '#ffffff',
+      countHaloWidth: 99,
+    } });
+    await el.updateComplete;
+    expect(paint()['text-color']).to.equal(defaultColor);
+    expect(paint()['text-halo-color']).to.equal('rgb(255, 255, 255)');
+    expect(paint()['text-halo-width']).to.equal(3);
+
+    el.dataLayers = entry({ cluster: { countHaloColor: '#ffffff', countHaloWidth: 0 } });
+    await el.updateComplete;
+    expect(paint()['text-halo-width']).to.equal(0);
+    el.dataLayers = entry({ cluster: { countHaloColor: 'url(https://example.invalid/x)' } });
+    await el.updateComplete;
+    expect(paint()['text-halo-color']).to.equal(null);
+    expect(paint()['text-halo-width']).to.equal(null);
+  });
+
+  it('resolves count foreground and halo tokens on add and theme repaint', async () => {
+    const el = (await fixture(html`<lr-map style="--lr-color-danger: rgb(1, 2, 3); --lr-color-brand: rgb(4, 5, 6)"></lr-map>`)) as LyraMap;
+    const { layers } = stubMaplibreMap(el, { glyphs: 'https://example.invalid/{range}.pbf' });
+    const added = captureAddedLayerPaint(el);
+    el.dataLayers = entry({ cluster: {
+      countColor: 'var(--lr-color-danger)',
+      countHaloColor: 'var(--lr-color-brand)',
+    } });
+    await el.updateComplete;
+    const id = `${dataLayerResourceId(el, 'pins')}-cluster-count`;
+    expect(added.get(id)!['text-color']).to.equal('rgb(1, 2, 3)');
+    expect(added.get(id)!['text-halo-color']).to.equal('rgb(4, 5, 6)');
+    el.style.setProperty('--lr-color-danger', 'rgb(7, 8, 9)');
+    el.style.setProperty('--lr-color-brand', 'rgb(10, 11, 12)');
+    (el as unknown as { refreshThemePaint: () => void }).refreshThemePaint();
+    expect(layers.get(id)!.paint!['text-color']).to.equal('rgb(7, 8, 9)');
+    expect(layers.get(id)!.paint!['text-halo-color']).to.equal('rgb(10, 11, 12)');
+  });
+
+  it('trims count token whitespace and rejects invalid or missing token values on add and repaint', async () => {
+    const el = (await fixture(html`<lr-map style="--lr-test-count: rgb(1, 2, 3); --lr-test-halo: rgb(4, 5, 6)"></lr-map>`)) as LyraMap;
+    const { layers } = stubMaplibreMap(el, { glyphs: 'https://example.invalid/{range}.pbf' });
+    const added = captureAddedLayerPaint(el);
+    el.dataLayers = entry({ cluster: {
+      countColor: '  var(--lr-test-count)  ',
+      countHaloColor: '  var(--lr-test-halo)  ',
+    } });
+    await el.updateComplete;
+    const id = `${dataLayerResourceId(el, 'pins')}-cluster-count`;
+    const paint = () => layers.get(id)!.paint!;
+    expect(added.get(id)!['text-color']).to.equal('rgb(1, 2, 3)');
+    expect(added.get(id)!['text-halo-color']).to.equal('rgb(4, 5, 6)');
+
+    el.style.setProperty('--lr-test-count', 'url(https://example.invalid/paint)');
+    el.style.setProperty('--lr-test-halo', 'not-a-color');
+    (el as unknown as { refreshThemePaint: () => void }).refreshThemePaint();
+    const invalidFallback = paint()['text-color'];
+    expect(invalidFallback).to.equal(getComputedStyle(el).getPropertyValue('--lr-color-on-brand').trim());
+    expect(paint()['text-halo-color']).to.equal(null);
+    expect(paint()['text-halo-width']).to.equal(null);
+
+    el.style.removeProperty('--lr-test-count');
+    el.style.removeProperty('--lr-test-halo');
+    (el as unknown as { refreshThemePaint: () => void }).refreshThemePaint();
+    expect(paint()['text-color']).to.equal(invalidFallback);
+    expect(paint()['text-halo-color']).to.equal(null);
+    expect(paint()['text-halo-width']).to.equal(null);
+  });
+
+  it('resolves count currentColor and CSS token fallbacks before MapLibre paint', async () => {
+    const el = (await fixture(html`<lr-map style="color: rgb(14, 15, 16)"></lr-map>`)) as LyraMap;
+    const { layers } = stubMaplibreMap(el, { glyphs: 'https://example.invalid/{range}.pbf' });
+    el.dataLayers = entry({ cluster: {
+      countColor: 'currentColor',
+      countHaloColor: 'var(--lr-missing-count-halo, #ffffff)',
+    } });
+    await el.updateComplete;
+    const paint = layers.get(`${dataLayerResourceId(el, 'pins')}-cluster-count`)!.paint!;
+    expect(paint['text-color']).to.equal('rgb(14, 15, 16)');
+    expect(paint['text-halo-color']).to.equal('rgb(255, 255, 255)');
+    expect(paint['text-halo-width']).to.equal(1);
+  });
+
+  it('converts modern CSS count colors to MapLibre-compatible sRGB paint', async () => {
+    const el = (await fixture(html`<lr-map style="--lr-test-modern-halo: oklch(70% 0.1 200)"></lr-map>`)) as LyraMap;
+    const { layers } = stubMaplibreMap(el, { glyphs: 'https://example.invalid/{range}.pbf' });
+    el.dataLayers = entry({ cluster: {
+      countColor: 'color-mix(in srgb, red, blue)',
+      countHaloColor: 'var(--lr-test-modern-halo)',
+    } });
+    await el.updateComplete;
+    const paint = layers.get(`${dataLayerResourceId(el, 'pins')}-cluster-count`)!.paint!;
+    expect(paint['text-color']).to.match(/^rgba?\(\d+, \d+, \d+/);
+    expect(paint['text-halo-color']).to.match(/^rgba?\(\d+, \d+, \d+/);
+    expect(paint['text-color']).to.not.equal(paint['text-halo-color']);
+  });
+
   it('filters malformed cluster font fallbacks while preserving the usable font order', async () => {
     const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
     const { layers } = stubMaplibreMap(el, { glyphs: 'https://example.invalid/{range}.pbf' });
@@ -6661,6 +6810,9 @@ describe('descriptor-safe map data projections', () => {
         radiusSteps: [[0, 12], [10, 20]],
         colorSteps: [[0, '#111111'], [10, '#222222']],
         countFont: ['Inter'],
+        countColor: '#123456',
+        countHaloColor: '#ffffff',
+        countHaloWidth: 2,
       },
       clusterReads,
     );
@@ -6710,7 +6862,10 @@ describe('descriptor-safe map data projections', () => {
       heatmapGeojson,
     ]);
     assertReadOnce(clusterReadsTopLevel, ['sourceId', 'geojson', 'cluster']);
-    assertReadOnce(clusterReads, ['radius', 'maxZoom', 'radiusSteps', 'colorSteps', 'countFont']);
+    assertReadOnce(clusterReads, [
+      'radius', 'maxZoom', 'radiusSteps', 'colorSteps', 'countFont',
+      'countColor', 'countHaloColor', 'countHaloWidth',
+    ]);
     assertReadOnce(heatmapReadsTopLevel, ['sourceId', 'geojson', 'kind', 'heatmap']);
     assertReadOnce(heatmapReads, ['weightField', 'weightRange', 'stops', 'radius', 'intensity', 'opacity']);
   });

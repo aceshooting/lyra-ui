@@ -670,6 +670,12 @@ export interface LyraMapClusterOptions {
    * since a text layer without one paints nothing and only emits peer errors.
    */
   readonly countFont?: readonly string[];
+  /** Count label foreground. Defaults to the layer tone's on-color. CSS token references resolve against this map. */
+  readonly countColor?: string;
+  /** Optional count label halo color. Without it, the label has no halo. */
+  readonly countHaloColor?: string;
+  /** Halo width in CSS pixels, clamped to 0–3 (one quarter of the 12px count text size). Defaults to 1 when a halo color is set. */
+  readonly countHaloWidth?: number;
 }
 
 /** A heatmap paint value expressed either as one constant or bounded `[zoom, value]` stops. */
@@ -1131,6 +1137,9 @@ interface NormalizedClusterOptions {
   readonly radiusSteps: readonly (readonly [number, number])[];
   readonly colorSteps: readonly (readonly [number, string])[];
   readonly countFont: readonly string[] | undefined;
+  readonly countColor: string | undefined;
+  readonly countHaloColor: string | undefined;
+  readonly countHaloWidth: number;
 }
 
 /**
@@ -1147,6 +1156,9 @@ function normalizedClusterOptions(value: unknown): NormalizedClusterOptions | un
     const radiusStepsDescriptor = ownDataValue(value, 'radiusSteps');
     const colorStepsDescriptor = ownDataValue(value, 'colorSteps');
     const countFontDescriptor = ownDataValue(value, 'countFont');
+    const countColorDescriptor = ownDataValue(value, 'countColor');
+    const countHaloColorDescriptor = ownDataValue(value, 'countHaloColor');
+    const countHaloWidthDescriptor = ownDataValue(value, 'countHaloWidth');
     const radiusValue = optionalDescriptorValue(radiusDescriptor);
     const maxZoomValue = optionalDescriptorValue(maxZoomDescriptor);
     const radiusSteps = normalizedSteps(
@@ -1155,6 +1167,7 @@ function normalizedClusterOptions(value: unknown): NormalizedClusterOptions | un
     );
     const colorSteps = normalizedSteps(optionalDescriptorValue(colorStepsDescriptor), isColorOutput);
     const fonts = normalizedClusterFonts(optionalDescriptorValue(countFontDescriptor));
+    const countHaloWidthValue = optionalDescriptorValue(countHaloWidthDescriptor);
     return Object.freeze({
       radius: finiteRange(
         typeof radiusValue === 'number' ? radiusValue : Number.NaN,
@@ -1171,6 +1184,14 @@ function normalizedClusterOptions(value: unknown): NormalizedClusterOptions | un
       radiusSteps: radiusSteps.length ? radiusSteps : DEFAULT_CLUSTER_RADIUS_STEPS,
       colorSteps,
       countFont: fonts.length ? fonts : undefined,
+      countColor: sanitizeCssColor(optionalDescriptorValue(countColorDescriptor)),
+      countHaloColor: sanitizeCssColor(optionalDescriptorValue(countHaloColorDescriptor)),
+      countHaloWidth: countHaloWidthValue === undefined ? 1 : finiteRange(
+        typeof countHaloWidthValue === 'number' ? countHaloWidthValue : Number.NaN,
+        1,
+        0,
+        3,
+      ),
     });
   } catch {
     return undefined;
@@ -1958,6 +1979,43 @@ function resolvedLayerColor(
     .getPropertyValue(reference[1]!)
     .trim();
   return resolved || dataLayerColor(host, tone);
+}
+
+/** Resolve a validated count color without replacing an invalid token with the circle's fill. */
+function resolvedClusterCountColor(host: Element, color: string | undefined): string | undefined {
+  if (!color) return undefined;
+  const candidate = color.trim();
+  if (!candidate) return undefined;
+  const resolved = resolveCanvasColor(host, candidate, '');
+  if (!resolved) return undefined;
+  if (/^rgba?\(/i.test(resolved)) return resolved;
+  const canvas = host.ownerDocument.createElement('canvas');
+  canvas.width = 1;
+  canvas.height = 1;
+  const context = canvas.getContext('2d', { colorSpace: 'srgb', willReadFrequently: true });
+  if (!context) return undefined;
+  // Modern computed colors can remain in color()/oklch() form, which MapLibre does not parse.
+  // A one-pixel sRGB readback converts only these colors to its rgb()/rgba() vocabulary.
+  let accepted = false;
+  for (const sentinel of ['rgb(1, 2, 3)', 'rgb(4, 5, 6)']) {
+    context.fillStyle = sentinel;
+    const before = context.fillStyle;
+    context.fillStyle = resolved;
+    if (context.fillStyle !== before) {
+      accepted = true;
+      break;
+    }
+  }
+  if (!accepted) return undefined;
+  try {
+    context.fillRect(0, 0, 1, 1);
+    const [r = 0, g = 0, b = 0, a = 0] = context.getImageData(0, 0, 1, 1).data;
+    return a === 255
+      ? `rgb(${r}, ${g}, ${b})`
+      : `rgba(${r}, ${g}, ${b}, ${Math.round((a / 255) * 1000) / 1000})`;
+  } catch {
+    return undefined;
+  }
 }
 
 /** Ceiling on the features one property-diff pass inspects, matching the untileable-property scan:
@@ -4428,7 +4486,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const circleId = `${sourceId}-circle`;
     const clusterColor = this.clusterColorExpression(layer, cluster);
     const clusterRadius = stepExpression(['get', 'point_count'], cluster.radiusSteps);
-    const countColor = resolvedLayerColor(this, `var(${ON_TONE_TOKEN[tone ?? 'accent']})`, tone);
+    const countColor = resolvedClusterCountColor(this, cluster.countColor)
+      ?? resolvedLayerColor(this, `var(${ON_TONE_TOKEN[tone ?? 'accent']})`, tone);
+    const countHaloColor = resolvedClusterCountColor(this, cluster.countHaloColor);
     if (!this._map.getLayer(clusterId)) {
       this._map.addLayer({
         id: clusterId,
@@ -4458,7 +4518,13 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
           'text-size': 12,
           ...(cluster.countFont ? { 'text-font': [...cluster.countFont] } : {}),
         },
-        paint: { 'text-color': countColor },
+        paint: {
+          'text-color': countColor,
+          ...(countHaloColor ? {
+            'text-halo-color': countHaloColor,
+            'text-halo-width': cluster.countHaloWidth,
+          } : {}),
+        },
       });
     }
     if (!this._map.getLayer(circleId)) {
@@ -4496,7 +4562,19 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       this._map.setPaintProperty(
         `${sourceId}-cluster-count`,
         'text-color',
-        resolvedLayerColor(this, `var(${ON_TONE_TOKEN[tone ?? 'accent']})`, tone),
+        resolvedClusterCountColor(this, cluster.countColor)
+          ?? resolvedLayerColor(this, `var(${ON_TONE_TOKEN[tone ?? 'accent']})`, tone),
+      );
+      const countHaloColor = resolvedClusterCountColor(this, cluster.countHaloColor);
+      this._map.setPaintProperty(
+        `${sourceId}-cluster-count`,
+        'text-halo-color',
+        countHaloColor ?? null,
+      );
+      this._map.setPaintProperty(
+        `${sourceId}-cluster-count`,
+        'text-halo-width',
+        countHaloColor ? cluster.countHaloWidth : null,
       );
     }
     this.paintPoints(sourceId, layer);
