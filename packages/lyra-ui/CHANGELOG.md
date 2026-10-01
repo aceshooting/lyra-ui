@@ -1,5 +1,22 @@
 # Changelog
 
+## 25.4.0
+
+### Minor Changes
+
+- 9deeb23: Add the inherited `--lr-avatar-border` CSS border hook for image, glyph and initials avatars. It defaults to no border and keeps the configured outer diameter across shapes and avatar groups, while preserving the forced-colors boundary.
+- 9deeb23: Add matrix-only heatmap `rowHeight` / `row-height` to keep readable rows independently of fit-to-width columns, with matching pointer, keyboard, accessibility, frozen labels, and export geometry.
+- 9deeb23: Add opt-in `sync-group` coordination between categorical vertical `lr-chart` and `lr-lite-chart` bar and line charts. Pointer and keyboard navigation show each chart's own matching category, crosshair and tooltip while preserving focus, announcements and activation behavior.
+
+### Patch Changes
+
+- fffbad7: Support KaTeX 0.19 alongside the existing 0.18 range, and preserve complete version ranges in the generated optional-peer documentation.
+- 9deeb23: Give reorder-item move controls localized action-label fallbacks for automation tools that omit
+  reflected element references, while preserving the full action-and-row native accessible names.
+- 9deeb23: Qualify glass control borders from the effective painted opacity, preserving contrast at the default 70% while restoring ordinary border colors on opaque surfaces and nested overlays. Controls inside surface-colored outlined cards and disclosures no longer inherit bright glass border qualification.
+- 9deeb23: Keep the app rail resize handle aligned with the navigation edge during width transitions, live sizing changes and reconnection.
+- 9deeb23: Keep loading button spinners centered in a glyph-sized box so their rotation does not create overflow or flickering scrollbars in dialogs and scroll containers.
+
 ## 25.3.1
 
 ### Patch Changes
