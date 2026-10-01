@@ -9865,7 +9865,7 @@
       "module": "src/components/media/map/map.class.ts",
       "exportName": "LyraMapClusterOptions",
       "kind": "interface",
-      "fingerprint": "1e7dcbd81ef5fbfa0186",
+      "fingerprint": "9e11fe14750b12b8ce36",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -9887,7 +9887,7 @@
       "module": "src/components/media/map/map.class.ts",
       "exportName": "LyraMapGeoJsonDataLayer",
       "kind": "interface",
-      "fingerprint": "c9446aea326dff5e10e6",
+      "fingerprint": "015e8bf91841a6d08487",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",

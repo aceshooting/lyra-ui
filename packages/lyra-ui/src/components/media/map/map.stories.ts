@@ -449,6 +449,7 @@ export const ClusteredPoints: Story = {
             [25, storyColor('warning')],
             [100, storyColor('danger')],
           ],
+          strokeColor: 'var(--lr-color-neutral)',
           countColor: 'var(--lr-color-on-warning)',
           countHaloColor: 'var(--lr-color-neutral)',
           countHaloWidth: 1,

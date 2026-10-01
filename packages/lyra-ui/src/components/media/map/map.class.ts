@@ -663,6 +663,8 @@ export interface LyraMapClusterOptions {
    * reaches MapLibre, which paints to a WebGL canvas and never sees the CSS cascade.
    */
   readonly colorSteps?: readonly (readonly [number, string])[];
+  /** Outline color for aggregate cluster circles only. Defaults to the layer stroke, color, then tone; individual pins keep their layer paint. */
+  readonly strokeColor?: string;
   /**
    * Font stack for the cluster count label, which must exist in the style's own glyph source.
    * Defaults to MapLibre's spec default; supply the names your style actually ships when that
@@ -1136,6 +1138,7 @@ interface NormalizedClusterOptions {
   readonly maxZoom: number;
   readonly radiusSteps: readonly (readonly [number, number])[];
   readonly colorSteps: readonly (readonly [number, string])[];
+  readonly strokeColor: string | undefined;
   readonly countFont: readonly string[] | undefined;
   readonly countColor: string | undefined;
   readonly countHaloColor: string | undefined;
@@ -1155,6 +1158,7 @@ function normalizedClusterOptions(value: unknown): NormalizedClusterOptions | un
     const maxZoomDescriptor = ownDataValue(value, 'maxZoom');
     const radiusStepsDescriptor = ownDataValue(value, 'radiusSteps');
     const colorStepsDescriptor = ownDataValue(value, 'colorSteps');
+    const strokeColorDescriptor = ownDataValue(value, 'strokeColor');
     const countFontDescriptor = ownDataValue(value, 'countFont');
     const countColorDescriptor = ownDataValue(value, 'countColor');
     const countHaloColorDescriptor = ownDataValue(value, 'countHaloColor');
@@ -1183,6 +1187,7 @@ function normalizedClusterOptions(value: unknown): NormalizedClusterOptions | un
       ),
       radiusSteps: radiusSteps.length ? radiusSteps : DEFAULT_CLUSTER_RADIUS_STEPS,
       colorSteps,
+      strokeColor: sanitizeCssColor(optionalDescriptorValue(strokeColorDescriptor)),
       countFont: fonts.length ? fonts : undefined,
       countColor: sanitizeCssColor(optionalDescriptorValue(countColorDescriptor)),
       countHaloColor: sanitizeCssColor(optionalDescriptorValue(countHaloColorDescriptor)),
@@ -1958,56 +1963,54 @@ function dataLayerColor(host: Element, tone: LyraMapGeoJsonDataLayer['tone']): s
   return raw || '#0969da';
 }
 
-/**
- * Resolves an author-supplied color for one data layer, falling back to the layer's `tone`.
- *
- * A `var(--lr-…)` reference is resolved against the host first, because maplibre paints to a WebGL
- * canvas and never sees the CSS cascade — handing it a raw `var()` string yields no paint at all,
- * the same class of silent failure `resolveCanvasColor()` exists for elsewhere in this library.
- */
-function resolvedLayerColor(
-  host: Element,
-  explicit: string | undefined,
-  tone: LyraMapGeoJsonDataLayer['tone'],
-): string {
-  const candidate = typeof explicit === 'string' ? explicit.trim() : '';
-  if (!candidate) return dataLayerColor(host, tone);
-  const reference = /^var\(\s*(--[\w-]+)/.exec(candidate);
-  if (!reference) return candidate;
-  const resolved = ownerWindow(host)
-    ?.getComputedStyle(host)
-    .getPropertyValue(reference[1]!)
-    .trim();
-  return resolved || dataLayerColor(host, tone);
-}
+/** Basic CSS names accepted by MapLibre's parser; other named/system colors need the DOM probe. */
+const BASIC_MAP_PAINT_COLOR_NAMES = new Set([
+  'aqua', 'black', 'blue', 'fuchsia', 'gray', 'green', 'lime', 'maroon', 'navy',
+  'olive', 'purple', 'red', 'silver', 'teal', 'white', 'yellow', 'transparent',
+]);
 
-/** Resolve a validated count color without replacing an invalid token with the circle's fill. */
-function resolvedClusterCountColor(host: Element, color: string | undefined): string | undefined {
-  if (!color) return undefined;
-  const candidate = color.trim();
+/**
+ * Resolve CSS colors into MapLibre's narrower paint vocabulary. Its parser accepts legacy hex and
+ * numeric rgb() but not modern color()/oklch()/color-mix(), even when the browser computes them.
+ * Preserve already-supported layer-paint strings, and only pay for the DOM probe when needed.
+ */
+function resolvedMapPaintColor(host: Element, color: string | undefined, preserveLegacy: boolean): string | undefined {
+  const candidate = typeof color === 'string' ? color.trim() : '';
   if (!candidate) return undefined;
+  if (preserveLegacy) {
+    const reference = /^var\(\s*(--[\w-]+)\s*\)$/.exec(candidate);
+    const plain = reference
+      ? ownerWindow(host)?.getComputedStyle(host).getPropertyValue(reference[1]!).trim() ?? ''
+      : candidate;
+    const namedPeerColor = BASIC_MAP_PAINT_COLOR_NAMES.has(plain.toLowerCase());
+    if (
+      /^#(?:[\da-f]{3,4}|[\da-f]{6}|[\da-f]{8})$/i.test(plain) ||
+      ((/^rgba?\([\d\s.,/]+\)$/i.test(plain) || namedPeerColor) &&
+        typeof CSS !== 'undefined' && CSS.supports('color', plain))
+    ) return plain;
+  }
   const resolved = resolveCanvasColor(host, candidate, '');
   if (!resolved) return undefined;
   if (/^rgba?\(/i.test(resolved)) return resolved;
   const canvas = host.ownerDocument.createElement('canvas');
   canvas.width = 1;
   canvas.height = 1;
-  const context = canvas.getContext('2d', { colorSpace: 'srgb', willReadFrequently: true });
-  if (!context) return undefined;
-  // Modern computed colors can remain in color()/oklch() form, which MapLibre does not parse.
-  // A one-pixel sRGB readback converts only these colors to its rgb()/rgba() vocabulary.
-  let accepted = false;
-  for (const sentinel of ['rgb(1, 2, 3)', 'rgb(4, 5, 6)']) {
-    context.fillStyle = sentinel;
-    const before = context.fillStyle;
-    context.fillStyle = resolved;
-    if (context.fillStyle !== before) {
-      accepted = true;
-      break;
-    }
-  }
-  if (!accepted) return undefined;
   try {
+    const context = canvas.getContext('2d', { colorSpace: 'srgb', willReadFrequently: true });
+    if (!context) return undefined;
+    // Computed modern colors may remain in color()/oklch() form. A one-pixel sRGB readback
+    // converts only these colors; two sentinels distinguish invalid from an unchanged fillStyle.
+    let accepted = false;
+    for (const sentinel of ['rgb(1, 2, 3)', 'rgb(4, 5, 6)']) {
+      context.fillStyle = sentinel;
+      const before = context.fillStyle;
+      context.fillStyle = resolved;
+      if (context.fillStyle !== before) {
+        accepted = true;
+        break;
+      }
+    }
+    if (!accepted) return undefined;
     context.fillRect(0, 0, 1, 1);
     const [r = 0, g = 0, b = 0, a = 0] = context.getImageData(0, 0, 1, 1).data;
     return a === 255
@@ -2016,6 +2019,32 @@ function resolvedClusterCountColor(host: Element, color: string | undefined): st
   } catch {
     return undefined;
   }
+}
+
+/** Resolve an author color, falling back to a concrete tone color on invalid paint. */
+function resolvedLayerColor(
+  host: Element,
+  explicit: string | undefined,
+  tone: LyraMapGeoJsonDataLayer['tone'],
+): string {
+  return resolvedMapPaintColor(host, explicit, true)
+    ?? resolvedMapPaintColor(host, dataLayerColor(host, tone), true)
+    ?? '#0969da';
+}
+
+/** Resolve a validated count color without replacing an invalid token with the circle's fill. */
+function resolvedClusterCountColor(host: Element, color: string | undefined): string | undefined {
+  return resolvedMapPaintColor(host, color, false);
+}
+
+/** Keep the cluster's optional ring separate from the layer paint used by single points. */
+function resolvedClusterStrokeColor(
+  host: Element,
+  clusterStroke: string | undefined,
+  layer: CanonicalMapDataLayer,
+): string {
+  return resolvedMapPaintColor(host, clusterStroke, true)
+    ?? resolvedLayerColor(host, layer.strokeColor ?? layer.color, layer.tone);
 }
 
 /** Ceiling on the features one property-diff pass inspects, matching the untileable-property scan:
@@ -4480,7 +4509,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   ): void {
     if (!this._map) return;
     const tone = layer.tone;
-    const stroke = resolvedLayerColor(this, layer.strokeColor ?? layer.color, tone);
+    const stroke = resolvedClusterStrokeColor(this, cluster.strokeColor, layer);
     const clusterId = `${sourceId}-cluster`;
     const countId = `${sourceId}-cluster-count`;
     const circleId = `${sourceId}-circle`;
@@ -4547,7 +4576,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   ): void {
     if (!this._map) return;
     const tone = layer.tone;
-    const stroke = resolvedLayerColor(this, layer.strokeColor ?? layer.color, tone);
+    const stroke = resolvedClusterStrokeColor(this, cluster.strokeColor, layer);
     const clusterId = `${sourceId}-cluster`;
     this._map.setPaintProperty(clusterId, 'circle-color', this.clusterColorExpression(layer, cluster));
     this._map.setPaintProperty(

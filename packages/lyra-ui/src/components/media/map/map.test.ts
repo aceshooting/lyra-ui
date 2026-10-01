@@ -4624,6 +4624,18 @@ describe('choropleth interpolation', () => {
       'rgb(4, 5, 6)',
     ]);
   });
+
+  it('resolves modern choropleth stop and base colors before building MapLibre expressions', async () => {
+    const options = {
+      stops: [[0, 'color(srgb 0.25 0.5 0.75)'], [100, 'color-mix(in srgb, red 50%, blue 50%)']] as const,
+      stepBaseColor: 'oklch(70% 0.1 200)',
+    };
+    const interpolate = await paintExprFor('linear', options);
+    const step = await paintExprFor('step', options);
+    expect(interpolate.slice(3)).to.deep.equal([0, 'rgb(64, 128, 191)', 100, 'rgb(128, 0, 128)']);
+    expect(step[2]).to.match(/^rgb\(\d+, \d+, \d+\)$/);
+    expect(step.slice(3)).to.deep.equal([0, 'rgb(64, 128, 191)', 100, 'rgb(128, 0, 128)']);
+  });
 });
 
 // `lr-map-click` used to query only the choropleth fill layer, so clicking a `dataLayers` polygon
@@ -5592,6 +5604,24 @@ describe('dataLayers clustering and heatmap', () => {
       .to.equal('#008000');
   });
 
+  it('resolves modern line stops and a CSS variable fallback before MapLibre paint', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { layers } = stubMaplibreMap(el);
+    el.dataLayers = entry({
+      strokeColor: 'var(--lr-missing-line, #102030)',
+      line: { field: 'speed', stops: [
+        [0, 'color(srgb 0.25 0.5 0.75)'],
+        [10, 'color-mix(in srgb, red 50%, blue 50%)'],
+      ] },
+    });
+    await el.updateComplete;
+    const expression = layers.get(`${dataLayerResourceId(el, 'pins')}-line`)!.paint!['line-color'] as unknown[];
+    expect((expression[2] as unknown[]).slice(-4)).to.deep.equal([
+      0, 'rgb(64, 128, 191)', 10, 'rgb(128, 0, 128)',
+    ]);
+    expect(expression[3]).to.equal('rgb(16, 32, 48)');
+  });
+
   it('updates and clears line paint in place without recreating resources', async () => {
     const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
     const { sources, layers } = stubMaplibreMap(el);
@@ -6281,6 +6311,161 @@ describe('dataLayers clustering and heatmap', () => {
       (layers.get(`${sourceId}-cluster`)!.paint!['circle-color'] as unknown[])[2],
       'a retheme moves the cluster breaks with everything else',
     ).to.equal('rgb(7, 8, 9)');
+  });
+
+  it('uses a cluster-only outline override and restores the layer stroke when it is unset', async () => {
+    const el = (await fixture(html`<lr-map style="--lr-test-cluster-ring: color(srgb 0.25 0.5 0.75)"></lr-map>`)) as LyraMap;
+    const { layers, sources } = stubMaplibreMap(el);
+    const added = captureAddedLayerPaint(el);
+    el.dataLayers = entry({ strokeColor: '#102030', cluster: {
+      strokeColor: 'var(--lr-test-cluster-ring)',
+    } });
+    await el.updateComplete;
+    const sourceId = dataLayerResourceId(el, 'pins');
+    const source = sources.get(sourceId);
+    const clusterPaint = () => layers.get(`${sourceId}-cluster`)!.paint!;
+    const pinPaint = () => layers.get(`${sourceId}-circle`)!.paint!;
+    expect(added.get(`${sourceId}-cluster`)!['circle-stroke-color']).to.equal('rgb(64, 128, 191)');
+    expect(clusterPaint()['circle-stroke-color']).to.equal('rgb(64, 128, 191)');
+    expect(pinPaint()['circle-color']).to.equal('#102030');
+
+    el.style.setProperty('--lr-test-cluster-ring', 'color(srgb 0.5 0.25 0.75)');
+    (el as unknown as { refreshThemePaint: () => void }).refreshThemePaint();
+    expect(clusterPaint()['circle-stroke-color']).to.equal('rgb(128, 64, 191)');
+    expect(pinPaint()['circle-color']).to.equal('#102030');
+
+    el.dataLayers = entry({ strokeColor: '#102030', cluster: {} });
+    await el.updateComplete;
+    expect(sources.get(sourceId)).to.equal(source);
+    expect(clusterPaint()['circle-stroke-color']).to.equal('#102030');
+    expect(pinPaint()['circle-color']).to.equal('#102030');
+  });
+
+  it('ignores unsafe cluster outline descriptors and invalid values without changing pins', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { layers } = stubMaplibreMap(el);
+    let getterCalls = 0;
+    const cluster = {
+      get strokeColor(): string {
+        getterCalls++;
+        return '#ffffff';
+      },
+    };
+    el.dataLayers = entry({ color: '#123456', cluster });
+    await el.updateComplete;
+    const sourceId = dataLayerResourceId(el, 'pins');
+    const aggregate = () => layers.get(`${sourceId}-cluster`)!.paint!['circle-stroke-color'];
+    const pin = () => layers.get(`${sourceId}-circle`)!.paint!['circle-color'];
+    expect(getterCalls).to.equal(0);
+    expect(aggregate()).to.equal('#123456');
+    expect(pin()).to.equal('#123456');
+
+    el.dataLayers = entry({ color: '#123456', cluster: { strokeColor: 'url(https://example.invalid/ring)' } });
+    await el.updateComplete;
+    expect(aggregate()).to.equal('#123456');
+    expect(pin()).to.equal('#123456');
+    el.dataLayers = entry({ color: '#123456', cluster: { strokeColor: 42 } });
+    await el.updateComplete;
+    expect(aggregate()).to.equal('#123456');
+    expect(pin()).to.equal('#123456');
+    el.dataLayers = entry({ color: '#123456', cluster: { strokeColor: 'var(--lr-missing-ring)' } });
+    await el.updateComplete;
+    expect(aggregate()).to.equal('#123456');
+    expect(pin()).to.equal('#123456');
+  });
+
+  it('snapshots cluster outline input until dataLayers is assigned again', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { layers, sources } = stubMaplibreMap(el);
+    const cluster = { strokeColor: '#123456' };
+    el.dataLayers = entry({ cluster });
+    await el.updateComplete;
+    const sourceId = dataLayerResourceId(el, 'pins');
+    const source = sources.get(sourceId);
+    const aggregate = () => layers.get(`${sourceId}-cluster`)!.paint!['circle-stroke-color'];
+    expect(aggregate()).to.equal('#123456');
+    cluster.strokeColor = '#abcdef';
+    (el as unknown as { refreshThemePaint: () => void }).refreshThemePaint();
+    expect(aggregate()).to.equal('#123456');
+    el.dataLayers = entry({ cluster });
+    await el.updateComplete;
+    expect(sources.get(sourceId)).to.equal(source);
+    expect(aggregate()).to.equal('#abcdef');
+  });
+
+  it('emits MapLibre-compatible paint for modern CSS colors in layer, point and cluster stops', async () => {
+    const el = (await fixture(html`<lr-map style="--lr-test-map-paint: color(srgb 0.25 0.5 0.75)"></lr-map>`)) as LyraMap;
+    const { layers } = stubMaplibreMap(el);
+    el.dataLayers = entry({
+      strokeColor: 'var(--lr-test-map-paint)',
+      cluster: { colorSteps: [[0, 'oklch(70% 0.1 200)'], [25, 'rgba(1, 2, 3, 0.5)']] },
+      point: { field: 'category', colors: [
+        ['home', 'color(srgb 0.25 0.5 0.75)'],
+        ['work', 'color-mix(in srgb, red 50%, blue 50%)'],
+        ['mixed', 'rgb(100% 0 0)'],
+        ['clear', 'color(srgb 1 0 0 / 0)'],
+      ] },
+    });
+    await el.updateComplete;
+
+    const sourceId = dataLayerResourceId(el, 'pins');
+    const circle = layers.get(`${sourceId}-circle`)!.paint!;
+    const cluster = layers.get(`${sourceId}-cluster`)!.paint!;
+    const pointColor = circle['circle-color'] as unknown[];
+    const clusterColor = cluster['circle-color'] as unknown[];
+    expect(pointColor[3]).to.equal('rgb(64, 128, 191)');
+    expect(pointColor[5]).to.equal('rgb(128, 0, 128)');
+    expect(pointColor[7]).to.equal('rgb(255, 0, 0)');
+    expect(pointColor[9]).to.match(/^rgba\(\d+, \d+, \d+, 0\)$/);
+    expect(circle['circle-stroke-color']).to.equal('rgb(64, 128, 191)');
+    expect(clusterColor[4]).to.match(/^rgb\(\d+, \d+, \d+\)$/);
+    expect(clusterColor[6]).to.equal('rgba(1, 2, 3, 0.5)');
+
+    el.style.setProperty('--lr-test-map-paint', 'color(srgb 0.5 0.25 0.75)');
+    (el as unknown as { refreshThemePaint: () => void }).refreshThemePaint();
+    expect(layers.get(`${sourceId}-circle`)!.paint!['circle-stroke-color']).to.equal('rgb(128, 64, 191)');
+  });
+
+  it('falls back to a valid tone when a map paint color cannot be resolved', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { layers } = stubMaplibreMap(el);
+    el.dataLayers = entry({ color: 'var(--lr-missing-map-color)', strokeColor: 'url(https://example.invalid/x)' });
+    await el.updateComplete;
+    const sourceId = dataLayerResourceId(el, 'pins');
+    const fill = layers.get(`${sourceId}-fill`)!.paint!['fill-color'];
+    const line = layers.get(`${sourceId}-line`)!.paint!['line-color'];
+    expect(fill).to.equal(getComputedStyle(el).getPropertyValue('--lr-color-brand').trim());
+    expect(line).to.equal(fill);
+  });
+
+  it('resolves a browser system color before passing it to MapLibre paint', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { layers } = stubMaplibreMap(el);
+    expect(CSS.supports('color', 'ButtonShadow')).to.be.true;
+    el.dataLayers = entry({ strokeColor: 'ButtonShadow' });
+    await el.updateComplete;
+    const stroke = layers.get(`${dataLayerResourceId(el, 'pins')}-line`)!.paint!['line-color'];
+    expect(stroke).to.match(/^rgba?\(/);
+    expect(stroke).to.not.equal('ButtonShadow');
+  });
+
+  it('keeps map paint valid when modern-color sRGB readback has no canvas context', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { layers } = stubMaplibreMap(el);
+    const descriptor = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, 'getContext');
+    const original = HTMLCanvasElement.prototype.getContext;
+    setCanvasGetContext(HTMLCanvasElement.prototype, function(contextId, ...args) {
+      return contextId === '2d' ? null : Reflect.apply(original, this, [contextId, ...args]);
+    });
+    try {
+      el.dataLayers = entry({ color: 'color(srgb 0.25 0.5 0.75)' });
+      await el.updateComplete;
+      const fill = layers.get(`${dataLayerResourceId(el, 'pins')}-fill`)!.paint!['fill-color'];
+      expect(fill).to.equal(getComputedStyle(el).getPropertyValue('--lr-color-brand').trim());
+    } finally {
+      if (descriptor) Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', descriptor);
+      else delete (HTMLCanvasElement.prototype as unknown as { getContext?: unknown }).getContext;
+    }
   });
 
   it('honours a single-stop heatmap ramp above the auto-prepended transparent floor', async () => {

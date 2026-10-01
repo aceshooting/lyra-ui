@@ -140,7 +140,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-funnel"></a>`lr-funnel` | data | `import '@aceshooting/lyra-ui/components/lr-funnel.js';` | none | none | none | 22.3 KiB |
 | <a id="lr-gauge"></a>`lr-gauge` | data | `import '@aceshooting/lyra-ui/components/lr-gauge.js';` | none | none | none | 22.7 KiB |
 | <a id="lr-generation-metrics"></a>`lr-generation-metrics` | conversation | `import '@aceshooting/lyra-ui/components/lr-generation-metrics.js';` | none | none | none | 21.6 KiB |
-| <a id="lr-geojson-viewer"></a>`lr-geojson-viewer` | viewers | `import '@aceshooting/lyra-ui/components/lr-geojson-viewer.js';` | `maplibre-gl` | `lr-json-viewer`, `lr-map`, `lr-skeleton` | none | 75 KiB |
+| <a id="lr-geojson-viewer"></a>`lr-geojson-viewer` | viewers | `import '@aceshooting/lyra-ui/components/lr-geojson-viewer.js';` | `maplibre-gl` | `lr-json-viewer`, `lr-map`, `lr-skeleton` | none | 75.2 KiB |
 | <a id="lr-graph"></a>`lr-graph` | retrieval | `import '@aceshooting/lyra-ui/components/lr-graph.js';` | `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` | `lr-skeleton` | none | 52.2 KiB |
 | <a id="lr-graph-legend"></a>`lr-graph-legend` | retrieval | `import '@aceshooting/lyra-ui/components/lr-graph-legend.js';` | none | none | none | 28.4 KiB |
 | <a id="lr-graph-query-builder"></a>`lr-graph-query-builder` | data | `import '@aceshooting/lyra-ui/components/lr-graph-query-builder.js';` | none | `lr-chip`, `lr-chip-group`, `lr-input`, `lr-option`, `lr-select` | none | 89.9 KiB |
@@ -170,7 +170,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-lite-chart"></a>`lr-lite-chart` | charts | `import '@aceshooting/lyra-ui/components/lr-lite-chart.js';` | none | `lr-live-region` | none | 43.5 KiB |
 | <a id="lr-live-region"></a>`lr-live-region` | utility | `import '@aceshooting/lyra-ui/components/lr-live-region.js';` | none | none | none | 22.6 KiB |
 | <a id="lr-locale-picker"></a>`lr-locale-picker` | forms | `import '@aceshooting/lyra-ui/components/lr-locale-picker.js';` | none | `lr-flag` | `lr-skeleton` | 60.9 KiB |
-| <a id="lr-map"></a>`lr-map` | media | `import '@aceshooting/lyra-ui/components/lr-map.js';` | `maplibre-gl` | `lr-skeleton` | none | 52.7 KiB |
+| <a id="lr-map"></a>`lr-map` | media | `import '@aceshooting/lyra-ui/components/lr-map.js';` | `maplibre-gl` | `lr-skeleton` | none | 53 KiB |
 | <a id="lr-markdown"></a>`lr-markdown` | conversation | `import '@aceshooting/lyra-ui/components/lr-markdown.js';` | `dompurify`, `katex`, `marked`, `shiki` | none | none | 59.9 KiB |
 | <a id="lr-markdown-core"></a>`lr-markdown-core` | conversation | `import '@aceshooting/lyra-ui/components/lr-markdown-core.js';` | `dompurify`, `katex`, `marked`, `shiki` | none | none | 59.1 KiB |
 | <a id="lr-mcp-app"></a>`lr-mcp-app` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-mcp-app.js';` | none | none | none | 28.6 KiB |
