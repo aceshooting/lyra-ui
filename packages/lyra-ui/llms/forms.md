@@ -6735,6 +6735,12 @@ A compact header can set `trigger-display="flag"` and
 Import `@aceshooting/lyra-ui/components/media/flag/flag-peer.js` to register the optional flag
 resolver. Menu labels stay visible; a per-entry `country` override also reaches the compact trigger.
 
+Option rows keep at least the medium control height (`--lr-form-control-height-m`, normally
+`2.25rem`), including `option-display="label"` and a small flag trigger. Larger control tiers,
+coarse-pointer control heights, larger text, and the optional tag line can grow the rows beyond
+that floor. The listbox keeps its scrolling height limit; `size` does not make language rows
+smaller than the medium floor.
+
 ```html
 <lr-locale-picker label="Language"></lr-locale-picker>
 <script type="module">

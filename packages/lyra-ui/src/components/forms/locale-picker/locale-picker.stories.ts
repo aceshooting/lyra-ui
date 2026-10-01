@@ -112,7 +112,7 @@ export const OptionDisplay: Story = {
     docs: {
       description: {
         story:
-          '`option-display="label"` drops each row\'s raw BCP-47 tag line. The tag element is omitted rather than hidden, so it is absent from the row\'s accessible name and `::part(option-tag)` matches nothing — open both lists to compare.',
+          '`option-display="label"` drops each row\'s raw BCP-47 tag line. Rows retain the medium control height floor even with small text or a compact trigger. The tag element is omitted rather than hidden, so it is absent from the row\'s accessible name and `::part(option-tag)` matches nothing — open both lists to compare.',
       },
     },
   },
@@ -122,6 +122,8 @@ export const OptionDisplay: Story = {
       <lr-locale-picker
         open
         option-display="label"
+        size="s"
+        style="font-size:var(--lr-font-size-xs)"
         label="Label only"
         .locales=${['fr', 'pt-BR', 'ja']}
       ></lr-locale-picker>
