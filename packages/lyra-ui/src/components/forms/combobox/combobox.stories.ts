@@ -105,8 +105,8 @@ export const VetoedClosePreservesFilter: Story = {
         style="display: grid; gap: var(--lr-space-s); max-inline-size: var(--lr-size-22rem)"
       >
         <p style="margin: 0">
-          Type a filter, then close twice. The first close is vetoed and keeps
-          the query and active row.
+          Type a filter, then close twice. The first ordinary close is vetoed and
+          keeps the query and active row.
         </p>
         <lr-combobox
           open

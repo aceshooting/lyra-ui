@@ -136,6 +136,38 @@ it('keeps the first-open listbox hidden and defers after-show until positioning 
   }
 });
 
+it('closes after a positioning runtime failure even when ordinary hide is vetoed', async () => {
+  __setAnchoredOverlayRuntimeLoaderForTesting(() => Promise.reject(new Error('positioning unavailable')));
+  try {
+    const el = await fixture<LyraCombobox>(basic());
+    el.style.setProperty('--show-duration', '0ms');
+    el.style.setProperty('--hide-duration', '0ms');
+    const cancelable: boolean[] = [];
+    const vetoHide = (event: Event) => {
+      cancelable.push(event.cancelable);
+      event.preventDefault();
+    };
+    el.addEventListener('lr-hide', vetoHide);
+    const afterHide = oneEvent(el, 'lr-after-hide');
+    const shown = el.show();
+    await Promise.all([shown, afterHide]);
+    expect(cancelable).to.deep.equal([false]);
+    expect(el.open, 'a failed positioning runtime cannot leave the listbox open').to.equal(false);
+    expect(el.hasAttribute('open')).to.equal(false);
+    expect(el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!.hidden).to.equal(true);
+
+    __setAnchoredOverlayRuntimeLoaderForTesting(() => Promise.resolve(positionedRuntime()));
+    await el.show();
+    await el.hide();
+    expect(cancelable).to.deep.equal([false, true]);
+    expect(el.open, 'ordinary dismissal remains vetoable after recovery').to.equal(true);
+    el.removeEventListener('lr-hide', vetoHide);
+    await el.hide();
+  } finally {
+    __setAnchoredOverlayRuntimeLoaderForTesting(undefined);
+  }
+});
+
 it('invalidates a deferred listbox generation when disconnected before the runtime loads', async () => {
   let resolveRuntime!: (runtime: AnchoredOverlayRuntime) => void;
   const pendingRuntime = new Promise<AnchoredOverlayRuntime>((resolve) => {

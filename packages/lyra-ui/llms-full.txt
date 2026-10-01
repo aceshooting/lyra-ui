@@ -6393,8 +6393,9 @@ options, and refreshes an async source when present; it preserves the committed 
 Activating the clear button is a user edit: when a query existed it emits `lr-filter` with
 `value: ''` before the clear transaction finishes.
 `lr-show` and `lr-hide` report the start of listbox visibility transitions. `lr-show` is a
-cancelable veto point; `lr-hide` is cancelable while connected, but the disconnect-driven close is
-non-cancelable because an already-removed control cannot honour a veto. Vetoing a connected close
+cancelable veto point; `lr-hide` is cancelable for ordinary connected dismissal, but closes after
+disconnect or a positioning runtime failure are non-cancelable because they cannot honour a veto.
+Vetoing an ordinary connected close
 is atomic: the filter query, active option, async result rows, reflected `open` state, and overlay
 ownership remain unchanged, so the host can defer dismissal without reconstructing the search.
 `lr-after-show` and

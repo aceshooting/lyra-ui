@@ -8,6 +8,7 @@
 
 ### Patch Changes
 
+- Close the combobox if its positioning runtime fails, even when a host vetoes ordinary dismissal. The failure emits a non-cancelable `lr-hide`; later user-initiated dismissal remains cancelable.
 - 8416b39: Keep `lr-data-grid` programmatic row alignment inside its own scrollable body so revealing a row does not move the page or an ancestor scroller.
 - 8416b39: Measure data-grid row, group, and expanded-detail heights in layout pixels so ancestor transforms and CSS zoom do not corrupt virtual scrolling. Correct subpixel scroll rounding for rendered and virtual rows so zoomed rows reach their requested viewport edge.
 - 8416b39: Keep map legend spacing aligned with native controls when an ancestor scales or zooms the map.

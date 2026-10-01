@@ -527,8 +527,9 @@ export type LyraComboboxSourceErrorEvent =
  * @event lr-after-show - The listbox finished opening and its transition settled.
  * @event lr-hide - The listbox is about to close, however `open` became false. Conditionally
  *   cancelable: connected transitions can be vetoed on the same terms as `lr-show`; an
- *   already-removed element closing on disconnect cannot honour a veto. A connected veto also
- *   preserves the live filter query, active option, and async rows exactly.
+ *   already-removed element closing on disconnect or a failed positioning runtime cannot honour
+ *   a veto. Vetoing an ordinary connected dismissal preserves the live filter query, active
+ *   option, and async rows exactly.
  * @event lr-after-hide - The listbox finished closing and its transition settled.
  * @event lr-clear - The value was cleared.
  * @event {CustomEvent<{ inputValue: string }>} lr-create - Cancelable request to create a
@@ -1139,6 +1140,8 @@ export class LyraCombobox<
 
   private _isFirstUpdate = true;
   private openVetoed = false;
+  /** A positioning failure cannot keep the listbox open, even if ordinary dismissal is vetoed. */
+  private closeAfterPositioningFailure = false;
   /** Set only by `hide()`. Cleanup is applied in `willUpdate()` after `lr-hide` accepts the close,
    * so a veto remains an atomic no-op for the query, active row, and async result set. */
   private closeCleanupPending = false;
@@ -2630,11 +2633,12 @@ export class LyraCombobox<
    */
   private announceOpenTransition(changed: PropertyValues): void {
     this.openVetoed = false;
+    const closeAfterPositioningFailure = !this.open && this.closeAfterPositioningFailure;
+    this.closeAfterPositioningFailure = false;
     if (!changed.has('open') || this._isFirstUpdate) return;
     const name = this.open ? 'lr-show' : 'lr-hide';
-    // Removal cannot be vetoed -- the element is already gone -- so the disconnect-driven close
-    // is announced without offering a veto nobody could honour.
-    if (!this.isConnected) {
+    // Removal and failed positioning cannot honour a veto: neither can keep a usable listbox open.
+    if (!this.isConnected || closeAfterPositioningFailure) {
       this.emit('lr-hide');
       return;
     }
@@ -2787,8 +2791,9 @@ export class LyraCombobox<
       if (generation !== this.positioningGeneration) cleanup();
       else this.cleanup = cleanup;
     } catch {
-      if (generation !== this.positioningGeneration) return;
+      if (generation !== this.positioningGeneration || !this.open) return;
       this.resolveCurrentPositioning(false);
+      this.closeAfterPositioningFailure = true;
       void this.hide();
     }
   }
