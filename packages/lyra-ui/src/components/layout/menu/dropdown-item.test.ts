@@ -1,4 +1,6 @@
-import { expect, fixture, html, nextFrame, oneEvent } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
+import type { LyraDropdown } from '../../overlays/overlay/dropdown.class.js';
+import { aTimeout, expect, fixture, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import './dropdown-item.js';
 import './menu.js';
 import { LyraDropdownItem } from './dropdown-item.class.js';
@@ -544,3 +546,109 @@ describe('lr-dropdown-item accessible names do not depend on display state', () 
     ]);
   });
 });
+
+for (const direction of ['ltr', 'rtl']) {
+  for (const [width, height] of [[390, 600], [320, 240]] as const) {
+    for (const shape of ['mapped', 'authored']) {
+      it(`keeps ${shape} submenu labels usable in a ${width}×${height} ${direction} viewport`, async () => {
+        const frame = await fixture<HTMLIFrameElement>(html`
+          <iframe title="Submenu viewport" style=${`width:${width}px;height:${height}px;border:0`}></iframe>
+        `);
+        const loaded = new Promise<void>(resolve => {
+          const onLoad = () => {
+            if (frame.contentDocument?.body.id !== 'submenu-document') return;
+            frame.removeEventListener('load', onLoad);
+            resolve();
+          };
+          frame.addEventListener('load', onLoad);
+        });
+        frame.srcdoc = '<!doctype html><html><body id="submenu-document"></body></html>';
+        await loaded;
+        const doc = frame.contentDocument!;
+        const view = doc.defaultView!;
+        doc.documentElement.dir = direction;
+        const module = doc.createElement('script');
+        module.type = 'module';
+        module.textContent = `await Promise.all([
+          import(${JSON.stringify(new URL('../../overlays/overlay/dropdown.ts', import.meta.url).href)}),
+          import(${JSON.stringify(new URL('./dropdown-item.ts', import.meta.url).href)}),
+          import(${JSON.stringify(new URL('./menu.ts', import.meta.url).href)})
+        ]); document.body.dataset.ready = 'true';`;
+        doc.head.append(module);
+        await waitUntil(() => doc.body.dataset['ready'] === 'true', 'frame components did not register');
+        doc.head.insertAdjacentHTML('beforeend', `<style>
+          body { margin: 0; font: 16px sans-serif; }
+          lr-dropdown { position: absolute; top: 16px; inset-inline-end: 12px; }
+          lr-dropdown::part(panel) { inline-size: min(320px, calc(100vw - 24px)); }
+        </style>`);
+        const options = ['English', 'Français', 'Português', 'Deutsch', 'العربية', '日本語', 'Español'].map((label, index) => `<lr-dropdown-item ${shape === 'mapped' ? 'slot="submenu"' : ''} type="checkbox" data-choice="${index}">${label}</lr-dropdown-item>`).join('');
+        doc.body.insertAdjacentHTML('beforeend', `<lr-dropdown top-layer placement="bottom-end">
+          <button slot="trigger">Settings</button>
+          <lr-menu label="Settings"><lr-dropdown-item id="languages">Language
+            ${shape === 'mapped' ? options : `<lr-menu slot="submenu" label="Languages">${options}</lr-menu>`}
+          </lr-dropdown-item></lr-menu>
+        </lr-dropdown>`);
+        const dropdown = doc.querySelector<LyraDropdown>('lr-dropdown')!;
+        await dropdown.updateComplete;
+        await dropdown.show();
+        const parent = doc.querySelector<LyraDropdownItem>('#languages')!;
+        await waitUntil(() => parent.hasSubmenu, 'mapped submenu did not initialize');
+        await parent.openSubmenu('first');
+        const submenu = shape === 'mapped'
+          ? parent.shadowRoot!.querySelector<HTMLElement>('[data-generated-submenu]')!
+          : parent.querySelector<HTMLElement>('lr-menu[slot="submenu"]')!;
+        const surface = submenu.shadowRoot!.querySelector<HTMLElement>('.submenu-surface')!;
+        await waitUntil(() => view.getComputedStyle(surface).visibility === 'visible', 'submenu did not become visible');
+        await new Promise<void>(resolve => view.requestAnimationFrame(() => view.requestAnimationFrame(() => resolve())));
+        const bounds = surface.getBoundingClientRect();
+        const parentBounds = parent.getBoundingClientRect();
+        const portuguese = parent.querySelector<LyraDropdownItem>('[data-choice="2"]')!;
+        const label = portuguese.shadowRoot!.querySelector<HTMLElement>('[part="label"]')!;
+        expect(bounds.width, 'the submenu must retain its 10rem minimum when the viewport can fit it').to.be.at.least(160);
+        expect(bounds.left).to.be.at.least(-1);
+        expect(bounds.right).to.be.at.most(width + 1);
+        expect(bounds.top).to.be.at.least(-1);
+        expect(bounds.bottom).to.be.at.most(height + 1);
+        expect(bounds.top >= parentBounds.bottom - 1 || bounds.bottom <= parentBounds.top + 1, 'the submenu must use a vertical fallback when neither side fits').to.equal(true);
+        expect(label.clientWidth, 'the language label must have room to render').to.be.at.least(label.scrollWidth);
+        expect(doc.activeElement === parent.querySelector('[data-choice="0"]'), 'opening from the keyboard must focus the first submenu item').to.equal(true);
+        if (height === 240) {
+          await sendKeys({ press: 'End' });
+          const last = parent.querySelector<HTMLElement>('[data-choice="6"]')!;
+          const list = submenu.shadowRoot!.querySelector<HTMLElement>('[part="list"]')!;
+          await waitUntil(() => doc.activeElement === last, 'End did not focus the last choice');
+          expect(list.scrollHeight, 'the short submenu must exercise scrolling').to.be.greaterThan(list.clientHeight);
+          await waitUntil(() => list.scrollTop > 0, 'the final choice did not scroll into view');
+          const lastBounds = last.getBoundingClientRect();
+          const listBounds = list.getBoundingClientRect();
+          expect(lastBounds.bottom).to.be.at.most(listBounds.bottom + 1);
+          expect(lastBounds.top).to.be.at.least(listBounds.top - 1);
+        }
+        await sendKeys({ press: 'Escape' });
+        await waitUntil(() => !parent.submenuOpen, 'Escape did not close the submenu');
+        expect(dropdown.open, 'Escape closes the submenu before the root dropdown').to.equal(true);
+        expect(doc.activeElement === parent, 'Escape must return focus to the parent row').to.equal(true);
+        if (shape === 'mapped' && direction === 'ltr' && width === 390) {
+          const point = (target: HTMLElement): [number, number] => {
+            const rect = target.getBoundingClientRect();
+            const frameRect = frame.getBoundingClientRect();
+            return [Math.round(frameRect.left + rect.left + rect.width / 2), Math.round(frameRect.top + rect.top + rect.height / 2)];
+          };
+          try {
+            await sendMouse({ type: 'move', position: point(parent) });
+            await waitUntil(() => parent.submenuOpen, 'pointer intent did not open the submenu');
+            await waitUntil(() => view.getComputedStyle(surface).visibility === 'visible');
+            expect(doc.activeElement === parent, 'pointer opening must leave focus outside the submenu').to.equal(true);
+            await sendMouse({ type: 'move', position: point(portuguese) });
+            await waitUntil(() => portuguese.matches(':hover'), 'the pointer did not reach the submenu choice');
+            await aTimeout(400);
+            expect(parent.submenuOpen, 'transferring the pointer into the vertical submenu must keep it open').to.equal(true);
+          } finally {
+            await resetMouse();
+          }
+        }
+        await dropdown.hide();
+      });
+    }
+  }
+}

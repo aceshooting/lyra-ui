@@ -61,6 +61,25 @@ export const NarrowNestedSurfaces: Story = {
   `,
 };
 
+export const NarrowSubmenuViewport: Story = {
+  parameters: {
+    viewport: { defaultViewport: 'mobile1' },
+    docs: { description: { story: 'At a narrow viewport, open Language. The submenu opens above or below the wide parent menu when neither side can fit readable choices.' } },
+  },
+  render: () => html`
+    <lr-menu label="Settings" style="inline-size: min(20rem, calc(100vw - 2rem));">
+      <lr-menu-item>Language
+        <lr-menu slot="submenu" label="Languages">
+          <lr-menu-item type="checkbox">English</lr-menu-item>
+          <lr-menu-item type="checkbox">Français</lr-menu-item>
+          <lr-menu-item type="checkbox">Português</lr-menu-item>
+          <lr-menu-item type="checkbox">Deutsch</lr-menu-item>
+        </lr-menu>
+      </lr-menu-item>
+    </lr-menu>
+  `,
+};
+
 /** Disabled and loading items remain visible but are skipped by navigation and activation. */
 export const WithUnavailableItems: Story = {
   render: () => html`

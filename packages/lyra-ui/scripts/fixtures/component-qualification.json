@@ -17525,8 +17525,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/menu/menu-closed-layout.test.ts",
-              "test": "keeps a closed-after-resize lr-menu submenu surface out of an ancestor's scrollable layout",
+              "file": "src/components/layout/menu/dropdown-item.test.ts",
+              "test": "keeps ${shape} submenu labels usable in a ${width}×${height} ${direction} viewport",
               "kind": "320px allocation test signal"
             }
           ]
@@ -29428,8 +29428,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/menu/menu-closed-layout.test.ts",
-              "test": "keeps a closed-after-resize lr-menu submenu surface out of an ancestor's scrollable layout",
+              "file": "src/components/layout/menu/dropdown-item.test.ts",
+              "test": "keeps ${shape} submenu labels usable in a ${width}×${height} ${direction} viewport",
               "kind": "320px allocation test signal"
             }
           ]
@@ -29678,8 +29678,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/menu/menu-closed-layout.test.ts",
-              "test": "keeps a closed-after-resize lr-menu submenu surface out of an ancestor's scrollable layout",
+              "file": "src/components/layout/menu/dropdown-item.test.ts",
+              "test": "keeps ${shape} submenu labels usable in a ${width}×${height} ${direction} viewport",
               "kind": "320px allocation test signal"
             }
           ]
@@ -29850,8 +29850,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/menu/menu-closed-layout.test.ts",
-              "test": "keeps a closed-after-resize lr-menu submenu surface out of an ancestor's scrollable layout",
+              "file": "src/components/layout/menu/dropdown-item.test.ts",
+              "test": "keeps ${shape} submenu labels usable in a ${width}×${height} ${direction} viewport",
               "kind": "320px allocation test signal"
             }
           ]

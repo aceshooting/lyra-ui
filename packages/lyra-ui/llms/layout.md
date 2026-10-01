@@ -3514,6 +3514,10 @@ has `aria-haspopup="menu"`, explicit `aria-expanded="true|false"`, the transient
 `submenu-open` state, and a logical-direction chevron. Its submenu is named from the parent's
 accessible label unless the submenu supplies its own `aria-label` or non-default `label`.
 
+Submenus prefer the inline end of their parent and flip to the other side when necessary. When
+neither side has enough space, they can open above or below the parent, keeping their labels
+readable within the viewport instead of shrinking to the remaining strip beside a wide menu.
+
 The into-branch and back-out arrow keys swap under RTL. Enter/Space and the into key open and focus
 the first child; the back-out key and Escape close only the innermost branch and return focus to its
 parent row. Pointer hover uses an intent delay, outside pointer dismissal closes the branch, and at

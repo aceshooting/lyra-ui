@@ -56,6 +56,9 @@ export interface MenuItemSelectDetail {
 /** Where a submenu prefers to sit: beside its parent row, on the inline-end side. Resolved
  *  through `rtlAwarePlacement` and then flipped by `place()` when it does not fit. */
 const SUBMENU_PLACEMENT: Placement = 'right-start';
+// Preserve side and alignment fallbacks first, then use the other axis when neither side can
+// accommodate the submenu. Measuring only beside a full-width parent can leave a sliver of width.
+const SUBMENU_FALLBACK_PLACEMENTS: Placement[] = ['right-end', 'left-start', 'left-end', 'bottom-start', 'top-start'];
 // Floating UI mirrors bottom-start alignment from the floating element's direction.
 const MENUBAR_PLACEMENT: Placement = 'bottom-start';
 
@@ -567,6 +570,9 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         : rtlAwarePlacement(SUBMENU_PLACEMENT, this);
       this.cleanup = place(this.submenuAnchor, popup, {
         placement,
+        flipFallbackPlacements: this.menubarAnchored
+          ? undefined
+          : SUBMENU_FALLBACK_PLACEMENTS.map(candidate => rtlAwarePlacement(candidate, this)),
         strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
       });
     }
