@@ -561,29 +561,54 @@ jobs:
   packed_consumer_contract:
     name: packed-consumer / contract
     runs-on: ubuntu-latest
+    # The matching image provides all three engines and their OS dependencies before consumers.
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --shm-size=2g -v /usr/share/fonts:/usr/share/host-fonts:ro
+    env:
+      HOME: /root
+    defaults:
+      run:
+        shell: bash
     # Typically ~10 minutes, but this job packs, installs, and exercises the tarball through
     # several consumers, and a slow hosted runner has spent four minutes in toolchain setup and
     # seven in the contracts step alone before the peer matrix even started; 15 cut two release
     # qualifications short at the peer-compatibility step.
     timeout-minutes: 25
     steps:
+      - name: Match the runner's default font resolution
+        run: |
+          cat > /etc/fonts/local.conf <<'CONF'
+          <?xml version="1.0"?>
+          <!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+          <fontconfig><dir>/usr/share/host-fonts</dir></fontconfig>
+          CONF
+          fc-cache -f >/dev/null 2>&1 || true
+          resolved="$(fc-match sans-serif)"
+          echo "sans-serif -> $resolved"
+          case "$resolved" in
+            *DejaVu*) ;;
+            *) echo "::error::sans-serif resolved to '$resolved', not DejaVu -- text-metric tests would measure the wrong typeface"; exit 1 ;;
+          esac
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
+      - name: Install frozen dependencies
+        run: ./scripts/ci-phase.sh dependencies pnpm install --frozen-lockfile
+      - name: Build canonical packages
+        run: ./scripts/ci-phase.sh build pnpm build
       # Includes a single-component (<lr-button>) gzip-size canary, gated far tighter than the
       # core-bundle budget, to catch a PR that silently drags something heavy into the eager
       # import graph -- see bundleEntries.button in scripts/check-packed-consumer.mjs.
       # Runs every packed-consumer check except ATTW. The exhaustive ATTW matrix below checks the
       # same tarball surface in sixteen disjoint shards; the ordinary local command remains unsharded.
       # Migrated consumers render in fresh Chromium, Firefox, and WebKit contexts against the
-      # installed tarball. Provision the engines before the contracts invoke those checks.
-      - run: pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps chromium firefox webkit
-      - run: pnpm check:packed-consumer:contracts
+      # installed tarball, using the matching binaries supplied by the container.
+      - name: Run packed consumer contracts
+        run: ./scripts/ci-phase.sh packed-contracts pnpm check:packed-consumer:contracts
         env:
           LYRA_PACKED_MIGRATION_ARTIFACTS: ${{ runner.temp }}/packed-migration-evidence
       - name: Upload installed migration evidence

@@ -15,7 +15,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
@@ -2712,9 +2712,7 @@ test('primary CI and release qualification use the exact Node file while compati
     /node-version-file: \.nvmrc/u,
     'the exact peer-profile checker must run under the checked-in Node patch, not a drifting Node 22 latest',
   );
-  const chromiumProvisionIndex = contractJob.indexOf(
-    'pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps chromium',
-  );
+  const chromiumProvisionIndex = contractJob.indexOf('image: mcr.microsoft.com/playwright:');
   const peerQualificationIndex = contractJob.indexOf('node scripts/check-peer-compatibility.mjs');
   assert.ok(
     chromiumProvisionIndex >= 0 && chromiumProvisionIndex < peerQualificationIndex,
@@ -3161,7 +3159,11 @@ test('every Playwright container image tracks the pinned playwright dependency',
   // The browser jobs no longer run `playwright install`; they inherit the binaries baked into the
   // image. A version skew there is silent and total -- Playwright would look for a browser build
   // the image does not carry -- so the tag is gated rather than trusted.
-  for (const file of ['.github/workflows/ci.yml', '.github/workflows/full-engine.yml']) {
+  for (const file of [
+    '.github/workflows/ci.yml',
+    '.github/workflows/full-engine.yml',
+    '.github/workflows/test-all-browsers.yml',
+  ]) {
     const src = readFileSync(path.join(repoRoot, file), 'utf8');
     const tags = [...src.matchAll(/mcr\.microsoft\.com\/playwright:v([0-9.]+)-/g)].map((m) => m[1]);
     assert.ok(tags.length > 0, `${file} must run its browser jobs in the pinned Playwright image`);
@@ -3268,4 +3270,118 @@ test('treats a published upgrade feed that lags npm as an incomplete release', (
   });
   assert.equal(unreachable.fresh, false);
   assert.match(unreachable.problems[0], /could not be fetched/);
+});
+
+test('CI phase logging preserves failed commands and literal arguments', () => {
+  const result = spawnSync('bash', [
+    path.join(repoRoot, 'scripts/ci-phase.sh'),
+    'consumer build',
+    'bash',
+    '-c',
+    'printf "%s\\n" "$1"; exit 17',
+    '--',
+    'literal $(touch never)',
+  ], { encoding: 'utf8' });
+  assert.equal(result.status, 17, result.stderr);
+  assert.match(result.stdout, /literal \$\(touch never\)/u);
+  assert.match(result.stdout, /phase-start.*UTC.*consumer build/u);
+  assert.match(result.stdout, /phase-end.*UTC.*consumer build.*elapsed=[0-9]+s.*status=17/u);
+});
+
+test('CI phase logging streams output before the command finishes', { timeout: 10000 }, async () => {
+  const child = spawn('bash', [
+    path.join(repoRoot, 'scripts/ci-phase.sh'),
+    'live tests',
+    'bash',
+    '-c',
+    'printf "live-output\\n"; read -r; printf "finished\\n"',
+  ], { timeout: 5000, killSignal: 'SIGKILL' });
+  let stdout = '';
+  let stderr = '';
+  let sawLiveBeforeFinished = false;
+  child.stdout.on('data', (chunk) => {
+    stdout += chunk.toString();
+    if (!sawLiveBeforeFinished && stdout.includes('live-output') && !stdout.includes('finished')) {
+      sawLiveBeforeFinished = true;
+      child.stdin.write('\n');
+    }
+  });
+  child.stderr.on('data', (chunk) => {
+    stderr += chunk.toString();
+  });
+  try {
+    const status = await new Promise((resolve, reject) => {
+      child.on('error', reject);
+      child.on('close', resolve);
+    });
+    assert.equal(status, 0, stderr);
+    assert.equal(sawLiveBeforeFinished, true, stdout);
+    assert.match(stdout, /finished/u);
+    assert.match(stdout, /phase-end.*status=0/u);
+  } finally {
+    child.stdin.end();
+    if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');
+  }
+});
+
+test('CI browser provisioning preserves requested rows, native engines and real channels', () => {
+  const source = readFileSync(path.join(repoRoot, '.github/workflows/test-all-browsers.yml'), 'utf8');
+  const testJob = source.slice(source.indexOf('\n  test:'), source.indexOf('\n  qualification:'));
+  assert.match(testJob, /browser: \$\{\{ fromJSON\(needs.plan.outputs.browsers\) \}\}/u);
+  assert.doesNotMatch(testJob, /include:/u);
+  assert.match(testJob, /image:.*chromium.*firefox.*safari.*mcr\.microsoft\.com\/playwright:v[0-9.]+-noble.*\|\| ''/u);
+  assert.match(testJob, /options: --shm-size=2g -v \/usr\/share\/fonts:\/usr\/share\/host-fonts:ro/u);
+  assert.match(testJob, /HOME:.*'\/root'.*'\/home\/runner'/u);
+  assert.match(testJob, /DejaVu/u);
+  assert.match(testJob, /timeout-minutes: 60/u);
+  assert.equal([...testJob.matchAll(/timeout-minutes:/gu)].length, 1);
+  assert.match(testJob, /channel-os.*playwright install-deps "\$INSTALL_BROWSER"/u);
+  assert.match(testJob, /channel-binary.*playwright install "\$INSTALL_BROWSER"/u);
+  assert.match(testJob, /matrix.browser == 'chrome' \|\| matrix.browser == 'edge'/u);
+  assert.match(testJob, /matrix.browser == 'edge' && 'msedge' \|\| 'chrome'/u);
+  assert.match(testJob, /TEST_ALL_BROWSERS_SKIP_INSTALL: '1'/u);
+  assert.match(testJob, /test_all_browsers\.sh --serial --browsers "\$TEST_BROWSER" --shards "\$TEST_SHARD"/u);
+  assert.doesNotMatch(testJob, /pkill|killall|continue-on-error|install --with-deps/u);
+  const ci = readFileSync(path.join(repoRoot, '.github/workflows/ci.yml'), 'utf8');
+  const packed = ci.slice(ci.indexOf('\n  packed_consumer_contract:'), ci.indexOf('\n  packed_consumer_attw:'));
+  assert.match(packed, /image: mcr\.microsoft\.com\/playwright:v[0-9.]+-noble/u);
+  assert.match(packed, /HOME: \/root/u);
+  assert.match(packed, /\/usr\/share\/host-fonts/u);
+  assert.doesNotMatch(packed, /playwright install/u);
+  assert.match(packed, /timeout-minutes: 25/u);
+});
+
+test('serial browser sweep keeps shard failures fatal with a mocked actual runner', () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'lyra-browser-sweep-contract-'));
+  try {
+    const executable = path.join(root, 'pnpm');
+    const calls = path.join(root, 'calls');
+    writeFileSync(executable, `#!/usr/bin/env bash\nset -euo pipefail\nif [[ "$1" == --version ]]; then echo 12.8.1; exit; fi\nprintf '%s %s\\n' "\${WTR_SHARD_INDEX:-build}" "$*" >> "$MOCK_CALLS"\nif [[ "$*" == *test:full-engine-shard* ]]; then echo live-shard; exit 17; fi\n`);
+    chmodSync(executable, 0o755);
+    const result = spawnSync('bash', [
+      path.join(repoRoot, 'scripts/test_all_browsers.sh'),
+      '--serial',
+      '--browser',
+      'safari',
+      '--shards',
+      '1,2',
+    ], {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        PATH: `${root}:${process.env.PATH}`,
+        MOCK_CALLS: calls,
+        TEST_ALL_BROWSERS_SKIP_INSTALL: '1',
+      },
+    });
+    assert.equal(result.status, 1, result.stderr);
+    assert.match(result.stdout, /live-shard/u);
+    assert.match(result.stdout, /FAIL.*safari/u);
+    const commands = readFileSync(calls, 'utf8').trim().split('\n');
+    assert.equal(commands.length, 2, commands.join('\n'));
+    assert.match(commands[0], /^build build$/u);
+    assert.match(commands[1], /^1 .*test:full-engine-shard$/u);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
