@@ -692,10 +692,24 @@ it('settles fractional bordered row and detail heights under CSS zoom', async ()
     const horizontalBefore = body.scrollLeft;
     element.scrollToIndex(70, { align: 'start' });
     await waitUntil(() => element.shadowRoot!.querySelector('[part~="row"][data-visible-index="70"]') !== null);
+    await waitUntil(() => measurementAccess(element).pendingVirtualScroll === undefined);
     await aTimeout(40);
     const target = element.shadowRoot!.querySelector<HTMLElement>('[part~="row"][data-visible-index="70"]')!;
     const bodyRect = body.getBoundingClientRect();
     const alignedTop = bodyRect.top + body.clientTop * 1.25;
+    expect(Math.abs(target.getBoundingClientRect().top - alignedTop)).to.be.at.most(1);
+    expect(window.scrollY).to.equal(pageBefore);
+    expect(outer.scrollTop).to.equal(outerBefore);
+    expect(body.scrollLeft).to.equal(horizontalBefore);
+    body.scrollTop = target.offsetTop + 1;
+    body.dispatchEvent(new Event('scroll'));
+    await aTimeout(40);
+    measurementAccess(element).pendingVirtualScroll = {
+      itemKey: target.dataset['virtualItemKey']!, align: 'start',
+    };
+    measurementAccess(element).alignPendingVirtualScroll();
+    await waitUntil(() => measurementAccess(element).pendingVirtualScroll === undefined);
+    await aTimeout(40);
     expect(Math.abs(target.getBoundingClientRect().top - alignedTop)).to.be.at.most(1);
     expect(window.scrollY).to.equal(pageBefore);
     expect(outer.scrollTop).to.equal(outerBefore);

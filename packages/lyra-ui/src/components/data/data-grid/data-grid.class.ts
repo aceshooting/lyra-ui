@@ -3487,9 +3487,10 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     const body = this.bodyElement;
     if (!target || !body) return;
     const alignmentDelta = this.renderedRowAlignmentDelta(target, body, pending.align);
-    // CSSOM scroll offsets round fractional pixels differently across engines. A settled
-    // subpixel alignment must not alternate adjacent integer offsets indefinitely.
-    if (Math.abs(alignmentDelta) <= 1) {
+    // CSSOM scroll offsets round fractional pixels differently across engines. Half a layout
+    // pixel is the closest reachable integer scroll position; a whole pixel can exceed the
+    // visible alignment tolerance under CSS zoom.
+    if (Math.abs(alignmentDelta) <= 0.5) {
       this.pendingVirtualScroll = undefined;
       return;
     }

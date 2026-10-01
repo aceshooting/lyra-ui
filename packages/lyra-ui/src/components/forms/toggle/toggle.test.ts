@@ -649,6 +649,66 @@ describe('<lr-toggle>', () => {
     expect(action!.disabled).to.equal(true);
   });
 
+  it('restores an authored button tabindex but leaves a later consumer edit in charge', async () => {
+    const el = await fixture<LyraToggle>(html`<lr-toggle>Bold</lr-toggle>`);
+    const button = control(el);
+    const [action] = el.getToolbarActions();
+    button.setAttribute('tabindex', '3');
+    action!.setTabIndex(-1);
+    expect(button.getAttribute('tabindex')).to.equal('-1');
+    action!.releaseTabIndex!();
+    expect(button.getAttribute('tabindex')).to.equal('3');
+
+    action!.setTabIndex(-1);
+    button.setAttribute('tabindex', '2');
+    action!.setTabIndex(0);
+    expect(button.getAttribute('tabindex'), 'the toolbar must not overwrite the consumer edit').to.equal('2');
+    action!.releaseTabIndex!();
+    expect(button.getAttribute('tabindex'), 'release keeps the consumer-owned value').to.equal('2');
+  });
+
+  it('releases toolbar tabindex and rebinds descriptions when adopted into another document', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`<div>
+      <span id="toggle-label">Original label</span>
+      <span id="toggle-help">Original help</span>
+      <lr-toggle aria-labelledby="toggle-label" aria-describedby="toggle-help"></lr-toggle>
+    </div>`);
+    const el = wrapper.querySelector<LyraToggle>('lr-toggle')!;
+    const [action] = el.getToolbarActions();
+    action!.setTabIndex(-1);
+    expect(control(el).getAttribute('tabindex')).to.equal('-1');
+    el.remove();
+    expect(control(el).hasAttribute('tabindex'), 'disconnect releases the previous toolbar lease').to.equal(false);
+    // A toolbar may still hold the action during a queued move and write while the host is
+    // detached. Adoption must release that stale lease even without another disconnect.
+    action!.setTabIndex(-1);
+    expect(control(el).getAttribute('tabindex')).to.equal('-1');
+
+    const frame = await fixture<HTMLIFrameElement>(html`<iframe title="Toggle adoption realm"></iframe>`);
+    const foreignDocument = frame.contentDocument!;
+    const label = foreignDocument.createElement('span');
+    label.id = 'toggle-label';
+    label.textContent = 'Adopted label';
+    const help = foreignDocument.createElement('span');
+    help.id = 'toggle-help';
+    help.textContent = 'Adopted help';
+    foreignDocument.body.append(label, help, foreignDocument.adoptNode(el));
+    await el.updateComplete;
+    await waitUntil(() => control(el).ariaLabelledByElements?.[0] === label);
+    await waitUntil(() => control(el).ariaDescribedByElements?.[0] === help);
+    expect(el.ownerDocument === foreignDocument).to.equal(true);
+    expect(control(el).hasAttribute('tabindex'), 'the old toolbar lease was released').to.equal(false);
+    const changed = oneEvent(el, 'lr-change');
+    control(el).click();
+    expect((await changed).detail.pressed).to.equal(true);
+
+    wrapper.append(document.adoptNode(el));
+    await el.updateComplete;
+    await waitUntil(() => control(el).ariaLabelledByElements?.[0]?.textContent === 'Original label');
+    await waitUntil(() => control(el).ariaDescribedByElements?.[0]?.textContent === 'Original help');
+    expect(el.pressed).to.equal(true);
+  });
+
   it('contributes no toolbar action while grouped, announcing each join and leave once', async () => {
     const wrapper = await fixture<HTMLDivElement>(html`<div>
       <lr-toggle-group label="Formatting"></lr-toggle-group>
@@ -656,6 +716,7 @@ describe('<lr-toggle>', () => {
     </div>`);
     const group = wrapper.querySelector<LyraToggleGroup>('lr-toggle-group')!;
     const el = wrapper.querySelector<LyraToggle>('lr-toggle')!;
+    const [cachedAction] = el.getToolbarActions();
     expect(el.getToolbarActions().length).to.equal(1);
     const notifications: Event[] = [];
     wrapper.addEventListener('lr-toolbar-actions-change', (event) => notifications.push(event));
@@ -663,6 +724,9 @@ describe('<lr-toggle>', () => {
     await waitUntil(() => el.getToolbarActions().length === 0, 'the toggle never joined the group');
     await el.updateComplete;
     expect(notifications.length).to.equal(1);
+    const groupedTabIndex = control(el).getAttribute('tabindex');
+    cachedAction!.setTabIndex(-1);
+    expect(control(el).getAttribute('tabindex'), 'a stale toolbar action cannot replace group roving').to.equal(groupedTabIndex);
     expect(notifications.every((event) => event.bubbles && event.composed)).to.equal(true);
     wrapper.append(el);
     await waitUntil(() => el.getToolbarActions().length === 1, 'the toggle never left the group');

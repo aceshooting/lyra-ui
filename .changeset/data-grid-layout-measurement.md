@@ -2,4 +2,4 @@
 '@aceshooting/lyra-ui': patch
 ---
 
-Measure data-grid row, group, and expanded-detail heights in layout pixels so ancestor transforms and CSS zoom do not corrupt virtual scrolling.
+Measure data-grid row, group, and expanded-detail heights in layout pixels so ancestor transforms and CSS zoom do not corrupt virtual scrolling. Settle pending row alignment after subpixel corrections so zoomed rows reach their requested viewport edge.

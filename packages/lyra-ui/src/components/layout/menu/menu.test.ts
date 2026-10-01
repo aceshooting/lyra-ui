@@ -8,6 +8,8 @@ import {
   waitUntil,
 } from '@open-wc/testing';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { sendKeys } from '@web/test-runner-commands';
 import './menu.js';
 import './menu-item.js';
 import './menu-label.js';
@@ -624,6 +626,34 @@ it('Escape and outside pointer dismissal close only the submenu', async () => {
   );
   await settle(menu, child);
   expect(share.submenuOpen).to.equal(false);
+});
+
+it('Escape from slotted submenu header and footer closes that submenu and returns focus to its parent', async () => {
+  for (const slot of ['header', 'footer'] as const) {
+    const menu = await fixture<LyraMenu>(html`
+      <lr-menu label="Actions">
+        <lr-menu-item id="share" value="share">
+          Share
+          <lr-menu slot="submenu" id="share-menu">
+            <input slot="header" id="filter" aria-label="Filter actions" />
+            <lr-menu-item id="email" value="email">Email</lr-menu-item>
+            <button slot="footer" id="apply" type="button">Apply</button>
+          </lr-menu>
+        </lr-menu-item>
+      </lr-menu>
+    `);
+    const share = byId<LyraMenuItem>(menu, 'share');
+    const child = byId<LyraMenu>(menu, 'share-menu');
+    await share.openSubmenu('first');
+    const control = byId<HTMLElement>(child, slot === 'header' ? 'filter' : 'apply');
+    await focusByKeyboard(control);
+    expect(document.activeElement === control, `${slot} control received focus`).to.equal(true);
+    await sendKeys({ press: 'Escape' });
+    await settle(menu, child);
+    expect(share.submenuOpen, `${slot} Escape closed submenu`).to.equal(false);
+    expect(document.activeElement === share, `${slot} Escape returned focus`).to.equal(true);
+    expect(menu.isConnected, `${slot} Escape kept root menu`).to.equal(true);
+  }
 });
 
 it('keeps at most one submenu open per menu level', async () => {
