@@ -250,7 +250,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   @state() private accessibleContentText = '';
   private contentObserver?: MutationObserver;
   private readonly contentUpgrades = new CustomElementUpgradeObserver(() => {
-    if (!this.isConnected || !this.contentObserver) return;
+    if (!this.isConnected || !this.contentObserver || !this.needsAccessibleContentText()) return;
     this.recomputeAccessibleContentText();
     bindAccessibleTextObserver(
       this.contentObserver, this, ['alt', 'aria-labelledby', 'slot'], this.contentUpgrades,
@@ -308,9 +308,8 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
       this.hasFooterActionsSlot = Array.from(this.children).some(
         (el) => el.getAttribute('slot') === 'footer-actions'
       );
-      this.recomputeAccessibleContentText();
     }
-    void changed;
+    this.syncAccessibleContentText();
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -423,7 +422,21 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.recomputeAccessibleContentText();
+    this.requestUpdate();
+  }
+
+  private needsAccessibleContentText(): boolean {
+    return this.actionable && !safeLinkHref(this.href) &&
+      (hostAriaLabel(this) ?? this.accessibleLabel ?? null) === null;
+  }
+
+  private syncAccessibleContentText(): void {
+    if (!this.needsAccessibleContentText()) {
+      if (this.contentObserver) this.resetContentObserver();
+      this.accessibleContentText = '';
+      return;
+    }
+    if (!this.hasUpdated || !this.contentObserver) this.recomputeAccessibleContentText();
     this.armContentObserver();
   }
 
@@ -447,7 +460,8 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
         this.contentObserverDocument !== ownerDocument ||
         this.contentObserverGeneration !== generation ||
         !this.isConnected ||
-        this.ownerDocument !== ownerDocument
+        this.ownerDocument !== ownerDocument ||
+        !this.needsAccessibleContentText()
       ) {
         return;
       }

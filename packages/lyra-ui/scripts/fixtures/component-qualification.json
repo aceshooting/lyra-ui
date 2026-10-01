@@ -7147,6 +7147,12 @@
               "test": "stays accessible as a disabled, pressed, right-to-left actionable card",
               "target": "el",
               "state": "populated"
+            },
+            {
+              "file": "src/components/layout/card/card.test.ts",
+              "test": "uses current names with native keyboard and pointer activation after a mode transition",
+              "target": "card",
+              "state": "populated"
             }
           ],
           "exemption": null

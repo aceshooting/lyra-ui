@@ -3,6 +3,8 @@ import "./card.js";
 import "../../forms/button/button.js";
 import type { LyraCard } from "./card.js";
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 function base(el: LyraCard): HTMLElement {
   return el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -1475,5 +1477,262 @@ describe('lr-card parity pass: default-tier background token, disabled, pressed/
       </lr-card>
     `)) as LyraCard;
     await expect(el).to.be.accessible();
+  });
+});
+
+describe('content-derived activation name work', () => {
+  async function withContentWorkCounters(
+    run: (counts: { reads: number; observations: number; disconnects: number }) => Promise<void>,
+  ): Promise<void> {
+    const originalStyle = window.getComputedStyle;
+    const OriginalObserver = window.MutationObserver;
+    const counts = { reads: 0, observations: 0, disconnects: 0 };
+    window.getComputedStyle = function (element, pseudo) {
+      if (element.hasAttribute('data-card-name-probe')) counts.reads += 1;
+      return originalStyle.call(this, element, pseudo);
+    };
+    window.MutationObserver = class extends OriginalObserver {
+      private observesCard = false;
+      override observe(target: Node, options?: MutationObserverInit): void {
+        if (target instanceof Element && target.matches('lr-card[data-card-work-probe]')) {
+          counts.observations += 1;
+          this.observesCard = true;
+        }
+        super.observe(target, options);
+      }
+      override disconnect(): void {
+        if (this.observesCard) counts.disconnects += 1;
+        super.disconnect();
+      }
+    };
+    try {
+      await run(counts);
+    } finally {
+      window.getComputedStyle = originalStyle;
+      window.MutationObserver = OriginalObserver;
+    }
+  }
+
+  async function settleContent(card: LyraCard): Promise<void> {
+    await new Promise<void>(resolve => setTimeout(resolve, 0));
+    await card.updateComplete;
+  }
+
+  function name(card: LyraCard): string | null {
+    return card.shadowRoot!.querySelector('[part="activation-button"]')?.getAttribute('aria-label') ?? null;
+  }
+
+  it('does not project or observe passive, linked, or explicitly named card content', async () => {
+    await withContentWorkCounters(async counts => {
+      const host = await fixture<HTMLElement>(html`
+        <div>
+          <lr-card data-card-work-probe><span data-card-name-probe>Passive</span></lr-card>
+          <lr-card data-card-work-probe actionable href="/report"><span data-card-name-probe>Linked</span></lr-card>
+          <lr-card data-card-work-probe actionable aria-label="Explicit"><span data-card-name-probe>Named</span></lr-card>
+          <lr-card data-card-work-probe actionable aria-label=""><span data-card-name-probe>Empty label</span></lr-card>
+          <lr-card data-card-work-probe actionable .accessibleLabel=${'Property label'}><span data-card-name-probe>Property</span></lr-card>
+        </div>
+      `);
+      const cards = [...host.querySelectorAll<LyraCard>('lr-card')];
+      await Promise.all(cards.map(card => card.updateComplete));
+      expect(counts.reads, 'unused fallback projections at mount').to.equal(0);
+      expect(counts.observations, 'unused fallback observers at mount').to.equal(0);
+      for (const card of cards) card.querySelector('[data-card-name-probe]')!.textContent = 'Changed';
+      await Promise.all(cards.map(settleContent));
+      expect(counts.reads, 'unused fallback projections after mutation').to.equal(0);
+      expect(counts.observations).to.equal(0);
+      expect(name(cards[2]!)).to.equal('Explicit');
+      expect(name(cards[3]!)).to.equal('');
+      expect(name(cards[4]!)).to.equal('Property label');
+      expect(cards[1]!.shadowRoot!.querySelector('a')!.getAttribute('aria-labelledby')).to.equal('linked-content');
+    });
+  });
+
+  it('starts and stops fallback work as action, safe links, and explicit labels change', async () => {
+    await withContentWorkCounters(async counts => {
+      const card = await fixture<LyraCard>(html`<lr-card data-card-work-probe><span data-card-name-probe>Initial</span></lr-card>`);
+      const text = card.querySelector('[data-card-name-probe]')!;
+      expect(counts.reads).to.equal(0);
+      card.actionable = true;
+      await card.updateComplete;
+      expect(name(card)).to.equal('Initial');
+      expect(counts.reads).to.be.greaterThan(0);
+      expect(counts.observations).to.be.greaterThan(0);
+      card.setAttribute('aria-label', 'Explicit');
+      await card.updateComplete;
+      expect(counts.disconnects).to.be.greaterThan(0);
+      let reads = counts.reads;
+      text.textContent = 'While labelled';
+      await settleContent(card);
+      expect(counts.reads).to.equal(reads);
+      card.removeAttribute('aria-label');
+      await card.updateComplete;
+      expect(name(card)).to.equal('While labelled');
+      card.accessibleLabel = '';
+      await card.updateComplete;
+      reads = counts.reads;
+      text.textContent = 'While empty labelled';
+      await settleContent(card);
+      expect(name(card)).to.equal('');
+      expect(counts.reads).to.equal(reads);
+      Reflect.set(card, 'accessibleLabel', undefined);
+      await card.updateComplete;
+      expect(name(card)).to.equal('While empty labelled');
+      text.textContent = 'Undefined label fallback';
+      await settleContent(card);
+      expect(name(card)).to.equal('Undefined label fallback');
+      card.href = '/report';
+      await card.updateComplete;
+      reads = counts.reads;
+      text.textContent = 'While linked';
+      await settleContent(card);
+      expect(counts.reads).to.equal(reads);
+      card.href = 'javascript:alert(1)';
+      await card.updateComplete;
+      expect(name(card)).to.equal('While linked');
+      card.disabled = true;
+      text.textContent = 'Disabled action';
+      await settleContent(card);
+      expect(name(card)).to.equal('Disabled action');
+      card.actionable = false;
+      await card.updateComplete;
+      reads = counts.reads;
+      text.textContent = 'Passive again';
+      await settleContent(card);
+      expect(counts.reads).to.equal(reads);
+      card.actionable = true;
+      await card.updateComplete;
+      expect(name(card)).to.equal('Passive again');
+    });
+  });
+
+  it('recomputes current visibility, inert content, and shadow text when fallback becomes needed', async () => {
+    const card = await fixture<LyraCard>(html`
+      <lr-card aria-label="Explicit">
+        <span hidden>Hidden</span><span inert>Inert</span>
+        <span style="visibility:hidden">Invisible<span style="visibility:visible">Visible</span></span>
+        <span id="card-shadow-name"></span>
+      </lr-card>
+    `);
+    const shadow = card.querySelector('#card-shadow-name')!.attachShadow({ mode: 'open' });
+    shadow.innerHTML = '<span>Shadow</span>';
+    card.actionable = true;
+    card.removeAttribute('aria-label');
+    await card.updateComplete;
+    expect(name(card)).to.equal('Visible Shadow');
+    shadow.querySelector('span')!.textContent = 'Updated shadow';
+    await settleContent(card);
+    expect(name(card)).to.equal('Visible Updated shadow');
+    card.querySelector('[inert]')!.removeAttribute('inert');
+    await settleContent(card);
+    expect(name(card)).to.equal('Inert Visible Updated shadow');
+  });
+
+  it('tracks late shadow upgrades only while the unnamed action needs content', async () => {
+    const card = await fixture<LyraCard>(html`<lr-card actionable><card-name-late-upgrade></card-name-late-upgrade></lr-card>`);
+    expect(name(card)).to.equal('Open');
+    customElements.define('card-name-late-upgrade', class extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' }).innerHTML = '<span>Upgraded name</span>';
+      }
+    });
+    await waitUntil(() => name(card) === 'Upgraded name');
+    const content = card.firstElementChild!.shadowRoot!.querySelector('span')!;
+    card.accessibleLabel = 'Explicit';
+    await card.updateComplete;
+    content.textContent = 'Upgrade while named';
+    await settleContent(card);
+    expect(name(card)).to.equal('Explicit');
+    card.accessibleLabel = null;
+    await card.updateComplete;
+    expect(name(card)).to.equal('Upgrade while named');
+    content.textContent = 'Live upgraded name';
+    await waitUntil(() => name(card) === 'Live upgraded name');
+  });
+
+  it('uses current names with native keyboard and pointer activation after a mode transition', async () => {
+    const card = await fixture<LyraCard>(html`<lr-card><span>Current action</span></lr-card>`);
+    card.actionable = true;
+    await card.updateComplete;
+    const button = card.shadowRoot!.querySelector<HTMLButtonElement>('[part="activation-button"]')!;
+    expect(name(card)).to.equal('Current action');
+    let activations = 0;
+    card.addEventListener('lr-card-activate', () => { activations += 1; });
+    await focusByKeyboard(button);
+    await sendKeys({ press: 'Enter' });
+    await sendKeys({ press: 'Space' });
+    expect(activations).to.equal(2);
+    const rect = card.querySelector('span')!.getBoundingClientRect();
+    try {
+      await sendMouse({ type: 'click', position: [Math.round(rect.x + rect.width / 2), Math.round(rect.y + rect.height / 2)] });
+      await waitUntil(() => activations === 3);
+    } finally {
+      await resetMouse();
+    }
+    await expect(card).to.be.accessible();
+  });
+
+  it('keeps adopted passive cards idle and observes the destination realm when action naming starts', async () => {
+    const card = await fixture<LyraCard>(html`<lr-card><span data-card-name-probe>Original</span></lr-card>`);
+    const frame = await fixture<HTMLIFrameElement>(html`<iframe title="Card destination"></iframe>`);
+    const owner = frame.contentDocument!;
+    const realm = frame.contentWindow!;
+    const originalStyle = realm.getComputedStyle;
+    let reads = 0;
+    realm.getComputedStyle = function (element, pseudo) {
+      if (element.hasAttribute('data-card-name-probe')) reads += 1;
+      return originalStyle.call(this, element, pseudo);
+    };
+    try {
+      owner.body.append(owner.adoptNode(card));
+      await card.updateComplete;
+      expect(reads).to.equal(0);
+      card.querySelector('span')!.textContent = 'Destination action';
+      card.actionable = true;
+      await card.updateComplete;
+      expect(name(card)).to.equal('Destination action');
+      expect(reads).to.be.greaterThan(0);
+      card.querySelector('span')!.textContent = 'Destination update';
+      await waitUntil(() => name(card) === 'Destination update');
+      card.accessibleLabel = 'Explicit';
+      await card.updateComplete;
+      const previousReads = reads;
+      card.querySelector('span')!.textContent = 'Unused destination update';
+      await settleContent(card);
+      expect(reads).to.equal(previousReads);
+      expect(name(card)).to.equal('Explicit');
+    } finally {
+      realm.getComputedStyle = originalStyle;
+      document.adoptNode(card);
+      card.remove();
+    }
+  });
+
+  it('keeps passive reconnects idle and refreshes fallback after detached mode changes', async () => {
+    await withContentWorkCounters(async counts => {
+      const card = await fixture<LyraCard>(html`<lr-card data-card-work-probe><span data-card-name-probe>Original</span></lr-card>`);
+      const parent = card.parentNode!;
+      card.remove();
+      card.querySelector('span')!.textContent = 'Detached passive';
+      parent.appendChild(card);
+      await card.updateComplete;
+      expect(counts.reads).to.equal(0);
+      expect(counts.observations).to.equal(0);
+      card.remove();
+      card.actionable = true;
+      card.querySelector('span')!.textContent = 'Detached action';
+      parent.appendChild(card);
+      await card.updateComplete;
+      expect(name(card)).to.equal('Detached action');
+      card.remove();
+      card.actionable = false;
+      parent.appendChild(card);
+      await card.updateComplete;
+      const reads = counts.reads;
+      card.querySelector('span')!.textContent = 'Passive restored';
+      await settleContent(card);
+      expect(counts.reads).to.equal(reads);
+    });
   });
 });
