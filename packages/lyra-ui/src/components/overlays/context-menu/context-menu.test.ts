@@ -779,6 +779,45 @@ describe('<lr-context-menu>', () => {
       expect(detail.path[0]?.id).to.equal('plain');
     });
 
+    for (const pointerType of ['touch', 'pen']) {
+      it(`cancels a pending ${pointerType} hold on native container scroll and opens on a fresh hold`, async () => {
+        const scroller = await fixture<HTMLElement>(html`
+          <div style="block-size: 200px; overflow: auto">
+            <lr-context-menu style="--show-duration: 0ms; --hide-duration: 0ms">
+              <div slot="trigger" id="area" style="block-size: 160px">Row actions</div>
+              <lr-menu-item value="copy">Copy</lr-menu-item>
+            </lr-context-menu>
+            <div style="block-size: 1200px"></div>
+          </div>
+        `);
+        const el = scroller.querySelector('lr-context-menu') as LyraContextMenu;
+        await el.updateComplete;
+        const area = byId(el, 'area');
+        const events = record(el);
+        const scrolled = oneEvent(scroller, 'scroll');
+        touch('pointerdown', area, ...center(area), { pointerType });
+        scroller.scrollTop = 40;
+        const scrollEvent = await scrolled;
+        expect(scrollEvent.target === scroller).to.equal(true);
+        expect(scrollEvent.isTrusted).to.equal(true);
+        expect(scroller.scrollTop).to.equal(40);
+        expect(events.count('lr-show'), 'native scroll settled before the hold opened').to.equal(0);
+        await aTimeout(HOLD_MS);
+        expect(events.count('lr-show'), 'scroll cancels the pending hold').to.equal(0);
+        expect(el.open).to.equal(false);
+        touch('pointerup', area, ...center(area), { pointerType });
+
+        const shown = oneEvent(el, 'lr-after-show');
+        await hold(area, { pointerType });
+        await shown;
+        touch('pointerup', area, ...center(area), { pointerType });
+        expect(events.count('lr-show')).to.equal(1);
+        expect(events.count('lr-after-show')).to.equal(1);
+        expect(events.shows[0]!.source).to.equal('long-press');
+        expect(el.open).to.equal(true);
+      });
+    }
+
     it('does not open for moved, cancelled, short, multi-touch, mouse, barrel-button or disabled presses', async () => {
       const el = await basic();
       const events = record(el);
