@@ -6612,7 +6612,7 @@ readonly LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; cou
 unset, selection commits synchronously without loading a catalog. Set it to `loadLyraLocale` from
 `@aceshooting/lyra-ui/locale-loader.js` to import the selected built-in catalog before committing.
 The loader accepts exact shipped canonical tags (equivalent casing/underscores normalize), shares
-concurrent requests, and permits retry after a failed import. `en` needs no import; an unshipped
+concurrent requests, and clears its promise cache after rejection. `en` needs no import; an unshipped
 regional tag rejects instead of claiming a translation. Importing the helper does not load a catalog
 or select the page locale. Supply an explicit `locales` list to offer catalogs before registration.
 
@@ -6627,7 +6627,11 @@ picker.localeLoader = loadLyraLocale;
 The unset callback preserves synchronous selection. A vetoed request never invokes the loader.
 While loading, the previous value stays committed and the trigger exposes `aria-busy`; a visible
 localized status and light-DOM announcement explain progress. Failure retains the value and offers
-Retry through a fresh request. An open listbox places above or below the full control and its
+Retry through a fresh callback invocation. Browsers may cache failed native module fetches, so
+Retry does not guarantee another network request. Retain the current locale and failure guidance;
+if a native import remains failed after connectivity returns, offer a user-initiated page reload
+after preserving unsaved work, or use an application-owned recoverable `localeLoader` transport.
+The picker never reloads automatically. An open listbox places above or below the full control and its
 failure guidance, including when `top-layer` is enabled, so it cannot cover Retry. Dismissing and
 reopening the listbox retains the failure guidance and the reachable retry action.
 New selection, host value/catalog/loader writes, reset, disablement,

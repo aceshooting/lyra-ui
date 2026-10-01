@@ -274,7 +274,9 @@ registers nothing.
 - Optional-peer tags are skipped by default. `optionalPeers: ['dompurify', 'postal-mime']` enables
   a tag only when the allowlist contains **all** packages recorded for it; `optionalPeers: 'all'`
   is for an installation that deliberately provides the entire peer set. A failed import clears
-  its marker and in-flight cache, so a later scan or insertion can retry it.
+  its marker and in-flight cache, so a later scan or insertion can invoke the loader again.
+  Browser caching of failed native module fetches can still prevent a new network request;
+  clearing the loader cache does not clear the browser's module map.
 
 ```ts
 import { start, stop } from "@aceshooting/lyra-ui/autoloader.js";

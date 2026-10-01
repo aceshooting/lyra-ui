@@ -329,7 +329,9 @@ registers nothing.
 - Optional-peer tags are skipped by default. `optionalPeers: ['dompurify', 'postal-mime']` enables
   a tag only when the allowlist contains **all** packages recorded for it; `optionalPeers: 'all'`
   is for an installation that deliberately provides the entire peer set. A failed import clears
-  its marker and in-flight cache, so a later scan or insertion can retry it.
+  its marker and in-flight cache, so a later scan or insertion can invoke the loader again.
+  Browser caching of failed native module fetches can still prevent a new network request;
+  clearing the loader cache does not clear the browser's module map.
 
 ```ts
 import { start, stop } from "@aceshooting/lyra-ui/autoloader.js";
@@ -2205,12 +2207,17 @@ ships with Lyra. A delta's own registered-key list reports only its own authored
 
 **Optional lazy loading.** `loadLyraLocale(tag)` from `@aceshooting/lyra-ui/locale-loader.js`
 loads one complete built-in catalog without selecting the page locale. Tags that canonicalize to
-the same shipped catalog identity share one in-flight/completed import; failure permits retry. `en`
+the same shipped catalog identity share one in-flight/completed import. Rejection clears the
+helper's promise cache, but browsers may retain failed module fetches: another call need not make
+a new network request. `en`
 resolves without an import. A tag with no exact shipped identity, such as an unshipped regional
 variant, rejects instead of quietly loading another language. The optional loader is outside the
 default component and localization graphs. Assign it to `lr-locale-picker.localeLoader` with an
 explicit offered locale list to use the picker's loading, failure/retry and stale-selection
-protection; see the forms guide.
+protection; see the forms guide. Keep the current locale and failure guidance when loading fails.
+If a native import remains failed after connectivity returns, a user-initiated reload can recover;
+preserve unsaved work first. A custom `localeLoader` can use an application-owned recoverable
+transport. The helper neither reloads the page nor changes module URLs to bypass browser caching.
 
 **Lookup order for a tag.** Every message resolves through one chain, and `Intl.PluralRules`
 category selection walks the same chain, so the two can never disagree:
@@ -12494,7 +12501,7 @@ readonly LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; cou
 unset, selection commits synchronously without loading a catalog. Set it to `loadLyraLocale` from
 `@aceshooting/lyra-ui/locale-loader.js` to import the selected built-in catalog before committing.
 The loader accepts exact shipped canonical tags (equivalent casing/underscores normalize), shares
-concurrent requests, and permits retry after a failed import. `en` needs no import; an unshipped
+concurrent requests, and clears its promise cache after rejection. `en` needs no import; an unshipped
 regional tag rejects instead of claiming a translation. Importing the helper does not load a catalog
 or select the page locale. Supply an explicit `locales` list to offer catalogs before registration.
 
@@ -12509,7 +12516,11 @@ picker.localeLoader = loadLyraLocale;
 The unset callback preserves synchronous selection. A vetoed request never invokes the loader.
 While loading, the previous value stays committed and the trigger exposes `aria-busy`; a visible
 localized status and light-DOM announcement explain progress. Failure retains the value and offers
-Retry through a fresh request. An open listbox places above or below the full control and its
+Retry through a fresh callback invocation. Browsers may cache failed native module fetches, so
+Retry does not guarantee another network request. Retain the current locale and failure guidance;
+if a native import remains failed after connectivity returns, offer a user-initiated page reload
+after preserving unsaved work, or use an application-owned recoverable `localeLoader` transport.
+The picker never reloads automatically. An open listbox places above or below the full control and its
 failure guidance, including when `top-layer` is enabled, so it cannot cover Retry. Dismissing and
 reopening the listbox retains the failure guidance and the reachable retry action.
 New selection, host value/catalog/loader writes, reset, disablement,

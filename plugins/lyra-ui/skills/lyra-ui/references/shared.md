@@ -274,7 +274,9 @@ registers nothing.
 - Optional-peer tags are skipped by default. `optionalPeers: ['dompurify', 'postal-mime']` enables
   a tag only when the allowlist contains **all** packages recorded for it; `optionalPeers: 'all'`
   is for an installation that deliberately provides the entire peer set. A failed import clears
-  its marker and in-flight cache, so a later scan or insertion can retry it.
+  its marker and in-flight cache, so a later scan or insertion can invoke the loader again.
+  Browser caching of failed native module fetches can still prevent a new network request;
+  clearing the loader cache does not clear the browser's module map.
 
 ```ts
 import { start, stop } from "@aceshooting/lyra-ui/autoloader.js";
@@ -2150,12 +2152,17 @@ ships with Lyra. A delta's own registered-key list reports only its own authored
 
 **Optional lazy loading.** `loadLyraLocale(tag)` from `@aceshooting/lyra-ui/locale-loader.js`
 loads one complete built-in catalog without selecting the page locale. Tags that canonicalize to
-the same shipped catalog identity share one in-flight/completed import; failure permits retry. `en`
+the same shipped catalog identity share one in-flight/completed import. Rejection clears the
+helper's promise cache, but browsers may retain failed module fetches: another call need not make
+a new network request. `en`
 resolves without an import. A tag with no exact shipped identity, such as an unshipped regional
 variant, rejects instead of quietly loading another language. The optional loader is outside the
 default component and localization graphs. Assign it to `lr-locale-picker.localeLoader` with an
 explicit offered locale list to use the picker's loading, failure/retry and stale-selection
-protection; see the forms guide.
+protection; see the forms guide. Keep the current locale and failure guidance when loading fails.
+If a native import remains failed after connectivity returns, a user-initiated reload can recover;
+preserve unsaved work first. A custom `localeLoader` can use an application-owned recoverable
+transport. The helper neither reloads the page nor changes module URLs to bypass browser caching.
 
 **Lookup order for a tag.** Every message resolves through one chain, and `Intl.PluralRules`
 category selection walks the same chain, so the two can never disagree:

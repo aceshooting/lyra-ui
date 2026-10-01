@@ -19,7 +19,7 @@ it('shares canonical in-flight and completed catalog loads without selecting the
   expect(load('pt-BR') === first).to.equal(true);
 });
 
-it('evicts both synchronous callback failures and rejected imports so retry is possible', async () => {
+it('evicts synchronous callback failures and rejected promises so the loader is invoked again', async () => {
   let calls = 0;
   const load = createLoader({ fr: () => {
     calls++;
