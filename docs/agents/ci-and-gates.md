@@ -758,6 +758,12 @@ Menu's actual +1,608-byte route increase includes shared glass-surface styling a
 reviewed, with a 15,983-byte marginal ceiling. These are acknowledged feature costs, not savings
 from a changed baseline. Time-input's loose 24 KiB ceiling tightens to 22,496 bytes.
 
+The narrow-viewport submenu placement correction measures 15,998 initial marginal gzip bytes
+for the menu route, exceeding the previous 15,983-byte ceiling by 15 bytes. Trying placement above
+or below the parent preserves readable labels when neither side has enough room. Its reviewed
+ceiling is 16,157 bytes (`floor(15998 * 1.01)`), with less than 1% headroom. The representative
+shell, measurement options, peer exclusions and every other initial-route ceiling are unchanged.
+
 The native-modal and overlay correctness changes retain the same measurement options, optional-peer
 exclusions and initial-route shell. Reviewed total gzip measurements are 75,505 bytes for combobox,
 67,512 for select, 139,680 for the overlays family and 139,002 for utility. Their new ceilings use
