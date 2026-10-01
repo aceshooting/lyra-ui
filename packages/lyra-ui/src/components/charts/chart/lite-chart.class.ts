@@ -1,3 +1,5 @@
+import { ChartSyncController, type ChartSyncPresentation } from './chart-sync.js';
+import { chartSyncStyles } from './chart-sync.styles.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { nativeSvgTitle } from '../../../internal/svg-title.js';
 import {
@@ -359,7 +361,7 @@ export interface LyraLiteChartEventMap {
  * `chart.js`). For a project whose architecture forbids a charting
  * dependency outright, this covers the common bar/line case: grouped or
  * stacked bars, multi-series lines, per-point click, and hover tooltips
- * (native SVG `<title>`, no positioning JS needed) — not a full `lr-chart`
+ * (native SVG `<title>` by default; positioned text tooltip with `sync-group`) — not a full `lr-chart`
  * replacement (no zoom/pan, no pie/doughnut/radar/scatter/bubble types, no
  * horizontal/dual-y-axis, no raw-config passthrough, no interactive legend
  * toggle — unlike `lr-chart`/`lr-box-plot`, clicking a `legend-item` here does
@@ -416,7 +418,7 @@ export interface LyraLiteChartEventMap {
  * unstacked overlay on a second axis" has no equivalent shape, and `stacked` already sums the
  * whole category into one segmented bar; a per-series stack-group id would need the bar-geometry
  * pass below to track independent running offsets per group instead of one per category. Tooltip
- * title/footer formatters are likewise absent: the hover tooltip here is a native SVG `<title>`
+ * title/footer formatters are likewise absent: the default hover tooltip is a native SVG `<title>`
  * per mark (`pointText`), not a multi-item tooltip with separate regions for several datasets
  * sharing a hovered category.
  *
@@ -464,6 +466,8 @@ export interface LyraLiteChartEventMap {
  * @slot data-table - An optional consumer-provided complete/paginated accessible data alternative.
  * @cssprop [--lr-chart-height=var(--lr-size-280px)] - Consumer-owned chart height. The `height`
  *   property supplies only a private fallback, so this public token always wins when set.
+ * @cssprop [--lr-chart-tooltip-bg=var(--lr-color-surface)] - Synchronized tooltip background.
+ * @cssprop [--lr-chart-tooltip-color=var(--lr-color-text)] - Synchronized tooltip text color.
  * @cssprop [--lr-chart-grid-color=var(--lr-color-border-subtle)] - Grid-line color.
  * @cssprop [--lr-chart-tick-color=var(--lr-color-text-quiet)] - Axis and legend-detail color.
  * @cssprop [--lr-chart-tick-font-size=var(--lr-font-size-2xs)] - Axis tick-label font size. Same
@@ -486,6 +490,10 @@ export interface LyraLiteChartEventMap {
  *   keeping series apart. Declared on the swatch part rather than the host; the stripe width within
  *   a tile stays `--lr-border-width-thin`, so a larger step spaces the stripes further apart.
  *   Shared verbatim with `<lr-chart>` and `<lr-box-plot>`.
+ * @csspart sync-crosshair - Decorative category crosshair shown while a sync group is active.
+ * @csspart sync-tooltip - Noninteractive text tooltip showing this chart's matched category values.
+ * @cssprop [--lr-chart-sync-crosshair-color=var(--lr-color-text)] - Shared category crosshair color.
+ * @cssprop [--lr-chart-sync-crosshair-width=var(--lr-border-width-thin)] - Shared category crosshair width.
  * @status stable
  * @since 4.0.0
  */
@@ -513,7 +521,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     'selectedIndices',
   ]);
 
-  static override styles = [LyraElement.styles, specialistTokens, styles, srOnly, bidiStyles];
+  static override styles = [LyraElement.styles, specialistTokens, styles, srOnly, bidiStyles, chartSyncStyles];
 
   @property({ converter: { fromAttribute: (value) => normalizeLiteChartType(value) } })
   type: LyraLiteChartType = 'bar';
@@ -765,6 +773,9 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   /** One roving tab stop across all bar/point marks. */
   @state() private activeMarkIndex = 0;
 
+  private syncPlot = { y: 0, height: 0 };
+  private syncCategoryPositions = new Map<number, number>();
+
   @query('svg') private svgEl?: SVGSVGElement;
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
   private resizeObserver?: ResizeObserver;
@@ -858,6 +869,18 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     }
   }
 
+  /**
+   * Synchronizes the visible active category with categorical vertical bar/line charts in the
+   * same owner document. Trimmed, case-sensitive groups match exact nonempty category labels.
+   * Duplicate labels choose the first eligible recipient category; unique labels are recommended.
+   * Peer updates are visual only and never move focus, announce, activate or select data.
+   */
+  @property({ attribute: 'sync-group' }) syncGroup = '';
+
+  // @renderController ChartSyncController
+  private readonly chartSync = new ChartSyncController(this, (label, index) => this.syncPresentation(label, index), undefined,
+    (target) => target.nodeType === 1 && (target as Element).hasAttribute('data-mark-index'));
+
   override connectedCallback(): void {
     super.connectedCallback();
     this.syncAnnouncementSink();
@@ -923,6 +946,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.chartSync.disconnect();
     super.disconnectedCallback();
     this.releaseAnnouncementSink();
     this.lastDataTruncationAnnouncement = '';
@@ -932,7 +956,9 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   }
 
   override adoptedCallback(): void {
+    this.chartSync.disconnect();
     super.adoptedCallback();
+    this.requestUpdate();
     this.resetResizeObserver();
     this.releaseAnnouncementSink();
     this.syncAnnouncementSink();
@@ -1070,6 +1096,9 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     this.fitAxisTitles();
     this.fitCategoryLabels();
     this.syncAxisTitleTargets();
+    const dataChanged = ['datasets', 'labels', 'type', 'skipZero', 'layout', 'maxRecords', 'maxSeries']
+      .some((name) => changed.has(name));
+    this.chartSync.update(this.syncGroup, true, dataChanged);
   }
 
   /** Fit using the rendered font after hydration, preserving Lit's text part anchors. */
@@ -1562,6 +1591,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     const marks = this.interactiveMarks();
     if (!marks[index]) return;
     this.activeMarkIndex = index;
+    this.publishSyncMark(marks[index]!);
     // `force: true` bypasses `<lr-live-region>`'s default throttle window --
     // each roving-tabindex move is its own discrete, user-driven navigation
     // event (not a streaming firehose), so it must land immediately rather
@@ -1772,6 +1802,40 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       selected?.datasetIndex ?? fallbackDatasetIndex,
       selected?.index ?? fallbackIndex,
     );
+  }
+
+  private publishSyncMark(mark: InteractiveMark): void {
+    this.chartSync.publish(mark.label, mark.index);
+  }
+
+  private syncPresentation(label: string, sourceIndex?: number): ChartSyncPresentation | undefined {
+    const marks = this.interactiveMarks();
+    const index = sourceIndex ?? marks.filter((mark) => mark.label === label).sort((a, b) => a.index - b.index)[0]?.index;
+    if (index === undefined || this.labels[index] !== label) return undefined;
+    const matched = marks.filter((mark) => mark.index === index);
+    if (!matched.length || !this.svgEl) return undefined;
+    const target = this.svgEl.querySelector<SVGGraphicsElement>(
+      `[data-dataset-index="${matched[0]!.datasetIndex}"][data-index="${index}"]`,
+    );
+    const container = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
+    if (!target || !container || !target.getClientRects().length) return undefined;
+    const bounds = container.getBoundingClientRect();
+    const matrix = this.svgEl.getScreenCTM();
+    if (!matrix) return undefined;
+    const rows = matched.map((mark) => {
+      const series = this.datasets[mark.datasetIndex]?.label ?? '';
+      return this.resolvePointText(mark.label, mark.value, mark.datasetIndex, mark.index) ??
+        this.localize('liteChartBarLabel', undefined, {
+          series, label: mark.label, value: getNumberFormat(this.effectiveLocale).format(mark.value),
+        });
+    });
+    return {
+      container,
+      x: matrix.a * (this.syncCategoryPositions.get(index) ?? 0) + matrix.e - bounds.left + container.scrollLeft,
+      top: matrix.d * this.syncPlot.y + matrix.f - bounds.top + container.scrollTop,
+      height: Math.abs(matrix.d * this.syncPlot.height),
+      tooltip: { title: label, rows },
+    };
   }
 
   private onPointKeyDown(e: KeyboardEvent, datasetIndex: number, index: number, markIndex: number): void {
@@ -2097,7 +2161,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         bars.push(
           this.roundedBars
             ? svg`
-          <g class="mark-hit-group">
+          <g class="mark-hit-group" @pointermove=${() => this.publishSyncMark({ datasetIndex: di, index: i, label, value: v })}>
             ${hitTarget}
             <path
               part="bar"
@@ -2115,11 +2179,11 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
               @click=${() => this.emitPoint(di, i)}
               @focus=${() => this.onMarkFocus(markIndex)}
               @keydown=${(e: KeyboardEvent) => this.onPointKeyDown(e, di, i, markIndex)}
-            >${nativeSvgTitle(titleText)}</path>
+            >${typeof this.syncGroup === 'string' && this.syncGroup.trim() ? nothing : nativeSvgTitle(titleText)}</path>
           </g>
         `
             : svg`
-          <g class="mark-hit-group">
+          <g class="mark-hit-group" @pointermove=${() => this.publishSyncMark({ datasetIndex: di, index: i, label, value: v })}>
             ${hitTarget}
             <rect
               part="bar"
@@ -2140,7 +2204,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
               @click=${() => this.emitPoint(di, i)}
               @focus=${() => this.onMarkFocus(markIndex)}
               @keydown=${(e: KeyboardEvent) => this.onPointKeyDown(e, di, i, markIndex)}
-            >${nativeSvgTitle(titleText)}</rect>
+            >${typeof this.syncGroup === 'string' && this.syncGroup.trim() ? nothing : nativeSvgTitle(titleText)}</rect>
           </g>
         `,
         );
@@ -2231,7 +2295,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         const markIndex = markIndexes.get(`${di}:${i}`)!;
         const selected = selectedIndices.has(i);
         return svg`
-          <g class="mark-hit-group">
+          <g class="mark-hit-group" @pointermove=${() => this.publishSyncMark({ datasetIndex: di, index: i, label, value: v })}>
             <circle
               data-mark-hit-target="point"
               aria-hidden="true"
@@ -2259,7 +2323,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
               @click=${(event: MouseEvent) => this.emitNearestLinePoint(event, hitPoints, di, i)}
               @focus=${() => this.onMarkFocus(markIndex)}
               @keydown=${(e: KeyboardEvent) => this.onPointKeyDown(e, di, i, markIndex)}
-            >${nativeSvgTitle(titleText)}</circle>
+            >${typeof this.syncGroup === 'string' && this.syncGroup.trim() ? nothing : nativeSvgTitle(titleText)}</circle>
           </g>
         `;
       });
@@ -2399,6 +2463,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     const plotX = rtl ? PAD_RIGHT : axisGutter;
     const plotY = PAD_TOP;
     const plotH = Math.max(0, h - plotY - padBottom);
+    this.syncPlot = { y: plotY, height: plotH };
 
     let w: number;
     let plotW: number;
@@ -2467,6 +2532,9 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       this.effectiveType === 'bar' && n > 0
         ? (barOrigins.get(i) ?? plotX + i * slot) + slot / 2
         : plotX + (n > 1 ? (i / (n - 1)) * plotW : plotW / 2);
+    this.syncCategoryPositions = typeof this.syncGroup === 'string' && this.syncGroup.trim()
+      ? new Map(recordSample.rowIndexes.map((index) => [index, categoryLabelX(index)]))
+      : new Map();
     const visibleLabelIndexes = this.visibleLabelIndexes(
       n,
       // A fixed pitch spreads the category ticks over `n * slot`, not the whole plot width.

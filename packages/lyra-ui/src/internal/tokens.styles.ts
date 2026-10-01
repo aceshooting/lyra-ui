@@ -88,10 +88,10 @@ const baseTokens = css`
     --_lr-glass-qualified-text-quiet: color-mix(in srgb, var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, #737373)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
     --lr-color-text-quiet: var(--_lr-glass-qualified-text-quiet, var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, #737373)));
     --_lr-glass-original-border: var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #919191));
-    --_lr-glass-qualified-border: color-mix(in srgb, var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #919191)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
+    --_lr-glass-qualified-border: color-mix(in srgb, var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #919191)), var(--lr-color-text) var(--_lr-glass-border-weight));
     --lr-color-border: var(--_lr-glass-qualified-border, var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #919191)));
     --_lr-glass-original-border-strong: var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #919191));
-    --_lr-glass-qualified-border-strong: color-mix(in srgb, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #919191)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
+    --_lr-glass-qualified-border-strong: color-mix(in srgb, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #919191)), var(--lr-color-text) var(--_lr-glass-border-weight));
     --lr-color-border-strong: var(--_lr-glass-qualified-border-strong, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #919191)));
     --lr-color-border-subtle: var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, color-mix(in srgb, #e5e5e5 var(--_lr-subtle-mix,100%), var(--lr-color-border))));
     --_lr-glass-brand-text: color-mix(in srgb, var(--lr-color-brand), var(--lr-color-text) var(--_lr-glass-foreground-weight));
@@ -447,10 +447,10 @@ const darkTokens = css`
     --_lr-glass-qualified-text-quiet: color-mix(in srgb, var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, #a1a1a1)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
     --lr-color-text-quiet: var(--_lr-glass-qualified-text-quiet, var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, #a1a1a1)));
       --_lr-glass-original-border: var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #646464));
-    --_lr-glass-qualified-border: color-mix(in srgb, var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #646464)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
+    --_lr-glass-qualified-border: color-mix(in srgb, var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #646464)), var(--lr-color-text) var(--_lr-glass-border-weight));
     --lr-color-border: var(--_lr-glass-qualified-border, var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, #646464)));
       --_lr-glass-original-border-strong: var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #646464));
-    --_lr-glass-qualified-border-strong: color-mix(in srgb, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #646464)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
+    --_lr-glass-qualified-border-strong: color-mix(in srgb, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #646464)), var(--lr-color-text) var(--_lr-glass-border-weight));
     --lr-color-border-strong: var(--_lr-glass-qualified-border-strong, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #646464)));
       --lr-color-border-subtle: var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, color-mix(in srgb, rgb(255 255 255 / 0.1) var(--_lr-subtle-mix,100%), var(--lr-color-border))));
       /* A modal panel cannot share the page surface token in dark mode: both resolve to the same

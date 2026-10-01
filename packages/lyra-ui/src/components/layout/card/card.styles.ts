@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { opaqueContentBorders } from '../../../internal/opaque-content-border.styles.js';
 
 // Inline-size containment removes content-based intrinsic sizing, so the fallback keeps a
 // standalone card visible while definite allocations (grid tracks, percentages, explicit
@@ -7,6 +8,7 @@ import { css } from 'lit';
 // regions pass pointer input through to that link; public slots opt back into hit testing so their
 // controls stay independently operable. Plain slotted content delegates its click in the class.
 export const styles = css`
+  ${opaqueContentBorders(':host(:not([appearance="plain"]):not([appearance="filled"]):not([appearance="filled-outlined"])) :is([part="body"], [part="header"], [part="footer"], .linked-content)')}
   :host {
     display: block;
     min-inline-size: 0;

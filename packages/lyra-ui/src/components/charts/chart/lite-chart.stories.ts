@@ -489,3 +489,21 @@ export const NamedLegendAndTable: Story = {
     ></lr-lite-chart>
   `,
 };
+
+export const SynchronizedMixedRenderers: Story = {
+  parameters: {
+    docs: { description: { story: 'SVG and canvas charts sharing sync-group coordinate by exact category label, including across shadow roots. Each tooltip uses its chart\'s own series, values and formatter. Recipient charts keep their focus and selection.' } },
+  },
+  render: () => html`
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,20rem),1fr));gap:var(--lr-space-l);max-inline-size:60rem">
+      <lr-lite-chart sync-group="mixed-quarterly" height="16rem"
+        .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
+        .datasets=${[{ label: 'Revenue', data: [12, 19, 14, 22] }]}
+      ></lr-lite-chart>
+      <lr-chart sync-group="mixed-quarterly" type="line" height="16rem"
+        .labels=${['Q4', 'Q3', 'Q2', 'Q1']}
+        .datasets=${[{ label: 'Subscriptions', data: [40, 30, 37, 26] }, { label: 'Services', data: [20, 12, 18, 10] }]}
+      ></lr-chart>
+    </div>
+  `,
+};

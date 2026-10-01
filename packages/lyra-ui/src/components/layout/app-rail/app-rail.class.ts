@@ -1115,6 +1115,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
         this.baseEl.style.removeProperty('inline-size');
       }
     }
+    this.observeResizerPosition();
     this.syncResizerPosition();
   }
 
@@ -1151,6 +1152,8 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       queueMicrotask(() => {
         if (!this.isConnected) return;
         this.syncSlottedItems();
+        this.observeResizerPosition();
+        this.syncResizerPosition();
         // disconnectedCallback() hands the trigger lease back (see releaseExternalTriggerA11y),
         // and only `updated()` ever re-acquires it -- but a reconnect that lands on the SAME mode
         // schedules no update at all (`setEffectiveMode()` early-returns on an unchanged mode),
@@ -1162,6 +1165,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.disconnectResizerPosition();
     this.nativeModal.hide();
     if (this.hotkeyWindow) {
       this.hotkeyWindow.removeEventListener('keydown', this.onHotkeyKeyDown);
@@ -1182,6 +1186,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   }
 
   override adoptedCallback(): void {
+    this.disconnectResizerPosition();
     super.adoptedCallback();
     this.teardownMediaQueries();
     this.endResizerGesture();
@@ -1743,6 +1748,34 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     }
   };
 
+  private resizerPositionObserver?: ResizeObserver;
+  private observedResizer?: HTMLElement;
+
+  private observeResizerPosition(): void {
+    const resizer = this.renderRoot.querySelector<HTMLElement>('[part="resizer"]');
+    if (!this.isConnected || !resizer || !this.baseEl || this._mode !== 'full' || !this.resizable) {
+      this.disconnectResizerPosition();
+      return;
+    }
+    if (this.observedResizer === resizer) return;
+    this.disconnectResizerPosition();
+    const ResizeObserverConstructor = this.ownerDocument.defaultView?.ResizeObserver;
+    if (!ResizeObserverConstructor) return;
+    // Width transitions and consumer token changes continue after Lit's update. Observe the
+    // allocated boxes so the separator stays on the painted edge, including a resized hit target.
+    this.resizerPositionObserver = new ResizeObserverConstructor(() => this.syncResizerPosition());
+    this.resizerPositionObserver.observe(this, { box: 'border-box' });
+    this.resizerPositionObserver.observe(this.baseEl, { box: 'border-box' });
+    this.resizerPositionObserver.observe(resizer, { box: 'border-box' });
+    this.observedResizer = resizer;
+  }
+
+  private disconnectResizerPosition(): void {
+    this.resizerPositionObserver?.disconnect();
+    this.resizerPositionObserver = undefined;
+    this.observedResizer = undefined;
+  }
+
   private syncResizerPosition(): void {
     const resizer = this.renderRoot.querySelector<HTMLElement>('[part="resizer"]');
     if (!resizer || !this.baseEl || this._mode !== 'full' || !this.resizable) return;
@@ -1752,7 +1785,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     const rtl = this.getAttribute('dir') === 'rtl' || isRtl(this);
     const offset = rtl ? hostRect.right - baseRect.left : baseRect.right - hostRect.left;
     resizer.style.setProperty('inset-inline-start', `${offset - half}px`);
-    resizer.style.removeProperty('inset-inline-end');
+    resizer.style.setProperty('inset-inline-end', 'auto');
   }
 
   override render(): TemplateResult {

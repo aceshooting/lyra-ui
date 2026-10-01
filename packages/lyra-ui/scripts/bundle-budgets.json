@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard gzip KiB ceilings for bundled, minified ESM with optional peers externalized. Reviewed byte measurements use Node 22.23.2, production esbuild, and gzip level 9. Each ceiling must satisfy the maximum headroom policy. The shared default-profile and material correctness review updates only failing entries with 2% headroom; all passing canaries retain their tighter ceilings. The theme entry includes canonical per-look contrast references and batched alias ownership after removal of redundant allocations and unused palette fields; its 13,099-byte measurement retains 2% headroom without changing other ceilings. The two component aggregate ceilings include layout-coordinate corrections for scaled scrolling and retain 2% headroom; all other ceilings remain unchanged.",
+  "$comment": "Hard gzip KiB ceilings for bundled, minified ESM with optional peers externalized. Reviewed byte measurements use Node 22.23.2, production esbuild, and gzip level 9. Each ceiling must satisfy the maximum headroom policy. The shared default-profile and material correctness review updates only failing entries with 2% headroom; all passing canaries retain their tighter ceilings. The theme entry includes canonical per-look contrast references and batched alias ownership after removal of redundant allocations and unused palette fields; its 13,099-byte measurement retains 2% headroom without changing other ceilings. The two component aggregate ceilings include layout-coordinate corrections for scaled scrolling and retain 2% headroom; all other ceilings remain unchanged. Categorical chart synchronization adds document-scoped coordination and renderer adapters; its 83,797-byte combined measurement retains 2% headroom, rounded up to whole bytes, without changing any other ceiling.",
   "$maximumHeadroomPercent": 4,
   "$reviewedGzipBytes": {
     "$componentMaxGzipKb": 236067,
@@ -8,7 +8,7 @@
     "dist/autoloader-cdn.js": 1273071,
     "dist/autoloader.js": 1272890,
     "dist/components/agent-tools/index.js": 413672,
-    "dist/components/charts/index.js": 80829,
+    "dist/components/charts/index.js": 83797,
     "dist/components/conversation/index.js": 365691,
     "dist/components/data/flow-canvas/flow-canvas.js": 51580,
     "dist/components/data/gauge/gauge.js": 23106,
@@ -43,7 +43,7 @@
   "dist/lyra.js": 199.388671875,
   "dist/all.js": 1200,
   "dist/components/agent-tools/index.js": 409.9326171875,
-  "dist/components/charts/index.js": 79.0361328125,
+  "dist/components/charts/index.js": 83.4697265625,
   "dist/components/conversation/index.js": 361.53125,
   "dist/components/data/index.js": 331.4912109375,
   "dist/components/forms/index.js": 249.630859375,

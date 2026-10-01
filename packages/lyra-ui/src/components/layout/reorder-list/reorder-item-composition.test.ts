@@ -1,9 +1,11 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
-import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './reorder-item.js';
 import './reorder-list.js';
 import type { LyraReorderItem } from './reorder-item.class.js';
+import type { LyraIconButton } from '../../forms/icon-button/icon-button.class.js';
+import { registerLyraLocale } from '../../../internal/localization.js';
 import {
   captureDeprecationWarnings,
   type DeprecatedUsage,
@@ -22,6 +24,80 @@ function movePart(el: LyraReorderItem, part: string): HTMLElement {
 function nativeControl(el: LyraReorderItem, part: string): HTMLButtonElement {
   return movePart(el, part).shadowRoot!.querySelector<HTMLButtonElement>('[part~="button"]')!;
 }
+
+function referenceTexts(el: LyraReorderItem, part: string): string[] {
+  const control = nativeControl(el, part) as HTMLButtonElement & {
+    ariaLabelledByElements?: readonly Element[] | null;
+  };
+  expect('ariaLabelledByElements' in control, 'native element references remain available').to.equal(true);
+  return (control.ariaLabelledByElements ?? []).map((node) => (node.textContent ?? '').trim());
+}
+
+async function settleMoveControls(el: LyraReorderItem): Promise<void> {
+  await el.updateComplete;
+  for (const part of ['move-up-button', 'move-down-button']) {
+    await (movePart(el, part) as LyraIconButton).updateComplete;
+  }
+}
+
+describe('lr-reorder-item: localized move-control fallbacks', () => {
+  it('provides specific English action fallbacks while preserving action and row references', async () => {
+    const el = await fixture<LyraReorderItem>(html`<lr-reorder-item value="row">Row</lr-reorder-item>`);
+    await settleMoveControls(el);
+    expect(nativeControl(el, 'move-up-button').getAttribute('aria-label')).to.equal('Move up');
+    expect(nativeControl(el, 'move-down-button').getAttribute('aria-label')).to.equal('Move down');
+    expect(referenceTexts(el, 'move-up-button')).to.deep.equal(['Move up', 'Row']);
+    expect(referenceTexts(el, 'move-down-button')).to.deep.equal(['Move down', 'Row']);
+  });
+
+  it('updates both disabled native fallbacks from strings without losing full row references', async () => {
+    const el = await fixture<LyraReorderItem>(html`<lr-reorder-item value="row" disabled>Row</lr-reorder-item>`);
+    el.strings = { moveUp: 'Monter', moveDown: 'Descendre' };
+    await settleMoveControls(el);
+    for (const [part, label] of [['move-up-button', 'Monter'], ['move-down-button', 'Descendre']] as const) {
+      expect(nativeControl(el, part).disabled).to.equal(true);
+      expect(nativeControl(el, part).getAttribute('aria-label')).to.equal(label);
+      expect(referenceTexts(el, part)).to.deep.equal([label, 'Row']);
+    }
+    el.strings = { moveUp: 'Vers le haut', moveDown: 'Vers le bas' };
+    await settleMoveControls(el);
+    expect(nativeControl(el, 'move-up-button').getAttribute('aria-label')).to.equal('Vers le haut');
+    expect(nativeControl(el, 'move-down-button').getAttribute('aria-label')).to.equal('Vers le bas');
+    expect(referenceTexts(el, 'move-up-button')).to.deep.equal(['Vers le haut', 'Row']);
+    expect(referenceTexts(el, 'move-down-button')).to.deep.equal(['Vers le bas', 'Row']);
+  });
+
+  it('follows a live registered locale and keeps row text and explicit row labels in references', async () => {
+    registerLyraLocale('fr-x-reorder-fallback', {
+      moveUp: 'Monter la ligne', moveDown: 'Descendre la ligne', iconButtonLabel: 'Bouton',
+    });
+    const el = await fixture<LyraReorderItem>(html`<lr-reorder-item value="row">Row</lr-reorder-item>`);
+    el.lang = 'fr-x-reorder-fallback';
+    await waitUntil(() => nativeControl(el, 'move-up-button').getAttribute('aria-label') === 'Monter la ligne');
+    await settleMoveControls(el);
+    expect(nativeControl(el, 'move-down-button').getAttribute('aria-label')).to.equal('Descendre la ligne');
+    el.textContent = 'Live row';
+    await waitUntil(() => referenceTexts(el, 'move-up-button')[1] === 'Live row');
+    expect(referenceTexts(el, 'move-down-button')).to.deep.equal(['Descendre la ligne', 'Live row']);
+    el.ariaLabel = 'Explicit row';
+    await settleMoveControls(el);
+    expect(referenceTexts(el, 'move-up-button')).to.deep.equal(['Monter la ligne', 'Explicit row']);
+    expect(referenceTexts(el, 'move-down-button')).to.deep.equal(['Descendre la ligne', 'Explicit row']);
+    expect(nativeControl(el, 'move-up-button').getAttribute('aria-label')).to.equal('Monter la ligne');
+  });
+
+  it('preserves an explicit icon-button fallback without replacing the full row references', async () => {
+    const el = await fixture<LyraReorderItem>(html`<lr-reorder-item value="row">Row</lr-reorder-item>`);
+    const up = movePart(el, 'move-up-button') as LyraIconButton;
+    up.accessibleLabel = 'Caller fallback';
+    el.strings = { moveUp: 'Monter', moveDown: 'Descendre' };
+    await settleMoveControls(el);
+    expect(nativeControl(el, 'move-up-button').getAttribute('aria-label')).to.equal('Caller fallback');
+    expect(referenceTexts(el, 'move-up-button')).to.deep.equal(['Monter', 'Row']);
+    expect(nativeControl(el, 'move-down-button').getAttribute('aria-label')).to.equal('Descendre');
+    expect(referenceTexts(el, 'move-down-button')).to.deep.equal(['Descendre', 'Row']);
+  });
+});
 
 describe('lr-reorder-item: composed move lr-icon-buttons', () => {
   it('composes real lr-icon-buttons for both move controls', async () => {

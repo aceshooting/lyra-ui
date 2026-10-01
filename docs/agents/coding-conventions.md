@@ -331,6 +331,12 @@
   interpolation. All three are handled today, but a "documented CSS part is not rendered
   statically" false positive on a new legitimate pattern means extending the checker, not
   assuming the component is wrong.
+  An imperative controller that paints the host's own surface can declare its provenance with
+  `// @renderController LocalControllerName` beside its construction. Render reachability follows
+  that relative module only when the annotated name is a value import actually constructed as
+  `new LocalControllerName(this, ...)`. Type-only imports, unused annotations, other receiver
+  arguments, and annotation text inside strings or templates do not qualify. The controller's
+  real part attributes still supply the rendered evidence; the annotation does not list parts.
   A subclass can inherit JavaScript members while rendering a different set of CSS parts.
   For an explicitly verified complete part list, the CEM projection sets the Lyra extension
   `lyraCssPartsComplete: true` with an own `cssParts` array (which may be empty). Manifest

@@ -1789,3 +1789,98 @@ test('rechecks reachable contracts when snapshots change between comparisons', (
   delete after.contracts.c2['mod#Row:member:a'];
   assert.equal(minimumRequiredBump(diffPublicApi(before, after)), 'major');
 });
+
+
+function declarationCommentFixture(geometryMembers) {
+  return {
+    packageJson: {
+      name: '@aceshooting/lyra-ui', version: '1.0.0',
+      exports: { '.': './dist/geometry.js' },
+    },
+    manifest: { modules: [] },
+    declarations: {
+      named: "export type { Geometry, GeometryEvents } from './geometry.js';",
+      files: {
+        'dist/bounds.d.ts': 'export interface Bounds { value: number; }',
+        'dist/geometry.d.ts': `import type { Bounds as ImportedBounds } from './bounds.js';
+          export type Geometry = { ${geometryMembers} };
+          export interface GeometryEvents { 'lr-geometry-change': CustomEvent<Geometry>; }
+          declare global {
+            interface HTMLElementEventMap { 'lr-geometry-change': CustomEvent<Geometry>; }
+          }`,
+      },
+      packageFiles: ['dist/bounds.d.ts', 'dist/geometry.d.ts', 'dist/geometry.js'],
+    },
+  };
+}
+
+test('declaration comments do not become members or alter reachable type contracts', () => {
+  const clean = declarationCommentFixture(`
+    cellSize: number;
+    cellWidth?: number;
+    nested?: { bounds: ImportedBounds };
+    literal?: '/* literal; { < > } */';
+    url?: 'https://example.test/cell;size';
+    staticTemplate?: \`/* static; */ // tail\`;
+    label?: \`cell-\${string}\`;
+  `);
+  const documented = declarationCommentFixture(`
+    /** Cell pitch; café 🚀; unmatched { < ' punctuation. */
+    cellSize: /* inline; } > */ number;
+    /** Painted bounds; omitted for default cells. */ cellWidth?: number;
+    // Nested bounds; unmatched } > ' punctuation.
+    nested?: { /* Coordinates; } < */ bounds: ImportedBounds };
+    literal?: '/* literal; { < > } */';
+    url?: 'https://example.test/cell;size';
+    staticTemplate?: \`/* static; */ // tail\`;
+    label?: \`cell-\${/* interpolation; } > */ string}\`;
+  `);
+  const before = normalizePublicApi(clean);
+  const after = normalizePublicApi(documented);
+  assert.deepEqual(after, before);
+  assert.deepEqual(diffPublicApi(before, after), []);
+  assert.deepEqual(diffPublicApi(after, before), []);
+  assert.ok(after.entries['named-export:Geometry:property:cellWidth']);
+  assert.ok(Object.keys(after.entries).every((key) => !key.includes('omitted for default cells')));
+});
+
+test('commented optional type members remain additive through event dependencies', () => {
+  const before = normalizePublicApi(declarationCommentFixture(`
+    cellSize: number;
+    /** Custom painted bounds; omitted for the default separators. */ cellWidth?: number;
+  `));
+  const after = normalizePublicApi(declarationCommentFixture(`
+    cellSize: number;
+    /** Vertical row pitch; omitted when it equals cellSize. */ rowHeight?: number;
+    /** Painted bounds; present for rectangular rows, omitted for default cells. */ cellWidth?: number;
+  `));
+  const changes = diffPublicApi(before, after);
+  assert.equal(minimumRequiredBump(changes), 'minor');
+  assert.ok(changes.every((change) => change.bump !== 'major'));
+  assert.ok(after.entries['named-export:Geometry:property:rowHeight']);
+  assert.equal(minimumRequiredBump(diffPublicApi(after, before)), 'major');
+});
+
+test('ignoring declaration comments preserves real member and literal breaking changes', () => {
+  const members = `
+    /** Custom painted bounds; omitted for default cells. */ cellWidth?: number;
+    literal: '/* original; */';
+    url: 'https://example.test/original;';
+    template: \`/* original; */ // original;\`;
+  `;
+  const before = normalizePublicApi(declarationCommentFixture(members));
+  for (const changed of [
+    members.replace('cellWidth?: number;', 'cellWidth?: string;'),
+    members.replace('cellWidth?: number;', ''),
+    members.replace('/* original; */', '/* changed; */'),
+    members.replace('https://example.test/original;', 'https://example.test/changed;'),
+    members.replace('template: `/* original; */', 'template: `/* changed; */'),
+    members.replace('// original;', '// changed;'),
+  ]) {
+    assert.equal(
+      minimumRequiredBump(diffPublicApi(before, normalizePublicApi(declarationCommentFixture(changed)))),
+      'major',
+      changed,
+    );
+  }
+});

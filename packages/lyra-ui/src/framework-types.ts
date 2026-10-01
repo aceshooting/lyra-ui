@@ -1170,6 +1170,7 @@ export interface LyraComponentTypeMap {
     events: LyraAvatarEventMap;
     eventNames:       | 'lr-error';
     cssNames:       | '--lr-avatar-bg'
+      | '--lr-avatar-border'
       | '--lr-avatar-color'
       | '--lr-avatar-font-size'
       | '--lr-avatar-radius'
@@ -1294,6 +1295,7 @@ export interface LyraComponentTypeMap {
       | 'stackedAxes'
       | 'stackTotals'
       | 'strings'
+      | 'syncGroup'
       | 'tooltipFooterFormatter'
       | 'tooltipTitleFormatter'
       | 'type'
@@ -1349,6 +1351,8 @@ export interface LyraComponentTypeMap {
       | '--lr-chart-pattern-step'
       | '--lr-chart-reset-zoom-button-active-bg'
       | '--lr-chart-reset-zoom-button-hover-bg'
+      | '--lr-chart-sync-crosshair-color'
+      | '--lr-chart-sync-crosshair-width'
       | '--lr-chart-tick-color'
       | '--lr-chart-tick-font-size'
       | '--lr-chart-tooltip-bg'
@@ -1363,6 +1367,7 @@ export interface LyraComponentTypeMap {
       'legend-position'?: LyraBarChart['legendPosition'];
       'scale-type'?: LyraBarChart['scaleType'];
       'stack-totals'?: LyraBarChart['stackTotals'];
+      'sync-group'?: LyraBarChart['syncGroup'];
       'with-data-table'?: LyraBarChart['withDataTable'];
       'without-animation'?: LyraBarChart['withoutAnimation'];
       'without-legend'?: LyraBarChart['withoutLegend'];
@@ -1562,6 +1567,7 @@ export interface LyraComponentTypeMap {
       | 'stackedAxes'
       | 'stackTotals'
       | 'strings'
+      | 'syncGroup'
       | 'tooltipFooterFormatter'
       | 'tooltipTitleFormatter'
       | 'type'
@@ -1617,6 +1623,8 @@ export interface LyraComponentTypeMap {
       | '--lr-chart-pattern-step'
       | '--lr-chart-reset-zoom-button-active-bg'
       | '--lr-chart-reset-zoom-button-hover-bg'
+      | '--lr-chart-sync-crosshair-color'
+      | '--lr-chart-sync-crosshair-width'
       | '--lr-chart-tick-color'
       | '--lr-chart-tick-font-size'
       | '--lr-chart-tooltip-bg'
@@ -1631,6 +1639,7 @@ export interface LyraComponentTypeMap {
       'legend-position'?: LyraBubbleChart['legendPosition'];
       'scale-type'?: LyraBubbleChart['scaleType'];
       'stack-totals'?: LyraBubbleChart['stackTotals'];
+      'sync-group'?: LyraBubbleChart['syncGroup'];
       'with-data-table'?: LyraBubbleChart['withDataTable'];
       'without-animation'?: LyraBubbleChart['withoutAnimation'];
       'without-legend'?: LyraBubbleChart['withoutLegend'];
@@ -2024,6 +2033,7 @@ export interface LyraComponentTypeMap {
       | 'stackedAxes'
       | 'stackTotals'
       | 'strings'
+      | 'syncGroup'
       | 'tooltipFooterFormatter'
       | 'tooltipTitleFormatter'
       | 'type'
@@ -2079,6 +2089,8 @@ export interface LyraComponentTypeMap {
       | '--lr-chart-pattern-step'
       | '--lr-chart-reset-zoom-button-active-bg'
       | '--lr-chart-reset-zoom-button-hover-bg'
+      | '--lr-chart-sync-crosshair-color'
+      | '--lr-chart-sync-crosshair-width'
       | '--lr-chart-tick-color'
       | '--lr-chart-tick-font-size'
       | '--lr-chart-tooltip-bg'
@@ -2093,6 +2105,7 @@ export interface LyraComponentTypeMap {
       'legend-position'?: LyraChart['legendPosition'];
       'scale-type'?: LyraChart['scaleType'];
       'stack-totals'?: LyraChart['stackTotals'];
+      'sync-group'?: LyraChart['syncGroup'];
       'with-data-table'?: LyraChart['withDataTable'];
       'without-animation'?: LyraChart['withoutAnimation'];
       'without-legend'?: LyraChart['withoutLegend'];
@@ -4173,6 +4186,7 @@ export interface LyraComponentTypeMap {
       | 'stackedAxes'
       | 'stackTotals'
       | 'strings'
+      | 'syncGroup'
       | 'tooltipFooterFormatter'
       | 'tooltipTitleFormatter'
       | 'type'
@@ -4228,6 +4242,8 @@ export interface LyraComponentTypeMap {
       | '--lr-chart-pattern-step'
       | '--lr-chart-reset-zoom-button-active-bg'
       | '--lr-chart-reset-zoom-button-hover-bg'
+      | '--lr-chart-sync-crosshair-color'
+      | '--lr-chart-sync-crosshair-width'
       | '--lr-chart-tick-color'
       | '--lr-chart-tick-font-size'
       | '--lr-chart-tooltip-bg'
@@ -4242,6 +4258,7 @@ export interface LyraComponentTypeMap {
       'legend-position'?: LyraDoughnutChart['legendPosition'];
       'scale-type'?: LyraDoughnutChart['scaleType'];
       'stack-totals'?: LyraDoughnutChart['stackTotals'];
+      'sync-group'?: LyraDoughnutChart['syncGroup'];
       'with-data-table'?: LyraDoughnutChart['withDataTable'];
       'without-animation'?: LyraDoughnutChart['withoutAnimation'];
       'without-legend'?: LyraDoughnutChart['withoutLegend'];
@@ -5698,6 +5715,7 @@ export interface LyraComponentTypeMap {
       | 'midpoint'
       | 'minCellSize'
       | 'multiple'
+      | 'rowHeight'
       | 'rowLabelWidth'
       | 'scale'
       | 'selectedCell'
@@ -5738,6 +5756,7 @@ export interface LyraComponentTypeMap {
       'fit-to-width'?: LyraHeatmap['fitToWidth'];
       'max-cell-size'?: LyraHeatmap['maxCellSize'];
       'min-cell-size'?: LyraHeatmap['minCellSize'];
+      'row-height'?: LyraHeatmap['rowHeight'];
       'row-label-width'?: LyraHeatmap['rowLabelWidth'];
       'sticky-labels'?: LyraHeatmap['stickyLabels'];
       'value-label'?: LyraHeatmap['valueLabel'];
@@ -5808,6 +5827,7 @@ export interface LyraComponentTypeMap {
       | 'stackedAxes'
       | 'stackTotals'
       | 'strings'
+      | 'syncGroup'
       | 'tooltipFooterFormatter'
       | 'tooltipTitleFormatter'
       | 'type'
@@ -5864,6 +5884,8 @@ export interface LyraComponentTypeMap {
       | '--lr-chart-pattern-step'
       | '--lr-chart-reset-zoom-button-active-bg'
       | '--lr-chart-reset-zoom-button-hover-bg'
+      | '--lr-chart-sync-crosshair-color'
+      | '--lr-chart-sync-crosshair-width'
       | '--lr-chart-tick-color'
       | '--lr-chart-tick-font-size'
       | '--lr-chart-tooltip-bg'
@@ -5879,6 +5901,7 @@ export interface LyraComponentTypeMap {
       'scale-type'?: LyraHistogram['scaleType'];
       'series-label'?: LyraHistogram['seriesLabel'];
       'stack-totals'?: LyraHistogram['stackTotals'];
+      'sync-group'?: LyraHistogram['syncGroup'];
       'with-data-table'?: LyraHistogram['withDataTable'];
       'without-animation'?: LyraHistogram['withoutAnimation'];
       'without-legend'?: LyraHistogram['withoutLegend'];
@@ -6626,6 +6649,7 @@ export interface LyraComponentTypeMap {
       | 'stackedAxes'
       | 'stackTotals'
       | 'strings'
+      | 'syncGroup'
       | 'tooltipFooterFormatter'
       | 'tooltipTitleFormatter'
       | 'type'
@@ -6681,6 +6705,8 @@ export interface LyraComponentTypeMap {
       | '--lr-chart-pattern-step'
       | '--lr-chart-reset-zoom-button-active-bg'
       | '--lr-chart-reset-zoom-button-hover-bg'
+      | '--lr-chart-sync-crosshair-color'
+      | '--lr-chart-sync-crosshair-width'
       | '--lr-chart-tick-color'
       | '--lr-chart-tick-font-size'
       | '--lr-chart-tooltip-bg'
@@ -6695,6 +6721,7 @@ export interface LyraComponentTypeMap {
       'legend-position'?: LyraLineChart['legendPosition'];
       'scale-type'?: LyraLineChart['scaleType'];
       'stack-totals'?: LyraLineChart['stackTotals'];
+      'sync-group'?: LyraLineChart['syncGroup'];
       'with-data-table'?: LyraLineChart['withDataTable'];
       'without-animation'?: LyraLineChart['withoutAnimation'];
       'without-legend'?: LyraLineChart['withoutLegend'];
@@ -6734,6 +6761,7 @@ export interface LyraComponentTypeMap {
       | 'skipZero'
       | 'stacked'
       | 'strings'
+      | 'syncGroup'
       | 'tableCellFormatter'
       | 'tableTotals'
       | 'tickFormat'
@@ -6763,8 +6791,12 @@ export interface LyraComponentTypeMap {
       | '--lr-chart-legend-color'
       | '--lr-chart-legend-side-max'
       | '--lr-chart-pattern-step'
+      | '--lr-chart-sync-crosshair-color'
+      | '--lr-chart-sync-crosshair-width'
       | '--lr-chart-tick-color'
       | '--lr-chart-tick-font-size'
+      | '--lr-chart-tooltip-bg'
+      | '--lr-chart-tooltip-color'
       | '--lr-lite-chart-data-table-toggle-active-bg'
       | '--lr-lite-chart-data-table-toggle-hover-bg'
       | '--lr-lite-chart-selected-outline-color'
@@ -6780,6 +6812,7 @@ export interface LyraComponentTypeMap {
       'min-bar-height'?: LyraLiteChart['minBarHeight'];
       'rounded-bars'?: LyraLiteChart['roundedBars'];
       'skip-zero'?: LyraLiteChart['skipZero'];
+      'sync-group'?: LyraLiteChart['syncGroup'];
       'table-totals'?: LyraLiteChart['tableTotals'];
       'value-axis-gutter'?: LyraLiteChart['valueAxisGutter'];
       'with-data-table'?: LyraLiteChart['withDataTable'];
@@ -8489,6 +8522,7 @@ export interface LyraComponentTypeMap {
       | 'stackedAxes'
       | 'stackTotals'
       | 'strings'
+      | 'syncGroup'
       | 'tooltipFooterFormatter'
       | 'tooltipTitleFormatter'
       | 'type'
@@ -8544,6 +8578,8 @@ export interface LyraComponentTypeMap {
       | '--lr-chart-pattern-step'
       | '--lr-chart-reset-zoom-button-active-bg'
       | '--lr-chart-reset-zoom-button-hover-bg'
+      | '--lr-chart-sync-crosshair-color'
+      | '--lr-chart-sync-crosshair-width'
       | '--lr-chart-tick-color'
       | '--lr-chart-tick-font-size'
       | '--lr-chart-tooltip-bg'
@@ -8558,6 +8594,7 @@ export interface LyraComponentTypeMap {
       'legend-position'?: LyraPieChart['legendPosition'];
       'scale-type'?: LyraPieChart['scaleType'];
       'stack-totals'?: LyraPieChart['stackTotals'];
+      'sync-group'?: LyraPieChart['syncGroup'];
       'with-data-table'?: LyraPieChart['withDataTable'];
       'without-animation'?: LyraPieChart['withoutAnimation'];
       'without-legend'?: LyraPieChart['withoutLegend'];
@@ -8603,6 +8640,7 @@ export interface LyraComponentTypeMap {
       | 'stackedAxes'
       | 'stackTotals'
       | 'strings'
+      | 'syncGroup'
       | 'tooltipFooterFormatter'
       | 'tooltipTitleFormatter'
       | 'type'
@@ -8658,6 +8696,8 @@ export interface LyraComponentTypeMap {
       | '--lr-chart-pattern-step'
       | '--lr-chart-reset-zoom-button-active-bg'
       | '--lr-chart-reset-zoom-button-hover-bg'
+      | '--lr-chart-sync-crosshair-color'
+      | '--lr-chart-sync-crosshair-width'
       | '--lr-chart-tick-color'
       | '--lr-chart-tick-font-size'
       | '--lr-chart-tooltip-bg'
@@ -8672,6 +8712,7 @@ export interface LyraComponentTypeMap {
       'legend-position'?: LyraPolarAreaChart['legendPosition'];
       'scale-type'?: LyraPolarAreaChart['scaleType'];
       'stack-totals'?: LyraPolarAreaChart['stackTotals'];
+      'sync-group'?: LyraPolarAreaChart['syncGroup'];
       'with-data-table'?: LyraPolarAreaChart['withDataTable'];
       'without-animation'?: LyraPolarAreaChart['withoutAnimation'];
       'without-legend'?: LyraPolarAreaChart['withoutLegend'];
@@ -9200,6 +9241,7 @@ export interface LyraComponentTypeMap {
       | 'stackedAxes'
       | 'stackTotals'
       | 'strings'
+      | 'syncGroup'
       | 'tooltipFooterFormatter'
       | 'tooltipTitleFormatter'
       | 'type'
@@ -9255,6 +9297,8 @@ export interface LyraComponentTypeMap {
       | '--lr-chart-pattern-step'
       | '--lr-chart-reset-zoom-button-active-bg'
       | '--lr-chart-reset-zoom-button-hover-bg'
+      | '--lr-chart-sync-crosshair-color'
+      | '--lr-chart-sync-crosshair-width'
       | '--lr-chart-tick-color'
       | '--lr-chart-tick-font-size'
       | '--lr-chart-tooltip-bg'
@@ -9269,6 +9313,7 @@ export interface LyraComponentTypeMap {
       'legend-position'?: LyraRadarChart['legendPosition'];
       'scale-type'?: LyraRadarChart['scaleType'];
       'stack-totals'?: LyraRadarChart['stackTotals'];
+      'sync-group'?: LyraRadarChart['syncGroup'];
       'with-data-table'?: LyraRadarChart['withDataTable'];
       'without-animation'?: LyraRadarChart['withoutAnimation'];
       'without-legend'?: LyraRadarChart['withoutLegend'];
@@ -9956,6 +10001,7 @@ export interface LyraComponentTypeMap {
       | 'stackedAxes'
       | 'stackTotals'
       | 'strings'
+      | 'syncGroup'
       | 'tooltipFooterFormatter'
       | 'tooltipTitleFormatter'
       | 'type'
@@ -10011,6 +10057,8 @@ export interface LyraComponentTypeMap {
       | '--lr-chart-pattern-step'
       | '--lr-chart-reset-zoom-button-active-bg'
       | '--lr-chart-reset-zoom-button-hover-bg'
+      | '--lr-chart-sync-crosshair-color'
+      | '--lr-chart-sync-crosshair-width'
       | '--lr-chart-tick-color'
       | '--lr-chart-tick-font-size'
       | '--lr-chart-tooltip-bg'
@@ -10025,6 +10073,7 @@ export interface LyraComponentTypeMap {
       'legend-position'?: LyraScatterChart['legendPosition'];
       'scale-type'?: LyraScatterChart['scaleType'];
       'stack-totals'?: LyraScatterChart['stackTotals'];
+      'sync-group'?: LyraScatterChart['syncGroup'];
       'with-data-table'?: LyraScatterChart['withDataTable'];
       'without-animation'?: LyraScatterChart['withoutAnimation'];
       'without-legend'?: LyraScatterChart['withoutLegend'];

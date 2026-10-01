@@ -1,6 +1,8 @@
 import { css } from 'lit';
+import { opaqueContentBorders } from '../../../internal/opaque-content-border.styles.js';
 
 export const styles = css`
+  ${opaqueContentBorders(":host(:not([appearance='plain']):not([appearance='filled']):not([appearance='filled-outlined'])) [part='content']")}
   :host {
     display: flex;
     flex-direction: column;

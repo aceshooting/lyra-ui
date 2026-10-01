@@ -83,9 +83,17 @@ weekdayLabelWidth?: number|'auto'; weekdayLabelText?: (jsWeekday:number)=>string
 - `cellSize: number = 22` (attribute `cell-size` — default `22` in matrix mode, `11` in calendar
   mode when left unset; explicitly setting it now governs both modes' per-cell size alike, and it's
   ignored in either mode when `fitToWidth` is set)
+- `rowHeight?: number` (attribute `row-height`) — independent matrix vertical row pitch in CSS
+  pixels, including its trailing `cellGapY` separator. Unset, removed, `null`, `undefined`, and
+  non-finite values restore square rows from the effective `cellSize`; finite values
+  clamp to the `1`–`4096` range. This bounds numeric outliers; browser canvas limits still apply
+  to the complete grid. `fitToWidth`, `minCellSize`, and `maxCellSize` continue to govern column pitch.
+  Calendar mode ignores it and preserves its existing square geometry. With `accessibleCells`,
+  width and height independently preserve the accessible target floor; dense columns can therefore
+  overflow even when fitting is requested.
 - `cellGapX: number = 1` / `cellGapY: number = 1` (attributes `cell-gap-x` / `cell-gap-y`) —
   trailing horizontal/vertical gaps in CSS pixels. In matrix mode they are subtracted from the
-  square `cellSize` pitch. Negative values clamp to zero, non-finite values use `1`, and oversized
+  horizontal `cellSize` / vertical `rowHeight ?? cellSize` pitch. Negative values clamp to zero, non-finite values use `1`, and oversized
   gaps leave at least one painted pixel. Custom geometry with `accessibleCells` grows the minimum
   pitch and caps gaps to preserve the `--lr-icon-button-size` target floor. In calendar mode they
   are opt-in: only an explicitly set property or attribute replaces the calendar's original `2px`
@@ -374,10 +382,11 @@ otherwise keep private. For the case that motivated it — a frozen header or gu
 matrix — prefer `stickyLabels`, which freezes the band inside the component and needs no mirror at
 all; the getter remains the way to align a *separate* element (a sibling chart, a custom overlay)
 with the grid. `LyraHeatmapMatrixGeometryChangeDetail` contains `padLeft`, `padTop`, and `cellSize`
-(the square pitch), plus optional `cellWidth`, `cellHeight`, and `cellRadius` for custom matrix
+(the horizontal pitch), plus optional `rowHeight` when vertical pitch differs and optional
+`cellWidth`, `cellHeight`, and `cellRadius` for custom matrix
 presentation. When those optional fields are absent, painted width/height are `cellSize - 1` and
 radius is zero. The getter and geometry-change event always share one frozen snapshot, including
-changes to the resolved gaps/radius.
+changes to the resolved row pitch, gaps, and radius. Use `rowHeight ?? cellSize` to position rows.
 
 `calendarGeometry: Readonly<LyraHeatmapCalendarGeometry> | undefined` (read-only; assignment is
 ignored) is the calendar-mode counterpart: the frozen snapshot of the last calendar draw with
@@ -394,6 +403,10 @@ selection, `lr-cell-activate`, and `cellText` keep working with no matrix rebuil
 
 For a fluid day/hour matrix, keep all 24 hour strings in `data.colLabels` and use
 `fit-to-width cell-gap-x="1" cell-gap-y="2" cell-radius="2" col-label-interval="3"`.
+For a dense matrix with 144 time columns and 20 rows, use `fit-to-width row-height="28"` to fit
+columns while keeping readable rows. Row height includes the trailing separator and stays `28px`
+when the host resizes. The existing `minCellSize` floor and accessible target sizes can require
+horizontal overflow in a narrow allocation; choose `sticky-labels` when you want a scrollport.
 For a single fluid square cell, use `fit-to-width` with equal horizontal and vertical gaps.
 
 **Events:** `lr-selection-change` (not cancelable; frozen readonly `HeatmapSelectionChangeDetail { selectedCells, source }` proposal in multiple mode, with `source: 'pointer' | 'keyboard' | 'row' | 'column'`; accept it by assigning `selectedCells`). `lr-cell-activate` (fired on click, or Enter/Space on the keyboard-focused cell —

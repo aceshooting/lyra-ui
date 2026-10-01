@@ -130,6 +130,8 @@ const CAL_GAP = 2;
 /** Matrix mode's original fixed cell size — the effective fallback the
  *  `cellSize` accessor uses in matrix mode when left unset. */
 const DEFAULT_MATRIX_CELL_SIZE = 22;
+/** Largest explicit row pitch; bounds accidental numeric outliers independently of data size. */
+const MAX_MATRIX_ROW_HEIGHT = 4096;
 const DEFAULT_ACCESSIBLE_TARGET_SIZE_PX = 40;
 const DEFAULT_BUCKET_COUNT = 5;
 /**
@@ -437,7 +439,7 @@ export function normalizeBucketCount(bucketCount: number): number {
  * `Number` converter — which turns a missing-but-present `foo=""` into `0` — anything that isn't a
  * finite number (absent, empty, whitespace, `"auto"`, garbage) maps to `undefined`, i.e. genuinely
  * unset. `max-cell-size=""` silently pinning every cell to the 4px floor would be a trap, and these
- * two are the only properties on this component where "no value" is a meaningful state.
+ * optional sizes preserve their automatic geometry when unset.
  */
 const optionalCellSizeConverter = {
   fromAttribute(value: string | null): number | undefined {
@@ -548,7 +550,9 @@ export type LyraHeatmapMatrixGeometryChangeDetail = {
   padLeft: number;
   padTop: number;
   cellSize: number;
-  /** Custom painted bounds; omitted for the default one-pixel separators and square corners. */
+  /** Vertical row pitch; omitted when it equals the horizontal cellSize. */
+  rowHeight?: number;
+  /** Custom painted bounds; present for rectangular rows or custom gaps/corners, omitted for default square cells. */
   cellWidth?: number;
   cellHeight?: number;
   cellRadius?: number;
@@ -620,7 +624,9 @@ export type LyraHeatmapExportFormat = 'csv' | 'png';
  * narrow one cannot collapse into hairlines. Both are ignored while
  * `fitToWidth` is unset (an explicit `cellSize` is an exact request), and the
  * canvas is sized from the *clamped* size — a capped grid leaves the host's
- * remaining width unfilled rather than stretching to it.
+ * remaining width unfilled rather than stretching to it. Matrix-only `rowHeight` independently
+ * sets vertical row pitch, including the trailing separator, while columns retain the fit-derived
+ * size. Unset preserves square geometry; calendar mode ignores it.
  *
  * The sequential color ramp's endpoints are read from the
  * `--lr-heatmap-scale-lo`/`-hi` custom properties (declared in
@@ -734,7 +740,7 @@ export type LyraHeatmapExportFormat = 'csv' | 'png';
  * wording that is not represented by the locale catalog.
  * `cellColor` overrides a cell's ramp-computed color entirely for an exact value.
  * @event lr-matrix-geometry-change - Fired after a matrix-mode draw pass whose resolved
- * `matrixGeometry` (`padLeft`/`padTop`/`cellSize`) differs from the previous draw -- e.g. after
+ * `matrixGeometry` (`padLeft`/`padTop`/`cellSize`/optional `rowHeight`) differs from the previous draw -- e.g. after
  * `row-label-width="auto"`/`col-label-height="auto"` resolves against new label content or a
  * resize. `detail` is the same object `matrixGeometry` returns. Never fired in calendar mode.
  * @event lr-calendar-geometry-change - Fired after a calendar-mode draw pass whose resolved
@@ -981,7 +987,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   /**
    * The gutter/cell geometry the last matrix-mode draw actually painted with --
    * `{ padLeft, padTop, cellSize }`, all in CSS pixels. Custom gaps/radius additionally report
-   * `cellWidth`, `cellHeight`, and `cellRadius`; default cells omit these fields. This lets a light-DOM consumer
+   * `cellWidth`, `cellHeight`, and `cellRadius`; rectangular rows also report `rowHeight`.
+   * The vertical pitch is `rowHeight ?? cellSize`; square default cells omit these fields. This lets a light-DOM consumer
    * (e.g. a sticky header mirror) line up with the canvas without hardcoding the same numbers `row-label-width`
    * or `col-label-height`'s `"auto"` resolution would otherwise keep private. `undefined` in
    * calendar mode, and before the first matrix draw.
@@ -1262,6 +1269,27 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
           );
     this.requestUpdate('cellSize', oldValue);
   }
+  private _rowHeight?: number;
+
+  /** Matrix-only vertical row pitch in CSS pixels, including the trailing cellGapY separator.
+   * Unset, removed, null, undefined, or non-finite values restore square rows from the effective
+   * cellSize. Finite values clamp between one and 4096 to bound numeric outliers. fitToWidth and its min/maxCellSize clamps keep
+   * governing column pitch independently. Calendar mode ignores this setting.
+   * With accessibleCells, each axis independently honors the minimum accessible target, which
+   * can make dense columns overflow their allocation. */
+  @property({ type: Number, attribute: 'row-height', converter: optionalCellSizeConverter })
+  get rowHeight(): number | undefined {
+    return this._rowHeight;
+  }
+
+  set rowHeight(value: number | undefined | null) {
+    const oldValue = this._rowHeight;
+    this._rowHeight = value == null || !Number.isFinite(value)
+      ? undefined
+      : finiteRange(value, 1, 1, MAX_MATRIX_ROW_HEIGHT);
+    this.requestUpdate('rowHeight', oldValue);
+  }
+
   /** Legend caption. Unset uses the localized default; every supplied string is literal. */
   @property({ attribute: 'value-label' }) valueLabel?: string;
   /**
@@ -1289,13 +1317,13 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * rest of a skewed dataset.
    */
   @property() scale: HeatmapScale = 'linear';
-  /** Trailing horizontal separator in CSS pixels. In matrix mode it is subtracted from the square
-   * cell pitch, clamped between zero and cellSize minus one; non-finite values use the default.
+  /** Trailing horizontal separator in CSS pixels. In matrix mode it is subtracted from the
+   * horizontal cell pitch, clamped between zero and the horizontal pitch minus one; non-finite values use the default.
    * In calendar mode it is opt-in: only an explicitly set value (property or attribute) replaces
    * the calendar's original 2px spacing between week columns, adding to the column pitch with the
    * same bounds; a non-finite value, or removing the attribute, restores the original spacing. */
   @property({ type: Number, attribute: 'cell-gap-x' }) cellGapX = 1;
-  /** Trailing vertical separator in CSS pixels, with the same bounds as cellGapX. In calendar mode
+  /** Trailing vertical separator in CSS pixels, bounded by the vertical row pitch minus one. In calendar mode
    * an explicitly set value replaces the original 2px spacing between weekday rows. */
   @property({ type: Number, attribute: 'cell-gap-y' }) cellGapY = 1;
   /** Painted corner radius in CSS pixels, clamped to half the smaller painted side. Does not change
@@ -2429,6 +2457,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       [
         'data',
         'cellSize',
+        'rowHeight',
         'cellGapX',
         'cellGapY',
         'cellRadius',
@@ -2634,11 +2663,12 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     y: number,
     size: number,
     state: 'annotation' | 'selected' | 'focus',
-    color: string
+    color: string,
+    paintedShape?: ReturnType<LyraHeatmap['matrixCellShape']>
   ): void {
-    const shape = this.effectiveMode === 'matrix'
+    const shape = paintedShape ?? (this.effectiveMode === 'matrix'
       ? this.matrixCellShape(size)
-      : this.calendarCellShape(size);
+      : this.calendarCellShape(size));
     const width = shape?.custom ? shape.w : size;
     const height = shape?.custom ? shape.h : size;
     if (shape?.custom) {
@@ -2707,7 +2737,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * so clearing a dirty rectangle never erases persistent data. Returns false when a complete draw
    * is still required (for example before the first canvas pass or after a mode change). */
   private repaintFocusRing(previous: CellPos | null | undefined): boolean {
-    if (!this.canvasHasContent || !this.canvas) return false;
+    if (!this.canvasHasContent || !this.canvas || this.drawDirty) return false;
     const current = this.focusedCell;
     if (this.effectiveMode === 'calendar') {
       if (
@@ -3262,24 +3292,35 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const target = this.accessibleTargetSizePx;
     const custom = finiteNumber(this.cellGapX, 1) !== 1 || finiteNumber(this.cellGapY, 1) !== 1 ||
       finiteRange(this.cellRadius, 0, 0) > 0;
-    const gap = custom ? Math.max(
-      finiteRange(this.cellGapX, 1, 0, target),
-      finiteRange(this.cellGapY, 1, 0, target)
-    ) : 0;
+    const gap = this.rowHeight !== undefined
+      ? finiteRange(this.cellGapX, 1, 0, target)
+      : custom ? Math.max(
+          finiteRange(this.cellGapX, 1, 0, target),
+          finiteRange(this.cellGapY, 1, 0, target)
+        ) : 0;
     return Math.max(size, target + gap);
   }
 
-  private matrixCellShape(size: number): { w: number; h: number; radius: number; custom: boolean } {
-    if (finiteNumber(this.cellGapX, 1) === 1 && finiteNumber(this.cellGapY, 1) === 1 &&
+  /** Vertical pitch shares the square default, but independently preserves accessible targets
+   * when an explicit rowHeight is supplied. Keep the existing square accessibility path intact. */
+  private matrixRowHeight(cellSize: number): number {
+    if (this.rowHeight === undefined) return cellSize;
+    const height = finiteRange(this.rowHeight, cellSize, 1);
+    if (!this.accessibleCells) return height;
+    const target = this.accessibleTargetSizePx;
+    return Math.max(height, target + finiteRange(this.cellGapY, 1, 0, target));
+  }
+
+  private matrixCellShape(size: number, height = this.matrixRowHeight(size)): { w: number; h: number; radius: number; custom: boolean } {
+    if (height === size && finiteNumber(this.cellGapX, 1) === 1 && finiteNumber(this.cellGapY, 1) === 1 &&
       finiteRange(this.cellRadius, 0, 0) === 0) {
       return { w: size - 1, h: size - 1, radius: 0, custom: false };
     }
-    const minimum = this.accessibleCells ? Math.min(size, this.accessibleTargetSizePx) : 1;
-    const maxGap = Math.max(0, size - minimum);
-    const w = size - finiteRange(this.cellGapX, 1, 0, maxGap);
-    const h = size - finiteRange(this.cellGapY, 1, 0, maxGap);
+    const target = this.accessibleCells ? this.accessibleTargetSizePx : 1;
+    const w = size - finiteRange(this.cellGapX, 1, 0, Math.max(0, size - Math.min(size, target)));
+    const h = height - finiteRange(this.cellGapY, 1, 0, Math.max(0, height - Math.min(height, target)));
     const radius = finiteRange(this.cellRadius, 0, 0, Math.min(w, h) / 2);
-    return { w, h, radius, custom: w !== size - 1 || h !== size - 1 || radius !== 0 };
+    return { w, h, radius, custom: height !== size || w !== size - 1 || h !== size - 1 || radius !== 0 };
   }
 
   /** Calendar ring clip shape: `undefined` (square, the original path) unless an explicit
@@ -3308,6 +3349,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     row: number,
     col: number,
     cellSize: number,
+    rowHeight: number,
+    shape: ReturnType<LyraHeatmap['matrixCellShape']>,
     cs: CSSStyleDeclaration,
     rampData: ReturnType<LyraHeatmap['colorRamp']>,
     noDataFill: string
@@ -3335,8 +3378,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     this.fillMatrixCell(
       ctx,
       this.matrixPadLeft + col * cellSize,
-      this.matrixPadTop + row * cellSize,
-      this.matrixCellShape(cellSize)
+      this.matrixPadTop + row * rowHeight,
+      shape
     );
   }
 
@@ -3345,11 +3388,13 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     row: number,
     col: number,
     cellSize: number,
+    rowHeight: number,
+    shape: ReturnType<LyraHeatmap['matrixCellShape']>,
     cs: CSSStyleDeclaration,
     state: 'annotation' | 'selected' | 'focus'
   ): void {
     const x = this.matrixPadLeft + col * cellSize;
-    const y = this.matrixPadTop + row * cellSize;
+    const y = this.matrixPadTop + row * rowHeight;
     if (state === 'annotation' && this.cachedMatrixAnnotationPositions.has(`${row}:${col}`)) {
       this.strokeCellState(
         ctx,
@@ -3357,7 +3402,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         y,
         cellSize,
         'annotation',
-        this.annotationColor(cs)
+        this.annotationColor(cs),
+        shape
       );
     }
     if (state === 'selected' && this.isSelectedPos({ row, col })) {
@@ -3367,7 +3413,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         y,
         cellSize,
         'selected',
-        this.selectedColor(cs)
+        this.selectedColor(cs),
+        shape
       );
     }
     if (
@@ -3383,7 +3430,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         y,
         cellSize,
         'focus',
-        this.focusRingColor(cs)
+        this.focusRingColor(cs),
+        shape
       );
     }
   }
@@ -3392,8 +3440,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     ctx: CanvasRenderingContext2D,
     x: number,
     y: number,
-    cellSize: number
-  ): { left: number; top: number; width: number; height: number; radius: number } {
+    cellSize: number,
+    cellHeight = cellSize
+  ): { left: number; top: number; width: number; height: number; radius: number; rowRadius: number } {
     const padding = RING_LINE_WIDTH + 1;
     const dpr = ctx.getTransform().a;
     // Fractional clipping and clearing blend edge pixels twice. Clear whole device pixels
@@ -3401,13 +3450,14 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const left = Math.floor((x - padding) * dpr) / dpr;
     const top = Math.floor((y - padding) * dpr) / dpr;
     const right = Math.ceil((x + cellSize + padding) * dpr) / dpr;
-    const bottom = Math.ceil((y + cellSize + padding) * dpr) / dpr;
+    const bottom = Math.ceil((y + cellHeight + padding) * dpr) / dpr;
     return {
       left,
       top,
       width: right - left,
       height: bottom - top,
       radius: Math.ceil((2 * padding + 1 / dpr) / cellSize),
+      rowRadius: Math.ceil((2 * padding + 1 / dpr) / cellHeight),
     };
   }
 
@@ -3418,42 +3468,84 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     if (pos.row < 0 || pos.row >= rows || pos.col < 0 || pos.col >= cols)
       return;
     const cellSize = this.matrixCellSize(cols);
+    const rowHeight = this.matrixRowHeight(cellSize);
+    const shape = this.matrixCellShape(cellSize, rowHeight);
     const x = this.matrixPadLeft + pos.col * cellSize;
-    const y = this.matrixPadTop + pos.row * cellSize;
+    const y = this.matrixPadTop + pos.row * rowHeight;
     const ctx = this.canvas.getContext('2d');
     if (!ctx) return;
     const cs = this.ownerDocument.defaultView?.getComputedStyle(this);
     if (!cs) return;
-    const { left, top, width, height, radius } = this.focusRepaintBounds(ctx, x, y, cellSize);
+    const { left, top, width, height, radius, rowRadius } =
+      this.focusRepaintBounds(ctx, x, y, cellSize, rowHeight);
     // Include neighboring fills and rings intersected by the clear, even at the minimum cell
     // size. Clip restoration to the dirty rectangle so those neighbors cannot disturb pixels
     // outside it. The neighborhood stays bounded independently of the matrix dimensions.
-    const firstRow = Math.max(0, pos.row - radius);
-    const lastRow = Math.min(rows - 1, pos.row + radius);
+    const firstRow = Math.max(0, pos.row - rowRadius);
+    const lastRow = Math.min(rows - 1, pos.row + rowRadius);
     const firstCol = Math.max(0, pos.col - radius);
     const lastCol = Math.min(cols - 1, pos.col + radius);
     const ramp = this.colorRamp(RAMP_STEPS, cs);
     const noData = this.noDataFill(cs);
-    ctx.save();
+    // A second clipping path intersects each rounded cell's antialiased clip mask. In very
+    // narrow/short cells this changes edge pixels even when the dirty box uses device-pixel
+    // boundaries. Rasterize complete neighboring cells into a bounded scratch bitmap instead,
+    // then copy the dirty region without multiplying the cell masks.
+    const scratch = rowHeight === cellSize ? undefined : this.ownerDocument.createElement('canvas');
+    const dpr = ctx.getTransform().a;
+    const scratchLeft = Math.floor((this.matrixPadLeft + firstCol * cellSize - RING_LINE_WIDTH - 1) * dpr) / dpr;
+    const scratchTop = Math.floor((this.matrixPadTop + firstRow * rowHeight - RING_LINE_WIDTH - 1) * dpr) / dpr;
+    if (scratch) {
+      const right = Math.ceil((this.matrixPadLeft + (lastCol + 1) * cellSize + RING_LINE_WIDTH + 1) * dpr);
+      const bottom = Math.ceil((this.matrixPadTop + (lastRow + 1) * rowHeight + RING_LINE_WIDTH + 1) * dpr);
+      scratch.width = right - Math.round(scratchLeft * dpr);
+      scratch.height = bottom - Math.round(scratchTop * dpr);
+    }
+    const paintCtx = scratch?.getContext('2d') ?? ctx;
+    if (scratch && paintCtx === ctx) {
+      this.drawMatrix();
+      return;
+    }
+    paintCtx.save();
     try {
-      ctx.beginPath();
-      ctx.rect(left, top, width, height);
-      ctx.clip();
-      ctx.clearRect(left, top, width, height);
+      if (scratch) paintCtx.setTransform(dpr, 0, 0, dpr, -scratchLeft * dpr, -scratchTop * dpr);
+      else {
+        paintCtx.beginPath();
+        paintCtx.rect(left, top, width, height);
+        paintCtx.clip();
+        paintCtx.clearRect(left, top, width, height);
+      }
       for (let row = firstRow; row <= lastRow; row++) {
         for (let col = firstCol; col <= lastCol; col++) {
-          this.paintMatrixCell(ctx, row, col, cellSize, cs, ramp, noData);
+          this.paintMatrixCell(paintCtx, row, col, cellSize, rowHeight, shape, cs, ramp, noData);
         }
       }
       for (const state of ['annotation', 'selected', 'focus'] as const) {
         for (let row = firstRow; row <= lastRow; row++) {
           for (let col = firstCol; col <= lastCol; col++) {
-            this.paintMatrixFocusOverlays(ctx, row, col, cellSize, cs, state);
+            this.paintMatrixFocusOverlays(paintCtx, row, col, cellSize, rowHeight, shape, cs, state);
           }
         }
       }
+      if (left < this.matrixPadLeft)
+        this.paintMatrixRowLabels(paintCtx, this.matrixPadLeft, this.matrixPadTop, rowHeight, cs);
+      if (top < this.matrixPadTop)
+        this.paintMatrixColLabels(paintCtx, this.matrixPadLeft, this.matrixPadTop, cellSize, cs);
     } finally {
-      ctx.restore();
+      paintCtx.restore();
+    }
+    if (scratch) {
+      ctx.save();
+      try {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(left * dpr, top * dpr, width * dpr, height * dpr);
+        ctx.drawImage(scratch,
+          Math.round((left - scratchLeft) * dpr), Math.round((top - scratchTop) * dpr),
+          Math.round(width * dpr), Math.round(height * dpr),
+          Math.round(left * dpr), Math.round(top * dpr), Math.round(width * dpr), Math.round(height * dpr));
+      } finally {
+        ctx.restore();
+      }
     }
   }
 
@@ -3660,7 +3752,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const padLeft = this.matrixPadLeft;
     const padTop = this.matrixPadTop;
     const cellSize = this.matrixCellSize(cols);
-    const shape = this.matrixCellShape(cellSize);
+    const rowHeight = this.matrixRowHeight(cellSize);
+    const shape = this.matrixCellShape(cellSize, rowHeight);
     const dimensions = shape.custom
       ? { cellWidth: shape.w, cellHeight: shape.h, cellRadius: shape.radius }
       : {};
@@ -3670,11 +3763,13 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       previous.padLeft === padLeft &&
       previous.padTop === padTop &&
       previous.cellSize === cellSize &&
+      previous.rowHeight === (rowHeight === cellSize ? undefined : rowHeight) &&
       previous.cellWidth === dimensions.cellWidth &&
       previous.cellHeight === dimensions.cellHeight &&
       previous.cellRadius === dimensions.cellRadius
         ? previous
-        : Object.freeze({ padLeft, padTop, cellSize, ...dimensions });
+        : Object.freeze({ padLeft, padTop, cellSize,
+            ...(rowHeight === cellSize ? {} : { rowHeight }), ...dimensions });
     // Reuse the frozen value when a redundant draw paints identical geometry. Besides avoiding
     // per-frame object churn, this preserves the public guarantee that the last geometry-change
     // event detail is the same object `matrixGeometry` returns until geometry actually changes.
@@ -3684,7 +3779,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       this.emit('lr-matrix-geometry-change', geometry);
     }
     const w = padLeft + cols * cellSize;
-    const h = padTop + rows * cellSize;
+    const h = padTop + rows * rowHeight;
     const dpr = this.ownerDocument.defaultView?.devicePixelRatio || 1;
     this.canvas.width = w * dpr;
     this.canvas.height = h * dpr;
@@ -3713,7 +3808,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       for (let c = 0; c < cols; c++) {
         const v = this.matrixValues[r]?.[c] ?? Number.NaN;
         const x = padLeft + c * cellSize;
-        const y = padTop + r * cellSize;
+        const y = padTop + r * rowHeight;
         const override = this.cellColor?.({ row: r, col: c }, v);
         if (override != null) {
           ctx.fillStyle = this.resolveCanvasColor(override, cs);
@@ -3755,14 +3850,15 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         if (ann.row < 0 || ann.row >= rows || ann.col < 0 || ann.col >= cols)
           continue;
         const x = padLeft + ann.col * cellSize;
-        const y = padTop + ann.row * cellSize;
+        const y = padTop + ann.row * rowHeight;
         this.strokeCellState(
           ctx,
           x,
           y,
           cellSize,
           'annotation',
-          this.annotationColor(cs)
+          this.annotationColor(cs),
+          shape
         );
       }
     }
@@ -3775,14 +3871,15 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       const { row, col } = selected;
       if (row >= 0 && row < rows && col >= 0 && col < cols) {
         const x = padLeft + col * cellSize;
-        const y = padTop + row * cellSize;
+        const y = padTop + row * rowHeight;
         this.strokeCellState(
           ctx,
           x,
           y,
           cellSize,
           'selected',
-          this.selectedColor(cs)
+          this.selectedColor(cs),
+          shape
         );
       }
     }
@@ -3795,21 +3892,22 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       const { row, col } = this.focusedCell;
       if (row < rows && col < cols) {
         const x = padLeft + col * cellSize;
-        const y = padTop + row * cellSize;
+        const y = padTop + row * rowHeight;
         this.strokeCellState(
           ctx,
           x,
           y,
           cellSize,
           'focus',
-          this.focusRingColor(cs)
+          this.focusRingColor(cs),
+          shape
         );
       }
     }
 
-    this.paintMatrixRowLabels(ctx, padLeft, padTop, cellSize, cs);
+    this.paintMatrixRowLabels(ctx, padLeft, padTop, rowHeight, cs);
     this.paintMatrixColLabels(ctx, padLeft, padTop, cellSize, cs);
-    this.paintFrozenLabelBands(padLeft, padTop, cellSize, w, h, dpr, cs);
+    this.paintFrozenLabelBands(padLeft, padTop, cellSize, rowHeight, w, h, dpr, cs);
     this.canvasHasContent = true;
     // renderAccessibleCells() deliberately used the previous frozen geometry while this draw was
     // pending, so the DOM overlay never jumped ahead of the old bitmap. Move it to this new
@@ -3897,6 +3995,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     padLeft: number,
     padTop: number,
     cellSize: number,
+    rowHeight: number,
     width: number,
     height: number,
     dpr: number,
@@ -3908,7 +4007,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const rowBand = this.frozenBandCanvas('row-labels');
     if (rowBand) {
       this.paintFrozenBand(rowBand, padLeft, height, dpr, backdrop, (bandCtx) =>
-        this.paintMatrixRowLabels(bandCtx, padLeft, padTop, cellSize, cs)
+        this.paintMatrixRowLabels(bandCtx, padLeft, padTop, rowHeight, cs)
       );
     }
     const colBand = this.frozenBandCanvas('col-labels');
@@ -3962,14 +4061,30 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
 
   private matrixNavigationGeometry(rows: number, cols: number): MatrixNavigationGeometry {
+    const painted = this.lastPaintedMatrixGeometry;
+    if (painted) {
+      return {
+        rows,
+        cols,
+        padLeft: painted.padLeft,
+        padTop: painted.padTop,
+        cellSize: painted.cellSize,
+        rowHeight: painted.rowHeight ?? painted.cellSize,
+        cellWidth: painted.cellWidth ?? painted.cellSize - 1,
+        cellHeight: painted.cellHeight ?? painted.cellSize - 1,
+        customShape: painted.cellWidth !== undefined,
+      };
+    }
     const cellSize = this.matrixCellSize(cols);
-    const shape = this.matrixCellShape(cellSize);
+    const rowHeight = this.matrixRowHeight(cellSize);
+    const shape = this.matrixCellShape(cellSize, rowHeight);
     return {
       rows,
       cols,
       padLeft: this.matrixPadLeft,
       padTop: this.matrixPadTop,
       cellSize,
+      rowHeight,
       cellWidth: shape.w,
       cellHeight: shape.h,
       customShape: shape.custom,

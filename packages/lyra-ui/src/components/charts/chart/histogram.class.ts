@@ -17,6 +17,7 @@ import {
 } from './histogram-bin.js';
 import { styles } from './histogram.styles.js';
 import { bidiStyles } from './chart-bidi.js';
+import { chartSyncStyles } from './chart-sync.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_histogramFrequency, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
@@ -61,7 +62,7 @@ export class LyraHistogram extends LyraChart {
   // here (mirrors `LyraChart.styles`) since the inherited `renderDataTable()`
   // relies on it to visually hide the fallback `<table>`/description when
   // `withDataTable` is false.
-  static override styles = [LyraElement.styles, specialistTokens, styles, srOnly, bidiStyles];
+  static override styles = [LyraElement.styles, specialistTokens, styles, srOnly, bidiStyles, chartSyncStyles];
 
   override type = 'bar' as const;
 

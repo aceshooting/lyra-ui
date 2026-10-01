@@ -117,9 +117,9 @@ test('default glass qualifies text, control edges and focus across all built-in 
     const qualify = color => mix(color, normal, glass.foregroundWeight);
     for (const surface of ['surface-default', 'surface-raised', 'surface-overlay', 'surface-container-high', 'surface-container-highest']) {
       const backgrounds = [0, 255].map(backdrop => mix([backdrop, backdrop, backdrop], read(surface), glass.opacity));
-      const roles = [['text-normal', normal, 4.5], ['text-quiet', qualify(read('text-quiet')), 4.5], ['action', qualify(read('brand-fill-loud')), 4.5], ['control', qualify(read('surface-border')), 3], ['focus', qualify(read('focus')), 3]];
+      const roles = [['text-normal', normal, 4.5], ['text-quiet', qualify(read('text-quiet')), 4.5], ['action', qualify(read('brand-fill-loud')), 4.5], ['control', mix(read('surface-border'), normal, Math.min(glass.foregroundWeight, glass.borderWeight * (1 - glass.opacity))), 3], ['control-strong', mix(read('border-strong'), normal, Math.min(glass.foregroundWeight, glass.borderWeight * (1 - glass.opacity))), 3], ['focus', qualify(read('focus')), 3]];
       for (const [role, color, minimum] of roles) {
-        const measured = backgrounds.map(background => role === 'control' || role === 'focus' ? mix(background, [255, 255, 255], highlightAlpha) : background);
+        const measured = backgrounds.map(background => role.startsWith('control') || role === 'focus' ? mix(background, [255, 255, 255], highlightAlpha) : background);
         assert.ok(measured.every(background => contrast(color, background) >= minimum), `${look.id}/${mode}/${accent.id}/${surface}/${role}: ${measured.map(background => contrast(color, background)).join(', ')}`);
         const signs = measured.map(background => Math.sign(luminance(color) - luminance(background)));
         assert.equal(signs[0], signs[1], 'extreme backdrops stay on the same side of the foreground luminance');
@@ -137,6 +137,7 @@ test('glass compiler rejects an unqualified transparency or foreground bound', (
     assert.throws(() => renderGlass({ ...glass, opacity: value }), /Invalid glass bounds/);
   }
   assert.throws(() => renderGlass({ ...glass, foregroundWeight: 0 }), /Invalid glass bounds/);
+  for (const borderWeight of [0, -1, NaN, Infinity, 4.01, '2.85']) assert.throws(() => renderGlass({ ...glass, borderWeight }), /Invalid glass bounds/);
   assert.throws(() => renderGlass({ ...glass, maximumBlur: '100px' }), /blur radius bound/);
   assert.throws(() => renderGlass({ ...glass, highlight: 'rgb(255 255 255 / 0.5)' }), /highlight bound/);
   assert.throws(() => renderGlass({ ...glass, maximumBlur: '1px; color: red' }), /Invalid glass maximumBlur/);

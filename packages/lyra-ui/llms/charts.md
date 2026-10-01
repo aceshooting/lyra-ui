@@ -1,3 +1,59 @@
+## Synchronized categorical charts
+
+`lr-chart` and `lr-lite-chart` accept `syncGroup: string = ''` (attribute `sync-group`). Give
+related charts the same trimmed, case-sensitive nonempty group to synchronize their visible active
+category across pointer interaction and existing keyboard navigation. Empty or whitespace-only
+groups preserve native tooltip behavior. Group membership works across arbitrary shadow roots in
+one owner document; separate documents, including iframes, remain independent.
+
+Synchronization supports vertical categorical bar and line charts, including multiple series and
+stacking. Core raw `config` uses its effective type, datasets, index axis and x scale: horizontal,
+continuous/time x scales and other chart types do not participate. Match keys are exact unformatted,
+nonempty category labels from each chart's own admitted/effective data. Category order may differ;
+`xLabel`, axis formatting, source values and pixel coordinates do not determine matches. Duplicate
+labels use the first category with an eligible rendered mark on each recipient; the initiating chart
+retains the exact category touched. Prefer unique labels to avoid this ambiguity. Hidden datasets,
+null/nonfinite/nonrendered values and zero bars omitted by lite `skipZero` are ineligible.
+
+The source and matching recipients show a decorative `sync-crosshair` and a tooltip, each using its own category position,
+eligible series and formatted values. Core retains its native Chart.js canvas tooltip, including
+visual options and callbacks; canvas content has no CSS part. Lite exposes its noninteractive
+positioned DOM tooltip through `sync-tooltip`. Core
+reuses Chart.js tooltip content, including configured callbacks/filter, `formatter`,
+`valueFormatter` and title/footer formatters; `withoutTooltip` and effective raw tooltip suppression
+still suppress its tooltip while retaining its crosshair. Lite uses its existing `formatter` visual
+surface / `pointText` / localized mark message. Within a group the positioned tooltip replaces the
+native SVG title tooltip; accessible mark names remain intact. DOM content is text and uses bidi
+isolation. Both renderers expose the DOM crosshair and share `--lr-chart-tooltip-bg`,
+`--lr-chart-tooltip-color`, `--lr-chart-sync-crosshair-color` (default `var(--lr-color-text)`) and
+`--lr-chart-sync-crosshair-width` (default `var(--lr-border-width-thin)`). Overlays stay within their
+chart allocation, add no tab stops and respect forced colors. The DOM crosshair and lite tooltip
+add no motion; core keeps its existing animation and reduced-motion behavior.
+
+Keyboard focus establishes a category; arrows/Home/End follow existing navigation, including RTL
+key behavior. Only the initiating chart performs its usual keyboard announcement. Recipients never
+move focus, auto-scroll, announce, change `selectedIndices`, or emit activation events. Click and
+Enter/Space keep their activation contract. The latest source interaction owns the group: owner
+pointerleave/pointercancel, Escape or keyboard blur out of the navigation surface clears all peers;
+a stale leave from an earlier source cannot clear a newer interaction. Missing peer matches clear
+that peer. Source chart-content/visibility changes conservatively clear the group, while recipient changes
+recompute their own match. Group changes, disconnect, incompatible configuration and adoption
+remove membership; reconnect does not restore stale owned state. Resize reprojects geometry and
+scroll either reprojects recipients or clears the owning interaction. Numeric/time interpolation,
+zoom/pan and selection synchronization are outside this API.
+
+```js
+import '@aceshooting/lyra-ui/components/lr-chart.js';
+import '@aceshooting/lyra-ui/components/lr-lite-chart.js';
+```
+
+```html
+<lr-chart sync-group="quarterly" type="line"></lr-chart>
+<lr-lite-chart sync-group="quarterly"></lr-lite-chart>
+```
+
+Assign each chart's own `.labels` and `.datasets` through property bindings as usual.
+
 ## Breaking changes in 9.0.0
 
 Breaking changes in this release (v9): `<lr-chart>` and `<lr-box-plot>` drop the deprecated
@@ -257,6 +313,10 @@ structured points retain their y-value formatting.
   value, matching Chart.js's own paired index/value-scale stacking contract.
 - `withoutAnimation: boolean = false` (attribute `without-animation`, reflected) — disables Chart.js
   construction animation; reduced-motion preference also disables it regardless of this value
+- `syncGroup: string = ''` (attribute `sync-group`) — opt-in exact category coordination; see
+  [Synchronized categorical charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md#synchronized-categorical-charts). Only effective vertical
+  categorical bar/line configurations participate; other types, horizontal charts and continuous
+  x scales keep this setting inert. Core keeps its native canvas tooltip and existing tooltip tokens.
 - `withoutTooltip: boolean = false` (attribute `without-tooltip`, reflected) — disables the
   Chart.js tooltip plugin for this instance
 - `dataLabels: boolean = false` (attribute `data-labels`) — draws each point's value on the chart via
@@ -456,7 +516,9 @@ notice, so use that escape hatch when the complete data set needs pagination, vi
 another application-owned presentation. Explicit `config.data` is the deliberate full-fidelity
 Chart.js escape hatch and is not rewritten by the simplified-surface sampler.
 
-**CSS parts:** `base`, `plot` (the fixed-height canvas/overlay region), `canvas`, `legend` (the
+**CSS parts:** `base`, `plot` (the fixed-height canvas/overlay region), `canvas`,
+`sync-crosshair` (decorative category line during an admitted synchronized interaction; the native
+canvas tooltip has no CSS part), `legend` (the
 wrapping DOM legend), `legend-item` (a dataset/category visibility button), `legend-item-hidden`
 (added while the dataset/category is hidden), `legend-swatch`,
 `reset-zoom-button`, `description`, `notices` (wrapper for nonfatal feature warnings and
@@ -472,6 +534,9 @@ legend grows the host in normal flow. The `height` property writes only a privat
 public token wins across valid, invalid, and unset `height` updates. Set it on the host or an
 ancestor, not a shadow-tree descendant, since custom properties only cascade downward);
 `--lr-chart-grid-color` (default `var(--lr-color-border-subtle)`),
+`--lr-chart-sync-crosshair-color` (default `var(--lr-color-text)`) and
+`--lr-chart-sync-crosshair-width` (default `var(--lr-border-width-thin)`) style the synchronized
+category line;
 `--lr-chart-tick-color` (default `var(--lr-color-text-quiet)`), `--lr-chart-legend-color`
 (default `var(--lr-color-text)`), `--lr-chart-tooltip-bg` (default `var(--lr-color-surface)`),
 `--lr-chart-tooltip-color` (default `var(--lr-color-text)`) — each resolved fresh via
@@ -628,10 +693,14 @@ announced. In particular, unavailable data labels do not remove generated table 
 
 ## `lr-lite-chart`
 
+`syncGroup: string = ''` (attribute `sync-group`) opts into
+[Synchronized categorical charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md#synchronized-categorical-charts). Its DOM `sync-crosshair` and
+`sync-tooltip` parts use the shared crosshair and tooltip tokens described there.
+
 A dependency-free bar/line chart — plain SVG/DOM rendering, zero peer dependencies (unlike
 `lr-chart`, which wraps `chart.js`). For a project whose architecture forbids a charting
 dependency outright: covers grouped/stacked bars, multi-series lines, per-point click, and hover
-tooltips (native SVG `<title>`, no positioning JS) — not a full `lr-chart` replacement (no
+tooltips (native SVG `<title>` by default, positioned text tooltips in a sync group) — not a full `lr-chart` replacement (no
 zoom/pan, no pie/doughnut/radar/scatter/bubble types, no horizontal/dual-y-axis, no raw-config
 passthrough). Not a subclass of `LyraChart`.
 
@@ -643,7 +712,7 @@ shape to express. A per-series stack-group id would also need the hand-rolled SV
 pass (linear/sqrt/log stack compression, `minBarHeight`) to track independent running offsets per
 group instead of one per category, which is a materially larger, higher-risk change than this
 component's existing single-stack model. `tooltipTitleFormatter`/`tooltipFooterFormatter` are
-similarly absent: this component's hover tooltip is a native SVG `<title>` on each mark — one
+similarly absent: this component's default hover tooltip is a native SVG `<title>` on each mark — one
 self-contained string per mark, generated by `pointText` — not a Chart.js-style multi-item tooltip
 with separate title/body/footer regions for several datasets sharing a hovered category, so there
 is no "every item in the tooltip" surface to hook a title or footer formatter onto.
@@ -887,7 +956,9 @@ instead of materializing an unbounded hidden DOM or SVG tree.
 **Slots:** `data-table` — optional consumer-provided complete, paginated, or virtualized accessible
 data alternative.
 
-**CSS parts:** `base`, `description`, `grid-line`, `axis-label`, `axis-title`, `bar` and `point` (each carries
+**CSS parts:** `base`, `description`, `grid-line`, `axis-label`, `axis-title`,
+`sync-crosshair` (decorative synchronized category line), `sync-tooltip` (noninteractive positioned
+text tooltip while `syncGroup` is active), `bar` and `point` (each carries
 `data-selected` when its category index is in `selectedIndices`, with explicit pressed state on every
 mark), `line`, `legend`, `legend-item`, `legend-swatch`, `legend-text` (extra per-item text after
 the series label, rendered only when `legendText` is set), `live-region` (the current mark
@@ -915,6 +986,10 @@ suppresses the generated sample and notice.
 
 **Themeable custom properties:** `--lr-chart-height` (same public host-level property and precedence
 as `lr-chart`; it always wins over the `height` property's private fallback);
+`--lr-chart-sync-crosshair-color` (default `var(--lr-color-text)`) and
+`--lr-chart-sync-crosshair-width` (default `var(--lr-border-width-thin)`) style the synchronized
+category line; `--lr-chart-tooltip-bg` (default `var(--lr-color-surface)`) and
+`--lr-chart-tooltip-color` (default `var(--lr-color-text)`) style the positioned synchronized tooltip;
 `--lr-chart-grid-color`, `--lr-chart-tick-color`, `--lr-chart-tick-font-size` (default
 `var(--lr-font-size-2xs)`), `--lr-chart-legend-color` — same token
 *names* as `lr-chart`, so a host already theming `lr-chart` themes this for free;
@@ -985,6 +1060,13 @@ Each is `LyraChart` with a named default `type` — respectively `line`, `bar`, 
 `radar`, `polarArea`, `bubble`, `scatter`. In parity with the mirrored tags, `type` remains writable
 and accepts the full `LyraChartType` vocabulary; the tag name is a convenient default, not a lock.
 
+`syncGroup: string = ''` (attribute `sync-group`) is inherited. The default vertical categorical
+`lr-line-chart` and `lr-bar-chart` configurations can participate in
+[Synchronized categorical charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md#synchronized-categorical-charts). The other six default chart
+types leave it inert; changing `type` or raw `config` to an admitted vertical categorical bar/line
+configuration enables participation regardless of the tag. Horizontal or continuous-x
+configurations remain outside synchronization.
+
 Everything else is inherited verbatim from `lr-chart`; each name below has the same type, default,
 and behavior there. **See `llms/components/lr-chart.md` for the details, code example, and gotchas
 of every entry in these lists.**
@@ -1015,12 +1097,15 @@ Radial category legends additionally emit `lr-datum-visibility-change-request` (
 **Slots:** default JSON configuration script, `data-table`, `center`.
 
 **CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-item-hidden`, `legend-swatch`,
+`sync-crosshair` (inherited decorative category line, rendered only for an admitted synchronized
+configuration; the native canvas tooltip has no CSS part),
 `reset-zoom-button`, `description`, `notices`, `data-table`, `data-table-toggle`, `data-truncation`, `feature-warning`, `center`, `error` (neutral visible message
 rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load; the
 failure transition is announced through the shared document-level light-DOM assertive sink — see
 `llms/components/lr-chart.md`).
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
+`--lr-chart-sync-crosshair-color`, `--lr-chart-sync-crosshair-width`,
 `--lr-chart-tick-color`, `--lr-chart-tick-font-size`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
 `--lr-chart-tooltip-color`, `--lr-chart-legend-item-hover-bg`,
 `--lr-chart-legend-item-active-bg`, `--lr-chart-data-table-button-hover-bg`,
@@ -1074,6 +1159,11 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
   chart-wide accessible-name meaning.
 - inherits `lr-chart`'s full surface, including `scaleType` (`scale-type`) and `annotations` —
   a logarithmic frequency axis and threshold/band markers both apply to a histogram
+- `syncGroup: string = ''` (attribute `sync-group`) — inherited exact category coordination for its
+  vertical categorical bar configuration; see
+  [Synchronized categorical charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md#synchronized-categorical-charts). Matches use the generated
+  bucket range strings, so different bin boundaries do not match unless their labels are exactly
+  equal. Horizontal or continuous-x raw configurations do not participate.
 - `labels`/`datasets`/`type` are **derived, read-only** (installed as getter/setter pairs on the
   prototype; direct writes are silently ignored) — `labels`/`datasets` are computed from
   `values`/`bins` (memoized per instance, keyed by reference equality on `values` plus the
@@ -1105,12 +1195,15 @@ bar controller and dataset legend even with `legend-mode="datum"`.
 **Slots:** default JSON configuration script, `data-table`, `center`.
 
 **CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-item-hidden`, `legend-swatch`,
+`sync-crosshair` (inherited decorative category line during synchronization; the native canvas
+tooltip has no CSS part),
 `reset-zoom-button`, `description`, `notices`, `data-table`, `data-table-toggle`, `data-truncation`, `feature-warning`, `center`, `error` (neutral visible message
 rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load; the
 failure transition is announced through the shared document-level light-DOM assertive sink —
 inherited from `LyraChart`, unaffected by the binning logic).
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
+`--lr-chart-sync-crosshair-color`, `--lr-chart-sync-crosshair-width`,
 `--lr-chart-tick-color`, `--lr-chart-tick-font-size`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
 `--lr-chart-tooltip-color`, `--lr-chart-legend-item-hover-bg`,
 `--lr-chart-legend-item-active-bg`, `--lr-chart-data-table-button-hover-bg`,

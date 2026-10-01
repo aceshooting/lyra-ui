@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md)
 - **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 16 parts, 37 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 39 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-bar-chart`, `lr-pie-chart`, `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`, `lr-scatter-chart` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -20,6 +20,13 @@
 Each is `LyraChart` with a named default `type` — respectively `line`, `bar`, `pie`, `doughnut`,
 `radar`, `polarArea`, `bubble`, `scatter`. In parity with the mirrored tags, `type` remains writable
 and accepts the full `LyraChartType` vocabulary; the tag name is a convenient default, not a lock.
+
+`syncGroup: string = ''` (attribute `sync-group`) is inherited. The default vertical categorical
+`lr-line-chart` and `lr-bar-chart` configurations can participate in
+[Synchronized categorical charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md#synchronized-categorical-charts). The other six default chart
+types leave it inert; changing `type` or raw `config` to an admitted vertical categorical bar/line
+configuration enables participation regardless of the tag. Horizontal or continuous-x
+configurations remain outside synchronization.
 
 Everything else is inherited verbatim from `lr-chart`; each name below has the same type, default,
 and behavior there. **See `llms/components/lr-chart.md` for the details, code example, and gotchas
@@ -51,12 +58,15 @@ Radial category legends additionally emit `lr-datum-visibility-change-request` (
 **Slots:** default JSON configuration script, `data-table`, `center`.
 
 **CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-item-hidden`, `legend-swatch`,
+`sync-crosshair` (inherited decorative category line, rendered only for an admitted synchronized
+configuration; the native canvas tooltip has no CSS part),
 `reset-zoom-button`, `description`, `notices`, `data-table`, `data-table-toggle`, `data-truncation`, `feature-warning`, `center`, `error` (neutral visible message
 rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load; the
 failure transition is announced through the shared document-level light-DOM assertive sink — see
 `llms/components/lr-chart.md`).
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
+`--lr-chart-sync-crosshair-color`, `--lr-chart-sync-crosshair-width`,
 `--lr-chart-tick-color`, `--lr-chart-tick-font-size`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
 `--lr-chart-tooltip-color`, `--lr-chart-legend-item-hover-bg`,
 `--lr-chart-legend-item-active-bg`, `--lr-chart-data-table-button-hover-bg`,

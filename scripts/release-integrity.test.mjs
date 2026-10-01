@@ -2403,7 +2403,7 @@ test('package peer floors remain independent from current development pins', () 
     '@sgratzl/chartjs-chart-boxplot': '^4.0.0',
     'chartjs-plugin-annotation': '^3.0.0',
     'chartjs-plugin-zoom': '^2.0.0',
-    katex: '^0.18.4',
+    katex: '^0.18.4 || ^0.19.0',
     mammoth: '^1.12.1',
   };
 

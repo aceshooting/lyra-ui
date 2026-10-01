@@ -1,3 +1,5 @@
+import { ChartSyncController, type ChartSyncPresentation } from './chart-sync.js';
+import { chartSyncStyles } from './chart-sync.styles.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
@@ -1834,6 +1836,9 @@ function isDenseChartSize(size: LyraSize): boolean {
  *   sample is insufficient.
  * @slot center - Optional overlay content positioned at the chart area's center. Useful for
  *   doughnut and pie totals.
+ * @csspart sync-crosshair - Decorative category crosshair shown while a sync group is active.
+ * @cssprop [--lr-chart-sync-crosshair-color=var(--lr-color-text)] - Shared category crosshair color.
+ * @cssprop [--lr-chart-sync-crosshair-width=var(--lr-border-width-thin)] - Shared category crosshair width.
  * @status stable
  * @since 4.0.0
  */
@@ -1915,7 +1920,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     'hiddenDatasets',
   ]);
 
-  static override styles = [LyraElement.styles, specialistTokens, styles, srOnly, bidiStyles];
+  static override styles = [LyraElement.styles, specialistTokens, styles, srOnly, bidiStyles, chartSyncStyles];
 
   constructor() {
     super();
@@ -2786,6 +2791,17 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   private lastDrawnDirection?: 'ltr' | 'rtl';
   private lastDrawnLocale?: string;
 
+  /**
+   * Synchronizes the visible active category with categorical vertical bar/line charts in the
+   * same owner document. Trimmed, case-sensitive groups match exact nonempty category labels.
+   * Duplicate labels choose the first eligible recipient category; unique labels are recommended.
+   * Peer updates are visual only and never move focus, announce, activate or select data.
+   */
+  @property({ attribute: 'sync-group' }) syncGroup = '';
+
+  // @renderController ChartSyncController
+  private readonly chartSync = new ChartSyncController(this, (label, index) => this.syncPresentation(label, index), () => this.resetSyncTooltip(), (target) => target === this.canvasEl);
+
   override connectedCallback(): void {
     super.connectedCallback();
     this.stopAnnotationRegistrationWatch?.();
@@ -2884,6 +2900,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.chartSync.disconnect();
     super.disconnectedCallback();
     this.stopAnnotationRegistrationWatch?.();
     this.stopAnnotationRegistrationWatch = undefined;
@@ -2913,7 +2930,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   override adoptedCallback(): void {
+    this.chartSync.disconnect();
     super.adoptedCallback();
+    this.requestUpdate();
     this.releaseAnnouncementSinks();
     this.syncAnnouncementSinks();
     this.armReducedMotionWatcher();
@@ -3193,6 +3212,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     // If the component is reconnected later, `connectedCallback()` re-kicks
     // its own load/draw sequence, so nothing is lost by bailing out here.
     if (!this.isConnected) return;
+    const contentChanged = this.chartContentChanged(changed);
+    const syncDataChanged = contentChanged || changed.has('hiddenDatums');
+    this.chartSync.update(this.syncGroup, typeof this.syncGroup === 'string' && this.syncGroup.trim() !== '' && this.syncCompatible(), syncDataChanged);
     const wasMounting = this.isMounting;
     this.isMounting = false;
 
@@ -3270,7 +3292,6 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     if (changed.has('annotations')) {
       this.requestAnnotationFeature();
     }
-    const contentChanged = this.chartContentChanged(changed);
     // `this.locale`/`this.strings` above only catch an explicit property write on this element
     // itself -- an inherited `dir`/`lang` flip on an ancestor changes `effectiveDirection()`/
     // `effectiveLocale()` (which `buildScales()`/`buildConfig()` read directly) without touching
@@ -3331,6 +3352,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       'withoutAnimation',
       'withoutLegend',
       'withoutTooltip',
+      'syncGroup',
       'dataLabels',
       'stackTotals',
       'config',
@@ -4300,10 +4322,102 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     this.emit('lr-point-activate', { ...datum });
   }
 
+  private resetSyncTooltip(): void {
+    const chart = this.chart as (RuntimeChart & {
+      tooltip?: { setActiveElements: (hits: ChartHit[], position: { x: number; y: number }) => void };
+      render?: () => void;
+    }) | undefined;
+    chart?.tooltip?.setActiveElements([], { x: 0, y: 0 });
+    chart?.render?.();
+  }
+
+  private syncCompatible(): boolean {
+    const chart = this.chart;
+    if (!chart) return false;
+    const type = this.effectiveType();
+    if (type !== 'bar' && type !== 'line') return false;
+    if (chart.options['indexAxis'] === 'y') return false;
+    const runtime = chart as RuntimeChart & { scales?: Record<string, { type?: string }> };
+    return runtime.scales?.['x']?.type === 'category' && Array.isArray(chart.data?.datasets) &&
+      chart.data.datasets.every((dataset) => dataset.type === undefined || dataset.type === 'bar' || dataset.type === 'line');
+  }
+
+  private syncDatums(): ChartDatum[] {
+    const chart = this.chart;
+    if (!chart) return [];
+    return this.chartDatums().filter((datum) => {
+      const visualDataset = this.visualDatasetSourceIndexes?.indexOf(datum.datasetIndex) ?? datum.datasetIndex;
+      const visualIndex = this.visualRowSourceIndexes?.indexOf(datum.index) ?? datum.index;
+      const meta = chart.getDatasetMeta?.(visualDataset) as { data?: { skip?: boolean; x?: number; y?: number }[] } | undefined;
+      const element = meta?.data?.[visualIndex];
+      return chart.isDatasetVisible(visualDataset) && !!element && !element.skip &&
+        Number.isFinite(element.x) && Number.isFinite(element.y) &&
+        chartDatumNumericValue(datum.value) !== undefined;
+    });
+  }
+
+  private publishSyncDatum(datum: ChartDatum): void {
+    const label = this.effectiveData().labels[datum.index];
+    if (typeof label === 'string') this.chartSync.publish(label, datum.index);
+    else this.chartSync.clear();
+  }
+
+  private onSyncPointerMove(event: PointerEvent): void {
+    if (!this.chartSync.enabled || !this.chart) return;
+    const hits = this.chart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
+    const hit = hits[0];
+    if (!hit) { this.chartSync.clear(); return; }
+    const datasetIndex = this.visualDatasetSourceIndexes?.[hit.datasetIndex] ?? hit.datasetIndex;
+    const index = this.visualRowSourceIndexes?.[hit.index] ?? hit.index;
+    const datum = this.syncDatums().find((candidate) => candidate.datasetIndex === datasetIndex && candidate.index === index);
+    if (datum) this.publishSyncDatum(datum);
+  }
+
+  private syncPresentation(label: string, sourceIndex?: number): ChartSyncPresentation | undefined {
+    if (!this.syncCompatible() || !this.canvasEl || !this.chart) return undefined;
+    const effective = this.effectiveData();
+    const datums = this.syncDatums();
+    const index = sourceIndex ?? datums.filter((datum) => effective.labels[datum.index] === label).sort((a, b) => a.index - b.index)[0]?.index;
+    if (index === undefined || effective.labels[index] !== label) return undefined;
+    const matches = datums.filter((datum) => datum.index === index);
+    if (!matches.length) return undefined;
+    const hits = matches.map((datum) => ({
+      datasetIndex: this.visualDatasetSourceIndexes?.indexOf(datum.datasetIndex) ?? datum.datasetIndex,
+      index: this.visualRowSourceIndexes?.indexOf(datum.index) ?? datum.index,
+    }));
+    const runtime = this.chart as RuntimeChart & {
+      tooltip?: {
+        setActiveElements: (hits: ChartHit[], position: { x: number; y: number }) => void;
+      };
+      render?: () => void;
+      scales?: Record<string, { getPixelForValue?: (index: number) => number }>;
+    };
+    const element = this.chart.getDatasetMeta?.(hits[0]!.datasetIndex) as { data?: { x: number; y: number }[] } | undefined;
+    const point = element?.data?.[hits[0]!.index];
+    const area = this.chart.chartArea;
+    const container = this.renderRoot.querySelector<HTMLElement>('[part="plot"]');
+    if (!point || !area || !container) return undefined;
+    const plugins = this.chart.options['plugins'] as { tooltip?: false | { enabled?: boolean } } | undefined;
+    const suppressed = this.withoutTooltip || plugins?.tooltip === false || plugins?.tooltip?.enabled === false;
+    const tooltip = runtime.tooltip;
+    tooltip?.setActiveElements(suppressed ? [] : hits, { x: point.x, y: point.y });
+    runtime.render?.();
+    const bounds = container.getBoundingClientRect();
+    const canvasBounds = this.canvasEl.getBoundingClientRect();
+    const categoryX = runtime.scales?.['x']?.getPixelForValue?.(hits[0]!.index);
+    return {
+      container,
+      x: canvasBounds.left - bounds.left + (typeof categoryX === 'number' && Number.isFinite(categoryX) ? categoryX : point.x),
+      top: canvasBounds.top - bounds.top + area.top,
+      height: area.height,
+    };
+  }
+
   private onCanvasFocus(): void {
     const datums = this.chartDatums();
     if (!datums.length) return;
     this.keyboardDatumIndex = Math.min(this.keyboardDatumIndex, datums.length - 1);
+    this.publishSyncDatum(datums[this.keyboardDatumIndex]!);
     this.keyboardDatumAnnouncement = this.datumAnnouncement(
       datums[this.keyboardDatumIndex]!,
       this.keyboardDatumIndex,
@@ -4331,6 +4445,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     else return;
     event.preventDefault();
     this.keyboardDatumIndex = next;
+    this.publishSyncDatum(datums[next]!);
     this.keyboardDatumAnnouncement = this.datumAnnouncement(datums[next]!, next, datums.length);
   }
 
@@ -4996,6 +5111,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       this.restoreZoomedBounds(this.chart, zoomedBounds);
       if (this.applyDatumVisibility()) this.chart.update('none');
       this.updateChartArea(this.chart);
+      this.chartSync.update(this.syncGroup, typeof this.syncGroup === 'string' && this.syncGroup.trim() !== '' && this.syncCompatible());
       return;
     }
     this.discardChart(true);
@@ -5014,6 +5130,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       this.chart.update('none');
     }
     this.updateChartArea(this.chart);
+    this.chartSync.update(this.syncGroup, typeof this.syncGroup === 'string' && this.syncGroup.trim() !== '' && this.syncCompatible());
   }
 
   private drawIfVisible(): void {
@@ -5036,6 +5153,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
   /** Destroys the peer instance and reconciles the Lyra-owned zoom state in one place. */
   private discardChart(announceZoomReset: boolean): void {
+    this.chartSync.disconnect();
     this.chart?.destroy();
     this.chart = undefined;
     this.resolvedChartArea = undefined;
@@ -5710,6 +5828,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             tabindex="0"
             aria-label=${label}
             aria-describedby=${this.descriptionId}
+            @pointermove=${this.onSyncPointerMove}
             @focus=${this.onCanvasFocus}
             @keydown=${this.onCanvasKeyDown}
           ></canvas>

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md)
 - **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 16 parts, 37 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 39 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -233,6 +233,10 @@ structured points retain their y-value formatting.
   value, matching Chart.js's own paired index/value-scale stacking contract.
 - `withoutAnimation: boolean = false` (attribute `without-animation`, reflected) — disables Chart.js
   construction animation; reduced-motion preference also disables it regardless of this value
+- `syncGroup: string = ''` (attribute `sync-group`) — opt-in exact category coordination; see
+  [Synchronized categorical charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md#synchronized-categorical-charts). Only effective vertical
+  categorical bar/line configurations participate; other types, horizontal charts and continuous
+  x scales keep this setting inert. Core keeps its native canvas tooltip and existing tooltip tokens.
 - `withoutTooltip: boolean = false` (attribute `without-tooltip`, reflected) — disables the
   Chart.js tooltip plugin for this instance
 - `dataLabels: boolean = false` (attribute `data-labels`) — draws each point's value on the chart via
@@ -432,7 +436,9 @@ notice, so use that escape hatch when the complete data set needs pagination, vi
 another application-owned presentation. Explicit `config.data` is the deliberate full-fidelity
 Chart.js escape hatch and is not rewritten by the simplified-surface sampler.
 
-**CSS parts:** `base`, `plot` (the fixed-height canvas/overlay region), `canvas`, `legend` (the
+**CSS parts:** `base`, `plot` (the fixed-height canvas/overlay region), `canvas`,
+`sync-crosshair` (decorative category line during an admitted synchronized interaction; the native
+canvas tooltip has no CSS part), `legend` (the
 wrapping DOM legend), `legend-item` (a dataset/category visibility button), `legend-item-hidden`
 (added while the dataset/category is hidden), `legend-swatch`,
 `reset-zoom-button`, `description`, `notices` (wrapper for nonfatal feature warnings and
@@ -448,6 +454,9 @@ legend grows the host in normal flow. The `height` property writes only a privat
 public token wins across valid, invalid, and unset `height` updates. Set it on the host or an
 ancestor, not a shadow-tree descendant, since custom properties only cascade downward);
 `--lr-chart-grid-color` (default `var(--lr-color-border-subtle)`),
+`--lr-chart-sync-crosshair-color` (default `var(--lr-color-text)`) and
+`--lr-chart-sync-crosshair-width` (default `var(--lr-border-width-thin)`) style the synchronized
+category line;
 `--lr-chart-tick-color` (default `var(--lr-color-text-quiet)`), `--lr-chart-legend-color`
 (default `var(--lr-color-text)`), `--lr-chart-tooltip-bg` (default `var(--lr-color-surface)`),
 `--lr-chart-tooltip-color` (default `var(--lr-color-text)`) — each resolved fresh via

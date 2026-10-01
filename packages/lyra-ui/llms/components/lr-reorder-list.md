@@ -126,6 +126,11 @@ row content for the repeated move-action names.
   effective owner state. Corresponding custom states include `:state(at-start)`, `:state(at-end)`,
   `:state(list-disabled)`, `:state(pending)`, and `:state(busy)`.
 
+Each move control also carries its localized `moveUp` or `moveDown` action as an `aria-label`
+fallback. The reflected `ariaLabelledByElements` relationship retains the full action and row name
+and takes precedence in supporting browsers. Automation tools that omit reflected element references
+may report only the action fallback; repeated actions can be located within their owning row.
+
 **Events:** `lr-move-request` (`detail: { direction: 'up' | 'down' }` — a move button was activated
 while not disabled; handled by the parent `<lr-reorder-list>`, which performs the actual move)
 

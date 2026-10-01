@@ -33,6 +33,27 @@ function calledIdentifiers(node, names = new Set()) {
   return names;
 }
 
+function hostControllerIdentifiers(node, names = new Set()) {
+  if (!node || typeof node !== "object") return names;
+  if (
+    node.type === "NewExpression" &&
+    node.callee?.type === "Identifier" &&
+    node.arguments?.[0]?.type === "ThisExpression"
+  ) {
+    names.add(node.callee.name);
+  }
+  for (const [key, value] of Object.entries(node)) {
+    if (key === "parent" || key === "type" || key === "start" || key === "end")
+      continue;
+    if (Array.isArray(value)) {
+      for (const child of value) hostControllerIdentifiers(child, names);
+    } else if (value && typeof value === "object") {
+      hostControllerIdentifiers(value, names);
+    }
+  }
+  return names;
+}
+
 function superclassIdentifiersIn(node, names = new Set()) {
   if (!node || typeof node !== "object") return names;
   if (
@@ -80,6 +101,14 @@ function moduleEdges(modulePath, source, sources) {
 
   const superclassIdentifiers = superclassIdentifiersIn(parsed.program);
   const calls = calledIdentifiers(parsed.program);
+  // Only actual comments establish an explicit controller render surface; string/template text
+  // and annotations without a value import constructed for this host provide no evidence.
+  const renderControllers = new Set(parsed.comments.flatMap((comment) =>
+    [...comment.value.matchAll(/^\s*\*?\s*@renderController\s+([A-Za-z_$][\w$]*)\s*$/gm)]
+      .map((match) => match[1])));
+  const hostControllers = renderControllers.size > 0
+    ? hostControllerIdentifiers(parsed.program)
+    : new Set();
   const targets = new Set();
 
   for (const statement of parsed.program.body) {
@@ -103,7 +132,9 @@ function moduleEdges(modulePath, source, sources) {
       const isRenderHelper =
         calls.has(localName) &&
         /^(?:render|create[A-Za-z0-9_$]*Template)/i.test(importedName);
-      if (isSuperclass || isRenderHelper) targets.add(target);
+      const isRenderController =
+        renderControllers.has(localName) && hostControllers.has(localName);
+      if (isSuperclass || isRenderHelper || isRenderController) targets.add(target);
     }
   }
   return targets;
@@ -111,7 +142,9 @@ function moduleEdges(modulePath, source, sources) {
 
 /**
  * Returns only source that can contribute to a component's own rendered surface: its class module,
- * relative superclasses, and explicitly invoked render helpers. Stylesheets, registered child
+ * relative superclasses, explicitly invoked render helpers, and annotated host-bound controllers.
+ * A controller's @renderController comment names its local value import and requires an actual
+ * new Controller(this, ...) expression. Stylesheets, registered child
  * classes, and unrelated siblings are deliberately excluded so selector text cannot satisfy a
  * documented `@csspart` contract.
  */

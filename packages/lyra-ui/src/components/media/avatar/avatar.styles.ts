@@ -61,11 +61,13 @@ export const styles = css`
   }
   [part='base'] {
     display: inline-flex;
+    box-sizing: border-box;
     align-items: center;
     justify-content: center;
     inline-size: var(--size, var(--lr-avatar-size, var(--_lr-avatar-size)));
     block-size: var(--size, var(--lr-avatar-size, var(--_lr-avatar-size)));
     overflow: hidden;
+    border: var(--lr-avatar-border, none);
     border-radius: var(--lr-avatar-radius, var(--_lr-avatar-radius));
     background: var(--lr-avatar-bg, var(--_lr-avatar-bg));
     color: var(--lr-avatar-color, var(--_lr-avatar-color));

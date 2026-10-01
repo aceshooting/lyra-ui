@@ -10573,6 +10573,12 @@
             "default": "var(--lr-color-neutral-fill-quiet)"
           },
           {
+            "name": "--lr-avatar-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "none"
+          },
+          {
             "name": "--lr-avatar-color",
             "deprecated": null,
             "hasDefault": true,
@@ -11684,6 +11690,16 @@
             "default": false
           },
           {
+            "name": "sync-group",
+            "property": "syncGroup",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "type",
             "property": "type",
             "type": "LyraChartType",
@@ -12014,6 +12030,16 @@
             "default": false
           },
           {
+            "name": "syncGroup",
+            "attribute": "sync-group",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "type",
             "attribute": "type",
             "type": "LyraChartType",
@@ -12236,6 +12262,10 @@
           {
             "name": "reset-zoom-button",
             "deprecated": null
+          },
+          {
+            "name": "sync-crosshair",
+            "deprecated": null
           }
         ],
         "cssProperties": [
@@ -12426,6 +12456,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-chart-sync-crosshair-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-chart-sync-crosshair-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-border-width-thin)"
           },
           {
             "name": "--lr-chart-tick-color",
@@ -14273,6 +14315,16 @@
             "default": false
           },
           {
+            "name": "sync-group",
+            "property": "syncGroup",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "type",
             "property": "type",
             "type": "LyraChartType",
@@ -14603,6 +14655,16 @@
             "default": false
           },
           {
+            "name": "syncGroup",
+            "attribute": "sync-group",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "type",
             "attribute": "type",
             "type": "LyraChartType",
@@ -14825,6 +14887,10 @@
           {
             "name": "reset-zoom-button",
             "deprecated": null
+          },
+          {
+            "name": "sync-crosshair",
+            "deprecated": null
           }
         ],
         "cssProperties": [
@@ -15015,6 +15081,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-chart-sync-crosshair-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-chart-sync-crosshair-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-border-width-thin)"
           },
           {
             "name": "--lr-chart-tick-color",
@@ -19392,6 +19470,16 @@
             "default": false
           },
           {
+            "name": "sync-group",
+            "property": "syncGroup",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "type",
             "property": "type",
             "type": "LyraChartType",
@@ -19787,6 +19875,16 @@
             "default": false
           },
           {
+            "name": "syncGroup",
+            "attribute": "sync-group",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "tooltipFooterFormatter",
             "attribute": null,
             "type": "LyraChartTooltipGroupFormatter | undefined",
@@ -20036,6 +20134,10 @@
           {
             "name": "reset-zoom-button",
             "deprecated": null
+          },
+          {
+            "name": "sync-crosshair",
+            "deprecated": null
           }
         ],
         "cssProperties": [
@@ -20226,6 +20328,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-chart-sync-crosshair-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-chart-sync-crosshair-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-border-width-thin)"
           },
           {
             "name": "--lr-chart-tick-color",
@@ -45250,6 +45364,16 @@
             "default": false
           },
           {
+            "name": "sync-group",
+            "property": "syncGroup",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "type",
             "property": "type",
             "type": "LyraChartType",
@@ -45580,6 +45704,16 @@
             "default": false
           },
           {
+            "name": "syncGroup",
+            "attribute": "sync-group",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "type",
             "attribute": "type",
             "type": "LyraChartType",
@@ -45802,6 +45936,10 @@
           {
             "name": "reset-zoom-button",
             "deprecated": null
+          },
+          {
+            "name": "sync-crosshair",
+            "deprecated": null
           }
         ],
         "cssProperties": [
@@ -45992,6 +46130,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-chart-sync-crosshair-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-chart-sync-crosshair-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-border-width-thin)"
           },
           {
             "name": "--lr-chart-tick-color",
@@ -62037,6 +62187,15 @@
             "default": false
           },
           {
+            "name": "row-height",
+            "property": "rowHeight",
+            "type": "number | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "row-label-width",
             "property": "rowLabelWidth",
             "type": "number | 'auto' | undefined",
@@ -62319,6 +62478,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "rowHeight",
+            "attribute": "row-height",
+            "type": "number | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "rowLabelWidth",
@@ -63228,6 +63396,16 @@
             "default": false
           },
           {
+            "name": "sync-group",
+            "property": "syncGroup",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "type",
             "property": "type",
             "type": "'bar'",
@@ -63587,6 +63765,16 @@
             "default": false
           },
           {
+            "name": "syncGroup",
+            "attribute": "sync-group",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "type",
             "attribute": "type",
             "type": "'bar'",
@@ -63819,6 +64007,10 @@
           {
             "name": "reset-zoom-button",
             "deprecated": null
+          },
+          {
+            "name": "sync-crosshair",
+            "deprecated": null
           }
         ],
         "cssProperties": [
@@ -64009,6 +64201,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-chart-sync-crosshair-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-chart-sync-crosshair-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-border-width-thin)"
           },
           {
             "name": "--lr-chart-tick-color",
@@ -72672,6 +72876,16 @@
             "default": false
           },
           {
+            "name": "sync-group",
+            "property": "syncGroup",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "type",
             "property": "type",
             "type": "LyraChartType",
@@ -73002,6 +73216,16 @@
             "default": false
           },
           {
+            "name": "syncGroup",
+            "attribute": "sync-group",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "type",
             "attribute": "type",
             "type": "LyraChartType",
@@ -73224,6 +73448,10 @@
           {
             "name": "reset-zoom-button",
             "deprecated": null
+          },
+          {
+            "name": "sync-crosshair",
+            "deprecated": null
           }
         ],
         "cssProperties": [
@@ -73414,6 +73642,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-chart-sync-crosshair-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-chart-sync-crosshair-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-border-width-thin)"
           },
           {
             "name": "--lr-chart-tick-color",
@@ -73674,6 +73914,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "sync-group",
+            "property": "syncGroup",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "table-totals",
@@ -73996,6 +74246,16 @@
             "default": false
           },
           {
+            "name": "syncGroup",
+            "attribute": "sync-group",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "tableCellFormatter",
             "attribute": null,
             "type": "LyraLiteChartTableCellFormatter | undefined",
@@ -74193,6 +74453,14 @@
             "deprecated": null
           },
           {
+            "name": "sync-crosshair",
+            "deprecated": null
+          },
+          {
+            "name": "sync-tooltip",
+            "deprecated": null
+          },
+          {
             "name": "table",
             "deprecated": null
           }
@@ -74277,6 +74545,18 @@
             "default": "var(--lr-space-2xs)"
           },
           {
+            "name": "--lr-chart-sync-crosshair-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-chart-sync-crosshair-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-border-width-thin)"
+          },
+          {
             "name": "--lr-chart-tick-color",
             "deprecated": null,
             "hasDefault": true,
@@ -74287,6 +74567,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-font-size-2xs)"
+          },
+          {
+            "name": "--lr-chart-tooltip-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-chart-tooltip-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
           },
           {
             "name": "--lr-lite-chart-data-table-toggle-active-bg",
@@ -94937,6 +95229,16 @@
             "default": false
           },
           {
+            "name": "sync-group",
+            "property": "syncGroup",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "type",
             "property": "type",
             "type": "LyraChartType",
@@ -95267,6 +95569,16 @@
             "default": false
           },
           {
+            "name": "syncGroup",
+            "attribute": "sync-group",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "type",
             "attribute": "type",
             "type": "LyraChartType",
@@ -95489,6 +95801,10 @@
           {
             "name": "reset-zoom-button",
             "deprecated": null
+          },
+          {
+            "name": "sync-crosshair",
+            "deprecated": null
           }
         ],
         "cssProperties": [
@@ -95679,6 +95995,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-chart-sync-crosshair-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-chart-sync-crosshair-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-border-width-thin)"
           },
           {
             "name": "--lr-chart-tick-color",
@@ -95989,6 +96317,16 @@
             "default": false
           },
           {
+            "name": "sync-group",
+            "property": "syncGroup",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "type",
             "property": "type",
             "type": "LyraChartType",
@@ -96319,6 +96657,16 @@
             "default": false
           },
           {
+            "name": "syncGroup",
+            "attribute": "sync-group",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "type",
             "attribute": "type",
             "type": "LyraChartType",
@@ -96541,6 +96889,10 @@
           {
             "name": "reset-zoom-button",
             "deprecated": null
+          },
+          {
+            "name": "sync-crosshair",
+            "deprecated": null
           }
         ],
         "cssProperties": [
@@ -96731,6 +97083,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-chart-sync-crosshair-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-chart-sync-crosshair-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-border-width-thin)"
           },
           {
             "name": "--lr-chart-tick-color",
@@ -102635,6 +102999,16 @@
             "default": false
           },
           {
+            "name": "sync-group",
+            "property": "syncGroup",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "type",
             "property": "type",
             "type": "LyraChartType",
@@ -102965,6 +103339,16 @@
             "default": false
           },
           {
+            "name": "syncGroup",
+            "attribute": "sync-group",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "type",
             "attribute": "type",
             "type": "LyraChartType",
@@ -103187,6 +103571,10 @@
           {
             "name": "reset-zoom-button",
             "deprecated": null
+          },
+          {
+            "name": "sync-crosshair",
+            "deprecated": null
           }
         ],
         "cssProperties": [
@@ -103377,6 +103765,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-chart-sync-crosshair-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-chart-sync-crosshair-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-border-width-thin)"
           },
           {
             "name": "--lr-chart-tick-color",
@@ -111902,6 +112302,16 @@
             "default": false
           },
           {
+            "name": "sync-group",
+            "property": "syncGroup",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "type",
             "property": "type",
             "type": "LyraChartType",
@@ -112232,6 +112642,16 @@
             "default": false
           },
           {
+            "name": "syncGroup",
+            "attribute": "sync-group",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "type",
             "attribute": "type",
             "type": "LyraChartType",
@@ -112454,6 +112874,10 @@
           {
             "name": "reset-zoom-button",
             "deprecated": null
+          },
+          {
+            "name": "sync-crosshair",
+            "deprecated": null
           }
         ],
         "cssProperties": [
@@ -112644,6 +113068,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-chart-sync-crosshair-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-chart-sync-crosshair-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-border-width-thin)"
           },
           {
             "name": "--lr-chart-tick-color",

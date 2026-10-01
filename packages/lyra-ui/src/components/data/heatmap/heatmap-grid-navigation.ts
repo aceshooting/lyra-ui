@@ -19,6 +19,7 @@ export interface MatrixNavigationGeometry {
   readonly padLeft: number;
   readonly padTop: number;
   readonly cellSize: number;
+  readonly rowHeight?: number;
   readonly cellWidth: number;
   readonly cellHeight: number;
   readonly customShape: boolean;
@@ -39,6 +40,7 @@ export interface PaintedMatrixCellGeometry {
   readonly padLeft: number;
   readonly padTop: number;
   readonly cellSize: number;
+  readonly rowHeight?: number;
   readonly cellWidth?: number;
   readonly cellHeight?: number;
 }
@@ -60,12 +62,12 @@ export function hitTestMatrix(
   const { rows, cols, cellSize, padLeft, padTop } = geometry;
   if (rows === 0 || cols === 0) return null;
   const col = Math.floor((x - padLeft) / cellSize);
-  const row = Math.floor((y - padTop) / cellSize);
+  const row = Math.floor((y - padTop) / (geometry.rowHeight ?? cellSize));
   if (row < 0 || row >= rows || col < 0 || col >= cols) return null;
   if (
     geometry.customShape &&
     (x - padLeft - col * cellSize >= geometry.cellWidth ||
-      y - padTop - row * cellSize >= geometry.cellHeight)
+      y - padTop - row * (geometry.rowHeight ?? cellSize) >= geometry.cellHeight)
   ) {
     return null;
   }
@@ -232,7 +234,7 @@ export function matrixCellRect(
 ): CellRect {
   return {
     x: geometry.padLeft + position.col * geometry.cellSize,
-    y: geometry.padTop + position.row * geometry.cellSize,
+    y: geometry.padTop + position.row * (geometry.rowHeight ?? geometry.cellSize),
     w: geometry.cellWidth,
     h: geometry.cellHeight,
   };
@@ -257,7 +259,7 @@ export function accessibleMatrixCellRect(
 ): CellRect {
   return {
     x: painted.padLeft + position.col * painted.cellSize,
-    y: painted.padTop + position.row * painted.cellSize,
+    y: painted.padTop + position.row * (painted.rowHeight ?? painted.cellSize),
     w: painted.cellWidth ?? painted.cellSize - 1,
     h: painted.cellHeight ?? painted.cellSize - 1,
   };

@@ -414,12 +414,16 @@ describe("lr-button", () => {
     const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
     const label = el.shadowRoot!.querySelector<HTMLElement>('[part="label"]')!;
     const spinner = el.shadowRoot!.querySelector<HTMLElement>('[part="spinner"]')!;
+    const animation = spinner.getAnimations()[0];
+    if (!animation) throw new Error('The loading spinner has no animation.');
+    animation.pause();
+    animation.currentTime = 0;
     const baseRect = base.getBoundingClientRect();
     const spinnerRect = spinner.getBoundingClientRect();
 
     expect(getComputedStyle(label).opacity).to.equal("0");
-    expect(spinnerRect.width).to.be.closeTo(base.clientWidth, 1);
-    expect(spinnerRect.height).to.be.closeTo(base.clientHeight, 1);
+    expect(spinnerRect.width).to.be.closeTo(parseFloat(getComputedStyle(spinner).fontSize), 1);
+    expect(spinnerRect.height).to.be.closeTo(parseFloat(getComputedStyle(spinner).fontSize), 1);
     expect(spinnerRect.left + spinnerRect.width / 2).to.be.closeTo(
       baseRect.left + baseRect.width / 2,
       1

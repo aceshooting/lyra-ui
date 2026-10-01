@@ -2476,9 +2476,14 @@ initials track the circle instead of staying one fixed size across every tier. `
 (default `var(--lr-radius-pill)`) — corner radius of the container. Its private default follows
 `shape` (`var(--lr-radius-pill)` for `circle`, `var(--lr-radius)` for `rounded`, `0` for `square`);
 an inherited or direct public value overrides uniformly across every shape, the same way
-`--lr-avatar-size` spans every size tier. Every public value
+`--lr-avatar-size` spans every size tier. `--lr-avatar-border` (default `none`) — border shorthand
+on `base`, applying to image, glyph and initials avatars in every shape. Border-box sizing keeps
+the border inside the outer diameter set by `--size`, `--lr-avatar-size` or the size ladder;
+image content fills the remaining inner area. Forced colors preserves the system-color boundary
+instead of the normal token border. Existing `::part(base)` border customization remains supported.
+Every public value
 above can be inherited from an ancestor or set directly on the avatar and remains authoritative
-across size/variant states. Plus shared tokens
+across size/variant states in normal color modes. Plus shared tokens
 `--lr-radius`/`-pill`, `--lr-font-weight-semibold`.
 
 The variant colors are deliberately **not** the library's generic quiet-fill/on-quiet-text pairing:
@@ -2491,6 +2496,7 @@ variant's quiet tint.
 <lr-avatar initials="JS" variant="brand"></lr-avatar>
 <lr-avatar image="/users/42/photo.jpg" label="Jane Smith" size="large" shape="rounded"></lr-avatar>
 <lr-avatar label="Assistant"><svg slot="icon" viewBox="0 0 24 24"><!-- role glyph --></svg></lr-avatar>
+<lr-avatar initials="JS" style="--lr-avatar-border: var(--lr-border-width-medium) solid var(--lr-color-border)"></lr-avatar>
 
 <!-- Far down a long list: defer the request, fall back to a glyph, and report a broken URL. -->
 <lr-avatar id="lazy-avatar" image="/users/7/photo.jpg" label="Ada Lovelace" loading="lazy">

@@ -2027,7 +2027,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "reducedMotion",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -2178,17 +2177,22 @@
         },
         "reducedMotion": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/layout/app-rail/app-rail-resizer-position-reduced-motion.test.ts",
+              "test": "tracks live ${direction} width and hit-target changes after reconnect under reduced motion",
+              "kind": "reduced-motion test signal"
+            }
+          ]
         },
         "narrowAllocation": {
           "applicability": "applicable",
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/app-rail/app-rail-sidebar.test.ts",
-              "line": 368,
+              "file": "src/components/layout/app-rail/app-rail-resizer-position-reduced-motion.test.ts",
+              "test": "tracks live ${direction} width and hit-target changes after reconnect under reduced motion",
               "kind": "320px allocation test signal"
             }
           ]
@@ -2279,7 +2283,6 @@
         }
       },
       "knownLimitations": [
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
@@ -2296,6 +2299,8 @@
           "src/components/layout/app-rail/app-rail-item.test.ts",
           "src/components/layout/app-rail/app-rail-mobile-shadow.test.ts",
           "src/components/layout/app-rail/app-rail-remediation.test.ts",
+          "src/components/layout/app-rail/app-rail-resizer-position-reduced-motion.test.ts",
+          "src/components/layout/app-rail/app-rail-resizer-position.test.ts",
           "src/components/layout/app-rail/app-rail-sidebar.test.ts",
           "src/components/layout/app-rail/app-rail.test.ts",
           "src/components/layout/app-rail/positioning-strategy.test.ts"
@@ -2479,7 +2484,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "reducedMotion",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -2613,17 +2617,22 @@
         },
         "reducedMotion": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/layout/app-rail/app-rail-resizer-position-reduced-motion.test.ts",
+              "test": "tracks live ${direction} width and hit-target changes after reconnect under reduced motion",
+              "kind": "reduced-motion test signal"
+            }
+          ]
         },
         "narrowAllocation": {
           "applicability": "applicable",
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/app-rail/app-rail-sidebar.test.ts",
-              "line": 368,
+              "file": "src/components/layout/app-rail/app-rail-resizer-position-reduced-motion.test.ts",
+              "test": "tracks live ${direction} width and hit-target changes after reconnect under reduced motion",
               "kind": "320px allocation test signal"
             }
           ]
@@ -2703,7 +2712,6 @@
         }
       },
       "knownLimitations": [
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -2720,6 +2728,8 @@
           "src/components/layout/app-rail/app-rail-item.test.ts",
           "src/components/layout/app-rail/app-rail-mobile-shadow.test.ts",
           "src/components/layout/app-rail/app-rail-remediation.test.ts",
+          "src/components/layout/app-rail/app-rail-resizer-position-reduced-motion.test.ts",
+          "src/components/layout/app-rail/app-rail-resizer-position.test.ts",
           "src/components/layout/app-rail/app-rail-sidebar.test.ts",
           "src/components/layout/app-rail/app-rail.test.ts",
           "src/components/layout/app-rail/positioning-strategy.test.ts"
@@ -4123,6 +4133,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/media/avatar/avatar-border.test.ts",
           "src/components/media/avatar/avatar-remediation.test.ts",
           "src/components/media/avatar/avatar.test.ts"
         ],
@@ -4821,6 +4832,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
+          "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
@@ -5048,6 +5060,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
+          "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
@@ -5967,6 +5980,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
+          "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
@@ -6148,7 +6162,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "reducedMotion",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -6257,9 +6270,14 @@
         },
         "reducedMotion": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/forms/button/button-loading.test.ts",
+              "test": "keeps loading semantics and stops repeated spinning under reduced motion",
+              "kind": "reduced-motion test signal"
+            }
+          ]
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -6362,7 +6380,6 @@
         }
       },
       "knownLimitations": [
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
@@ -6376,6 +6393,7 @@
         "tests": [
           "src/components/forms/button/button-icon-only-live-resize.test.ts",
           "src/components/forms/button/button-label-layout.test.ts",
+          "src/components/forms/button/button-loading.test.ts",
           "src/components/forms/button/button-remediation.test.ts",
           "src/components/forms/button/button.test.ts"
         ],
@@ -8062,6 +8080,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
+          "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
@@ -16687,6 +16706,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
+          "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
@@ -23574,6 +23594,12 @@
               "state": "populated"
             },
             {
+              "file": "src/components/data/heatmap/heatmap-row-height.test.ts",
+              "test": "honors independent accessible target floors with reachable semantic cells and frozen painted bounds",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/data/heatmap/heatmap-selection.test.ts",
               "test": "emits an immutable proposal and applies only the controlled assignment",
               "target": "el",
@@ -23675,8 +23701,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/heatmap/heatmap-selection.test.ts",
-              "line": 18,
+              "file": "src/components/data/heatmap/heatmap-row-height.test.ts",
+              "test": "fits 144 columns while retaining independently readable row pitch across resize",
               "kind": "320px allocation test signal"
             }
           ]
@@ -23750,7 +23776,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.class.ts",
-              "line": 2486,
+              "line": 2515,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -23794,6 +23820,7 @@
           "src/components/data/heatmap/heatmap-no-canvas-dev-gate.test.ts",
           "src/components/data/heatmap/heatmap-no-canvas.test.ts",
           "src/components/data/heatmap/heatmap-remediation.test.ts",
+          "src/components/data/heatmap/heatmap-row-height.test.ts",
           "src/components/data/heatmap/heatmap-rtl.test.ts",
           "src/components/data/heatmap/heatmap-scale.test.ts",
           "src/components/data/heatmap/heatmap-selection.test.ts",
@@ -24157,6 +24184,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
+          "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
@@ -27261,6 +27289,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
+          "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
@@ -27489,6 +27518,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
+          "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
@@ -35259,6 +35289,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
+          "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
@@ -35462,6 +35493,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
+          "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
@@ -37893,6 +37925,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
+          "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
@@ -41748,6 +41781,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
+          "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",

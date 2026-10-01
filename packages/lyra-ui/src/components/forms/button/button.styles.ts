@@ -483,6 +483,11 @@ export const styles = css`
     display: inline-flex;
     position: absolute;
     inset: 0;
+    /* Rotate only the glyph-sized box: a button-wide rotating overlay expands ancestor
+       scroll extents as it turns, even though the visible glyph stays centered. */
+    inline-size: var(--lr-size-1em);
+    block-size: var(--lr-size-1em);
+    margin: auto;
     align-items: center;
     justify-content: center;
     animation: var(--_lr-motion-animation, lr-button-spin

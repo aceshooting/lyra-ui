@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md)
 - **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 16 parts, 37 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 39 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -28,6 +28,11 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
   chart-wide accessible-name meaning.
 - inherits `lr-chart`'s full surface, including `scaleType` (`scale-type`) and `annotations` —
   a logarithmic frequency axis and threshold/band markers both apply to a histogram
+- `syncGroup: string = ''` (attribute `sync-group`) — inherited exact category coordination for its
+  vertical categorical bar configuration; see
+  [Synchronized categorical charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md#synchronized-categorical-charts). Matches use the generated
+  bucket range strings, so different bin boundaries do not match unless their labels are exactly
+  equal. Horizontal or continuous-x raw configurations do not participate.
 - `labels`/`datasets`/`type` are **derived, read-only** (installed as getter/setter pairs on the
   prototype; direct writes are silently ignored) — `labels`/`datasets` are computed from
   `values`/`bins` (memoized per instance, keyed by reference equality on `values` plus the
@@ -59,12 +64,15 @@ bar controller and dataset legend even with `legend-mode="datum"`.
 **Slots:** default JSON configuration script, `data-table`, `center`.
 
 **CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-item-hidden`, `legend-swatch`,
+`sync-crosshair` (inherited decorative category line during synchronization; the native canvas
+tooltip has no CSS part),
 `reset-zoom-button`, `description`, `notices`, `data-table`, `data-table-toggle`, `data-truncation`, `feature-warning`, `center`, `error` (neutral visible message
 rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load; the
 failure transition is announced through the shared document-level light-DOM assertive sink —
 inherited from `LyraChart`, unaffected by the binning logic).
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
+`--lr-chart-sync-crosshair-color`, `--lr-chart-sync-crosshair-width`,
 `--lr-chart-tick-color`, `--lr-chart-tick-font-size`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
 `--lr-chart-tooltip-color`, `--lr-chart-legend-item-hover-bg`,
 `--lr-chart-legend-item-active-bg`, `--lr-chart-data-table-button-hover-bg`,

@@ -85,3 +85,44 @@ test("render reachability terminates same-directory helper cycles", () => {
     /renderB/
   );
 });
+
+test("render reachability follows an annotated controller constructed for this host", () => {
+  const sources = new Map([
+    ["src/example.ts", `
+      import { SurfaceController as PaintController } from './controller.js';
+      export class Example {
+        // @renderController PaintController
+        private controller = new PaintController(this);
+      }
+    `],
+    ["src/controller.ts", `
+      export class SurfaceController {
+        constructor(private host: HTMLElement) {}
+        paint() { const overlay = document.createElement('div'); overlay.setAttribute('part', 'controller-owned'); this.host.append(overlay); }
+      }
+    `],
+  ]);
+  assert.match(renderSurfaceFor("src/example.ts", sources), /controller-owned/);
+});
+
+for (const [name, component] of [
+  ["unannotated constructor", `import { Controller } from './controller.js'; class Example { c = new Controller(this); }`],
+  ["unused annotation", `import { Controller } from './controller.js'; // @renderController Controller\nclass Example {}`],
+  ["unmatched import alias", `import { Controller as Alias } from './controller.js'; // @renderController Controller\nclass Example { c = new Alias(this); }`],
+  ["another host", `import { Controller } from './controller.js'; // @renderController Controller\nclass Example { c = new Controller(otherHost); }`],
+  ["type-only import", `import type { Controller } from './controller.js'; // @renderController Controller\nclass Example { c = new Controller(this); }`],
+  ["type-only specifier", `import { type Controller } from './controller.js'; // @renderController Controller\nclass Example { c = new Controller(this); }`],
+  ["annotation inside a string", `import { Controller } from './controller.js'; class Example { note = '@renderController Controller'; c = new Controller(this); }`],
+  ["annotation inside a template", `import { Controller } from './controller.js'; class Example { note = \`@renderController Controller\`; c = new Controller(this); }`],
+  ["constructor inside a string", `import { Controller } from './controller.js'; // @renderController Controller\nclass Example { note = 'new Controller(this)'; }`],
+  ["stylesheet controller", `import { Controller } from './controller.styles.js'; // @renderController Controller\nclass Example { c = new Controller(this); }`],
+]) {
+  test(`render reachability excludes ${name}`, () => {
+    const sources = new Map([
+      ["src/example.ts", component],
+      ["src/controller.ts", `export class Controller { paint() { return html\`<div part="phantom-controller"></div>\`; } }`],
+      ["src/controller.styles.ts", `export class Controller { paint() { return html\`<div part="phantom-controller"></div>\`; } }`],
+    ]);
+    assert.doesNotMatch(renderSurfaceFor("src/example.ts", sources), /phantom-controller/);
+  });
+}

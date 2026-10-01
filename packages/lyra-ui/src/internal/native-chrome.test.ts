@@ -79,7 +79,7 @@ describe('native chrome material', () => {
           const background = composite(paint, backdrop);
           for (const token of ['--lr-color-text', '--lr-color-text-quiet']) expect(contrastRatio(resolvedColorToken(surface, token), background), `${look}/${mode}/${fill}/${token}/${backdrop}`).to.be.at.least(4.5);
           const highlighted = composite('rgb(255 255 255 / 0.12)', background);
-          for (const token of ['--lr-color-border', '--lr-focus-ring-color']) expect(contrastRatio(resolvedColorToken(surface, token), highlighted), `${look}/${mode}/${fill}/${token}/${backdrop}`).to.be.at.least(3);
+          for (const token of ['--lr-color-border', '--lr-color-border-strong', '--lr-focus-ring-color']) expect(contrastRatio(resolvedColorToken(surface, token), highlighted), `${look}/${mode}/${fill}/${token}/${backdrop}`).to.be.at.least(3);
         }
       }
     });

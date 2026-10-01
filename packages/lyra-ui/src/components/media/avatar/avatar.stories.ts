@@ -152,6 +152,31 @@ export const RadiusToken: Story = {
   `,
 };
 
+export const BorderToken: Story = {
+  name: 'Border token (--lr-avatar-border)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-avatar-border` accepts a border shorthand and defaults to `none`. Inherit it from a container or override it per avatar. The border stays inside the fixed diameter across shapes and image, glyph and initials content; forced colors retains the system-color boundary.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex; align-items:center; gap:var(--lr-space-m); --lr-avatar-border:var(--lr-border-width-medium) solid var(--lr-color-border);">
+      <lr-avatar initials="AB" label="A. Bee"></lr-avatar>
+      <lr-avatar shape="rounded" label="Assistant">
+        <svg slot="icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2l1.8 5.6L19 9l-5.2 1.4L12 16l-1.8-5.6L5 9l5.2-1.4L12 2z"></path>
+        </svg>
+      </lr-avatar>
+      <lr-avatar image=${IMAGE_SRC} shape="square" label="Profile photo"
+        style="--lr-avatar-border:var(--lr-border-width-thick) solid var(--lr-color-brand)"></lr-avatar>
+      <lr-avatar initials="CD" label="C. Dee" style="--lr-avatar-border:none"></lr-avatar>
+    </div>
+  `,
+};
+
 export const IconSlotFallback: Story = {
   name: 'Fallback glyph (slot="icon")',
   parameters: {

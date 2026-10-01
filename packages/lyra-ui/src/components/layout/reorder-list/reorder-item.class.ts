@@ -310,6 +310,7 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
         <lr-icon-button
           part="move-up-button"
           exportparts="button:move-up-button-control"
+          .label=${this.localize('moveUp')}
           aria-labelledby=${`${this.moveUpLabelId} ${this.itemLabelId}`}
           ?disabled=${this.moveUpDisabled}
           @click=${this.onMoveUpClick}
@@ -319,6 +320,7 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
         <lr-icon-button
           part="move-down-button"
           exportparts="button:move-down-button-control"
+          .label=${this.localize('moveDown')}
           aria-labelledby=${`${this.moveDownLabelId} ${this.itemLabelId}`}
           ?disabled=${this.moveDownDisabled}
           @click=${this.onMoveDownClick}

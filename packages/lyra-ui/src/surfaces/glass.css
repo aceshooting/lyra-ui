@@ -20,6 +20,7 @@
     --_lr-surface-min-opacity: 0;
     --_lr-surface-maximum-blur: 16px;
     --_lr-surface-foreground-weight: 99%;
+    --_lr-surface-border-weight: 285%;
     --_lr-surface-child-filter: none;
     --_lr-surface-child-opacity: 1;
     --lr-theme-surface-blur: 12px;
@@ -51,6 +52,7 @@
     --lr-color-text: var(--lr-theme-color-text-normal, CanvasText);
     --_lr-glass-original-text-quiet: var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, CanvasText));
     --_lr-glass-original-border: var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, CanvasText));
+    --_lr-glass-original-border-strong: var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, CanvasText));
     --_lr-glass-original-focus-ring-color: var(--lr-theme-color-focus, Highlight);
     --lr-focus-ring-width: max(var(--lr-theme-focus-ring-width, 2px), var(--_lr-preference-focus-min, 0px));
     --lr-focus-ring-color: var(--_lr-glass-qualified-focus-ring-color, var(--_lr-glass-original-focus-ring-color));
@@ -71,6 +73,7 @@
       --_lr-glass-filter-value: blur(calc(clamp(0px, var(--lr-theme-surface-blur, var(--_lr-surface-default-blur)), var(--_lr-surface-maximum-blur, var(--_lr-surface-default-maximum-blur))) * (1 - var(--_lr-glass-parent-opacity, 0)))) saturate(calc(1 + (clamp(0, var(--lr-theme-surface-saturation, 1.1), 2) - 1) * (1 - var(--_lr-glass-parent-opacity, 0))));
       --_lr-glass-current-filter: var(--_lr-preference-glass-filter, var(--_lr-glass-blocker, var(--_lr-glass-filter-value, none)));
       --_lr-glass-foreground-weight: initial;
+      --_lr-glass-border-weight: initial;
       --_lr-next-glass-blocker: var(--_lr-surface-child-filter, none);
     }
     :where(.lr-surface-chrome) {
@@ -107,11 +110,15 @@
       }
       :where(.lr-surface-chrome) {
         isolation: var(--_lr-surface-isolation, isolate);
+        --_lr-glass-effective-opacity: var(--_lr-preference-glass-opacity, max(var(--_lr-glass-parent-opacity, 0), clamp(var(--_lr-surface-min-opacity, 0), var(--lr-theme-surface-opacity, 0.7), 1)));
+        --_lr-glass-border-weight: clamp(0%, calc(var(--_lr-surface-border-weight, 285%) * var(--_lr-surface-enabled, 1) * (1 - var(--_lr-glass-effective-opacity))), var(--_lr-surface-foreground-weight, 99%));
         --_lr-glass-foreground-weight: calc(var(--_lr-surface-foreground-weight, 99%) * var(--_lr-surface-enabled, 1) * (1 - var(--_lr-glass-parent-opacity, 0)) * (1 - var(--_lr-preference-glass-opacity, 0)));
         --_lr-glass-qualified-text-quiet: color-mix(in srgb, var(--_lr-glass-original-text-quiet, var(--lr-color-text)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
         --lr-color-text-quiet: var(--_lr-glass-qualified-text-quiet, var(--_lr-glass-original-text-quiet));
-        --_lr-glass-qualified-border: color-mix(in srgb, var(--_lr-glass-original-border, var(--lr-color-text)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
+        --_lr-glass-qualified-border: color-mix(in srgb, var(--_lr-glass-original-border, var(--lr-color-text)), var(--lr-color-text) var(--_lr-glass-border-weight));
         --lr-color-border: var(--_lr-glass-qualified-border, var(--_lr-glass-original-border));
+        --_lr-glass-qualified-border-strong: color-mix(in srgb, var(--_lr-glass-original-border-strong, var(--_lr-glass-original-border, var(--lr-color-text))), var(--lr-color-text) var(--_lr-glass-border-weight));
+        --lr-color-border-strong: var(--_lr-glass-qualified-border-strong, var(--_lr-glass-original-border-strong));
         --_lr-glass-brand-text: color-mix(in srgb, var(--lr-color-brand), var(--lr-color-text) var(--_lr-glass-foreground-weight));
         --_lr-glass-danger-text: color-mix(in srgb, var(--lr-color-danger), var(--lr-color-text) var(--_lr-glass-foreground-weight));
         --_lr-glass-background: color-mix(
@@ -119,7 +126,7 @@
           var(--lr-surface-background, var(--lr-theme-color-surface-container-high, var(--lr-theme-color-surface-overlay, Canvas))) calc((1 - var(--_lr-surface-enabled, 1) * (1 - var(--_lr-preference-glass-opacity, 0))) * 100%),
           color-mix(
             in srgb,
-            var(--lr-surface-background, var(--lr-theme-color-surface-container-high, var(--lr-theme-color-surface-overlay, Canvas))) calc(var(--_lr-preference-glass-opacity, max(var(--_lr-glass-parent-opacity, 0), clamp(var(--_lr-surface-min-opacity, 0), var(--lr-theme-surface-opacity, 0.7), 1))) * 100%),
+            var(--lr-surface-background, var(--lr-theme-color-surface-container-high, var(--lr-theme-color-surface-overlay, Canvas))) calc(var(--_lr-glass-effective-opacity) * 100%),
             transparent
           )
         );
@@ -144,6 +151,7 @@
       :where(.lr-surface-chrome) {
         background: var(--lr-surface-background, var(--lr-theme-color-surface-container-high, var(--lr-theme-color-surface-overlay, Canvas)));
         --_lr-glass-foreground-weight: initial;
+        --_lr-glass-border-weight: initial;
       }
       :where(.lr-surface-chrome)::before {
         content: none;

@@ -673,3 +673,39 @@ export const WithoutLegend: Story = {
     </div>
   `,
 };
+
+export const ReadableDenseRows: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: '144 columns fit the available width while 20 rows keep a 28px pitch. Resize the panel to compare; minimum column size can require horizontal overflow in narrow allocations. row-height has no effect on calendar grids.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="inline-size: min(100%, 94rem); overflow: auto">
+      <lr-heatmap
+        fit-to-width row-height="28" col-label-interval="12"
+        row-label-width="auto" col-label-height="auto" col-label-rotation="-45"
+        .data=${{
+          kind: 'matrix',
+          rowLabels: Array.from({ length: 20 }, (_, row) => `Series ${row + 1}`),
+          colLabels: Array.from({ length: 144 }, (_, col) => `${Math.floor(col / 6)}:${String(col % 6 * 10).padStart(2, '0')}`),
+          values: Array.from({ length: 20 }, (_, row) => Array.from({ length: 144 }, (_, col) => (row * 3 + col) % 20)),
+        }}
+      ></lr-heatmap>
+    </div>
+  `,
+};
+
+export const CalendarIgnoresRowHeight: Story = {
+  parameters: {
+    docs: { description: { story: 'row-height is matrix-only: this calendar keeps its default 11px square cells.' } },
+  },
+  render: () => html`
+    <lr-heatmap row-height="28" .data=${{
+      kind: 'calendar',
+      days: Array.from({ length: 28 }, (_, day) => ({ date: `2026-09-${String(day + 1).padStart(2, '0')}`, value: day % 5 })),
+    }}></lr-heatmap>
+  `,
+};

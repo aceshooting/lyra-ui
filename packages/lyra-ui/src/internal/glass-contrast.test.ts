@@ -70,7 +70,7 @@ describe('rendered glass foreground qualification', () => {
             }
             expect(contrastRatio(getComputedStyle(plainBase).color, background), `${look}/${mode}/${accent}: plain action`).to.be.at.least(4.5);
             const highlighted = treatment === 'glass' ? composite('rgb(255 255 255 / 0.12)', background) : background;
-            for (const token of ['--lr-color-border', '--lr-focus-ring-color']) {
+            for (const token of ['--lr-color-border', '--lr-color-border-strong', '--lr-focus-ring-color']) {
               expect(contrastRatio(resolvedColorToken(surface, token), highlighted), `${look}/${mode}/${accent}/${token}: edge`).to.be.at.least(3);
             }
           }

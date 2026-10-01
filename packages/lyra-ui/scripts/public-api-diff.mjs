@@ -952,6 +952,19 @@ function collectTypeBinderNames(module) {
   return canonical;
 }
 
+function maskDeclarationComments(source, comments) {
+  let output = '';
+  let cursor = 0;
+  for (const comment of comments) {
+    output += source.slice(cursor, comment.start);
+    // Preserve AST offsets and line breaks while removing prose from type/member text.
+    // Parser ranges distinguish comments from slash-containing string and template literals.
+    output += source.slice(comment.start, comment.end).replace(/[^\r\n\u2028\u2029]/g, ' ');
+    cursor = comment.end;
+  }
+  return output + source.slice(cursor);
+}
+
 function parseDeclarationModule(file, source, { publicGraph = false } = {}) {
   const parsed = parseSync(file, source, { lang: 'ts', sourceType: 'module' });
   if (parsed.errors.length > 0) {
@@ -986,7 +999,7 @@ function parseDeclarationModule(file, source, { publicGraph = false } = {}) {
   }
   const module = {
     file,
-    source,
+    source: maskDeclarationComments(source, parsed.comments),
     body: parsed.program.body,
     declarations: new Map(),
     directExports: new Map(),

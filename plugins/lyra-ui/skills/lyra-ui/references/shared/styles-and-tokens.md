@@ -1135,12 +1135,18 @@ The public `--lr-theme-surface-opacity` input accepts 0 through 1. Lower opacity
 of the backdrop; the default foreground qualification covers 70%, while a custom lower setting
 cannot guarantee contrast against every backdrop. Solid and accessibility preferences retain
 opaque fills regardless of this input.
-Quiet text, necessary control edges, focus indicators and transparent actions gain a local
+Necessary control borders use the effective painted opacity: their glass adjustment grows as
+transparency increases and disappears at 100% opacity. Ordinary and strong borders share this
+adjustment; decorative borders and explicit component border overrides keep their own tokens.
+Quiet text, focus indicators and transparent actions retain their separate local
 contrast-qualified foreground; opaque accent fills retain their own on-colours. Supported chrome
 includes app rails, navigation menus, menubars, menus and their context-menu composition, popovers,
 selection toolbars, toast items and the owned playback-rate toolbar of `lr-av-player`. Nested glass
 chrome is opaque, preventing repeated blur. Independently promoted menus and modal panels start a
-new material root. Content cards and editing fields remain opaque.
+new material root. Surface-colored outlined card and disclosure interiors let nested Lyra
+controls use their solid border colors while preserving the enclosing edge against glass.
+Filled accent interiors retain qualification. Native descendants retain inherited public color
+aliases. Custom translucent content fills require the author to choose suitable control borders.
 A design panel can offer a Glass opacity range from 0–100%, shown when the selected surface is
 Glass. Start and reset it at 70%; convert the displayed percentage to the public token's 0–1 range.
 Apply this CSS input independently of look overrides: `setLyraStyle()` does not accept surface

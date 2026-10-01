@@ -312,6 +312,7 @@ export function renderNativeChrome(data = JSON.parse(readFileSync(new URL('../to
     ['--lr-color-text', 'var(--lr-theme-color-text-normal, CanvasText)'],
     ['--_lr-glass-original-text-quiet', 'var(--_lr-preference-quiet-color, var(--lr-theme-color-text-quiet, CanvasText))'],
     ['--_lr-glass-original-border', 'var(--_lr-preference-control-color, var(--lr-theme-color-surface-border, CanvasText))'],
+    ['--_lr-glass-original-border-strong', 'var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, CanvasText))'],
     ['--_lr-glass-original-focus-ring-color', 'var(--lr-theme-color-focus, Highlight)'],
     ['--lr-focus-ring-width', 'max(var(--lr-theme-focus-ring-width, 2px), var(--_lr-preference-focus-min, 0px))'],
     ['--lr-focus-ring-color', 'var(--_lr-glass-qualified-focus-ring-color, var(--_lr-glass-original-focus-ring-color))'],
@@ -321,7 +322,7 @@ export function renderNativeChrome(data = JSON.parse(readFileSync(new URL('../to
 }
 
 export function renderGlass(data, { defaults = false } = {}) {
-  if (!(data.foregroundWeight >= 0.8 && data.foregroundWeight <= 1) || !(Number.isFinite(data.minimumOpacity) && data.minimumOpacity >= 0 && data.minimumOpacity <= 1) || !(Number.isFinite(data.opacity) && data.opacity >= data.minimumOpacity && data.opacity <= 1) || !(data.saturation >= 0 && data.saturation <= 2)) throw new Error('Invalid glass bounds');
+  if (!(Number.isFinite(data.borderWeight) && data.borderWeight > 0 && data.borderWeight <= 4) || !(data.foregroundWeight >= 0.8 && data.foregroundWeight <= 1) || !(Number.isFinite(data.minimumOpacity) && data.minimumOpacity >= 0 && data.minimumOpacity <= 1) || !(Number.isFinite(data.opacity) && data.opacity >= data.minimumOpacity && data.opacity <= 1) || !(data.saturation >= 0 && data.saturation <= 2)) throw new Error('Invalid glass bounds');
   for (const name of ['blur', 'maximumBlur', 'highlight']) if (unsafeValueReason(data[name])) throw new Error(`Invalid glass ${name}`);
   const radius = value => typeof value === 'string' && /^(?:\d+|\d+\.\d+)px$/.test(value) ? Number.parseFloat(value) : NaN;
   if (!(radius(data.blur) >= 0 && radius(data.blur) <= radius(data.maximumBlur) && radius(data.maximumBlur) <= 16)) throw new Error('Invalid glass blur radius bound');
@@ -330,14 +331,14 @@ export function renderGlass(data, { defaults = false } = {}) {
   const clear = data.clearMedia;
   if (!clear || !(clear.scrimStart >= 0.78 && clear.scrimStart <= 1) || !(clear.scrimEnd >= clear.scrimStart && clear.scrimEnd <= 1) || !(clear.fillOpacity >= 0 && clear.fillOpacity <= 0.08)) throw new Error('Invalid clear media bounds');
   const helper = readFileSync(new URL('../src/internal/glass-surface.styles.ts', import.meta.url), 'utf8');
-  for (const [name, value] of [['--_lr-surface-min-opacity', data.minimumOpacity], ['--lr-theme-surface-opacity', data.opacity], ['--_lr-surface-foreground-weight', `${data.foregroundWeight * 100}%`], ['--lr-theme-surface-saturation', data.saturation]]) {
+  for (const [name, value] of [['--_lr-surface-min-opacity', data.minimumOpacity], ['--lr-theme-surface-opacity', data.opacity], ['--_lr-surface-foreground-weight', `${data.foregroundWeight * 100}%`], ['--_lr-surface-border-weight', `${data.borderWeight * 100}%`], ['--lr-theme-surface-saturation', data.saturation]]) {
     if (!helper.includes(`var(${name}, ${value})`)) throw new Error(`Intrinsic glass fallback differs from canonical ${name}`);
   }
 
   let css = LAYERS + '@layer lr-theme-preset.surface {\n';
   css += rule(':root', [['--lr-theme-surface-opacity', data.opacity]]);
   css += rule(':root, :host', [['--_lr-media-clear-scrim-start', clear.scrimStart], ['--_lr-media-clear-scrim-end', clear.scrimEnd], ['--_lr-media-clear-fill', `rgb(255 255 255 / ${clear.fillOpacity})`], ['--_lr-media-clear-text', '#ffffff']]);
-  css += rule(defaults ? ":root:not([data-lr-surface]), [data-lr-surface='glass']" : "[data-lr-surface='glass']", [['--_lr-surface-installed', STYLE_VERSION], ['--_lr-surface-enabled', '1'], ['--_lr-surface-root-filter', 'initial'], ['--_lr-glass-blocker', 'initial'], ['--_lr-surface-content', "''"], ['--_lr-surface-isolation', 'isolate'], ['--_lr-surface-min-opacity', data.minimumOpacity], ['--_lr-surface-maximum-blur', data.maximumBlur], ['--_lr-surface-foreground-weight', `${data.foregroundWeight * 100}%`], ['--_lr-surface-child-filter', 'none'], ['--_lr-surface-child-opacity', '1'], ['--lr-theme-surface-blur', data.blur], ['--lr-theme-surface-saturation', data.saturation], ['--lr-theme-surface-highlight', data.highlight]]);
+  css += rule(defaults ? ":root:not([data-lr-surface]), [data-lr-surface='glass']" : "[data-lr-surface='glass']", [['--_lr-surface-installed', STYLE_VERSION], ['--_lr-surface-enabled', '1'], ['--_lr-surface-root-filter', 'initial'], ['--_lr-glass-blocker', 'initial'], ['--_lr-surface-content', "''"], ['--_lr-surface-isolation', 'isolate'], ['--_lr-surface-min-opacity', data.minimumOpacity], ['--_lr-surface-maximum-blur', data.maximumBlur], ['--_lr-surface-foreground-weight', `${data.foregroundWeight * 100}%`], ['--_lr-surface-border-weight', `${data.borderWeight * 100}%`], ['--_lr-surface-child-filter', 'none'], ['--_lr-surface-child-opacity', '1'], ['--lr-theme-surface-blur', data.blur], ['--lr-theme-surface-saturation', data.saturation], ['--lr-theme-surface-highlight', data.highlight]]);
   css += rule("[data-lr-surface='solid']", [['--_lr-surface-installed', STYLE_VERSION], ['--_lr-surface-enabled', '0'], ['--_lr-surface-root-filter', 'none'], ['--_lr-glass-blocker', 'none'], ['--_lr-surface-maximum-blur', 'initial'], ['--_lr-surface-content', 'none'], ['--_lr-surface-isolation', 'auto'], ['--_lr-surface-child-filter', 'initial'], ['--_lr-surface-child-opacity', '0'], ['--_lr-glass-parent-opacity', '0'], ['--_lr-next-glass-opacity', '0']]);
   return css + '}\n' + renderNativeChrome(data);
 }

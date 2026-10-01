@@ -1,6 +1,8 @@
 import { css } from 'lit';
+import { opaqueContentBorders } from '../../../internal/opaque-content-border.styles.js';
 
 export const styles = css`
+  ${opaqueContentBorders('[part~="accordion-item"][data-appearance="outlined"] [part~="panel"]')}
   :host {
     --_lr-accordion-item-spacing: var(--lr-form-control-padding-inline);
     --_lr-accordion-item-show-duration: var(--lr-duration-base);
