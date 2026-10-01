@@ -297,7 +297,8 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
 - `groupLabel?: (key: string | number, rows: readonly T[]) => unknown` (attribute: false) — custom group
   header content; without it, the group key is rendered as text
 - `expandedContent?: (row: T) => unknown` (attribute: false) — enables a leading expand toggle and
-  renders a full-width detail row beneath expanded records. The returned content renders inside
+  renders a full-width detail row beneath expanded records. The visually empty toggle-column
+  header has the localized accessible name `details` (overridable through `.strings`). The returned content renders inside
   the component's shadow root, behind the `expanded-cell` part — page CSS cannot reach it, and
   `::part(expanded-cell)` only reaches the wrapping `<td>` itself, not the descendants this
   callback returns (the same `::part()` limitation a column's `cell(row)` anchors run into, see

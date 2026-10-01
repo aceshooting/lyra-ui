@@ -1,4 +1,6 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './table.js';
 import '../../forms/select/select.js';
 import type { LyraTable, TableColumn } from './table.js';
@@ -8,6 +10,51 @@ import type { LyraTable, TableColumn } from './table.js';
 import '../../../translations/ar/data.js';
 import { installTableTestHooks, TableOpenShellElement, sinkElement, sinkTexts, type Row, columns, editableColumns, rows, forcedWidthHeaderCell, priorityColumns } from '../../../../test/table.js';
 installTableTestHooks();
+
+for (const direction of ['ltr', 'rtl'] as const) {
+  it(`names the expansion column in a populated ${direction} table before and after keyboard expansion`, async () => {
+    const el = await fixture<LyraTable<Row>>(html`<lr-table aria-label="Records" dir=${direction}></lr-table>`);
+    el.columns = [
+      { key: 'id', label: 'ID', cell: (row) => row.id },
+      { key: 'name', label: 'Name', cell: (row) => row.name },
+      { key: 'score', label: 'Score', cell: (row) => row.score },
+      { key: 'status', label: 'Status', cell: () => 'Ready' },
+    ];
+    el.rows = Array.from({ length: 4 }, (_, index) => ({ id: String(index), name: `Record ${index}`, score: index }));
+    el.rowKey = (row) => row.id;
+    el.expansionMode = 'multiple';
+    el.expandedContent = (row) => html`<p>${row.name} details</p>`;
+    el.rowExpandLabel = (row, expanded) => `${expanded ? 'Collapse' : 'Expand'} ${row.name}`;
+    if (direction === 'rtl') el.strings = { details: 'Détails' };
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelectorAll('[part="row-expand-toggle"]').length).to.equal(4);
+    await expect(el).to.be.accessible();
+    // The default axe scan excludes this experimental table-header rule.
+    const axe = (window as Window & { axe?: typeof import('axe-core') }).axe;
+    if (!axe) throw new Error('The accessibility scan must load axe before the header audit.');
+    const headerAudit = await axe.run(el, { runOnly: ['td-has-header'] });
+    expect(headerAudit.violations.map((violation) => violation.id)).to.deep.equal([]);
+    const header = el.shadowRoot!.querySelector<HTMLTableCellElement>('th[data-row-expand-toggle]')!;
+    expect(header.getAttribute('scope')).to.equal('col');
+    expect(header.getAttribute('aria-hidden')).to.equal(null);
+    expect(header.textContent).to.equal(direction === 'rtl' ? 'Détails' : 'Details');
+    expect(getComputedStyle(header.querySelector('span')!).position).to.equal('absolute');
+    const toggle = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="row-expand-toggle"]')!;
+    expect(toggle.getAttribute('aria-label')).to.equal('Expand Record 0');
+    const expanded = oneEvent(el, 'lr-row-expand-toggle');
+    await focusByKeyboard(toggle);
+    await sendKeys({ press: 'Enter' });
+    await expanded;
+    await el.updateComplete;
+    expect(el.expandedRowKeys.has('0')).to.equal(true);
+    expect(toggle.getAttribute('aria-label')).to.equal('Collapse Record 0');
+    expect(el.shadowRoot!.querySelectorAll('[part="expanded-row"]').length).to.equal(1);
+    await expect(el).to.be.accessible();
+    const expandedAudit = await axe.run(el, { runOnly: ['td-has-header'] });
+    expect(expandedAudit.violations.map((violation) => violation.id)).to.deep.equal([]);
+  });
+}
 
 
 

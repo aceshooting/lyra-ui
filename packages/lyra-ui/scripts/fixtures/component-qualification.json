@@ -47311,6 +47311,18 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/data/table/table-accessibility.test.ts",
+              "test": "names the expansion column in a populated ${direction} table before and after keyboard expansion",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/data/table/table-accessibility.test.ts",
+              "test": "names the expansion column in a populated ${direction} table before and after keyboard expansion",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/data/table/table-editing.test.ts",
               "test": "is accessible with a column of persistent editors rendered",
               "target": "el",
@@ -47409,7 +47421,7 @@
           "evidence": [
             {
               "file": "src/components/data/table/table-accessibility.test.ts",
-              "test": "emits lr-row-activate via keydown (Enter and Space) on a focused row",
+              "test": "names the expansion column in a populated ${direction} table before and after keyboard expansion",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -47420,7 +47432,7 @@
           "evidence": [
             {
               "file": "src/components/data/table/table-accessibility.test.ts",
-              "test": "swaps ArrowLeft/ArrowRight header navigation under dir=\"rtl\", matching a native table\\'s own mirrored column order",
+              "line": 14,
               "kind": "rendered RTL test signal"
             }
           ]

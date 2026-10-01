@@ -794,7 +794,7 @@ export const ExpandableRows: Story = {
     docs: {
       description: {
         story:
-          'The row-expand control inherits table typography, so its 1em chevron scales together with the surrounding table text.',
+          'The row-expand control inherits table typography, so its 1em chevron scales with the surrounding text. The visually empty toggle-column header has the localized accessible name Details.',
       },
     },
   },

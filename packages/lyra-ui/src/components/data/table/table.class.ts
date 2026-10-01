@@ -842,8 +842,8 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  * @csspart sort-icon-active - The active direction chevron; also carries sort-icon.
  * @csspart sort-icon-inactive - The muted bidirectional indicator when sortIndicators is all; also carries sort-icon.
  * @csspart reveal-columns-button - The button that toggles `priority`-hidden columns back into view.
- * @csspart expand-toggle-cell - Each row's (and the header's) leading
- *   chevron-toggle cell, rendered only when `expandedContent` is set.
+ * @csspart expand-toggle-cell - Each body row's leading chevron-toggle cell, rendered only
+ *   when `expandedContent` is set. Its column header uses `header-cell` and a localized name.
  * @csspart row-expand-toggle - The `<button>` inside `expand-toggle-cell`,
  *   absent for a row that fails `canExpand`; it inherits the table's typography.
  * @csspart row-expand-icon - The 1em chevron icon inside `row-expand-toggle`.
@@ -3806,7 +3806,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
             </colgroup>
             <thead part="head">
               <tr role="row">
-                ${hasExpand ? html`<th part="header-cell" data-row-expand-toggle aria-hidden="true"></th>` : nothing}
+                ${hasExpand ? html`<th part="header-cell" data-row-expand-toggle scope="col"><span class="sr-only">${this.localize('details')}</span></th>` : nothing}
                 ${this.columns.map((col) => {
                   const active = Boolean(col.sortable) && this.sortKey === col.key;
                   const ariaSort = active ? (this.sortDir === 'asc' ? 'ascending' : 'descending') : 'none';
