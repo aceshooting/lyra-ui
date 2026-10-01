@@ -6,39 +6,16 @@ function parseRgbTriplet(value: string): [number, number, number] | null {
   return match ? [Number(match[1]), Number(match[2]), Number(match[3])] : null;
 }
 
-function parseHexTriplet(value: string): [number, number, number] | null {
-  const match = value.trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
-  if (!match) return null;
-  const hex = match[1]!;
-  const full =
-    hex.length === 3
-      ? hex
-          .split('')
-          .map((c) => c + c)
-          .join('')
-      : hex;
-  const num = Number.parseInt(full, 16);
-  return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
-}
-
-/** Normalizes any syntactically valid CSS `<color>` -- hex, `rgb()`/`rgba()`, a named color, etc.
- *  -- to an `[r, g, b]` triple. `getComputedStyle().getPropertyValue()` on a *custom* property (as
- *  opposed to a built-in property like `color`) returns the value in whatever syntax it was
- *  originally authored in, e.g. still `#1a1a1a` rather than browser-normalized `rgb(26, 26, 26)` --
- *  so a regex that only understands `rgb()`/`rgba()` silently misreads every hex/named/hsl/oklch
- *  value as black. Normalizes through the canvas 2D context's own color grammar instead (mirrors
- *  `heatmap.class.ts`'s `resolveRgb()`/`qr-code.class.ts`'s `resolveQrColor()`, this codebase's
- *  established pattern for the same problem), rather than hand-rolling a parser for every CSS color
- *  syntax -- `ctx.fillStyle`'s own getter re-serializes right back to hex for an opaque color (per
- *  the CSS Color serialization algorithm canvas 2D uses), so both forms are tried on either side of
- *  the round-trip. Returns `null` when `value` doesn't parse as a color at all. */
+/** Resolves a computed built-in CSS color to an sRGB triple. Most computed colors serialize as
+ *  rgb()/rgba(); the canvas pixel fallback converts modern color spaces to its sRGB backing store.
+ *  The fallback returns null if the value cannot be parsed or its canvas pixel is transparent. */
 function toRgb(
   value: string,
   ownerDocument: Document
 ): [number, number, number] | null {
   const trimmed = value.trim();
   if (!trimmed) return null;
-  const direct = parseRgbTriplet(trimmed) ?? parseHexTriplet(trimmed);
+  const direct = parseRgbTriplet(trimmed);
   if (direct) return direct;
   const ctx = getScratchCtx(ownerDocument);
   if (!ctx) return null;

@@ -10,6 +10,7 @@ import {
 import type { LyraDocumentViewer } from "./document-viewer.js";
 import type { DialogCloseReason } from "../../overlays/dialog/dialog.class.js";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 afterEach(() => {
   clearDocumentRenderers();
@@ -276,6 +277,86 @@ describe("registry dispatch", () => {
     const lazy = el.shadowRoot!.querySelector('[part="body"] #lazy');
     expect(lazy != null).to.equal(true);
     expect(lazy!.textContent).to.equal("report.pdf");
+  });
+
+  it('shows and announces a rejected lazy load, then retries when reopened', async () => {
+    let rejectFirst!: (error: Error) => void;
+    let loads = 0;
+    const registry = new Map([
+      ['application/x-retry', {
+        load: () => {
+          loads++;
+          return loads === 1
+            ? new Promise<{ render: (file: LyraDocumentFile) => unknown }>((_resolve, reject) => {
+                rejectFirst = reject;
+              })
+            : Promise.resolve({ render: (file: LyraDocumentFile) => html`<p id="retry-output">${file.name}</p>` });
+        },
+      }],
+    ]);
+    const el = await fixture<LyraDocumentViewer>(html`
+      <lr-document-viewer
+        name="retry.bin"
+        mime-type="application/x-retry"
+        src="https://example.test/retry.bin"
+        .registry=${registry}
+        .strings=${{ documentPreviewGenericError: 'Localized preview failure.' }}
+      ></lr-document-viewer>
+    `);
+    const body = el.shadowRoot!.querySelector('[part="body"]')!;
+    el.open = true;
+    await waitUntil(() => body.getAttribute('aria-busy') === 'true');
+    rejectFirst(new Error('private loader details'));
+    await waitUntil(() => body.textContent?.includes('Localized preview failure.') === true);
+
+    expect(body.getAttribute('aria-busy')).to.equal('false');
+    expect(body.textContent).to.not.include('private loader details');
+    expect(body.querySelectorAll('[role="alert"], [role="status"], [aria-live]').length).to.equal(0);
+    const announcement = document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`);
+    await waitUntil(() => announcement?.textContent?.includes('Localized preview failure.') === true);
+    expect(announcement?.textContent).to.include('Localized preview failure.');
+
+    el.open = false;
+    await el.updateComplete;
+    el.open = true;
+    await waitUntil(() => el.shadowRoot!.querySelector('#retry-output')?.textContent === 'retry.bin');
+    expect(loads).to.equal(2);
+    expect(body.textContent).to.not.include('Localized preview failure.');
+  });
+
+  it('keeps a newer renderer visible when an earlier lazy load rejects', async () => {
+    let rejectOld!: (error: Error) => void;
+    const registry = new Map([
+      ['application/x-old', {
+        load: () => new Promise<{ render: () => unknown }>((_resolve, reject) => {
+          rejectOld = reject;
+        }),
+      }],
+      ['application/x-new', {
+        render: () => html`<p id="new-output">Current preview</p>`,
+      }],
+    ]);
+    const el = await fixture<LyraDocumentViewer>(html`
+      <lr-document-viewer
+        name="switch.bin"
+        mime-type="application/x-old"
+        src="https://example.test/switch.bin"
+        .registry=${registry}
+        .strings=${{ documentPreviewGenericError: 'Localized preview failure.' }}
+      ></lr-document-viewer>
+    `);
+    el.open = true;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="body"]')?.getAttribute('aria-busy') === 'true');
+    el.mimeType = 'application/x-new';
+    await waitUntil(() => el.shadowRoot!.querySelector('#new-output')?.textContent === 'Current preview');
+    const announcement = document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`);
+    const priorAnnouncements = announcement?.childElementCount ?? 0;
+
+    rejectOld(new Error('outdated loader failure'));
+    await aTimeout(20);
+    expect(el.shadowRoot!.querySelector('#new-output')?.textContent).to.equal('Current preview');
+    expect(el.shadowRoot!.querySelector('[part="body"]')?.textContent).to.not.include('Localized preview failure.');
+    expect(announcement?.childElementCount).to.equal(priorAnnouncements);
   });
 
   it("drops a lazy renderer result that resolves after detach and resolves afresh on reconnect", async () => {

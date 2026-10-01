@@ -717,7 +717,9 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
           documentHeight > 0 ? documentHeight : finiteNumber(external.innerHeight, 0),
       };
     }
-    const scrollerTop = external.getBoundingClientRect().top;
+    // getBoundingClientRect() begins at the outer border, while rows scroll against the
+    // scroller's inner viewport. clientTop includes that border.
+    const scrollerTop = external.getBoundingClientRect().top + external.clientTop;
     const rawScrollTop = finiteNumber(scrollerTop - spacerTop, 0);
     return {
       scrollTop: Math.max(0, rawScrollTop),

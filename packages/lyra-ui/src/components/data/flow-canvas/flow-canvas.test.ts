@@ -8,6 +8,7 @@ import type { LyraFlowCanvas, FlowNode, FlowEdge, FlowStructureSnapshot } from '
 import { FLOW_PALETTE_MIME_TYPE } from './flow-canvas.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sendKeys } from '@web/test-runner-commands';
 import {
   hoverUntilMatched,
@@ -1785,6 +1786,52 @@ describe('selection & roving focus', () => {
     await el.updateComplete;
     expect(nodeControl(el, 'b').getAttribute('tabindex')).to.equal('0');
   });
+
+  for (const direction of ['ltr', 'rtl'] as const) {
+    it(`Home and End focus the first and last enabled nodes under ${direction.toUpperCase()}`, async () => {
+      const wrapper = (await fixture(html`
+        <div dir=${direction}><lr-flow-canvas></lr-flow-canvas></div>
+      `)) as HTMLElement;
+      const el = wrapper.querySelector('lr-flow-canvas') as LyraFlowCanvas;
+      el.nodes = [
+        { id: 'disabled-first', position: { x: 0, y: 0 }, disabled: true },
+        { id: 'first-enabled', position: { x: 200, y: 0 } },
+        { id: 'middle', position: { x: 400, y: 0 } },
+        { id: 'last-enabled', position: { x: 600, y: 0 } },
+        { id: 'disabled-last', position: { x: 800, y: 0 }, disabled: true },
+      ];
+      await el.updateComplete;
+
+      const middle = nodeControl(el, 'middle');
+      await focusByKeyboard(middle);
+      const homeKeydowns: KeyboardEvent[] = [];
+      middle.addEventListener('keydown', (event) => {
+        homeKeydowns.push(event as KeyboardEvent);
+      }, { once: true });
+      await sendKeys({ press: 'Home' });
+      await waitUntil(
+        () => el.shadowRoot!.activeElement === nodeControl(el, 'first-enabled'),
+        'Home focuses the first enabled node',
+      );
+      expect(homeKeydowns[0]?.defaultPrevented).to.equal(true);
+      expect(nodeControl(el, 'first-enabled').tabIndex).to.equal(0);
+      expect(nodeControl(el, 'disabled-first').tabIndex).to.equal(-1);
+
+      const first = nodeControl(el, 'first-enabled');
+      const endKeydowns: KeyboardEvent[] = [];
+      first.addEventListener('keydown', (event) => {
+        endKeydowns.push(event as KeyboardEvent);
+      }, { once: true });
+      await sendKeys({ press: 'End' });
+      await waitUntil(
+        () => el.shadowRoot!.activeElement === nodeControl(el, 'last-enabled'),
+        'End focuses the last enabled node',
+      );
+      expect(endKeydowns[0]?.defaultPrevented).to.equal(true);
+      expect(nodeControl(el, 'last-enabled').tabIndex).to.equal(0);
+      expect(nodeControl(el, 'disabled-last').tabIndex).to.equal(-1);
+    });
+  }
 
   it('mirrors roving node and edge focus under inherited RTL', async () => {
     const wrapper = (await fixture(html`

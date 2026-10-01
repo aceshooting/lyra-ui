@@ -1,6 +1,29 @@
 import { expect, fixture, html, aTimeout } from "@open-wc/testing";
 import { resolveIsDarkTheme, watchDarkTheme } from "./shiki-dark-theme.js";
 
+for (const { name, text, surface, inheritedColor, dark } of [
+  { name: 'short hex dark', text: '#fff', surface: '#111', dark: true },
+  { name: 'short hex light', text: '#111', surface: '#fff', dark: false },
+  { name: 'long hex dark', text: '#ffffff', surface: '#101010', dark: true },
+  { name: 'long hex light', text: '#101010', surface: '#ffffff', dark: false },
+  { name: 'named dark', text: 'white', surface: 'black', dark: true },
+  { name: 'named light', text: 'black', surface: 'white', dark: false },
+  { name: 'transparent dark', text: 'white', surface: 'transparent', dark: true },
+  { name: 'transparent light', text: 'transparent', surface: 'white', dark: false },
+  { name: 'currentColor dark', text: 'currentColor', surface: 'black', inheritedColor: 'white', dark: true },
+  { name: 'currentColor light', text: 'currentColor', surface: 'white', inheritedColor: 'black', dark: false },
+  { name: 'modern dark', text: 'oklch(95% 0 0)', surface: 'oklch(10% 0 0)', dark: true },
+  { name: 'modern light', text: 'oklch(10% 0 0)', surface: 'oklch(95% 0 0)', dark: false },
+] as const) {
+  it(`classifies rendered ${name} syntax colors`, async () => {
+    const host = await fixture<HTMLElement>(html`<div></div>`);
+    host.style.setProperty('--lr-color-text', text);
+    host.style.setProperty('--lr-color-surface', surface);
+    if (inheritedColor) host.style.color = inheritedColor;
+    expect(resolveIsDarkTheme(host)).to.equal(dark);
+  });
+}
+
 for (const [attribute, value] of [
   ['data-lr-theme', 'dark'],
   ['data-lr-mode', 'dark'],

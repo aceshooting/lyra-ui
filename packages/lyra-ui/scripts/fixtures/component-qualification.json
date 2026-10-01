@@ -53915,6 +53915,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/virtual-list/virtual-list-border-scroll.test.ts",
           "src/components/layout/virtual-list/virtual-list-window-scroll.test.ts",
           "src/components/layout/virtual-list/virtual-list.test.ts"
         ],
