@@ -1,5 +1,21 @@
 # Changelog
 
+## 25.3.0
+
+### Minor Changes
+
+- ce805a4: Add a property-only `interactionBoundary` to popovers with DOM anchors so presses within a collection can reanchor the open popup without a hide/show cycle.
+
+### Patch Changes
+
+- 8a35c8f: Clarify no-flash bootstrap placement after the document charset declaration and document the current startup fallback profile.
+- d7f53a2: Avoid content-name traversal and observation for passive, linked, and explicitly named cards. Refresh the current content-derived name when a card becomes an unnamed action.
+- 8a35c8f: Support a validated public documentation base at build time, keeping canonical metadata and crawler files consistent across documentation mirrors.
+- 5d3b7c2: Clarify that retrying a locale loader does not guarantee a fresh native module download after a browser-cached failure, and document recovery without losing the current language or unsaved work.
+- fbcfd08: Keep locale-picker options at least as tall as a medium control, including label-only language rows and compact flag triggers. Larger text and touch control heights still grow the rows, and long language lists remain scrollable.
+- d70a4a4: Give expandable table rows a localized column header for assistive technology while preserving the compact chevron layout and row-specific button names.
+- 9a3eaf4: Fix combobox clearing with mouse, touch, and keyboard input so clearing filter text reliably emits `lr-filter` and preserves input focus.
+
 ## 25.2.0
 
 ### Minor Changes
