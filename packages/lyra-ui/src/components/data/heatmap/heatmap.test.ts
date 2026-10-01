@@ -3434,6 +3434,48 @@ describe("calendar weekday-label gutter", () => {
     expect(firstColumnX(el)).to.be.greaterThan(28);
   });
 
+  it('keeps accessible calendar cells on the painted week column after locale and width changes', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap accessible-cells cell-size="40" style="inline-size:420px"></lr-heatmap>
+    `)) as LyraHeatmap;
+    el.locale = 'en';
+    el.data = {
+      kind: 'calendar',
+      days: [{ date: '2026-01-05', value: 3 }],
+      weekdayLabelWidth: 'auto',
+      weekdayLabelText: (weekday: number) =>
+        el.locale === 'de' ? `Wochentag ${weekday} (ausführlich)` : `W${weekday}`,
+    };
+    await el.updateComplete;
+    await settleLayout();
+
+    const canvas = el.shadowRoot!.querySelector<HTMLCanvasElement>('[part="canvas"]')!;
+    const grid = el.shadowRoot!.querySelector<HTMLElement>('[part="cells"]')!;
+    const firstCell = () => el.shadowRoot!.querySelector<HTMLButtonElement>(
+      '[part="cell"][data-cell-key="calendar-0-0"]'
+    )!;
+    const assertAlignment = () => {
+      const geometry = el.calendarGeometry!;
+      const paintedColumnLeft = canvas.getBoundingClientRect().left + geometry.padLeft;
+      expect(firstCell().getBoundingClientRect().left).to.be.closeTo(paintedColumnLeft, 1);
+      return geometry.padLeft;
+    };
+    expect(grid.getAttribute('role')).to.equal('grid');
+    expect(firstCell().getAttribute('role')).to.equal('gridcell');
+    const initialGutter = assertAlignment();
+
+    el.locale = 'de';
+    await el.updateComplete;
+    await settleLayout();
+    const localizedGutter = assertAlignment();
+    expect(localizedGutter).to.be.greaterThan(initialGutter);
+
+    el.style.inlineSize = '160px';
+    await settleLayout();
+    const narrowedGutter = assertAlignment();
+    expect(narrowedGutter).to.be.lessThan(localizedGutter);
+  });
+
   it("ignores a malformed calendar weekdayLabelWidth", async () => {
     const el = await calendarWith("not-a-number");
     expect(firstColumnX(el)).to.equal(28);

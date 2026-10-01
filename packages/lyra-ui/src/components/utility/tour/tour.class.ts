@@ -124,8 +124,9 @@ export interface LyraTourStep {
  * Reason a tour ended, forwarded as `lr-tour-end` detail.reason.
  * `'completed'`/`'skip'`/`'escape'` are emitted by the tour's own built-in dismiss triggers;
  * `'unmount'` is emitted when the tour is removed from the DOM while still open by something
- * other than its own `end()` (mirrors `lr-dialog`'s identical `'unmount'` case); any other
- * string is whatever a caller passes to `end()` directly.
+ * other than its own `end()` (mirrors `lr-dialog`'s identical `'unmount'` case);
+ * `'unavailable'` is emitted when deferred placement fails and the hidden panel cannot remain open;
+ * any other string is whatever a caller passes to `end()` directly.
  */
 export type LyraTourEndReason =
   | 'completed'
@@ -133,6 +134,7 @@ export type LyraTourEndReason =
   | 'escape'
   | 'api'
   | 'unmount'
+  | 'unavailable'
   | (string & Record<never, never>);
 
 export interface LyraTourEventMap {
@@ -353,7 +355,8 @@ function snapshotTourSteps(value: unknown): readonly Readonly<LyraTourStep>[] {
  * @event lr-tour-end-request - Cancelable proposal before an ordinary tour end. `detail: { reason }`.
  *   Preventing it keeps the tour open. Removal from the document does not request permission.
  * @event lr-tour-end - Non-cancelable notification after the tour closes. `detail: { reason }`.
- *   Forced removal emits reason `unmount` without a request because it cannot be vetoed.
+ *   Forced removal emits reason `unmount`; unavailable deferred placement emits `unavailable`.
+ *   Neither requests permission because the closure cannot be vetoed.
  * @event lr-tour-target-missing - The active step's `target` did not resolve to a connected
  *   element. `detail: { index, step }`. Not cancelable -- informational. The tour does not
  *   auto-end; it renders that step's popover unanchored (viewport-centered, no spotlight cutout)
@@ -804,6 +807,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
       // cancelable end lifecycle just like losing the component itself does.
       this.open = false;
       this.deactivateOverlayInternal();
+      this.emit('lr-tour-end', { reason: 'unavailable' });
     });
   }
 

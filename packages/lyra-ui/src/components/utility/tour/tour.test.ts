@@ -17,6 +17,7 @@ import {
   type AnchoredOverlayRuntime,
 } from '../../../internal/anchored-overlay-runtime.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 // These fixtures deliberately verify that retired attributes remain inert.
 expectStaleAttribute('lr-tour', 'show-progress');
@@ -1410,6 +1411,41 @@ describe('lr-tour', () => {
       expect(popover().style.getPropertyValue('visibility')).to.equal('');
     } finally {
       __setAnchoredOverlayRuntimeLoaderForTesting(undefined);
+    }
+  });
+
+  it('ends an opened tour when its deferred placement runtime is unavailable', async () => {
+    const el = (await fixture(html`<div>
+      <button id="tour-opener">Open tour</button>
+      <lr-tour .steps=${makeSteps(1)}></lr-tour>
+      ${targetButtons(1)}
+    </div>`)) as HTMLDivElement;
+    const tour = el.querySelector('lr-tour') as LyraTour;
+    const opener = el.querySelector<HTMLButtonElement>('#tour-opener')!;
+    const starts: number[] = [];
+    const ends: Array<{ reason: string; cancelable: boolean }> = [];
+    let endRequests = 0;
+    tour.addEventListener('lr-tour-start', (event) => starts.push(event.detail.index));
+    tour.addEventListener('lr-tour-end', (event) => {
+      ends.push({ reason: event.detail.reason, cancelable: event.cancelable });
+    });
+    tour.addEventListener('lr-tour-end-request', () => endRequests++);
+    await focusByKeyboard(opener);
+    const originalOverflow = document.documentElement.style.overflow;
+    __setAnchoredOverlayRuntimeLoaderForTesting(() => Promise.reject(new Error('positioning unavailable')));
+    try {
+      tour.start();
+      await waitUntil(() => !tour.open, 'unavailable placement did not close the tour');
+      await tour.updateComplete;
+      expect(tour.hasAttribute('open')).to.equal(false);
+      expect(document.documentElement.style.overflow).to.equal(originalOverflow);
+      expect(focusedDescriptor()).to.include('#tour-opener');
+      expect(starts).to.deep.equal([0]);
+      expect(endRequests).to.equal(0);
+      expect(ends).to.deep.equal([{ reason: 'unavailable', cancelable: false }]);
+    } finally {
+      __setAnchoredOverlayRuntimeLoaderForTesting(undefined);
+      tour.end();
     }
   });
 

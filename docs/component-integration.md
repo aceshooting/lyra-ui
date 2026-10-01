@@ -302,7 +302,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-tool-select-dialog"></a>`lr-tool-select-dialog` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-tool-select-dialog.js';` | none | `lr-checkbox`, `lr-switch` | none | 52.7 KiB |
 | <a id="lr-tool-timeline"></a>`lr-tool-timeline` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-tool-timeline.js';` | none | `lr-details`, `lr-empty`, `lr-tool-approval-dialog`, `lr-tool-call-chip`, `lr-tool-result-view` | `lr-button`, `lr-copy-button`, `lr-icon-button`, `lr-json-viewer`, `lr-skeleton`, `lr-tooltip` | 106.3 KiB |
 | <a id="lr-tooltip"></a>`lr-tooltip` | overlays | `import '@aceshooting/lyra-ui/components/lr-tooltip.js';` | none | none | none | 53 KiB |
-| <a id="lr-tour"></a>`lr-tour` | utility | `import '@aceshooting/lyra-ui/components/lr-tour.js';` | none | none | none | 49.5 KiB |
+| <a id="lr-tour"></a>`lr-tour` | utility | `import '@aceshooting/lyra-ui/components/lr-tour.js';` | none | none | none | 49.6 KiB |
 | <a id="lr-trace-tree"></a>`lr-trace-tree` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-trace-tree.js';` | none | `lr-empty`, `lr-live-region` | none | 37.5 KiB |
 | <a id="lr-transcript-feed"></a>`lr-transcript-feed` | conversation | `import '@aceshooting/lyra-ui/components/lr-transcript-feed.js';` | none | none | none | 28.6 KiB |
 | <a id="lr-tree"></a>`lr-tree` | data | `import '@aceshooting/lyra-ui/components/lr-tree.js';` | none | `lr-empty`, `lr-live-region`, `lr-tree-item` | none | 48 KiB |

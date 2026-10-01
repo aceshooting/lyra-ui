@@ -64,7 +64,7 @@ accessor/inherited/malformed rows and invalid optional fields are omitted while 
 remain usable. Step ids and headings are bounded to 256 and 4,096 characters, target selector
 strings to 8,192, and body content to 65,536. Per-step spotlight padding is finite, non-negative,
 and capped at 10,000px. Provider mutation after assignment cannot change rendering or event detail.
-`LyraTourEndReason = 'completed' | 'skip' | 'escape' | 'api' | 'unmount' | (string & {})`.
+`LyraTourEndReason = 'completed' | 'skip' | 'escape' | 'api' | 'unmount' | 'unavailable' | (string & {})`.
 
 **Methods:** `start(index = 0)` (clamps, opens, emits `lr-tour-start`), `next()` (on the last step
 ends with `'completed'` instead), `back()` (no-op on the first step), `goToStep(index)` (clamped),
@@ -76,7 +76,9 @@ ends with `'completed'` instead), `back()` (no-op on the first step), `goToStep(
 departure from `lr-carousel`'s non-cancelable `lr-slide-change`); `lr-tour-end-request`
 (`detail: { reason }`, cancelable before ordinary completion); `lr-tour-end`
 (`detail: { reason }`, non-cancelable after closing). Forced removal still notifies with reason
-`unmount`, without a request because removal cannot be vetoed. Migrate old raw-detail reads to
+`unmount`, without a request because removal cannot be vetoed. If deferred placement fails, the
+hidden panel closes with reason `unavailable`, also without a request; the host can use
+`lr-tour-end` to clear its own open state. Migrate old raw-detail reads to
 `detail.reason` and move end vetoes to `lr-tour-end-request`.
 `lr-tour-target-missing` (`detail: { index, step }`, informational — the tour does **not** auto-end,
 it renders that step viewport-centered with no spotlight).
