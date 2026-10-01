@@ -27712,6 +27712,12 @@
               "state": "populated"
             },
             {
+              "file": "src/components/forms/locale-picker/locale-picker-row-comfort.test.ts",
+              "test": "keeps the last comfortable row keyboard-reachable in a 320px ${direction} viewport",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/forms/locale-picker/locale-picker.test.ts",
               "test": "is accessible",
               "target": "el",
@@ -27870,6 +27876,7 @@
           "src/components/forms/locale-picker/locale-picker-option-display.test.ts",
           "src/components/forms/locale-picker/locale-picker-remediation.test.ts",
           "src/components/forms/locale-picker/locale-picker-retry-layout.test.ts",
+          "src/components/forms/locale-picker/locale-picker-row-comfort.test.ts",
           "src/components/forms/locale-picker/locale-picker.test.ts",
           "src/components/forms/locale-picker/positioning-strategy.test.ts",
           "src/components/forms/locale-picker/top-layer.test.ts"
