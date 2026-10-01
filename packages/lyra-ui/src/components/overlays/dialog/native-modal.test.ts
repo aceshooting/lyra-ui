@@ -1,4 +1,4 @@
-import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { sendMouse } from '../../../../test/wtr-mouse.js';
 import { deepActiveElement } from '../../../internal/overlay-manager.js';
@@ -78,6 +78,143 @@ describe('native modal interoperability', () => {
       overlay.removeEventListener('lr-hide', veto);
       overlay.remove();
       native.close();
+    }
+  });
+
+  it('routes the carrier native requestClose through a vetoable public close and preserves focus', async function () {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div><dialog><button>Open details</button></dialog>
+        <lr-dialog label="Details" style="--show-duration:0ms;--hide-duration:0ms"><button>Apply</button></lr-dialog>
+      </div>
+    `);
+    const native = wrapper.querySelector('dialog')!;
+    const opener = native.querySelector('button')!;
+    const overlay = wrapper.querySelector('lr-dialog') as LyraDialog;
+    const action = overlay.querySelector('button')!;
+    const events: string[] = [];
+    const veto = (event: Event): void => event.preventDefault();
+    try {
+      native.showModal();
+      await click(opener);
+      await overlay.show();
+      const carrier = overlay.shadowRoot!.querySelector<HTMLDialogElement>('dialog[data-native-modal-carrier]')!;
+      if (typeof carrier.requestClose !== 'function') this.skip();
+      expect(carrier.matches(':modal')).to.equal(true);
+      await click(action);
+      overlay.addEventListener('lr-request-close', (event) => events.push(`request:${(event as CustomEvent<{ source: string }>).detail.source}`));
+      overlay.addEventListener('lr-hide', () => events.push('hide'));
+      overlay.addEventListener('lr-close', () => events.push('close'));
+      overlay.addEventListener('lr-after-hide', () => events.push('after-hide'));
+      overlay.addEventListener('lr-hide', veto);
+
+      const firstCancel = oneEvent(carrier, 'cancel');
+      carrier.requestClose();
+      await firstCancel;
+      expect(events).to.deep.equal(['request:keyboard', 'hide']);
+      expect(overlay.open).to.equal(true);
+      expect(carrier.matches(':modal'), 'a veto keeps the native carrier modal').to.equal(true);
+      expect(native.matches(':modal'), 'the author modal remains open underneath').to.equal(true);
+      expect(deepActiveElement(document) === action, 'focus remains in the vetoed overlay').to.equal(true);
+
+      overlay.removeEventListener('lr-hide', veto);
+      const afterHide = oneEvent(overlay, 'lr-after-hide');
+      const secondCancel = oneEvent(carrier, 'cancel');
+      carrier.requestClose();
+      await secondCancel;
+      await afterHide;
+      expect(events).to.deep.equal(['request:keyboard', 'hide', 'request:keyboard', 'hide', 'close', 'after-hide']);
+      expect(overlay.open).to.equal(false);
+      expect(carrier.matches(':modal')).to.equal(false);
+      expect(native.matches(':modal')).to.equal(true);
+      await waitUntil(() => deepActiveElement(document) === opener, 'focus returns to the author modal opener');
+    } finally {
+      overlay.removeEventListener('lr-hide', veto);
+      overlay.remove();
+      if (native.open) native.close();
+    }
+  });
+
+  it('reconciles a directly closed native carrier or restores it after a public hide veto', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div><dialog><button>Open details</button></dialog>
+        <lr-dialog label="Details" style="--show-duration:0ms;--hide-duration:0ms"><button>Apply</button></lr-dialog>
+      </div>
+    `);
+    const native = wrapper.querySelector('dialog')!;
+    const opener = native.querySelector('button')!;
+    const overlay = wrapper.querySelector('lr-dialog') as LyraDialog;
+    const action = overlay.querySelector('button')!;
+    const hideSources: Element[] = [];
+    const reasons: string[] = [];
+    const veto = (event: Event): void => event.preventDefault();
+    try {
+      native.showModal();
+      await click(opener);
+      await overlay.show();
+      const carrier = overlay.shadowRoot!.querySelector<HTMLDialogElement>('dialog[data-native-modal-carrier]')!;
+      expect(carrier.matches(':modal')).to.equal(true);
+      await click(action);
+      overlay.addEventListener('lr-hide', (event) => hideSources.push((event as CustomEvent<{ source: Element }>).detail.source));
+      overlay.addEventListener('lr-close', (event) => reasons.push((event as CustomEvent<{ reason: string }>).detail.reason));
+      overlay.addEventListener('lr-hide', veto);
+
+      const vetoedHide = oneEvent(overlay, 'lr-hide');
+      carrier.close();
+      await vetoedHide;
+      await waitUntil(() => carrier.matches(':modal'), 'hide veto re-enters the native top layer');
+      expect(overlay.open).to.equal(true);
+      expect(native.matches(':modal')).to.equal(true);
+      expect(reasons).to.deep.equal([]);
+      await click(action);
+      expect(deepActiveElement(document) === action, 'restored carrier accepts focus').to.equal(true);
+
+      overlay.removeEventListener('lr-hide', veto);
+      const afterHide = oneEvent(overlay, 'lr-after-hide');
+      carrier.close();
+      await afterHide;
+      expect(overlay.open).to.equal(false);
+      expect(carrier.matches(':modal')).to.equal(false);
+      expect(native.matches(':modal')).to.equal(true);
+      expect(hideSources.length).to.equal(2);
+      expect(hideSources.every((source) => source === carrier), 'the native carrier is the hide source').to.equal(true);
+      expect(reasons).to.deep.equal(['api']);
+      await waitUntil(() => deepActiveElement(document) === opener, 'focus returns to the author modal opener');
+    } finally {
+      overlay.removeEventListener('lr-hide', veto);
+      overlay.remove();
+      if (native.open) native.close();
+    }
+  });
+
+  it('retains modal focus when the author closes the native dialog underneath', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div><dialog><button>Open details</button></dialog>
+        <lr-dialog label="Details" style="--show-duration:0ms;--hide-duration:0ms"><button>Apply</button></lr-dialog>
+      </div>
+    `);
+    const native = wrapper.querySelector('dialog')!;
+    const overlay = wrapper.querySelector('lr-dialog') as LyraDialog;
+    const action = overlay.querySelector('button')!;
+    let clicks = 0;
+    action.addEventListener('click', () => clicks++);
+    try {
+      native.showModal();
+      await click(native.querySelector('button')!);
+      await overlay.show();
+      const carrier = overlay.shadowRoot!.querySelector<HTMLDialogElement>('dialog[data-native-modal-carrier]')!;
+      await click(action);
+      expect(deepActiveElement(document) === action).to.equal(true);
+      const closed = oneEvent(native, 'close');
+      native.close();
+      await closed;
+      expect(overlay.open).to.equal(true);
+      expect(carrier.matches(':modal')).to.equal(true);
+      expect(deepActiveElement(document) === action, 'the Lyra modal keeps focus').to.equal(true);
+      await click(action);
+      expect(clicks).to.equal(2);
+    } finally {
+      overlay.remove();
+      if (native.open) native.close();
     }
   });
 
