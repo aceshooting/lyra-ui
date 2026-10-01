@@ -3346,14 +3346,19 @@ export class LyraCombobox<
     // Synchronously, not from `updated()`: `:state(user-invalid)` has to be true the moment focus
     // leaves, the same instant native `:user-invalid` starts matching.
     this.syncCustomStates();
-    // A mouse click outside the element is already handled by
-    // onDocPointer/hide(), but that leaves keyboard users with no way to
-    // dismiss the listbox short of Escape -- tabbing focus away from the
-    // input should close it too, the same as it would for a native
-    // `<select>`'s popup.
-    this.restoreFocusOnClose = false;
-    this.hide();
+    this.onComboFocusOut(event);
     relayNativeEvent(this, event);
+  };
+
+  private onComboFocusOut = (event: FocusEvent): void => {
+    // Moving from the input to a trigger control must preserve the query until that control
+    // activates. In particular, closing on input blur would remove a query-only clear button
+    // before its native click. Tab still dismisses when focus leaves the whole trigger.
+    const trigger = this.renderRoot.querySelector('[part="combobox"]');
+    const target = event.relatedTarget;
+    if (target && typeof (target as Node).nodeType === 'number' && trigger?.contains(target as Node)) return;
+    this.restoreFocusOnClose = false;
+    void this.hide();
   };
 
   private onInputFocus = (event: FocusEvent): void => {
@@ -3656,7 +3661,11 @@ export class LyraCombobox<
         >
           <span part="label">${this.label}<slot name="label"></slot></span>
         </label>
-        <div part="combobox" @mousedown=${this.onComboMouseDown}>
+        <div
+          part="combobox"
+          @mousedown=${this.onComboMouseDown}
+          @focusout=${this.onComboFocusOut}
+        >
           <span part="form-control-input" class="control-contents">
             <span part="start" ?hidden=${!this.slotPresence.has('start')}>
               <slot name="start"></slot>
@@ -3718,9 +3727,19 @@ export class LyraCombobox<
                   type="button"
                   ?disabled=${this.effectiveDisabled || this.readonly}
                   aria-label=${this.localize('clear')}
+                  @mousedown=${(e: MouseEvent) => e.preventDefault()}
                   @click=${(e: Event) => {
                     e.stopPropagation();
                     this.clear();
+                    // Clearing can remove this focused button; return focus without reopening
+                    // a listbox that was already closed.
+                    const restoringFocus = this.restoringOverlayFocus;
+                    this.restoringOverlayFocus = true;
+                    try {
+                      this.inputEl?.focus();
+                    } finally {
+                      this.restoringOverlayFocus = restoringFocus;
+                    }
                   }}
                 >
                   <span aria-hidden="true" inert

@@ -816,8 +816,10 @@ synchronous and fires no `input`/`change`/`lr-change` event.
 - `aria-required` reflects `required` immediately; `aria-invalid`, by contrast, only reflects
   **after the field has been touched** (first `blur`) — a `required` field with a validity error
   doesn't look invalid to assistive tech before that, by design (avoids flashing invalid styling on
-  first render). Blurring the input (Tab away) now also closes an open listbox, the same as a
-  native `<select>`'s popup, not just a click outside or Escape.
+  first render). Moving focus outside the combobox trigger (Tab away) closes an open listbox,
+  the same as a native `<select>`'s popup. Moving from the input to its clear button retains the
+  filter until the button activates; clearing returns focus to the input without changing whether
+  the listbox is open.
 - `dotColor`/`sub`/`group` are read from light-DOM `<lr-option>` children as before, but are also
   first-class fields on `ComboboxSourceRow` for the async `source` path — an async lookup can drive
   the same grouped/dot/sub-text rendering a static option list can.

@@ -1348,9 +1348,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 77939,
-        "kib": 76.1,
-        "bundleSha256": "a5ba804aa03e6f6be93fc44172b8ae378c8e4ac309127c13e379831ae895e10b",
+        "bytes": 78042,
+        "kib": 76.2,
+        "bundleSha256": "647684534c6e785ec42b22412375ab80deee6587548b9965d3aa8b77b04b5d67",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -1468,9 +1468,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 136882,
-        "kib": 133.7,
-        "bundleSha256": "138738828a4d7a878ec1556d2a3f168f957c7fdaade64c6547709d672fa8ea15",
+        "bytes": 136989,
+        "kib": 133.8,
+        "bundleSha256": "bb08273d0ee0b98353d11abf7c1f21d99c663a7c1e1b39b123f8a13c7f0b3944",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -1991,9 +1991,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 131703,
-        "kib": 128.6,
-        "bundleSha256": "20f407075d0afa5785dd42310bae11c648c7f08756edd5212df221d8cc99da9f",
+        "bytes": 131809,
+        "kib": 128.7,
+        "bundleSha256": "0b1a3edb9a20d3874350c451d7695ec474f58224553b4e5a8f7c5f64479a7a77",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -2672,9 +2672,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 160006,
-        "kib": 156.3,
-        "bundleSha256": "59e6e709ba29484849a67f83fbd9b95105939a6782b189c87cc9a008f7540f5d",
+        "bytes": 160116,
+        "kib": 156.4,
+        "bundleSha256": "f34d6420ec1a4abc09600deb3300181a4eab9ba66c7d19608ef771c80851dd18",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },

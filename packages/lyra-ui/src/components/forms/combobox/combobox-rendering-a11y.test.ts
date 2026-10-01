@@ -11,7 +11,9 @@ import "../../layout/segmented/segmented.js";
 import type { ComboboxFilterDetail, LyraCombobox } from "./combobox.js";
 import type { LyraOption } from "./option.js";
 import { styles } from "./combobox.styles.js";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
+import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { setReducedMotion } from "../../../../test/wtr-media.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import "../../../translations/ar/forms.js";
@@ -1494,6 +1496,146 @@ describe("clear affordance on the filter axis", () => {
     ) as HTMLButtonElement | null;
   const inputEl = (el: LyraCombobox) =>
     el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+
+  const center = (element: HTMLElement): [number, number] => {
+    const rect = element.getBoundingClientRect();
+    return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
+  };
+
+  for (const asyncSource of [false, true]) {
+    it(`reports a query-only clear after a native pointer click with ${asyncSource ? 'async' : 'slotted'} options`, async () => {
+      const el = await fixture<LyraCombobox>(html`
+        <lr-combobox clearable label="Fruit" style="--lr-transition-fast: 0s">
+          <lr-option value="a">Apple</lr-option>
+        </lr-combobox>
+      `);
+      const queries: string[] = [];
+      if (asyncSource) {
+        el.sourceDelay = 0;
+        el.source = async (query) => {
+          queries.push(query);
+          return [{ value: 'a', label: 'Apple' }];
+        };
+      }
+      try {
+        await sendMouse({ type: 'click', position: center(inputEl(el)) });
+        await sendKeys({ type: 'Apple' });
+        await waitUntil(() => el.inputValue === 'Apple' && clearButton(el) !== null);
+        if (asyncSource) await waitUntil(() => queries.includes('Apple'));
+        const filters: string[] = [];
+        const selectionEvents: string[] = [];
+        el.addEventListener('lr-filter', (event) => filters.push((event as CustomEvent<ComboboxFilterDetail>).detail.value));
+        for (const name of ['input', 'change', 'lr-input', 'lr-change', 'lr-clear']) {
+          el.addEventListener(name, () => selectionEvents.push(name));
+        }
+        const button = clearButton(el)!;
+        await sendMouse({ type: 'move', position: center(button) });
+        await sendMouse({ type: 'down' });
+        await settlePointer();
+        expect(el.inputValue, 'the pointer press preserves the query until activation').to.equal('Apple');
+        await sendMouse({ type: 'up' });
+        await waitUntil(() => filters.length > 0, 'clear must report an empty filter');
+        await el.updateComplete;
+        expect(filters).to.deep.equal(['']);
+        expect(selectionEvents).to.deep.equal([]);
+        expect(inputEl(el).value).to.equal('');
+        expect(el.value).to.equal('');
+        expect(el.shadowRoot!.activeElement === inputEl(el)).to.equal(true);
+        if (asyncSource) await waitUntil(() => queries.at(-1) === '');
+      } finally {
+        await resetMouse();
+      }
+    });
+  }
+
+  it('reports both axes exactly once when a native pointer clears selection and query', async () => {
+    const el = await fixture<LyraCombobox>(html`
+      <lr-combobox clearable label="Fruit" style="--lr-transition-fast: 0s">
+        <lr-option value="a" selected>Apple</lr-option>
+      </lr-combobox>
+    `);
+    try {
+      await sendMouse({ type: 'click', position: center(inputEl(el)) });
+      await sendKeys({ type: 'Banana' });
+      await waitUntil(() => el.inputValue === 'Banana');
+      const reported: string[] = [];
+      for (const name of ['lr-filter', 'input', 'change', 'lr-input', 'lr-change', 'lr-clear']) {
+        el.addEventListener(name, (event) => reported.push(name === 'lr-filter'
+          ? `${name}:${(event as CustomEvent<ComboboxFilterDetail>).detail.value}` : name));
+      }
+      await sendMouse({ type: 'click', position: center(clearButton(el)!) });
+      await waitUntil(() => el.value === '');
+      expect(reported.sort()).to.deep.equal(['change', 'input', 'lr-change', 'lr-clear', 'lr-filter:']);
+      expect(inputEl(el).value).to.equal('');
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('clears a closed committed selection without opening the listbox', async () => {
+    const el = await fixture<LyraCombobox>(html`
+      <lr-combobox clearable label="Fruit" style="--lr-transition-fast: 0s">
+        <lr-option value="a" selected>Apple</lr-option>
+      </lr-combobox>
+    `);
+    let shows = 0;
+    el.addEventListener('lr-show', () => shows++);
+    expect(el.open).to.equal(false);
+    try {
+      await sendMouse({ type: 'click', position: center(clearButton(el)!) });
+      await waitUntil(() => el.value === '');
+      await settlePointer();
+      expect(el.open).to.equal(false);
+      expect(shows).to.equal(0);
+      expect(el.shadowRoot!.activeElement === inputEl(el)).to.equal(true);
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  for (const key of ['Enter', 'Space']) {
+    it(`preserves the query while tabbing to clear and activates it with ${key}`, async () => {
+      const el = await fixture<LyraCombobox>(html`
+        <lr-combobox clearable label="Fruit" style="--lr-transition-fast: 0s">
+          <lr-option value="a">Apple</lr-option>
+        </lr-combobox>
+      `);
+      await focusByKeyboard(inputEl(el));
+      await sendKeys({ type: 'Apple' });
+      await waitUntil(() => clearButton(el) !== null);
+      const filters: string[] = [];
+      el.addEventListener('lr-filter', (event) => filters.push((event as CustomEvent<ComboboxFilterDetail>).detail.value));
+      await sendKeys({ press: 'Tab' });
+      await el.updateComplete;
+      expect(el.shadowRoot!.activeElement === clearButton(el), 'Tab reaches the retained clear control').to.equal(true);
+      expect(el.inputValue).to.equal('Apple');
+      await sendKeys({ press: key });
+      await waitUntil(() => filters.length > 0);
+      await el.updateComplete;
+      expect(filters).to.deep.equal(['']);
+      expect(inputEl(el).value).to.equal('');
+      expect(el.shadowRoot!.activeElement === inputEl(el)).to.equal(true);
+    });
+  }
+
+  it('closes and discards the query when Tab leaves the clear control', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div>
+        <lr-combobox clearable label="Fruit" style="--lr-transition-fast: 0s">
+          <lr-option value="a">Apple</lr-option>
+        </lr-combobox>
+        <button id="after-clear">After</button>
+      </div>
+    `);
+    const el = wrapper.querySelector<LyraCombobox>('lr-combobox')!;
+    await focusByKeyboard(inputEl(el));
+    await sendKeys({ type: 'Apple' });
+    await sendKeys({ press: 'Tab' });
+    expect(el.shadowRoot!.activeElement === clearButton(el)).to.equal(true);
+    await sendKeys({ press: 'Tab' });
+    await waitUntil(() => !el.open && el.inputValue === '');
+    expect(document.activeElement?.id).to.equal('after-clear');
+  });
 
   it("renders the clear button for a query-only state and clearing it emits lr-filter with an empty value", async () => {
     const el = (await fixture(html`
