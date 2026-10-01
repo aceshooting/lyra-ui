@@ -2245,10 +2245,23 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         0,
         Math.max(0, body.scrollHeight - body.clientHeight)
       );
-      this.lastMeasurementAnchor = this.measurementAnchorAtOffset(top, items);
+      body.scrollTo({ top });
+      if (alignment === 'start') {
+        const correction = this.renderedStartPrecisionDelta(rendered, body);
+        if (correction !== 0) {
+          top = finiteRange(
+            body.scrollTop + correction,
+            body.scrollTop,
+            0,
+            Math.max(0, body.scrollHeight - body.clientHeight)
+          );
+          body.scrollTo({ top });
+        }
+      }
+      top = body.scrollTop;
       this.expectedBodyScroll = Object.freeze({ body, top });
       this.bodyScrollTop = top;
-      body.scrollTo({ top });
+      this.lastMeasurementAnchor = this.measurementAnchorAtOffset(top, items);
       return;
     }
     this.lastMeasurementAnchor = this.measurementAnchorAtOffset(top, items);
@@ -3464,6 +3477,22 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     return oversized ? targetTop : targetBottom - viewportBottom;
   }
 
+  /** Corrects the painted start edge after CSSOM snaps a rendered row's scroll offset. */
+  private renderedStartPrecisionDelta(target: HTMLElement, body: HTMLElement): number {
+    const bodyRect = body.getBoundingClientRect();
+    const layoutHeight = this.layoutBorderBoxHeight(body);
+    const scaleY = bodyRect.height / layoutHeight;
+    if (!Number.isFinite(scaleY) || scaleY <= 0) return 0;
+    const style = body.ownerDocument.defaultView?.getComputedStyle(body);
+    const computedBorderTop = Number.parseFloat(style?.borderTopWidth ?? '');
+    const borderTop = Number.isFinite(computedBorderTop) && computedBorderTop >= 0
+      ? computedBorderTop
+      : body.clientTop;
+    const visualError = target.getBoundingClientRect().top -
+      (bodyRect.top + borderTop * scaleY);
+    return Math.abs(visualError) > 1 ? visualError / scaleY : 0;
+  }
+
   /** Replays a virtual scroll command only after its target's measured offsets are stable. */
   private alignPendingVirtualScroll(): void {
     const pending = this.pendingVirtualScroll;
@@ -3486,14 +3515,20 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     )].find((element) => element.dataset['virtualItemKey'] === pending.itemKey);
     const body = this.bodyElement;
     if (!target || !body) return;
-    const alignmentDelta = this.renderedRowAlignmentDelta(target, body, pending.align);
+    const layoutDelta = this.renderedRowAlignmentDelta(target, body, pending.align);
+    const precisionDelta = pending.align === 'start'
+      ? this.renderedStartPrecisionDelta(target, body)
+      : 0;
     // CSSOM scroll offsets round fractional pixels differently across engines. Half a layout
     // pixel is the closest reachable integer scroll position; a whole pixel can exceed the
     // visible alignment tolerance under CSS zoom.
-    if (Math.abs(alignmentDelta) <= 0.5) {
+    if (Math.abs(layoutDelta) <= 0.5 && precisionDelta === 0) {
       this.pendingVirtualScroll = undefined;
       return;
     }
+    const alignmentDelta = Math.abs(layoutDelta) > 0.5
+      ? layoutDelta
+      : precisionDelta;
     const previousTop = body.scrollTop;
     const nextTop = finiteRange(
       previousTop + alignmentDelta,
@@ -3502,6 +3537,13 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       Math.max(0, body.scrollHeight - body.clientHeight)
     );
     body.scrollTo({ top: nextTop });
+    if (precisionDelta !== 0) {
+      const remaining = this.renderedStartPrecisionDelta(target, body);
+      if (Math.abs(remaining) >= Math.abs(precisionDelta)) {
+        body.scrollTo({ top: previousTop });
+        this.pendingVirtualScroll = undefined;
+      }
+    }
     // Alignment can change the virtual window itself. Keep the command until that window
     // commits, otherwise replacing overscan rows with estimated spacers shifts the target.
     if (body.scrollTop === previousTop) this.pendingVirtualScroll = undefined;

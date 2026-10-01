@@ -1,5 +1,21 @@
 # Changelog
 
+## 25.1.0
+
+### Minor Changes
+
+- 94a6d02: Emit `lr-tour-end` with reason `unavailable` when deferred placement fails and the tour closes, so hosts tracking the public lifecycle can clear their open state.
+
+### Patch Changes
+
+- 8416b39: Keep `lr-data-grid` programmatic row alignment inside its own scrollable body so revealing a row does not move the page or an ancestor scroller.
+- 8416b39: Measure data-grid row, group, and expanded-detail heights in layout pixels so ancestor transforms and CSS zoom do not corrupt virtual scrolling. Correct subpixel scroll rounding for rendered and virtual rows so zoomed rows reach their requested viewport edge.
+- 8416b39: Keep map legend spacing aligned with native controls when an ancestor scales or zooms the map.
+- cfa77b8: Align virtual-list rows to the content viewport of a bordered external scroll element. Programmatic start, end, and nearest scrolling now account for the scroller's block-start border.
+
+  Remove redundant hex parsing from syntax-theme detection while preserving the browser's resolved CSS color behavior.
+- 8416b39: Align virtual-list rows correctly when an external scroll element or the list has a positive CSS scale or zoom. Start, end, and nearest scrolling now convert rendered geometry to list and scroll coordinates, including fractional borders and Window scrollers.
+
 ## 25.0.0
 
 ### Major Changes

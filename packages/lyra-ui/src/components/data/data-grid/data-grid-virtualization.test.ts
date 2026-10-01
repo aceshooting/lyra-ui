@@ -690,17 +690,48 @@ it('settles fractional bordered row and detail heights under CSS zoom', async ()
     const pageBefore = window.scrollY;
     const outerBefore = outer.scrollTop;
     const horizontalBefore = body.scrollLeft;
+    expect(element.shadowRoot!.querySelector('[part~="row"][data-visible-index="70"]') !== null).to.equal(true);
     element.scrollToIndex(70, { align: 'start' });
-    await waitUntil(() => element.shadowRoot!.querySelector('[part~="row"][data-visible-index="70"]') !== null);
-    await waitUntil(() => measurementAccess(element).pendingVirtualScroll === undefined);
     await aTimeout(40);
     const target = element.shadowRoot!.querySelector<HTMLElement>('[part~="row"][data-visible-index="70"]')!;
-    const bodyRect = body.getBoundingClientRect();
-    const alignedTop = bodyRect.top + body.clientTop * 1.25;
+    const marker = document.createElement('div');
+    marker.style.cssText = 'position: sticky; top: 0; width: 0; height: 0; pointer-events: none';
+    body.prepend(marker);
+    const alignedTop = marker.getBoundingClientRect().top;
+    marker.remove();
     expect(Math.abs(target.getBoundingClientRect().top - alignedTop)).to.be.at.most(1);
     expect(window.scrollY).to.equal(pageBefore);
     expect(outer.scrollTop).to.equal(outerBefore);
     expect(body.scrollLeft).to.equal(horizontalBefore);
+    for (const align of ['center', 'end', 'nearest'] as const) {
+      body.scrollTop = align === 'nearest'
+        ? target.offsetTop - body.clientHeight - 20
+        : 0;
+      body.dispatchEvent(new Event('scroll'));
+      await aTimeout(40);
+      if (align === 'nearest') {
+        const beforeRect = target.getBoundingClientRect();
+        const beforeViewportEnd = alignedTop + body.clientHeight * 1.25;
+        expect(beforeRect.top).to.be.greaterThan(beforeViewportEnd);
+      }
+      if (align === 'nearest') element.scrollToIndex(70);
+      else element.scrollToIndex(70, { align });
+      await aTimeout(40);
+      const edge = document.createElement('div');
+      edge.style.cssText = 'position: sticky; top: 0; width: 0; height: 0; pointer-events: none';
+      body.prepend(edge);
+      const viewportStart = edge.getBoundingClientRect().top;
+      edge.remove();
+      const viewportEnd = viewportStart + body.clientHeight * 1.25;
+      const rowRect = target.getBoundingClientRect();
+      const error = align === 'center'
+        ? (rowRect.top + rowRect.bottom - viewportStart - viewportEnd) / 2
+        : rowRect.bottom - viewportEnd;
+      expect(Math.abs(error), `${align} zoomed rendered alignment`).to.be.at.most(1);
+      expect(window.scrollY).to.equal(pageBefore);
+      expect(outer.scrollTop).to.equal(outerBefore);
+      expect(body.scrollLeft).to.equal(horizontalBefore);
+    }
     body.scrollTop = target.offsetTop + 1;
     body.dispatchEvent(new Event('scroll'));
     await aTimeout(40);
