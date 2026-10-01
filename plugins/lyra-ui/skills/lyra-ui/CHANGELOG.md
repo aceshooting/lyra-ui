@@ -1,5 +1,14 @@
 # Changelog
 
+## 25.3.1
+
+### Patch Changes
+
+- 8fa2d03: Give language choices a comfortable 3rem minimum row height independent of compact triggers or density, add roomier block padding, and wrap long native labels while retaining keyboard navigation, RTL and viewport scrolling.
+- cc451c6: Clarify that theme.css includes the default Shadcn look and distinguish optional look sheets from legacy mode compatibility aliases.
+- 1993c8a: Validate the latest stable syntax-highlighting, math-rendering and email-parsing dependencies while retaining support for the existing Shiki peer range.
+- f0212e7: Keep nested menu labels readable on narrow viewports by trying placement above or below the parent when neither side has enough space. Preserve ordinary side placement, RTL navigation, and menubar attachment.
+
 ## 25.3.0
 
 ### Minor Changes
