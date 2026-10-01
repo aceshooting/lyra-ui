@@ -595,7 +595,7 @@ export function policyAccountingFailures(result, expectedTestFileCount) {
 export function runTestAssertionPolicy({
   cwd = packageDir,
   projectFile = configFile,
-  expectedTestFileCount = 723,
+  expectedTestFileCount = 724,
   includeFile = defaultTestFileFilter,
 } = {}) {
   const api = new API({ cwd });

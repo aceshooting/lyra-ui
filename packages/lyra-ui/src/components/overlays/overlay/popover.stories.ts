@@ -156,6 +156,41 @@ export const ExternalAnchor: Story = {
   `,
 };
 
+function onCollectionClick(event: MouseEvent): void {
+  const boundary = event.currentTarget as HTMLElement;
+  const target = (event.target as Element).closest('button');
+  if (!target) return;
+  const popover = boundary.parentElement!.querySelector<LyraPopover>('lr-popover')!;
+  popover.interactionBoundary = boundary;
+  if (popover.open && popover.anchor === target) {
+    void popover.hide();
+    return;
+  }
+  popover.anchor = target;
+  void popover.show();
+}
+
+export const DomInteractionBoundary: Story = {
+  name: 'DOM anchors in an interaction boundary',
+  parameters: {
+    docs: {
+      description: {
+        story: 'The property-only `interactionBoundary` keeps pointer presses within a collection inside light-dismiss containment. Each button owns its activation handler; switching `.anchor` preserves the open popup and automatic DOM positioning without a hide/show cycle. Activate the current point again, press Escape, or click outside to close. The boundary adds no generated ARIA or focus-return behavior.',
+      },
+    },
+  },
+  render: () => html`
+    <div>
+      <div @click=${onCollectionClick} style="display:flex;gap:var(--lr-space-2xl);padding:var(--lr-space-l)">
+        <button type="button">First point</button>
+        <button type="button">Second point</button>
+        <button type="button">Third point</button>
+      </div>
+      <lr-popover placement="bottom"><p>Details follow the selected DOM point.</p></lr-popover>
+    </div>
+  `,
+};
+
 export const DisclosureNavigation: Story = {
   name: 'Disclosure navigation (popup-role="none")',
   parameters: {

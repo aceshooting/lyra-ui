@@ -97498,6 +97498,16 @@
             "default": false
           },
           {
+            "name": "interactionBoundary",
+            "attribute": null,
+            "type": "Element | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "locale",
             "attribute": "locale",
             "type": "string",
