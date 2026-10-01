@@ -1,8 +1,12 @@
 # Native document editing
 
-Status: planned future work. No document editor is shipped or promised for the current release.
+Status: feasibility in progress. No document editor is shipped or promised for the current release.
 Existing `lr-docx-viewer` remains a lightweight, read-only semantic viewer. Component names,
 engine selection and packaging are decided by the first phase below.
+
+The [preliminary feasibility findings](document-editing-feasibility.md) record the candidate
+engine, rejected integration path, dependency boundaries and remaining qualification. Basic
+prototype success does not complete the phase or establish document fidelity.
 
 ## Objective and boundaries
 
@@ -49,7 +53,7 @@ interactive increment. Later phases do not postpone those requirements.
 
 ### 0. Feasibility and engine decision
 
-- [ ] Compare a public optional engine behind native Lyra controls, a cohesive reusable engine
+- [x] Compare a public optional engine behind native Lyra controls, a cohesive reusable engine
   subset, and an independently maintained editor. Record ownership, licenses and maintenance cost.
 - [ ] Prove mounting, selection, caret, IME and toolbar focus in a small Lit composition. Validate
   shadow-root support explicitly: document-level focus and selection assumptions may require an
