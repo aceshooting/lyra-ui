@@ -2505,6 +2505,53 @@ test('upgrade dependency-only mode installs and synchronizes peers without gener
   }
 });
 
+test('upgrade keeps the supported Shiki peer floor while refreshing its development version', () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'lyra-upgrade-shiki-'));
+  try {
+    mkdirSync(path.join(root, 'scripts'), { recursive: true });
+    mkdirSync(path.join(root, 'packages/lyra-ui'), { recursive: true });
+    mkdirSync(path.join(root, 'bin'));
+    copyFileSync(path.join(repoRoot, 'scripts/upgrade.sh'), path.join(root, 'scripts/upgrade.sh'));
+    writeFileSync(path.join(root, '.nvmrc'), '22.23.2\n');
+    const manifestPath = path.join(root, 'packages/lyra-ui/package.json');
+    writeFileSync(manifestPath, JSON.stringify({
+      peerDependencies: { shiki: '^4.4.3' },
+      devDependencies: { shiki: '^4.4.3' },
+    }));
+    const nodeStub = path.join(root, 'bin/node');
+    writeFileSync(nodeStub, '#!/usr/bin/env bash\nif [[ "$1" == "-p" ]]; then echo "22.23.2"; fi\n');
+    chmodSync(nodeStub, 0o755);
+    const pnpmStub = path.join(root, 'bin/pnpm');
+    writeFileSync(pnpmStub, `#!${process.execPath}
+const fs = require('node:fs');
+const args = process.argv.slice(2);
+if (args[0] === 'dlx') {
+  const manifest = JSON.parse(fs.readFileSync('packages/lyra-ui/package.json', 'utf8'));
+  const section = args[args.indexOf('--dep') + 1];
+  const rejected = args.includes('--reject') ? args[args.indexOf('--reject') + 1].split(',') : [];
+  if (section === 'peer') {
+    if (!rejected.includes('shiki')) manifest.peerDependencies.shiki = '^4.5.0';
+  } else {
+    manifest.devDependencies.shiki = '^4.5.0';
+  }
+  fs.writeFileSync('packages/lyra-ui/package.json', JSON.stringify(manifest));
+}
+`);
+    chmodSync(pnpmStub, 0o755);
+    const result = spawnSync('bash', ['scripts/upgrade.sh'], {
+      cwd: root,
+      encoding: 'utf8',
+      env: { ...process.env, PATH: `${path.join(root, 'bin')}:/usr/bin:/bin`, VERIFY: '0' },
+    });
+    assert.equal(result.status, 0, result.stderr);
+    const upgraded = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    assert.equal(upgraded.devDependencies.shiki, '^4.5.0');
+    assert.equal(upgraded.peerDependencies.shiki, '^4.4.3');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 /** Run one helper from upgrade.sh's exact-Node activation block against a fixture tree. The block
  *  is extracted rather than re-implemented so the test fails when the script's own resolution
  *  changes, and the ambient host's real version-manager directories are replaced by the fixture. */

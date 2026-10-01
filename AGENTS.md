@@ -126,6 +126,15 @@ three-engine baseline: **[docs/agents/component-scaffold.md](docs/agents/compone
 
 - `packages/lyra-ui/package.json#scripts.contract-policy` and `.github/workflows/ci.yml` are the
   authoritative gate lists; reproduce CI failures in that order, never from a prose copy.
+- Before every release, run `./scripts/upgrade.sh` on `ssh cygnus` with the pinned Node version.
+  If the author has run it for this release, use that completed run; do not repeat it or run it
+  concurrently. Review and verify its resulting changes before proceeding.
+  Upgrade dependencies across the root and every workspace package to their latest stable versions,
+  review the manifest/lockfile/generated changes, and fix compatibility failures before preparing
+  the version bump. Keep supported consumer peer ranges unless a reviewed API change requires
+  narrowing them; test their latest versions without dropping supported older peers unnecessarily.
+  Commit the verified dependency update before `pnpm release:prepare` so preparation starts clean.
+  Do not add dependency upgrades after release qualification or mutate an existing release tag.
 - Release flow: `pnpm release:prepare`, review, commit `chore(release): <pkg>@<version>`, push to
   main; push CI, all Test All Browsers aggregates and all full-engine shards must pass on that exact
   commit; then `gh workflow run release.yml --ref main` tags, releases and dispatches `publish.yml`

@@ -442,6 +442,20 @@ and the release flow below.
 
 Releases run in four steps; nothing is tagged or published from a workstation.
 
+Before starting those steps for **every release**, run `./scripts/upgrade.sh` on `ssh cygnus`
+with the exact `.nvmrc` Node patch. An author-run upgrade for this release satisfies this step:
+wait for it to finish, then review and verify its output instead of running a duplicate or
+concurrent upgrade. The release starts with the latest stable dependencies in the
+root and every workspace package, including the latest tested optional peers. Review manifest,
+lockfile, compatibility-profile and generated-artifact changes; resolve compatibility or
+verification failures and commit that update before preparing the release version. Preserve
+supported consumer peer ranges unless the implementation needs a reviewed, semver-appropriate
+compatibility change: installing and testing the latest peer does not itself justify dropping an
+older supported peer. If a latest version cannot be supported, document the concrete blocker
+instead of silently calling an older dependency current. Complete this upgrade before release
+qualification; any later dependency change requires a new commit and fresh qualification, and
+an already-created release tag is never rewritten to include it.
+
 1. **Prepare locally.** `pnpm release:prepare` (`scripts/release-prepare.mjs`) requires the exact
    `.nvmrc` Node patch, a clean tree, and a HEAD containing `origin/main`. It fetches `origin/main`
    and published tags before bumping, refusing to overwrite conflicting local tags. It consumes every
