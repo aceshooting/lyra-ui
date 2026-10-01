@@ -154,8 +154,9 @@ Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS
   utilities, and separate decorative and control-border tokens.
 
 See the [feature guide](./packages/lyra-ui/README.md#highlights) for APIs and examples.
-The [roadmap](./docs/roadmap.md) tracks the v24 library release; its
-[rollout page](./docs/roadmap/post-v24-rollout.md) covers the later website, admin and consumer work.
+The [roadmap](./docs/roadmap.md) tracks future scope and historical release commitments, including
+[native document editing](./docs/roadmap/document-editing.md). Its
+[rollout page](./docs/roadmap/post-v24-rollout.md) covers website, admin and consumer work.
 For version-by-version changes and older upgrades, use the
 [package changelog](./packages/lyra-ui/CHANGELOG.md).
 Upgrading to v23? Review the [compatibility and sizing changes](./packages/lyra-ui/README.md#upgrading-to-v23)

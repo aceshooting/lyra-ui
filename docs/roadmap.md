@@ -2,14 +2,17 @@
 
 ## Roadmap index and release status
 
-This page keeps the current release contract and stable historical anchors. Follow the linked
-focused pages for full earlier-release decisions and the application rollout.
+This page indexes future scope and preserves stable historical release anchors. Follow the linked
+focused pages for delivery criteria, earlier-release decisions and the application rollout.
 
-- **Current v24 scope:** [design completion](#design-completion-through-v24),
+- **Planned document editing:** [native editor delivery sequence](roadmap/document-editing.md),
+  from basic rich text and DOCX round trips through fidelity, agent operations, review and
+  collaboration. This is future scope, not part of the current release qualification.
+- **v24 scope and historical contract:** [design completion](#design-completion-through-v24),
   [compatibility cleanup](#v24-compatibility-cleanup), and the
   [file-layout and context plan](#file-layout-and-ai-context-efficiency), including the
   [structural consolidation scope](#v24-structural-consolidation).
-- **Before v24 publication:** complete and document the library's supported styling, options,
+- **v24 publication criteria:** complete and document the library's supported styling, options,
   localization, migration and cleanup behavior; qualify the exact release candidate and keep open
   device, human-review and measurement limits explicit.
 - **After v24 publication:** upgrade `lyra-ui.com`, `lyra-admin` and every maintained consumer;
