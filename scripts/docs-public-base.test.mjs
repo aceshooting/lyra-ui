@@ -11,6 +11,10 @@ const credentialBase = new URL(branded);
 credentialBase.username = 'fixture';
 credentialBase.password = 'synthetic-password';
 
+function sitemapLocations(xml) {
+  return Array.from(xml.matchAll(/<loc>([^<]*)<\/loc>/g), (match) => match[1]);
+}
+
 function sitemapFixture(run) {
   const root = mkdtempSync(join(tmpdir(), 'lyra-docs-base-'));
   try {
@@ -38,12 +42,12 @@ test('custom sitemap generation preserves the standalone source and records the 
     assert.equal(result.status, 0, result.stderr);
     const source = readFileSync(join(root, '.storybook/sitemap.xml'), 'utf8');
     const built = readFileSync(join(root, 'storybook-static/sitemap.xml'), 'utf8');
-    assert.ok(built.includes(`<loc>${branded}</loc>`), 'the built sitemap must use the selected public base');
-    assert.ok(built.includes(`${branded}?path=/docs/alpha--docs`));
-    assert.ok(source.includes(`<loc>${standalone}</loc>`));
-    assert.ok(!source.includes(branded));
-    assert.ok(!built.includes('alpha--example'));
-    assert.ok(built.indexOf('alpha--docs') < built.indexOf('zeta--docs'));
+    assert.deepEqual(sitemapLocations(built), [
+      branded, `${branded}?path=/docs/alpha--docs`, `${branded}?path=/docs/zeta--docs`,
+    ], 'the artifact must contain exactly the selected base and sorted documentation routes');
+    assert.deepEqual(sitemapLocations(source), [
+      standalone, `${standalone}?path=/docs/alpha--docs`, `${standalone}?path=/docs/zeta--docs`,
+    ], 'the source must retain only standalone URLs, without story routes');
     assert.equal(readFileSync(join(root, 'storybook-static/robots.txt'), 'utf8'),
       `User-agent: *\nAllow: /\n\nSitemap: ${branded}sitemap.xml\n`);
     assert.deepEqual(JSON.parse(readFileSync(join(root, 'storybook-static/docs-public-base.json'), 'utf8')),
@@ -96,7 +100,10 @@ test('manager metadata uses correct HTML and JSON escaping without changing repo
 test('sitemap URLs encode story identifiers and escape XML without inventing separate documents', async () => {
   const { renderDocsSitemap } = await import('./docs-public-base.mjs');
   const xml = renderDocsSitemap(['alpha&beta--docs'], 'https://docs.example.test/research&development/');
-  assert.ok(xml.includes('https://docs.example.test/research&amp;development/?path=/docs/alpha%26beta--docs'));
+  assert.deepEqual(sitemapLocations(xml), [
+    'https://docs.example.test/research&amp;development/',
+    'https://docs.example.test/research&amp;development/?path=/docs/alpha%26beta--docs',
+  ]);
   assert.ok(xml.includes('one index.html'));
 });
 
