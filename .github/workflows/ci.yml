@@ -556,6 +556,7 @@ jobs:
           name: packed-attw-tarball
           path: artifacts/packed-attw
           if-no-files-found: error
+          retention-days: 7
 
   packed_consumer_contract:
     name: packed-consumer / contract
@@ -592,6 +593,7 @@ jobs:
           name: packed-migration-evidence
           path: ${{ runner.temp }}/packed-migration-evidence
           if-no-files-found: ignore
+          retention-days: 14
       # Reuse the exact prepacked Lyra artifact from the contract check above. Its receipt binds
       # these bytes to that pack; the peer runner then validates the archive and installs it through
       # all four profiles under strict pnpm and npm consumers.
@@ -1014,7 +1016,7 @@ jobs:
           name: visual-regression-diff-${{ matrix.shard }}-of-3
           path: packages/lyra-ui/.visual-diff-output
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: ${{ job.status == 'success' && 7 || 14 }}
           include-hidden-files: true
 
   # Keep one stable required-check name for branch protection and release qualification while the
