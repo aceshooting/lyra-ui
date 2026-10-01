@@ -31,6 +31,30 @@ describe('lr-agent-question', () => {
     expect(el.status).to.equal('submitted');
   });
 
+  it('emits one owned draft snapshot for a field edit and ignores a stale request edit', async () => {
+    const el = await fixture<LyraAgentQuestion>(html`<lr-agent-question request-id="first" .schema=${schema}></lr-agent-question>`);
+    const input = form(el).shadowRoot!.querySelector<HTMLInputElement>('input[type="text"]')!;
+    const drafts: Array<{ requestId: string; value: { name?: string } }> = [];
+    let leakedFormInputs = 0;
+    el.addEventListener('lr-question-input', (event) => drafts.push(event.detail));
+    el.addEventListener('lr-input', () => leakedFormInputs++);
+
+    input.value = 'Ada';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(drafts).to.deep.equal([{ requestId: 'first', value: { name: 'Ada' } }]);
+    expect(Object.isFrozen(drafts[0])).to.equal(true);
+    expect(Object.isFrozen(drafts[0]!.value)).to.equal(true);
+    expect(leakedFormInputs).to.equal(0);
+
+    el.requestId = 'second';
+    input.value = 'stale';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(drafts).to.have.lengthOf(1);
+    await el.updateComplete;
+    expect(el.value).to.deep.equal({});
+    expect(drafts[0]!.value).to.deep.equal({ name: 'Ada' });
+  });
+
   it('declines without validation or leaking draft content', async () => {
     const el = await fixture<LyraAgentQuestion>(html`<lr-agent-question request-id="q" .schema=${schema} .value=${{ name: 'private' }}></lr-agent-question>`);
     const responses: unknown[] = [];

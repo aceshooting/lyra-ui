@@ -820,6 +820,36 @@ it('returns focus to an opener the host re-shows only after lr-close', async () 
 
 
 describe('native modal interoperability', () => {
+  it('reconciles a directly closed native carrier through one public API close', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`<div>
+      <dialog><button>Return</button></dialog>
+      <lr-tool-result-dialog tool-name="run_python"></lr-tool-result-dialog>
+    </div>`);
+    const native = wrapper.querySelector('dialog')!;
+    const el = wrapper.querySelector('lr-tool-result-dialog') as LyraToolResultDialog;
+    const reasons: string[] = [];
+    el.addEventListener('lr-close', (event) => reasons.push(event.detail.reason));
+    try {
+      native.showModal();
+      el.show();
+      await el.updateComplete;
+      const carrier = el.shadowRoot!.querySelector('dialog')!;
+      expect(carrier.open).to.equal(true);
+      carrier.close();
+      await waitUntil(() => !el.open);
+      await el.updateComplete;
+      expect(reasons).to.deep.equal(['api']);
+      expect(carrier.open).to.equal(false);
+      expect(el.hasAttribute('data-native-modal-active')).to.equal(false);
+      expect(native.open).to.equal(true);
+      await waitUntil(() => document.activeElement === native.querySelector('button'));
+    } finally {
+      el.close();
+      await el.updateComplete;
+      native.close();
+    }
+  });
+
   it('keeps the ordinary modal path when no native modal is open', async () => {
     const el = await fixture<LyraToolResultDialog>(html`<lr-tool-result-dialog open></lr-tool-result-dialog>`);
     expect(el.shadowRoot!.querySelector('dialog') === null).to.equal(true);

@@ -215,6 +215,33 @@ describe("loadShikiHighlighterCore", () => {
 });
 
 describe('loadShikiHighlighter diagnostics', () => {
+  it('fails closed for a resolved peer without createHighlighter and an invalid factory result', async () => {
+    const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+    const originalIssuedWarnings = runtime.litIssuedWarnings;
+    const originalWarn = console.warn;
+    const messages: string[] = [];
+    runtime.litIssuedWarnings = new Set();
+    console.warn = (...args: unknown[]) => messages.push(args.map(String).join(' '));
+    try {
+      __setShikiModuleLoaderForTesting(async () => ({ default: { privatePeerValue: 'secret' } }));
+      expect(await loadShikiHighlighter()).to.equal(null);
+      expect(await loadShikiHighlighter()).to.equal(null);
+      __setShikiModuleLoaderForTesting(async () => ({
+        createHighlighter: async () => ({ getLoadedLanguages: () => [] }),
+      }));
+      expect(await loadShikiHighlighter()).to.equal(null);
+      expect(messages).to.have.lengthOf(1);
+      expect(messages[0]).to.contain('syntax highlighting');
+      expect(messages[0]).to.not.contain('privatePeerValue');
+      expect(messages[0]).to.not.contain('createHighlighter');
+    } finally {
+      __setShikiModuleLoaderForTesting(undefined);
+      if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+      else runtime.litIssuedWarnings = originalIssuedWarnings;
+      console.warn = originalWarn;
+    }
+  });
+
   it('uses one fixed development-only diagnostic for a failed optional peer without exposing its error', async () => {
     const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
     const originalIssuedWarnings = runtime.litIssuedWarnings;

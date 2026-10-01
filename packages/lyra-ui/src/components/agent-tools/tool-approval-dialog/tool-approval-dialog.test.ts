@@ -1521,3 +1521,33 @@ it('renders the disabled edit action with the shared disabled opacity token', as
   expect(getComputedStyle(edit).opacity).to.equal(expected);
   expect(getComputedStyle(edit).opacity).not.to.equal('1');
 });
+
+it('reconciles a directly closed native carrier through one public API close', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div>
+    <dialog><button>Return</button></dialog>
+    <lr-tool-approval-dialog tool-name="run_python" .args=${ARGS}></lr-tool-approval-dialog>
+  </div>`);
+  const native = wrapper.querySelector('dialog')!;
+  const el = wrapper.querySelector('lr-tool-approval-dialog') as LyraToolApprovalDialog;
+  const reasons: string[] = [];
+  el.addEventListener('lr-close', (event) => reasons.push(event.detail.reason));
+  try {
+    native.showModal();
+    el.show();
+    await el.updateComplete;
+    const carrier = el.shadowRoot!.querySelector('dialog')!;
+    expect(carrier.open).to.equal(true);
+    carrier.close();
+    await waitUntil(() => !el.open);
+    await el.updateComplete;
+    expect(reasons).to.deep.equal(['api']);
+    expect(carrier.open).to.equal(false);
+    expect(el.hasAttribute('data-native-modal-active')).to.equal(false);
+    expect(native.open).to.equal(true);
+    await waitUntil(() => document.activeElement === native.querySelector('button'));
+  } finally {
+    el.close();
+    await el.updateComplete;
+    native.close();
+  }
+});

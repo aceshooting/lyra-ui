@@ -297,21 +297,16 @@ for the renderer setup, machine-readable matrix, diagnostics, and capability lim
 
 ### Verified release snapshot
 
-The dated snapshot below records the tests that qualified
-[`@aceshooting/lyra-ui@12.1.1`](https://github.com/aceshooting/lyra-ui/commit/2b56b7af6eec938f21fb4aee29f59361baca9265)
-on 2026-08-22. The workflow badges above remain the source of truth for newer commits.
+The checks below qualified `@aceshooting/lyra-ui@25.0.0` on
+[`33cff6d`](https://github.com/aceshooting/lyra-ui/commit/33cff6d4baa1efd61766ea888defad31fc69ef73).
+The workflow badges above report newer commits.
 
 | Scope | Result |
 | --- | --- |
-| Four-shard Chromium coverage sweep | All 496 test files: 20,657 passed / 14 expected skips; zero failures |
-| Coverage | 99.61% statements, 96.97% branches, 99.91% functions, 99.61% lines (99.02% arithmetic mean) |
-| Visual and workspace contracts | 253 captures: 129 exact, 124 evidence-only, 0 mismatches; all 249 workspace flags verified |
-| [Push CI](https://github.com/aceshooting/lyra-ui/actions/runs/32534261216) | 41/41 jobs passed in 13m00s |
-| [Full browser-engine suite](https://github.com/aceshooting/lyra-ui/actions/runs/32534262485) | 16/16 complete Firefox/WebKit shards passed in 7m48s |
-| [Test All Browsers](https://github.com/aceshooting/lyra-ui/actions/runs/32534264180) | Plan, 20/20 Chromium/Chrome/Edge/Firefox/Safari shards, and 5/5 fail-closed aggregates passed in 12m12s |
-
-A post-release run completed the 41-job push CI in
-[8m37s](https://github.com/aceshooting/lyra-ui/actions/runs/32531724224).
+| [Push CI](https://github.com/aceshooting/lyra-ui/actions/runs/36788745458) | Passed |
+| [Test All Browsers](https://github.com/aceshooting/lyra-ui/actions/runs/36788769887) | Passed |
+| [Full browser-engine suite](https://github.com/aceshooting/lyra-ui/actions/runs/36788772557) | Passed |
+| [Codecov line coverage](https://app.codecov.io/gh/aceshooting/lyra-ui/commit/33cff6d4baa1efd61766ea888defad31fc69ef73) | 99.53% (459,954 / 462,114 lines) |
 
 ## Built with
 
