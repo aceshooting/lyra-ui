@@ -17207,7 +17207,7 @@
       }
     },
     {
-      "module": "src/components/forms/currency-picker/currency-picker.class.ts",
+      "module": "src/components/forms/currency-picker/currency-types.ts",
       "exportName": "LyraCurrencyEntry",
       "kind": "interface",
       "fingerprint": "3828370185c7b9905ab5",

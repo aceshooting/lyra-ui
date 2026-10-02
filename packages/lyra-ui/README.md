@@ -214,7 +214,7 @@ import "@aceshooting/lyra-ui/all.js";
 > component registration entry, family entry, or `@aceshooting/lyra-ui/all.js` to define tags.
 > An unregistered tag remains inert even when the import and build succeed.
 
-`all.js` registers 288 tags — every component **except** the 15 inventory-designated
+`all.js` registers 289 tags — every component **except** the 15 inventory-designated
 optional-peer-family tags: `<lr-chart>` and its 8 typed subclasses, `<lr-box-plot>`,
 `<lr-histogram>`, `<lr-map>`, `<lr-graph>`, `<lr-knowledge-graph-explorer>`, and
 `<lr-geojson-viewer>` (see Install above). Those always require their own explicit subpath import,
