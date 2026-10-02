@@ -1,4 +1,4 @@
-import type { LyraCurrencyEntry } from './currency-picker.class.js';
+import type { LyraCurrencyEntry } from './currency-types.js';
 import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,

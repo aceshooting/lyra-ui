@@ -157,12 +157,94 @@ function isObjectTypeWidening(before, after) {
   return true;
 }
 
-function isTypeWidening(before, after, baseline, current) {
+/** Prove additive literal members in readonly arrays, including unchanged-shape Readonly objects
+ * containing them. Other leaves, mutable containers and arbitrary generic wrappers are opaque. */
+function isReadonlyLiteralCollectionWidening(before, after, baseline, current) {
+  const parseType = (text) => {
+    const normalized = normalizeType(text);
+    if (!/^(?:readonly\b|Readonly<)/.test(normalized)) return undefined;
+    const source = `type Collection = ${normalized};`;
+    const parsed = parseSync('readonly-collection.d.ts', source, { lang: 'ts', sourceType: 'module' });
+    const declaration = parsed.program.body[0];
+    if (parsed.errors.length > 0 || parsed.program.body.length !== 1
+      || declaration?.type !== 'TSTypeAliasDeclaration') return undefined;
+    return { source, node: declaration.typeAnnotation };
+  };
+  const oldType = parseType(before);
+  const nextType = parseType(after);
+  if (!oldType || !nextType) return false;
+  const unwrap = (node) => {
+    while (node?.type === 'TSTypeAnnotation' || node?.type === 'TSParenthesizedType') {
+      node = node.typeAnnotation;
+    }
+    return node;
+  };
+  const literalElements = (node) => {
+    if (node?.type !== 'TSTypeOperator' || node.operator !== 'readonly') return undefined;
+    const array = unwrap(node.typeAnnotation);
+    if (array?.type !== 'TSArrayType') return undefined;
+    const literals = new Set();
+    const collect = (element) => {
+      element = unwrap(element);
+      if (element?.type === 'TSUnionType') return element.types.every(collect);
+      if (element?.type !== 'TSLiteralType' || typeof element.literal?.value !== 'string') return false;
+      literals.add(element.literal.value);
+      return true;
+    };
+    return collect(array.elementType) && literals.size > 0 ? literals : undefined;
+  };
+  const readonlyMembers = (node) => {
+    if (baseline?.shadowedReadonly || current?.shadowedReadonly) return undefined;
+    if (node?.type !== 'TSTypeReference' || node.typeName?.type !== 'Identifier'
+      || node.typeName.name !== 'Readonly' || node.typeArguments?.params?.length !== 1) return undefined;
+    const object = unwrap(node.typeArguments.params[0]);
+    if (object?.type !== 'TSTypeLiteral') return undefined;
+    const members = new Map();
+    for (const member of object.members) {
+      if (member.type !== 'TSPropertySignature' || member.computed || !member.typeAnnotation) return undefined;
+      const key = member.key?.type === 'Identifier' ? member.key.name
+        : member.key?.type === 'Literal' && typeof member.key.value === 'string' ? member.key.value
+          : undefined;
+      if (key === undefined || members.has(key)) return undefined;
+      members.set(key, member);
+    }
+    return members;
+  };
+  const widen = (oldNode, nextNode) => {
+    oldNode = unwrap(oldNode);
+    nextNode = unwrap(nextNode);
+    const oldElements = literalElements(oldNode);
+    const nextElements = literalElements(nextNode);
+    if (oldElements || nextElements) {
+      return Boolean(oldElements && nextElements && nextElements.size > oldElements.size
+        && [...oldElements].every((literal) => nextElements.has(literal)));
+    }
+    const oldMembers = readonlyMembers(oldNode);
+    const nextMembers = readonlyMembers(nextNode);
+    if (!oldMembers || !nextMembers || oldMembers.size !== nextMembers.size) return false;
+    let widened = false;
+    for (const [name, member] of oldMembers) {
+      const next = nextMembers.get(name);
+      if (!next || Boolean(member.optional) !== Boolean(next.optional)
+        || Boolean(member.readonly) !== Boolean(next.readonly)) return false;
+      const oldAnnotation = unwrap(member.typeAnnotation);
+      const nextAnnotation = unwrap(next.typeAnnotation);
+      if (normalizeType(nodeText(oldType, oldAnnotation)) === normalizeType(nodeText(nextType, nextAnnotation))) continue;
+      if (!widen(oldAnnotation, nextAnnotation)) return false;
+      widened = true;
+    }
+    return widened;
+  };
+  return widen(oldType.node, nextType.node);
+}
+
+function isTypeWidening(before, after, baseline, current, allowReadonlyCollections = true) {
   const resolvedBefore = resolveUniqueAliases(before, baseline);
   const resolvedAfter = resolveUniqueAliases(after, current);
   if (resolvedBefore !== normalizeType(before) || resolvedAfter !== normalizeType(after)) {
-    return isTypeWidening(resolvedBefore, resolvedAfter, baseline, current);
+    return isTypeWidening(resolvedBefore, resolvedAfter, baseline, current, allowReadonlyCollections);
   }
+  if (allowReadonlyCollections && isReadonlyLiteralCollectionWidening(before, after, baseline, current)) return true;
   if (isObjectTypeWidening(before, after)) return true;
   const oldAtoms = typeAtoms(before);
   const newAtoms = typeAtoms(after);
@@ -195,7 +277,7 @@ function isTypeWidening(before, after, baseline, current) {
       const unclaimed = new Set(added);
       const everyDroppedAtomWidened = dropped.every((oldAtom) => {
         for (const candidate of unclaimed) {
-          if (isTypeWidening(oldAtom, candidate, baseline, current)) {
+          if (isTypeWidening(oldAtom, candidate, baseline, current, false)) {
             unclaimed.delete(candidate);
             return true;
           }
@@ -225,7 +307,7 @@ function isTypeWidening(before, after, baseline, current) {
       widened = true;
       continue;
     }
-    if (!isTypeWidening(beforeArg, afterArg, baseline, current)) return false;
+    if (!isTypeWidening(beforeArg, afterArg, baseline, current, false)) return false;
     widened = true;
   }
   return widened;
@@ -2629,6 +2711,9 @@ export function normalizePublicApi({ packageJson, manifest, declarations = {} })
         left.localeCompare(right)),
     ),
     typeAliases: normalizedTypeAliases(graph),
+    shadowedReadonly: [...(graph?.modules.values() ?? [])].some((module) =>
+      module.imports.has('Readonly') || [...module.symbols.values()].some((records) =>
+        records.some((record) => record.name === 'Readonly'))),
   };
 }
 

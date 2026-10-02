@@ -1,4 +1,4 @@
-import type { LyraCurrencyEntry } from './currency-picker.class.js';
+import type { LyraCurrencyEntry } from './currency-types.js';
 import { getDisplayNames, getNumberFormat } from '../../../internal/intl-cache.js';
 
 export interface ResolvedCurrencyEntry {

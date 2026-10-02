@@ -455,3 +455,229 @@ test('authored-document validation rejects duplicate exact signatures', () => {
   assert.equal(gaps[0].tag, 'lr-extra');
   assert.match(gaps[0].names.join('\n'), /LyraExtraEntry.*signature, found 2/u);
 });
+
+function relocationFixture(data = fixture()) {
+  const previous = owner('example');
+  const toModule = 'src/components/forms/example/example-types.ts';
+  data.census = data.census.filter(record => record.exportName !== 'LyraExtraEntry');
+  const moved = data.census.find(record => record.exportName === previous.exportName);
+  moved.module = toModule;
+  moved.fingerprint = fingerprints.previous;
+  data.baseline.documented[1].routes.reverse();
+  data.baseline.documented[1].annotations = { notes: ['Preserve relocated owner metadata.'] };
+  data.request = {
+    schemaVersion: 1,
+    updates: [],
+    enrollments: [],
+    relocations: [{ ...previous, toModule, expectedFingerprint: fingerprints.previous }],
+  };
+  return data;
+}
+
+function rejectRelocationRequest(change) {
+  const { request } = relocationFixture();
+  change(request);
+  assert.throws(() => parse(request));
+}
+
+function rejectRelocationCandidate(change) {
+  const data = relocationFixture();
+  change(data);
+  const before = structuredClone(data);
+  deepFreeze(data);
+  assert.throws(() => prepareSourceContractBaseline(data.census, data.baseline, data.request));
+  assert.deepEqual(data, before);
+}
+
+test('the parser accepts a relocation-only request and optional empty relocations on existing requests', () => {
+  const { request } = relocationFixture();
+  assert.deepEqual(parse(request), request);
+  const existing = { ...fixture().request, relocations: [] };
+  assert.deepEqual(parse(existing), existing);
+  assert.throws(() => parse(request, 'release'));
+});
+
+for (const [name, change] of [
+  ['null relocations', request => { request.relocations = null; }],
+  ['non-array relocations', request => { request.relocations = {}; }],
+  ['three empty operation lists', request => { request.relocations = []; }],
+  ['missing required updates', request => { delete request.updates; }],
+  ['missing required enrollments', request => { delete request.enrollments; }],
+  ['a null relocation', request => { request.relocations[0] = null; }],
+  ['a missing source module', request => { delete request.relocations[0].module; }],
+  ['a missing target module', request => { delete request.relocations[0].toModule; }],
+  ['a missing fingerprint preimage', request => { delete request.relocations[0].expectedFingerprint; }],
+  ['an unknown relocation field', request => { request.relocations[0].force = true; }],
+  ['a caller-supplied relocation fingerprint', request => { request.relocations[0].fingerprint = fingerprints.current; }],
+  ['caller-supplied relocation routes', request => { request.relocations[0].routes = ['src/lyra.ts']; }],
+  ['a replacement documentation locator', request => { request.relocations[0].locator = location(owner('example')).locator; }],
+  ['a replacement exported name', request => { request.relocations[0].toExportName = 'LyraOtherEntry'; }],
+  ['an unsupported relocated kind', request => { request.relocations[0].kind = 'type'; }],
+  ['an empty relocated export name', request => { request.relocations[0].exportName = ''; }],
+  ['a self relocation', request => { request.relocations[0].toModule = request.relocations[0].module; }],
+]) {
+  test(`the relocation parser rejects ${name}`, () => rejectRelocationRequest(change));
+}
+
+test('relocations require canonical source and target paths', () => {
+  for (const field of ['module', 'toModule']) {
+    for (const path of [
+      '/src/example.ts', '../src/example.ts', 'src/../example.ts', './src/example.ts',
+      'src//example.ts', 'src/./example.ts', 'src\\example.ts', 'dist/example.ts',
+      'src/example.js', 'src/example\0.ts', '', null,
+    ]) {
+      rejectRelocationRequest(request => { request.relocations[0][field] = path; });
+    }
+  }
+});
+
+test('relocations require exact fingerprint preimages', () => {
+  for (const value of ['', 'a'.repeat(19), 'a'.repeat(21), 'A'.repeat(20), 'g'.repeat(20), null, 1]) {
+    rejectRelocationRequest(request => { request.relocations[0].expectedFingerprint = value; });
+  }
+});
+
+test('both relocation endpoints are reserved against updates and enrollments', () => {
+  for (const endpoint of ['module', 'toModule']) {
+    for (const operation of ['updates', 'enrollments']) {
+      rejectRelocationRequest(request => {
+        const move = request.relocations[0];
+        const overlapping = {
+          module: move[endpoint], exportName: move.exportName, kind: move.kind,
+        };
+        request[operation].push(operation === 'updates'
+          ? { ...overlapping, expectedFingerprint: move.expectedFingerprint }
+          : { ...overlapping, ...location(overlapping) });
+      });
+    }
+  }
+});
+
+for (const [name, secondMove] of [
+  ['duplicate moves', move => ({ ...move })],
+  ['one source moving to two targets', move => ({ ...move, toModule: 'src/other.ts' })],
+  ['two sources moving to one target', move => ({ ...move, module: 'src/other.ts' })],
+  ['a forward relocation chain', move => ({ ...move, module: move.toModule, toModule: 'src/other.ts' })],
+  ['a reverse relocation chain', move => ({ ...move, module: 'src/other.ts', toModule: move.module })],
+  ['a relocation swap', move => ({ ...move, module: move.toModule, toModule: move.module })],
+]) {
+  test(`the relocation parser rejects ${name}`, () => {
+    rejectRelocationRequest(request => {
+      request.relocations.push(secondMove(request.relocations[0]));
+    });
+  });
+}
+
+test('relocation changes only the owner module in place and returns an isolated deep clone', () => {
+  const data = relocationFixture();
+  const before = structuredClone(data);
+  const expected = structuredClone(data.baseline);
+  expected.documented[1].module = data.request.relocations[0].toModule;
+  deepFreeze(data);
+
+  const candidate = prepareSourceContractBaseline(data.census, data.baseline, data.request);
+  assert.deepEqual(candidate, expected);
+  assert.deepEqual(data, before);
+  assert.notStrictEqual(candidate.documented[1], data.baseline.documented[1]);
+  assert.notStrictEqual(candidate.documented[1].routes, data.baseline.documented[1].routes);
+  assert.notStrictEqual(candidate.documented[1].locator, data.baseline.documented[1].locator);
+
+  candidate.documented[1].routes.push('src/candidate.ts');
+  candidate.documented[1].locator.tag = 'lr-candidate';
+  candidate.documented[1].annotations.notes.push('Candidate-only relocation note.');
+  candidate.annotations.notes.push('Candidate-only baseline note.');
+  candidate.legacy[0].reason = 'Candidate-only legacy reason.';
+  assert.deepEqual(data, before);
+});
+
+test('disjoint updates, enrollments and relocations can be prepared in one request', () => {
+  const data = fixture();
+  const keeper = owner('keeper');
+  const toModule = 'src/components/forms/keeper/keeper-types.ts';
+  data.census.find(record => record.exportName === keeper.exportName).module = toModule;
+  data.request.relocations = [{ ...keeper, toModule, expectedFingerprint: fingerprints.unchanged }];
+  const expected = structuredClone(data.baseline);
+  expected.documented[0].module = toModule;
+  expected.documented[1].fingerprint = fingerprints.current;
+  expected.documented.push(documentedRecord(owner('extra'), fingerprints.added));
+  assert.deepEqual(prepareSourceContractBaseline(data.census, data.baseline, data.request), expected);
+});
+
+for (const [name, change] of [
+  ['a stale relocation fingerprint preimage', data => {
+    data.request.relocations[0].expectedFingerprint = fingerprints.unexpected;
+  }],
+  ['a source owner still present in the live census', data => {
+    data.census.push(censusRecord(owner('example'), fingerprints.previous));
+  }],
+  ['a source owner absent from the documented baseline', data => {
+    data.baseline.documented.pop();
+  }],
+  ['a source owner enrolled only as legacy', data => {
+    data.baseline.legacy.push(data.baseline.documented.pop());
+  }],
+  ['a source owner also enrolled as legacy', data => {
+    data.baseline.legacy.push(structuredClone(data.baseline.documented[1]));
+  }],
+  ['a target owner absent from the live census', data => {
+    data.census = data.census.filter(record => record.exportName !== 'LyraExampleEntry');
+  }],
+  ['a target already in the documented baseline', data => {
+    const target = structuredClone(data.baseline.documented[1]);
+    target.module = data.request.relocations[0].toModule;
+    data.baseline.documented.push(target);
+  }],
+  ['a target already in the legacy baseline', data => {
+    const target = structuredClone(data.baseline.documented[1]);
+    target.module = data.request.relocations[0].toModule;
+    data.baseline.legacy.push(target);
+  }],
+  ['a target with a changed signature', data => {
+    data.census.find(record => record.exportName === 'LyraExampleEntry').fingerprint = fingerprints.current;
+  }],
+  ['a target with an extra public route', data => {
+    data.census.find(record => record.exportName === 'LyraExampleEntry').routes.push('src/testing.ts');
+  }],
+  ['a target with a missing public route', data => {
+    data.census.find(record => record.exportName === 'LyraExampleEntry').routes.pop();
+  }],
+  ['a target with a renamed export', data => {
+    data.census.find(record => record.exportName === 'LyraExampleEntry').exportName = 'LyraRenamedEntry';
+  }],
+  ['a target with a changed contract kind', data => {
+    data.census.find(record => record.exportName === 'LyraExampleEntry').kind = 'function';
+  }],
+  ['an unrequested dependent signature change', data => {
+    data.census.find(record => record.exportName === 'LyraKeeperEntry').fingerprint = fingerprints.unexpected;
+  }],
+  ['an unrequested route change beside a relocation', data => {
+    data.census.find(record => record.exportName === 'LyraKeeperEntry').routes.pop();
+  }],
+  ['an unrequested new owner beside a relocation', data => {
+    data.census.push(censusRecord(owner('unrequested'), fingerprints.unexpected));
+  }],
+  ['an unrequested removed owner beside a relocation', data => {
+    data.census = data.census.filter(record => record.exportName !== 'LyraKeeperEntry');
+  }],
+  ['a changed legacy owner beside a relocation', data => {
+    data.census.find(record => record.exportName === 'LyraLegacyEntry').fingerprint = fingerprints.unexpected;
+  }],
+]) {
+  test(`relocation rejects ${name} without mutating inputs`, () => rejectRelocationCandidate(change));
+}
+
+test('relocated ownership preserves the authored component declaration contract', () => {
+  assert.deepEqual(documentationGaps(relocationFixture(documentationFixture())), []);
+});
+
+test('relocation does not conceal a field missing from the preserved authored declaration', () => {
+  const data = relocationFixture(documentationFixture());
+  data.documents['llms/forms.md'] = data.documents['llms/forms.md'].replace(
+    'LyraExampleEntry { code: string; label: string }',
+    'LyraExampleEntry { code: string }',
+  );
+  const gaps = documentationGaps(data);
+  assert.equal(gaps.length, 1);
+  assert.equal(gaps[0].tag, 'lr-example');
+  assert.deepEqual(gaps[0].names, ['label']);
+});

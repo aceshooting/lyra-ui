@@ -21,6 +21,22 @@ export function prepareSourceContractBaseline(census, baseline, request) {
   const documented = new Map(next.documented.map(owner => [sourceContractKey(owner), owner]));
   const legacy = new Set(next.legacy.map(sourceContractKey));
   assert.equal(documented.size, next.documented.length, 'Duplicate documented source-contract owner');
+  for (const relocation of request.relocations ?? []) {
+    const key = sourceContractKey(relocation);
+    const targetKey = sourceContractKey({ ...relocation, module: relocation.toModule });
+    assert.ok(!legacy.has(key), `Cannot relocate legacy source-contract owner ${key}`);
+    const owner = documented.get(key);
+    const contract = actual.get(targetKey);
+    assert.ok(owner && contract, `Relocation requires a documented source and live target ${key}`);
+    assert.ok(!actual.has(key), `Relocated source-contract owner remains live ${key}`);
+    assert.ok(!documented.has(targetKey) && !legacy.has(targetKey), `Relocation target is already enrolled ${targetKey}`);
+    assert.equal(owner.fingerprint, relocation.expectedFingerprint, `Stale source-contract fingerprint preimage ${key}`);
+    assert.equal(contract.fingerprint, owner.fingerprint, `Relocation changed source-contract signature ${key}`);
+    assert.deepEqual(owner.routes.slice().sort(), contract.routes, `Relocation changed source-contract routes ${key}`);
+    owner.module = contract.module;
+    documented.delete(key);
+    documented.set(targetKey, owner);
+  }
   for (const update of request.updates) {
     const key = sourceContractKey(update);
     assert.ok(!legacy.has(key), `Cannot update legacy source-contract owner ${key}`);
@@ -68,8 +84,17 @@ export function writePreparedSourceContracts(root, request) {
   // supply alternate documents, census data, or relaxed gap findings to this hosted writer.
   assert.deepEqual(collectGaps(undefined, null, { census, baseline: next }), [],
     'Authored documentation has unresolved source-contract or component gaps');
-  const requested = new Set([...request.updates, ...request.enrollments].map(sourceContractKey));
+  const relocations = request.relocations ?? [];
+  const requested = new Set([
+    ...request.updates,
+    ...request.enrollments,
+    ...relocations.map(relocation => ({ ...relocation, module: relocation.toModule })),
+  ].map(sourceContractKey));
   const oldOwners = new Map(baseline.documented.map(owner => [sourceContractKey(owner), owner]));
+  for (const relocation of relocations) {
+    oldOwners.set(sourceContractKey({ ...relocation, module: relocation.toModule }),
+      oldOwners.get(sourceContractKey(relocation)));
+  }
   const changes = next.documented.filter(owner => requested.has(sourceContractKey(owner))).map(owner => ({
     before: oldOwners.get(sourceContractKey(owner)) ?? null,
     after: owner,

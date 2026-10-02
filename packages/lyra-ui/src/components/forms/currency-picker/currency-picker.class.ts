@@ -18,19 +18,14 @@ import '../combobox/option.class.js';
 import { styles } from './currency-picker.styles.js';
 import { DEFAULT_CURRENCY_ENTRIES, normalizeCurrencyCatalog, normalizeCurrencyValue } from './currency-catalog.js';
 import { resolveCurrencyPresentation, type ResolvedCurrencyEntry } from './currency-presentation.js';
+import type { LyraCurrencyCatalog, LyraCurrencyEntry } from './currency-types.js';
+export type { LyraCurrencyCatalog, LyraCurrencyEntry } from './currency-types.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_currencyPickerLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-export interface LyraCurrencyEntry {
-  readonly code: string;
-  readonly label?: string;
-  readonly symbol?: string;
-  readonly disabled?: boolean;
-}
-export type LyraCurrencyCatalog = readonly string[] | readonly LyraCurrencyEntry[];
 export interface LyraCurrencyChangeDetail {
   readonly value: string;
   readonly previousValue: string;

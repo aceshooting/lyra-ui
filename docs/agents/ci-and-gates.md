@@ -146,6 +146,14 @@ drift. Both the complete census and the authored documentation must pass their e
 before the fixture is written. Review the workflow's before/after owner log and guarded source
 artifact before applying it; this input is not a blanket rebaseline or release-preparation option.
 
+Schema 1 also accepts an optional `relocations` array of
+`{ module, toModule, exportName, kind, expectedFingerprint }` records for extracting a declaration
+into a shared module while retaining its public re-exports. The old documented owner must disappear
+from the live census, the target must be new to the baseline, and its fingerprint and public routes
+must remain identical. Only the existing row's `module` changes; documentation locators, metadata
+and order are preserved. Relocation source and target owners cannot overlap any other requested
+operation. Any additional census drift still fails the complete validation.
+
 **Composable styling and the token grammar.** Author shared theme inputs in
 `tokens/canonical-tokens.json`, looks in `tokens/looks/*.json`, and the density and glass treatments
 in `tokens/density.json` and `tokens/surfaces/glass.json`. `pnpm run style-axes` generates the

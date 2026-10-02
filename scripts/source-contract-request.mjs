@@ -34,23 +34,39 @@ function assertLocator(locator) {
 }
 
 export function assertSourceContractRequest(request) {
-  exactKeys(request, ['schemaVersion', 'updates', 'enrollments'], 'Source-contract request');
+  const hasRelocations = request != null && Object.hasOwn(request, 'relocations');
+  exactKeys(request, ['schemaVersion', 'updates', 'enrollments', ...(hasRelocations ? ['relocations'] : [])],
+    'Source-contract request');
   assert.equal(request.schemaVersion, 1, 'Source-contract request schemaVersion must be 1');
-  assert.ok(Array.isArray(request.updates) && Array.isArray(request.enrollments),
-    'Source-contract updates and enrollments must be arrays');
-  assert.ok(request.updates.length + request.enrollments.length > 0, 'Source-contract request must name owners');
+  const relocations = hasRelocations ? request.relocations : [];
+  assert.ok(Array.isArray(request.updates) && Array.isArray(request.enrollments) && Array.isArray(relocations),
+    'Source-contract updates, enrollments and relocations must be arrays');
+  assert.ok(request.updates.length + request.enrollments.length + relocations.length > 0,
+    'Source-contract request must name owners');
   const owners = new Set();
-  for (const [operation, entries] of [['update', request.updates], ['enrollment', request.enrollments]]) {
+  for (const [operation, entries] of [
+    ['update', request.updates], ['enrollment', request.enrollments], ['relocation', relocations],
+  ]) {
     for (const entry of entries) {
-      exactKeys(entry, ['module', 'exportName', 'kind', ...(operation === 'update'
-        ? ['expectedFingerprint'] : ['document', 'family', 'locator'])], `Source-contract ${operation}`);
+      const fields = ['module', 'exportName', 'kind', ...(operation === 'enrollment'
+        ? ['document', 'family', 'locator'] : ['expectedFingerprint'])];
+      if (operation === 'relocation') fields.push('toModule');
+      exactKeys(entry, fields, `Source-contract ${operation}`);
       sourcePath(entry.module, 'src/', '.ts', 'Contract module');
       nonempty(entry.exportName, 'Contract exportName');
       assert.ok(['interface', 'function'].includes(entry.kind), 'Unsupported source-contract kind');
-      const key = JSON.stringify([entry.module, entry.exportName, entry.kind]);
-      assert.ok(!owners.has(key), `Duplicate requested source-contract owner ${key}`);
-      owners.add(key);
-      if (operation === 'update') {
+      const modules = [entry.module];
+      if (operation === 'relocation') {
+        sourcePath(entry.toModule, 'src/', '.ts', 'Relocation target module');
+        assert.notEqual(entry.module, entry.toModule, 'Source-contract relocation must change its module');
+        modules.push(entry.toModule);
+      }
+      for (const module of modules) {
+        const key = JSON.stringify([module, entry.exportName, entry.kind]);
+        assert.ok(!owners.has(key), `Duplicate requested source-contract owner ${key}`);
+        owners.add(key);
+      }
+      if (operation !== 'enrollment') {
         assert.match(entry.expectedFingerprint, /^[a-f0-9]{20}$/u, 'Expected fingerprint must be the exact old census hash');
       } else {
         sourcePath(entry.document, 'llms/', '.md', 'Contract document');

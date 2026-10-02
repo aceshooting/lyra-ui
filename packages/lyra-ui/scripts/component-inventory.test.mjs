@@ -886,7 +886,7 @@ test('form association comes only from static/mixin truth and follows superclass
   );
 });
 
-test('the live manifest resolves to the exact 33 runtime FACE tags', () => {
+test('the live manifest resolves to the exact 34 runtime FACE tags', () => {
   const associated = normalizeManifest(readJson('custom-elements.json'), {
     ecosystem: 'lyra',
   })
@@ -900,6 +900,7 @@ test('the live manifest resolves to the exact 33 runtime FACE tags', () => {
     'lr-code-editor',
     'lr-color-picker',
     'lr-combobox',
+    'lr-currency-picker',
     'lr-date-input',
     'lr-emoji-picker',
     'lr-file-input',
@@ -1075,6 +1076,7 @@ test('the CEM FormAssociated projection is truthful, scoped, and idempotent', ()
       'lr-chat-composer',
       'lr-code-editor',
       'lr-color-picker',
+      'lr-currency-picker',
       'lr-date-input',
       'lr-emoji-picker',
       'lr-known-date',

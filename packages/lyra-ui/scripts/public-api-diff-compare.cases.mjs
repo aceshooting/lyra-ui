@@ -1498,6 +1498,133 @@ test('keeps a union breaking when its object member NARROWED', () => {
   assert.equal(changes[0].bump, 'major');
 });
 
+function readonlySsrTagsFixture(tags) {
+  const array = `readonly (${tags})[]`;
+  return {
+    packageJson: {
+      name: '@aceshooting/lyra-ui', version: '1.0.0',
+      exports: { './ssr.js': './dist/ssr.js', './ssr/all.js': './dist/ssr/all.js' },
+    },
+    manifest: { modules: [] },
+    declarations: {
+      files: {
+        'dist/ssr.d.ts': `export declare const LYRA_SSR_CLIENT_RENDER_TAGS: ${array};
+          export declare const LYRA_SSR_RENDER_AND_HYDRATE_TAGS: ${array};
+          export declare const LYRA_SSR_SUPPORT_MATRIX: Readonly<{
+            declarativeShadowDom: Readonly<{ mode: 'render-and-hydrate'; tags: ${array} }>;
+            browserFallback: Readonly<{ mode: 'client-render'; tags: ${array} }>;
+          }>;`,
+        'dist/ssr/all.d.ts': "export * from '../ssr.js';",
+      },
+      packageFiles: ['dist/ssr.js', 'dist/ssr.d.ts', 'dist/ssr/all.js', 'dist/ssr/all.d.ts'],
+    },
+  };
+}
+
+test('readonly tag array additions stay minor through both SSR export routes', () => {
+  const before = normalizePublicApi(readonlySsrTagsFixture("'lr-a' | 'lr-c'"));
+  const after = normalizePublicApi(readonlySsrTagsFixture("'lr-a' | 'lr-b' | 'lr-c'"));
+  const changes = diffPublicApi(before, after);
+  assert.deepEqual(changes.map((change) => [change.id, change.bump]),
+    ['./ssr.js', './ssr/all.js'].flatMap((route) => [
+      'LYRA_SSR_CLIENT_RENDER_TAGS', 'LYRA_SSR_RENDER_AND_HYDRATE_TAGS', 'LYRA_SSR_SUPPORT_MATRIX',
+    ].map((name) => [`subpath-export:${route}:${name}:contract`, 'minor'])));
+  assert.equal(minimumRequiredBump(diffPublicApi(after, before)), 'major');
+  assert.deepEqual(diffPublicApi(after,
+    normalizePublicApi(readonlySsrTagsFixture("'lr-c' | 'lr-a' | 'lr-b'"))), []);
+});
+
+test('readonly literal arrays recognize single-element and parenthesized union widening', () => {
+  for (const before of ["readonly 'lr-a'[]", "readonly ('lr-a')[]"]) {
+    const changes = diffPublicApi(typeSnapshot(before), typeSnapshot("readonly ('lr-a' | 'lr-b')[]"));
+    assert.equal(changes[0].bump, 'minor', before);
+  }
+  assert.equal(diffPublicApi(
+    typeSnapshot("Readonly<{ readonly tags?: readonly 'lr-a'[]; mode: 'static' }>"),
+    typeSnapshot("Readonly<{ readonly tags?: readonly ('lr-a' | 'lr-b')[]; mode: 'static' }>"),
+  )[0].bump, 'minor');
+});
+
+test('readonly literal array widening does not relax mutable, tuple, mixed or generic types', () => {
+  for (const [before, after] of [
+    ["('lr-a' | 'lr-c')[]", "('lr-a' | 'lr-b' | 'lr-c')[]"],
+    ["readonly ('lr-a' | 'lr-c')[]", "('lr-a' | 'lr-b' | 'lr-c')[]"],
+    ["readonly ['lr-a', 'lr-c']", "readonly ['lr-a', 'lr-b', 'lr-c']"],
+    ["readonly ['lr-a', ...'lr-c'[]]", "readonly ['lr-a', ...('lr-b' | 'lr-c')[]]"],
+    ["readonly ['lr-a', 'lr-c'?]", "readonly ['lr-a', 'lr-b'?, 'lr-c'?]"],
+    ["readonly ('lr-a' | 'lr-c')[]", "readonly ('lr-a' | 'lr-b')[]"],
+    ["readonly ('lr-a' | 1)[]", "readonly ('lr-a' | 'lr-b' | 1)[]"],
+    ["readonly 'lr-a'[]", "readonly ('lr-a' | Unknown)[]"],
+    ["readonly never[]", "readonly 'lr-a'[]"],
+    ["Arbitrary<readonly 'lr-a'[]>", "Arbitrary<readonly ('lr-a' | 'lr-b')[]>"],
+    ["Arbitrary<Readonly<{ tags: readonly 'lr-a'[] }>>", "Arbitrary<Readonly<{ tags: readonly ('lr-a' | 'lr-b')[] }>>"],
+    ["readonly 'lr-a'[] | undefined", "readonly ('lr-a' | 'lr-b')[] | undefined"],
+    ["{ tags: readonly 'lr-a'[] }", "{ tags: readonly ('lr-a' | 'lr-b')[] }"],
+  ]) {
+    assert.equal(diffPublicApi(typeSnapshot(before), typeSnapshot(after))[0].bump, 'major', before);
+  }
+});
+
+test('readonly object projections preserve properties, modifiers and every unrelated leaf', () => {
+  const array = "readonly ('lr-a' | 'lr-b')[]";
+  const before = `Readonly<{ readonly tags?: ${array}; mode: 'static' | 'dynamic'; other: ${array} }>`;
+  for (const after of [
+    `Readonly<{ readonly tags?: ${array}; mode: 'static' | 'dynamic' }>`,
+    `Readonly<{ readonly renamed?: ${array}; mode: 'static' | 'dynamic'; other: ${array} }>`,
+    `Readonly<{ readonly tags: ${array}; mode: 'static' | 'dynamic'; other: ${array} }>`,
+    `Readonly<{ tags?: ${array}; mode: 'static' | 'dynamic'; other: ${array} }>`,
+    `Readonly<{ readonly tags?: readonly ('lr-a' | 'lr-b' | 'lr-c')[]; mode: 'static'; other: ${array} }>`,
+    `Readonly<{ readonly tags?: readonly ('lr-a' | 'lr-b' | 'lr-c')[]; mode: 'static' | 'dynamic'; other: readonly 'lr-a'[] }>`,
+    `Readonly<{ readonly tags?: readonly ('lr-a' | 'lr-b' | 'lr-c')[]; mode: 'static' | 'dynamic' | 'new'; other: ${array} }>`,
+  ]) {
+    assert.equal(diffPublicApi(typeSnapshot(before), typeSnapshot(after))[0].bump, 'major', after);
+  }
+  assert.equal(diffPublicApi(
+    typeSnapshot("Readonly<{ inner: { tags: readonly 'lr-a'[] } }>"),
+    typeSnapshot("Readonly<{ inner: { tags: readonly ('lr-a' | 'lr-b')[] } }>"),
+  )[0].bump, 'major');
+});
+
+test('readonly collection widening stays disabled through arbitrary generic alias resolution', () => {
+  const before = typeSnapshot('Arbitrary<Tags>');
+  const after = typeSnapshot('Arbitrary<MoreTags>');
+  before.typeAliases = { Tags: ["readonly 'lr-a'[]"] };
+  after.typeAliases = { MoreTags: ["readonly ('lr-a' | 'lr-b')[]"] };
+  assert.equal(diffPublicApi(before, after)[0].bump, 'major');
+});
+
+test('readonly object widening rejects unsupported member forms and duplicate keys', () => {
+  for (const member of [
+    'read(): void;',
+    '(): void;',
+    'new (): object;',
+    '[key: string]: unknown;',
+    '[Symbol.iterator]: unknown;',
+    "tags: readonly 'lr-a'[];",
+  ]) {
+    assert.equal(diffPublicApi(
+      typeSnapshot(`Readonly<{ ${member} tags: readonly 'lr-a'[] }>`),
+      typeSnapshot(`Readonly<{ ${member} tags: readonly ('lr-a' | 'lr-b')[] }>`),
+    )[0].bump, 'major', member);
+  }
+});
+
+test('a package-local Readonly declaration does not inherit the standard helper proof', () => {
+  const fixture = (tags) => {
+    const input = readonlySsrTagsFixture(tags);
+    input.declarations.files['dist/ssr.d.ts'] += '\ntype Readonly<T> = { wrapped: T };';
+    return normalizePublicApi(input);
+  };
+  const before = fixture("'lr-a' | 'lr-c'");
+  const after = fixture("'lr-a' | 'lr-b' | 'lr-c'");
+  assert.equal(before.shadowedReadonly, true);
+  assert.equal(after.shadowedReadonly, true);
+  const changes = diffPublicApi(before, after);
+  const matrices = changes.filter((change) => change.id.endsWith(':LYRA_SSR_SUPPORT_MATRIX:contract'));
+  assert.equal(matrices.length, 2);
+  assert.ok(matrices.every((change) => change.bump === 'major'));
+});
+
 test('treats a real multi-argument generated framework prop type gaining one event as minor', () => {
   // A faithful reproduction of the real generated shape that broke: LyraReactElementProps<Host,
   // PropsUnion, {}, EventMap, EventsUnion, CssPropsUnion, AttrAliases> gaining one member in the
