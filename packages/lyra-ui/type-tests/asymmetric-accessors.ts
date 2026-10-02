@@ -30,3 +30,10 @@ void resolvedOwner;
 // @ts-expect-error reads remain element-valued even though string owner ids are accepted on write
 const ownerId: string = control.form;
 void ownerId;
+
+control.defaultValue = null;
+const resetDefault: string = control.defaultValue;
+void resetDefault;
+// @ts-expect-error clearing the reset default does not make its read value nullable
+const nullDefault: null = control.defaultValue;
+void nullDefault;

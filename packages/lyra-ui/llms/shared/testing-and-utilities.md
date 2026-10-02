@@ -397,6 +397,8 @@ arrowPadding?: number; hoverBridge?: HTMLElement; onPlaced?: (result: PlacementR
   `validationMessage`, and `willValidate`; `setFormValue(next)`; `getForm()`; `checkValidity()`;
   `reportValidity()`; `setCustomValidity(message)`; `resetValidity()`; `formResetCallback()`; and
   `formStateRestoreCallback(state, reason)`.
+  Writing `null` to `defaultValue` removes its markup value and resets the default to the adapter's
+  empty value; reading it still returns `TValue`. This does not overwrite a dirty live value.
   The exact callable signatures are `attachInternalsSafely(host: HTMLElement): ElementInternals`,
   `createFallbackInternals(): ElementInternals`, `createStringArrayFormDataState(name: string,
 values: readonly string[]): FormData`, `readStringArrayFormDataState(state: string | File |
@@ -409,7 +411,8 @@ toFormValue(value: TValue): FormSubmissionValue; toFormState?(value: TValue):
 FormSubmissionValue; isEmpty?(value: TValue): boolean; fromAttribute?(attribute: string): TValue;
 toAttribute?(value: TValue): string | null; fromFormState?(state: FormSubmissionValue): TValue }`
   and `FormAssociatedInterface<TValue> { internals: ElementInternals; get name(): string; set
-name(next: string | null); value: TValue; defaultValue: TValue; customError: string | null;
+name(next: string | null); value: TValue; get defaultValue(): TValue;
+set defaultValue(next: TValue | null); customError: string | null;
 disabled: boolean; required: boolean; readonly effectiveDisabled: boolean; get form():
 HTMLFormElement | null; set form(owner: FormOwnerValue); readonly labels: NodeList; readonly
 validity: ValidityState; readonly validationMessage: string; readonly willValidate: boolean;

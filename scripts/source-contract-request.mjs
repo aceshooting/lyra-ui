@@ -48,13 +48,22 @@ export function assertSourceContractRequest(request) {
     ['update', request.updates], ['enrollment', request.enrollments], ['relocation', relocations],
   ]) {
     for (const entry of entries) {
+      const hasAdditionalRoutes = operation === 'update' && entry != null && Object.hasOwn(entry, 'additionalRoutes');
       const fields = ['module', 'exportName', 'kind', ...(operation === 'enrollment'
         ? ['document', 'family', 'locator'] : ['expectedFingerprint'])];
       if (operation === 'relocation') fields.push('toModule');
+      if (hasAdditionalRoutes) fields.push('additionalRoutes');
       exactKeys(entry, fields, `Source-contract ${operation}`);
       sourcePath(entry.module, 'src/', '.ts', 'Contract module');
       nonempty(entry.exportName, 'Contract exportName');
       assert.ok(['interface', 'function'].includes(entry.kind), 'Unsupported source-contract kind');
+      if (hasAdditionalRoutes) {
+        assert.ok(Array.isArray(entry.additionalRoutes) && entry.additionalRoutes.length > 0,
+          'Additional source-contract routes must be a nonempty array');
+        entry.additionalRoutes.forEach(route => sourcePath(route, 'src/', '.ts', 'Additional contract route'));
+        assert.equal(new Set(entry.additionalRoutes).size, entry.additionalRoutes.length,
+          'Duplicate additional source-contract route');
+      }
       const modules = [entry.module];
       if (operation === 'relocation') {
         sourcePath(entry.toModule, 'src/', '.ts', 'Relocation target module');

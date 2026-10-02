@@ -224,6 +224,35 @@ test('both owner lists reject noncanonical or non-source module paths', () => {
   }
 });
 
+test('the parser accepts explicit additional public routes on update owners', () => {
+  const { request } = fixture();
+  request.updates[0].additionalRoutes = ['src/utilities/example.ts', 'src/example.ts'];
+  assert.deepEqual(parse(request), request);
+  assert.throws(() => parse(request, 'release'));
+});
+
+test('additional routes must be a nonempty array of unique canonical source paths', () => {
+  for (const additionalRoutes of [
+    [], null, {}, 'src/example.ts', ['src/example.ts', 'src/example.ts'],
+    ...[
+      '/src/example.ts', '../src/example.ts', 'src/../example.ts', './src/example.ts',
+      'src//example.ts', 'src/./example.ts', 'src\\example.ts', 'dist/example.ts',
+      'src/example.js', 'src/example.ts\n', 'src/example\0.ts', '', null, 1,
+    ].map(route => [route]),
+  ]) {
+    rejectRequest(request => { request.updates[0].additionalRoutes = additionalRoutes; });
+  }
+});
+
+test('additional routes require a fingerprint preimage and belong only to update owners', () => {
+  rejectRequest(request => {
+    request.updates[0].additionalRoutes = ['src/example.ts'];
+    delete request.updates[0].expectedFingerprint;
+  });
+  rejectRequest(request => { request.enrollments[0].additionalRoutes = ['src/example.ts']; });
+  rejectRelocationRequest(request => { request.relocations[0].additionalRoutes = ['src/example.ts']; });
+});
+
 test('documentation paths cannot escape the authored llms tree', () => {
   for (const document of [
     '../llms/forms.md', '/llms/forms.md', 'llms/../forms.md', 'llms//forms.md',
@@ -290,6 +319,122 @@ test('an enrollment-only request appends owners in request order instead of cens
     'LyraKeeperEntry', 'LyraExampleEntry', 'LyraExtraEntry', 'LyraLastEntry',
   ]);
 });
+
+function routeAdditionFixture(data = fixture()) {
+  const additionalRoutes = ['src/utilities/example.ts', 'src/example.ts'];
+  const record = data.census.find(entry => entry.exportName === 'LyraExampleEntry');
+  record.fingerprint = fingerprints.previous;
+  record.routes = [...record.routes, ...additionalRoutes].sort();
+  data.request.updates[0].additionalRoutes = additionalRoutes;
+  data.baseline.documented[1].routes.reverse();
+  data.baseline.documented[1].annotations = { notes: ['Preserve owner metadata.'] };
+  return data;
+}
+
+for (const [name, fingerprint] of [
+  ['route-only', fingerprints.previous],
+  ['signature and route', fingerprints.current],
+]) {
+  test(`${name} updates derive exact additions without mutating or aliasing inputs`, () => {
+    const data = routeAdditionFixture();
+    const record = data.census.find(entry => entry.exportName === 'LyraExampleEntry');
+    record.fingerprint = fingerprint;
+    const before = structuredClone(data);
+    const expected = structuredClone(data.baseline);
+    expected.documented[1].fingerprint = fingerprint;
+    expected.documented[1].routes = [...record.routes];
+    expected.documented.push(documentedRecord(owner('extra'), fingerprints.added));
+    deepFreeze(data);
+
+    const candidate = prepareSourceContractBaseline(data.census, data.baseline, data.request);
+    assert.deepEqual(candidate, expected);
+    assert.deepEqual(data, before);
+    assert.notStrictEqual(candidate.documented[1].routes, record.routes);
+    assert.notStrictEqual(candidate.documented[1].routes, data.request.updates[0].additionalRoutes);
+
+    candidate.documented[1].routes.push('src/candidate.ts');
+    candidate.documented[1].locator.tag = 'lr-candidate';
+    candidate.documented[1].annotations.notes.push('Candidate-only owner note.');
+    assert.deepEqual(data, before);
+  });
+}
+
+test('different owners can explicitly add the same public route', () => {
+  const data = routeAdditionFixture();
+  const keeper = owner('keeper');
+  const record = data.census.find(entry => entry.exportName === keeper.exportName);
+  record.routes = [...record.routes, 'src/example.ts'].sort();
+  data.request.updates.push({
+    ...keeper,
+    expectedFingerprint: fingerprints.unchanged,
+    additionalRoutes: ['src/example.ts'],
+  });
+  const candidate = prepareSourceContractBaseline(data.census, data.baseline, data.request);
+  assert.deepEqual(candidate.documented[0].routes, record.routes);
+  assert.equal(candidate.documented[0].fingerprint, fingerprints.unchanged);
+  assert.deepEqual(candidate.documented[1].routes,
+    data.census.find(entry => entry.exportName === 'LyraExampleEntry').routes);
+});
+
+for (const [name, change] of [
+  ['a stale fingerprint preimage', data => {
+    data.request.updates[0].expectedFingerprint = fingerprints.unexpected;
+  }],
+  ['a previously recorded route in the requested additions', data => {
+    data.request.updates[0].additionalRoutes.push('src/lyra.ts');
+  }],
+  ['a requested addition absent from the live routes', data => {
+    const record = data.census.find(entry => entry.exportName === 'LyraExampleEntry');
+    record.routes = record.routes.filter(route => route !== 'src/example.ts');
+  }],
+  ['a live addition absent from the request', data => {
+    const record = data.census.find(entry => entry.exportName === 'LyraExampleEntry');
+    record.routes = [...record.routes, 'src/unrequested.ts'].sort();
+  }],
+  ['an old route removed while adding new routes', data => {
+    const record = data.census.find(entry => entry.exportName === 'LyraExampleEntry');
+    record.routes = record.routes.filter(route => route !== 'src/lyra.ts');
+  }],
+  ['duplicate baseline routes', data => {
+    data.baseline.documented[1].routes.push('src/lyra.ts');
+  }],
+  ['an empty old route list covered entirely by requested additions', data => {
+    data.request.updates[0].additionalRoutes = [
+      ...data.request.updates[0].additionalRoutes,
+      ...data.baseline.documented[1].routes,
+    ];
+    data.baseline.documented[1].routes = [];
+  }],
+  ['duplicate live routes', data => {
+    const record = data.census.find(entry => entry.exportName === 'LyraExampleEntry');
+    record.routes = [...record.routes, 'src/example.ts'].sort();
+  }],
+  ['an owner absent from the baseline', data => {
+    data.baseline.documented.pop();
+  }],
+  ['an owner absent from the live census', data => {
+    data.census = data.census.filter(record => record.exportName !== 'LyraExampleEntry');
+  }],
+  ['a legacy owner', data => {
+    data.baseline.legacy.push(data.baseline.documented.pop());
+  }],
+  ['unrelated signature drift', data => {
+    data.census.find(record => record.exportName === 'LyraKeeperEntry').fingerprint = fingerprints.unexpected;
+  }],
+  ['unrelated route drift', data => {
+    data.census.find(record => record.exportName === 'LyraKeeperEntry').routes.pop();
+  }],
+  ['an unrelated new owner', data => {
+    data.census.push(censusRecord(owner('unrequested'), fingerprints.unexpected));
+  }],
+]) {
+  test(`route additions reject ${name} without mutating inputs`, () => {
+    rejectCandidate(data => {
+      routeAdditionFixture(data);
+      change(data);
+    });
+  });
+}
 
 for (const [name, change] of [
   ['a stale expected fingerprint', data => {
@@ -415,6 +560,22 @@ function documentationGaps(data) {
 
 test('prepared enrollment resolves exact typed declarations in the authored component sections', () => {
   assert.deepEqual(documentationGaps(documentationFixture()), []);
+});
+
+test('route additions preserve the authored component declaration contract', () => {
+  assert.deepEqual(documentationGaps(routeAdditionFixture(documentationFixture())), []);
+});
+
+test('route additions do not conceal a field missing from the preserved authored declaration', () => {
+  const data = routeAdditionFixture(documentationFixture());
+  data.documents['llms/forms.md'] = data.documents['llms/forms.md'].replace(
+    'LyraExampleEntry { code: string; label: string }',
+    'LyraExampleEntry { code: string }',
+  );
+  const gaps = documentationGaps(data);
+  assert.equal(gaps.length, 1);
+  assert.equal(gaps[0].tag, 'lr-example');
+  assert.deepEqual(gaps[0].names, ['label']);
 });
 
 test('a valid candidate still fails authored-document validation when its document is wrong', () => {

@@ -44,8 +44,19 @@ export function prepareSourceContractBaseline(census, baseline, request) {
     const contract = actual.get(key);
     assert.ok(owner && contract, `Update requires an existing documented and live source-contract owner ${key}`);
     assert.equal(owner.fingerprint, update.expectedFingerprint, `Stale source-contract fingerprint preimage ${key}`);
-    assert.notEqual(contract.fingerprint, owner.fingerprint, `Source-contract fingerprint is unchanged ${key}`);
-    assert.deepEqual(owner.routes.slice().sort(), contract.routes, `Source-contract routes changed ${key}`);
+    const additionalRoutes = update.additionalRoutes ?? [];
+    assert.ok(Array.isArray(owner.routes) && owner.routes.length > 0,
+      `Source-contract owner lacks recorded routes ${key}`);
+    if (additionalRoutes.length === 0) {
+      assert.notEqual(contract.fingerprint, owner.fingerprint, `Source-contract fingerprint is unchanged ${key}`);
+    }
+    for (const route of additionalRoutes) {
+      assert.ok(!owner.routes.includes(route), `Source-contract route is already recorded ${key}: ${route}`);
+    }
+    assert.deepEqual([...owner.routes, ...additionalRoutes].sort(), contract.routes,
+      additionalRoutes.length > 0 ? `Source-contract routes changed beyond the requested additions ${key}`
+        : `Source-contract routes changed ${key}`);
+    if (additionalRoutes.length > 0) owner.routes = [...contract.routes];
     owner.fingerprint = contract.fingerprint;
   }
   for (const enrollment of request.enrollments) {

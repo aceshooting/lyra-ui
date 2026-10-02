@@ -14,6 +14,9 @@ native form contracts and consistent field styling. Country choices include loca
 optional decorative flags. Add optional text filtering to the language picker while preserving its
 locale loading, veto and selection behavior.
 
+Match the form mixin's public reset-default setter type to its existing nullable runtime input,
+while preserving the non-nullable read type and dirty live values.
+
 Avoid marking a selected `lr-select` value as unavailable before its slotted options have been
 collected, including during server rendering. Keep its dropdown within the available screen height
 and width when text is enlarged, and scroll keyboard-highlighted options into view within the

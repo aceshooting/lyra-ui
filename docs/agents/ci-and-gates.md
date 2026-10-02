@@ -146,6 +146,15 @@ drift. Both the complete census and the authored documentation must pass their e
 before the fixture is written. Review the workflow's before/after owner log and guarded source
 artifact before applying it; this input is not a blanket rebaseline or release-preparation option.
 
+An update may also specify `additionalRoutes`, a nonempty array of unique canonical `src/**/*.ts`
+paths for explicitly reviewed public route additions. Each route must be new to that owner, and
+the live routes must equal its existing routes plus exactly those additions; route removals and
+unrequested additions are rejected. The updater copies the verified scanner routes and keeps the
+existing documentation locator and metadata. A route-only update may retain its fingerprint, but
+still requires the exact old `expectedFingerprint`. Without `additionalRoutes`, an update must
+change the fingerprint and retain the exact existing routes. Enrollments and relocations do not
+accept `additionalRoutes`; complete census and authored-document validation still apply.
+
 **Hosted dependency refresh.** When hosted execution is authorized, dispatch
 `prepare-artifacts.yml` with `mode=source` and `upgradeDependencies=true` to run the release's
 dependency refresh without preparing a version bump. Publication and source-contract inputs must

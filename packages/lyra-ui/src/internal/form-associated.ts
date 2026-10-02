@@ -304,7 +304,9 @@ export interface FormAssociatedInterface<TValue = string> {
   get name(): string;
   set name(next: string | null);
   value: TValue;
-  defaultValue: TValue;
+  /** Reset default on read; null on write removes its markup value. */
+  get defaultValue(): TValue;
+  set defaultValue(next: TValue | null);
   customError: string | null;
   disabled: boolean;
   required: boolean;

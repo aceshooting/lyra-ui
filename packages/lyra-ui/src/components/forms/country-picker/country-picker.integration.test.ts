@@ -23,6 +23,21 @@ async function filter(el: LyraCountryPicker, text: string): Promise<void> {
 }
 
 describe('international picker form and filtering integration', () => {
+  it('removes a null reset default without erasing a dirty committed value', async () => {
+    const form = await fixture<HTMLFormElement>(html`<form><lr-country-picker name="country" value="FR" .countries=${['FR', 'GB']}></lr-country-picker></form>`);
+    const el = form.querySelector('lr-country-picker')!;
+    el.value = 'GB';
+    el.defaultValue = null;
+    await settle(el);
+    expect(el.hasAttribute('value')).to.equal(false);
+    expect(el.defaultValue).to.equal('');
+    expect(el.value).to.equal('GB');
+    expect(new FormData(form).get('country')).to.equal('GB');
+    form.reset();
+    expect(el.value).to.equal('');
+    expect(new FormData(form).get('country')).to.equal('');
+  });
+
   it('keeps an empty searchable field empty, filters without committing and commits by keyboard', async () => {
     const form = await fixture<HTMLFormElement>(html`<form><lr-country-picker name="country" searchable required label="Country" .countries=${['FR', 'GB', 'US']}></lr-country-picker></form>`);
     const el = form.querySelector('lr-country-picker')!;
