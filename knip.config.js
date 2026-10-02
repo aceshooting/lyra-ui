@@ -31,6 +31,8 @@ export default {
       ],
     },
     'packages/lyra-ui': {
+      // Edge startup diagnostics probe the hosted runner's OS-installed channel executable.
+      ignoreBinaries: ['microsoft-edge'],
       entry: [
         'src/**/*.test.ts',
         'src/**/*.stories.ts',
