@@ -10,6 +10,7 @@ import {
 } from './create-component.mjs';
 import { normalizeManifest } from './component-inventory.mjs';
 import { expandLyraInventoryManifest } from './generate-component-inventory.mjs';
+import { generateTagAliases } from './generate-tag-aliases.mjs';
 import {
   assembleComponentMetadata,
   commitComponentMetadataWritePlan,
@@ -276,6 +277,7 @@ test('creates a complete populated component scaffold and runs focused three-eng
       'manifest',
       'component-metadata',
       'registrations',
+      'manifest',
       'component-families',
       'component-inventory',
       'registration-check',
@@ -346,6 +348,27 @@ test('rejects invalid, traversal, and already-prefixed names before writing', as
     );
     assert.equal(existsSync(join(packageDir, 'src/components/utility/status-panel')), false);
   }
+});
+
+test('scaffold refreshes its manifest after generating the new tag alias', async () => {
+  const packageDir = fixturePackage();
+  const inner = successfulRunner(packageDir, []);
+  const aliasFile = join(packageDir, 'src/components/lr-status-panel.ts');
+  let manifestAfterAliases = false;
+  await scaffoldComponent({
+    packageDir, family: 'utility', name: 'status-panel',
+    runStep(step) {
+      const result = inner(step);
+      if (step.id === 'registrations') generateTagAliases({ packageDir });
+      if (step.id === 'manifest' && existsSync(aliasFile)) manifestAfterAliases = true;
+      if (step.id === 'component-inventory') {
+        assert.equal(manifestAfterAliases, true, 'inventory verification consumes the manifest including the new alias');
+      }
+      return result;
+    },
+  });
+  assert.equal(manifestAfterAliases, true);
+  assert.match(readFileSync(aliasFile, 'utf8'), /export \* from '\.\/utility\/status-panel\/status-panel\.js'/u);
 });
 
 test('detects directory, inventory, catalog, barrel, docs, and manifest collisions', async (t) => {

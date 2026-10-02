@@ -22,6 +22,8 @@ const PRIMARY_PACKAGE = '@aceshooting/lyra-ui';
  * Per-package post-bump generators, in dependency order. The bump stamps `since: 'unreleased'`
  * deprecation records with the new version. The metadata history refresh retains immutable
  * published-release snapshots from the fetched tags before regenerating the manifest and inventory.
+ * Registration aliases are generated from the initial inventory before the final manifest includes
+ * those source modules; the final inventory then records the stamped metadata surface.
  * The component inventory records each stamped deprecation. LLM
  * references read the regenerated manifest and package metadata, and the built component-quality
  * evidence measures the build that embeds the new version.
@@ -30,11 +32,12 @@ export const PACKAGE_GENERATORS = Object.freeze([
   'archive-changelog',
   'package-metadata',
   'manifest',
+  'component-inventory',
   'component-metadata:history',
+  'registrations',
   'manifest',
   'component-inventory',
   'visual-manifest',
-  'registrations',
   'autoloader-manifest',
   'registration-graph',
   'scoped-definitions',

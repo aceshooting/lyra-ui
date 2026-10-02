@@ -36,11 +36,12 @@ test('release preparation runs every per-package generator in dependency order',
     'archive-changelog',
     'package-metadata',
     'manifest',
+    'component-inventory',
     'component-metadata:history',
+    'registrations',
     'manifest',
     'component-inventory',
     'visual-manifest',
-    'registrations',
     'autoloader-manifest',
     'registration-graph',
     'scoped-definitions',
@@ -70,9 +71,21 @@ test('release preparation regenerates the component inventory after the bump sta
 test('release preparation refreshes immutable release history between manifest generations', () => {
   const lines = render(releasePreparationSteps(['@aceshooting/lyra-ui']));
   const manifest = indexAfter(lines, 'pnpm --filter @aceshooting/lyra-ui --if-present run manifest');
-  const history = indexAfter(lines, 'pnpm --filter @aceshooting/lyra-ui --if-present run component-metadata:history', manifest);
-  const refreshedManifest = indexAfter(lines, 'pnpm --filter @aceshooting/lyra-ui --if-present run manifest', history);
+  const inventory = indexAfter(lines, 'pnpm --filter @aceshooting/lyra-ui --if-present run component-inventory', manifest);
+  const history = indexAfter(lines, 'pnpm --filter @aceshooting/lyra-ui --if-present run component-metadata:history', inventory);
+  const registrations = indexAfter(lines, 'pnpm --filter @aceshooting/lyra-ui --if-present run registrations', history);
+  const refreshedManifest = indexAfter(lines, 'pnpm --filter @aceshooting/lyra-ui --if-present run manifest', registrations);
   indexAfter(lines, 'pnpm --filter @aceshooting/lyra-ui --if-present run component-inventory', refreshedManifest);
+});
+
+test('hosted source preparation bootstraps manifest and inventory before history reconciliation', () => {
+  const lines = readFileSync(join(repoRoot, '.github/workflows/prepare-artifacts.yml'), 'utf8')
+    .split('\n').map(line => line.trim());
+  const sourceStep = indexAfter(lines, '- name: Reconcile release history and generate source');
+  const manifest = indexAfter(lines, 'pnpm manifest', sourceStep);
+  const inventory = indexAfter(lines, 'pnpm --filter @aceshooting/lyra-ui run component-inventory', manifest);
+  const history = indexAfter(lines, 'pnpm --filter @aceshooting/lyra-ui run component-metadata:history', inventory);
+  indexAfter(lines, './scripts/regen.sh', history);
 });
 
 test('release preparation fetches published tags before bumping and refuses conflicting local tags', () => {

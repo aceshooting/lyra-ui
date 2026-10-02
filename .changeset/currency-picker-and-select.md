@@ -11,8 +11,8 @@ validate, load and convert explicit rate snapshots with caller-owned providers a
 
 Add country, time-zone and measurement-unit pickers with configurable catalogs, optional search,
 native form contracts and consistent field styling. Country choices include localized names and
-optional decorative flags. Add optional text filtering to the language picker while preserving its
-locale loading, veto and selection behavior.
+decorative flags by default, with an option to hide the flags. Add optional text filtering to the
+language picker while preserving its locale loading, veto and selection behavior.
 
 Match the form mixin's public reset-default setter type to its existing nullable runtime input,
 while preserving the non-nullable read type and dirty live values. Keep a cleared reset attribute

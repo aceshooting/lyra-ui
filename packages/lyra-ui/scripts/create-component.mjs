@@ -370,6 +370,7 @@ function verificationSteps(testPath) {
     commandStep('manifest', ['run', 'manifest']),
     commandStep('component-metadata', ['run', 'component-metadata']),
     commandStep('registrations', ['run', 'registrations']),
+    commandStep('manifest', ['run', 'manifest']),
     { id: 'component-families', command: 'node', args: ['scripts/component-families.test.mjs'] },
     commandStep('component-inventory', ['run', 'check:component-inventory']),
     commandStep('registration-check', ['run', 'check:registrations']),

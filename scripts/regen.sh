@@ -89,7 +89,11 @@ pnpm --filter @aceshooting/lyra-ui component-inventory
 step "component release metadata and source annotations"
 pnpm --filter @aceshooting/lyra-ui component-metadata
 
-step "final manifest after component metadata annotations"
+# Registration aliases are source modules included by the manifest analyzer.
+step "registration entries, root allowlist, tag aliases, and sideEffects"
+pnpm registrations
+
+step "final manifest after component metadata annotations and registration aliases"
 pnpm manifest
 
 step "final component inventory after the annotated manifest"
@@ -97,9 +101,6 @@ pnpm --filter @aceshooting/lyra-ui component-inventory
 
 step "visual manifest from authored family sources"
 pnpm --filter @aceshooting/lyra-ui visual-manifest
-
-step "registration entries, root allowlist, tag aliases, and sideEffects"
-pnpm registrations
 
 step "autoloader manifest"
 pnpm --filter @aceshooting/lyra-ui autoloader-manifest
