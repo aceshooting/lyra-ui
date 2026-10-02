@@ -1656,9 +1656,9 @@ function memberDescriptor(module, member) {
   const signature = normalizedParameters ? `(${normalizedParameters.join(',')})` : '';
   return {
     member,
-    kind,
+    kind: kind === 'property' && member.static ? 'static-property' : kind,
     name,
-    idName: `${name}${kind === 'property' && member.static ? ':static' : ''}${genericSignature}${signature}`,
+    idName: `${name}${genericSignature}${signature}`,
     parameters: normalizedParameters,
     typeParameters,
     optional: Boolean(member.optional),
@@ -1716,13 +1716,13 @@ function memberDescriptors(module, members) {
     const first = group[0];
     const common = {
       ...first,
-      idName: `${first.name}${first.static ? ':static' : ''}`,
+      idName: first.name,
       parameters: undefined,
       typeParameters: [],
     };
     if (!supported) return [{
       ...common,
-      kind: 'unsupported-accessor',
+      kind: first.static ? 'static-unsupported-accessor' : 'unsupported-accessor',
       unsupportedAccessor: true,
       type: group.map(({ member }) => normalizeWhitespace(canonicalNodeText(module, member))).sort(),
     }];
@@ -1730,7 +1730,8 @@ function memberDescriptors(module, members) {
       read: types.find((type) => type.read !== null)?.read ?? null,
       write: types.find((type) => type.write !== null)?.write ?? null,
     };
-    return [{ ...common, kind: 'property', readonly: access.write === null, access }];
+    return [{ ...common, kind: first.static ? 'static-property' : 'property',
+      readonly: access.write === null, access }];
   });
 }
 

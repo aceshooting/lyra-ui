@@ -2092,6 +2092,36 @@ test('class accessor grouping preserves static sides, visibility and unrelated m
   ]) assert.equal(minimumRequiredBump(accessorChanges(before, after, options)), 'major');
 });
 
+test('static property presence cannot collide with an instance property static flag', () => {
+  for (const members of [
+    'static value: string; value: number;',
+    'static get value(): string; static set value(next: string | null); value: number;',
+  ]) {
+    const { entries } = normalizePublicApi(accessorFixture(members, { kind: 'declare class' }));
+    const presence = entries['named-export:Field:static-property:value'];
+    const instanceFlag = entries['named-export:Field:property:value:static'];
+    assert.equal(presence.semantic, 'presence');
+    assert.equal(presence.value, true);
+    assert.equal(instanceFlag.semantic, 'static');
+    assert.equal(instanceFlag.value, false);
+    assert.equal(entries['named-export:Field:static-property:value:static'].value, true);
+  }
+});
+
+test('unsupported static and instance accessors retain separate conservative contracts', () => {
+  const options = { kind: 'declare class' };
+  const before = "static get ['value'](): string; get ['value'](): number;";
+  const after = "static get ['value'](): string | null; get ['value'](): number;";
+  const { entries } = normalizePublicApi(accessorFixture(before, options));
+  assert.equal(entries['named-export:Field:static-unsupported-accessor:value'].semantic, 'presence');
+  assert.equal(entries['named-export:Field:static-unsupported-accessor:value:static'].value, true);
+  assert.equal(entries['named-export:Field:unsupported-accessor:value:static'].semantic, 'static');
+  assert.equal(entries['named-export:Field:unsupported-accessor:value:static'].value, false);
+  assert.equal(minimumRequiredBump(accessorChanges(before, after, options)), 'major');
+  assert.deepEqual(accessorChanges(before,
+    "get ['value'](): number; static get ['value'](): string;", options), []);
+});
+
 test('unsupported computed, ambiguous and untyped accessor shapes remain conservative', () => {
   for (const [before, after] of [
     ["['value']: string;", "get ['value'](): string; set ['value'](next: string | null);"],

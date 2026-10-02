@@ -7538,7 +7538,7 @@ the catalog property. Shared form-control and surface tokens apply, including RT
 <script type="module">
   import '@aceshooting/lyra-ui/components/lr-country-picker.js';
 </script>
-<lr-country-picker name="country" label="Country" searchable flags="false"></lr-country-picker>
+<lr-country-picker name="country" label="Country" searchable></lr-country-picker>
 ```
 
 ## `lr-time-zone-picker`
