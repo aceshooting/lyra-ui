@@ -106,6 +106,14 @@ Run the installed, version-matched CLI with `--origin=lyra-v22` and review its r
 import and SSR replacements, theme semantics, event-detail changes and historical profile rules.
 The generated [`llms/migration.md`](./llms/migration.md) has per-component `wa-*`/`sl-*` mappings.
 
+## Quick Start
+
+Paste this prompt into Claude or Codex:
+
+```text
+Install the Lyra UI skill from GitHub aceshooting/lyra-ui. Start a Lit app with Vite+ and @aceshooting/lyra-ui, following the skill.
+```
+
 ## Install
 
 ```bash

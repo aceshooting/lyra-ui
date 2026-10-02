@@ -90,6 +90,16 @@ See each package's own README for full install/usage details.
 
 ## Quick Start
 
+### Quick start prompt
+
+Paste this into Claude or Codex:
+
+```text
+Install the Lyra UI skill from GitHub aceshooting/lyra-ui. Start a Lit app with Vite+ and @aceshooting/lyra-ui, following the skill.
+```
+
+### Manual setup
+
 ```bash
 npm install @aceshooting/lyra-ui
 ```
