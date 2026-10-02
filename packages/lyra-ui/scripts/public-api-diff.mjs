@@ -1242,6 +1242,7 @@ function declarationGraph(filesValue) {
     contractDefinitions: new Map(),
     referencedTypeCache: new Map(),
     typeDependencyCache: new Map(),
+    tupleElementAliasCache: new Map(),
     moduleDependencyCache: new Map(),
     directDependencyCache: new Map(),
   };
@@ -1266,7 +1267,8 @@ function normalizedTypeAliases(graph) {
         ) {
           continue;
         }
-        const definition = typeNodeText(module, node.typeAnnotation);
+        const definition = tupleElementAliasType(graph, { module, records: [record], path: record.path })
+          ?? typeNodeText(module, node.typeAnnotation);
         const names = new Set([
           record.name,
           ...(record.path?.length > 1 ? [record.path.join('.')] : []),
@@ -1766,7 +1768,8 @@ function addDeclarationSurface(entries, base, surface, label, resolved, graph) {
       normalizeTypeParameters(module, primary),
       label,
     );
-    addTypeSurface(entries, base, surface, typeNodeText(module, primary.typeAnnotation), label);
+    addTypeSurface(entries, base, surface,
+      tupleElementAliasType(graph, resolved) ?? typeNodeText(module, primary.typeAnnotation), label);
     return;
   }
   if (kind === 'class') {
@@ -2004,6 +2007,70 @@ function declarationIdentity(resolved) {
   return `${resolved.module.file}#${JSON.stringify(pathParts)}`;
 }
 
+/** A whole alias of a nonempty readonly string tuple's element type exposes a union, not its
+ * indices or length. Project only that complete, resolved shape; every other tuple use keeps
+ * its ordinary declaration contract and dependency edges. */
+function tupleElementAliasType(graph, resolved) {
+  if (!graph) return undefined;
+  const identity = declarationIdentity(resolved);
+  if (graph.tupleElementAliasCache.has(identity)) return graph.tupleElementAliasCache.get(identity);
+  const project = () => {
+    if (resolved.records.length !== 1) return undefined;
+    const alias = resolved.records[0].node;
+    if (alias.type !== 'TSTypeAliasDeclaration' || (alias.typeParameters?.params?.length ?? 0) > 0) {
+      return undefined;
+    }
+    const unwrap = (node) => {
+      while (node?.type === 'TSTypeAnnotation' || node?.type === 'TSParenthesizedType') {
+        node = node.typeAnnotation;
+      }
+      return node;
+    };
+    const indexed = unwrap(alias.typeAnnotation);
+    if (indexed?.type !== 'TSIndexedAccessType' || indexed.indexType?.type !== 'TSNumberKeyword') {
+      return undefined;
+    }
+    const query = unwrap(indexed.objectType);
+    if (query?.type !== 'TSTypeQuery' || (query.typeArguments?.params?.length ?? 0) > 0) return undefined;
+    const parts = entityNameParts(query.exprName);
+    if (parts.length === 0) return undefined;
+    const localRoot = resolveScopedLocalDeclaration(resolved.module, resolved.path, [parts[0]]);
+    let target = localRoot
+      ? resolveLocalDeclaration(resolved.module, [...localRoot.path, ...parts.slice(1)])
+      : undefined;
+    if (!localRoot) {
+      const imported = resolved.module.imports.get(parts[0]);
+      const file = imported && resolveDeclarationFile(graph.files, resolved.module.file, imported.source);
+      const module = file && graph.getModule(file);
+      const [exported, ...members] = imported?.imported === '*'
+        ? parts.slice(1)
+        : [imported?.imported, ...parts.slice(1)];
+      // Only direct exports prove one authority here. Re-export chains and ambiguous stars
+      // retain their normal dependency contracts until their resolution can be proved.
+      const binding = module?.directExports.get(exported);
+      if (!binding || binding.source) return undefined;
+      const local = binding.localPath ?? (binding.local ? [binding.local] : undefined);
+      target = local && resolveLocalDeclaration(module, [...local, ...members]);
+    }
+    if (!target) return undefined;
+    if (target.records.length !== 1) return undefined;
+    const variable = target.records[0].node;
+    if (variable.type !== 'VariableDeclarator' || variable.id?.type !== 'Identifier') return undefined;
+    const annotation = unwrap(variable.id.typeAnnotation);
+    if (annotation?.type !== 'TSTypeOperator' || annotation.operator !== 'readonly') return undefined;
+    const tuple = unwrap(annotation.typeAnnotation);
+    if (tuple?.type !== 'TSTupleType' || !Array.isArray(tuple.elementTypes)
+      || tuple.elementTypes.length === 0) return undefined;
+    if (!tuple.elementTypes.every((element) =>
+      element.type === 'TSLiteralType' && typeof element.literal?.value === 'string')) return undefined;
+    const literals = [...new Set(tuple.elementTypes.map((element) => JSON.stringify(element.literal.value)))];
+    return normalizeType(literals.sort().join('|'));
+  };
+  const projected = project();
+  graph.tupleElementAliasCache.set(identity, projected);
+  return projected;
+}
+
 /** Materializing one declaration surface walks every public member and normalizes every nested
  * type. Granular routes intentionally expose the same class/type through several registration,
  * class, family, and wildcard paths, so doing that work independently per route grows into
@@ -2132,10 +2199,12 @@ function cachedReferencedTypeNames(graph, resolved) {
   if (!graph.referencedTypeCache.has(identity)) {
     graph.referencedTypeCache.set(
       identity,
-      referencedTypeNames(
-        resolved.module,
-        resolved.records.filter(({ node }) => node.type !== 'TSModuleDeclaration'),
-      ),
+      tupleElementAliasType(graph, resolved) !== undefined
+        ? []
+        : referencedTypeNames(
+          resolved.module,
+          resolved.records.filter(({ node }) => node.type !== 'TSModuleDeclaration'),
+        ),
     );
   }
   return graph.referencedTypeCache.get(identity);

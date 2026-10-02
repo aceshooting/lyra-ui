@@ -21,11 +21,13 @@ const manifest = JSON.parse(
 
 test('checks every live typed export while preserving blocked retired routes', () => {
   const entrypoints = attwEntrypoints(manifest);
-  assert.equal(entrypoints.length, 2432, 'the reviewed package has 2432 live typed exports');
+  assert.equal(entrypoints.length, 2434, 'the reviewed package has 2434 live typed exports');
   assert.ok(entrypoints.includes('.'));
   assert.ok(entrypoints.includes('./package.json'));
   assert.ok(entrypoints.includes('./theme/*'));
   assert.ok(entrypoints.includes('./theme/looks/shadcn.js'), 'current look routes remain checked');
+  assert.ok(entrypoints.includes('./components/lr-currency-picker.js'));
+  assert.ok(entrypoints.includes('./components/forms/currency-picker/currency-picker.class.js'));
   for (const route of ['./utilities/*', './theme/presets.js', './theme/presets/shadcn.js']) {
     assert.equal(manifest.exports[route], null, `${route} remains an explicit closed door`);
     assert.ok(!entrypoints.includes(route), `${route} has no typed target for ATTW to resolve`);
@@ -36,7 +38,7 @@ test('checks every live typed export while preserving blocked retired routes', (
   const shards = Array.from({ length: ATTW_CI_SHARD_TOTAL }, (_, index) =>
     partitionAttwEntrypoints(entrypoints, index + 1, ATTW_CI_SHARD_TOTAL),
   );
-  assert.deepEqual(shards.map((shard) => shard.length), Array(ATTW_CI_SHARD_TOTAL).fill(152));
+  assert.deepEqual(shards.map((shard) => shard.length), [153, 153, ...Array(ATTW_CI_SHARD_TOTAL - 2).fill(152)]);
   assert.equal(new Set(shards.flat()).size, entrypoints.length, 'shards are disjoint');
   assert.deepEqual(shards.flat().sort(), entrypoints, 'shards cover every typed export');
 });

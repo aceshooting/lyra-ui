@@ -80,9 +80,13 @@ class CurrencyPickerBase extends LyraElement<LyraCurrencyPickerEventMap> {}
  * @csspart select-clear-button - The optional clear action.
  * @csspart hint - Field guidance.
  * @csspart error - Validation guidance.
+ * @event {Event} input - Fired after a user selection updates the committed value and form state.
  * @event lr-input - User selection changed the committed value.
+ * @event {Event} change - Fired once after an accepted user selection or clear.
  * @event lr-change - User selection changed the committed value.
- * @event lr-invalid - Native invalid alias. Canceling suppresses validation UI.
+ * @event lr-invalid - Native invalid alias. Cancelable: preventDefault() suppresses validation UI.
+ * @event {FocusEvent} focus - Re-dispatched from the visible control as a bubbling, composed event.
+ * @event {FocusEvent} blur - Re-dispatched from the visible control as a bubbling, composed event.
  * @status experimental
  * @since unreleased
  */
@@ -177,6 +181,7 @@ export class LyraCurrencyPicker extends FormAssociated(CurrencyPickerBase, value
     else if (this.required && !this.value) this[SET_ANCHORED_VALIDITY]({ valueMissing: true }, this.localize('fieldRequired'));
     else this[SET_ANCHORED_VALIDITY]({});
   }
+  /** @internal Anchor validation to the composed select's focusable semantic owner. */
   [VALIDITY_ANCHOR](): HTMLElement | null {
     return resolveValidityAnchor(this.selectElement) ?? null;
   }

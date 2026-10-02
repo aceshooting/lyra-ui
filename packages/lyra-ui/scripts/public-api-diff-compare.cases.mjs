@@ -1570,6 +1570,151 @@ test('keeps an ambiguous type alias replacement breaking', () => {
   assert.equal(diffPublicApi(before, after)[0].bump, 'major');
 });
 
+function tupleElementAliasFixture(tuple, {
+  alias = '(typeof TAGS)[number]',
+  parameters = '',
+  extraExports = '',
+  payload = 'string | number',
+} = {}) {
+  return {
+    packageJson: {
+      name: '@aceshooting/lyra-ui', version: '1.0.0',
+      exports: { '.': { types: './dist/index.d.ts', default: './dist/index.js' } },
+    },
+    manifest: { modules: [] },
+    declarations: {
+      namedEntry: 'dist/index.d.ts',
+      named: `export type { Tag } from './tags.js';
+        export type { EventMap, FrameworkProps } from './consumer.js'; ${extraExports}`,
+      files: {
+        'dist/tags.d.ts': `export declare const TAGS: ${tuple};
+          export type Tag${parameters} = ${alias};`,
+        'dist/consumer.d.ts': `import type { Tag } from './tags.js';
+          export interface EventMap { loaded: CustomEvent<{ tag: Tag; value: ${payload} }>; }
+          export type FrameworkProps = { onLoaded?: (event: EventMap['loaded']) => void };`,
+      },
+      packageFiles: ['dist/index.d.ts', 'dist/index.js', 'dist/tags.d.ts', 'dist/consumer.d.ts'],
+    },
+  };
+}
+
+test('projects readonly string tuple elements without propagating tuple insertion breaks', () => {
+  const before = normalizePublicApi(tupleElementAliasFixture("readonly ['lr-a', 'lr-c']"));
+  const after = normalizePublicApi(tupleElementAliasFixture("readonly ['lr-a', 'lr-b', 'lr-c']"));
+  const changes = diffPublicApi(before, after);
+  assert.equal(after.entries['named-export:Tag:type'].value, normalizeType('"lr-a"|"lr-b"|"lr-c"'));
+  assert.deepEqual(after.typeAliases.Tag, [after.entries['named-export:Tag:type'].value]);
+  assert.equal(minimumRequiredBump(changes), 'minor');
+  for (const name of ['EventMap', 'FrameworkProps']) {
+    assert.ok(changes.some((change) =>
+      change.id === `named-export:${name}:dependencies` && change.bump === 'minor'));
+  }
+  assert.equal(minimumRequiredBump(diffPublicApi(after, before)), 'major');
+});
+
+test('tuple element unions ignore ordering and repeated literal elements', () => {
+  const before = normalizePublicApi(tupleElementAliasFixture("readonly ['lr-a', 'lr-c']"));
+  const after = normalizePublicApi(tupleElementAliasFixture("readonly ['lr-c', 'lr-a', 'lr-c']"));
+  assert.deepEqual(diffPublicApi(before, after), []);
+  assert.deepEqual(diffPublicApi(after, before), []);
+});
+
+test('tuple projection resolves import aliases and namespace-qualified variables', () => {
+  for (const [declaration, query] of [
+    ["import { TAGS as Registry } from './registry.js';", 'Registry'],
+    ["import * as Registry from './registry.js';", 'Registry.TAGS'],
+    ['declare namespace Registry { const TAGS: TUPLE; }', 'Registry.TAGS'],
+  ]) {
+    const fixture = (tuple) => {
+      const input = tupleElementAliasFixture(tuple);
+      input.declarations.files['dist/registry.d.ts'] = `export declare const TAGS: ${tuple};`;
+      input.declarations.files['dist/tags.d.ts'] = `${declaration.replace('TUPLE', tuple)}
+        export type Tag = (typeof ${query})[number];`;
+      input.declarations.packageFiles.push('dist/registry.d.ts');
+      return normalizePublicApi(input);
+    };
+    assert.equal(minimumRequiredBump(diffPublicApi(
+      fixture("readonly ['lr-a', 'lr-c']"),
+      fixture("readonly ['lr-a', 'lr-b', 'lr-c']"),
+    )), 'minor', query);
+  }
+});
+
+test('tuple projection preserves raw tuple and fixed-index contracts', () => {
+  for (const options of [
+    { extraExports: "export { TAGS } from './tags.js';" },
+    { alias: 'typeof TAGS' },
+    { alias: '(typeof TAGS)[1]' },
+    { alias: "(typeof TAGS)['length']" },
+    { alias: '{ element: (typeof TAGS)[number]; tuple: typeof TAGS }' },
+  ]) {
+    const changes = diffPublicApi(
+      normalizePublicApi(tupleElementAliasFixture("readonly ['lr-a', 'lr-c']", options)),
+      normalizePublicApi(tupleElementAliasFixture("readonly ['lr-a', 'lr-b', 'lr-c']", options)),
+    );
+    assert.equal(minimumRequiredBump(changes), 'major', JSON.stringify(options));
+  }
+});
+
+test('tuple projection retains conservative dependencies for unsupported tuple shapes', () => {
+  for (const [before, after, options] of [
+    ['readonly []', "readonly ['lr-a']", {}],
+    ["['lr-a', 'lr-c']", "['lr-a', 'lr-b', 'lr-c']", {}],
+    ["readonly ['lr-a', string]", "readonly ['lr-a', 'lr-b', string]", {}],
+    ["readonly ['lr-a', ...string[]]", "readonly ['lr-a', 'lr-b', ...string[]]", {}],
+    ["readonly ['lr-a', 'lr-c'?]", "readonly ['lr-a', 'lr-b', 'lr-c'?]", {}],
+    ["readonly ['lr-a', 'lr-c']", "readonly ['lr-a', 'lr-b', 'lr-c']", { parameters: '<T = unknown>' }],
+  ]) {
+    assert.equal(minimumRequiredBump(diffPublicApi(
+      normalizePublicApi(tupleElementAliasFixture(before, options)),
+      normalizePublicApi(tupleElementAliasFixture(after, options)),
+    )), 'major', before);
+  }
+});
+
+test('tuple element additions do not hide narrowing elsewhere in a reachable event contract', () => {
+  const before = normalizePublicApi(tupleElementAliasFixture("readonly ['lr-a', 'lr-c']"));
+  const after = normalizePublicApi(tupleElementAliasFixture("readonly ['lr-a', 'lr-b', 'lr-c']", {
+    payload: 'string',
+  }));
+  const changes = diffPublicApi(before, after);
+  assert.equal(minimumRequiredBump(changes), 'major');
+  assert.ok(changes.some((change) =>
+    change.id === 'named-export:FrameworkProps:dependencies' && change.bump === 'major'));
+});
+
+test('tuple projection leaves unresolved references and duplicate declarations unprojected', () => {
+  const unresolved = normalizePublicApi(tupleElementAliasFixture("readonly ['lr-a']", {
+    alias: '(typeof Missing)[number]',
+  }));
+  assert.equal(unresolved.entries['named-export:Tag:type'].value, normalizeType('(typeof Missing)[number]'));
+  const fixture = (tuple) => {
+    const input = tupleElementAliasFixture(tuple);
+    input.declarations.files['dist/tags.d.ts'] += `\nexport declare const TAGS: ${tuple};`;
+    return normalizePublicApi(input);
+  };
+  const before = fixture("readonly ['lr-a', 'lr-c']");
+  const after = fixture("readonly ['lr-a', 'lr-b', 'lr-c']");
+  assert.equal(after.entries['named-export:Tag:type'].value, normalizeType('(typeof TAGS)[number]'));
+  assert.equal(minimumRequiredBump(diffPublicApi(before, after)), 'major');
+});
+
+test('tuple projection does not select one ambiguous star re-export authority', () => {
+  const fixture = (tuple) => {
+    const input = tupleElementAliasFixture(tuple);
+    input.declarations.files['dist/tags.d.ts'] = `import { TAGS } from './registry.js';
+      export type Tag = (typeof TAGS)[number];`;
+    input.declarations.files['dist/registry.d.ts'] = "export * from './a.js'; export * from './b.js';";
+    input.declarations.files['dist/a.d.ts'] = `export declare const TAGS: ${tuple};`;
+    input.declarations.files['dist/b.d.ts'] = "export declare const TAGS: readonly ['other'];";
+    return normalizePublicApi(input);
+  };
+  const before = fixture("readonly ['lr-a', 'lr-c']");
+  const after = fixture("readonly ['lr-a', 'lr-b', 'lr-c']");
+  assert.equal(after.entries['named-export:Tag:type'].value, normalizeType('(typeof TAGS)[number]'));
+  assert.equal(minimumRequiredBump(diffPublicApi(before, after)), 'major');
+});
+
 test('treats a leading-bar single-member union gaining a member as minor', () => {
   const changes = diffPublicApi(
     typeSnapshot("| 'lr-cell-click'"),
