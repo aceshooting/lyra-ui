@@ -9,7 +9,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 
 export type { LyraCountryCatalog, LyraCountryEntry } from '../../../countries.js';
 export type LyraCountryChangeDetail = LyraCatalogPickerChangeDetail;
-export type LyraCountryPickerEventMap = LyraCatalogPickerEventMap;
+export interface LyraCountryPickerEventMap extends LyraCatalogPickerEventMap {}
 const defaultEntries = Object.freeze(COUNTRY_CODES.map((code) => Object.freeze({ code })));
 function normalizeCountry(value: unknown): string {
   const text = typeof value === 'string' ? value.trim() : '';

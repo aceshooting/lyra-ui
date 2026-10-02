@@ -7,7 +7,7 @@ import { styles } from './time-zone-picker.styles.js';
 
 export type { LyraTimeZoneCatalog, LyraTimeZoneEntry } from '../../../time-zones.js';
 export type LyraTimeZoneChangeDetail = LyraCatalogPickerChangeDetail;
-export type LyraTimeZonePickerEventMap = LyraCatalogPickerEventMap;
+export interface LyraTimeZonePickerEventMap extends LyraCatalogPickerEventMap {}
 
 /**
  * `<lr-time-zone-picker>` — a form-associated time-zone identifier selector.

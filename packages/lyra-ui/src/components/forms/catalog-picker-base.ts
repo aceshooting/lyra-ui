@@ -39,13 +39,14 @@ export interface LyraCatalogPickerEventMap {
 }
 
 type PickerControl = LyraSelect<false> | LyraCombobox<false>;
+class CatalogPickerElement extends LyraElement<LyraCatalogPickerEventMap> {}
 const pickerSpellcheckConverter = {
   ...spellcheckConverter,
   fromAttribute: (value: string | null): boolean => value === null ? false : spellcheckConverter.fromAttribute!(value, Boolean),
 };
 
 /** Shared implementation for catalog selectors; not a registered custom element. */
-export abstract class LyraCatalogPickerBase extends FormAssociated(LyraElement<LyraCatalogPickerEventMap>) {
+export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPickerElement) {
   static override styles = [LyraElement.styles, styles];
   protected static override collectionSupport = collectionSupport;
   protected static override readonly immutableEventDetails = Object.freeze(['lr-input', 'lr-change']);

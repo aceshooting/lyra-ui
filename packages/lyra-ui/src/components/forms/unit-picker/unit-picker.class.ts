@@ -7,7 +7,7 @@ import { styles } from './unit-picker.styles.js';
 
 export type { LyraUnitCatalog, LyraUnitEntry } from '../../../units.js';
 export type LyraUnitChangeDetail = LyraCatalogPickerChangeDetail;
-export type LyraUnitPickerEventMap = LyraCatalogPickerEventMap;
+export interface LyraUnitPickerEventMap extends LyraCatalogPickerEventMap {}
 const defaultEntries = Object.freeze(UNIT_CODES.map((code) => Object.freeze({ code })));
 
 /**
