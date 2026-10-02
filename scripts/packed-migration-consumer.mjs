@@ -781,7 +781,8 @@ async function verifyPackedMemberConsumers({ fixtureDir, compatibilityContext, e
     const reportPath = join(artifactsDir, `${origin}-members-resolved.json`); reportPaths.push(reportPath);
     await runMigrationProcess(executable, [`--origin=${origin}`, '--check', `--report=${reportPath}`, resolvedDir], fixtureDir);
     const report = JSON.parse(await readFile(reportPath, 'utf8'));
-    assertMigrationReport(report, [], origin, origin === 'lyra-v21' ? 2 : 0);
+    const acknowledged = cases.reduce((total, item) => total + (item.resolvedAcknowledgementsByOrigin?.[origin] ?? 0), 0);
+    assertMigrationReport(report, [], origin, acknowledged);
   }
   const casesPath = join(artifactsDir, 'member-resolutions.json');
   await writeFile(casesPath, json(cases.map(item => ({ key: item.key, file: `${item.id}.${item.extension}`,

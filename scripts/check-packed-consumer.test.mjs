@@ -17,7 +17,7 @@ const bundleBudgets = JSON.parse(
   ),
 );
 
-test('caps the packed core raw sum at the reviewed v24 measurement plus selected headroom', () => {
+test('caps the packed core raw sum at the reviewed 25.4 measurement plus unchanged headroom', () => {
   const block = checkerSource.match(/const coreRawBudget = \{(?<body>[\s\S]*?)\n\};/u);
   assert.ok(block?.groups?.body, 'coreRawBudget must remain an inspectable measured budget');
 
@@ -26,17 +26,25 @@ test('caps the packed core raw sum at the reviewed v24 measurement plus selected
       .map((match) => [match.groups.name, Number(match.groups.value.replaceAll('_', ''))]),
   );
   assert.deepEqual(terms, {
-    reviewedV24MeasurementBytes: 4_834_973,
+    reviewedV254MeasurementBytes: 4_860_094,
     selectedRegressionHeadroomBytes: 16_000,
   });
-  const ceiling = terms.reviewedV24MeasurementBytes + terms.selectedRegressionHeadroomBytes;
-  assert.equal(ceiling, 4_850_973);
-  assert.ok(ceiling < 4_869_000, 'the v24 core ceiling must tighten the prior allowance');
+  const ceiling = terms.reviewedV254MeasurementBytes + terms.selectedRegressionHeadroomBytes;
+  assert.equal(ceiling, 4_876_094);
+  assert.ok(terms.selectedRegressionHeadroomBytes / terms.reviewedV254MeasurementBytes < 0.005,
+    'the existing raw regression headroom must remain below 0.5%');
   assert.match(
     checkerSource,
-    /maxRawBytes:\s*coreRawBudget\.reviewedV24MeasurementBytes\s*\+\s*coreRawBudget\.selectedRegressionHeadroomBytes\s*,/u,
+    /maxRawBytes:\s*coreRawBudget\.reviewedV254MeasurementBytes\s*\+\s*coreRawBudget\.selectedRegressionHeadroomBytes\s*,/u,
     'the core bundle entry must use the exact reviewed measurement and selected headroom',
   );
+  const overageGate = checkerSource.match(/if \(config\.maxRawBytes != null && output\.rawBytes > config\.maxRawBytes\) \{[\s\S]*?\n  \}/u)?.[0];
+  assert.ok(overageGate, 'the packed raw-byte gate must remain inspectable');
+  const inspectOverage = new Function('output', 'config', 'formatBytes', `const violations = []; ${overageGate}\nreturn violations;`);
+  assert.deepEqual(inspectOverage({ rawBytes: ceiling }, { maxRawBytes: ceiling }, String), []);
+  const overage = inspectOverage({ rawBytes: ceiling + 1 }, { maxRawBytes: ceiling }, String);
+  assert.equal(overage.length, 1, 'one byte above the reviewed raw ceiling must fail');
+  assert.match(overage[0], /exceeds budget/u);
 });
 
 test('keeps the packed button canary aligned with the authoritative granular hard budget', () => {

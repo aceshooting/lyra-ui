@@ -1201,6 +1201,7 @@ jobs:
       - if: matrix.container == '' && steps.playwright-cache.outputs.cache-hit != 'true'
         run: pnpm --filter @aceshooting/lyra-ui exec playwright install ${{ matrix.install_browser }}
       - name: Run platform contract suite
+        if: matrix.browser != 'edge'
         env:
           WTR_BROWSER: ${{ matrix.browser }}
           WTR_TEST_SUITE: platform
@@ -1208,3 +1209,22 @@ jobs:
           WTR_SHARD_TOTAL: ${{ matrix.shard_total }}
           WTR_STRICT_CONSOLE: "1"
         run: pnpm --filter @aceshooting/lyra-ui test:platform-shard
+      - name: Run Edge platform contracts with bounded startup diagnostics
+        if: matrix.browser == 'edge'
+        env:
+          WTR_BROWSER: edge
+          WTR_TEST_SUITE: platform
+          WTR_SHARD_INDEX: ${{ matrix.shard_index }}
+          WTR_SHARD_TOTAL: ${{ matrix.shard_total }}
+          WTR_STRICT_CONSOLE: "1"
+        run: |
+          node --test packages/lyra-ui/scripts/edge-platform-diagnostics.test.mjs
+          node packages/lyra-ui/scripts/edge-platform-diagnostics.mjs test-results/edge-startup.log pnpm --filter @aceshooting/lyra-ui test:platform-shard
+      - name: Archive Edge startup diagnostics
+        if: always() && matrix.browser == 'edge'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: edge-platform-startup-${{ github.run_attempt }}
+          path: test-results/edge-startup.log
+          if-no-files-found: warn
+          retention-days: 7

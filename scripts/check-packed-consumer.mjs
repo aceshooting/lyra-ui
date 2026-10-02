@@ -138,14 +138,17 @@ const optionalPeerFamilyTags = componentInventory.components
 // tags. Imperative helpers register the exact elements they need only when the helper is invoked.
 const rootHelperRegisteredTags = [];
 
-// Packed core/all.js on a3d7f307e9486e622c6d81bc9969932ffefdce82 measured 4,834,973 raw
+// Packed core/all.js on bd8e07507bdc1b083d4d34b4ead25f5008e42333 measured 4,860,094 raw
 // bytes across all 15 emitted files, with optional peers externalized (zero eager/bundled peers).
-// Select 16,000 bytes of regression headroom, informed by the historical ~16 KiB practice; this
-// is a new allowance for the reviewed v24 measurement, not retained deprecated-alias weight.
-// The prior additive budget chronology is preserved at:
+// The normal @aceshooting/lyra-ui@25.4.0 tarball SHA-256 was
+// d0e670d51914d82fdc054a89e7c4b29331840a6331fc06b4de3d08ddb3a8e1f4.
+// Reviewed additions since the v24 baseline include synchronized categorical charts and native
+// overlay/layout fixes. Retain the existing 16,000-byte regression headroom (less than 0.5%);
+// this adjusts only the failing core entry, with no change to peer exclusions or measurement.
+// The prior 4,834,973-byte baseline and allowance chronology are preserved at:
 // https://github.com/aceshooting/lyra-ui/blob/a3d7f307e9486e622c6d81bc9969932ffefdce82/scripts/check-packed-consumer.mjs#L140-L394
 const coreRawBudget = {
-  reviewedV24MeasurementBytes: 4_834_973,
+  reviewedV254MeasurementBytes: 4_860_094,
   selectedRegressionHeadroomBytes: 16_000,
 };
 
@@ -175,7 +178,7 @@ const bundleEntries = {
     // Measures the entire non-optional registration graph from `all.js`; the bare package root
     // has its separate tree-shaking canary below. The reviewed raw sum includes every emitted file.
     maxRawBytes:
-      coreRawBudget.reviewedV24MeasurementBytes +
+      coreRawBudget.reviewedV254MeasurementBytes +
       coreRawBudget.selectedRegressionHeadroomBytes,
   },
   // The other half of the registration split, and the reason the `core` budget above could move to

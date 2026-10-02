@@ -386,6 +386,56 @@ test('all390 member inputs have exact action witnesses in both scanner profiles 
   }
 });
 
+test('current shared chart tooltip ownership preserves all historical sites as exact manual decisions', async () => {
+  const { createMemberMigrationCases, assertMemberMigrationReport } = await import('./packed-migration-consumer-cases.mjs');
+  const { readCurrentCompatibilityContext } = await import('../packages/lyra-ui/scripts/check-published-compatibility.mjs');
+  const { buildMigrationContract, migrateText } = await import('../packages/lyra-ui/scripts/migrate-wa.mjs');
+  const context = await readCurrentCompatibilityContext();
+  const inventory = JSON.parse(await readFile(new URL('../packages/lyra-ui/scripts/fixtures/component-inventory.json', import.meta.url), 'utf8'));
+  const ledger = JSON.parse(await readFile(new URL('../packages/lyra-ui/scripts/fixtures/lyra-renames.json', import.meta.url), 'utf8'));
+  const cases = createMemberMigrationCases(context, ledger);
+  assert.equal(cases.length, 390);
+  const shared = cases.filter(item => item.key.name === '--lr-chart-tooltip-text');
+  assert.deepEqual(shared.map(item => item.key.tag).sort(), [
+    'lr-bar-chart', 'lr-box-plot', 'lr-bubble-chart', 'lr-chart', 'lr-doughnut-chart',
+    'lr-histogram', 'lr-line-chart', 'lr-pie-chart', 'lr-polar-area-chart', 'lr-radar-chart', 'lr-scatter-chart',
+  ]);
+  const contract = buildMigrationContract(inventory, { renameLedger: ledger, lyraVersion: context.packageVersion, compatibilityContext: context });
+  for (const item of shared) {
+    assert.equal(item.automatic, false, item.id);
+    assert.equal(item.sharedTargetReview, true, item.id);
+    assert.deepEqual(item.targetKeepers, ['lr-lite-chart'], item.id);
+    const file = `${item.id}.css`;
+    const result = migrateText(item.input, contract, { file, origin: 'lyra-v21' });
+    assert.equal(result.content, item.input, 'A shared target cannot be silently applied');
+    const report = { schemaVersion: 1, origin: 'lyra-v21', ...result, filesChanged: Number(result.content !== item.input),
+      summary: { rewrites: result.changes.length, warnings: result.warnings.length, acknowledged: result.acknowledged } };
+    assertMemberMigrationReport(report, [{ ...item, file }], 'lyra-v21');
+    assert.match(result.warnings[0].message, /Custom properties inherit into nested components/);
+    assert.match(result.warnings[0].message, /lr-lite-chart already uses --lr-chart-tooltip-color/);
+    assert.throws(() => assertMemberMigrationReport({ ...report, warnings: [] }, [{ ...item, file }], 'lyra-v21'));
+    const wrongOwner = structuredClone(report); wrongOwner.warnings[0].upstreamTag = 'lr-lite-chart';
+    assert.throws(() => assertMemberMigrationReport(wrongOwner, [{ ...item, file }], 'lyra-v21'));
+    for (const [field, value] of [['warningCode', 'DEPRECATED_MEMBER_REVIEW'], ['target', '--lr-other-color'], ['column', item.column + 1]]) {
+      const drifted = structuredClone(report); drifted.warnings[0][field] = value;
+      assert.throws(() => assertMemberMigrationReport(drifted, [{ ...item, file }], 'lyra-v21'), `Manual ${field} drift must fail`);
+    }
+    const rewritten = structuredClone(report); rewritten.changes.push({ ...rewritten.warnings[0], action: 'rewrite-css-property', warningCode: null });
+    rewritten.summary.rewrites = 1; rewritten.filesChanged = 1;
+    assert.throws(() => assertMemberMigrationReport(rewritten, [{ ...item, file }], 'lyra-v21'), 'An unexpected rewrite must fail');
+    const unreviewed = migrateText(item.resolved, contract, { file, origin: 'lyra-v21' });
+    assert.deepEqual(unreviewed.warnings.map(site => site.warningCode), ['NAME_GAINED_OWNER_REVIEW']);
+    const resolved = migrateText(item.resolvedByOrigin['lyra-v21'], contract, { file, origin: 'lyra-v21' });
+    assert.deepEqual(resolved.changes, []); assert.deepEqual(resolved.warnings, []);
+    assert.equal(resolved.acknowledged, 1);
+  }
+  const beforeSharedTarget = structuredClone(context);
+  beforeSharedTarget.exposure['css-property']['--lr-chart-tooltip-color'] = beforeSharedTarget.exposure['css-property']['--lr-chart-tooltip-color'].filter(tag => tag !== 'lr-lite-chart');
+  const historical = createMemberMigrationCases(beforeSharedTarget, ledger);
+  assert.equal(historical.filter(item => item.key.name === '--lr-chart-tooltip-text' && item.automatic).length, 11,
+    'Expectation changes only when independently checked ownership changes');
+});
+
 test('full member stage remains off until all390 are retired and rejects changed cohort identity', async () => {
   const { createMemberMigrationCases, selectMemberMigrationStage } = await import('./packed-migration-consumer-cases.mjs');
   const facts = JSON.parse(await readFile(new URL('../packages/lyra-ui/scripts/fixtures/compatibility-history/22.0.0/facts.json', import.meta.url), 'utf8'));

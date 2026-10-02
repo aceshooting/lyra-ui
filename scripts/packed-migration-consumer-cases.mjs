@@ -57,6 +57,20 @@ export function createMemberMigrationCases(context, ledger) {
     assert.ok(Boolean(rule) !== Boolean(review || slotContent), `Missing or conflicting recipe: ${compatibilityKey(record.key)}`);
     if (rule) assert.equal(rule.to, record.policy.replacement.name, 'Ledger and policy target differ');
     const target = rule?.to ?? record.policy.replacement.name;
+    // CSS declarations reach nested components too. Bind expectations to independently checked
+    // exposure rather than assuming a published rename stays global as new components adopt it.
+    const exposedBy = (name) => context.exposure?.['css-property']?.[name] ??
+      Object.values(context.sourceComponents ?? {}).filter(component =>
+        component.surface?.cssProperties?.some(property => property.name === name)).map(component => component.tag);
+    const cssRenames = kind === 'css-property' && rule
+      ? profile.renames.filter(entry => entry.kind === kind && entry.from === name) : [];
+    const movingOwners = new Set(cssRenames.filter(entry => entry.to === target && !entry.polarity).map(entry => entry.tag));
+    const targetKeepers = cssRenames.length ? exposedBy(target).filter(owner => !movingOwners.has(owner)).sort() : [];
+    const sharedTargetReview = targetKeepers.length > 0;
+    if (sharedTargetReview) {
+      assert.ok(cssRenames.every(entry => entry.to === target && !entry.polarity), 'Shared CSS target must have one uninverted replacement');
+      assert.ok(exposedBy(name).every(owner => movingOwners.has(owner)), 'Shared CSS source ownership needs a separate reviewed recipe');
+    }
     const anchor = `document.querySelector('${tag}')!`;
     let input; let resolved; let extension = 'ts'; let column;
     if (kind === 'property') {
@@ -104,13 +118,20 @@ export function createMemberMigrationCases(context, ledger) {
       column = tag.length + 4;
     } else assert.fail(`Unsupported member recipe: ${kind}`);
     return { id: [tag, kind, name || 'default'].join('_').replaceAll(/[^a-zA-Z0-9_-]/gu, '_'),
-      key: record.key, record, input, resolved, extension, column, rule, review, slotContent,
+      key: record.key, record, input, resolved, extension, column, rule, review, slotContent, sharedTargetReview, targetKeepers,
       reportedTag: kind === 'css-property' && rule && new Set(profile.renames.filter(entry => entry.kind === kind && entry.from === name).map(entry => entry.tag)).size > 1 ? null : tag,
-      resolvedByOrigin: tag === 'lr-graph' && kind === 'event' && review ? {
+      resolvedByOrigin: sharedTargetReview ? {
+        'lyra-v21': `/* lyra-migrate-reviewed: NAME_GAINED_OWNER_REVIEW:${target} */\n${resolved}`,
+        'lyra-v22': resolved,
+      } : tag === 'lr-graph' && kind === 'event' && review ? {
         'lyra-v21': `// lyra-migrate-reviewed: DETAIL_SHAPE_REVIEW:${target}\n${resolved}`,
         'lyra-v22': resolved,
       } : undefined,
-      automatic: Boolean(rule && rule.polarity !== 'inverted') };
+      resolvedAcknowledgementsByOrigin: {
+        'lyra-v21': Number(sharedTargetReview || (tag === 'lr-graph' && kind === 'event' && Boolean(review))),
+        'lyra-v22': 0,
+      },
+      automatic: Boolean(rule && rule.polarity !== 'inverted' && !sharedTargetReview) };
   });
 }
 
@@ -141,8 +162,12 @@ export function assertMemberMigrationReport(report, cases, origin) {
         assert.equal(site.warningCode, null); assert.equal(site.target, item.rule.to);
       } else {
         assert.equal(site.action, 'manual-review');
-        assert.equal(site.warningCode, item.slotContent ? 'DEPRECATED_CONTENT_REVIEW' : item.rule?.polarity === 'inverted' ? 'POLARITY_REVIEW' : 'DEPRECATED_MEMBER_REVIEW');
+        assert.equal(site.warningCode, item.sharedTargetReview ? 'RENAME_TARGET_SHARED_REVIEW' : item.slotContent ? 'DEPRECATED_CONTENT_REVIEW' : item.rule?.polarity === 'inverted' ? 'POLARITY_REVIEW' : 'DEPRECATED_MEMBER_REVIEW');
         assert.equal(site.target, item.slotContent ? null : item.rule?.to ?? item.record.policy.replacement.usage ?? item.record.policy.replacement.name);
+        if (item.sharedTargetReview) {
+          assert.match(site.message, /Custom properties inherit into nested components/);
+          for (const owner of item.targetKeepers) assert.ok(site.message.includes(owner), `Shared target warning omitted ${owner}`);
+        }
         if (item.review && item.record.state === 'retired') assert.ok(site.message.includes('was removed in 23.0.0'), site.message);
       }
     }
