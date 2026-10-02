@@ -153,7 +153,12 @@ be empty. The workflow runs `VERIFY=0 ./scripts/upgrade.sh`, then its complete c
 regeneration, build, measurements and source checks; the flag avoids running those stages twice.
 The exact Node and package-manager checks remain enforced. Review the generated artifact's
 manifest, lockfile, current-peer profile and derived changes, and commit the verified dependency
-update before dispatching release preparation. No Git refs are written by this workflow.
+update before dispatching release preparation. No Git refs are pushed by this workflow.
+
+In release mode, the hosted workflow retains its exact detached checkout and creates a local
+`main` ref at that dispatch SHA for Changesets' configured base branch. An existing mismatched
+local `main` is rejected. This does not filter pending changesets or replace release preparation's
+fresh `origin/main` ancestry check; no refs are pushed.
 
 Schema 1 also accepts an optional `relocations` array of
 `{ module, toModule, exportName, kind, expectedFingerprint }` records for extracting a declaration

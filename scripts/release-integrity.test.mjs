@@ -786,6 +786,97 @@ test('fails closed on malformed or ambiguous Changesets status entries', () => {
   );
 });
 
+test('hosted release planning retains committed changesets in an exact detached checkout', () => {
+  const workspace = mkdtempSync(path.join(tmpdir(), 'lyra-detached-release-plan-'));
+  const checkout = path.join(workspace, 'checkout');
+  const bin = path.join(workspace, 'bin');
+  const git = (args) => {
+    const result = spawnSync('git', args, { cwd: checkout, encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    return result.stdout.trim();
+  };
+  try {
+    for (const directory of ['scripts', 'packages/lyra-ui/scripts', 'packages/fixture', '.changeset']) {
+      mkdirSync(path.join(checkout, directory), { recursive: true });
+    }
+    mkdirSync(bin);
+    for (const file of ['scripts/changeset-release-plan.mjs', 'packages/lyra-ui/scripts/is-main-module.mjs']) {
+      copyFileSync(path.join(repoRoot, file), path.join(checkout, file));
+    }
+    writeFileSync(path.join(checkout, 'package.json'), JSON.stringify({ name: 'release-fixture', private: true }));
+    writeFileSync(path.join(checkout, 'pnpm-workspace.yaml'), 'packages:\n  - packages/*\n');
+    writeFileSync(path.join(checkout, 'packages/fixture/package.json'), JSON.stringify({
+      name: 'release-fixture-package', version: '1.0.0',
+    }));
+    writeFileSync(path.join(checkout, '.changeset/config.json'), JSON.stringify({
+      baseBranch: 'main', changelog: false, commit: false, fixed: [], linked: [],
+      access: 'public', updateInternalDependencies: 'patch', ignore: [],
+    }));
+    writeFileSync(path.join(checkout, '.changeset/already-committed.md'),
+      "---\n'release-fixture-package': minor\n---\n\nCommitted pending release.\n");
+    const changesetCli = fileURLToPath(import.meta.resolve('@changesets/cli/bin.js'));
+    // Run the installed Changesets CLI, stopping release:prepare before any version or build writes.
+    writeFileSync(path.join(bin, 'pnpm'), `#!/usr/bin/env node
+const { spawnSync } = require('node:child_process');
+const args = process.argv.slice(2);
+const command = args[0] === 'changeset'
+  ? [${JSON.stringify(changesetCli)}, ...args.slice(1)]
+  : args.length === 1 && args[0] === 'release:prepare'
+    ? ['scripts/changeset-release-plan.mjs'] : null;
+if (!command) process.exit(72);
+const result = spawnSync(process.execPath, command, { stdio: 'inherit' });
+process.exit(result.status ?? 1);
+`, { mode: 0o755 });
+    git(['init', '--initial-branch=main']);
+    git(['config', 'user.name', 'Release fixture']);
+    git(['config', 'user.email', 'release@example.invalid']);
+    git(['add', '.']);
+    git(['commit', '-m', 'Committed pending release']);
+    const dispatchSha = git(['rev-parse', 'HEAD']);
+    git(['update-ref', 'refs/remotes/origin/main', dispatchSha]);
+    git(['checkout', '--detach', dispatchSha]);
+    git(['branch', '-D', 'main']);
+    const env = { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}`, GITHUB_SHA: dispatchSha };
+    const missingBase = spawnSync(process.execPath, ['scripts/changeset-release-plan.mjs'], {
+      cwd: checkout, env, encoding: 'utf8',
+    });
+    assert.equal(missingBase.status, 1);
+    assert.equal(missingBase.stdout, '', 'failure diagnostics must not become TSV output');
+    assert.match(missingBase.stderr, /Failed to find where HEAD diverged from "main"/u);
+
+    const workflow = readFileSync(path.join(repoRoot, '.github/workflows/prepare-artifacts.yml'), 'utf8');
+    const releaseStep = /      - name: Prepare release source from pending changesets\n        if: inputs.mode == 'release'\n        run: \|\n(?<commands>(?:          .*\n)+)/u.exec(workflow);
+    assert.ok(releaseStep, 'the hosted release step must expose its exact checkout preparation');
+    const commands = releaseStep.groups.commands.replace(/^          /gmu, '');
+    const runReleaseStep = (sourceSha) => spawnSync('bash', ['-euo', 'pipefail', '-c', commands], {
+      cwd: checkout, env: { ...env, GITHUB_SHA: sourceSha }, encoding: 'utf8',
+    });
+    for (const existingMain of [false, true]) {
+      const prepared = runReleaseStep(dispatchSha);
+      assert.equal(prepared.status, 0, prepared.stderr);
+      assert.equal(prepared.stdout, 'already-committed\trelease-fixture-package\n',
+        `all pending changesets remain visible with existing main=${existingMain}`);
+      assert.equal(git(['rev-parse', 'HEAD']), dispatchSha);
+      assert.equal(git(['rev-parse', 'refs/heads/main']), dispatchSha);
+      assert.equal(git(['branch', '--show-current']), '', 'HEAD remains detached');
+      assert.equal(git(['status', '--porcelain']), '', 'planning does not mutate tracked source');
+    }
+
+    git(['commit', '--allow-empty', '-m', 'Different source commit']);
+    const otherSha = git(['rev-parse', 'HEAD']);
+    for (const requestedSha of [dispatchSha, otherSha]) {
+      const rejected = runReleaseStep(requestedSha);
+      assert.notEqual(rejected.status, 0, 'mismatched HEAD or existing main must fail');
+      assert.equal(rejected.stdout, '', 'rejected source must not reach release planning');
+      assert.equal(git(['rev-parse', 'HEAD']), otherSha);
+      assert.equal(git(['rev-parse', 'refs/heads/main']), dispatchSha, 'existing main is never overwritten');
+      assert.equal(git(['status', '--porcelain']), '');
+    }
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
 test('budgets the platform matrix for degraded fresh-runner OS dependency setup', () => {
   const workflow = readFileSync(
     path.join(repoRoot, '.github/workflows/ci.yml'),

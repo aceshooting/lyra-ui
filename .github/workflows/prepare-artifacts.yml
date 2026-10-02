@@ -105,7 +105,16 @@ jobs:
         run: node scripts/prepare-artifacts.mjs source-contracts
       - name: Prepare release source from pending changesets
         if: inputs.mode == 'release'
-        run: pnpm release:prepare
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          # Changesets resolves baseBranch locally even when every pending changeset is committed.
+          if git show-ref --verify --quiet refs/heads/main; then
+            test "$(git rev-parse refs/heads/main)" = "$GITHUB_SHA"
+          else
+            git branch main "$GITHUB_SHA"
+          fi
+          pnpm release:prepare
       - name: Verify generated source contracts
         run: |
           pnpm --filter @aceshooting/lyra-ui run check:published-compatibility

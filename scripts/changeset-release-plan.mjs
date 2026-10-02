@@ -69,10 +69,16 @@ function loadChangesetPackagePlan(root = repoRoot) {
   const output = path.join(workspace, 'status.json');
   const pnpm = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
   try {
-    execFileSync(pnpm, ['changeset', 'status', '--output', output], {
-      cwd: root,
-      stdio: ['ignore', 'ignore', 'inherit'],
-    });
+    try {
+      execFileSync(pnpm, ['changeset', 'status', '--output', output], {
+        cwd: root,
+        stdio: ['ignore', 'pipe', 'inherit'],
+      });
+    } catch (error) {
+      // Changesets also prints failures to stdout; keep successful TSV output machine-readable.
+      if (error.stdout?.length) process.stderr.write(error.stdout);
+      throw error;
+    }
     return changesetPackagePlan(JSON.parse(readFileSync(output, 'utf8')));
   } finally {
     rmSync(workspace, { recursive: true, force: true });
