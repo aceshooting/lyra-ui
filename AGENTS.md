@@ -93,6 +93,7 @@ packages/lyra-ui/                 @aceshooting/lyra-ui, the library
   llms-full.txt, llms/{index,tokens,peers,migration}.md, llms/components/<tag>.md
                                   GENERATED; never edit, CI diffs them
 packages/lyra-flags/              optional <lr-flag> SVG companion (Noto Emoji, Public Domain)
+packages/lyra-docs/               private experimental editor companion; viewers stay in lyra-ui
 docs/agents/                      detail behind this file's digests
 .storybook/ | .agents/            Storybook docs site | Codex skill links + marketplace metadata
 plugins/lyra-ui/                  shared Codex/Claude plugin; skills/lyra-ui/references/ GENERATED

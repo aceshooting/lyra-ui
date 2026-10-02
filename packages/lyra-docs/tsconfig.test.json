@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": ".test-output",
+    "types": ["node"],
+    "paths": {
+      "@aceshooting/lyra-docs": ["./src/index.ts"],
+      "@aceshooting/lyra-docs/docx": ["./src/docx/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "type-tests/**/*.ts"],
+  "exclude": []
+}

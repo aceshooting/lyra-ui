@@ -458,6 +458,9 @@ pnpm --filter @aceshooting/lyra-ui check:bundle-size
 step "workspace tests (non-lyra-ui)"
 pnpm --filter '!@aceshooting/lyra-ui' -r test
 
+step "document companion type and package checks"
+pnpm --filter @aceshooting/lyra-docs lint
+
 step "check:dead-code"
 pnpm run check:dead-code
 

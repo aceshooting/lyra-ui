@@ -269,6 +269,15 @@ importers:
         specifier: ^8.3.2
         version: 8.3.2(@types/node@26.1.2)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0)
 
+  packages/lyra-docs:
+    devDependencies:
+      '@types/node':
+        specifier: 26.1.2
+        version: 26.1.2
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
   packages/lyra-flags:
     devDependencies:
       '@resvg/resvg-js':

@@ -7,10 +7,11 @@ still has open qualification requirements.
 ## Provisional direction
 
 Continue with the public, framework-independent EigenPal core behind original Lit and Lyra
-controls, using a stable light-DOM editing surface. The provisional packaging choice is an
-optional companion, keeping engine, styles, shaping, fonts and serialization outside ordinary
-Lyra imports. Asset and performance qualification must confirm that choice; package and component
-names remain undecided.
+controls, using a stable light-DOM editing surface. The packaging decision is the optional
+`@aceshooting/lyra-docs` companion for editors, keeping engine, styles, shaping, fonts and
+serialization outside ordinary Lyra imports. All existing file viewers remain in
+`@aceshooting/lyra-ui`. Asset and performance qualification must verify the separation; editor
+component names remain undecided. Additional editing formats require their own qualification.
 
 This chooses a candidate for further qualification. It does not import the upstream React/Vue
 application, promise all upstream features, or change the existing read-only `lr-docx-viewer`.

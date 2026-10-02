@@ -1,8 +1,9 @@
 # Native document editing
 
 Status: feasibility in progress. No document editor is shipped or promised for the current release.
-Existing `lr-docx-viewer` remains a lightweight, read-only semantic viewer. Component names,
-engine selection and packaging are decided by the first phase below.
+All existing file viewers, including the lightweight, read-only `lr-docx-viewer`, stay in
+`@aceshooting/lyra-ui`. Editing belongs in the optional `@aceshooting/lyra-docs` companion.
+Editor component names and the engine remain subject to the first phase's qualification.
 
 The [preliminary feasibility findings](document-editing-feasibility.md) record the candidate
 engine, rejected integration path, dependency boundaries and remaining qualification. Basic
@@ -14,6 +15,22 @@ Provide a native Lyra editing experience with Lit controls, design tokens, local
 compact API for applications and agents. Progress from basic editing to DOCX fidelity, review
 and collaboration through independently qualified increments. Preserve existing library features
 and keep document-engine, font, WASM and collaboration costs outside ordinary component imports.
+
+## Package boundary
+
+`@aceshooting/lyra-docs` is an independently versioned companion in the Lyra monorepo, following
+the optional-package model of `@aceshooting/lyra-flags`. It is for editors; it does not relocate,
+replace or add dependencies to the file viewers in `@aceshooting/lyra-ui`. Applications that only
+view files continue to install and import Lyra UI as before.
+
+DOCX is the first editing format under investigation. The package name leaves room for other
+formats through separate entry points and separately qualified engines. Spreadsheet, presentation
+and PDF editing are not implied by the initial DOCX work. Importing one format must not load engines
+for other formats, and the DOCX engine itself must load only when needed.
+
+The companion reuses Lyra's public controls, tokens, localization and accessibility utilities.
+Its first implementation remains private and experimental until the applicable release gates
+pass; creating the package does not make an editor available in the current Lyra UI release.
 
 Study useful architecture from
 [EigenPal DOCX Editor](https://github.com/eigenpal/docx-editor/tree/0bc6d8fa8ec5a35bb267ac171e10102617a68535),
@@ -61,7 +78,7 @@ interactive increment. Later phases do not postpone those requirements.
 - [ ] Establish a representative DOCX corpus, including unsupported content, malformed packages,
   RTL, large documents and round trips through Word and LibreOffice.
 - [ ] Measure production JS/CSS, lazy chunks, WASM, fonts, opening time, typing latency and retained
-  memory. Decide an optional library entry versus a separate companion package from this evidence.
+  memory. Verify that the companion's format entry points and lazy loading isolate these costs.
 
 Exit: a documented engine/DOM/packaging decision, license inventory and reproducible baseline.
 Stop or narrow the proposal if supported integration or preservation cannot be demonstrated.

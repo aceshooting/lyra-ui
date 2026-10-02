@@ -53,6 +53,10 @@ export default {
         '*.config.js',
       ],
     },
+    'packages/lyra-docs': {
+      entry: ['src/index.ts', 'src/docx/index.ts', 'src/**/*.test.ts', 'type-tests/**/*.ts'],
+      project: ['src/**/*.ts', 'scripts/**/*.mjs', 'type-tests/**/*.ts'],
+    },
     'packages/lyra-flags': {
       project: ['scripts/**/*.mjs', '*.js'],
     },
