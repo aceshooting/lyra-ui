@@ -15,7 +15,7 @@ import { parseSourceContractRequest } from './source-contract-request.mjs';
 assert.equal(process.env.GITHUB_ACTIONS, 'true', 'Use the hosted generation workflow');
 assert.equal(process.env.GITHUB_REF, 'refs/heads/main', 'Generation requires main');
 const preparationMode = process.env.PREPARATION_MODE ?? 'source';
-assertPreparationInputs(preparationMode, process.env.PUBLICATION_JSON ?? '', process.env.SOURCE_CONTRACTS_JSON ?? '');
+assertPreparationInputs(preparationMode, process.env.PUBLICATION_JSON ?? '', process.env.SOURCE_CONTRACTS_JSON ?? '', process.env.UPGRADE_DEPENDENCIES ?? 'false');
 const root = process.cwd();
 const git = args => execFileSync('git', args, { cwd: root, maxBuffer: 128 * 1024 * 1024 });
 const historyDir = join(root, 'packages/lyra-ui/scripts/fixtures/compatibility-history');

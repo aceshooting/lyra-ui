@@ -21,6 +21,11 @@ on:
         required: false
         type: string
         default: ''
+      upgradeDependencies:
+        description: 'Run the dependency upgrade before source regeneration; source mode only'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -37,6 +42,7 @@ jobs:
     env:
       PREPARATION_MODE: ${{ inputs.mode }}
       SOURCE_CONTRACTS_JSON: ${{ inputs.sourceContracts }}
+      UPGRADE_DEPENDENCIES: ${{ inputs.upgradeDependencies }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -67,7 +73,7 @@ jobs:
         run: |
           node --input-type=module <<'NODE'
           import { assertPreparationInputs } from './scripts/prepare-artifacts-paths.mjs';
-          assertPreparationInputs(process.env.PREPARATION_MODE, process.env.PUBLICATION_JSON, process.env.SOURCE_CONTRACTS_JSON);
+          assertPreparationInputs(process.env.PREPARATION_MODE, process.env.PUBLICATION_JSON, process.env.SOURCE_CONTRACTS_JSON, process.env.UPGRADE_DEPENDENCIES);
           NODE
           node --test scripts/prepare-artifacts.test.mjs
       - run: pnpm install --frozen-lockfile
@@ -79,6 +85,10 @@ jobs:
           PUBLICATION_JSON: ${{ inputs.publication }}
           GH_TOKEN: ${{ github.token }}
         run: node scripts/prepare-artifacts.mjs capture
+      - name: Upgrade workspace dependencies
+        if: inputs.mode == 'source' && inputs.upgradeDependencies
+        # Canonical regeneration below performs the build and measurements once, after upgrading.
+        run: VERIFY=0 ./scripts/upgrade.sh
       # History reconciliation needs a current manifest and pinned inventory first.
       # The repository runner refreshes package, plugin, size and Storybook projections.
       - name: Reconcile release history and generate source

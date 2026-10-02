@@ -14,6 +14,18 @@ test('release preparation rejects publication capture and unknown modes', () => 
   assert.throws(() => assertPreparationInputs('source', '', '{}'), /missing fields/u);
 });
 
+test('dependency refresh is explicit and isolated from release and authority updates', () => {
+  assert.doesNotThrow(() => assertPreparationInputs('source', '', '', 'true'));
+  assert.doesNotThrow(() => assertPreparationInputs('source', '', '', 'false'));
+  assert.doesNotThrow(() => assertPreparationInputs('release', '', '', 'false'));
+  assert.throws(() => assertPreparationInputs('release', '', '', 'true'), /requires source mode/u);
+  assert.throws(() => assertPreparationInputs('source', '{}', '', 'true'), /cannot capture a publication/u);
+  assert.throws(() => assertPreparationInputs('source', '', '{}', 'true'), /cannot update source-contract/u);
+  for (const flag of ['', 'TRUE', '1', ' false ', true, false, null, 1]) {
+    assert.throws(() => assertPreparationInputs('source', '', '', flag), /flag must be true or false/u);
+  }
+});
+
 test('only tracked pending Markdown changeset deletions pass in release mode', () => {
   const options = { mode: 'release', tracked, deleted: true };
   assert.doesNotThrow(() => assertSourcePath('.changeset/quiet-rivers.md', options));
