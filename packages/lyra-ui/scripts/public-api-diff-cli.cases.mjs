@@ -51,6 +51,51 @@ test('parses the highest Changeset bump for one package', () => {
   assert.equal(second.get('@aceshooting/lyra-ui'), 'major');
 });
 
+test('keeps major changes visible when more than 100 additive changes sort before them', (context) => {
+  const root = mkdtempSync(path.join(tmpdir(), 'lyra-api-report-priority-'));
+  const logs = [];
+  context.mock.method(console, 'log', (line) => logs.push(line));
+  try {
+    const before = path.join(root, 'before');
+    const after = path.join(root, 'after');
+    const addedExports = Object.fromEntries(Array.from({ length: 105 }, (_, index) => {
+      const name = `a-${String(index).padStart(3, '0')}`;
+      return [`./${name}.js`, `./dist/${name}.js`];
+    }));
+    for (const [directory, exports] of [
+      [before, { './z-first.js': './dist/z-first.js', './z-last.js': './dist/z-last.js' }],
+      [after, addedExports],
+    ]) {
+      mkdirSync(directory);
+      writeFileSync(path.join(directory, 'package.json'), JSON.stringify({
+        name: '@example/report', version: '1.0.0', exports,
+      }));
+    }
+    const args = ['--baseline', before, '--current', after, '--changesets', root];
+    assert.equal(runCli([...args, '--json']), 1);
+    const report = JSON.parse(logs.at(-1));
+    assert.equal(report.changes.length, 107);
+    assert.equal(report.changes[0].bump, 'minor', 'JSON keeps the complete original change ordering');
+    const majorLines = report.changes.filter((change) => change.bump === 'major')
+      .map((change) => `  [major] ${change.id}`);
+    const minorLines = report.changes.filter((change) => change.bump === 'minor')
+      .map((change) => `  [minor] ${change.id}`);
+    assert.equal(majorLines.length, 2);
+    assert.equal(minorLines.length, 105);
+
+    logs.length = 0;
+    assert.equal(runCli(args), 1);
+    assert.deepEqual(logs.filter((line) => line.startsWith('  [')), [
+      ...majorLines, ...minorLines.slice(0, 98),
+    ]);
+    assert.ok(logs.includes('Normalized changes: 2 major, 105 minor, 0 reviewed patch, 0 reviewed no-release'));
+    assert.ok(logs.includes('  ... 7 more change(s)'));
+    assert.ok(logs.includes('Public API semver gate failed.'));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('accepts SemVer build metadata without treating it as a release bump', () => {
   assert.equal(versionBump('8.0.0+build.1', '8.0.0+build.2'), 'none');
   assert.equal(versionBump('8.0.0-rc.1+build.1', '8.0.0-rc.1+build.2'), 'none');

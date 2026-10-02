@@ -3940,6 +3940,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-conversation-item': LyraConversationItemReactProps;
   'lr-copy-button': LyraCopyButtonReactProps;
   'lr-csv-viewer': LyraCsvViewerReactProps;
+  'lr-currency-picker': LyraCurrencyPickerReactProps;
   'lr-dashboard-grid': LyraDashboardGridReactProps;
   'lr-data-grid': LyraDataGridReactProps;
   'lr-dataset-viewer': LyraDatasetViewerReactProps;
@@ -4368,6 +4369,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-conversation-item': LyraComponentTypeMap['lr-conversation-item']['element'];
   'lr-copy-button': LyraComponentTypeMap['lr-copy-button']['element'];
   'lr-csv-viewer': LyraComponentTypeMap['lr-csv-viewer']['element'];
+  'lr-currency-picker': LyraComponentTypeMap['lr-currency-picker']['element'];
   'lr-dashboard-grid': LyraComponentTypeMap['lr-dashboard-grid']['element'];
   'lr-data-grid': LyraComponentTypeMap['lr-data-grid']['element'];
   'lr-dataset-viewer': LyraComponentTypeMap['lr-dataset-viewer']['element'];
@@ -4673,6 +4675,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-conversation-item': LyraConversationItemSvelteProps;
   'lr-copy-button': LyraCopyButtonSvelteProps;
   'lr-csv-viewer': LyraCsvViewerSvelteProps;
+  'lr-currency-picker': LyraCurrencyPickerSvelteProps;
   'lr-dashboard-grid': LyraDashboardGridSvelteProps;
   'lr-data-grid': LyraDataGridSvelteProps;
   'lr-dataset-viewer': LyraDatasetViewerSvelteProps;
@@ -5090,6 +5093,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-conversation-item': LyraConversationItemVueProps;
   'lr-copy-button': LyraCopyButtonVueProps;
   'lr-csv-viewer': LyraCsvViewerVueProps;
+  'lr-currency-picker': LyraCurrencyPickerVueProps;
   'lr-dashboard-grid': LyraDashboardGridVueProps;
   'lr-data-grid': LyraDataGridVueProps;
   'lr-dataset-viewer': LyraDatasetViewerVueProps;

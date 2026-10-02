@@ -36179,6 +36179,34 @@
         ],
         "events": [
           {
+            "name": "blur",
+            "type": "FocusEvent",
+            "cancelable": "never",
+            "constructor": "FocusEvent",
+            "bubbles": true,
+            "composed": true
+          },
+          {
+            "name": "change",
+            "type": "Event",
+            "cancelable": "never",
+            "constructor": "Event"
+          },
+          {
+            "name": "focus",
+            "type": "FocusEvent",
+            "cancelable": "never",
+            "constructor": "FocusEvent",
+            "bubbles": true,
+            "composed": true
+          },
+          {
+            "name": "input",
+            "type": "Event",
+            "cancelable": "never",
+            "constructor": "Event"
+          },
+          {
             "name": "lr-change",
             "type": "CustomEvent<LyraCurrencyChangeDetail>",
             "cancelable": "never",
@@ -36193,7 +36221,7 @@
           {
             "name": "lr-invalid",
             "type": "CustomEvent<null>",
-            "cancelable": "never",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           }
         ],
@@ -36242,15 +36270,6 @@
         "cssProperties": [],
         "cssStates": [],
         "methods": [
-          {
-            "name": "[VALIDITY_ANCHOR]",
-            "overloads": [
-              {
-                "parameters": [],
-                "returnType": "HTMLElement | null"
-              }
-            ]
-          },
           {
             "name": "blur",
             "overloads": [
@@ -36394,7 +36413,12 @@
           ]
         },
         "native": {
-          "forwardedEvents": [],
+          "forwardedEvents": [
+            "blur",
+            "change",
+            "focus",
+            "input"
+          ],
           "delegatedMethods": [
             "blur",
             "click",

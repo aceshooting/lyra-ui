@@ -556,6 +556,7 @@ export const LYRA_EVENT_CANCELABLE: {
   'lr-context-inspector': { 'lr-export-request': true },
   'lr-context-menu': { 'lr-hide': true, 'lr-select': true, 'lr-show': true },
   'lr-context-meter': { 'lr-segment-activate-request': true },
+  'lr-currency-picker': { 'lr-invalid': true },
   'lr-data-grid': { 'lr-cell-contextmenu': true, 'lr-retry-request': true, 'lr-sort-request': true },
   'lr-date-input': { 'lr-hide': true, 'lr-invalid': true, 'lr-show': true },
   'lr-details': { 'lr-hide': true, 'lr-show': true },

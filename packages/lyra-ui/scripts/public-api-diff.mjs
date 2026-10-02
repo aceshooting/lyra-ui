@@ -3319,7 +3319,8 @@ function reportResult(result, json) {
     `Normalized changes: ${counts.major} major, ${counts.minor} minor, ` +
       `${counts.patch} reviewed patch, ${counts.none} reviewed no-release`,
   );
-  for (const change of result.changes.slice(0, 100)) {
+  const prioritized = result.changes.toSorted((left, right) => BUMP_RANK[right.bump] - BUMP_RANK[left.bump]);
+  for (const change of prioritized.slice(0, 100)) {
     const reviewed = change.exception ? ` (reviewed: ${change.exception.reason})` : '';
     console.log(`  [${change.bump}] ${change.id}${reviewed}`);
   }

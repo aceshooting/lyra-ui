@@ -28,8 +28,9 @@ and uppercased. The default catalog contains the pinned ISO 4217 currency, fund 
 excluding the testing/no-currency codes `XTS` and `XXX`. Use `.currencies` for an ordered everyday
 subset. Omitted, `undefined` or `null` restores the default catalog; `[]` means no options.
 
-`currencies` accepts a readonly array of code strings or a readonly array of `LyraCurrencyEntry`
-objects: `{ code, label?, symbol?, disabled? }`. Names and symbols come from `Intl` using the field's
+`currencies` accepts `LyraCurrencyCatalog = readonly string[] | readonly LyraCurrencyEntry[]`.
+Each `LyraCurrencyEntry { readonly code: string; readonly label?: string; readonly symbol?: string;
+readonly disabled?: boolean }` supplies one option. Names and symbols come from `Intl` using the field's
 effective locale, with code fallbacks where display data is unavailable. Caller labels/symbols,
 including explicit empty strings, override that presentation. The catalog is copied; reassign it
 to change options. At most 512 rows are examined, invalid rows are skipped, and the first valid
@@ -48,15 +49,22 @@ fieldset disablement, `checkValidity()`, `reportValidity()` and `setCustomValidi
 shared form contracts. `size` defaults to `m`; `clearable` defaults to `false`. `focus()`, `blur()`
 and `click()` forward to the visible control.
 
+`customError: string | null = null` (attribute `custom-error`, reflected) supplies a consumer
+validation message. `getForm()` returns the browser-resolved form owner, including an external
+owner selected by `form`. `setCustomValidity(message)` sets or clears `customError`;
+`resetValidity()` clears only that consumer error and recomputes the current required/catalog
+constraints, leaving `value`, `defaultValue` and interaction state unchanged.
+
 `topLayer` (attribute `top-layer`) defaults to `false`; enable it inside clipped headers or dialogs.
 An explicit `positioningStrategy` (attribute `positioning-strategy`) of `"fixed"` or `"absolute"`
 overrides inherited `--lr-positioning-strategy`.
 Keyboard navigation and ISO-code type-ahead use the select contract. This is a closed list, without
 a text-search field or currency-name filtering.
 
-**Events.** An accepted user choice or clear updates `value` synchronously, then emits exactly one
+**Events:** An accepted user choice or clear updates `value` synchronously, then emits exactly one
 `input`, `lr-input`, `change`, `lr-change` sequence. The prefixed details are
-`{ value, previousValue }` (`LyraCurrencyChangeDetail`). Re-selecting the current code, programmatic
+`LyraCurrencyChangeDetail { readonly value: string; readonly previousValue: string }`.
+Re-selecting the current code, programmatic
 updates, resets, locale changes and catalog replacements emit no change event. Native `focus` and
 `blur` relay once; the cancelable `lr-invalid` alias follows native validation.
 

@@ -3383,7 +3383,11 @@ export interface LyraComponentTypeMap {
       }
     >;
     events: LyraCurrencyPickerEventMap;
-    eventNames:       | 'lr-change'
+    eventNames:       | 'blur'
+      | 'change'
+      | 'focus'
+      | 'input'
+      | 'lr-change'
       | 'lr-input'
       | 'lr-invalid';
     cssNames: never;
