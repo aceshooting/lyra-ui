@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard marginal gzip KiB ceilings for splitting-aware production ESM. Each route adds one anchored component to the representative shell in $baseline. Initial bytes include only the entry and transitively static chunks; dynamic chunks remain covered by total-cost budgets. Ceilings retain at most 4% drift.",
+  "$comment": "Hard marginal gzip KiB ceilings for splitting-aware production ESM. Each route adds one anchored component to the representative shell in $baseline. Initial bytes include only the entry and transitively static chunks; dynamic chunks remain covered by total-cost budgets. Ceilings retain at most 4% drift. Locale-picker's optional text filter adds localized matching, editable input and IME handling, keyboard focus/navigation, and an empty state. Its reviewed 24,921-byte initial marginal measurement retains a 2% allowance at 25,419 bytes; the shell, optional-peer exclusions and other ceilings are unchanged.",
   "$baseline": [
     "dist/components/data/stat/stat.js",
     "dist/components/overlays/callout/callout.js",
@@ -16,7 +16,7 @@
     "dist/components/forms/combobox/combobox.js": 35.765625,
     "dist/components/forms/date-picker/date-input.js": 36.38671875,
     "dist/components/forms/input/time-input.js": 24.2197265625,
-    "dist/components/forms/locale-picker/locale-picker.js": 23.1669921875,
+    "dist/components/forms/locale-picker/locale-picker.js": 24.8232421875,
     "dist/components/forms/select/select.js": 29.888671875,
     "dist/components/layout/app-rail/app-rail-item.js": 4.5986328125,
     "dist/components/layout/menu/menu.js": 15.7783203125,

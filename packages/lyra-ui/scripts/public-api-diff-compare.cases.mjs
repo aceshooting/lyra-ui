@@ -1955,6 +1955,153 @@ function callableFixture(options, { extra = '', parameters = undefined, result =
   };
 }
 
+function accessorFixture(members, { kind = 'interface', generic = '', exported = true, support = '' } = {}) {
+  return {
+    packageJson: { name: '@aceshooting/lyra-ui', version: '1.0.0', exports: {
+      '.': { types: './dist/lyra.d.ts', default: './dist/lyra.js' },
+      './fields.js': { types: './dist/fields.d.ts', default: './dist/fields.js' },
+    } },
+    manifest: { modules: [] },
+    declarations: {
+      files: {
+        'dist/lyra.d.ts': "export * from './fields.js';",
+        'dist/fields.d.ts': `${support}
+          ${exported ? 'export ' : ''}${kind} Field${generic} { ${members} }
+          export interface Consumer { field: Field; }
+          export declare function createField(): Field;`,
+      },
+      packageFiles: ['dist/lyra.d.ts', 'dist/lyra.js', 'dist/fields.d.ts', 'dist/fields.js'],
+    },
+  };
+}
+
+function accessorChanges(before, after, options) {
+  return diffPublicApi(normalizePublicApi(accessorFixture(before, options)),
+    normalizePublicApi(accessorFixture(after, options)));
+}
+
+test('property and typed accessor pairs preserve read/write contracts in either direction', () => {
+  for (const kind of ['interface', 'declare class']) {
+    for (const [property, accessors] of [
+      ['value: string;', 'get value(): string; set value(next: string);'],
+      ['readonly value: string;', 'get value(): string;'],
+    ]) {
+      assert.equal(minimumRequiredBump(accessorChanges(property, accessors, { kind })), 'none');
+      assert.equal(minimumRequiredBump(accessorChanges(accessors, property, { kind })), 'none');
+    }
+  }
+});
+
+test('asymmetric setter widening is minor through named, subpath and dependency contracts', () => {
+  for (const before of ['defaultValue: string;', 'get defaultValue(): string; set defaultValue(value: string);']) {
+    const changes = accessorChanges(before, 'get defaultValue(): string; set defaultValue(value: string | null);');
+    assert.equal(minimumRequiredBump(changes), 'minor');
+    for (const id of [
+      'named-export:Field:property:defaultValue:type',
+      'subpath-export:./fields.js:Field:contract',
+      'named-export:Consumer:dependencies',
+      'named-export:createField:dependencies',
+      'subpath-export:./fields.js:createField:dependencies',
+    ]) assert.ok(changes.some((change) => change.id === id && change.bump === 'minor'), id);
+    assert.equal(changes.some((change) => change.bump === 'major'), false);
+  }
+});
+
+test('accessor compatibility remains bounded by canonical interface generic parameters', () => {
+  const before = normalizePublicApi(accessorFixture('value: T;', { generic: '<T extends string = string>' }));
+  const after = normalizePublicApi(accessorFixture('get value(): U; set value(next: U | null);', {
+    generic: '<U extends string = string>',
+  }));
+  assert.equal(minimumRequiredBump(diffPublicApi(before, after)), 'minor');
+  for (const generic of ['<T extends number = number>', "<T extends string = 'fixed'>"]) {
+    const changed = normalizePublicApi(accessorFixture('get value(): T; set value(next: T | null);', { generic }));
+    assert.equal(minimumRequiredBump(diffPublicApi(before, changed)), 'major');
+  }
+});
+
+test('changed accessor reads, narrowed writes and removed access remain breaking', () => {
+  for (const [before, after] of [
+    ['value: string;', 'get value(): string | null; set value(next: string | null);'],
+    ['get value(): string; set value(next: string | null);', 'value: string | null;'],
+    ['get value(): string; set value(next: string | null);', 'value: string;'],
+    ['value: string;', "get value(): string; set value(next: 'fixed');"],
+    ['value: string;', 'get value(): string;'],
+    ['value: string;', 'set value(next: string);'],
+    ['get value(): string; set value(next: string);', 'set value(next: string);'],
+    ['get value(): string; set value(next: string);', 'get value(): string;'],
+    ['get value(): string;', 'get value(): string | null;'],
+    ['get value(): string;', 'readonly value?: string;'],
+    ['get value(): string; set value(next: string);', 'value?: string;'],
+    ['get value(): () => string | undefined;', 'readonly value?: () => string;'],
+    ['set value(next: string | null);', 'set value(next: string);'],
+    ['value?: string;', 'get value(): string; set value(next: string);'],
+  ]) {
+    const changes = accessorChanges(before, after);
+    assert.equal(minimumRequiredBump(changes), 'major', `${before} -> ${after}`);
+    assert.ok(changes.some((change) => change.id === 'named-export:Consumer:dependencies' && change.bump === 'major'));
+  }
+});
+
+test('adding explicitly typed read or write access remains additive', () => {
+  for (const [before, after] of [
+    ['get value(): string;', 'get value(): string; set value(next: string | null);'],
+    ['set value(next: string);', 'get value(): string; set value(next: string);'],
+    ['set value(next: string);', 'set value(next: string | null);'],
+  ]) assert.equal(minimumRequiredBump(accessorChanges(before, after)), 'minor');
+});
+
+test('accessor order and setter parameter spelling do not affect the property contract', () => {
+  assert.deepEqual(accessorChanges('get value(): string; set value(next: string | null);',
+    'set value(replacement: null | string); get value(): string;'), []);
+});
+
+test('accessor writes do not assume covariance of generic callback inputs', () => {
+  assert.equal(minimumRequiredBump(accessorChanges(
+    "get value(): string; set value(next: Sink<'a'>);",
+    "get value(): string; set value(next: Sink<'a' | 'b'>);",
+    { support: 'type Sink<T> = (value: T) => void;' })), 'major');
+});
+
+test('unexported accessor contracts are classified through their reachable declarations', () => {
+  const options = { exported: false };
+  for (const [after, bump] of [
+    ['get value(): string; set value(next: string | null);', 'minor'],
+    ['get value(): number; set value(next: string | null);', 'major'],
+    ['get value(): string;', 'major'],
+  ]) {
+    const changes = accessorChanges('value: string;', after, options);
+    assert.equal(minimumRequiredBump(changes), bump);
+    assert.ok(changes.some((change) => change.id === 'named-export:Consumer:dependencies' && change.bump === bump));
+  }
+});
+
+test('class accessor grouping preserves static sides, visibility and unrelated members', () => {
+  const options = { kind: 'declare class' };
+  assert.equal(minimumRequiredBump(accessorChanges(
+    'protected value: string;',
+    'protected get value(): string; protected set value(next: string | null);', options)), 'minor');
+  assert.equal(minimumRequiredBump(accessorChanges(
+    'static value: string; value: number;',
+    'static get value(): string; static set value(next: string | null); value: number;', options)), 'minor');
+  for (const [before, after] of [
+    ['value: string;', 'static get value(): string; static set value(next: string | null);'],
+    ['value: string;', 'protected get value(): string; protected set value(next: string | null);'],
+    ['value: string;', 'get value(): string; private set value(next: string | null);'],
+    ['value: string;', 'get value(): string; protected set value(next: string | null);'],
+    ['value: string; keep: number;', 'get value(): string; set value(next: string | null);'],
+  ]) assert.equal(minimumRequiredBump(accessorChanges(before, after, options)), 'major');
+});
+
+test('unsupported computed, ambiguous and untyped accessor shapes remain conservative', () => {
+  for (const [before, after] of [
+    ["['value']: string;", "get ['value'](): string; set ['value'](next: string | null);"],
+    ['value: string;', 'get value(); set value(next: string | null);'],
+    ['value: string;', 'get value(): string; set value(next);'],
+    ['value: string;', 'get value(): string; get value(): string; set value(next: string | null);'],
+    ['value: string;', 'value: string; get value(): string; set value(next: string | null);'],
+  ]) assert.equal(minimumRequiredBump(accessorChanges(before, after)), 'major');
+});
+
 test('recognizes optional method option additions in CEM and reachable declaration contracts', () => {
   const changes = diffPublicApi(
     normalizePublicApi(callableFixture('{ target?: HTMLElement }')),

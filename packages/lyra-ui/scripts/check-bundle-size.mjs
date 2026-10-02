@@ -594,7 +594,7 @@ if (exclusionClaimsOnly) {
       if (typeof budgetKb !== "number") continue;
       const line = `${entry}: min ${toKb(minBytes)} KB, gzip ${toKb(
         gzipBytes
-      )} KB (budget ${budgetKb} KB)`;
+      )} KB (${gzipBytes} bytes; budget ${budgetKb} KB)`;
       const budgetBytes = budgetKilobytesToBytes(budgetKb, entry);
       if (gzipBytes > budgetBytes) {
         errors.push(
@@ -635,7 +635,7 @@ if (exclusionClaimsOnly) {
       const budgetKb = budgets[budgetKey];
       const line = `${label}: gzip ${toKb(
         actualBytes
-      )} KB (budget ${budgetKb} KB)`;
+      )} KB (${actualBytes} bytes; budget ${budgetKb} KB)`;
       if (actualBytes > budgetKilobytesToBytes(budgetKb, budgetKey)) {
         errors.push(`${line} -- OVER BUDGET`);
       } else if (!printBudgetReview) {

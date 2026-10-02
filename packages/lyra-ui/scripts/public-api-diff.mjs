@@ -1658,7 +1658,7 @@ function memberDescriptor(module, member) {
     member,
     kind,
     name,
-    idName: `${name}${genericSignature}${signature}`,
+    idName: `${name}${kind === 'property' && member.static ? ':static' : ''}${genericSignature}${signature}`,
     parameters: normalizedParameters,
     typeParameters,
     optional: Boolean(member.optional),
@@ -1673,12 +1673,69 @@ function memberDescriptor(module, member) {
   };
 }
 
-function addMemberSurfaces(entries, base, surface, label, module, members) {
+function accessorType(module, descriptor) {
+  const { member } = descriptor;
+  if (!['TSMethodSignature', 'MethodDefinition'].includes(member.type)
+    || !['get', 'set'].includes(member.kind) || member.computed || member.optional
+    || member.abstract || member.decorators?.length) return undefined;
+  const method = member.value && typeof member.value === 'object' ? member.value : member;
+  const parameters = method.params ?? member.parameters;
+  if (!Array.isArray(parameters) || method.typeParameters?.params?.length
+    || method.async || method.generator) return undefined;
+  if (member.kind === 'get') {
+    if (parameters.length !== 0 || !method.returnType) return undefined;
+    return { read: typeNodeText(module, method.returnType), write: null };
+  }
+  const [parameter] = parameters;
+  if (parameters.length !== 1 || parameter.type !== 'Identifier' || parameter.optional
+    || parameter.name === 'this' || !parameter.typeAnnotation || method.returnType) return undefined;
+  return { read: null, write: typeNodeText(module, parameter.typeAnnotation) };
+}
+
+/** Explicit accessors share a property identity; unsupported or conflicting declarations retain
+ * their complete shape instead of guessing read/write capabilities from incomplete annotations. */
+function memberDescriptors(module, members) {
   const descriptors = members
     .map((member) => memberDescriptor(module, member))
     .filter(({ member, accessibility }) =>
       member.key?.type !== 'PrivateIdentifier' && accessibility !== 'private')
     .sort((left, right) => left.sortKey.localeCompare(right.sortKey));
+  const groups = new Map();
+  for (const descriptor of descriptors) {
+    const key = JSON.stringify([descriptor.name, descriptor.static]);
+    const group = groups.get(key) ?? [];
+    group.push(descriptor);
+    groups.set(key, group);
+  }
+  return [...groups.values()].flatMap((group) => {
+    if (!group.some(({ member }) => member.kind === 'get' || member.kind === 'set')) return group;
+    const types = group.map((descriptor) => accessorType(module, descriptor));
+    const supported = types.every(Boolean)
+      && new Set(group.map(({ accessibility }) => accessibility)).size === 1
+      && new Set(group.map(({ member }) => member.kind)).size === group.length;
+    const first = group[0];
+    const common = {
+      ...first,
+      idName: `${first.name}${first.static ? ':static' : ''}`,
+      parameters: undefined,
+      typeParameters: [],
+    };
+    if (!supported) return [{
+      ...common,
+      kind: 'unsupported-accessor',
+      unsupportedAccessor: true,
+      type: group.map(({ member }) => normalizeWhitespace(canonicalNodeText(module, member))).sort(),
+    }];
+    const access = {
+      read: types.find((type) => type.read !== null)?.read ?? null,
+      write: types.find((type) => type.write !== null)?.write ?? null,
+    };
+    return [{ ...common, kind: 'property', readonly: access.write === null, access }];
+  });
+}
+
+function addMemberSurfaces(entries, base, surface, label, module, members) {
+  const descriptors = memberDescriptors(module, members);
   for (const descriptor of descriptors) {
     const memberBase = `${base}:${descriptor.kind}:${descriptor.idName}`;
     addPresence(entries, memberBase, surface, `${label}.${descriptor.name}`);
@@ -1713,7 +1770,10 @@ function addMemberSurfaces(entries, base, surface, label, module, members) {
         memberBase,
       );
     }
-    addTypeSurface(entries, memberBase, surface, descriptor.type, memberBase);
+    if (descriptor.access || descriptor.unsupportedAccessor) {
+      addEntry(entries, `${memberBase}:type`, surface,
+        descriptor.access ? 'property-access' : 'shape', descriptor.access ?? descriptor.type, memberBase);
+    } else addTypeSurface(entries, memberBase, surface, descriptor.type, memberBase);
   }
 }
 
@@ -2819,6 +2879,44 @@ function alignCompatibleMethods(before, after, baseline, current) {
   return aligned;
 }
 
+/** Compare a plain property's existing type/readonly surface with an explicit accessor surface.
+ * Property-only comparisons retain their established type-widening policy. Optional properties,
+ * object projections and incomplete records keep their conservative diff: reconstructing their
+ * read contract from normalized text can lose undefined/function-return union precedence. */
+function alignPropertyAccess(before, after) {
+  const ids = new Set([...Object.entries(before), ...Object.entries(after)]
+    .filter(([, entry]) => entry.semantic === 'property-access').map(([id]) => id));
+  const align = (entries) => {
+    let aligned = entries;
+    for (const id of ids) {
+      const entry = entries[id];
+      if (entry?.semantic !== 'type' || typeof entry.value !== 'string' || !id.endsWith(':type')) continue;
+      const base = id.slice(0, -':type'.length);
+      const readonly = entries[`${base}:readonly`];
+      if (entries[base]?.semantic !== 'presence' || readonly?.semantic !== 'readonly'
+        || typeof readonly.value !== 'boolean' || entries[`${base}:optional`]?.value !== false) continue;
+      if (aligned === entries) aligned = { ...entries };
+      aligned[id] = { ...entry, semantic: 'property-access', value: {
+        read: entry.value,
+        write: readonly.value ? null : entry.value,
+      } };
+    }
+    return aligned;
+  };
+  return { before: align(before), after: align(after) };
+}
+
+function propertyAccessBump(before, after, baseline, current) {
+  const valid = (access) => access && typeof access === 'object' && !Array.isArray(access)
+    && Object.keys(access).sort().join(',') === 'read,write'
+    && [access.read, access.write].every((type) => type === null || typeof type === 'string');
+  if (!valid(before) || !valid(after)) return 'major';
+  if (before.read !== after.read && before.read !== null) return 'major';
+  if (before.write !== after.write && before.write !== null
+    && (after.write === null || !isInputTypeWidening(before.write, after.write, baseline, current))) return 'major';
+  return 'minor';
+}
+
 // One invocation can reach the same declaration through hundreds of exports. Reset between
 // comparisons so callers may mutate snapshots between runs without retaining a stale result.
 let declarationBumpCache = new WeakMap();
@@ -2827,16 +2925,18 @@ function declarationContractBump(before, after, baseline, current) {
   const cache = cacheable ? declarationBumpCache.get(before) : undefined;
   const cached = cache?.get(after);
   if (cached) return cached;
+  const originalBefore = before;
   const originalAfter = after;
   const finish = (bump) => {
     if (cacheable) {
       const entries = cache ?? new WeakMap();
       entries.set(originalAfter, bump);
-      declarationBumpCache.set(before, entries);
+      declarationBumpCache.set(originalBefore, entries);
     }
     return bump;
   };
-  after = alignCompatibleMethods(before ?? {}, after ?? {}, baseline, current);
+  ({ before, after } = alignPropertyAccess(before ?? {}, after ?? {}));
+  after = alignCompatibleMethods(before, after, baseline, current);
   let bump = 'none';
   const ids = new Set([...Object.keys(before ?? {}), ...Object.keys(after ?? {})]);
   for (const id of ids) {
@@ -2963,6 +3063,7 @@ function dependencyContractBump(before, after, baseline, current) {
 }
 
 function changedBump(entry, before, after, baseline, current) {
+  if (entry.semantic === 'property-access') return propertyAccessBump(before, after, baseline, current);
   if (entry.semantic === 'declaration-contract-ref') {
     const beforeContract = baseline?.contracts?.[before];
     const afterContract = current?.contracts?.[after];
@@ -2973,7 +3074,8 @@ function changedBump(entry, before, after, baseline, current) {
     return dependencyContractBump(before, after, baseline, current);
   }
   if (entry.semantic === 'parameters' && isParameterWidening(before, after, baseline, current)) return 'minor';
-  if (entry.semantic === 'type' && isTypeWidening(before, after, baseline, current)) return 'minor';
+  if (entry.semantic === 'type' && typeof before === 'string' && typeof after === 'string'
+    && isTypeWidening(before, after, baseline, current)) return 'minor';
   if (entry.semantic === 'heritage' && isHeritageSpecialization(before, after)) return 'minor';
   if (entry.semantic === 'optional' && before === false && after === true) return 'minor';
   if (entry.semantic === 'readonly' && before === true && after === false) return 'minor';
@@ -2989,10 +3091,11 @@ export function diffPublicApi(baseline, current) {
     );
   }
   const changes = [];
-  const currentEntries = alignCompatibleMethods(baseline.entries, current.entries, baseline, current);
-  const ids = new Set([...Object.keys(baseline.entries), ...Object.keys(currentEntries)]);
+  const aligned = alignPropertyAccess(baseline.entries, current.entries);
+  const currentEntries = alignCompatibleMethods(aligned.before, aligned.after, baseline, current);
+  const ids = new Set([...Object.keys(aligned.before), ...Object.keys(currentEntries)]);
   for (const id of [...ids].sort()) {
-    const beforeEntry = baseline.entries[id];
+    const beforeEntry = aligned.before[id];
     const afterEntry = currentEntries[id];
     if (!beforeEntry) {
       changes.push({
