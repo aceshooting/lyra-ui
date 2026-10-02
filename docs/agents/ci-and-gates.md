@@ -133,6 +133,19 @@ internally by `registrations`), `component-metadata:history` (a manual git-histo
 and `coverage-floors` (reviewed limits, not derived output — already outside `contract-policy` for
 the same reason).
 
+**Reviewed source-contract enrollment.** The `prepare-artifacts.yml` workflow accepts an optional
+`sourceContracts` JSON input in `source` mode only. Commit and review the authored documentation
+first. The request has `schemaVersion: 1`, an `updates` array of
+`{ module, exportName, kind, expectedFingerprint }` owners, and an `enrollments` array of
+`{ module, exportName, kind, document, family, locator }` owners; at least one owner is required.
+An update names an existing documented owner and its exact old census fingerprint. An enrollment
+names a new public contract and the authored locator documenting it. After canonical regeneration,
+the hosted updater derives fingerprints and routes with the existing scanner, preserves existing
+routes and locators, and rejects legacy owners, stale preimages, unchanged requests and unrelated
+drift. Both the complete census and the authored documentation must pass their existing gap checks
+before the fixture is written. Review the workflow's before/after owner log and guarded source
+artifact before applying it; this input is not a blanket rebaseline or release-preparation option.
+
 **Composable styling and the token grammar.** Author shared theme inputs in
 `tokens/canonical-tokens.json`, looks in `tokens/looks/*.json`, and the density and glass treatments
 in `tokens/density.json` and `tokens/surfaces/glass.json`. `pnpm run style-axes` generates the

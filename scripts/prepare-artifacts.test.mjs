@@ -10,6 +10,8 @@ test('release preparation rejects publication capture and unknown modes', () => 
   assert.doesNotThrow(() => assertPreparationInputs('release', ''));
   assert.throws(() => assertPreparationInputs('release', '{}'), /cannot capture a publication/u);
   assert.throws(() => assertPreparationInputs('relese', ''), /Unknown preparation mode/u);
+  assert.throws(() => assertPreparationInputs('release', '', '{}'), /cannot update source-contract/u);
+  assert.throws(() => assertPreparationInputs('source', '', '{}'), /missing fields/u);
 });
 
 test('only tracked pending Markdown changeset deletions pass in release mode', () => {

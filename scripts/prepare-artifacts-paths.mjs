@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { parseSourceContractRequest } from './source-contract-request.mjs';
 
 const hiddenGenerated = new Set([
   '.storybook/token-preview.generated.js', '.storybook/sitemap.xml',
@@ -6,10 +7,11 @@ const hiddenGenerated = new Set([
   'plugins/lyra-ui/.claude-plugin/plugin.json', 'plugins/lyra-ui/.codex-plugin/plugin.json',
 ]);
 
-export function assertPreparationInputs(mode = 'source', publication = '') {
+export function assertPreparationInputs(mode = 'source', publication = '', sourceContracts = '') {
   assert.ok(['source', 'release'].includes(mode), `Unknown preparation mode ${mode}`);
   assert.ok(mode !== 'release' || publication === '',
     'Release preparation cannot capture a publication; capture and commit it in source mode first');
+  parseSourceContractRequest(sourceContracts, mode);
 }
 
 export function assertGeneratedAddition(file) {

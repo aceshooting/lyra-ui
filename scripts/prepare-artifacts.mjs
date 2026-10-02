@@ -8,13 +8,14 @@ import { capturePolicyWitnesses } from '../packages/lyra-ui/scripts/capture-publ
 import { checkPublishedCompatibilitySync } from '../packages/lyra-ui/scripts/check-published-compatibility.mjs';
 import { decodeEvidence, encodeEvidence, jsonBytes, readPublishedCaptureSync, sha256, verifyPolicyWitnesses } from '../packages/lyra-ui/scripts/published-compatibility-io.mjs';
 import { assertGeneratedAddition, assertPreparationInputs, assertSourcePath } from './prepare-artifacts-paths.mjs';
+import { parseSourceContractRequest } from './source-contract-request.mjs';
 
 // This runner prepares reviewable source only. Qualification and publication retain their
 // existing workflows; neither this script nor its workflow writes Git refs.
 assert.equal(process.env.GITHUB_ACTIONS, 'true', 'Use the hosted generation workflow');
 assert.equal(process.env.GITHUB_REF, 'refs/heads/main', 'Generation requires main');
 const preparationMode = process.env.PREPARATION_MODE ?? 'source';
-assertPreparationInputs(preparationMode, process.env.PUBLICATION_JSON ?? '');
+assertPreparationInputs(preparationMode, process.env.PUBLICATION_JSON ?? '', process.env.SOURCE_CONTRACTS_JSON ?? '');
 const root = process.cwd();
 const git = args => execFileSync('git', args, { cwd: root, maxBuffer: 128 * 1024 * 1024 });
 const historyDir = join(root, 'packages/lyra-ui/scripts/fixtures/compatibility-history');
@@ -165,5 +166,12 @@ function bundle() {
 }
 
 if (process.argv[2] === 'capture') await capture();
+else if (process.argv[2] === 'source-contracts') {
+  const request = parseSourceContractRequest(process.env.SOURCE_CONTRACTS_JSON ?? '', preparationMode);
+  if (request) {
+    const { writePreparedSourceContracts } = await import('./prepare-source-contracts.mjs');
+    writePreparedSourceContracts(root, request);
+  }
+}
 else if (process.argv[2] === 'bundle') bundle();
-else throw new Error('Expected capture or bundle');
+else throw new Error('Expected capture, source-contracts, or bundle');

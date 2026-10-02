@@ -7356,7 +7356,7 @@ overrides inherited `--lr-positioning-strategy`.
 Keyboard navigation and ISO-code type-ahead use the select contract. This is a closed list, without
 a text-search field or currency-name filtering.
 
-**Events.** An accepted user choice or clear updates `value` synchronously, then emits exactly one
+**Events:** An accepted user choice or clear updates `value` synchronously, then emits exactly one
 `input`, `lr-input`, `change`, `lr-change` sequence. The prefixed details are
 `LyraCurrencyChangeDetail { readonly value: string; readonly previousValue: string }`.
 Re-selecting the current code, programmatic

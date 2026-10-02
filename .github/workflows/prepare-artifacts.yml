@@ -16,6 +16,11 @@ on:
         required: false
         type: string
         default: ''
+      sourceContracts:
+        description: 'Optional reviewed JSON: schemaVersion, explicit fingerprint updates and authored locator enrollments'
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -31,6 +36,7 @@ jobs:
     timeout-minutes: 35
     env:
       PREPARATION_MODE: ${{ inputs.mode }}
+      SOURCE_CONTRACTS_JSON: ${{ inputs.sourceContracts }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -61,10 +67,12 @@ jobs:
         run: |
           node --input-type=module <<'NODE'
           import { assertPreparationInputs } from './scripts/prepare-artifacts-paths.mjs';
-          assertPreparationInputs(process.env.PREPARATION_MODE, process.env.PUBLICATION_JSON);
+          assertPreparationInputs(process.env.PREPARATION_MODE, process.env.PUBLICATION_JSON, process.env.SOURCE_CONTRACTS_JSON);
           NODE
           node --test scripts/prepare-artifacts.test.mjs
       - run: pnpm install --frozen-lockfile
+      - name: Check scoped source-contract preparation
+        run: node --test scripts/prepare-source-contracts.test.mjs
       - name: Capture an explicitly pinned publication
         if: inputs.mode == 'source'
         env:
@@ -82,6 +90,9 @@ jobs:
           pnpm --filter @aceshooting/lyra-ui run component-inventory
           pnpm --filter @aceshooting/lyra-ui run component-metadata:history
           ./scripts/regen.sh
+      - name: Apply explicitly reviewed source-contract enrollment
+        if: inputs.mode == 'source'
+        run: node scripts/prepare-artifacts.mjs source-contracts
       - name: Prepare release source from pending changesets
         if: inputs.mode == 'release'
         run: pnpm release:prepare
