@@ -121,6 +121,7 @@ minimumReleaseAgeExclude:
   - '@img/sharp-win32-x64@0.35.5'
   - sharp@0.35.5
   - '@types/d3-zoom@3.0.9'
+  - '@types/node@26.6.4'
 allowBuilds:
   esbuild: true
   rs-module-lexer: true

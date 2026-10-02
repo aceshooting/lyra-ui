@@ -21,7 +21,7 @@
     "test": "pnpm build && tsc --noEmit -p tsconfig.exports.json && tsc -p tsconfig.test.json && node --test --test-concurrency=2 .test-output/src/docx/session.test.js scripts/package.test.mjs"
   },
   "devDependencies": {
-    "@types/node": "26.1.2",
+    "@types/node": "26.6.4",
     "typescript": "^7.0.2"
   }
 }
