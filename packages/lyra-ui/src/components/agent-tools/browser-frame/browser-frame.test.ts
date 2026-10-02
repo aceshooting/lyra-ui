@@ -1,4 +1,6 @@
 import { fixture, expect, html, oneEvent, waitUntil, aTimeout } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './browser-frame.js';
 import type { LyraBrowserFrame } from './browser-frame.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
@@ -690,3 +692,59 @@ describe('lr-browser-frame deprecated --lr-browser-frame-controller-background a
     expect(fill(both)).to.equal('rgb(4, 5, 6)');
   });
 });
+
+for (const width of [640, 320]) {
+  for (const direction of ['ltr', 'rtl']) {
+    it(`contains the hidden address label in a nested scroller at ${width}px in ${direction}`, async () => {
+      const labelText = 'Adresse de la page affichée '.repeat(20);
+      const url = 'https://example.test/preview';
+      const outer = await fixture<HTMLElement>(html`
+        <div dir=${direction} style=${`position:relative;inline-size:${width}px;block-size:400px`}>
+          <div data-scroller style="block-size:350px;overflow:auto">
+            <div style="block-size:800px"></div>
+            <lr-browser-frame .url=${url} .strings=${{ browserFrameUrlLabel: labelText }}>
+              <div>Preview</div>
+              <button slot="actions" type="button">Inspect preview</button>
+            </lr-browser-frame>
+          </div>
+        </div>
+      `);
+      const scroller = outer.querySelector<HTMLElement>('[data-scroller]')!;
+      const el = outer.querySelector<LyraBrowserFrame>('lr-browser-frame')!;
+      await el.updateComplete;
+      const toolbar = el.shadowRoot!.querySelector<HTMLElement>('[part="toolbar"]')!;
+      const label = toolbar.querySelector<HTMLElement>('.sr-only')!;
+      const address = toolbar.querySelector<HTMLElement>('[part="url"]')!;
+      expect(scroller.scrollHeight).to.be.greaterThan(scroller.clientHeight);
+      expect(outer.scrollHeight, 'hidden address stays within the inner scrollport').to.equal(outer.clientHeight);
+      expect(label.offsetParent === toolbar).to.equal(true);
+      expect(label.textContent).to.equal(labelText);
+      expect(label.hasAttribute('aria-hidden')).to.equal(false);
+      expect(label.hidden).to.equal(false);
+      expect(getComputedStyle(label).display).to.not.equal('none');
+      expect(getComputedStyle(label).clipPath).to.not.equal('none');
+      expect(address.textContent).to.equal(url);
+      expect(address.getAttribute('title')).to.equal(url);
+      expect(address.getAttribute('dir')).to.equal('ltr');
+      expect(toolbar.querySelectorAll('input').length).to.equal(0);
+
+      scroller.scrollTop = scroller.scrollHeight;
+      expect(scroller.scrollTop).to.be.greaterThan(0);
+      expect(outer.scrollHeight, 'inner scrolling cannot grow the outer shell').to.equal(outer.clientHeight);
+      const takeOver = toolbar.querySelector<HTMLButtonElement>('[part="take-over-button"]')!;
+      await focusByKeyboard(takeOver);
+      const requested = oneEvent(el, 'lr-take-over');
+      await sendKeys({ press: 'Enter' });
+      expect((await requested).detail).to.deep.equal({ controller: 'user' });
+      const stop = toolbar.querySelector<HTMLButtonElement>('[part="stop-button"]')!;
+      await focusByKeyboard(stop);
+      const stopped = oneEvent(el, 'lr-stop');
+      await sendKeys({ press: 'Enter' });
+      await stopped;
+      const action = el.querySelector<HTMLButtonElement>('[slot="actions"]')!;
+      await focusByKeyboard(action);
+      expect(el.ownerDocument.activeElement === action).to.equal(true);
+      expect(outer.scrollHeight, 'toolbar actions preserve the scroll owner').to.equal(outer.clientHeight);
+    });
+  }
+}

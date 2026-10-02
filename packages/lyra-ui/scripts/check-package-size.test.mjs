@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import {
   formatPackageSummary,
@@ -289,4 +290,64 @@ test('derives metrics from npm pack JSON without trusting its entryCount alias',
       files: [{ path: 'dist/a.js' }, { path: 'dist/a.d.ts' }],
     },
   );
+});
+
+test('retains seven scaffold files above the reviewed required-artifact inventory', () => {
+  const actualBudgets = JSON.parse(
+    readFileSync(new URL('package-budgets.json', import.meta.url), 'utf8'),
+  );
+  const fileBudget = actualBudgets.fileCountBudget;
+  assert.equal(
+    fileBudget.stableTagAliasCount,
+    303,
+    'the normal tarball has 303 stable registration aliases',
+  );
+  assert.equal(
+    fileBudget.baseArtifactCeiling +
+      fileBudget.stableTagAliasCount * fileBudget.emittedFilesPerAlias +
+      fileBudget.measuredEntrypointRemainder,
+    4_097,
+    'the derivation must bind the reviewed complete package inventory',
+  );
+  assert.equal(
+    fileBudget.nextComponentArtifactHeadroom,
+    7,
+    'the existing scaffold reserve must remain unchanged',
+  );
+  assert.equal(
+    actualBudgets.maximum.fileCount,
+    4_104,
+    'the complete inventory retains exactly seven scaffold files',
+  );
+  assert.deepEqual(
+    [actualBudgets.maximum.packedBytes, actualBudgets.maximum.unpackedBytes],
+    [7_686_989, 34_994_525],
+    'passing byte ceilings must remain unchanged',
+  );
+
+  const requiredAdditions = [
+    'dist/components/charts/chart/chart-sync.js',
+    'dist/components/charts/chart/chart-sync.d.ts',
+    'dist/components/charts/chart/chart-sync.styles.js',
+    'dist/components/charts/chart/chart-sync.styles.d.ts',
+    'dist/internal/opaque-content-border.styles.js',
+    'dist/internal/opaque-content-border.styles.d.ts',
+  ];
+  for (const fileCount of [4_097, 4_104, 4_105]) {
+    const extraFiles = Array.from(
+      { length: fileCount - requiredTarballFiles.length - requiredAdditions.length },
+      (_, index) => `dist/required-entrypoint-${index}.js`,
+    );
+    const metrics = metricsFromPackResult({
+      size: 7_584_288,
+      unpackedSize: 34_095_803,
+      files: tarballFiles(...requiredAdditions, ...extraFiles),
+    });
+    const findings = packageBudgetFindings(metrics, actualBudgets);
+    assert.deepEqual(
+      findings,
+      fileCount === 4_105 ? ['fileCount 4,105 exceeds hard budget 4,104'] : [],
+      'the measured package and exact reserve pass, while one additional artifact fails',
+    );
+  }
 });

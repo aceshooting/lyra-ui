@@ -2041,3 +2041,49 @@ it('retains the locale listbox baseline minimum when the viewport has room', asy
     await setViewport(viewport);
   }
 });
+
+for (const width of [640, 320]) {
+  for (const direction of ['ltr', 'rtl']) {
+    it(`contains a flag-only description in a nested scroller at ${width}px in ${direction}`, async () => {
+      const labelText = 'Langue actuelle avec une description longue '.repeat(20);
+      const outer = await fixture<HTMLElement>(html`
+        <div dir=${direction} style=${`position:relative;inline-size:${width}px;block-size:400px`}>
+          <div data-scroller style="block-size:350px;overflow:auto">
+            <div style="block-size:800px"></div>
+            <lr-locale-picker
+              value="en"
+              trigger-display="flag"
+              .locales=${[{ tag: 'en', label: labelText }]}
+            ></lr-locale-picker>
+          </div>
+        </div>
+      `);
+      const scroller = outer.querySelector<HTMLElement>('[data-scroller]')!;
+      const el = outer.querySelector<LyraLocalePicker>('lr-locale-picker')!;
+      await el.updateComplete;
+      const control = trigger(el);
+      const description = el.shadowRoot!.querySelector<HTMLElement>('#locale-picker-value')!;
+      expect(scroller.scrollHeight).to.be.greaterThan(scroller.clientHeight);
+      expect(outer.scrollHeight, 'hidden value stays within the inner scrollport').to.equal(outer.clientHeight);
+      expect(description.offsetParent === control).to.equal(true);
+      expect(description.textContent).to.equal(labelText);
+      expect(control.getAttribute('aria-describedby')?.split(' ')).to.include(description.id);
+      expect(description.hasAttribute('aria-hidden')).to.equal(false);
+      expect(description.hidden).to.equal(false);
+      expect(getComputedStyle(description).display).to.not.equal('none');
+      expect(getComputedStyle(description).clipPath).to.not.equal('none');
+
+      scroller.scrollTop = scroller.scrollHeight;
+      expect(scroller.scrollTop).to.be.greaterThan(0);
+      expect(outer.scrollHeight, 'inner scrolling cannot grow the outer shell').to.equal(outer.clientHeight);
+      await focusByKeyboard(control);
+      expect(el.shadowRoot!.activeElement === control).to.equal(true);
+      await sendKeys({ press: 'Enter' });
+      await waitUntil(() => el.open);
+      expect(control.getAttribute('aria-expanded')).to.equal('true');
+      await sendKeys({ press: 'Escape' });
+      await waitUntil(() => !el.open);
+      expect(outer.scrollHeight, 'closing the popup preserves the scroll owner').to.equal(outer.clientHeight);
+    });
+  }
+}

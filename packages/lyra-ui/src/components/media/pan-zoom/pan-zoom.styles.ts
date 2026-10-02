@@ -89,6 +89,7 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast);
   }
   [part='reset'] {
+    position: relative;
     max-inline-size: 100%;
     overflow: hidden;
     text-overflow: ellipsis;

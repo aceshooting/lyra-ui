@@ -5642,7 +5642,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "keyboard",
           "reducedMotion",
           "visual",
           "forcedColors",
@@ -5665,9 +5664,14 @@
         },
         "keyboard": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Interactive implementation detected without a recorded component keyboard-test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/agent-tools/browser-frame/browser-frame.test.ts",
+              "test": "contains the hidden address label in a nested scroller at ${width}px in ${direction}",
+              "kind": "component keyboard exercise signal"
+            }
+          ]
         },
         "rtl": {
           "applicability": "applicable",
@@ -5772,7 +5776,6 @@
         }
       },
       "knownLimitations": [
-        "Interactive implementation detected without a recorded component keyboard-test signal.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -34104,8 +34107,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/pan-zoom/pan-zoom.test.ts",
-              "test": "uses group semantics for independently tabbable zoom controls",
+              "file": "src/components/media/pan-zoom/pan-zoom-remediation.test.ts",
+              "test": "keeps hidden reset text inside a nested scroller at ${width}px in ${direction}",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -34115,8 +34118,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/pan-zoom/pan-zoom.test.ts",
-              "test": "expands scroll geometry with the scaled paint footprint at narrow LTR and RTL allocations",
+              "file": "src/components/media/pan-zoom/pan-zoom-remediation.test.ts",
+              "line": 33,
               "kind": "rendered RTL test signal"
             }
           ]

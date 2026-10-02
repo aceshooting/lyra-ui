@@ -70,6 +70,7 @@ export const styles = css`
   ${formControlRequiredMarker}
 
   [part='trigger'] {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: space-between;

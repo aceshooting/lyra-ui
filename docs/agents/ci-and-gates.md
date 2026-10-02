@@ -672,15 +672,21 @@ measurement at or below the recorded favorable probe, headroom above 0.5%, and a
 from measurement plus headroom. A ceiling at or above the historical baseline requires a separate
 named review; no such approval is active. Raising a ceiling merely to clear a failure is insufficient.
 
-The file ceiling is 4,095: 2,500 base artifacts, one emitted JavaScript file for each of the 304 stable
-tag aliases, a measured 1,284-file remainder, and the existing seven-file reserve for the next
-component scaffold. The remainder was measured at 1,268 in the previous package review; since then,
-nine required runtime modules add 18 emitted files (JavaScript and declarations): `input-shared`,
-`custom-element-upgrade-observer`, `icon-only-content`, `native-modal-carrier` and its styles,
-`native-modal-context`, and the `data`, `high-contrast`, and `terminal` theme looks. Retiring
-`utilities/localization` removes its JavaScript and declaration files, for a net increase of 16.
-Canonical declarations supply alias types without an extra declaration per alias. Validation
-requires this exact derivation and a ceiling below the historical 4,441-file baseline.
+The file ceiling is 4,104: 2,500 base artifacts, one emitted JavaScript file for each of the 303 stable
+registration aliases, a measured 1,294-file remainder, and the unchanged seven-file reserve for the
+next component scaffold. The complete 25.4.0 candidate contains 4,097 files. Published 23.0.0, the
+previous file-budget measurement, contains 4,088 files; published 25.3.1 contains 4,091. The exact
+23.0.0-to-25.3.1 inventory has 21 additions and 18 removals, including native glass, media/map,
+chart-axis and heatmap helpers, focused guides, and removal of empty runtime/type-only modules and
+retired routes. The six further files are JavaScript/declaration pairs for `chart-sync`,
+`chart-sync.styles`, and `opaque-content-border.styles`; they implement synchronized charts and
+opaque content borders. No files were removed from 25.3.1. All three inventories contain 303 stable
+registration aliases: correcting the former 304-alias term moves one file into the measured
+remainder without increasing the total. The net nine-file increase since the last measurement
+retains the same scaffold reserve. Canonical declarations supply alias types without an extra
+declaration per alias. Byte ceilings, required-artifact exceptions, and source/map/fixture/test/story
+rejection remain unchanged; validation requires the exact derivation and a ceiling below the
+historical 4,441-file baseline.
 
 ## `tsconfig.build.json` and dist hygiene
 

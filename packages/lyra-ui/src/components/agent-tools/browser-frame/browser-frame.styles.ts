@@ -16,6 +16,7 @@ export const styles = css`
     overflow: hidden;
   }
   [part='toolbar'] {
+    position: relative;
     display: flex;
     flex-wrap: wrap;
     align-items: center;

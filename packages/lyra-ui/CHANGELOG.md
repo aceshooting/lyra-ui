@@ -10,6 +10,8 @@
 
 ### Patch Changes
 
+- Keep the pan-zoom reset button’s screen-reader label inside its button so nested scroll containers do not create extra page overflow. Preserve localized reset names, keyboard activation and visible zoom percentages.
+- Contain flag-only locale-picker descriptions within their trigger and browser-frame address labels within their toolbar, preserving accessible text without enlarging outer scroll areas.
 - fffbad7: Support KaTeX 0.19 alongside the existing 0.18 range, and preserve complete version ranges in the generated optional-peer documentation.
 - 9deeb23: Give reorder-item move controls localized action-label fallbacks for automation tools that omit
   reflected element references, while preserving the full action-and-row native accessible names.
