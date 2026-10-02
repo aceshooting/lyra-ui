@@ -97,7 +97,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'छोड्नुहोस्',
   localePickerLabel: 'भाषा',
   localePickerRequired: 'कृपया भाषा छान्नुहोस्।',
+  localePickerSearchLabel: 'भाषाहरू खोज्नुहोस्',
+  localePickerEmpty: 'मेल खाने भाषा भेटिएन।',
   currencyPickerLabel: 'मुद्रा',
+  countryPickerLabel: 'देश',
+  timeZonePickerLabel: 'समय क्षेत्र',
+  unitPickerLabel: 'एकाइ',
 };
 
 registerLyraLocale('ne', strings);

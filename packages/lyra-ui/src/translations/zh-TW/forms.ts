@@ -95,7 +95,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: '跳過',
   localePickerLabel: '語言',
   localePickerRequired: '請選擇一種語言。',
+  localePickerSearchLabel: '搜尋語言',
+  localePickerEmpty: '沒有符合的語言。',
   currencyPickerLabel: '貨幣',
+  countryPickerLabel: '國家／地區',
+  timeZonePickerLabel: '時區',
+  unitPickerLabel: '單位',
 };
 
 registerLyraLocale('zh-TW', strings);

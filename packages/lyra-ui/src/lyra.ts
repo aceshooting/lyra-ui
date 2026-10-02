@@ -1971,3 +1971,15 @@ export type {
   LyraCurrencyChangeDetail,
   LyraCurrencyPickerEventMap,
 } from './components/forms/currency-picker/currency-picker.class.js';
+
+export { CURRENCY_CODES, getCurrencyCatalog, normalizeCurrencyRates, loadCurrencyRates, convertCurrency } from './currency.js';
+export type { LyraCurrencyCode, LyraCurrencyDisplayEntry, LyraCurrencyRateSnapshot, LyraCurrencyRateLoader, LyraCurrencyRateLoadOptions, LyraCurrencyRateSource } from './currency.js';
+export { COUNTRY_CODES, resolveCountryNames } from './countries.js';
+export type { LyraCountryCode, LyraCountryEntry, LyraCountryCatalog } from './countries.js';
+export { getTimeZoneCodes } from './time-zones.js';
+export type { LyraTimeZoneEntry, LyraTimeZoneCatalog } from './time-zones.js';
+export { UNIT_CODES, resolveUnitNames } from './units.js';
+export type { LyraUnitCode, LyraUnitEntry, LyraUnitCatalog } from './units.js';
+export type { LyraCountryPickerEventMap, LyraCountryChangeDetail } from './components/forms/country-picker/country-picker.class.js';
+export type { LyraTimeZonePickerEventMap, LyraTimeZoneChangeDetail } from './components/forms/time-zone-picker/time-zone-picker.class.js';
+export type { LyraUnitPickerEventMap, LyraUnitChangeDetail } from './components/forms/unit-picker/unit-picker.class.js';

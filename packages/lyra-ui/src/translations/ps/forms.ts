@@ -97,7 +97,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'پرېښودل',
   localePickerLabel: 'ژبه',
   localePickerRequired: 'یوه ژبه وټاکئ.',
+  localePickerSearchLabel: 'ژبې ولټوئ',
+  localePickerEmpty: 'سمون لرونکې ژبه ونه موندل شوه.',
   currencyPickerLabel: 'اسعار',
+  countryPickerLabel: 'هېواد',
+  timeZonePickerLabel: 'وخت زون',
+  unitPickerLabel: 'د اندازه کولو واحد',
 };
 
 registerLyraLocale('ps', strings, { dir: 'rtl', name: 'پښتو' });

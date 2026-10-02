@@ -97,7 +97,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Өткізіп жіберу',
   localePickerLabel: 'Тіл',
   localePickerRequired: 'Тілді таңдаңыз.',
+  localePickerSearchLabel: 'Тілдерді іздеу',
+  localePickerEmpty: 'Сәйкес тілдер табылмады.',
   currencyPickerLabel: 'Валюта',
+  countryPickerLabel: 'Ел',
+  timeZonePickerLabel: 'Уақыт белдеуі',
+  unitPickerLabel: 'Өлшем бірлігі',
 };
 
 registerLyraLocale('kk', strings);

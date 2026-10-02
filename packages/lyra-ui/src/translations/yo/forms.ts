@@ -95,7 +95,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Fo kọjá',
   localePickerLabel: 'Èdè',
   localePickerRequired: 'Jọ̀wọ́ yan èdè kan.',
+  localePickerSearchLabel: 'Wá àwọn èdè',
+  localePickerEmpty: 'Kò sí èdè tó bá ìwádìí mu.',
   currencyPickerLabel: 'Owó',
+  countryPickerLabel: 'Orílẹ̀-èdè',
+  timeZonePickerLabel: 'Agbègbè àkókò',
+  unitPickerLabel: 'Ẹyọ ìwọ̀n',
 };
 
 registerLyraLocale('yo', strings);

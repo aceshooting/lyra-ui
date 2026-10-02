@@ -2,9 +2,12 @@
   "family": "forms",
   "assignments": {
     "new-component-experimental": [
+      "lr-country-picker",
       "lr-currency-picker",
+      "lr-time-zone-picker",
       "lr-toggle",
-      "lr-toggle-group"
+      "lr-toggle-group",
+      "lr-unit-picker"
     ],
     "published-stable": [
       "lr-button",

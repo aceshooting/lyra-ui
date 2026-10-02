@@ -29,6 +29,15 @@ export const EverydayCurrencies: StoryObj = {
     hint="Choose the currency used for prices." .currencies=${everydayCurrencies}></lr-currency-picker>`,
 };
 
+export const SearchableGroups: StoryObj = {
+  render: () => html`<lr-currency-picker searchable clearable label="Display currency" value="EUR"
+    hint="Search by currency code, name or symbol." .currencies=${[
+      { code: 'EUR', group: 'Often used' }, { code: 'USD', group: 'Often used' },
+      { code: 'GBP', group: 'Often used' }, { code: 'JPY', group: 'Other accounts' },
+      { code: 'CAD', group: 'Other accounts' }, { code: 'CHF', group: 'Other accounts' },
+    ]}></lr-currency-picker>`,
+};
+
 export const CompactToolbar: StoryObj = {
   render: () => html`<div style="display:flex;align-items:center;justify-content:space-between;gap:var(--lr-space-m);max-inline-size:var(--lr-size-20rem)">
     <span>Catalogue prices</span>

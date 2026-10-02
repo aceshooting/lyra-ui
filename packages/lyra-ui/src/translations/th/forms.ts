@@ -95,7 +95,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'ข้าม',
   localePickerLabel: 'ภาษา',
   localePickerRequired: 'โปรดเลือกภาษา',
+  localePickerSearchLabel: 'ค้นหาภาษา',
+  localePickerEmpty: 'ไม่พบภาษาที่ตรงกัน',
   currencyPickerLabel: 'สกุลเงิน',
+  countryPickerLabel: 'ประเทศ',
+  timeZonePickerLabel: 'เขตเวลา',
+  unitPickerLabel: 'หน่วย',
 };
 
 registerLyraLocale('th', strings);

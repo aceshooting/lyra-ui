@@ -18,6 +18,8 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import { DebounceController } from '../../../internal/debounce-controller.js';
+import { getDisplayNames, resolveIntlLocale } from '../../../internal/intl-cache.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 import {
   activateNonmodalOverlay,
   type OverlayHandle,
@@ -33,7 +35,7 @@ import { localeNativeName } from '../../media/flag/language-map.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './locale-picker.styles.js';
-import { declaredDefaultConverter } from '../../../internal/converters.js';
+import { autocorrectConverter, declaredDefaultConverter, spellcheckConverter } from '../../../internal/converters.js';
 import {
   attachInternalsSafely,
   getFormOwner,
@@ -94,6 +96,11 @@ export type LyraLocaleOptionDisplay = 'label' | 'label-tag';
 const TYPE_AHEAD_RESET_MS = 500;
 
 const MAX_LOCALE_ENTRIES = 512;
+const localeSpellcheckConverter = {
+  ...spellcheckConverter,
+  fromAttribute: (value: string | null, type?: unknown): boolean | undefined =>
+    value === null ? undefined : spellcheckConverter.fromAttribute?.(value, type),
+};
 
 function snapshotLocaleCatalog(source: unknown): LyraLocaleCatalog {
   if (!Array.isArray(source)) return Object.freeze([]);
@@ -173,9 +180,9 @@ export interface LyraLocalePickerEventMap {
  * higher-precedence validation layer until the caller clears it.
  *
  * Built directly on the shared trigger-button/`aria-activedescendant` listbox technique
- * `<lr-select>` uses (not composed from it) — a plain closed list, no filter/free-text mode; a
- * locale catalog is realistically dozens of rows, not thousands, so `<lr-combobox>`'s filterable
- * model would be more surface than the job needs.
+ * `<lr-select>` uses (not composed from it). Optional `searchable` adds a text filter over the
+ * offered rows, matching tags, native names, caller labels and localized language names. The
+ * filter never becomes a submitted value and never selects a locale by itself.
  *
  * Selecting a row emits a cancelable `lr-change-request` before setting `value` — if a listener doesn't call
  * `event.preventDefault()`, the component applies the pick itself via `setLyraLocale()`. A host
@@ -201,8 +208,9 @@ export interface LyraLocalePickerEventMap {
  * @event lr-change - Non-cancelable notification after locale selection commits. The selection changed. `detail: { value, previousValue, direction }`, where
  *   `direction` is the picked locale's `'ltr'`/`'rtl'` writing direction. Veto through
  *   `lr-change-request`; preventing this notification does not reverse the commit.
- * @event blur - Native `FocusEvent` relayed from the internal trigger button.
- * @event focus - Native `FocusEvent` relayed from the internal trigger button.
+ * @event blur - Native `FocusEvent` relayed when focus leaves the control. Internal moves between
+ *   the trigger, optional search input and Retry do not emit another blur.
+ * @event focus - Native `FocusEvent` relayed when focus enters the control.
  * @event lr-invalid - The locale picker failed a validity check; cancelable. Calling
  *   `preventDefault()` also cancels the native `invalid` event it aliases, suppressing the
  *   browser's own validation bubble and `reportValidity()`'s focus/scroll.
@@ -218,6 +226,8 @@ export interface LyraLocalePickerEventMap {
  * @csspart trigger-label - The current locale's label. Visually hidden in flag-only mode but
  *   retained as the trigger's accessible current-value description.
  * @csspart listbox - The options popover.
+ * @csspart search-input - The optional text filter inside the popover.
+ * @csspart empty - The optional filter's no-match guidance.
  * @csspart option - An option row.
  * @csspart option-flag - The row's leading `<lr-flag>` (present only while `withoutFlags` is off).
  * @csspart option-label - An option row's label wrapper (native name + tag).
@@ -388,6 +398,30 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   @property({ attribute: 'option-display', converter: declaredDefaultConverter('label-tag') })
   optionDisplay: LyraLocaleOptionDisplay = 'label-tag';
 
+  /** Adds an optional text filter over tags, native names, caller labels and localized language
+   * names. Filtering is case/accent insensitive, never commits a free-text value and emits no
+   * selection event. Opening focuses the filter; arrows move the active match and Enter chooses
+   * it. Escape returns to the trigger. The private query clears on close, reset, disablement,
+   * disconnect or turning this option off. Unset preserves the original closed-list behavior. */
+  @property({ type: Boolean }) searchable = false;
+
+  /** Native autocomplete hint for the optional filter input. */
+  @property() autocomplete = 'off';
+  /** Native keyboard hint for the optional filter input. */
+  @property({ attribute: 'inputmode' }) override inputMode = '';
+  /** Native enter-key hint for the optional filter input. */
+  @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
+  /** Native spellchecking for the filter; removing the attribute restores false. */
+  @property({ converter: localeSpellcheckConverter, useDefault: true }) override spellcheck = false;
+  /** Native capitalization hint for the optional filter input. */
+  @property() override autocapitalize = '';
+  private autocorrectValue = true;
+  /** Native filter autocorrection. HTML accepts on/off; omission defaults to true.
+   * @default true */
+  @property({ converter: autocorrectConverter })
+  override get autocorrect(): boolean { return this.autocorrectValue; }
+  override set autocorrect(next: boolean) { this.autocorrectValue = Boolean(next); this.requestUpdate(); }
+
   @property() label = '';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
@@ -404,7 +438,10 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
       if (next && !this._open && this.hasAttribute('open')) this.removeAttribute('open');
       return;
     }
-    if (!this._open) this.activeIndex = -1;
+    if (!this._open) {
+      this.activeIndex = -1;
+      this.clearSearch();
+    }
     this.requestUpdate('open', old);
   }
   /** Visual size — the library-wide `2xs`–`xl` ladder shared with `lr-select`. The Web Awesome /
@@ -415,6 +452,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   }) size: LyraSize = 'm';
 
   @state() private activeIndex = -1;
+  @state() private searchQuery = '';
   @state() private touched = false;
   @state() private hasHintSlot = false;
   @state() private hasErrorSlot = false;
@@ -424,6 +462,9 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   // nothing in its body needs to read this field.
   @state() private registryTick = 0;
   @query('[part="trigger"]') private triggerElement?: HTMLButtonElement;
+  @query('[part="search-input"]') private searchElement?: HTMLInputElement;
+  private searchAnnouncements?: AnnouncementSink;
+  private searchFocusGeneration = 0;
 
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
@@ -500,15 +541,23 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   override focus(options?: FocusOptions): void {
     if (!this.liveDisabled) this.triggerElement?.focus(options);
   }
-  /** Blur the internal trigger. */
+  /** Blur the internal trigger or the optional focused search input. */
   override blur(): void {
-    this.triggerElement?.blur();
+    if (this.searchElement && activeElementIn(this.shadowRoot) === this.searchElement) this.searchElement.blur();
+    else this.triggerElement?.blur();
   }
   /** Activates the internal trigger -- `HTMLElement.prototype.click()` on a custom element with
    *  no native click semantics is otherwise a silent no-op. Mirrors `<lr-select>`'s identical
    *  `click()`. */
   override click(): void {
     if (!this.liveDisabled) this.triggerElement?.click();
+  }
+
+  /** Native filter input when searchable, otherwise null. After editing its value directly,
+   * dispatch a native input event to update filtering; this never changes the committed locale.
+   * The field remains disabled while the popup is closed. */
+  get input(): HTMLInputElement | null {
+    return this.searchable ? this.searchElement ?? null : null;
   }
 
   get form(): HTMLFormElement | null {
@@ -566,6 +615,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.clearSearch();
     this.cancelLocaleLoad();
     this.loadAnnouncements?.release();
     this.loadAnnouncements = undefined;
@@ -589,6 +639,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   }
 
   override adoptedCallback(): void {
+    this.clearSearch();
     this.cancelLocaleLoad();
     this.loadAnnouncements?.release();
     this.loadAnnouncements = undefined;
@@ -610,8 +661,12 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     // former locale for the render and for the required-message calculation.
     if (changed.has('locale')) this.syncLocaleAttributeForLocalization();
     if (this.hasUpdated) this.refreshLocalizedIntrinsicValidity(changed);
-    if (this.open && (changed.has('locales') || changed.has('registryTick')) && this.activeIndex >= 0) {
-      this.activeIndex = Math.min(this.activeIndex, this.normalizedEntries.length - 1);
+    if (changed.has('searchable') && !this.searchable) {
+      this.clearSearch();
+      if (this.searchElement && activeElementIn(this.shadowRoot) === this.searchElement) this.focus();
+    }
+    if (this.open && (this.searchable || changed.has('locales') || changed.has('registryTick')) && this.activeIndex >= 0) {
+      this.activeIndex = Math.min(this.activeIndex, this.visibleEntries.length - 1);
       this.queueActiveScroll();
     }
     if (!this.hasUpdated) {
@@ -795,6 +850,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     // immediately invalid once more. The `value` write below re-runs updateValidity() (and
     // therefore syncCustomStates()) with this flag already cleared.
     this.touched = false;
+    this.clearSearch();
     this.restoreLiveValueFromDefault();
   }
   private restoreLiveValueFromDefault(): void {
@@ -884,6 +940,48 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     return getRegisteredLyraLocales().map((tag) => ({ tag, label: localeNativeName(tag) }));
   }
 
+  private normalizeSearch(text: string): string {
+    return text.toLocaleLowerCase(resolveIntlLocale(this.effectiveLocale))
+      .normalize('NFKD').replace(/\p{M}/gu, '').trim();
+  }
+
+  private get visibleEntries(): NormalizedLocaleEntry[] {
+    const rows = this.normalizedEntries;
+    const query = this.searchable ? this.normalizeSearch(this.searchQuery) : '';
+    if (!query) return rows;
+    let names: Intl.DisplayNames | undefined;
+    try { names = getDisplayNames(this.effectiveLocale, { type: 'language' }); }
+    catch { /* Tags, native names and caller labels remain available without Intl language names. */ }
+    return rows.filter(row => {
+      let localizedName = '';
+      try { localizedName = names?.of(row.tag) ?? ''; }
+      catch { /* A custom malformed tag remains searchable by its literal tag and label. */ }
+      return [row.tag, row.label, localeNativeName(row.tag), localizedName]
+        .some(text => this.normalizeSearch(text).includes(query));
+    });
+  }
+
+  private clearSearch(): void {
+    this.searchQuery = '';
+    this.searchFocusGeneration++;
+    this.searchAnnouncements?.release();
+    this.searchAnnouncements = undefined;
+  }
+
+  private queueSearchFocus(): void {
+    if (!this.searchable || !this.open || this.liveDisabled) return;
+    const generation = ++this.searchFocusGeneration;
+    const ownerDocument = this.ownerDocument;
+    const outerFocus = activeElementIn(ownerDocument);
+    const innerFocus = activeElementIn(this.shadowRoot);
+    void this.updateComplete.then(() => {
+      if (generation !== this.searchFocusGeneration || !this.isConnected || !this.open ||
+          !this.searchable || this.liveDisabled || this.ownerDocument !== ownerDocument ||
+          activeElementIn(ownerDocument) !== outerFocus || activeElementIn(this.shadowRoot) !== innerFocus) return;
+      this.searchElement?.focus();
+    });
+  }
+
   /** The tag actually shown in the trigger: the committed `value` once set, else a live preview
    *  of `effectiveLocale` -- never a committed selection, see the class doc's value/preview
    *  split.
@@ -916,6 +1014,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   private show(): void {
     if (this.open || this.liveDisabled) return;
     this.open = true;
+    this.queueSearchFocus();
   }
   private hide(): void {
     if (!this.open) return;
@@ -1042,6 +1141,8 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
         (changed.has('locales') ||
           changed.has('registryTick') ||
           changed.has('locale') ||
+          changed.has('searchQuery') ||
+          changed.has('searchable') ||
           changed.has('loadFailureTag') ||
           changed.has('topLayer')));
     if (reposition) {
@@ -1050,6 +1151,14 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     if (changed.has('open')) {
       if (this.open) this.closeSettleToken++;
       else void this.settleClosedLayout();
+    }
+    if (this.open && this.searchable && changed.has('searchQuery') && this.searchQuery.trim() &&
+        this.visibleEntries.length === 0) {
+      this.searchAnnouncements ??= acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
+      this.searchAnnouncements.announce(this.localize('localePickerEmpty'));
+    }
+    if (changed.has('searchable') && this.searchable && activeElementIn(this.shadowRoot) === this.triggerElement) {
+      this.queueSearchFocus();
     }
     if (changed.has('touched') || changed.has('required') || changed.has('value')) {
       this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
@@ -1090,10 +1199,13 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
       if (request.defaultPrevented || this.liveDisabled || this.valueWriteVersion !== version ||
           this.loadGeneration !== generation || this.localeLoader !== loader || !this.entryFor(tag)) return;
       const commitValue = () => {
+        const searchFocus = this.searchElement && activeElementIn(this.shadowRoot) === this.searchElement
+          ? this.searchElement : undefined;
         this.value = tag;
         this.hide();
         setLyraLocale(tag);
         this.emit('lr-change', Object.freeze({ ...detail, direction: getLyraLocaleDirection(tag) }));
+        if (searchFocus && this.isConnected && this.searchable && activeElementIn(this.shadowRoot) === searchFocus) this.focus();
       };
       if (loader === undefined) {
         commitValue();
@@ -1124,10 +1236,10 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   }
 
   private retryLocaleLoad = (): void => {
-    const restoreFocus = this.shadowRoot?.activeElement?.getAttribute('part') === 'load-retry';
+    const restoreFocus = activeElementIn(this.shadowRoot)?.getAttribute('part') === 'load-retry';
     if (this.loadFailureTag !== undefined) this.commit(this.loadFailureTag);
     if (restoreFocus && this.loadFailureTag === undefined && this.isConnected &&
-        this.shadowRoot?.activeElement?.getAttribute('part') === 'load-retry') this.focus();
+        activeElementIn(this.shadowRoot)?.getAttribute('part') === 'load-retry') this.focus();
   };
 
   private onTriggerClick = (): void => {
@@ -1135,6 +1247,10 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     this.open ? this.hide() : this.show();
   };
   private onTriggerBlur = (event: FocusEvent): void => {
+    if (this.isSearchFocusTransfer(event)) {
+      event.stopPropagation();
+      return;
+    }
     // The trigger's own `disabled` state becoming true force-blurs it when it currently holds
     // focus -- a platform reaction, not a user interaction. That blur can land synchronously
     // nested inside the very property write that disabled this control (before this update's
@@ -1151,11 +1267,49 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     relayNativeEvent(this, event);
   };
   private onTriggerFocus = (event: FocusEvent): void => {
+    if (this.isSearchFocusTransfer(event)) {
+      event.stopPropagation();
+      return;
+    }
     if (this.liveDisabled) {
       event.stopPropagation();
       return;
     }
     relayNativeEvent(this, event);
+  };
+
+  private isSearchFocusTransfer(event: FocusEvent): boolean {
+    const related = event.relatedTarget;
+    return (this.searchable || event.currentTarget === this.searchElement || related === this.searchElement) &&
+      related !== null && 'nodeType' in related && this.renderRoot.contains(related as Node);
+  }
+
+  private onSearchInput = (event: Event): void => {
+    event.stopPropagation();
+    if (!this.searchable || !this.open || this.liveDisabled) return;
+    this.searchQuery = (event.currentTarget as HTMLInputElement).value;
+    this.setActiveIndex(this.visibleEntries.length ? 0 : -1);
+  };
+
+  private onSearchChange = (event: Event): void => { event.stopPropagation(); };
+
+  private onSearchKeyDown = (event: KeyboardEvent): void => {
+    if (this.liveDisabled || !this.open || event.isComposing || event.keyCode === 229) return;
+    const rows = this.visibleEntries;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.setActiveIndex(event.key === 'ArrowDown'
+        ? Math.min(rows.length - 1, this.activeIndex + 1)
+        : Math.max(0, this.activeIndex - 1));
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      const row = rows[this.activeIndex];
+      if (row) this.commit(row.tag);
+    } else if (event.key === 'Escape' &&
+        (!this.overlayHandle?.isActive() || this.overlayHandle.isTopmost())) {
+      event.preventDefault();
+      this.dismissFromEscape();
+    }
   };
 
   // Each reads the light-DOM `slot` attribute directly rather than the live `assignedElements()`
@@ -1213,7 +1367,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
 
   /** Updates active-descendant ownership and keeps the resulting row visible after render. */
   private setActiveIndex(index: number): void {
-    const last = this.normalizedEntries.length - 1;
+    const last = this.visibleEntries.length - 1;
     const next = last < 0 || index < 0 ? -1 : Math.min(last, index);
     this.activeIndex = next;
     this.queueActiveScroll();
@@ -1230,23 +1384,32 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
         !this.open ||
         this.activeIndex !== index
       ) return;
-      this.shadowRoot?.getElementById(`${this.listId}-opt-${index}`)?.scrollIntoView({ block: 'nearest' });
+      const row = this.shadowRoot?.getElementById(`${this.listId}-opt-${index}`);
+      row?.scrollIntoView({ block: 'nearest' });
+      const search = this.searchElement;
+      const popup = this.renderRoot.querySelector<HTMLElement>('[part="listbox"]');
+      if (row && search && popup) {
+        const overlap = search.getBoundingClientRect().bottom - row.getBoundingClientRect().top;
+        if (overlap > 0) popup.scrollTop -= overlap;
+      }
     });
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (this.liveDisabled) return;
-    const rows = this.normalizedEntries;
+    if (this.liveDisabled || e.isComposing || e.keyCode === 229) return;
+    const rows = this.visibleEntries;
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
         if (!this.open) return this.show();
         this.setActiveIndex(Math.min(rows.length - 1, this.activeIndex + 1));
+        this.queueSearchFocus();
         break;
       case 'ArrowUp':
         e.preventDefault();
         if (!this.open) return this.show();
         this.setActiveIndex(Math.max(0, this.activeIndex - 1));
+        this.queueSearchFocus();
         break;
       case 'Enter':
       case ' ':
@@ -1285,7 +1448,13 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
         break;
       default:
         if (e.key.length === 1 && !e.altKey && !e.ctrlKey && !e.metaKey) {
-          this.typeAhead(e.key);
+          if (this.searchable) {
+            e.preventDefault();
+            this.show();
+            this.searchQuery += e.key;
+            this.setActiveIndex(this.visibleEntries.length ? 0 : -1);
+            this.queueSearchFocus();
+          } else this.typeAhead(e.key);
         }
         break;
     }
@@ -1333,7 +1502,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   }
 
   override render(): TemplateResult {
-    const rows = this.normalizedEntries;
+    const rows = this.visibleEntries;
     const activeId = this.activeIndex >= 0 && rows[this.activeIndex] ? `${this.listId}-opt-${this.activeIndex}` : '';
     const previewTag = this.previewTag;
     const previewEntry = this.entryFor(previewTag);
@@ -1355,11 +1524,11 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
           class=${flagOnly ? 'flag-only' : nothing}
           type="button"
           role="combobox"
-          aria-haspopup="listbox"
+          aria-haspopup=${this.searchable ? 'dialog' : 'listbox'}
           aria-busy=${this.loadingTag !== undefined ? 'true' : 'false'}
           aria-expanded=${this.open ? 'true' : 'false'}
           aria-controls=${this.listId}
-          aria-activedescendant=${activeId}
+          aria-activedescendant=${this.searchable ? nothing : activeId}
           aria-label=${hostAriaLabel(this) ?? (hasLabel ? nothing : this.localize('localePickerLabel'))}
           aria-describedby=${describedBy || nothing}
           aria-required=${this.required ? 'true' : 'false'}
@@ -1382,17 +1551,52 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
           part="listbox"
           ?hidden=${this.listboxHidden}
           id=${this.listId}
-          role="listbox"
+          role=${this.searchable ? 'dialog' : 'listbox'}
+          aria-label=${this.searchable ? this.localize('localePickerLabel') : nothing}
           @mousedown=${this.onListboxMouseDown}
           @click=${this.onListboxClick}
         >
           <span class="glass-scroll-layer" aria-hidden="true"></span>
-          ${this.renderRows(rows, activeId)}
+          ${this.searchable ? html`
+            <input
+              part="search-input"
+              type="search"
+              role="combobox"
+              aria-label=${this.localize('localePickerSearchLabel')}
+              placeholder=${this.localize('localePickerSearchLabel')}
+              aria-haspopup="listbox"
+              aria-autocomplete="list"
+              aria-expanded=${this.open ? 'true' : 'false'}
+              aria-controls=${`${this.listId}-matches`}
+              aria-activedescendant=${activeId || nothing}
+              aria-describedby=${rows.length ? nothing : `${this.listId}-empty`}
+              autocomplete=${this.autocomplete}
+              inputmode=${this.inputMode || nothing}
+              enterkeyhint=${this.enterKeyHint || nothing}
+              spellcheck=${this.spellcheck ? 'true' : 'false'}
+              autocapitalize=${this.autocapitalize || nothing}
+              autocorrect=${this.autocorrect ? 'on' : 'off'}
+              tabindex=${this.open ? '0' : '-1'}
+              ?disabled=${this.effectiveDisabled || !this.open}
+              .value=${this.searchQuery}
+              @input=${this.onSearchInput}
+              @change=${this.onSearchChange}
+              @keydown=${this.onSearchKeyDown}
+              @focus=${this.onTriggerFocus}
+              @blur=${this.onTriggerBlur}
+            >
+            <div id=${`${this.listId}-matches`} role="listbox" aria-label=${this.localize('localePickerLabel')}>
+              ${this.renderRows(rows, activeId)}
+            </div>
+            ${rows.length ? nothing : html`<div part="empty" id=${`${this.listId}-empty`}>${this.localize('localePickerEmpty')}</div>`}
+          ` : this.renderRows(rows, activeId)}
         </div>
         ${this.loadingTag !== undefined || this.loadFailureTag !== undefined ? html`
           <div id="locale-picker-load-status" part="load-status">
             ${this.loadingTag !== undefined ? this.localize('loading') : this.localize('statusError')}
-            ${this.loadFailureTag !== undefined ? html`<button part="load-retry" type="button" ?disabled=${this.effectiveDisabled} @click=${this.retryLocaleLoad}>${this.localize('retry')}</button>` : nothing}
+            ${this.loadFailureTag !== undefined ? html`<button part="load-retry" type="button" ?disabled=${this.effectiveDisabled} @click=${this.retryLocaleLoad}
+              @focus=${this.searchable ? this.onTriggerFocus : nothing}
+              @blur=${this.searchable ? this.onTriggerBlur : nothing}>${this.localize('retry')}</button>` : nothing}
           </div>` : nothing}
         <div id="locale-picker-error" part="error" ?hidden=${!hasError}>
           ${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot>

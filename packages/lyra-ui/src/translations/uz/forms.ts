@@ -97,7 +97,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Oʻtkazib yuborish',
   localePickerLabel: 'Til',
   localePickerRequired: 'Tilni tanlang.',
+  localePickerSearchLabel: 'Tillarni qidirish',
+  localePickerEmpty: 'Mos til topilmadi.',
   currencyPickerLabel: 'Valyuta',
+  countryPickerLabel: 'Mamlakat',
+  timeZonePickerLabel: 'Vaqt mintaqasi',
+  unitPickerLabel: 'O‘lchov birligi',
 };
 
 registerLyraLocale('uz', strings);

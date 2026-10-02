@@ -97,7 +97,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Παράλειψη',
   localePickerLabel: 'Γλώσσα',
   localePickerRequired: 'Επιλέξτε μια γλώσσα.',
+  localePickerSearchLabel: 'Αναζήτηση γλωσσών',
+  localePickerEmpty: 'Δεν υπάρχουν γλώσσες που ταιριάζουν.',
   currencyPickerLabel: 'Νόμισμα',
+  countryPickerLabel: 'Χώρα',
+  timeZonePickerLabel: 'Ζώνη ώρας',
+  unitPickerLabel: 'Μονάδα',
 };
 
 registerLyraLocale('el', strings);

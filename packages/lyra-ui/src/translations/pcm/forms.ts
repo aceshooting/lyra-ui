@@ -97,7 +97,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Skip am',
   localePickerLabel: 'Language',
   localePickerRequired: 'Abeg choose one language.',
+  localePickerSearchLabel: 'Find language',
+  localePickerEmpty: 'No language match.',
   currencyPickerLabel: 'Di kind of money',
+  countryPickerLabel: 'Di country',
+  timeZonePickerLabel: 'Di time zone',
+  unitPickerLabel: 'Di unit',
 };
 
 registerLyraLocale('pcm', strings);

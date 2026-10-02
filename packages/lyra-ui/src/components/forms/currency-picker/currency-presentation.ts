@@ -1,11 +1,19 @@
-import type { LyraCurrencyEntry } from './currency-types.js';
+import type { LyraCurrencyDisplayEntry, LyraCurrencyEntry } from './currency-types.js';
 import { getDisplayNames, getNumberFormat } from '../../../internal/intl-cache.js';
 
-export interface ResolvedCurrencyEntry {
-  readonly code: string;
-  readonly label: string;
-  readonly symbol: string;
-  readonly disabled: boolean;
+export interface ResolvedCurrencyEntry extends LyraCurrencyDisplayEntry {
+  readonly searchText: string;
+}
+
+function resolveSymbol(code: string, locale: string, currencyDisplay: 'symbol' | 'narrowSymbol'): string {
+  try {
+    const part = getNumberFormat(locale, {
+      style: 'currency', currency: code, currencyDisplay,
+    }).formatToParts(0).find((candidate) => candidate.type === 'currency')?.value;
+    return part?.trim() ? part : code;
+  } catch {
+    return code;
+  }
 }
 
 /** Resolve display-only names and symbols without changing currency identity. */
@@ -14,31 +22,23 @@ export function resolveCurrencyPresentation(
   locale: string,
 ): readonly ResolvedCurrencyEntry[] {
   const rows = entries.map((entry): ResolvedCurrencyEntry => {
-    let label = entry.label;
-    if (label === undefined) {
-      try {
-        const name = getDisplayNames(locale, { type: 'currency', fallback: 'code' }).of(entry.code);
-        label = name?.trim() ? name : entry.code;
-      } catch {
-        label = entry.code;
-      }
+    let localizedName: string;
+    try {
+      const name = getDisplayNames(locale, { type: 'currency', fallback: 'code' }).of(entry.code);
+      localizedName = name?.trim() ? name : entry.code;
+    } catch {
+      localizedName = entry.code;
     }
-
-    let symbol = entry.symbol;
-    if (symbol === undefined) {
-      try {
-        const part = getNumberFormat(locale, {
-          style: 'currency',
-          currency: entry.code,
-          currencyDisplay: 'symbol',
-        }).formatToParts(0).find((candidate) => candidate.type === 'currency')?.value;
-        symbol = part?.trim() ? part : entry.code;
-      } catch {
-        symbol = entry.code;
-      }
-    }
-
-    return Object.freeze({ code: entry.code, label, symbol, disabled: entry.disabled === true });
+    const regularSymbol = resolveSymbol(entry.code, locale, 'symbol');
+    const narrowSymbol = resolveSymbol(entry.code, locale, 'narrowSymbol');
+    const label = entry.label ?? localizedName;
+    const symbol = entry.symbol ?? regularSymbol;
+    const searchText = [...new Set([entry.code, label, localizedName, symbol, regularSymbol, narrowSymbol])].join(' ');
+    return Object.freeze({
+      code: entry.code, label, symbol, narrowSymbol, disabled: entry.disabled === true,
+      ...(entry.group === undefined ? {} : { group: entry.group }),
+      searchText,
+    });
   });
   return Object.freeze(rows);
 }

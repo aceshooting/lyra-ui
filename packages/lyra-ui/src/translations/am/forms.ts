@@ -97,7 +97,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'ዝለል',
   localePickerLabel: 'ቋንቋ',
   localePickerRequired: 'እባክዎ ቋንቋ ይምረጡ።',
+  localePickerSearchLabel: 'ቋንቋዎችን ፈልግ',
+  localePickerEmpty: 'የሚዛመድ ቋንቋ አልተገኘም።',
   currencyPickerLabel: 'ምንዛሪ',
+  countryPickerLabel: 'አገር',
+  timeZonePickerLabel: 'የሰዓት ሰቅ',
+  unitPickerLabel: 'መለኪያ አሃድ',
 };
 
 registerLyraLocale('am', strings);

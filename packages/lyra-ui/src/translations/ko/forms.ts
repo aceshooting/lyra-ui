@@ -95,7 +95,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: '넘기기',
   localePickerLabel: '언어',
   localePickerRequired: '언어 선택',
+  localePickerSearchLabel: '언어 검색',
+  localePickerEmpty: '일치하는 언어가 없습니다.',
   currencyPickerLabel: '통화',
+  countryPickerLabel: '국가',
+  timeZonePickerLabel: '시간대',
+  unitPickerLabel: '단위',
 };
 
 registerLyraLocale('ko', strings);

@@ -97,7 +97,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Atla',
   localePickerLabel: 'Dil',
   localePickerRequired: 'Bir dil seçin.',
+  localePickerSearchLabel: 'Dil ara',
+  localePickerEmpty: 'Eşleşen dil bulunamadı.',
   currencyPickerLabel: 'Para birimi',
+  countryPickerLabel: 'Ülke',
+  timeZonePickerLabel: 'Saat dilimi',
+  unitPickerLabel: 'Birim',
 };
 
 registerLyraLocale('tr', strings);

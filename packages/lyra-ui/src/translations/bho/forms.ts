@@ -97,7 +97,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'छोड़ दीं',
   localePickerLabel: 'भाषा',
   localePickerRequired: 'कृपया भाषा चुनीं।',
+  localePickerSearchLabel: 'भाषा खोजीं',
+  localePickerEmpty: 'कवनो मेल खात भाषा नइखे।',
   currencyPickerLabel: 'मुद्रा',
+  countryPickerLabel: 'देस',
+  timeZonePickerLabel: 'समय क्षेत्र',
+  unitPickerLabel: 'माप इकाई',
 };
 
 registerLyraLocale('bho', strings);

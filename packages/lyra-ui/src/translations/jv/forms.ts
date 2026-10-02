@@ -95,7 +95,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Lumpati',
   localePickerLabel: 'Basa',
   localePickerRequired: 'Pilih basa.',
+  localePickerSearchLabel: 'Goleki basa',
+  localePickerEmpty: 'Ora ana basa sing cocog.',
   currencyPickerLabel: 'Mata uang',
+  countryPickerLabel: 'Negara',
+  timeZonePickerLabel: 'Zona wektu',
+  unitPickerLabel: 'Satuan',
 };
 
 registerLyraLocale('jv', strings);

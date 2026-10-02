@@ -97,7 +97,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Laktawan',
   localePickerLabel: 'Wika',
   localePickerRequired: 'Pumili ng wika.',
+  localePickerSearchLabel: 'Maghanap ng mga wika',
+  localePickerEmpty: 'Walang tumutugmang wika.',
   currencyPickerLabel: 'Pera',
+  countryPickerLabel: 'Bansa',
+  timeZonePickerLabel: 'Sona ng oras',
+  unitPickerLabel: 'Yunit',
 };
 
 registerLyraLocale('tl', strings);

@@ -95,7 +95,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: '跳过',
   localePickerLabel: '语言',
   localePickerRequired: '请选择一种语言。',
+  localePickerSearchLabel: '搜索语言',
+  localePickerEmpty: '没有匹配的语言。',
   currencyPickerLabel: '货币',
+  countryPickerLabel: '国家/地区',
+  timeZonePickerLabel: '时区',
+  unitPickerLabel: '单位',
 };
 
 registerLyraLocale('zh-CN', strings);

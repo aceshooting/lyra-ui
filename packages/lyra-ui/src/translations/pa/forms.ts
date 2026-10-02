@@ -97,7 +97,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'ਛੱਡੋ',
   localePickerLabel: 'ਭਾਸ਼ਾ',
   localePickerRequired: 'ਕਿਰਪਾ ਕਰਕੇ ਭਾਸ਼ਾ ਚੁਣੋ।',
+  localePickerSearchLabel: 'ਭਾਸ਼ਾਵਾਂ ਖੋਜੋ',
+  localePickerEmpty: 'ਕੋਈ ਮੇਲ ਖਾਂਦੀ ਭਾਸ਼ਾ ਨਹੀਂ ਮਿਲੀ।',
   currencyPickerLabel: 'ਮੁਦਰਾ',
+  countryPickerLabel: 'ਦੇਸ਼',
+  timeZonePickerLabel: 'ਸਮਾਂ ਖੇਤਰ',
+  unitPickerLabel: 'ਇਕਾਈ',
 };
 
 registerLyraLocale('pa', strings);

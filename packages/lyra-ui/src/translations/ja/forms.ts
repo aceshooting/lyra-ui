@@ -95,7 +95,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'スキップ',
   localePickerLabel: '言語',
   localePickerRequired: '言語を選択してください。',
+  localePickerSearchLabel: '言語を検索',
+  localePickerEmpty: '一致する言語がありません。',
   currencyPickerLabel: '通貨',
+  countryPickerLabel: '国',
+  timeZonePickerLabel: 'タイムゾーン',
+  unitPickerLabel: '単位',
 };
 
 registerLyraLocale('ja', strings);

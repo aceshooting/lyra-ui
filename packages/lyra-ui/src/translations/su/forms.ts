@@ -95,7 +95,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Liwatkeun',
   localePickerLabel: 'Basa',
   localePickerRequired: 'Pilih basa.',
+  localePickerSearchLabel: 'Téangan basa',
+  localePickerEmpty: 'Teu aya basa nu cocog.',
   currencyPickerLabel: 'Mata uang',
+  countryPickerLabel: 'Nagara',
+  timeZonePickerLabel: 'Zona waktu',
+  unitPickerLabel: 'Satuan',
 };
 
 registerLyraLocale('su', strings);

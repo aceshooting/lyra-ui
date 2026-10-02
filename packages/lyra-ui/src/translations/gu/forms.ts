@@ -97,7 +97,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'છોડી દો',
   localePickerLabel: 'ભાષા',
   localePickerRequired: 'ભાષા પસંદ કરો.',
+  localePickerSearchLabel: 'ભાષાઓ શોધો',
+  localePickerEmpty: 'કોઈ મેળ ખાતી ભાષા મળી નથી.',
   currencyPickerLabel: 'ચલણ',
+  countryPickerLabel: 'દેશ',
+  timeZonePickerLabel: 'સમય ઝોન',
+  unitPickerLabel: 'એકમ',
 };
 
 registerLyraLocale('gu', strings);

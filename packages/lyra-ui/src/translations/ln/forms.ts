@@ -97,7 +97,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'leka',
   localePickerLabel: 'Monoko',
   localePickerRequired: 'Pona monoko.',
+  localePickerSearchLabel: 'Luka minoko',
+  localePickerEmpty: 'Monoko oyo ekokani ezali te.',
   currencyPickerLabel: 'Mbɔ́ngɔ',
+  countryPickerLabel: 'Mboka',
+  timeZonePickerLabel: 'Etando ya ngonga',
+  unitPickerLabel: 'Liyoko lya lomeko',
 };
 
 registerLyraLocale('ln', strings);

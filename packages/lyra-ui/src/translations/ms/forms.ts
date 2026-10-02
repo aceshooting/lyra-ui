@@ -95,7 +95,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Langkau',
   localePickerLabel: 'Bahasa',
   localePickerRequired: 'Pilih bahasa.',
+  localePickerSearchLabel: 'Cari bahasa',
+  localePickerEmpty: 'Tiada bahasa yang sepadan.',
   currencyPickerLabel: 'Mata wang',
+  countryPickerLabel: 'Negara',
+  timeZonePickerLabel: 'Zon waktu',
+  unitPickerLabel: 'Unit',
 };
 
 registerLyraLocale('ms', strings);

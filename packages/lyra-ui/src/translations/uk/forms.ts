@@ -101,7 +101,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Пропустити',
   localePickerLabel: 'Мова',
   localePickerRequired: 'Виберіть мову.',
+  localePickerSearchLabel: 'Пошук мов',
+  localePickerEmpty: 'Відповідних мов не знайдено.',
   currencyPickerLabel: 'Валюта',
+  countryPickerLabel: 'Країна',
+  timeZonePickerLabel: 'Часовий пояс',
+  unitPickerLabel: 'Одиниця вимірювання',
 };
 
 registerLyraLocale('uk', strings);

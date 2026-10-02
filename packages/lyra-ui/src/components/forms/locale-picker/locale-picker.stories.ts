@@ -50,6 +50,20 @@ export const CustomCatalog: Story = {
   `,
 };
 
+export const Searchable: Story = {
+  parameters: { docs: { description: { story: 'Optional text filtering matches locale tags, native names, custom labels and language names in the current UI locale. Try “eng”, “allemand”, “café” or “pt-BR”. Typing only filters; choose a row to request a language change. Flags and comfortable option rows stay visible.' } } },
+  render: () => html`
+    <lr-locale-picker searchable locale="fr" label="Langue" trigger-display="flag" option-display="label"
+      .locales=${[
+        { tag: 'en', label: 'English · Workspace' },
+        { tag: 'fr', label: 'Français · Café' },
+        { tag: 'de' }, { tag: 'pt-BR' }, { tag: 'ja' }, { tag: 'ar' },
+      ]}
+      @lr-change-request=${(event: Event) => event.preventDefault()}
+    ></lr-locale-picker>
+  `,
+};
+
 /** `undefined` selects registry discovery; an explicit empty array is an authoritative empty
  * catalog and never silently falls back to registry rows. */
 export const EmptyCatalog: Story = {

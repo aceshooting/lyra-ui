@@ -97,7 +97,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'దాటవేయండి',
   localePickerLabel: 'భాష',
   localePickerRequired: 'ఒక భాషను ఎంచుకోండి.',
+  localePickerSearchLabel: 'భాషలను వెతకండి',
+  localePickerEmpty: 'సరిపోలే భాషలు లేవు.',
   currencyPickerLabel: 'కరెన్సీ',
+  countryPickerLabel: 'దేశం',
+  timeZonePickerLabel: 'సమయ మండలం',
+  unitPickerLabel: 'ప్రమాణం',
 };
 
 registerLyraLocale('te', strings);

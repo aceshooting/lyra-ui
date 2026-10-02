@@ -97,7 +97,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Overslaan',
   localePickerLabel: 'Taal',
   localePickerRequired: 'Kies een taal.',
+  localePickerSearchLabel: 'Talen zoeken',
+  localePickerEmpty: 'Geen overeenkomende talen.',
   currencyPickerLabel: 'Valuta',
+  countryPickerLabel: 'Land',
+  timeZonePickerLabel: 'Tijdzone',
+  unitPickerLabel: 'Eenheid',
 };
 
 registerLyraLocale('nl', strings);

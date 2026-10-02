@@ -95,7 +95,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Bỏ qua',
   localePickerLabel: 'Ngôn ngữ',
   localePickerRequired: 'Vui lòng chọn ngôn ngữ.',
+  localePickerSearchLabel: 'Tìm ngôn ngữ',
+  localePickerEmpty: 'Không có ngôn ngữ phù hợp.',
   currencyPickerLabel: 'Tiền tệ',
+  countryPickerLabel: 'Quốc gia',
+  timeZonePickerLabel: 'Múi giờ',
+  unitPickerLabel: 'Đơn vị',
 };
 
 registerLyraLocale('vi', strings);

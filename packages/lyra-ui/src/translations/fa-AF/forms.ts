@@ -97,7 +97,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'ردشدن',
   localePickerLabel: 'زبان',
   localePickerRequired: 'لطفاً یک زبان انتخاب کنید.',
+  localePickerSearchLabel: 'جستجوی زبان‌ها',
+  localePickerEmpty: 'هیچ زبان مطابقی یافت نشد.',
   currencyPickerLabel: 'واحد پول',
+  countryPickerLabel: 'کشور',
+  timeZonePickerLabel: 'منطقهٔ زمانی',
+  unitPickerLabel: 'واحد',
 };
 
 registerLyraLocale('fa-AF', strings, { dir: 'rtl', name: 'دری' });

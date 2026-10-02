@@ -97,7 +97,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'தவிர்',
   localePickerLabel: 'மொழி',
   localePickerRequired: 'ஒரு மொழியைத் தேர்ந்தெடுக்கவும்.',
+  localePickerSearchLabel: 'மொழிகளைத் தேடு',
+  localePickerEmpty: 'பொருந்தும் மொழிகள் எதுவும் இல்லை.',
   currencyPickerLabel: 'நாணயம்',
+  countryPickerLabel: 'நாடு',
+  timeZonePickerLabel: 'நேர மண்டலம்',
+  unitPickerLabel: 'அலகு',
 };
 
 registerLyraLocale('ta', strings);

@@ -101,7 +101,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Přeskočit',
   localePickerLabel: 'Jazyk',
   localePickerRequired: 'Vyberte prosím jazyk.',
+  localePickerSearchLabel: 'Hledat jazyky',
+  localePickerEmpty: 'Žádné odpovídající jazyky.',
   currencyPickerLabel: 'Měna',
+  countryPickerLabel: 'Země',
+  timeZonePickerLabel: 'Časové pásmo',
+  unitPickerLabel: 'Jednotka',
 };
 
 registerLyraLocale('cs', strings);

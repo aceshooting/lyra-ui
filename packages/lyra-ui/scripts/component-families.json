@@ -305,6 +305,9 @@
     "background-runs": "agent-tools",
     "research-progress": "retrieval",
     "budget-meter": "agent-tools",
-    "currency-picker": "forms"
+    "currency-picker": "forms",
+    "country-picker": "forms",
+    "time-zone-picker": "forms",
+    "unit-picker": "forms"
   }
 }

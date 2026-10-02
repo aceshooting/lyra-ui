@@ -97,7 +97,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Hoppa över',
   localePickerLabel: 'Språk',
   localePickerRequired: 'Välj ett språk.',
+  localePickerSearchLabel: 'Sök språk',
+  localePickerEmpty: 'Inga matchande språk.',
   currencyPickerLabel: 'Valuta',
+  countryPickerLabel: 'Land',
+  timeZonePickerLabel: 'Tidszon',
+  unitPickerLabel: 'Enhet',
 };
 
 registerLyraLocale('sv', strings);

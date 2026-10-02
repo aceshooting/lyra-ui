@@ -90,6 +90,38 @@ describe('currency catalog and presentation', () => {
     expect(rows[0]?.label).to.equal('Valid later row');
   });
 
+  it('preserves literal optional groups and rejects malformed or accessor-backed group rows', () => {
+    let calls = 0;
+    const rows = normalizeCurrencyCatalog([
+      { code: 'EUR', group: 'Common' },
+      { code: 'USD', group: '' },
+      { code: 'CAD', group: '<b>Other</b>' },
+      { code: 'GBP', group: 3 },
+      { code: 'JPY', get group() { calls++; return 'Hidden'; } },
+      { code: 'CHF' },
+    ])!;
+    expect(rows.map((row) => row.code)).to.deep.equal(['EUR', 'USD', 'CAD', 'CHF']);
+    expect(rows.map((row) => row.group)).to.deep.equal(['Common', '', '<b>Other</b>', undefined]);
+    expect(calls).to.equal(0);
+  });
+
+  it('includes localized names and both symbols in search text even when caller display text overrides them', () => {
+    const [row] = resolveCurrencyPresentation([{ code: 'USD', label: 'Custom dollar', symbol: 'money', group: 'Common' }], 'fr');
+    const name = new Intl.DisplayNames('fr', { type: 'currency' }).of('USD')!;
+    const regular = new Intl.NumberFormat('fr', {
+      style: 'currency', currency: 'USD', currencyDisplay: 'symbol',
+    }).formatToParts(0).find((part) => part.type === 'currency')!.value;
+    const narrow = new Intl.NumberFormat('fr', {
+      style: 'currency', currency: 'USD', currencyDisplay: 'narrowSymbol',
+    }).formatToParts(0).find((part) => part.type === 'currency')!.value;
+    expect(row?.searchText).to.include('USD').and.include('Custom dollar').and.include('money')
+      .and.include(name).and.include(regular).and.include(narrow);
+    expect(row?.label).to.equal('Custom dollar');
+    expect(row?.symbol).to.equal('money');
+    expect(row?.narrowSymbol).to.equal(narrow);
+    expect(row?.group).to.equal('Common');
+  });
+
   it('examines no more than 512 input rows even when earlier rows are invalid', () => {
     const ignored = [...Array.from({ length: 512 }, () => 'invalid'), 'EUR'];
     expect(normalizeCurrencyCatalog(ignored)).to.deep.equal([]);
@@ -107,8 +139,12 @@ describe('currency catalog and presentation', () => {
     const expectedSymbol = new Intl.NumberFormat('fr', {
       style: 'currency', currency: 'EUR', currencyDisplay: 'symbol',
     }).formatToParts(0).find((part) => part.type === 'currency')?.value;
-    expect(result[0]).to.deep.equal({ code: 'EUR', label: expectedName, symbol: expectedSymbol, disabled: false });
-    expect(result[1]).to.deep.equal({ code: 'USD', label: '', symbol: '', disabled: true });
+    expect(result[0]).to.include({ code: 'EUR', label: expectedName, symbol: expectedSymbol, disabled: false });
+    expect(result[1]).to.include({ code: 'USD', label: '', symbol: '', disabled: true });
+    expect(result[0]?.searchText).to.include(expectedName!).and.include(expectedSymbol!);
+    expect(result[0]?.narrowSymbol).to.equal(new Intl.NumberFormat('fr', {
+      style: 'currency', currency: 'EUR', currencyDisplay: 'narrowSymbol',
+    }).formatToParts(0).find((part) => part.type === 'currency')?.value);
     expect(Object.isFrozen(result)).to.equal(true);
     expect(result.every((row) => Object.isFrozen(row))).to.equal(true);
     expect(rows[0]!.label).to.equal(undefined);
@@ -129,9 +165,11 @@ describe('currency catalog and presentation', () => {
         value: class { constructor() { numberCalls++; throw new Error('no currency format'); } },
       });
       const result = resolveCurrencyPresentation([{ code: 'ZZZ' }], 'en-US-x-lr-currency-test');
-      expect(result[0]).to.deep.equal({ code: 'ZZZ', label: 'ZZZ', symbol: 'ZZZ', disabled: false });
+      expect(result[0]).to.deep.equal({
+        code: 'ZZZ', label: 'ZZZ', symbol: 'ZZZ', narrowSymbol: 'ZZZ', disabled: false, searchText: 'ZZZ',
+      });
       expect(displayCalls).to.equal(1);
-      expect(numberCalls).to.equal(1);
+      expect(numberCalls).to.equal(2);
     } finally {
       Object.defineProperty(Intl, 'DisplayNames', displayDescriptor);
       Object.defineProperty(Intl, 'NumberFormat', numberDescriptor);
@@ -149,7 +187,7 @@ describe('currency catalog and presentation', () => {
         ...partsDescriptor, value() { return []; },
       });
       expect(resolveCurrencyPresentation([{ code: 'EUR' }], 'fr')[0]).to.deep.equal({
-        code: 'EUR', label: 'EUR', symbol: 'EUR', disabled: false,
+        code: 'EUR', label: 'EUR', symbol: 'EUR', narrowSymbol: 'EUR', disabled: false, searchText: 'EUR',
       });
       Object.defineProperty(Intl.DisplayNames.prototype, 'of', {
         ...nameDescriptor, value() { return ''; },
@@ -158,7 +196,7 @@ describe('currency catalog and presentation', () => {
         ...partsDescriptor, value() { throw new Error('parts unavailable'); },
       });
       expect(resolveCurrencyPresentation([{ code: 'USD' }], 'fr')[0]).to.deep.equal({
-        code: 'USD', label: 'USD', symbol: 'USD', disabled: false,
+        code: 'USD', label: 'USD', symbol: 'USD', narrowSymbol: 'USD', disabled: false, searchText: 'USD',
       });
     } finally {
       Object.defineProperty(Intl.DisplayNames.prototype, 'of', nameDescriptor);
@@ -177,6 +215,7 @@ describe('currency catalog and presentation', () => {
   it('keeps caller text literal and never interprets it as markup', () => {
     const label = '<img src=x onerror=alert(1)>';
     const result = resolveCurrencyPresentation([{ code: 'EUR', label, symbol: '<b>€</b>' }], 'en');
-    expect(result[0]).to.deep.equal({ code: 'EUR', label, symbol: '<b>€</b>', disabled: false });
+    expect(result[0]).to.include({ code: 'EUR', label, symbol: '<b>€</b>', disabled: false });
+    expect(result[0]?.searchText).to.include(label).and.include('<b>€</b>');
   });
 });

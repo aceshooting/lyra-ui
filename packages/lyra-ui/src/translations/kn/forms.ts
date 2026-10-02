@@ -97,7 +97,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'ಬಿಟ್ಟುಹೋಗಿ',
   localePickerLabel: 'ಭಾಷೆ',
   localePickerRequired: 'ಭಾಷೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ.',
+  localePickerSearchLabel: 'ಭಾಷೆಗಳನ್ನು ಹುಡುಕಿ',
+  localePickerEmpty: 'ಹೊಂದಿಕೆಯಾಗುವ ಭಾಷೆಗಳು ಕಂಡುಬಂದಿಲ್ಲ.',
   currencyPickerLabel: 'ಕರೆನ್ಸಿ',
+  countryPickerLabel: 'ದೇಶ',
+  timeZonePickerLabel: 'ಸಮಯ ವಲಯ',
+  unitPickerLabel: 'ಏಕಮಾನ',
 };
 
 registerLyraLocale('kn', strings);

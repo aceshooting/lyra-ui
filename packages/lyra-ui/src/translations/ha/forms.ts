@@ -97,7 +97,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Tsallake',
   localePickerLabel: 'Harshe',
   localePickerRequired: 'Da fatan zaɓi harshe.',
+  localePickerSearchLabel: 'Nemo harsuna',
+  localePickerEmpty: 'Babu harsunan da suka dace.',
   currencyPickerLabel: 'Kudin ƙasa',
+  countryPickerLabel: 'Ƙasa',
+  timeZonePickerLabel: 'Yankin lokaci',
+  unitPickerLabel: 'Ma\'aunin awo',
 };
 
 registerLyraLocale('ha', strings);

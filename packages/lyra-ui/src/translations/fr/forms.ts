@@ -99,7 +99,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Ignorer',
   localePickerLabel: 'Langue',
   localePickerRequired: 'Veuillez choisir une langue.',
+  localePickerSearchLabel: 'Rechercher une langue',
+  localePickerEmpty: 'Aucune langue correspondante.',
   currencyPickerLabel: 'Devise',
+  countryPickerLabel: 'Pays',
+  timeZonePickerLabel: 'Fuseau horaire',
+  unitPickerLabel: 'Unité',
 };
 
 registerLyraLocale('fr', strings);

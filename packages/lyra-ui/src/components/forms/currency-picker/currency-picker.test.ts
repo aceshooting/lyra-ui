@@ -443,17 +443,17 @@ describe('lr-currency-picker composed field ownership', () => {
       const picker = await fixture<LyraCurrencyPicker>(html`<lr-currency-picker locale="en"
         .currencies=${['EUR', 'USD']}></lr-currency-picker>`);
       await settled(picker);
-      expect(calls).to.equal(2);
+      expect(calls, 'regular and narrow symbols are each resolved once per row').to.equal(4);
       picker.label = 'Settlement';
       picker.required = true;
       await settled(picker);
-      expect(calls).to.equal(2);
+      expect(calls).to.equal(4);
       picker.locale = 'fr';
       await settled(picker);
-      expect(calls).to.equal(4);
+      expect(calls).to.equal(8);
       picker.currencies = ['EUR'];
       await settled(picker);
-      expect(calls).to.equal(5);
+      expect(calls).to.equal(10);
     } finally {
       Intl.NumberFormat.prototype.formatToParts = original;
     }

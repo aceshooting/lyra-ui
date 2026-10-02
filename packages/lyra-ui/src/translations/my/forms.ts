@@ -95,7 +95,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'ကျော်ရန်',
   localePickerLabel: 'ဘာသာစကား',
   localePickerRequired: 'ဘာသာစကားတစ်ခုကို ရွေးပါ။',
+  localePickerSearchLabel: 'ဘာသာစကားများ ရှာရန်',
+  localePickerEmpty: 'ကိုက်ညီသော ဘာသာစကား မရှိပါ။',
   currencyPickerLabel: 'ငွေကြေး',
+  countryPickerLabel: 'နိုင်ငံ',
+  timeZonePickerLabel: 'အချိန်ဇုန်',
+  unitPickerLabel: 'ယူနစ်',
 };
 
 registerLyraLocale('my', strings);

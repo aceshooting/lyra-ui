@@ -97,7 +97,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Yeqa',
   localePickerLabel: 'Ulimi',
   localePickerRequired: 'Khetha ulimi.',
+  localePickerSearchLabel: 'Sesha izilimi',
+  localePickerEmpty: 'Azikho izilimi ezifanayo.',
   currencyPickerLabel: 'Uhlobo lwemali',
+  countryPickerLabel: 'Izwe',
+  timeZonePickerLabel: 'Izoni yesikhathi',
+  unitPickerLabel: 'Iyunithi',
 };
 
 registerLyraLocale('zu', strings);

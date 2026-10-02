@@ -99,7 +99,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Salta',
   localePickerLabel: 'Lingua',
   localePickerRequired: 'Scegli una lingua.',
+  localePickerSearchLabel: 'Cerca lingue',
+  localePickerEmpty: 'Nessuna lingua corrispondente.',
   currencyPickerLabel: 'Valuta',
+  countryPickerLabel: 'Paese',
+  timeZonePickerLabel: 'Fuso orario',
+  unitPickerLabel: 'Unità',
 };
 
 registerLyraLocale('it', strings);

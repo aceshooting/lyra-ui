@@ -97,7 +97,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Kihagyás',
   localePickerLabel: 'Nyelv',
   localePickerRequired: 'Válasszon nyelvet.',
+  localePickerSearchLabel: 'Nyelvek keresése',
+  localePickerEmpty: 'Nincs megfelelő nyelv.',
   currencyPickerLabel: 'Pénznem',
+  countryPickerLabel: 'Ország',
+  timeZonePickerLabel: 'Időzóna',
+  unitPickerLabel: 'Mértékegység',
 };
 
 registerLyraLocale('hu', strings);

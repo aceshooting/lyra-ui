@@ -8648,6 +8648,22 @@
     "./translations/zu/viewers.d.ts": {
       "types": "./dist/internal/side-effect-only.d.ts",
       "default": "./dist/internal/side-effect-only.d.ts"
+    },
+    "./countries.js": {
+      "types": "./dist/countries.d.ts",
+      "default": "./dist/countries.js"
+    },
+    "./currency.js": {
+      "types": "./dist/currency.d.ts",
+      "default": "./dist/currency.js"
+    },
+    "./time-zones.js": {
+      "types": "./dist/time-zones.d.ts",
+      "default": "./dist/time-zones.js"
+    },
+    "./units.js": {
+      "types": "./dist/units.d.ts",
+      "default": "./dist/units.js"
     }
   },
   "sideEffects": [

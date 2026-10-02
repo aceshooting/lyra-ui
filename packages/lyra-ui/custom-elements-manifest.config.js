@@ -16,6 +16,10 @@ const packageVersion = JSON.parse(
 // invisible to CEM's syntax-only analyzer. Keep the small, explicit projection in one exported
 // table so its synthetic test covers every entry and a source rename fails closed.
 export const ACCESSOR_RUNTIME_CONTRACTS = new Map([
+  ...['lr-country-picker', 'lr-currency-picker', 'lr-locale-picker', 'lr-time-zone-picker', 'lr-unit-picker'].map((tag) => [
+    tag,
+    { autocorrect: { default: 'true', attribute: 'autocorrect' } },
+  ]),
   [
     'lr-avatar',
     {

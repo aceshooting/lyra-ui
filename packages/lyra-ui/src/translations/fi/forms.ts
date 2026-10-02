@@ -97,7 +97,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Ohita',
   localePickerLabel: 'Kieli',
   localePickerRequired: 'Valitse kieli.',
+  localePickerSearchLabel: 'Hae kieliä',
+  localePickerEmpty: 'Vastaavia kieliä ei löytynyt.',
   currencyPickerLabel: 'Valuutta',
+  countryPickerLabel: 'Maa',
+  timeZonePickerLabel: 'Aikavyöhyke',
+  unitPickerLabel: 'Yksikkö',
 };
 
 registerLyraLocale('fi', strings);

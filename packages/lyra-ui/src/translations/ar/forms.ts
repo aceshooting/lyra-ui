@@ -105,7 +105,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'تخطي',
   localePickerLabel: 'اللغة',
   localePickerRequired: 'يُرجى اختيار لغة.',
+  localePickerSearchLabel: 'ابحث عن اللغات',
+  localePickerEmpty: 'لا توجد لغات مطابقة.',
   currencyPickerLabel: 'العملة',
+  countryPickerLabel: 'البلد',
+  timeZonePickerLabel: 'المنطقة الزمنية',
+  unitPickerLabel: 'وحدة القياس',
 };
 
 registerLyraLocale('ar', strings, { dir: 'rtl', name: 'العربية' });

@@ -97,7 +97,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'ഒഴിവാക്കുക',
   localePickerLabel: 'ഭാഷ',
   localePickerRequired: 'ഒരു ഭാഷ തിരഞ്ഞെടുക്കുക.',
+  localePickerSearchLabel: 'ഭാഷകൾ തിരയുക',
+  localePickerEmpty: 'പൊരുത്തപ്പെടുന്ന ഭാഷകളൊന്നുമില്ല.',
   currencyPickerLabel: 'കറൻസി',
+  countryPickerLabel: 'രാജ്യം',
+  timeZonePickerLabel: 'സമയ മേഖല',
+  unitPickerLabel: 'ഏകകം',
 };
 
 registerLyraLocale('ml', strings);

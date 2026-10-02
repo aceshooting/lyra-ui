@@ -97,7 +97,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Ruka',
   localePickerLabel: 'Lugha',
   localePickerRequired: 'Chagua lugha.',
+  localePickerSearchLabel: 'Tafuta lugha',
+  localePickerEmpty: 'Hakuna lugha zinazolingana.',
   currencyPickerLabel: 'Sarafu',
+  countryPickerLabel: 'Nchi',
+  timeZonePickerLabel: 'Ukanda wa saa',
+  unitPickerLabel: 'Kipimo',
 };
 
 registerLyraLocale('sw', strings);

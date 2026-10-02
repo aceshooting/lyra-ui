@@ -223,6 +223,37 @@ export const styles = css`
     }
   }
 
+  [part='search-input'] {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 1;
+    box-sizing: border-box;
+    inline-size: 100%;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: max(var(--lr-icon-button-size), var(--lr-form-control-height));
+    margin-block-end: var(--lr-space-xs);
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
+    font: inherit;
+    text-align: start;
+    transition: var(--lr-transition-interactive);
+  }
+  [part='search-input']:where(:hover:not(:disabled)) {
+    border-color: var(--lr-color-brand);
+  }
+  [part='search-input']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+  }
+  [part='empty'] {
+    padding: var(--lr-space-s);
+    color: var(--lr-color-text-quiet);
+    overflow-wrap: anywhere;
+  }
+
   [part='option'] {
     display: flex;
     align-items: center;

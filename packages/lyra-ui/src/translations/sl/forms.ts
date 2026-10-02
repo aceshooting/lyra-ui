@@ -101,7 +101,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Preskoči',
   localePickerLabel: 'Jezik',
   localePickerRequired: 'Izberite jezik.',
+  localePickerSearchLabel: 'Išči jezike',
+  localePickerEmpty: 'Ni ujemajočih se jezikov.',
   currencyPickerLabel: 'Valuta',
+  countryPickerLabel: 'Država',
+  timeZonePickerLabel: 'Časovni pas',
+  unitPickerLabel: 'Enota',
 };
 
 registerLyraLocale('sl', strings);

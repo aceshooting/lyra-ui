@@ -97,7 +97,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'ڇڏي ڏيو',
   localePickerLabel: 'ٻولي',
   localePickerRequired: 'مهرباني ڪري ٻولي چونڊيو.',
+  localePickerSearchLabel: 'ٻوليون ڳوليو',
+  localePickerEmpty: 'ڪا به ملندڙ ٻولي نه ملي.',
   currencyPickerLabel: 'ڪرنسي',
+  countryPickerLabel: 'ملڪ',
+  timeZonePickerLabel: 'وقت جو علائقو',
+  unitPickerLabel: 'ماپ جو ايڪو',
 };
 
 registerLyraLocale('sd', strings, { dir: 'rtl', name: 'سنڌي' });

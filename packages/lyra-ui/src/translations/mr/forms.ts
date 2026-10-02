@@ -97,7 +97,12 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'वगळा',
   localePickerLabel: 'भाषा',
   localePickerRequired: 'एक भाषा निवडा.',
+  localePickerSearchLabel: 'भाषा शोधा',
+  localePickerEmpty: 'जुळणारी भाषा सापडली नाही.',
   currencyPickerLabel: 'चलन',
+  countryPickerLabel: 'देश',
+  timeZonePickerLabel: 'वेळ क्षेत्र',
+  unitPickerLabel: 'एकक',
 };
 
 registerLyraLocale('mr', strings);
