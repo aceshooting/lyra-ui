@@ -101,13 +101,6 @@ export async function buildQualityArtifacts({
   const graph = componentDependencyGraph({ packageDir: packageRoot, inventory });
   if (graph.findings.length > 0) throw new Error(`Component dependency graph failed:\n- ${graph.findings.join('\n- ')}`);
 
-  const qualification = buildQualificationLedger({
-    packageDir: packageRoot,
-    inventory,
-    exemptions,
-    visualManifest,
-    ssrSource,
-  });
   const integration = await buildComponentIntegration({
     packageDir: packageRoot,
     inventory,
@@ -115,6 +108,15 @@ export async function buildQualityArtifacts({
     previous: previousIntegration,
     measureGzip,
     graph,
+  });
+  // Qualification follows composed interaction through dependencies. Refresh those edges before
+  // deriving applicability so retained inventory metadata cannot make the next pass disagree.
+  const qualification = buildQualificationLedger({
+    packageDir: packageRoot,
+    inventory: projectQualityMetadata(inventory, null, integration),
+    exemptions,
+    visualManifest,
+    ssrSource,
   });
   const qualificationFindings = validateQualificationLedger(qualification, inventory);
   const integrationFindings = validateComponentIntegration(integration, inventory, graph);
