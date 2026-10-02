@@ -101,6 +101,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Pomiń',
   localePickerLabel: 'Język',
   localePickerRequired: 'Wybierz język.',
+  currencyPickerLabel: 'Waluta',
 };
 
 registerLyraLocale('pl', strings);

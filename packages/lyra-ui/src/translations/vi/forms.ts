@@ -95,6 +95,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Bỏ qua',
   localePickerLabel: 'Ngôn ngữ',
   localePickerRequired: 'Vui lòng chọn ngôn ngữ.',
+  currencyPickerLabel: 'Tiền tệ',
 };
 
 registerLyraLocale('vi', strings);

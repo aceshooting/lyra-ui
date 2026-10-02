@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Darbii',
   localePickerLabel: 'Afaan',
   localePickerRequired: 'Maaloo afaan tokko filadhu.',
+  currencyPickerLabel: 'Maallaqa',
 };
 
 registerLyraLocale('om', strings);

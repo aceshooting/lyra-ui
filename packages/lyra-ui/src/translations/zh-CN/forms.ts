@@ -95,6 +95,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: '跳过',
   localePickerLabel: '语言',
   localePickerRequired: '请选择一种语言。',
+  currencyPickerLabel: '货币',
 };
 
 registerLyraLocale('zh-CN', strings);

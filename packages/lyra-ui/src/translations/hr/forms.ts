@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Preskoči',
   localePickerLabel: 'Jezik',
   localePickerRequired: 'Odaberite jezik.',
+  currencyPickerLabel: 'Valuta',
 };
 
 registerLyraLocale('hr', strings);

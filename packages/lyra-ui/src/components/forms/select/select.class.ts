@@ -250,6 +250,9 @@ export type LyraSelectInputEvent<Multiple extends boolean = boolean> =
  * same flag covers an empty selection too -- with nothing selected the trigger shows that same
  * localized text in place of `placeholder`, so both halves of a pending state read the same words
  * without a consumer re-localizing them.
+ * When not loading, before the browser has observed the default option slot, including during
+ * server rendering, a committed value retains its raw code without an unavailable badge or custom unknown label.
+ * Once the slot is observed, real option labels and genuinely unmatched feedback resolve normally.
  *
  * A slotted `<lr-option>`'s `start`/`end` (and the Shoelace `prefix`/`suffix` aliases) adornments
  * are cloned into the corresponding `[part='option-start']`/`[part='option-end']` listbox row,
@@ -730,6 +733,8 @@ export class LyraSelect<
    *  availability changes so the numeric index never silently points at a different row. */
   private activeOption?: LyraOption;
   @state() private options: LyraOption[] = [];
+  /** An unobserved default slot is not an authoritative empty catalog. */
+  @state() private optionsObserved = false;
   // Set on the trigger button's first `blur`; gates the `data-invalid`
   // reflection below so validity styling never flashes on first render.
   @state() private touched = false;
@@ -1028,7 +1033,9 @@ export class LyraSelect<
     const slot = this.optionsSlot;
     queueMicrotask(() => {
       collectInitialSlotAssignment(slot, (s) => {
-        if (s.assignedElements({ flatten: true }).some(isLyraOptionElement)) {
+        const assigned = s.assignedElements({ flatten: true });
+        this.optionsObserved = true;
+        if (assigned.some(isLyraOptionElement)) {
           this.collectOptionsFromSlot(s);
         }
       });
@@ -1601,6 +1608,7 @@ export class LyraSelect<
     this.options = slot
       .assignedElements({ flatten: true })
       .filter(isLyraOptionElement);
+    this.optionsObserved = true;
     // The option set (or an option's own adornment children) may have changed wholesale; re-clone
     // lazily on the next render rather than serving a stale adornment -- mirrors lr-combobox.
     this.adornmentClones = new WeakMap();
@@ -1792,7 +1800,7 @@ export class LyraSelect<
     if (this.loading) return this.localize('loading');
     // Unmatched only, so the hook can never override a real option's own label. `getTag` cannot
     // serve this case -- it is handed a matched option, which by definition does not exist here.
-    const override = this.getUnknownLabel?.(value);
+    const override = this.optionsObserved ? this.getUnknownLabel?.(value) : undefined;
     return override !== undefined && override.trim().length > 0 ? override : value;
   }
 
@@ -1807,7 +1815,7 @@ export class LyraSelect<
    *  unknown" -- see `labelFor()`'s own loading-placeholder fallback, which this has to agree with
    *  so the trigger/tag text and the "not in catalog" badge are never shown at the same time. */
   private isUnknownValue(value: string, occurrenceIndex = 0): boolean {
-    if (this.loading) return false;
+    if (!this.optionsObserved || this.loading) return false;
     return this.resolvedLabelFor(value, occurrenceIndex) === undefined;
   }
 
@@ -2082,9 +2090,35 @@ export class LyraSelect<
     this.positioningReady = operation.ready.then((positioned) => {
       if (positioned && this.cleanup === operation && this.open && this.isConnected) {
         this.listboxPositioned = true;
+        this.revealActiveOption();
       }
       return positioned;
     });
+  }
+
+  /** Reveal only the active row inside this listbox; never scroll page ancestors or move focus. */
+  private revealActiveOption(): void {
+    if (!this.isConnected || !this.open || !this.listboxPositioned || !this.cleanup) return;
+    const listbox = this.renderRoot.querySelector<HTMLElement>('[part="listbox"]');
+    const activeId = this.triggerElement?.getAttribute('aria-activedescendant');
+    const row = listbox?.querySelector<HTMLElement>('[part="option"][data-active]');
+    if (!listbox || !row || !activeId || row.id !== activeId || listbox.clientHeight === 0) return;
+    // Offset geometry and scrollTop share local CSS units, including under CSS zoom. Summing
+    // containing blocks also accommodates grouped rows without mixing viewport rectangles in.
+    let top = 0;
+    let node: HTMLElement | null = row;
+    while (node && node !== listbox) {
+      if (!listbox.contains(node)) return;
+      top += node.offsetTop;
+      node = node.offsetParent as HTMLElement | null;
+    }
+    if (node !== listbox) return;
+    const bottom = top + row.offsetHeight;
+    if (top < listbox.scrollTop || row.offsetHeight > listbox.clientHeight) {
+      listbox.scrollTop = top;
+    } else if (bottom > listbox.scrollTop + listbox.clientHeight) {
+      listbox.scrollTop = bottom - listbox.clientHeight;
+    }
   }
 
   private activateListboxOverlay(): void {
@@ -2208,6 +2242,9 @@ export class LyraSelect<
       // Live positioning-option changes update the existing overlay entry in place. Re-registering
       // it would incorrectly promote the select to the top of the stack and refire lifecycle.
       this.positionListbox();
+    }
+    if (changed.has('activeIndex') || changed.has('options') || changed.has('listboxPositioned')) {
+      this.revealActiveOption();
     }
     if (
       changed.has('touched') ||

@@ -102,6 +102,7 @@ import type { LyraCodeEditorEventMap } from '../components/forms/code-editor/cod
 import type { LyraColorPickerEventMap } from '../components/forms/color-picker/color-picker.class.js';
 import type { LyraComboboxEventMap } from '../components/forms/combobox/combobox.class.js';
 import type { LyraOptionEventMap } from '../components/forms/combobox/option.class.js';
+import type { LyraCurrencyPickerEventMap } from '../components/forms/currency-picker/currency-picker.class.js';
 import type { LyraDateInputEventMap } from '../components/forms/date-picker/date-input.class.js';
 import type { LyraDatePickerEventMap } from '../components/forms/date-picker/date-picker.class.js';
 import type { LyraEmojiPickerEventMap } from '../components/forms/emoji-picker/emoji-picker.class.js';
@@ -324,6 +325,7 @@ export interface LyraTagEventTypes {
   'lr-conversation-item': LyraConversationItemEventMap;
   'lr-copy-button': LyraCopyButtonEventMap;
   'lr-csv-viewer': LyraCsvViewerEventMap;
+  'lr-currency-picker': LyraCurrencyPickerEventMap;
   'lr-dashboard-grid': LyraDashboardGridEventMap;
   'lr-data-grid': LyraDataGridEventMap;
   'lr-dataset-viewer': LyraDatasetViewerEventMap;

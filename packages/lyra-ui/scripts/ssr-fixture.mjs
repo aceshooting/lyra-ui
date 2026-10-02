@@ -6,6 +6,23 @@ import { collectResult } from '@lit-labs/ssr/lib/render-result.js';
 import { html, unsafeStatic } from 'lit/static-html.js';
 
 export const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
+export const currencyPickerSsrCatalog = Object.freeze([
+  Object.freeze({ code: 'EUR', label: 'Euro', symbol: '€' }),
+  Object.freeze({ code: 'USD', label: 'US dollar', symbol: '$' }),
+]);
+
+export function currencyPickerSsrTemplate() {
+  return html`<lr-currency-picker
+    data-ssr-probe="lr-currency-picker"
+    .currencies=${currencyPickerSsrCatalog}
+    value="USD"
+    name="currency"
+    form="currency-hydration-form"
+    label="Billing currency"
+    hint="For estimates"
+  ></lr-currency-picker>`;
+}
+
 const inventoryPath = join(packageDir, 'scripts', 'fixtures', 'component-inventory.json');
 const editorHtmlDataPath = join(packageDir, 'vscode-html-data.json');
 

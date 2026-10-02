@@ -304,6 +304,7 @@
     "connector-manager": "agent-tools",
     "background-runs": "agent-tools",
     "research-progress": "retrieval",
-    "budget-meter": "agent-tools"
+    "budget-meter": "agent-tools",
+    "currency-picker": "forms"
   }
 }

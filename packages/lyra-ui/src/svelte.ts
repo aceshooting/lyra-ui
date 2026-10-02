@@ -188,6 +188,8 @@ export type LyraCopyButtonSvelteProps = LyraSvelteElementProps<'lr-copy-button'>
 
 export type LyraCsvViewerSvelteProps = LyraSvelteElementProps<'lr-csv-viewer'>;
 
+export type LyraCurrencyPickerSvelteProps = LyraSvelteElementProps<'lr-currency-picker'>;
+
 export type LyraDashboardGridSvelteProps = LyraSvelteElementProps<'lr-dashboard-grid'>;
 
 export type LyraDataGridSvelteProps = LyraSvelteElementProps<'lr-data-grid'>;
@@ -721,6 +723,7 @@ export interface LyraSvelteElements {
   'lr-conversation-item': LyraConversationItemSvelteProps;
   'lr-copy-button': LyraCopyButtonSvelteProps;
   'lr-csv-viewer': LyraCsvViewerSvelteProps;
+  'lr-currency-picker': LyraCurrencyPickerSvelteProps;
   'lr-dashboard-grid': LyraDashboardGridSvelteProps;
   'lr-data-grid': LyraDataGridSvelteProps;
   'lr-dataset-viewer': LyraDatasetViewerSvelteProps;
@@ -1027,6 +1030,7 @@ export interface LyraElementTagNameMap {
   'lr-conversation-item': LyraComponentTypeMap['lr-conversation-item']['element'];
   'lr-copy-button': LyraComponentTypeMap['lr-copy-button']['element'];
   'lr-csv-viewer': LyraComponentTypeMap['lr-csv-viewer']['element'];
+  'lr-currency-picker': LyraComponentTypeMap['lr-currency-picker']['element'];
   'lr-dashboard-grid': LyraComponentTypeMap['lr-dashboard-grid']['element'];
   'lr-data-grid': LyraComponentTypeMap['lr-data-grid']['element'];
   'lr-dataset-viewer': LyraComponentTypeMap['lr-dataset-viewer']['element'];

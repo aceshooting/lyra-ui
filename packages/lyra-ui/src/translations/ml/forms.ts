@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'ഒഴിവാക്കുക',
   localePickerLabel: 'ഭാഷ',
   localePickerRequired: 'ഒരു ഭാഷ തിരഞ്ഞെടുക്കുക.',
+  currencyPickerLabel: 'കറൻസി',
 };
 
 registerLyraLocale('ml', strings);

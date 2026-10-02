@@ -101,6 +101,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Пропустити',
   localePickerLabel: 'Мова',
   localePickerRequired: 'Виберіть мову.',
+  currencyPickerLabel: 'Валюта',
 };
 
 registerLyraLocale('uk', strings);

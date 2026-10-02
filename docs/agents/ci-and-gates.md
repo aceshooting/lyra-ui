@@ -672,21 +672,27 @@ measurement at or below the recorded favorable probe, headroom above 0.5%, and a
 from measurement plus headroom. A ceiling at or above the historical baseline requires a separate
 named review; no such approval is active. Raising a ceiling merely to clear a failure is insufficient.
 
-The file ceiling is 4,104: 2,500 base artifacts, one emitted JavaScript file for each of the 303 stable
-registration aliases, a measured 1,294-file remainder, and the unchanged seven-file reserve for the
-next component scaffold. The complete 25.4.0 candidate contains 4,097 files. Published 23.0.0, the
+The file ceiling is 4,116: 2,500 base artifacts, one emitted JavaScript file for each of the 304 stable
+registration aliases, a measured 1,305-file remainder, and the unchanged seven-file reserve for the
+next component scaffold. The currency-picker candidate contains 4,109 files, up from 4,097 before
+its addition. Published 23.0.0, the
 previous file-budget measurement, contains 4,088 files; published 25.3.1 contains 4,091. The exact
 23.0.0-to-25.3.1 inventory has 21 additions and 18 removals, including native glass, media/map,
 chart-axis and heatmap helpers, focused guides, and removal of empty runtime/type-only modules and
 retired routes. The six further files are JavaScript/declaration pairs for `chart-sync`,
 `chart-sync.styles`, and `opaque-content-border.styles`; they implement synchronized charts and
-opaque content borders. No files were removed from 25.3.1. All three inventories contain 303 stable
+opaque content borders. No files were removed from 25.3.1. Those three earlier inventories contain 303 stable
 registration aliases: correcting the former 304-alias term moves one file into the measured
-remainder without increasing the total. The net nine-file increase since the last measurement
+remainder without increasing the total. The earlier net nine-file increase since the last measurement
 retains the same scaffold reserve. Canonical declarations supply alias types without an extra
 declaration per alias. Byte ceilings, required-artifact exceptions, and source/map/fixture/test/story
 rejection remain unchanged; validation requires the exact derivation and a ceiling below the
 historical 4,441-file baseline.
+
+Currency-picker adds exactly twelve required files: JavaScript/declaration pairs for its catalog,
+class, registration, styles and presentation helper, plus its stable registration alias and component
+guide. No files are removed. The measured package is 7,517,992 bytes packed and 34,167,076 bytes
+unpacked; both retain the existing byte ceilings and the seven-file scaffold reserve.
 
 ## `tsconfig.build.json` and dist hygiene
 
@@ -744,6 +750,12 @@ Defer to `ci.yml` and `package.json#scripts` for when each runs:
   exact-measurement/maximum-ceiling proposal after the integrated source set is final; it never
   writes or loosens policy, and an existing tighter canary stays tighter unless separately reviewed.
 - `pnpm test:visual` runs the visual-regression screenshot suite against `visual-baselines/`.
+
+The shared select slot-readiness, viewport-containment and keyboard-scroll fixes increase the
+layout-family bundle from 353,941 to 354,218 gzip bytes. Its graph contains no currency-picker,
+catalog or presentation modules; restoring only the previous select class and styles restores the
+previous layout bundle byte for byte. The layout ceiling is 354,402 bytes, preserving its previous
+184-byte allowance. All other direct-entry, initial-route and aggregate ceilings remain unchanged.
 
 The 22.0.0 bundle review keeps those measurement options unchanged. A direct entry-point bundle
 preserves all exports and inlines relative dynamic imports; `all.js` also re-exports the root API.

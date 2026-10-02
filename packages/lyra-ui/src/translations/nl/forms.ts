@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Overslaan',
   localePickerLabel: 'Taal',
   localePickerRequired: 'Kies een taal.',
+  currencyPickerLabel: 'Valuta',
 };
 
 registerLyraLocale('nl', strings);

@@ -347,6 +347,8 @@ export const LYRA_SSR_AUDITED_STATIC_SAFE_TAGS = Object.freeze([
   'lr-connector-manager',
   'lr-context-inspector',
   'lr-context-menu',
+  // The initial field retains its committed code; interactive selection requires hydration.
+  'lr-currency-picker',
   'lr-context-meter',
   'lr-control-group',
   'lr-conversation-item',

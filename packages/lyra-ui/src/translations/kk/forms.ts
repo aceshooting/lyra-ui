@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Өткізіп жіберу',
   localePickerLabel: 'Тіл',
   localePickerRequired: 'Тілді таңдаңыз.',
+  currencyPickerLabel: 'Валюта',
 };
 
 registerLyraLocale('kk', strings);

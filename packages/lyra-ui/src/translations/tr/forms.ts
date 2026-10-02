@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Atla',
   localePickerLabel: 'Dil',
   localePickerRequired: 'Bir dil seçin.',
+  currencyPickerLabel: 'Para birimi',
 };
 
 registerLyraLocale('tr', strings);

@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Ruka',
   localePickerLabel: 'Lugha',
   localePickerRequired: 'Chagua lugha.',
+  currencyPickerLabel: 'Sarafu',
 };
 
 registerLyraLocale('sw', strings);

@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'ਛੱਡੋ',
   localePickerLabel: 'ਭਾਸ਼ਾ',
   localePickerRequired: 'ਕਿਰਪਾ ਕਰਕੇ ਭਾਸ਼ਾ ਚੁਣੋ।',
+  currencyPickerLabel: 'ਮੁਦਰਾ',
 };
 
 registerLyraLocale('pa', strings);

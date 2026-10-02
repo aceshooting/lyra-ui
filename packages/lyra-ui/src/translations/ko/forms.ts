@@ -95,6 +95,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: '넘기기',
   localePickerLabel: '언어',
   localePickerRequired: '언어 선택',
+  currencyPickerLabel: '통화',
 };
 
 registerLyraLocale('ko', strings);

@@ -475,7 +475,10 @@ export const styles = css`
     position: absolute;
     z-index: var(--lr-overlay-stack-index, var(--lr-layer-dropdown));
     box-sizing: border-box;
-    max-block-size: var(--lr-size-18rem);
+    max-block-size: min(
+      var(--lr-size-18rem),
+      var(--lr-positioner-available-block-size, var(--lr-size-18rem))
+    );
     /* Per the CSS overflow spec, pinning one axis to a non-'visible' value forces the other to
        'auto', and an implicit overflow-x: auto risks a phantom horizontal scrollbar from sub-pixel
        rounding on a vertical-only listbox. Pin it explicitly -- same fix as lr-tab-group' tablist,
@@ -504,7 +507,10 @@ export const styles = css`
      an intentional bound the content-based clamp would otherwise fight. Unset sync renders exactly
      what this part always rendered. */
   :host(:not([sync="width"]):not([sync="both"])) [part="listbox"] {
-    min-inline-size: var(--lr-size-12rem);
+    min-inline-size: min(
+      var(--lr-size-12rem),
+      var(--lr-positioner-available-inline-size, var(--lr-size-12rem))
+    );
     max-inline-size: min(
       var(--lr-popover-viewport-clamp),
       var(--lr-size-28rem)

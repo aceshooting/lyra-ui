@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'ଛାଡ଼ିଦିଅନ୍ତୁ',
   localePickerLabel: 'ଭାଷା',
   localePickerRequired: 'ଦୟାକରି ଗୋଟିଏ ଭାଷା ଚୟନ କରନ୍ତୁ।',
+  currencyPickerLabel: 'ମୁଦ୍ରା',
 };
 
 registerLyraLocale('or', strings);

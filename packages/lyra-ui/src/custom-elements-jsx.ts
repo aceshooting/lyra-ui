@@ -186,6 +186,8 @@ export type LyraCopyButtonReactProps = LyraReactElementProps<'lr-copy-button'>;
 
 export type LyraCsvViewerReactProps = LyraReactElementProps<'lr-csv-viewer'>;
 
+export type LyraCurrencyPickerReactProps = LyraReactElementProps<'lr-currency-picker'>;
+
 export type LyraDashboardGridReactProps = LyraReactElementProps<'lr-dashboard-grid'>;
 
 export type LyraDataGridReactProps = LyraReactElementProps<'lr-data-grid'>;
@@ -719,6 +721,7 @@ export interface LyraReactIntrinsicElements {
   'lr-conversation-item': LyraConversationItemReactProps;
   'lr-copy-button': LyraCopyButtonReactProps;
   'lr-csv-viewer': LyraCsvViewerReactProps;
+  'lr-currency-picker': LyraCurrencyPickerReactProps;
   'lr-dashboard-grid': LyraDashboardGridReactProps;
   'lr-data-grid': LyraDataGridReactProps;
   'lr-dataset-viewer': LyraDatasetViewerReactProps;

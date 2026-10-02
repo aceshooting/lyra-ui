@@ -35755,6 +35755,655 @@
       }
     },
     {
+      "tag": "lr-currency-picker",
+      "family": "forms",
+      "classModule": "src/components/forms/currency-picker/currency-picker.class.ts",
+      "registrationModule": "src/components/forms/currency-picker/currency-picker.ts",
+      "rootIncluded": true,
+      "rootExclusion": null,
+      "optionalPeers": [],
+      "maturity": {
+        "status": "experimental",
+        "since": "unreleased",
+        "deprecated": null,
+        "profile": "new-component-experimental",
+        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
+        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "deprecations": []
+      },
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "accessibility": "automated",
+        "ledger": "scripts/fixtures/component-qualification.json"
+      },
+      "dependencies": {
+        "direct": [
+          "lr-option",
+          "lr-select"
+        ],
+        "transitive": [],
+        "ledger": "scripts/fixtures/component-integration.json"
+      },
+      "counterparts": [],
+      "surface": {
+        "attributes": [
+          {
+            "name": "aria-label",
+            "property": "accessibleLabel",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "clearable",
+            "property": "clearable",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "custom-error",
+            "property": "customError",
+            "type": "string | null",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "disabled",
+            "property": "disabled",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "error-text",
+            "property": "errorText",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "form",
+            "property": "form",
+            "type": "HTMLFormElement | string | null",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "hint",
+            "property": "hint",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "label",
+            "property": "label",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "locale",
+            "property": "locale",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "name",
+            "property": "name",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "placeholder",
+            "property": "placeholder",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "positioning-strategy",
+            "property": "positioningStrategy",
+            "type": "PlaceStrategy | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "required",
+            "property": "required",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "size",
+            "property": "size",
+            "type": "LyraSize",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
+          },
+          {
+            "name": "top-layer",
+            "property": "topLayer",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "value",
+            "property": "defaultValue",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          }
+        ],
+        "properties": [
+          {
+            "name": "accessibleLabel",
+            "attribute": "aria-label",
+            "type": "string | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "clearable",
+            "attribute": "clearable",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "currencies",
+            "attribute": null,
+            "type": "LyraCurrencyCatalog | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "customError",
+            "attribute": "custom-error",
+            "type": "string | null",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "defaultValue",
+            "attribute": "value",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "disabled",
+            "attribute": "disabled",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "errorText",
+            "attribute": "error-text",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "form",
+            "attribute": "form",
+            "type": "HTMLFormElement | string | null",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "hint",
+            "attribute": "hint",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "label",
+            "attribute": "label",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "labels",
+            "attribute": null,
+            "type": "NodeList",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "locale",
+            "attribute": "locale",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "name",
+            "attribute": "name",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "placeholder",
+            "attribute": "placeholder",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "positioningStrategy",
+            "attribute": "positioning-strategy",
+            "type": "PlaceStrategy | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "required",
+            "attribute": "required",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "size",
+            "attribute": "size",
+            "type": "LyraSize",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
+          },
+          {
+            "name": "topLayer",
+            "attribute": "top-layer",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "validationMessage",
+            "attribute": null,
+            "type": "string",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "validity",
+            "attribute": null,
+            "type": "ValidityState",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "value",
+            "attribute": null,
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "willValidate",
+            "attribute": null,
+            "type": "boolean",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
+        "slots": [
+          {
+            "name": "error",
+            "deprecated": null
+          },
+          {
+            "name": "hint",
+            "deprecated": null
+          },
+          {
+            "name": "label",
+            "deprecated": null
+          }
+        ],
+        "events": [
+          {
+            "name": "lr-change",
+            "type": "CustomEvent<LyraCurrencyChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-input",
+            "type": "CustomEvent<LyraCurrencyChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-invalid",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          }
+        ],
+        "parts": [
+          {
+            "name": "error",
+            "deprecated": null
+          },
+          {
+            "name": "form-control",
+            "deprecated": null
+          },
+          {
+            "name": "form-control-label",
+            "deprecated": null
+          },
+          {
+            "name": "hint",
+            "deprecated": null
+          },
+          {
+            "name": "select-clear-button",
+            "deprecated": null
+          },
+          {
+            "name": "select-display-input",
+            "deprecated": null
+          },
+          {
+            "name": "select-listbox",
+            "deprecated": null
+          },
+          {
+            "name": "select-option",
+            "deprecated": null
+          },
+          {
+            "name": "select-option-sub",
+            "deprecated": null
+          },
+          {
+            "name": "select-trigger",
+            "deprecated": null
+          }
+        ],
+        "cssProperties": [],
+        "cssStates": [],
+        "methods": [
+          {
+            "name": "[VALIDITY_ANCHOR]",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "HTMLElement | null"
+              }
+            ]
+          },
+          {
+            "name": "blur",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "checkValidity",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "click",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "focus",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "options",
+                    "type": "FocusOptions",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "formResetCallback",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "formStateRestoreCallback",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "state",
+                    "type": "FormSubmissionValue",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "reason",
+                    "type": "'autocomplete' | 'restore'",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "getForm",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "HTMLFormElement | null"
+              }
+            ]
+          },
+          {
+            "name": "reportValidity",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "resetValidity",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "setCustomValidity",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "message",
+                    "type": "string",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          }
+        ],
+        "staticProperties": [],
+        "staticMethods": [],
+        "moduleExports": [],
+        "form": {
+          "associated": true,
+          "properties": [
+            "defaultValue",
+            "disabled",
+            "form",
+            "labels",
+            "name",
+            "required",
+            "validationMessage",
+            "validity",
+            "value",
+            "willValidate"
+          ],
+          "methods": [
+            "checkValidity",
+            "getForm",
+            "reportValidity",
+            "setCustomValidity"
+          ]
+        },
+        "native": {
+          "forwardedEvents": [],
+          "delegatedMethods": [
+            "blur",
+            "click",
+            "focus"
+          ]
+        }
+      }
+    },
+    {
       "tag": "lr-dashboard-grid",
       "family": "layout",
       "classModule": "src/components/layout/dashboard-grid/dashboard-grid.class.ts",

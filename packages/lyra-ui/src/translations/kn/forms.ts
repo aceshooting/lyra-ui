@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'ಬಿಟ್ಟುಹೋಗಿ',
   localePickerLabel: 'ಭಾಷೆ',
   localePickerRequired: 'ಭಾಷೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ.',
+  currencyPickerLabel: 'ಕರೆನ್ಸಿ',
 };
 
 registerLyraLocale('kn', strings);

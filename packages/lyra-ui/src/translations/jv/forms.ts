@@ -95,6 +95,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Lumpati',
   localePickerLabel: 'Basa',
   localePickerRequired: 'Pilih basa.',
+  currencyPickerLabel: 'Mata uang',
 };
 
 registerLyraLocale('jv', strings);

@@ -9,8 +9,8 @@ component’s compatibility status. The machine-readable source is
 
 ## Current evidence
 
-- Public tags: **303**
-- Exact same-test/same-instance populated or open axe evidence: **302**
+- Public tags: **304**
+- Exact same-test/same-instance populated or open axe evidence: **303**
 - Narrow reviewed axe-state exemptions: **1**
 - Missing axe qualification: **0**
 - Visual-regression enrollment: **92** tags
@@ -128,6 +128,7 @@ complete enrolled set. Axe is not assistive-technology testing.
 | [`lr-conversation-item`](component-integration.md#lr-conversation-item) | stable | automated | source signal | source signal | not recorded | not recorded | configured CI | render-and-hydrate | not enrolled | N/A | source signal | not enrolled | not verified |
 | [`lr-copy-button`](component-integration.md#lr-copy-button) | stable | automated | source signal | not recorded | N/A | not recorded | configured CI | render-and-hydrate | not enrolled | N/A | source signal | not enrolled | not verified |
 | [`lr-csv-viewer`](component-integration.md#lr-csv-viewer) | stable | automated | not recorded | not recorded | not recorded | not recorded | configured CI | render-and-hydrate | pending human | not recorded | source signal | not enrolled | not verified |
+| [`lr-currency-picker`](component-integration.md#lr-currency-picker) | experimental | automated | source signal | source signal | N/A | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |
 | [`lr-dashboard-grid`](component-integration.md#lr-dashboard-grid) | stable | automated | source signal | source signal | not recorded | source signal | configured CI | render-and-hydrate | not enrolled | not recorded | not recorded | not enrolled | not verified |
 | [`lr-data-grid`](component-integration.md#lr-data-grid) | experimental | automated | source signal | source signal | source signal | source signal | configured CI | render-and-hydrate | not enrolled | N/A | source signal | not enrolled | not verified |
 | [`lr-dataset-viewer`](component-integration.md#lr-dataset-viewer) | stable | automated | not recorded | not recorded | not recorded | not recorded | configured CI | render-and-hydrate | pending human | source signal | source signal | not enrolled | not verified |

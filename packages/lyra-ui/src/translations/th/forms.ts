@@ -95,6 +95,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'ข้าม',
   localePickerLabel: 'ภาษา',
   localePickerRequired: 'โปรดเลือกภาษา',
+  currencyPickerLabel: 'สกุลเงิน',
 };
 
 registerLyraLocale('th', strings);

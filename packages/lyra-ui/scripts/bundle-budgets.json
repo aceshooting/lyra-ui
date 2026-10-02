@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard gzip KiB ceilings for bundled, minified ESM with optional peers externalized. Reviewed byte measurements use Node 22.23.2, production esbuild, and gzip level 9. Each ceiling must satisfy the maximum headroom policy. The shared default-profile and material correctness review updates only failing entries with 2% headroom; all passing canaries retain their tighter ceilings. The theme entry includes canonical per-look contrast references and batched alias ownership after removal of redundant allocations and unused palette fields; its 13,099-byte measurement retains 2% headroom without changing other ceilings. The two component aggregate ceilings include layout-coordinate corrections for scaled scrolling and retain 2% headroom; all other ceilings remain unchanged. Categorical chart synchronization adds document-scoped coordination and renderer adapters; its 83,797-byte combined measurement retains 2% headroom, rounded up to whole bytes, without changing any other ceiling.",
+  "$comment": "Hard gzip KiB ceilings for bundled, minified ESM with optional peers externalized. Reviewed byte measurements use Node 22.23.2, production esbuild, and gzip level 9. Each ceiling must satisfy the maximum headroom policy. The shared default-profile and material correctness review updates only failing entries with 2% headroom; all passing canaries retain their tighter ceilings. The theme entry includes canonical per-look contrast references and batched alias ownership after removal of redundant allocations and unused palette fields; its 13,099-byte measurement retains 2% headroom without changing other ceilings. The two component aggregate ceilings include layout-coordinate corrections for scaled scrolling and retain 2% headroom; all other ceilings remain unchanged. Categorical chart synchronization adds document-scoped coordination and renderer adapters; its 83,797-byte combined measurement retains 2% headroom, rounded up to whole bytes, without changing any other ceiling. Shared select slot readiness, viewport containment and keyboard scrolling increase the layout family by 277 gzip bytes; its 354,218-byte measurement keeps the prior 184-byte absolute allowance at a 354,402-byte ceiling. Currency-picker modules are absent from that family graph; every other ceiling is unchanged.",
   "$maximumHeadroomPercent": 4,
   "$reviewedGzipBytes": {
     "$componentMaxGzipKb": 236067,
@@ -17,7 +17,7 @@
     "dist/components/forms/combobox/combobox.js": 77870,
     "dist/components/forms/index.js": 250610,
     "dist/components/forms/select/select.js": 69842,
-    "dist/components/layout/index.js": 350553,
+    "dist/components/layout/index.js": 354218,
     "dist/components/media/index.js": 219605,
     "dist/components/overlays/index.js": 139470,
     "dist/components/overlays/overlay/popover.js": 54276,
@@ -47,7 +47,7 @@
   "dist/components/conversation/index.js": 361.53125,
   "dist/components/data/index.js": 331.4912109375,
   "dist/components/forms/index.js": 249.630859375,
-  "dist/components/layout/index.js": 345.8251953125,
+  "dist/components/layout/index.js": 346.095703125,
   "dist/components/media/index.js": 218.7470703125,
   "dist/components/overlays/index.js": 139.1337890625,
   "dist/components/retrieval/index.js": 316.6904296875,

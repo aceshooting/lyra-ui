@@ -32,6 +32,29 @@ Session-history/autofill restoration assigns the stored string through the same 
 value/form/validity path as a programmatic value write and does not emit `input`, `change`, or
 `lr-change`.
 
+**Selecting options in browser tests.** The light-DOM `<lr-option>` children supply option data;
+the clickable rows are rendered inside `<lr-select>`'s shadow-root listbox as
+`[part="option"][role="option"]`, each with a `data-value` matching its represented value.
+Click the trigger to open the listbox, then target a rendered row. For example, in Playwright:
+
+```ts
+const select = page.locator('lr-select[name="country"]');
+await select.getByRole('combobox').click();
+await select.getByRole('option', { name: 'France' }).click();
+// When the label is localized or otherwise variable, target its value instead:
+await select.getByRole('combobox').click();
+await select.locator('[part="option"][data-value="fr"]').click();
+```
+
+For an in-page component test with a `LyraSelect` element, the public
+`@aceshooting/lyra-ui/testing` `chooseOption(selectElement, 'fr')` driver opens the listbox,
+clicks its first rendered row with that value, and awaits the component update. It also works in
+DOM test environments without Playwright; see [interaction drivers](shared/testing-and-utilities.md#driving-a-components-real-activation-path-interaction-drivers).
+
+Playwright's locators enter the open shadow root. A light-DOM `lr-option[value="fr"]` has no
+clickable box in this picker. If multiple options share a value, `data-value` matches every
+occurrence; narrow by accessible name or assert their order before choosing an occurrence.
+
 Mounted `option.selected` assignments update the picker value and form submission immediately,
 including deselection and equal-value writes. Duplicate-valued options retain their individual
 occurrence identities. These programmatic writes emit no user input/change event.
@@ -235,6 +258,12 @@ to be missing. Once the matching option mounts, the real label renders on the ne
 renders the same localized `loading` text in place of `placeholder`, so a consumer never has to
 hand-write a conditional placeholder bound to the same flag and re-localize, in its own catalogue,
 the string this control already owns.
+
+When not loading, before the browser first reads the option slot, including during SSR, a committed
+value renders as its raw code without an unavailable badge, synthetic unknown option, or custom unknown label.
+After hydration observes the slot, real option labels and genuine unmatched-value feedback resolve
+normally; an observed empty slot is an empty catalog. Server rendering does not inspect browser
+slot assignments or provide an interactive popup without JavaScript.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal trigger button.
 `show()` and `hide()` return `Promise<void>` and resolve after `lr-after-show`/`lr-after-hide` once

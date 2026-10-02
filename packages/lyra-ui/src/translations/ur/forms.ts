@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'چھوڑ دیں',
   localePickerLabel: 'زبان',
   localePickerRequired: 'براہ کرم ایک زبان منتخب کریں۔',
+  currencyPickerLabel: 'کرنسی',
 };
 
 registerLyraLocale('ur', strings, { dir: 'rtl', name: 'اردو' });

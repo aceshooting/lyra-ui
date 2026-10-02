@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Omite',
   localePickerLabel: 'Limbă',
   localePickerRequired: 'Alege o limbă.',
+  currencyPickerLabel: 'Monedă',
 };
 
 registerLyraLocale('ro', strings);

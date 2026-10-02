@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Skip am',
   localePickerLabel: 'Language',
   localePickerRequired: 'Abeg choose one language.',
+  currencyPickerLabel: 'Di kind of money',
 };
 
 registerLyraLocale('pcm', strings);

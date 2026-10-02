@@ -1468,6 +1468,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   agentRunStatusCancelled: 'Cancelled',
   localePickerLabel: 'Language',
   localePickerRequired: 'Please choose a language.',
+  currencyPickerLabel: 'Currency',
   // `<lr-flag>`'s fail-closed `role="alert"` when the optional `@aceshooting/lyra-flags`
   // resolver is absent or rejects. Deliberately generic: the cause (peer missing vs. network
   // failure) is a developer concern surfaced through `console.warn`, not something to read out.

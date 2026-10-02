@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'এড়িয়ে যান',
   localePickerLabel: 'ভাষা',
   localePickerRequired: 'একটি ভাষা বেছে নিন।',
+  currencyPickerLabel: 'মুদ্রা',
 };
 
 registerLyraLocale('bn', strings);

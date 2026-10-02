@@ -333,6 +333,7 @@ export const LYRA_DEFAULT_copyJson: LyraMessage = 'Copy JSON to clipboard';
 export const LYRA_DEFAULT_cost: LyraMessage = 'Cost';
 export const LYRA_DEFAULT_csvViewerLabel: LyraMessage = 'CSV document';
 export const LYRA_DEFAULT_csvViewerUnavailable: LyraMessage = 'CSV preview is unavailable.';
+export const LYRA_DEFAULT_currencyPickerLabel: LyraMessage = 'Currency';
 export const LYRA_DEFAULT_dashboardCellCollisionRejected: LyraMessage = '{label} cannot be placed there because it overlaps another cell.';
 export const LYRA_DEFAULT_dashboardCellMoved: LyraMessage = '{label} moved to column {x}, row {y}.';
 export const LYRA_DEFAULT_dashboardCellResized: LyraMessage = '{label} resized to width {w}, height {h}.';

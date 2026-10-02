@@ -2,6 +2,7 @@
   "family": "forms",
   "assignments": {
     "new-component-experimental": [
+      "lr-currency-picker",
       "lr-toggle",
       "lr-toggle-group"
     ],

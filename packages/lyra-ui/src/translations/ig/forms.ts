@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Mafee',
   localePickerLabel: 'Asụsụ',
   localePickerRequired: 'Biko họrọ asụsụ.',
+  currencyPickerLabel: 'Egọ',
 };
 
 registerLyraLocale('ig', strings);

@@ -95,6 +95,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Lewati',
   localePickerLabel: 'Bahasa',
   localePickerRequired: 'Pilih bahasa.',
+  currencyPickerLabel: 'Mata uang',
 };
 
 registerLyraLocale('id', strings);

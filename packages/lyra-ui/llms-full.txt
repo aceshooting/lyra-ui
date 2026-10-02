@@ -37,7 +37,7 @@ sibling's file for the shared prose. Either way it costs a few hundred tokens in
 whole catalog. `llms/index.md` maps every tag to its family and entry point.
 
 - **Foundation** — base class, form association, events, i18n, theming, TypeScript, frameworks, SSR, packaging (`llms/shared.md`)
-- **Form controls & inputs** — 31 tags in `components/forms/`
+- **Form controls & inputs** — 32 tags in `components/forms/`
 - **Data display, dashboards & flow canvas** — 26 tags in `components/data/`
 - **Layout, navigation & structure** — 40 tags in `components/layout/`
 - **Overlays, status & feedback** — 22 tags in `components/overlays/`
@@ -6774,6 +6774,29 @@ Session-history/autofill restoration assigns the stored string through the same 
 value/form/validity path as a programmatic value write and does not emit `input`, `change`, or
 `lr-change`.
 
+**Selecting options in browser tests.** The light-DOM `<lr-option>` children supply option data;
+the clickable rows are rendered inside `<lr-select>`'s shadow-root listbox as
+`[part="option"][role="option"]`, each with a `data-value` matching its represented value.
+Click the trigger to open the listbox, then target a rendered row. For example, in Playwright:
+
+```ts
+const select = page.locator('lr-select[name="country"]');
+await select.getByRole('combobox').click();
+await select.getByRole('option', { name: 'France' }).click();
+// When the label is localized or otherwise variable, target its value instead:
+await select.getByRole('combobox').click();
+await select.locator('[part="option"][data-value="fr"]').click();
+```
+
+For an in-page component test with a `LyraSelect` element, the public
+`@aceshooting/lyra-ui/testing` `chooseOption(selectElement, 'fr')` driver opens the listbox,
+clicks its first rendered row with that value, and awaits the component update. It also works in
+DOM test environments without Playwright; see [interaction drivers](shared/testing-and-utilities.md#driving-a-components-real-activation-path-interaction-drivers).
+
+Playwright's locators enter the open shadow root. A light-DOM `lr-option[value="fr"]` has no
+clickable box in this picker. If multiple options share a value, `data-value` matches every
+occurrence; narrow by accessible name or assert their order before choosing an occurrence.
+
 Mounted `option.selected` assignments update the picker value and form submission immediately,
 including deselection and equal-value writes. Duplicate-valued options retain their individual
 occurrence identities. These programmatic writes emit no user input/change event.
@@ -6977,6 +7000,12 @@ to be missing. Once the matching option mounts, the real label renders on the ne
 renders the same localized `loading` text in place of `placeholder`, so a consumer never has to
 hand-write a conditional placeholder bound to the same flag and re-localize, in its own catalogue,
 the string this control already owns.
+
+When not loading, before the browser first reads the option slot, including during SSR, a committed
+value renders as its raw code without an unavailable badge, synthetic unknown option, or custom unknown label.
+After hydration observes the slot, real option labels and genuine unmatched-value feedback resolve
+normally; an observed empty slot is an empty catalog. Server rendering does not inspect browser
+slot assignments or provide an interactive popup without JavaScript.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal trigger button.
 `show()` and `hide()` return `Promise<void>` and resolve after `lr-after-show`/`lr-after-hide` once
@@ -13184,6 +13213,73 @@ toggles join, and `var(--lr-space-2xs)` when vertical) and `--lr-toggle-group-wr
   <lr-toggle value="yellow" pressed>Yellow</lr-toggle>
   <lr-toggle value="green">Green</lr-toggle>
 </lr-toggle-group>
+```
+
+## `lr-currency-picker`
+
+A form-associated, single-currency selector with a compact ISO-code trigger and localized currency
+names and symbols in its options. It composes `lr-select` and `lr-option`; no additional popover,
+currency-name table or optional peer is needed. Selection changes the field value only: exchange
+rates, amount conversion, persistence and the application's display-currency preference belong to
+the application. Selecting a currency does not change the interface language.
+
+**Value and catalog.** `value` defaults to `''`; no currency is inferred or selected automatically.
+Set `value="EUR"` when your application wants euros by default. Valid three-letter codes are trimmed
+and uppercased. The default catalog contains the pinned ISO 4217 currency, fund and metal codes,
+excluding the testing/no-currency codes `XTS` and `XXX`. Use `.currencies` for an ordered everyday
+subset. Omitted, `undefined` or `null` restores the default catalog; `[]` means no options.
+
+`currencies` accepts a readonly array of code strings or a readonly array of `LyraCurrencyEntry`
+objects: `{ code, label?, symbol?, disabled? }`. Names and symbols come from `Intl` using the field's
+effective locale, with code fallbacks where display data is unavailable. Caller labels/symbols,
+including explicit empty strings, override that presentation. The catalog is copied; reassign it
+to change options. At most 512 rows are examined, invalid rows are skipped, and the first valid
+entry for each normalized code wins. Caller order is preserved.
+
+**Unavailable values stay visible.** A value outside the configured catalog, a malformed nonempty
+value, or a selected entry that becomes disabled is retained and marked unavailable. It fails
+validation until cleared or replaced; it is never silently switched to another currency. Such a
+value is not added as a selectable option. A caller's `setCustomValidity()` message takes priority.
+
+**Field API.** `label`, `hint`, `errorText` (`error-text`) and their slots supply field chrome.
+`accessibleLabel` (host attribute `aria-label`) overrides the computed field name; otherwise a label or localized Currency name
+names the actual control. `placeholder` defaults to localized Select, with explicit empty strings
+preserved. `name`, `form`, `required`, `disabled`, `defaultValue`, native form submission/reset,
+fieldset disablement, `checkValidity()`, `reportValidity()` and `setCustomValidity()` follow the
+shared form contracts. `size` defaults to `m`; `clearable` defaults to `false`. `focus()`, `blur()`
+and `click()` forward to the visible control.
+
+`topLayer` (attribute `top-layer`) defaults to `false`; enable it inside clipped headers or dialogs.
+An explicit `positioningStrategy` (attribute `positioning-strategy`) of `"fixed"` or `"absolute"`
+overrides inherited `--lr-positioning-strategy`.
+Keyboard navigation and ISO-code type-ahead use the select contract. This is a closed list, without
+a text-search field or currency-name filtering.
+
+**Events.** An accepted user choice or clear updates `value` synchronously, then emits exactly one
+`input`, `lr-input`, `change`, `lr-change` sequence. The prefixed details are
+`{ value, previousValue }` (`LyraCurrencyChangeDetail`). Re-selecting the current code, programmatic
+updates, resets, locale changes and catalog replacements emit no change event. Native `focus` and
+`blur` relay once; the cancelable `lr-invalid` alias follows native validation.
+
+**Slots:** `label`, `hint`, `error` — custom field copy. There is no option/default content slot;
+bind `currencies` to supply rows.
+
+**CSS parts:** `form-control`, `form-control-label`, `hint`, `error`;
+`select-trigger`, `select-display-input`, `select-listbox`, `select-option`, `select-option-sub`,
+`select-clear-button`. The composed select inherits shared form-control and surface tokens.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/lr-currency-picker.js';
+
+  const picker = document.querySelector('lr-currency-picker');
+  picker.currencies = ['EUR', 'USD', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD'];
+  picker.addEventListener('lr-change', ({ detail }) => {
+    console.log(detail.value, detail.previousValue);
+  });
+</script>
+
+<lr-currency-picker name="currency" label="Display currency" value="EUR"></lr-currency-picker>
 ```
 
 # Data display, dashboards & flow canvas (`components/data/`)

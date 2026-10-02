@@ -1422,6 +1422,7 @@ export type LyraMessageKey =
   | 'agentRunStatusCancelled'
   | 'localePickerLabel'
   | 'localePickerRequired'
+  | 'currencyPickerLabel'
   | 'flagLoadError'
   | 'moveUp'
   | 'moveDown'

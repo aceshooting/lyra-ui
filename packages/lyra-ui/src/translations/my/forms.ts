@@ -95,6 +95,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'ကျော်ရန်',
   localePickerLabel: 'ဘာသာစကား',
   localePickerRequired: 'ဘာသာစကားတစ်ခုကို ရွေးပါ။',
+  currencyPickerLabel: 'ငွေကြေး',
 };
 
 registerLyraLocale('my', strings);

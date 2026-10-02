@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'چھڈ دیو',
   localePickerLabel: 'زبان',
   localePickerRequired: 'براہ کرم اک زبان چنو۔',
+  currencyPickerLabel: 'کرنسی',
 };
 
 registerLyraLocale('pnb', strings, { dir: 'rtl', name: 'پنجابی' });

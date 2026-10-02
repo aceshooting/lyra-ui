@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Ignorer',
   localePickerLabel: 'Langue',
   localePickerRequired: 'Veuillez choisir une langue.',
+  currencyPickerLabel: 'Devise',
 };
 
 registerLyraLocale('fr', strings);

@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'پرېښودل',
   localePickerLabel: 'ژبه',
   localePickerRequired: 'یوه ژبه وټاکئ.',
+  currencyPickerLabel: 'اسعار',
 };
 
 registerLyraLocale('ps', strings, { dir: 'rtl', name: 'پښتو' });

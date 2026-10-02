@@ -1964,3 +1964,10 @@ export type * from './ai/types.js';
 export type { LyraGlobalEventMap } from './events.js';
 
 export type { LyraMenubarEventMap } from './components/layout/menubar/menubar.class.js';
+
+export type {
+  LyraCurrencyEntry,
+  LyraCurrencyCatalog,
+  LyraCurrencyChangeDetail,
+  LyraCurrencyPickerEventMap,
+} from './components/forms/currency-picker/currency-picker.class.js';

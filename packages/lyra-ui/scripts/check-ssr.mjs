@@ -6,6 +6,7 @@ import { html } from 'lit';
 import { assertAgenticSsrFixtures } from './ssr-agentic-fixtures.mjs';
 import { replaceHtmlComments } from './html-comments.mjs';
 import {
+  currencyPickerSsrTemplate,
   enumeratePublicSsrStateCases,
   loadSsrFixtureContext,
   readEditorHtmlData,
@@ -902,6 +903,15 @@ assert.equal(globalThis.window, undefined, 'populated SVG tooltip rendering must
 assert.equal(globalThis.document, undefined, 'populated SVG tooltip rendering must not create a document shim');
 
 const { entries, inventory, loader } = await renderSsrMatrix();
+const selectedCurrencyHtml = replaceHtmlComments(await collectResult(render(currencyPickerSsrTemplate(), {
+  elementRenderers: animatedImageContext.elementRenderers,
+})), () => '');
+const selectedCurrencyDisplay = selectedCurrencyHtml.match(/<span[^>]*part="display-input"[^>]*>([\s\S]*?)<\/span\s*>/);
+assert.ok(selectedCurrencyDisplay, 'selected currency SSR must render the nested display');
+assert.equal(selectedCurrencyDisplay[1].trim(), 'USD', 'selected currency SSR must not mislabel a catalog value as unavailable');
+assert.match(selectedCurrencyHtml, /<lr-option[^>]*value="USD"/, 'selected currency SSR must retain its selected catalog entry');
+assert.match(selectedCurrencyHtml, /<lr-option[^>]*value="EUR"/, 'selected currency SSR must retain the alternate catalog entry');
+assert.equal((selectedCurrencyHtml.match(/<lr-option\s/g) ?? []).length, 2, 'selected currency SSR must retain its explicit catalog');
 const inventoryTags = inventory.components.map(({ tag }) => tag).sort();
 const declaredTags = [
   ...loader.LYRA_SSR_RENDER_AND_HYDRATE_TAGS,

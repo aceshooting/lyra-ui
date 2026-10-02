@@ -181,6 +181,8 @@ export type LyraCopyButtonVueProps = LyraVueCustomElement<'lr-copy-button'>;
 
 export type LyraCsvViewerVueProps = LyraVueCustomElement<'lr-csv-viewer'>;
 
+export type LyraCurrencyPickerVueProps = LyraVueCustomElement<'lr-currency-picker'>;
+
 export type LyraDashboardGridVueProps = LyraVueCustomElement<'lr-dashboard-grid'>;
 
 export type LyraDataGridVueProps = LyraVueCustomElement<'lr-data-grid'>;
@@ -714,6 +716,7 @@ export interface LyraVueGlobalComponents {
   'lr-conversation-item': LyraConversationItemVueProps;
   'lr-copy-button': LyraCopyButtonVueProps;
   'lr-csv-viewer': LyraCsvViewerVueProps;
+  'lr-currency-picker': LyraCurrencyPickerVueProps;
   'lr-dashboard-grid': LyraDashboardGridVueProps;
   'lr-data-grid': LyraDataGridVueProps;
   'lr-dataset-viewer': LyraDatasetViewerVueProps;

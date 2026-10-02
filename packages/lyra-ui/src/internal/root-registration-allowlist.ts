@@ -74,6 +74,7 @@ export const ROOT_BARREL_TAGS = [
   'lr-conversation-item',
   'lr-copy-button',
   'lr-csv-viewer',
+  'lr-currency-picker',
   'lr-dashboard-grid',
   'lr-data-grid',
   'lr-dataset-viewer',

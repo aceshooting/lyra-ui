@@ -305,6 +305,10 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     optionalPeers: ['papaparse'],
     load: () => import('../components/viewers/csv-viewer/csv-viewer.class.js').then((module) => module.LyraCsvViewer),
   },
+  'lr-currency-picker': {
+    optionalPeers: [],
+    load: () => import('../components/forms/currency-picker/currency-picker.class.js').then((module) => module.LyraCurrencyPicker),
+  },
   'lr-dashboard-grid': {
     optionalPeers: ['dompurify', 'katex', 'marked', 'shiki'],
     load: () => import('../components/layout/dashboard-grid/dashboard-grid.class.js').then((module) => module.LyraDashboardGrid),

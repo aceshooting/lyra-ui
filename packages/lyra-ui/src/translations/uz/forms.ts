@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Oʻtkazib yuborish',
   localePickerLabel: 'Til',
   localePickerRequired: 'Tilni tanlang.',
+  currencyPickerLabel: 'Valyuta',
 };
 
 registerLyraLocale('uz', strings);

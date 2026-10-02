@@ -6,6 +6,7 @@ export * from './code-editor/code-editor.js';
 export * from './color-picker/color-picker.js';
 export * from './combobox/combobox.js';
 export * from './combobox/option.js';
+export * from './currency-picker/currency-picker.js';
 export * from './date-picker/date-input.js';
 export * from './date-picker/date-picker.js';
 export * from './emoji-picker/emoji-picker.js';

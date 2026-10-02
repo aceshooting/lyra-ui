@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'ዝለል',
   localePickerLabel: 'ቋንቋ',
   localePickerRequired: 'እባክዎ ቋንቋ ይምረጡ።',
+  currencyPickerLabel: 'ምንዛሪ',
 };
 
 registerLyraLocale('am', strings);

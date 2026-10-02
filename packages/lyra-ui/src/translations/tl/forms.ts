@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Laktawan',
   localePickerLabel: 'Wika',
   localePickerRequired: 'Pumili ng wika.',
+  currencyPickerLabel: 'Pera',
 };
 
 registerLyraLocale('tl', strings);

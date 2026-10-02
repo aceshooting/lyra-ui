@@ -72,6 +72,7 @@ import './components/layout/control-group/control-group.js';
 import './components/conversation/conversation-item/conversation-item.js';
 import './components/utility/copy-button/copy-button.js';
 import './components/viewers/csv-viewer/csv-viewer.js';
+import './components/forms/currency-picker/currency-picker.js';
 import './components/layout/dashboard-grid/dashboard-grid.js';
 import './components/data/data-grid/data-grid.js';
 import './components/viewers/dataset-viewer/dataset-viewer.js';

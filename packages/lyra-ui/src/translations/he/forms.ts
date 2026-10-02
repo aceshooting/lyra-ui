@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'דלג',
   localePickerLabel: 'שפה',
   localePickerRequired: 'אנא בחר שפה.',
+  currencyPickerLabel: 'מטבע',
 };
 
 registerLyraLocale('he', strings, { dir: 'rtl', name: 'עברית' });

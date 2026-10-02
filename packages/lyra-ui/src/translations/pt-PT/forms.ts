@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Saltar',
   localePickerLabel: 'Idioma',
   localePickerRequired: 'Escolha um idioma.',
+  currencyPickerLabel: 'Moeda',
 };
 
 registerLyraLocale('pt-PT', strings);

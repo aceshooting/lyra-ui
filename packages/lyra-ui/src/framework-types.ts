@@ -124,6 +124,7 @@ import type { LyraCodeEditor, LyraCodeEditorEventMap } from './components/forms/
 import type { LyraColorPicker, LyraColorPickerEventMap } from './components/forms/color-picker/color-picker.class.js';
 import type { LyraCombobox, LyraComboboxEventMap } from './components/forms/combobox/combobox.class.js';
 import type { LyraOption, LyraOptionEventMap } from './components/forms/combobox/option.class.js';
+import type { LyraCurrencyPicker, LyraCurrencyPickerEventMap } from './components/forms/currency-picker/currency-picker.class.js';
 import type { LyraDateInput, LyraDateInputEventMap } from './components/forms/date-picker/date-input.class.js';
 import type { LyraDatePicker, LyraDatePickerEventMap } from './components/forms/date-picker/date-picker.class.js';
 import type { LyraEmojiPicker, LyraEmojiPickerEventMap } from './components/forms/emoji-picker/emoji-picker.class.js';
@@ -3352,6 +3353,47 @@ export interface LyraComponentTypeMap {
       'active-highlight-id'?: LyraCsvViewer['activeHighlightId'];
       'max-height'?: LyraCsvViewer['maxHeight'];
       'without-header-row'?: LyraCsvViewer['withoutHeaderRow'];
+    };
+  };
+  'lr-currency-picker': {
+    element: LyraCurrencyPicker;
+    properties: LyraElementProperties<
+      LyraCurrencyPicker,
+      | 'accessibleLabel'
+      | 'clearable'
+      | 'currencies'
+      | 'customError'
+      | 'defaultValue'
+      | 'disabled'
+      | 'errorText'
+      | 'form'
+      | 'hint'
+      | 'label'
+      | 'locale'
+      | 'name'
+      | 'placeholder'
+      | 'positioningStrategy'
+      | 'required'
+      | 'size'
+      | 'strings'
+      | 'topLayer'
+      | 'value',
+      {
+        form: HTMLFormElement | string | null;
+      }
+    >;
+    events: LyraCurrencyPickerEventMap;
+    eventNames:       | 'lr-change'
+      | 'lr-input'
+      | 'lr-invalid';
+    cssNames: never;
+    attributeAliases: {
+      'aria-label'?: LyraCurrencyPicker['accessibleLabel'];
+      'custom-error'?: LyraCurrencyPicker['customError'];
+      'error-text'?: LyraCurrencyPicker['errorText'];
+      'positioning-strategy'?: LyraCurrencyPicker['positioningStrategy'];
+      'top-layer'?: LyraCurrencyPicker['topLayer'];
+      'value'?: LyraCurrencyPicker['defaultValue'];
     };
   };
   'lr-dashboard-grid': {

@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Spring over',
   localePickerLabel: 'Sprog',
   localePickerRequired: 'Vælg et sprog.',
+  currencyPickerLabel: 'Valuta',
 };
 
 registerLyraLocale('da', strings);

@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Παράλειψη',
   localePickerLabel: 'Γλώσσα',
   localePickerRequired: 'Επιλέξτε μια γλώσσα.',
+  currencyPickerLabel: 'Νόμισμα',
 };
 
 registerLyraLocale('el', strings);

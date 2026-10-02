@@ -95,6 +95,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'スキップ',
   localePickerLabel: '言語',
   localePickerRequired: '言語を選択してください。',
+  currencyPickerLabel: '通貨',
 };
 
 registerLyraLocale('ja', strings);

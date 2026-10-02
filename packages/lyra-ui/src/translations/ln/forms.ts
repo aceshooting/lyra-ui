@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'leka',
   localePickerLabel: 'Monoko',
   localePickerRequired: 'Pona monoko.',
+  currencyPickerLabel: 'Mbɔ́ngɔ',
 };
 
 registerLyraLocale('ln', strings);

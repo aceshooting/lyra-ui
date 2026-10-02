@@ -1,13 +1,17 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
 import { createRequire } from 'node:module';
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { extname, join, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { render } from '@lit-labs/ssr';
 import { collectResult } from '@lit-labs/ssr/lib/render-result.js';
 import { html } from 'lit';
 import { chromium } from 'playwright';
 import {
+  currencyPickerSsrCatalog,
+  currencyPickerSsrTemplate,
   packageDir,
   registrationDistPath,
   renderSsrMatrix,
@@ -67,6 +71,10 @@ if (hydrationTag) {
   );
 }
 const statefulProbeMarkup = new Map([
+  [
+    'lr-currency-picker',
+    await collectResult(render(currencyPickerSsrTemplate(), { elementRenderers })),
+  ],
   [
     'lr-copy-button',
     await collectResult(
@@ -313,11 +321,13 @@ const statefulProbeMarkup = new Map([
     'lr-select',
     await collectResult(
       render(
-        html`<lr-select data-ssr-probe="lr-select">
+        html`<lr-select data-ssr-probe="lr-select" value="USD">
           <span slot="label" data-ssr-light="lr-select">Status</span
           ><span slot="start">&#x25cf;</span><span slot="end">&#x2713;</span
           ><span slot="error">Choose a status</span
           ><span slot="hint">One status</span>
+          <lr-option value="EUR" label="Euro">Euro</lr-option>
+          <lr-option value="USD" label="US dollar">US dollar</lr-option>
         </lr-select>`,
         { elementRenderers }
       )
@@ -682,6 +692,7 @@ const progressiveSlotParts = {
 };
 const populatedHydrationTags = new Set([
   ...Object.keys(progressiveSlotParts),
+  'lr-currency-picker',
   'lr-chip-group',
   'lr-avatar-group',
   'lr-flow-canvas',
@@ -808,6 +819,7 @@ const documentHtml = `<!doctype html>
     <script type="importmap">${JSON.stringify(importMap)}</script>
   </head>
   <body>
+    <form id="currency-hydration-form"></form>
     ${fixtureMarkup}
     <script>
       // Property bindings do not serialize as attributes. Restore each populated probe's public
@@ -816,6 +828,9 @@ const documentHtml = `<!doctype html>
       for (const fixture of document.querySelectorAll('[data-fixture-tag]')) {
         const host = fixture.firstElementChild;
         switch (host.localName) {
+          case 'lr-currency-picker':
+            host.currencies = ${JSON.stringify(currencyPickerSsrCatalog)};
+            break;
           case 'lr-flow-canvas':
             host.nodes = [
               { id: 'fetch', data: { label: 'Fetch' }, position: { x: 0, y: 0 } },
@@ -881,10 +896,26 @@ const documentHtml = `<!doctype html>
         disabled: host.getAttribute('aria-disabled'),
         readonly: host.getAttribute('aria-readonly'),
         required: host.getAttribute('aria-required'),
+        ...(host.localName === 'lr-currency-picker' ? {
+          currencyValue: host.value ?? host.getAttribute('value'),
+          currencyDisplay: host.shadowRoot?.querySelector('lr-select')?.shadowRoot
+            ?.querySelector('[part="display-input"]')?.textContent?.trim(),
+          currencyOptionCount: host.shadowRoot?.querySelectorAll('lr-option').length,
+        } : {}),
+        ...(host.localName === 'lr-select' ? {
+          selectValue: host.value ?? host.getAttribute('value'),
+          selectDisplay: host.shadowRoot?.querySelector('[part="display-input"]')?.textContent?.trim(),
+          selectUnknownBadgeCount: host.shadowRoot?.querySelectorAll('[part="unknown-value"]').length,
+        } : {}),
       });
       const progressivePartsByTag = ${JSON.stringify(progressiveSlotParts)};
       globalThis.__lyraPopulatedNode = (host) => {
         switch (host.localName) {
+          case 'lr-select':
+            return host.shadowRoot?.querySelector('[part="display-input"]') ?? undefined;
+          case 'lr-currency-picker':
+            return host.shadowRoot?.querySelector('lr-select')?.shadowRoot
+              ?.querySelector('[part="display-input"]') ?? undefined;
           case 'lr-flow-canvas':
             return host.shadowRoot?.querySelector('[data-node-id="fetch"]');
           case 'lr-dashboard-grid':
@@ -1396,6 +1427,56 @@ try {
     ['settled hydration', component.hydratedSemantics],
   ];
 
+  if (shouldAssertHydrationTag('lr-select')) {
+    const selectHydration = hydrationResult('lr-select');
+    for (const [phase, semantics] of semanticPhases(selectHydration)) {
+      assert.equal(semantics.selectValue, 'USD', `${phase}: retained select value must survive`);
+      assert.equal(semantics.selectUnknownBadgeCount, 0, `${phase}: known select value must not be declared unavailable`);
+    }
+    assert.equal(selectHydration.serverSemantics.selectDisplay, 'USD', 'SSR uses the raw code before slot observation');
+    assert.equal(selectHydration.hydratedSemantics.selectDisplay, 'US dollar', 'hydration resolves the observed real option label');
+  }
+
+  if (shouldAssertHydrationTag('lr-currency-picker')) {
+    for (const [phase, semantics] of semanticPhases(hydrationResult('lr-currency-picker'))) {
+      assert.equal(semantics.currencyValue, 'USD', `${phase}: selected currency value must survive`);
+      assert.equal(semantics.currencyDisplay, 'USD', `${phase}: selected currency display must be correct`);
+      assert.equal(semantics.currencyOptionCount, 2, `${phase}: the explicit currency catalog must survive`);
+    }
+  }
+
+  // The full crawl includes an open modal that makes its background inert. Exercise real
+  // selection in the isolated currency probe rather than bypassing that interaction contract.
+  if (hydrationTag === 'lr-currency-picker') {
+    const picker = page.locator('lr-currency-picker');
+    const formEntries = () => page.evaluate(() =>
+      [...new FormData(document.querySelector('#currency-hydration-form')).entries()],
+    );
+    assert.deepEqual(await formEntries(), [['currency', 'USD']], 'only the outer picker submits the initial value');
+    await picker.evaluate((host) => {
+      globalThis.__lyraCurrencyEvents = [];
+      for (const type of ['input', 'lr-input', 'change', 'lr-change']) {
+        host.addEventListener(type, (event) => globalThis.__lyraCurrencyEvents.push({
+          type,
+          outerTarget: event.target === host,
+          value: new FormData(host.form).get('currency'),
+          detail: type.startsWith('lr-') ? event.detail : undefined,
+        }));
+      }
+    });
+    await picker.locator('lr-select').locator('[part="trigger"]').click();
+    await picker.locator('lr-select').locator('[part="option"][data-value="EUR"]').click();
+    await page.waitForFunction(() => document.querySelector('lr-currency-picker').value === 'EUR');
+    assert.deepEqual(await formEntries(), [['currency', 'EUR']], 'real hydrated selection must update one external form value');
+    const events = await page.evaluate(() => globalThis.__lyraCurrencyEvents);
+    assert.deepEqual(events, [
+      { type: 'input', outerTarget: true, value: 'EUR', detail: undefined },
+      { type: 'lr-input', outerTarget: true, value: 'EUR', detail: { value: 'EUR', previousValue: 'USD' } },
+      { type: 'change', outerTarget: true, value: 'EUR', detail: undefined },
+      { type: 'lr-change', outerTarget: true, value: 'EUR', detail: { value: 'EUR', previousValue: 'USD' } },
+    ], 'real hydrated selection must emit each outer event exactly once');
+  }
+
   if (shouldAssertHydrationTag('lr-copy-button')) {
     const copyHydration = hydrationResult('lr-copy-button');
     assert.equal(
@@ -1858,7 +1939,20 @@ try {
   await new Promise((resolveClose) => server.close(resolveClose));
 }
 
+// The full matrix's modal fixtures make their background inert. After that crawl closes its
+// resources, run the maintained currency interaction proof on a separate isolated page.
+if (hydrationTag === undefined) {
+  const isolatedCurrency = spawnSync(process.execPath, [
+    fileURLToPath(import.meta.url),
+    '--tag=lr-currency-picker',
+  ], { cwd: packageDir, stdio: 'inherit' });
+  assert.equal(isolatedCurrency.error, undefined, 'isolated currency hydration probe must launch');
+  assert.equal(isolatedCurrency.signal, null, 'isolated currency hydration probe must not be terminated');
+  assert.equal(isolatedCurrency.status, 0, 'isolated currency hydration probe must pass');
+}
+
 console.log(
-  `Hydration crawl passed: ${loader.LYRA_SSR_RENDER_AND_HYDRATE_TAGS.length} shadow roots reused, ` +
-    `${loader.LYRA_SSR_CLIENT_RENDER_TAGS.length} explicit client fallbacks upgraded.`
+  `Hydration crawl passed: ${entries.filter(({ mode }) => mode === 'render-and-hydrate').length +
+    (includeMarkdownStreamingProgressiveFixture ? 1 : 0)} shadow roots reused, ` +
+    `${entries.filter(({ mode }) => mode === 'client-render').length} explicit client fallbacks upgraded.`
 );

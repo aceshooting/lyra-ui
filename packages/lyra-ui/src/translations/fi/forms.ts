@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Ohita',
   localePickerLabel: 'Kieli',
   localePickerRequired: 'Valitse kieli.',
+  currencyPickerLabel: 'Valuutta',
 };
 
 registerLyraLocale('fi', strings);

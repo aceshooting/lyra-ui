@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'છોડી દો',
   localePickerLabel: 'ભાષા',
   localePickerRequired: 'ભાષા પસંદ કરો.',
+  currencyPickerLabel: 'ચલણ',
 };
 
 registerLyraLocale('gu', strings);

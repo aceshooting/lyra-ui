@@ -265,6 +265,7 @@
     "./components/forms/color-picker/color-picker.class.js": "./dist/components/forms/color-picker/color-picker.class.js",
     "./components/forms/combobox/combobox.class.js": "./dist/components/forms/combobox/combobox.class.js",
     "./components/forms/combobox/option.class.js": "./dist/components/forms/combobox/option.class.js",
+    "./components/forms/currency-picker/currency-picker.class.js": "./dist/components/forms/currency-picker/currency-picker.class.js",
     "./components/forms/date-picker/date-input.class.js": "./dist/components/forms/date-picker/date-input.class.js",
     "./components/forms/date-picker/date-picker.class.js": "./dist/components/forms/date-picker/date-picker.class.js",
     "./components/forms/emoji-picker/emoji-picker.class.js": "./dist/components/forms/emoji-picker/emoji-picker.class.js",
@@ -627,6 +628,10 @@
     "./components/lr-csv-viewer.js": {
       "types": "./dist/components/viewers/csv-viewer/csv-viewer.d.ts",
       "default": "./dist/components/lr-csv-viewer.js"
+    },
+    "./components/lr-currency-picker.js": {
+      "types": "./dist/components/forms/currency-picker/currency-picker.d.ts",
+      "default": "./dist/components/lr-currency-picker.js"
     },
     "./components/lr-dashboard-grid.js": {
       "types": "./dist/components/layout/dashboard-grid/dashboard-grid.d.ts",
@@ -8775,6 +8780,7 @@
     "./dist/components/forms/color-picker/color-picker.js",
     "./dist/components/forms/combobox/combobox.js",
     "./dist/components/forms/combobox/option.js",
+    "./dist/components/forms/currency-picker/currency-picker.js",
     "./dist/components/forms/date-picker/date-input.js",
     "./dist/components/forms/date-picker/date-picker.js",
     "./dist/components/forms/emoji-picker/emoji-picker.js",
@@ -8917,6 +8923,7 @@
     "./dist/components/lr-conversation-item.js",
     "./dist/components/lr-copy-button.js",
     "./dist/components/lr-csv-viewer.js",
+    "./dist/components/lr-currency-picker.js",
     "./dist/components/lr-dashboard-grid.js",
     "./dist/components/lr-data-grid.js",
     "./dist/components/lr-dataset-viewer.js",
@@ -10285,6 +10292,7 @@
     "./src/components/forms/color-picker/color-picker.ts",
     "./src/components/forms/combobox/combobox.ts",
     "./src/components/forms/combobox/option.ts",
+    "./src/components/forms/currency-picker/currency-picker.ts",
     "./src/components/forms/date-picker/date-input.ts",
     "./src/components/forms/date-picker/date-picker.ts",
     "./src/components/forms/emoji-picker/emoji-picker.ts",
@@ -10427,6 +10435,7 @@
     "./src/components/lr-conversation-item.ts",
     "./src/components/lr-copy-button.ts",
     "./src/components/lr-csv-viewer.ts",
+    "./src/components/lr-currency-picker.ts",
     "./src/components/lr-dashboard-grid.ts",
     "./src/components/lr-data-grid.ts",
     "./src/components/lr-dataset-viewer.ts",

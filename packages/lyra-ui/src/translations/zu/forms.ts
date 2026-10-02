@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Yeqa',
   localePickerLabel: 'Ulimi',
   localePickerRequired: 'Khetha ulimi.',
+  currencyPickerLabel: 'Uhlobo lwemali',
 };
 
 registerLyraLocale('zu', strings);

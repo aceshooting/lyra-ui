@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Kihagyás',
   localePickerLabel: 'Nyelv',
   localePickerRequired: 'Válasszon nyelvet.',
+  currencyPickerLabel: 'Pénznem',
 };
 
 registerLyraLocale('hu', strings);

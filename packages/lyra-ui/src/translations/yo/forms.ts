@@ -95,6 +95,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Fo kọjá',
   localePickerLabel: 'Èdè',
   localePickerRequired: 'Jọ̀wọ́ yan èdè kan.',
+  currencyPickerLabel: 'Owó',
 };
 
 registerLyraLocale('yo', strings);

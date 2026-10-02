@@ -101,6 +101,7 @@ const strings: LyraLocaleStrings = {
   rubricSkip: 'Přeskočit',
   localePickerLabel: 'Jazyk',
   localePickerRequired: 'Vyberte prosím jazyk.',
+  currencyPickerLabel: 'Měna',
 };
 
 registerLyraLocale('cs', strings);
