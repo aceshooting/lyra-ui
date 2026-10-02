@@ -15,7 +15,8 @@ optional decorative flags. Add optional text filtering to the language picker wh
 locale loading, veto and selection behavior.
 
 Match the form mixin's public reset-default setter type to its existing nullable runtime input,
-while preserving the non-nullable read type and dirty live values.
+while preserving the non-nullable read type and dirty live values. Keep a cleared reset attribute
+absent after the next render instead of restoring an empty attribute through queued reflection.
 
 Avoid marking a selected `lr-select` value as unavailable before its slotted options have been
 collected, including during server rendering. Keep its dropdown within the available screen height

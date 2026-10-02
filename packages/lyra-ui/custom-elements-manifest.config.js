@@ -386,6 +386,17 @@ export const ACCESSOR_WRITE_TYPE_CONTRACTS = new Map([
     },
   ],
   [
+    'lr-country-picker',
+    {
+      countries: {
+        readType: 'LyraCountryCatalog | undefined',
+        writeType: 'LyraCountryCatalog | null | undefined',
+        attribute: false,
+      },
+      defaultValue: { readType: 'string', writeType: 'string | null' },
+    },
+  ],
+  [
     'lr-icon',
     {
       name: {
@@ -448,6 +459,28 @@ export const ACCESSOR_WRITE_TYPE_CONTRACTS = new Map([
         readType: 'boolean',
         writeType: 'boolean | string',
       },
+    },
+  ],
+  [
+    'lr-time-zone-picker',
+    {
+      timeZones: {
+        readType: 'LyraTimeZoneCatalog | undefined',
+        writeType: 'LyraTimeZoneCatalog | null | undefined',
+        attribute: false,
+      },
+      defaultValue: { readType: 'string', writeType: 'string | null' },
+    },
+  ],
+  [
+    'lr-unit-picker',
+    {
+      units: {
+        readType: 'LyraUnitCatalog | undefined',
+        writeType: 'LyraUnitCatalog | null | undefined',
+        attribute: false,
+      },
+      defaultValue: { readType: 'string', writeType: 'string | null' },
     },
   ],
 ]);

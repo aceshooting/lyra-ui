@@ -72,12 +72,15 @@ function syntheticManifest() {
 
 const EXPECTED_VALUES = {
   'lr-breadcrumb-item': { href: undefined },
+  'lr-country-picker': {},
   'lr-icon': { name: undefined, src: undefined },
   'lr-icon-button': { name: undefined },
   'lr-filter-bar': {},
   'lr-input': {},
   'lr-split-panel': { snap: undefined },
   'lr-textarea': {},
+  'lr-time-zone-picker': {},
+  'lr-unit-picker': {},
 };
 
 const EXPECTED_BUCKET_B_WRITE_TYPES = {
@@ -193,6 +196,34 @@ test('CEM projects the exact optional write surfaces for accessor-backed string 
       assert.equal(declaration.members.find((candidate) => candidate.name === name).type.text, expectedWriteType);
       assert.equal(declaration.attributes.find((candidate) => candidate.name === name).type.text, expectedWriteType);
     }
+  }
+});
+
+test('catalog picker metadata preserves nullable catalog and reset writes with narrow reads', () => {
+  const manifest = syntheticManifest();
+  plugin.packageLinkPhase({ customElementsManifest: manifest });
+
+  for (const [tagName, name, catalogType] of [
+    ['lr-country-picker', 'countries', 'LyraCountryCatalog'],
+    ['lr-time-zone-picker', 'timeZones', 'LyraTimeZoneCatalog'],
+    ['lr-unit-picker', 'units', 'LyraUnitCatalog'],
+  ]) {
+    assert.deepEqual(ACCESSOR_WRITE_TYPE_CONTRACTS.get(tagName), {
+      [name]: {
+        readType: `${catalogType} | undefined`,
+        writeType: `${catalogType} | null | undefined`,
+        attribute: false,
+      },
+      defaultValue: { readType: 'string', writeType: 'string | null' },
+    });
+    const declaration = manifest.modules[0].declarations.find((entry) => entry.tagName === tagName);
+    const catalog = declaration.members.find((entry) => entry.name === name);
+    assert.equal(catalog.type.text, `${catalogType} | null | undefined`);
+    assert.equal(catalog.lyraReadType.text, `${catalogType} | undefined`);
+    assert.equal(declaration.attributes.some((entry) => entry.name === name), false);
+    const defaultValue = declaration.members.find((entry) => entry.name === 'defaultValue');
+    assert.equal(defaultValue.type.text, 'string | null');
+    assert.equal(defaultValue.lyraReadType.text, 'string');
   }
 });
 
@@ -374,6 +405,20 @@ test('fresh no-write CEM retains reviewed runtime and public-document subclass c
   }
   assert.equal(member('lr-radio-group', 'defaultValue')?.default, "''");
   assert.equal(attribute('lr-select', 'value')?.default, "''");
+
+  for (const [tagName, name, catalogType] of [
+    ['lr-country-picker', 'countries', 'LyraCountryCatalog'],
+    ['lr-time-zone-picker', 'timeZones', 'LyraTimeZoneCatalog'],
+    ['lr-unit-picker', 'units', 'LyraUnitCatalog'],
+  ]) {
+    assert.equal(member(tagName, name)?.type?.text, `${catalogType} | null | undefined`);
+    assert.equal(member(tagName, name)?.lyraReadType?.text, `${catalogType} | undefined`);
+    assert.equal(attribute(tagName, name), undefined, `${tagName}.${name} stays property-only`);
+    assert.equal(member(tagName, 'defaultValue')?.type?.text, 'string | null');
+    assert.equal(member(tagName, 'defaultValue')?.lyraReadType?.text, 'string');
+    assert.equal(attribute(tagName, 'value')?.type?.text, 'string | null');
+    assert.equal(attribute(tagName, 'value')?.fieldName, 'defaultValue');
+  }
 
   assert.equal(member('lr-dropdown', 'placement')?.default, "'bottom-start'");
   assert.equal(member('lr-dropdown', 'distance')?.default, '0');

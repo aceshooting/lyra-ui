@@ -7520,6 +7520,8 @@ The readonly `input: HTMLInputElement | null` exposes the filter, or null in com
 After directly editing its DOM value, dispatch a native `input` event to refilter. Keyboard
 selection, disabled-row navigation, IME handling and popup behavior follow the composed control.
 
+**Events:** `input`, `lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`.
+
 An accepted user choice or clear synchronously updates the form value, then emits one
 `input`, `lr-input`, `change`, `lr-change` sequence. Prefixed details have readonly `value: string`
 and `previousValue: string`, exported as `LyraCountryChangeDetail`, `LyraTimeZoneChangeDetail`
@@ -7614,9 +7616,26 @@ Defaults and form/editing methods follow the [shared contract](#lr-country-picke
 
 These granular modules register no custom elements. Country/unit name resolution returns frozen
 rows with `code`, resolved `label`, `searchText`, optional `symbol`, `group` and `disabled`.
-Their `SelectionCatalogRow` return type is inferred; consumers need no internal-module import.
+Their `SelectionCatalogRow` return type is also available as a type-only package-root export.
 Both helpers use the shared 1024-row bound, preserve order and explicit empty display overrides,
 and skip invalid or duplicate rows. Pass the application's locale explicitly.
+
+- **`selection-catalog-types`** — Type-only import: `@aceshooting/lyra-ui`.
+  `SelectionCatalogEntry { readonly code: string; readonly label?: string; readonly symbol?: string;
+  readonly group?: string; readonly disabled?: boolean }` is the shared caller-row shape.
+  `SelectionCatalogRow extends SelectionCatalogEntry { readonly label: string; readonly searchText: string;
+  readonly code: string; readonly symbol?: string; readonly group?: string; readonly disabled?: boolean }`
+  is the resolved display row; its signature includes the inherited fields. The country and unit
+  name helpers return readonly arrays of these frozen rows.
+
+- **`catalog-picker-events`** — Type-only import: `@aceshooting/lyra-ui`.
+  `LyraCatalogPickerChangeDetail { readonly value: string; readonly previousValue: string }`
+  is the shared committed-selection detail. `LyraCountryChangeDetail`, `LyraTimeZoneChangeDetail`
+  and `LyraUnitChangeDetail` name this same shape from their respective component modules.
+  `LyraCatalogPickerEventMap { 'lr-input': CustomEvent<LyraCatalogPickerChangeDetail>;
+  'lr-change': CustomEvent<LyraCatalogPickerChangeDetail>; 'lr-invalid': CustomEvent<null>;
+  input: Event; change: Event; focus: FocusEvent; blur: FocusEvent }`
+  is the shared event contract extended by each picker-specific event map.
 
 - **`country-catalog`** — Import: `@aceshooting/lyra-ui/countries.js`.
   `COUNTRY_CODES: readonly LyraCountryCode[]` is the frozen ISO alpha-2 list;

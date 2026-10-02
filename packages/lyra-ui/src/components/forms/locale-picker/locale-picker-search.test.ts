@@ -119,10 +119,10 @@ describe('lr-locale-picker optional text filtering', () => {
   it('keeps text editing native and uses arrows and Enter only for visible matches', async () => {
     const el = await create();
     const field = await openSearch(el);
-    await sendKeys({ type: 'en' });
+    await sendKeys({ type: 'eng' });
     expect(tags(el)).to.deep.equal(['en']);
     await sendKeys({ press: 'Space' });
-    expect(field.value).to.equal('en ');
+    expect(field.value).to.equal('eng ');
     expect(el.open).to.equal(true);
     expect(el.value).to.equal('en');
     await filter(el, '');
@@ -428,7 +428,8 @@ describe('lr-locale-picker optional text filtering', () => {
   it('keeps active ownership valid when filtered catalogs shrink and locale names change', async () => {
     const el = await create();
     await openSearch(el);
-    await filter(el, 'e');
+    await filter(el, 'en');
+    expect(tags(el)).to.deep.equal(['en', 'fr']);
     await sendKeys({ press: 'ArrowDown' });
     el.locales = ['ja'];
     await el.updateComplete;

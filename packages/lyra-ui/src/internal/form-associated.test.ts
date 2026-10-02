@@ -238,6 +238,29 @@ it('marks the control invalid via ElementInternals while required and empty, val
   expect((ctl as unknown as HTMLElement).matches(':valid')).to.be.true;
 });
 
+it('keeps a cleared reset attribute absent after queued updates while preserving dirty values', async () => {
+  for (const dirty of [false, true]) {
+    const form = await fixture<HTMLFormElement>(html`<form><lr-demo-ctl name="field" value="initial"></lr-demo-ctl></form>`);
+    const ctl = form.querySelector('lr-demo-ctl') as Ctl;
+    if (dirty) ctl.value = 'edited';
+    ctl.defaultValue = 'queued';
+    ctl.defaultValue = null;
+    expect(ctl.hasAttribute('value')).to.equal(false);
+    expect(ctl.defaultValue).to.equal('');
+    expect(ctl.value).to.equal(dirty ? 'edited' : '');
+    await ctl.updateComplete;
+    expect(ctl.hasAttribute('value')).to.equal(false);
+    expect(new FormData(form).get('field')).to.equal(dirty ? 'edited' : '');
+    form.reset();
+    await ctl.updateComplete;
+    expect(ctl.value).to.equal('');
+    expect(ctl.hasAttribute('value')).to.equal(false);
+    ctl.defaultValue = '';
+    await ctl.updateComplete;
+    expect(ctl.getAttribute('value')).to.equal('');
+  }
+});
+
 it('restores the constructed default value on form.reset(), not blank', async () => {
   const form = await fixture<HTMLFormElement>(
     html`<form><lr-demo-ctl name="x" value="2026-07-15"></lr-demo-ctl></form>`,

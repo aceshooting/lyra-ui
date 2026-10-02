@@ -53,7 +53,7 @@ export class LyraTimeZonePicker extends LyraCatalogPickerBase {
   /** Clone-owned ordered catalog, capped at 1024 rows. Undefined/null restores runtime defaults; [] stays empty. */
   @property({ attribute: false })
   get timeZones(): LyraTimeZoneCatalog | undefined { return this._timeZones; }
-  set timeZones(value: LyraTimeZoneCatalog | undefined) {
+  set timeZones(value: LyraTimeZoneCatalog | null | undefined) {
     const previous = this._timeZones;
     this._timeZones = snapshotSelectionCatalog(value, normalizeSelectionValue);
     this.updateValidity();

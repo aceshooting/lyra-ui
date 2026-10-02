@@ -1983,3 +1983,5 @@ export type { LyraUnitCode, LyraUnitEntry, LyraUnitCatalog } from './units.js';
 export type { LyraCountryPickerEventMap, LyraCountryChangeDetail } from './components/forms/country-picker/country-picker.class.js';
 export type { LyraTimeZonePickerEventMap, LyraTimeZoneChangeDetail } from './components/forms/time-zone-picker/time-zone-picker.class.js';
 export type { LyraUnitPickerEventMap, LyraUnitChangeDetail } from './components/forms/unit-picker/unit-picker.class.js';
+export type { SelectionCatalogEntry, SelectionCatalogRow } from './internal/selection-catalog.js';
+export type { LyraCatalogPickerChangeDetail, LyraCatalogPickerEventMap } from './components/forms/catalog-picker-base.js';

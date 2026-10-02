@@ -58,7 +58,7 @@ export class LyraCountryPicker extends LyraCatalogPickerBase {
   /** Clone-owned ordered catalog. Undefined/null restores ISO defaults; [] stays empty. */
   @property({ attribute: false })
   get countries(): LyraCountryCatalog | undefined { return this._countries; }
-  set countries(value: LyraCountryCatalog | undefined) {
+  set countries(value: LyraCountryCatalog | null | undefined) {
     const previous = this._countries;
     this._countries = snapshotSelectionCatalog(value, normalizeCountry, (code) => /^[A-Z]{2}$/.test(code));
     this.updateValidity();

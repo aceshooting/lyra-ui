@@ -697,7 +697,9 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
       }
 
       if (!this._valueDirty) this.restoreLiveValueFromDefault();
-      this.requestUpdate('defaultValue', old);
+      // The synchronous setter owns reflection, including null's absent attribute. A second
+      // queued reflection would serialize the normalized empty value and recreate that attribute.
+      this.requestUpdate('defaultValue', old, { reflect: false });
     }
 
     /** Consumer-supplied validity message, reflected through `custom-error`. */

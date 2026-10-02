@@ -51,7 +51,7 @@ export class LyraUnitPicker extends LyraCatalogPickerBase {
   /** Clone-owned ordered catalog, capped at 1024 rows. Undefined/null restores standard defaults; [] stays empty. */
   @property({ attribute: false })
   get units(): LyraUnitCatalog | undefined { return this._units; }
-  set units(value: LyraUnitCatalog | undefined) {
+  set units(value: LyraUnitCatalog | null | undefined) {
     const previous = this._units;
     this._units = snapshotSelectionCatalog(value, normalizeSelectionValue);
     this.updateValidity();

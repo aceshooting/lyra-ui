@@ -94,7 +94,7 @@ describe('<lr-unit-picker>', () => {
     await waitUntil(() => el.shadowRoot!.querySelector('lr-option')?.label === 'mètre');
     await child.updateComplete;
     expect(el.input?.value).to.equal('mètre');
-    el.input!.value = 'mètre';
+    el.input!.value = 'mèt';
     el.input!.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
     await waitUntil(() => child.shadowRoot!.querySelectorAll('[part~="option"]').length === 1);
     expect(child.shadowRoot!.querySelector('[part~="option"]')?.getAttribute('data-value')).to.equal('meter');
