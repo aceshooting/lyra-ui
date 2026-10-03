@@ -226,7 +226,7 @@ export const styles = css`
   [part='search-input'] {
     position: sticky;
     inset-block-start: 0;
-    z-index: 1;
+    z-index: var(--lr-layer-content);
     box-sizing: border-box;
     inline-size: 100%;
     min-inline-size: var(--lr-icon-button-size);

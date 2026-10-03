@@ -469,6 +469,9 @@ export type LyraComboboxSourceErrorEvent =
  * unresolved window the raw value itself is withheld too -- the trigger (and any `multiple`-mode
  * tag for the same value) shows the `loadingText` placeholder instead of the raw string, since it
  * is not yet knowable whether the value is even unmatched.
+ * With local options and no loading state, an unobserved slot (including SSR) renders the raw
+ * committed value without an unknown badge, synthetic option or custom unknown label. The first
+ * browser slot observation enables ordinary matched/unmatched presentation, even for an empty slot.
  *
  * @customElement lr-combobox
  * @slot - `<lr-option>` elements.
@@ -1037,6 +1040,7 @@ export class LyraCombobox<
   private explicitInputValue = false;
   @state() private activeIndex = -1;
   @state() private options: LyraOption[] = [];
+  @state() private optionsObserved = false;
   // Set on the combobox input's first `blur`; gates the `data-invalid`
   // reflection below so validity styling never flashes on first render.
   @state() private touched = false;
@@ -1513,6 +1517,7 @@ export class LyraCombobox<
     const slot = this.optionsSlot;
     queueMicrotask(() => {
       collectInitialSlotAssignment(slot, (s) => {
+        this.optionsObserved = true;
         if (s.assignedElements({ flatten: true }).some(isLyraOptionElement)) {
           this.collectOptionsFromSlot(s);
         }
@@ -2126,6 +2131,7 @@ export class LyraCombobox<
    */
   private collectOptionsFromSlot(slot: HTMLSlotElement): void {
     const previous = new Set(this.options);
+    this.optionsObserved = true;
     this.options = slot
       .assignedElements({ flatten: true })
       .filter(isLyraOptionElement);
@@ -2360,6 +2366,7 @@ export class LyraCombobox<
    * one, so it must never show this badge.
    */
   private isUnknownValue(value: string): boolean {
+    if (!this.source && !this.optionsObserved) return false;
     if (this.loading || (this.source && !this.sourceEverSettled)) return false;
     return !(
       (!this.source && !this.multiple && this.singleSelectedOption?.value === value) ||

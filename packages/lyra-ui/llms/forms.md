@@ -437,6 +437,11 @@ for the same value) shows the `loadingText` placeholder instead, so a value seed
 catalogue has ever answered never flashes an unexplained, unbadged machine key. Once the fetch
 settles — success or failure — the raw value returns, badged if it still matches nothing.
 
+With local options and no loading state, before the browser first reads the option slot,
+including during SSR, a committed value renders as its raw code without an unavailable badge,
+synthetic unknown option or custom unknown label. Once the slot has been observed, even when
+empty, ordinary matched/unmatched presentation applies.
+
 **Methods:** `focus(options?)`, `blur()`, `select()`, `setSelectionRange()`, and `setRangeText()`
 forward to the internal input. `setRangeText()` synchronizes the filter query and visible options.
 `show(): Promise<void>` and `hide(): Promise<void>` settle after `lr-after-show` and
@@ -7476,7 +7481,8 @@ Import `@aceshooting/lyra-ui/components/lr-country-picker.js`. The default catal
 249-code ISO alpha-2 list. `value` defaults to `''`; valid two-letter values are trimmed and
 uppercased, and no country is inferred. `.countries` accepts
 `LyraCountryCatalog = readonly string[] | readonly LyraCountryEntry[]`; the entry and headless
-catalog helper are documented [below](#country-time-zone-and-unit-catalog-helpers).
+catalog helper are documented in the
+[catalog helper reference](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md#country-time-zone-and-unit-catalog-helpers).
 
 `flags` defaults to `true`; set `.flags = false` or `flags="false"` to hide flags in both the
 trigger and offered rows. Emoji need no optional peer, assets or network request. Platform fonts
@@ -7491,6 +7497,10 @@ normalized identifier wins, and caller order is preserved. `group` adds headings
 rows, `disabled` prevents selection, and literal `label` overrides include explicit empty strings.
 A nonempty unknown, malformed or disabled selected value stays visible and invalid until cleared
 or replaced. It is never silently replaced or added as a selectable row.
+
+**SSR:** All three render declarative shadow DOM with catalog rows and the committed identifier
+without browser globals. Country flag emoji need no asset loader. Interactive selection requires
+hydration; use the same explicit catalog and locale on server and client for consistent options.
 
 `label=''`, `hint=''`, `errorText=''` (`error-text`) and the `label`, `hint`, `error` slots supply
 field chrome. `accessibleLabel=null` (attribute `aria-label`) overrides the actual control's name;
@@ -7545,7 +7555,8 @@ the catalog property. Shared form-control and surface tokens apply, including RT
 
 A form-associated identifier selector. Import
 `@aceshooting/lyra-ui/components/lr-time-zone-picker.js`. It follows the
-[shared field contract](#lr-country-picker), with `.timeZones` accepting
+[shared field contract](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/components/lr-country-picker.md),
+with `.timeZones` accepting
 `LyraTimeZoneCatalog = readonly string[] | readonly LyraTimeZoneEntry[]`.
 Default options are `UTC` followed by the runtime's supported primary IANA identifiers, or only
 `UTC` when that catalog API is unavailable. Supply the same explicit catalog on server and client
@@ -7555,15 +7566,16 @@ Identifiers are trimmed and case-sensitive, limited to 256 characters, and never
 Caller catalogs can retain aliases or custom identifiers. Default labels replace underscores
 with spaces; `label` overrides provide other display names, and `searchable` matches both.
 Selection does not change the application's time zone or calculate offsets, clocks or daylight
-saving transitions. Catalog types and `getTimeZoneCodes()` are documented
-[below](#country-time-zone-and-unit-catalog-helpers).
+saving transitions. Catalog types and `getTimeZoneCodes()` are documented in the
+[catalog helper reference](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md#country-time-zone-and-unit-catalog-helpers).
 
 **Field API:** `label`, `hint`, `errorText` (`error-text`), `placeholder`, `accessibleLabel`
 (`aria-label`), `name`, `form`, `value`, `defaultValue`, `required`, `disabled`, `customError`
 (`custom-error`), `size`, `clearable`, `searchable`, `topLayer` (`top-layer`),
 `positioningStrategy` (`positioning-strategy`), `autocomplete`, `inputMode` (`inputmode`),
 `enterKeyHint` (`enterkeyhint`), `spellcheck`, `autocapitalize`, `autocorrect`, and readonly `input`.
-Defaults and form/editing methods follow the [shared contract](#lr-country-picker), including
+Defaults and form/editing methods follow the
+[shared contract](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/components/lr-country-picker.md), including
 `getForm()`, `checkValidity()`, `reportValidity()`, `setCustomValidity(message)` and
 `resetValidity()` for the owning form and consumer validation messages.
 
@@ -7584,7 +7596,8 @@ Defaults and form/editing methods follow the [shared contract](#lr-country-picke
 
 A form-associated measurement-unit selector. Import
 `@aceshooting/lyra-ui/components/lr-unit-picker.js`. It follows the
-[shared field contract](#lr-country-picker), with `.units` accepting
+[shared field contract](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/components/lr-country-picker.md),
+with `.units` accepting
 `LyraUnitCatalog = readonly string[] | readonly LyraUnitEntry[]`.
 The default catalog contains the 45 standard ECMA-402 simple units. `value=''` selects nothing;
 identifiers are trimmed and case-sensitive, limited to 256 characters. Caller catalogs may include
@@ -7592,14 +7605,16 @@ custom or compound units. `Intl.NumberFormat` resolves localized singular names 
 unsupported identifiers fall back to their code. Literal `label` and `symbol` overrides, including
 empty strings, take precedence. `searchable` matches identifiers, localized/literal names and
 symbols. Selection edits no amount and performs no unit conversion. Catalog types and name
-resolution are documented [below](#country-time-zone-and-unit-catalog-helpers).
+resolution are documented in the
+[catalog helper reference](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md#country-time-zone-and-unit-catalog-helpers).
 
 **Field API:** `label`, `hint`, `errorText` (`error-text`), `placeholder`, `accessibleLabel`
 (`aria-label`), `name`, `form`, `value`, `defaultValue`, `required`, `disabled`, `customError`
 (`custom-error`), `size`, `clearable`, `searchable`, `topLayer` (`top-layer`),
 `positioningStrategy` (`positioning-strategy`), `autocomplete`, `inputMode` (`inputmode`),
 `enterKeyHint` (`enterkeyhint`), `spellcheck`, `autocapitalize`, `autocorrect`, and readonly `input`.
-Defaults and form/editing methods follow the [shared contract](#lr-country-picker), including
+Defaults and form/editing methods follow the
+[shared contract](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/components/lr-country-picker.md), including
 `getForm()`, `checkValidity()`, `reportValidity()`, `setCustomValidity(message)` and
 `resetValidity()` for the owning form and consumer validation messages.
 

@@ -17,6 +17,17 @@ describe('<lr-unit-picker>', () => {
     expect(el.input === null).to.equal(true);
   });
 
+  it('renders the default filter name and updates it through a strings override', async () => {
+    const el = await fixture<LyraUnitPicker>(html`<lr-unit-picker searchable lang="en" .units=${['meter']}></lr-unit-picker>`);
+    const child = el.shadowRoot!.querySelector('lr-combobox')!;
+    await child.updateComplete;
+    expect(el.input?.getAttribute('aria-label')).to.equal('Unit');
+    el.strings = { unitPickerLabel: 'Unité de mesure' };
+    await el.updateComplete;
+    await child.updateComplete;
+    expect(el.input?.getAttribute('aria-label')).to.equal('Unité de mesure');
+  });
+
   it('supports caller-defined units, symbols, groups, ordering and immutable snapshots', async () => {
     const units = [{ code: 'kWh', label: 'Kilowatt-hour', symbol: 'kWh', group: 'Energy' }, { code: 'MWh', label: 'Megawatt-hour', disabled: true }];
     const el = await fixture<LyraUnitPicker>(html`<lr-unit-picker label="Energy unit" .units=${units} value="kWh"></lr-unit-picker>`);

@@ -264,10 +264,11 @@ describe('lr-locale-picker optional text filtering', () => {
   });
 
   it('localizes empty results, retains the query on Enter and restores focus on Escape', async () => {
-    const el = await create();
+    const el = await fixture<LyraLocalePicker>(html`<lr-locale-picker searchable locale="en"
+      value="en" .locales=${CATALOG}></lr-locale-picker>`);
     el.strings = { localePickerSearchLabel: 'Rechercher une langue', localePickerEmpty: 'Aucune langue correspondante.' };
     await openSearch(el);
-    expect(input(el).getAttribute('aria-label')).to.equal('Rechercher une langue');
+    expect(el.shadowRoot!.querySelector('[part="search-input"]')?.getAttribute('aria-label')).to.equal('Rechercher une langue');
     await sendKeys({ type: 'zzzz' });
     await el.updateComplete;
     expect(tags(el)).to.deep.equal([]);

@@ -2637,6 +2637,35 @@ describe('option adornments in the popup', () => {
 
 // -- only the presentation changes.
 describe('unknown committed value presentation', () => {
+  it('observes an initially empty local catalog and updates unknown feedback as options change', async () => {
+    const el = await fixture<LyraCombobox>(html`
+      <lr-combobox value="pending" with-unknown-option></lr-combobox>
+    `);
+    const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="combobox-input"]')!;
+    await waitUntil(() => input.hasAttribute('data-unknown-value'));
+    expect(input.value).to.equal('pending');
+    expect(el.shadowRoot!.querySelector('[part="unknown-value"]') !== null).to.equal(true);
+
+    const defaultSlot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot:not([name])')!;
+    const option = document.createElement('lr-option') as LyraOption;
+    option.value = 'pending';
+    option.textContent = 'Pending label';
+    const added = oneEvent(defaultSlot, 'slotchange');
+    el.append(option);
+    await added;
+    await el.updateComplete;
+    expect(input.value).to.equal('Pending label');
+    expect(input.hasAttribute('data-unknown-value')).to.equal(false);
+
+    const removed = oneEvent(defaultSlot, 'slotchange');
+    option.remove();
+    await removed;
+    await el.updateComplete;
+    expect(el.value).to.equal('pending');
+    expect(input.value).to.equal('pending');
+    expect(input.hasAttribute('data-unknown-value')).to.equal(true);
+  });
+
   it('flags the closed single-select input as unknown when the committed value matches no option', async () => {
     const el = (await fixture(html`
       <lr-combobox><lr-option value="a">Apple</lr-option></lr-combobox>

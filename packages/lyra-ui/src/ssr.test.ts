@@ -77,7 +77,7 @@ describe('LYRA_SSR_STATIC_SAFETY', () => {
     const values = Object.values(LYRA_SSR_STATIC_SAFETY);
     const staticSafeCount = values.filter((value) => value === 'static-safe').length;
     const hydrationRequiredCount = values.filter((value) => value === 'hydration-required').length;
-    expect(staticSafeCount).to.equal(236);
+    expect(staticSafeCount).to.equal(239);
     expect(hydrationRequiredCount).to.equal(50);
     expect(staticSafeCount + hydrationRequiredCount).to.equal(LYRA_SSR_RENDER_AND_HYDRATE_TAGS.length);
   });
@@ -85,6 +85,14 @@ describe('LYRA_SSR_STATIC_SAFETY', () => {
   it('classifies the currency picker as static-safe server-rendered form content', () => {
     expect(getLyraSsrMode('lr-currency-picker')).to.equal('render-and-hydrate');
     expect(getLyraSsrStaticSafety('lr-currency-picker')).to.equal('static-safe');
+  });
+
+  it('classifies the country, time-zone and unit pickers as static-safe server content', () => {
+    for (const tagName of ['lr-country-picker', 'lr-time-zone-picker', 'lr-unit-picker']) {
+      expect(getLyraSsrMode(tagName)).to.equal('render-and-hydrate');
+      expect(getLyraSsrStaticSafety(tagName)).to.equal('static-safe');
+      expect(new Set<string>(LYRA_SSR_CLIENT_RENDER_TAGS).has(tagName)).to.equal(false);
+    }
   });
 
   it('retains the canonical GeoJSON remote-content contract without the retired tag', () => {
