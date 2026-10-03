@@ -111,7 +111,7 @@ The generated [`llms/migration.md`](./llms/migration.md) has per-component `wa-*
 Paste this prompt into Claude or Codex:
 
 ```text
-Install the Lyra UI skill from GitHub aceshooting/lyra-ui. Start a Lit app with Vite+ and @aceshooting/lyra-ui, following the skill.
+Install the Lyra UI skill from GitHub aceshooting/lyra-ui. Start a Lit app with Vite+ and lyra-ui, following the skill.
 ```
 
 ## Install
