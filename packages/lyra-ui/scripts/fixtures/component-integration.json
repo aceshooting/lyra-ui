@@ -1696,9 +1696,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 98558,
-        "kib": 96.2,
-        "bundleSha256": "0af6fcbfa6240a61b97f4423a4dfe128da3da6f35e37ee14b1573cc30440d07f",
+        "bytes": 98574,
+        "kib": 96.3,
+        "bundleSha256": "4d8414a856ca648dff0f53d76ef1140cb2516c5d361a3c21bb0cf85c523cb8c1",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -1746,9 +1746,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 98456,
-        "kib": 96.1,
-        "bundleSha256": "cfeb2618fc0d20afee0a03e524ee14b3eb434d3dafef9b25f6656402d96d86e5",
+        "bytes": 98463,
+        "kib": 96.2,
+        "bundleSha256": "a5bbd23458f6a9cabb902fab644f46f4d7087eada9c4dcfb0e1e777611ae4a2f",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -6372,9 +6372,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 97595,
+        "bytes": 97614,
         "kib": 95.3,
-        "bundleSha256": "1bea9b93d23e056a88a00e50dde1b2c67fec00ed2097eb16ad39e1fd68d34bdf",
+        "bundleSha256": "b26db98a54b495f06694cb661725f71c8f08620ab5282ef937baf28a7c8f214a",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -6891,9 +6891,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 97862,
+        "bytes": 97878,
         "kib": 95.6,
-        "bundleSha256": "4fbeea3c390fb5fca387535c0971f1978a76d9c4b902ff4dbd060d2045780609",
+        "bundleSha256": "73abf48ff925f051600822ff485db971b085948ca77246e8f1abf01bfaaf613d",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },

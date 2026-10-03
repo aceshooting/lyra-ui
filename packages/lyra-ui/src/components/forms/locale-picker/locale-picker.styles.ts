@@ -241,6 +241,8 @@ export const styles = css`
     text-align: start;
     transition: var(--lr-transition-interactive);
   }
+  /* no-pressed-state: pressing this text filter places a caret or selects text; it does not
+     activate an option. Keyboard engagement is shown by the focus ring below. */
   [part='search-input']:where(:hover:not(:disabled)) {
     border-color: var(--lr-color-brand);
   }
