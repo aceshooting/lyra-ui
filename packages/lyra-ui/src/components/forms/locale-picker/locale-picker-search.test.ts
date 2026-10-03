@@ -5,6 +5,10 @@ import { resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse
 import { getLyraLocale, setLyraLocale } from '../../../localization.js';
 import { setFlagUrlResolver } from '../../media/flag/flag.class.js';
 import './locale-picker.js';
+import '../../../translations/fr/forms.js';
+import '../../../translations/fr/shared.js';
+import '../../../translations/tr/forms.js';
+import '../../../translations/tr/shared.js';
 import type { LyraLocalePicker } from './locale-picker.class.js';
 
 const CATALOG = ['en', 'fr', 'de', 'pt-BR'];
@@ -179,11 +183,11 @@ describe('lr-locale-picker optional text filtering', () => {
     el.autocapitalize = 'words';
     el.autocorrect = false;
     await el.updateComplete;
-    expect(input(el).autocomplete).to.equal('language');
-    expect(input(el).inputMode).to.equal('search');
-    expect(input(el).enterKeyHint).to.equal('search');
+    expect(input(el).getAttribute('autocomplete')).to.equal('language');
+    expect(input(el).getAttribute('inputmode')).to.equal('search');
+    expect(input(el).getAttribute('enterkeyhint')).to.equal('search');
     expect(input(el).spellcheck).to.equal(true);
-    expect(input(el).autocapitalize).to.equal('words');
+    expect(input(el).getAttribute('autocapitalize')).to.equal('words');
     expect(input(el).getAttribute('autocorrect')).to.equal('off');
     el.setAttribute('spellcheck', 'true');
     await el.updateComplete;
@@ -339,7 +343,9 @@ describe('lr-locale-picker optional text filtering', () => {
 
   for (const dismiss of ['Escape', 'Tab']) {
     it(`does not cancel an accepted load when a later ${dismiss} closes the filter`, async () => {
-      const el = await create();
+      const wrapper = await fixture<HTMLDivElement>(html`<div><lr-locale-picker searchable locale="en"
+        value="en" .locales=${CATALOG}></lr-locale-picker><button id="after-loading-picker">Next</button></div>`);
+      const el = wrapper.querySelector<LyraLocalePicker>('lr-locale-picker')!;
       let resolve!: () => void;
       let started = false;
       const pending = new Promise<void>(done => { resolve = done; });
@@ -352,10 +358,14 @@ describe('lr-locale-picker optional text filtering', () => {
       await sendKeys({ press: dismiss });
       await el.updateComplete;
       expect(el.open).to.equal(false);
+      if (dismiss === 'Tab') expect(document.activeElement?.id).to.equal('after-loading-picker');
+      else expect(el.shadowRoot!.activeElement === trigger(el)).to.equal(true);
       resolve();
       await waitUntil(() => el.value === 'fr');
       expect(getLyraLocale()).to.equal('fr');
       expect(input(el).value).to.equal('');
+      if (dismiss === 'Tab') expect(document.activeElement?.id).to.equal('after-loading-picker');
+      else expect(el.shadowRoot!.activeElement === trigger(el)).to.equal(true);
     });
   }
 

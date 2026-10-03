@@ -243,7 +243,7 @@ describe('lr-currency-picker optional search and groups', () => {
       autocorrect="off" .currencies=${['EUR', 'USD']}></lr-currency-picker>`);
     await settle(picker);
     const native = input(picker);
-    expect([native.autocomplete, native.inputMode, native.enterKeyHint, native.spellcheck, native.autocapitalize, native.getAttribute('autocorrect')])
+    expect([native.getAttribute('autocomplete'), native.getAttribute('inputmode'), native.getAttribute('enterkeyhint'), native.spellcheck, native.getAttribute('autocapitalize'), native.getAttribute('autocorrect')])
       .to.deep.equal(['off', 'search', 'search', true, 'characters', 'off']);
     picker.removeAttribute('spellcheck');
     picker.removeAttribute('autocorrect');
@@ -355,7 +355,7 @@ describe('lr-currency-picker optional search and groups', () => {
       <lr-currency-picker value="EUR" .currencies=${[{ code: 'EUR', group: 'Accounts' }]}></lr-currency-picker>
     </div>`);
     const picker = host.querySelector<LyraCurrencyPicker>('lr-currency-picker')!;
-    for (const searchable of [false, true]) {
+    for (const searchable of [false, true, false]) {
       picker.searchable = searchable;
       await settle(picker);
       child(picker).open = true;
@@ -364,9 +364,10 @@ describe('lr-currency-picker optional search and groups', () => {
       const group = root.querySelector<HTMLElement>('[part="group-label"]')!;
       const display = root.querySelector<HTMLElement>(searchable ? '[part="combobox-input"]' : '[part="display-input"]')!;
       const trigger = root.querySelector<HTMLElement>(searchable ? '[part="combobox"]' : '[part="trigger"]')!;
-      expect(getComputedStyle(group).letterSpacing).to.equal('3px');
-      expect(getComputedStyle(display).fontStyle).to.equal('italic');
-      expect(getComputedStyle(trigger).borderTopLeftRadius).to.equal('7px');
+      const mode = searchable ? 'searchable' : 'compact';
+      expect(getComputedStyle(group).letterSpacing, `${mode} group part`).to.equal('3px');
+      expect(getComputedStyle(display).fontStyle, `${mode} display part`).to.equal('italic');
+      expect(getComputedStyle(trigger).borderTopLeftRadius, `${mode} trigger part`).to.equal('7px');
     }
   });
 

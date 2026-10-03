@@ -285,8 +285,13 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
     const optionTag = unsafeStatic(tag('option'));
     const hasLabel = Boolean(this.label) || this.slots.has('label');
     const current = this.rows.find((row) => row.code === this.value);
+    const exportParts = [
+      'form-control,form-control-label',
+      this.searchable ? 'combobox:select-trigger,combobox-input:select-display-input' : 'trigger:select-trigger,display-input:select-display-input',
+      'listbox:select-listbox,option:select-option,option-sub:select-option-sub,group-label:select-group-label,clear-button:select-clear-button,flag,hint,error',
+    ].join(',');
     return html`<${controlTag}
-      exportparts="form-control,form-control-label,trigger:select-trigger,combobox:select-trigger,display-input:select-display-input,combobox-input:select-display-input,listbox:select-listbox,option:select-option,option-sub:select-option-sub,group-label:select-group-label,clear-button:select-clear-button,flag,hint,error"
+      exportparts=${exportParts}
       style=${styleMap({ '--lr-positioning-strategy': this.positioningStrategy === 'fixed' || this.positioningStrategy === 'absolute' ? this.positioningStrategy : undefined })}
       .strings=${this.strings} .customError=${this.validity.valid ? null : this.validationMessage}
       .value=${this.searchable ? this.value || null : this.value}

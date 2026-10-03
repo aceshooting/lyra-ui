@@ -377,8 +377,13 @@ export class LyraCurrencyPicker extends FormAssociated(CurrencyPickerBase, value
     const hasLabel = Boolean(this.label) || this.slotPresence.has('label');
     const controlTag = unsafeStatic(tag(this.searchable ? 'combobox' : 'select'));
     const optionTag = unsafeStatic(tag('option'));
+    const exportParts = [
+      'form-control,form-control-label',
+      this.searchable ? 'combobox:select-trigger,combobox-input:select-display-input' : 'trigger:select-trigger,display-input:select-display-input',
+      'listbox:select-listbox,option:select-option,option-sub:select-option-sub,group-label:select-group-label,clear-button:select-clear-button,hint,error',
+    ].join(',');
     return html`<${controlTag}
-      exportparts="form-control,form-control-label,trigger:select-trigger,combobox:select-trigger,display-input:select-display-input,combobox-input:select-display-input,listbox:select-listbox,option:select-option,option-sub:select-option-sub,group-label:select-group-label,clear-button:select-clear-button,hint,error"
+      exportparts=${exportParts}
       style=${styleMap({ '--lr-positioning-strategy': this.positioningStrategy === 'fixed' || this.positioningStrategy === 'absolute' ? this.positioningStrategy : undefined })}
       .strings=${this.strings}
       .customError=${this.validity.valid ? null : this.validationMessage}

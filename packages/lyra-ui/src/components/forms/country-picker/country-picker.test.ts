@@ -23,7 +23,9 @@ describe('<lr-country-picker>', () => {
   for (const searchable of [false, true]) {
     it(`styles visible trigger and popup flags, then hides them in ${searchable ? 'search' : 'compact'} mode`, async () => {
       const host = await fixture<HTMLDivElement>(html`<div>
-        <style>lr-country-picker::part(flag) { font-size: 31px; }</style>
+        <style>lr-country-picker::part(flag) { font-size: 31px; }
+          lr-country-picker::part(select-display-input) { font-style: italic; }
+          lr-country-picker::part(select-trigger) { border-radius: 7px; }</style>
         <lr-country-picker label="Country" value="LU" .searchable=${searchable}
           .countries=${['LU', 'FR']}></lr-country-picker>
       </div>`);
@@ -35,6 +37,10 @@ describe('<lr-country-picker>', () => {
       const popup = child.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
       const visibleFlags = () => [...child.shadowRoot!.querySelectorAll<HTMLElement>('[part="option"] [part="flag"]')];
       await waitUntil(() => visibleFlags().length === 2 && getComputedStyle(popup).opacity === '1');
+      const display = child.shadowRoot!.querySelector<HTMLElement>(searchable ? '[part="combobox-input"]' : '[part="display-input"]')!;
+      const trigger = child.shadowRoot!.querySelector<HTMLElement>(searchable ? '[part="combobox"]' : '[part="trigger"]')!;
+      expect(getComputedStyle(display).fontStyle, 'forwarded display part').to.equal('italic');
+      expect(getComputedStyle(trigger).borderTopLeftRadius, 'forwarded trigger part').to.equal('7px');
       expect(visibleFlags().map(flag => flag.textContent)).to.deep.equal(['🇱🇺', '🇫🇷']);
       expect(visibleFlags().every(flag => flag.getClientRects().length > 0)).to.equal(true);
       expect(visibleFlags().map(flag => getComputedStyle(flag).fontSize)).to.deep.equal(['31px', '31px']);

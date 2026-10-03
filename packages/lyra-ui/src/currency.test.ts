@@ -26,14 +26,14 @@ function trackAbortListeners(signal: AbortSignal): { readonly added: number; rea
   let removed = 0;
   Object.defineProperty(signal, 'addEventListener', {
     configurable: true,
-    value: (...args: Parameters<EventTarget['addEventListener']>) => {
+    value: (...args: Parameters<AbortSignal['addEventListener']>) => {
       if (args[0] === 'abort') added++;
       add(...args);
     },
   });
   Object.defineProperty(signal, 'removeEventListener', {
     configurable: true,
-    value: (...args: Parameters<EventTarget['removeEventListener']>) => {
+    value: (...args: Parameters<AbortSignal['removeEventListener']>) => {
       if (args[0] === 'abort') removed++;
       remove(...args);
     },

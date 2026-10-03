@@ -25,9 +25,11 @@ async function viewportField(fontSize: string, top: number, topLayer = false): P
   select.style.cssText = `position:absolute;inset-block-start:${top}px;inset-inline-start:20px;inline-size:350px;`;
   doc.body.append(select);
   await select.updateComplete;
+  const shown = oneEvent(select, 'lr-after-show');
   select.click();
   await waitUntil(() => select.open);
   await select.updateComplete;
+  await shown;
   await waitUntil(() => Boolean(select.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!.style.getPropertyValue('--lr-positioner-available-block-size')));
   return { frame, select };
 }
