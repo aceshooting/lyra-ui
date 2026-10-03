@@ -181,8 +181,9 @@ export interface LyraLocalePickerEventMap {
  *
  * Built directly on the shared trigger-button/`aria-activedescendant` listbox technique
  * `<lr-select>` uses (not composed from it). Optional `searchable` adds a text filter over the
- * offered rows, matching tags, native names, caller labels and localized language names. The
- * filter never becomes a submitted value and never selects a locale by itself.
+ * offered rows, matching tags, native names, caller labels, English names and localized language
+ * names. The filter never becomes a submitted value and never selects a locale by itself.
+ * Escape clears a nonempty filter first; a subsequent Escape closes and restores trigger focus.
  *
  * Selecting a row emits a cancelable `lr-change-request` before setting `value` — if a listener doesn't call
  * `event.preventDefault()`, the component applies the pick itself via `setLyraLocale()`. A host
@@ -400,10 +401,11 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   @property({ attribute: 'option-display', converter: declaredDefaultConverter('label-tag') })
   optionDisplay: LyraLocaleOptionDisplay = 'label-tag';
 
-  /** Adds an optional text filter over tags, native names, caller labels and localized language
-   * names. Filtering is case/accent insensitive, never commits a free-text value and emits no
+  /** Adds an optional text filter over tags, native names, caller labels, English names and
+   * localized language names. Filtering is case/accent insensitive, never commits a free-text value and emits no
    * selection event. Opening focuses the filter; arrows move the active match and Enter chooses
-   * it. Escape returns to the trigger. The private query clears on close, reset, disablement,
+   * it. Escape first clears nonempty text without moving focus; with an empty filter it closes
+   * and returns to the trigger. The private query also clears on close, reset, disablement,
    * disconnect or turning this option off. Unset preserves the original closed-list behavior. */
   @property({ type: Boolean }) searchable = false;
 
@@ -942,8 +944,8 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     return getRegisteredLyraLocales().map((tag) => ({ tag, label: localeNativeName(tag) }));
   }
 
-  private normalizeSearch(text: string): string {
-    return text.toLocaleLowerCase(resolveIntlLocale(this.effectiveLocale))
+  private normalizeSearch(text: string, locale = this.effectiveLocale): string {
+    return text.toLocaleLowerCase(resolveIntlLocale(locale))
       .normalize('NFKD').replace(/\p{M}/gu, '').trim();
   }
 
@@ -954,12 +956,21 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     let names: Intl.DisplayNames | undefined;
     try { names = getDisplayNames(this.effectiveLocale, { type: 'language' }); }
     catch { /* Tags, native names and caller labels remain available without Intl language names. */ }
+    // English names are additional search data; visible language names retain the UI locale.
+    let englishNames: Intl.DisplayNames | undefined;
+    try { englishNames = getDisplayNames('en', { type: 'language' }); }
+    catch { /* Native, custom and localized labels remain available without English aliases. */ }
+    const invariantQuery = this.normalizeSearch(this.searchQuery, 'en');
     return rows.filter(row => {
       let localizedName = '';
       try { localizedName = names?.of(row.tag) ?? ''; }
       catch { /* A custom malformed tag remains searchable by its literal tag and label. */ }
-      return [row.tag, row.label, localeNativeName(row.tag), localizedName]
-        .some(text => this.normalizeSearch(text).includes(query));
+      let englishName = '';
+      try { englishName = englishNames?.of(row.tag) ?? ''; }
+      catch { /* Malformed tags still match their literal tag and caller label. */ }
+      return [row.label, localeNativeName(row.tag), localizedName]
+        .some(text => this.normalizeSearch(text).includes(query)) ||
+        [row.tag, englishName].some(text => this.normalizeSearch(text, 'en').includes(invariantQuery));
     });
   }
 
@@ -1026,6 +1037,11 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
 
   private dismissFromEscape(): void {
     if (!this.open) return;
+    if (this.searchable && this.searchQuery.length) {
+      this.clearSearch();
+      this.setActiveIndex(this.visibleEntries.length ? 0 : -1);
+      return;
+    }
     this.deactivatePopupOverlay(true);
     this.hide();
   }

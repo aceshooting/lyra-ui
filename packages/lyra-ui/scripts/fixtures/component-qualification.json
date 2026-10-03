@@ -28149,7 +28149,7 @@
             },
             {
               "file": "src/components/forms/locale-picker/locale-picker-search.test.ts",
-              "test": "localizes empty results, retains the query on Enter and restores focus on Escape",
+              "test": "localizes empty results, clears on the first Escape and restores focus on the second",
               "target": "el",
               "state": "populated"
             },
@@ -28278,7 +28278,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.class.ts",
-              "line": 980,
+              "line": 991,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

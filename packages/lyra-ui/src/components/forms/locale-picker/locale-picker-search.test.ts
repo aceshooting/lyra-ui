@@ -105,7 +105,7 @@ describe('lr-locale-picker optional text filtering', () => {
     el.localeLoader = async () => { loads++; };
     await openSearch(el);
     for (const [query, expected] of [
-      [' ENG ', 'en'], ['allemand', 'de'], ['cafe', 'es'], ['PT-br', 'pt-BR'], ['not_a_', 'not_a_locale'],
+      [' ENG ', 'en'], ['GERMAN', 'de'], ['allemand', 'de'], ['cafe', 'es'], ['PT-br', 'pt-BR'], ['not_a_', 'not_a_locale'],
     ]) {
       await filter(el, query!);
       expect(tags(el)).to.deep.equal([expected]);
@@ -150,6 +150,17 @@ describe('lr-locale-picker optional text filtering', () => {
     await openSearch(el);
     await filter(el, 'ing');
     expect(tags(el)).to.deep.equal(['en']);
+    expect(el.value).to.equal('');
+  });
+
+  it('matches English language names and ASCII locale tags independently of Turkish casing', async () => {
+    const el = await fixture<LyraLocalePicker>(html`<lr-locale-picker searchable locale="tr"
+      .locales=${['it', 'id', 'de']}></lr-locale-picker>`);
+    await openSearch(el);
+    for (const [query, expected] of [['ITALIAN', 'it'], ['italian', 'it'], ['IT', 'it'], ['INDONESIAN', 'id'], ['GERMAN', 'de']]) {
+      await filter(el, query!);
+      expect(tags(el), query).to.deep.equal([expected]);
+    }
     expect(el.value).to.equal('');
   });
 
@@ -267,7 +278,7 @@ describe('lr-locale-picker optional text filtering', () => {
     expect(el.shadowRoot!.querySelector('[part="empty"]')?.textContent).to.equal('No matching languages.');
   });
 
-  it('localizes empty results, retains the query on Enter and restores focus on Escape', async () => {
+  it('localizes empty results, clears on the first Escape and restores focus on the second', async () => {
     const el = await fixture<LyraLocalePicker>(html`<lr-locale-picker searchable locale="en"
       value="en" .locales=${CATALOG}></lr-locale-picker>`);
     el.strings = { localePickerSearchLabel: 'Rechercher une langue', localePickerEmpty: 'Aucune langue correspondante.' };
@@ -286,11 +297,110 @@ describe('lr-locale-picker optional text filtering', () => {
     expect(input(el).value).to.equal('zzzz');
     await sendKeys({ press: 'Escape' });
     await el.updateComplete;
+    expect(el.open).to.equal(true);
+    expect(input(el).value).to.equal('');
+    expect(tags(el)).to.deep.equal(CATALOG);
+    expect(activeTag(el)).to.equal('en');
+    expect(el.shadowRoot!.activeElement === input(el)).to.equal(true);
+    expect(el.value).to.equal('en');
+    await sendKeys({ press: 'Escape' });
+    await el.updateComplete;
     expect(el.open).to.equal(false);
     expect(el.shadowRoot!.activeElement === trigger(el)).to.equal(true);
     await openSearch(el);
     expect(input(el).value).to.equal('');
     expect(tags(el)).to.deep.equal(CATALOG);
+  });
+
+  it('leaves composing Escape untouched and clears whitespace without selecting or loading', async () => {
+    const el = await create();
+    let selections = 0;
+    let loads = 0;
+    el.addEventListener('lr-change-request', () => { selections++; });
+    el.addEventListener('lr-change', () => { selections++; });
+    el.localeLoader = async () => { loads++; };
+    await openSearch(el);
+    await sendKeys({ type: 'de' });
+    for (const options of [{ isComposing: true }, { keyCode: 229 }]) {
+      const composing = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true, cancelable: true, ...options });
+      input(el).dispatchEvent(composing);
+      await el.updateComplete;
+      expect(composing.defaultPrevented).to.equal(false);
+      expect(el.open).to.equal(true);
+      expect(input(el).value).to.equal('de');
+      expect(el.shadowRoot!.activeElement === input(el)).to.equal(true);
+    }
+    await filter(el, '  ');
+    await sendKeys({ press: 'Escape' });
+    await el.updateComplete;
+    expect(el.open).to.equal(true);
+    expect(input(el).value).to.equal('');
+    expect(tags(el)).to.deep.equal(CATALOG);
+    expect(activeTag(el)).to.equal('en');
+    expect(el.shadowRoot!.activeElement === input(el)).to.equal(true);
+    expect(el.value).to.equal('en');
+    expect(selections).to.equal(0);
+    expect(loads).to.equal(0);
+    await sendKeys({ press: 'Escape' });
+    await el.updateComplete;
+    expect(el.open).to.equal(false);
+    expect(el.shadowRoot!.activeElement === trigger(el)).to.equal(true);
+  });
+
+  it('routes document Escape only to the newest searchable top-layer popup', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`<div>
+      <lr-locale-picker id="older-search" searchable top-layer option-display="label" .locales=${CATALOG}></lr-locale-picker>
+      <lr-locale-picker id="newer-search" searchable top-layer option-display="label" .locales=${CATALOG}></lr-locale-picker>
+    </div>`);
+    const older = wrapper.querySelector<LyraLocalePicker>('#older-search')!;
+    const newer = wrapper.querySelector<LyraLocalePicker>('#newer-search')!;
+    older.open = true;
+    await older.updateComplete;
+    await filter(older, 'de');
+    newer.open = true;
+    await newer.updateComplete;
+    await filter(newer, 'fr');
+    const escape = () => document.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'Escape', bubbles: true, composed: true, cancelable: true,
+    }));
+    escape();
+    await newer.updateComplete;
+    expect(newer.open).to.equal(true);
+    expect(input(newer).value).to.equal('');
+    expect(tags(newer)).to.deep.equal(CATALOG);
+    expect(older.open).to.equal(true);
+    expect(input(older).value).to.equal('de');
+    escape();
+    await newer.updateComplete;
+    expect(newer.open).to.equal(false);
+    expect(older.open).to.equal(true);
+    expect(input(older).value).to.equal('de');
+    escape();
+    await older.updateComplete;
+    expect(older.open).to.equal(true);
+    expect(input(older).value).to.equal('');
+    escape();
+    await older.updateComplete;
+    expect(older.open).to.equal(false);
+  });
+
+  it('clears the filter from the trigger without moving its keyboard focus', async () => {
+    const el = await create();
+    await openSearch(el);
+    await sendKeys({ type: 'de' });
+    await sendKeys({ press: 'Shift+Tab' });
+    expect(el.shadowRoot!.activeElement === trigger(el)).to.equal(true);
+    expect(el.open).to.equal(true);
+    await sendKeys({ press: 'Escape' });
+    await el.updateComplete;
+    expect(input(el).value).to.equal('');
+    expect(tags(el)).to.deep.equal(CATALOG);
+    expect(el.open).to.equal(true);
+    expect(el.shadowRoot!.activeElement === trigger(el)).to.equal(true);
+    await sendKeys({ press: 'Escape' });
+    await el.updateComplete;
+    expect(el.open).to.equal(false);
+    expect(el.shadowRoot!.activeElement === trigger(el)).to.equal(true);
   });
 
   it('allows Tab to leave and does not reclaim an external focus move while opening', async () => {
@@ -357,6 +467,13 @@ describe('lr-locale-picker optional text filtering', () => {
       await filter(el, 'zzzz');
       await sendKeys({ press: dismiss });
       await el.updateComplete;
+      if (dismiss === 'Escape') {
+        expect(el.open).to.equal(true);
+        expect(input(el).value).to.equal('');
+        expect(el.shadowRoot!.activeElement === input(el)).to.equal(true);
+        await sendKeys({ press: 'Escape' });
+        await el.updateComplete;
+      }
       expect(el.open).to.equal(false);
       if (dismiss === 'Tab') expect(document.activeElement?.id).to.equal('after-loading-picker');
       else expect(el.shadowRoot!.activeElement === trigger(el)).to.equal(true);
@@ -369,7 +486,7 @@ describe('lr-locale-picker optional text filtering', () => {
     });
   }
 
-  it('allows Tab to reach Retry while preserving the open query', async () => {
+  it('allows Tab to reach Retry and clears Escape without moving that focus', async () => {
     const el = await create();
     el.localeLoader = () => Promise.reject(new Error('not rendered'));
     await openSearch(el);
@@ -380,6 +497,15 @@ describe('lr-locale-picker optional text filtering', () => {
     expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('load-retry');
     expect(el.open).to.equal(true);
     expect(input(el).value).to.equal('fr');
+    await sendKeys({ press: 'Escape' });
+    await el.updateComplete;
+    expect(el.open).to.equal(true);
+    expect(input(el).value).to.equal('');
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('load-retry');
+    await sendKeys({ press: 'Escape' });
+    await el.updateComplete;
+    expect(el.open).to.equal(false);
+    expect(el.shadowRoot!.activeElement === trigger(el)).to.equal(true);
   });
 
   for (const asynchronous of [false, true]) {
@@ -454,16 +580,16 @@ describe('lr-locale-picker optional text filtering', () => {
   });
 
   it('recomputes localized names after an inherited language change', async () => {
-    const wrapper = await fixture<HTMLDivElement>(html`<div lang="en"><lr-locale-picker searchable
+    const wrapper = await fixture<HTMLDivElement>(html`<div lang="fr"><lr-locale-picker searchable
       .locales=${['de']}></lr-locale-picker></div>`);
     const el = wrapper.querySelector<LyraLocalePicker>('lr-locale-picker')!;
     await openSearch(el);
-    await filter(el, 'german');
+    await filter(el, 'allemand');
     expect(tags(el)).to.deep.equal(['de']);
-    wrapper.lang = 'fr';
+    wrapper.lang = 'en';
     await waitUntil(() => tags(el).length === 0);
     expect(input(el).getAttribute('aria-activedescendant')).to.equal(null);
-    await filter(el, 'allemand');
+    await filter(el, 'german');
     expect(tags(el)).to.deep.equal(['de']);
   });
 

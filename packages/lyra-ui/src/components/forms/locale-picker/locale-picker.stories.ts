@@ -51,7 +51,7 @@ export const CustomCatalog: Story = {
 };
 
 export const Searchable: Story = {
-  parameters: { docs: { description: { story: 'Optional text filtering matches locale tags, native names, custom labels and language names in the current UI locale. Try “eng”, “allemand”, “café” or “pt-BR”. Typing only filters; choose a row to request a language change. Flags and comfortable option rows stay visible.' } } },
+  parameters: { docs: { description: { story: 'Optional text filtering matches locale tags, native names, custom labels, English names and language names in the current UI locale. Try “german”, “allemand”, “café” or “pt-BR”. Typing only filters; choose a row to request a language change. Escape clears a query first, then closes the menu. Flags and comfortable option rows stay visible.' } } },
   render: () => html`
     <lr-locale-picker searchable locale="fr" label="Langue" trigger-display="flag" option-display="label"
       .locales=${[

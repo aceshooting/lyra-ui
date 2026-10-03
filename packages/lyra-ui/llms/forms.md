@@ -6609,10 +6609,14 @@ readonly LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; cou
   new end is rehomed to the last remaining row. Arrow/Home/End/typeahead changes scroll the active
   owned option into nearest view after render; replacement and disconnect cancel stale scrolls.
 - `searchable: boolean = false` — add a search field inside the open menu. Substring matching
-  ignores case and accents across language tags, native names, localized names and caller labels;
-  for example, `eng` finds English. Filtering emits no selection events and does not invoke a
+  ignores case and accents across language tags, native names, English names, localized names and
+  caller labels; for example, `german` finds Deutsch even in a French interface, where `allemand`
+  also matches. Filtering emits no selection events and does not invoke a
   locale loader. Arrow keys and Enter select an offered match; ordinary text editing and IME
-  composition remain native. Empty results show localized guidance. Closing, disabling, resetting,
+  composition remain native. Escape clears any nonempty filter first, including whitespace, while
+  keeping the menu open and preserving focus. Escape with an empty filter closes and restores
+  trigger focus. Composing Escape leaves the filter and menu unchanged. Empty results show
+  localized guidance. Closing, disabling, resetting,
   reconnecting or turning search off clears unfinished filtering. The default keeps the existing
   compact list without an input.
 - `autocomplete: string = 'off'`, `inputMode: string = ''` (attribute `inputmode`),
@@ -6730,7 +6734,8 @@ required picker with nothing committed goes back to `valueMissing`. It survives 
 `value`/`required` change and a form reset. `getForm()` returns the browser-resolved owning form.
 
 The open list is a nonmodal overlay: only its topmost owner handles Escape and outside pointer
-dismissal; Escape restores the trigger, while Tab keeps ordinary document navigation. Disconnect or
+dismissal; Escape clears an unfinished search first, then closes and restores the trigger, while
+Tab keeps ordinary document navigation. Disconnect or
 cross-document adoption closes it. A required, uncommitted value recomputes its intrinsic localized
 message when `.strings` or the effective locale changes; an author custom-validity message retains
 priority until cleared.
@@ -6816,8 +6821,8 @@ its scrolling height limit; `size` controls the trigger rather than shrinking la
   `document.documentElement.lang`/`dir`. Applying those is still the host's job, but the direction
   is no longer the host's to _derive_: read `event.detail.direction` (or call
   `getLyraLocaleDirection(tag)`), rather than keeping a hand-maintained list of RTL tags.
-- no filter/free-text mode — for a catalog with hundreds+ of rows, roll your own with `lr-select`
-  or `lr-combobox` instead.
+- search filters the offered catalog only; it never creates a locale from free text. Enable
+  `searchable` for long language lists.
 - arrow-key navigation is vertical-only (Home/End/ArrowUp/ArrowDown); there is no
   ArrowLeft/ArrowRight remap under RTL, since there is no horizontal axis to remap.
 
