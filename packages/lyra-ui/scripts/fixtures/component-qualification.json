@@ -17841,6 +17841,7 @@
           "src/components/overlays/overlay/tooltip-description.test.ts",
           "src/components/overlays/overlay/tooltip-lifecycle.test.ts",
           "src/components/overlays/overlay/tooltip-top-layer.test.ts",
+          "src/components/overlays/overlay/tooltip-visibility.test.ts",
           "src/components/overlays/overlay/tooltip.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -36540,6 +36541,7 @@
           "src/components/overlays/overlay/tooltip-description.test.ts",
           "src/components/overlays/overlay/tooltip-lifecycle.test.ts",
           "src/components/overlays/overlay/tooltip-top-layer.test.ts",
+          "src/components/overlays/overlay/tooltip-visibility.test.ts",
           "src/components/overlays/overlay/tooltip.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -52753,6 +52755,7 @@
           "src/components/overlays/overlay/tooltip-description.test.ts",
           "src/components/overlays/overlay/tooltip-lifecycle.test.ts",
           "src/components/overlays/overlay/tooltip-top-layer.test.ts",
+          "src/components/overlays/overlay/tooltip-visibility.test.ts",
           "src/components/overlays/overlay/tooltip.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",

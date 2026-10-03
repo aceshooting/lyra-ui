@@ -27,6 +27,8 @@ export interface ComposedAccessibilityTextOptions {
   shouldPrune?: (element: Element) => boolean;
   /** Additional pruning that can also reject externally assigned Text nodes. */
   shouldPruneNode?: (node: Node) => boolean;
+  /** Observes each element/ancestor visibility snapshot read by this walk. Does not change traversal. */
+  onElementState?: (element: Element, state: Readonly<AccessibilityElementState>) => void;
   /** Replaces the ordinary own-subtree exclusion predicate for presentation-owned fences. */
   isSubtreeExcluded?: (element: Element) => boolean;
   /** Stops initial composed-ancestor validation after this boundary is validated. */
@@ -59,7 +61,7 @@ export interface ComposedAccessibilityTextResult {
   visitedNodes: number;
 }
 
-interface AccessibilityElementState {
+export interface AccessibilityElementState {
   display: string | undefined;
   subtreeExcluded: boolean;
   visibilityHidden: boolean;
@@ -242,6 +244,7 @@ type TextWork =
 interface AccessibilityTextContext {
   ancestorBoundary: Element | null;
   elementStates: Map<Element, AccessibilityElementState>;
+  onElementState?: (element: Element, state: Readonly<AccessibilityElementState>) => void;
   excludedElements: Map<Element, boolean>;
   /** Cached verdict for {@link isAncestorBoundaryExternallyUnrendered}. Lazily computed since it
    *  costs a native `checkVisibility()` call and does not vary per descendant node. */
@@ -290,6 +293,7 @@ function cachedElementState(
   if (!state) {
     state = accessibilityElementState(element, cachedImageMapImage(context, element));
     context.elementStates.set(element, state);
+    context.onElementState?.(element, state);
   }
   return state;
 }
@@ -852,6 +856,7 @@ export function composedAccessibilityTextResult(
     excludedElements: new Map<Element, boolean>(),
     imageMapImages: new Map<Element, HTMLImageElement | null>(),
     isSubtreeExcluded: resolved.isSubtreeExcluded,
+    onElementState: resolved.onElementState,
     // Skipping ancestor validation outright cannot honor ancestor-inherited visibility either.
     ignoreInheritedVisibility:
       resolved.skipRootAncestorValidation === true || resolved.ignoreInheritedVisibility === true,

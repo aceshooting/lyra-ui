@@ -45,7 +45,10 @@ import {
   type OverlayHandle,
 } from '../../../internal/nonmodal-overlay-manager.js';
 import { animateRegistered } from '../../../internal/registered-animation.js';
-import { composedAccessibilityTextResult } from '../../../internal/accessibility-visibility.js';
+import {
+  composedAccessibilityTextResult,
+  type AccessibilityElementState,
+} from '../../../internal/accessibility-visibility.js';
 import { applyOverlayArrow, type LyraArrowPlacement } from './overlay-arrow.js';
 import {
   normalizeVirtualRect,
@@ -1290,6 +1293,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     }
     try {
       const visitedContentElements = new Set<Element>();
+      const elementStates = new Map<Element, Readonly<AccessibilityElementState>>();
       const accessibilityText = composedAccessibilityTextResult(activeSlot, {
         // Reuse the shared walk's node/depth budgets for actionability and observer enrollment too.
         // Side effects only record nodes the bounded traversal actually reached; returning false
@@ -1301,25 +1305,33 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
           if (node.nodeType !== 1) return false;
           const element = node as Element;
           visitedContentElements.add(element);
-          const excluded = isAccessibilitySubtreeExcluded(element);
-          if (!excluded && !isAccessibilityVisibilityHidden(element) && isActionableElement(element)) {
-            snapshot.actionable = true;
-          }
           if (element.localName === 'slot') snapshot.forwardingSlots.add(element as HTMLSlotElement);
           if (element.shadowRoot) snapshot.shadowRoots.add(element.shadowRoot);
           else if (element.localName.includes('-')) snapshot.awaitingShadowRoot = true;
           return false;
         },
-        // The shared walk invokes this for composed ancestors as well as visited content. Recording
-        // only elements not already seen as content preserves the focused ancestor observation
-        // without a second, independently recursive ancestry walk.
-        isSubtreeExcluded: (element) => {
-          if (!visitedContentElements.has(element) && element !== this) {
-            snapshot.composedAncestors.add(element);
-          }
-          return isAccessibilitySubtreeExcluded(element);
-        },
+        // Reuse the walk's per-inspection visibility reads for both content and ancestors.
+        // A later inspection gets fresh state, including after the popup visibility is restored.
+        onElementState: (element, state) => elementStates.set(element, state),
       });
+      for (const element of elementStates.keys()) {
+        if (!visitedContentElements.has(element) && element !== this) {
+          snapshot.composedAncestors.add(element);
+        }
+      }
+      for (const element of visitedContentElements) {
+        if (!isActionableElement(element)) continue;
+        // Image maps historically resolve actionability independently of the text walk's shared
+        // lookup budget. Keep that verdict when the text projection exhausts its smaller budget.
+        const imageMapElement = element.localName === 'map' || element.localName === 'area';
+        const state = imageMapElement ? undefined : elementStates.get(element);
+        // Text-omitted nodes can still be authored focus stops, such as a displayed stylesheet.
+        // Preserve their actionability even though the text walk never needed their visibility.
+        const excluded = state?.subtreeExcluded ?? isAccessibilitySubtreeExcluded(element);
+        if (excluded) continue;
+        const visibilityHidden = state?.visibilityHidden ?? isAccessibilityVisibilityHidden(element);
+        if (!visibilityHidden) snapshot.actionable = true;
+      }
       snapshot.text = accessibilityText.text.replace(/\s+/g, ' ').trim();
       for (const root of accessibilityText.labelReferenceRoots) {
         snapshot.labelReferenceRoots.add(root);
