@@ -234,12 +234,55 @@ async function runBasicEditing(page, check) {
   await check('link popover inserts safe relationship and remove-link is undoable', async () => {
     const source = await createEditor(page, 'basic-link', 'basic-editing');
     await page.locator('#basic-link .docx-pages').getByText('Corpus opening', { exact: true }).click();
-    await page.keyboard.insertText('Linked words');
-    const selectLinkedWords = id => page.locator(`#${id}`).evaluate(element => {
-      const found = element.find('Linked words');
-      return found.ok ? element.selectMatch(found.value.matches[0].id) : found;
+    const beforeTyping = await page.locator('#basic-link').evaluate(element => {
+      const pages = element.querySelector('.docx-pages');
+      let active = document.activeElement;
+      while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+      const record = { event: null, listener: null };
+      record.listener = event => {
+        let focused = document.activeElement;
+        while (focused?.shadowRoot?.activeElement) focused = focused.shadowRoot.activeElement;
+        record.event = { data: event.data, inputType: event.inputType,
+          targetOwned: pages.contains(event.target), focusOwned: pages.contains(focused) };
+      };
+      pages.__nativeInputRecord = record;
+      pages.addEventListener('beforeinput', record.listener, { capture: true, once: true });
+      return { revision: element.snapshot().revision.value, focusOwned: pages.contains(active) };
     });
-    assert.equal((await selectLinkedWords('basic-link')).ok, true);
+    let nativeInput;
+    try {
+      assert.equal(beforeTyping.focusOwned, true, 'Linked text must be typed into basic-link');
+      await page.keyboard.insertText('Linked words');
+    } finally {
+      nativeInput = await page.locator('#basic-link .docx-pages').evaluate(pages => {
+        const record = pages.__nativeInputRecord;
+        pages.removeEventListener('beforeinput', record.listener, { capture: true });
+        delete pages.__nativeInputRecord;
+        return record.event;
+      });
+    }
+    assert.equal(nativeInput?.data, 'Linked words', JSON.stringify(nativeInput));
+    assert.equal(nativeInput.targetOwned, true, JSON.stringify(nativeInput));
+    assert.equal(nativeInput.focusOwned, true, JSON.stringify(nativeInput));
+    // Native input is queued by the editor; its dispatch does not commit the document synchronously.
+    await page.waitForFunction(revision => {
+      const element = document.querySelector('#basic-link');
+      const pages = element.querySelector('.docx-pages');
+      let active = document.activeElement;
+      while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+      return element.snapshot().revision.value > revision && pages.textContent.includes('Linked words') && pages.contains(active);
+    }, beforeTyping.revision);
+    const selectLinkedWords = async id => {
+      const selected = await page.locator(`#${id}`).evaluate(element => {
+        const found = element.find('Linked words');
+        if (!found.ok) return { found };
+        const matches = found.value.matches;
+        return { matchCount: matches.length, selected: matches.length === 1 ? element.selectMatch(matches[0].id) : null };
+      });
+      assert.equal(selected.matchCount, 1, `${id}: expected exactly one linked-text match: ${JSON.stringify(selected)}`);
+      assert.equal(selected.selected.ok, true, `${id}: ${JSON.stringify(selected)}`);
+    };
+    await selectLinkedWords('basic-link');
     const triggerState = () => page.locator('#basic-link').evaluate(element => {
       const popover = element.shadowRoot.querySelector('[part="link-popover"]');
       const host = popover?.querySelector('[part="link-trigger"]');
@@ -273,6 +316,7 @@ async function runBasicEditing(page, check) {
     });
     const bytes = await saveEditor(page, 'basic-link');
     assert.match(zipEntry(bytes, 'word/document.xml'), /<w:hyperlink\b/u);
+    assert.ok([...zipEntry(bytes, 'word/document.xml').matchAll(/<w:t\b[^>]*>(.*?)<\/w:t>/gu)].map(match => match[1]).join('').includes('Linked words'), 'Saved link must retain the native inserted text');
     assert.ok(zipEntry(bytes, 'word/_rels/document.xml.rels').includes('https://example.test/linked'));
     assertProtectedParts(bytes, source);
     const refused = await page.locator('#basic-link').evaluate(element => ({
@@ -292,7 +336,7 @@ async function runBasicEditing(page, check) {
     assert.match(zipEntry(roundTrip, 'word/document.xml'), /<w:hyperlink\b/u);
     assert.ok(zipEntry(roundTrip, 'word/_rels/document.xml.rels').includes('https://example.test/linked'));
     assertProtectedParts(roundTrip, source);
-    assert.equal((await selectLinkedWords('basic-link-reopened')).ok, true);
+    await selectLinkedWords('basic-link-reopened');
     await page.locator('#basic-link-reopened [part="link-trigger"]').click();
     await page.locator('#basic-link-reopened [part="link-remove"]').click();
     const unlinked = await saveEditor(page, 'basic-link-reopened');
