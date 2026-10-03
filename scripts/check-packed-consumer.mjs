@@ -138,17 +138,15 @@ const optionalPeerFamilyTags = componentInventory.components
 // tags. Imperative helpers register the exact elements they need only when the helper is invoked.
 const rootHelperRegisteredTags = [];
 
-// Packed core/all.js on bd8e07507bdc1b083d4d34b4ead25f5008e42333 measured 4,860,094 raw
-// bytes across all 15 emitted files, with optional peers externalized (zero eager/bundled peers).
-// The normal @aceshooting/lyra-ui@25.4.0 tarball SHA-256 was
-// d0e670d51914d82fdc054a89e7c4b29331840a6331fc06b4de3d08ddb3a8e1f4.
-// Reviewed additions since the v24 baseline include synchronized categorical charts and native
-// overlay/layout fixes. Retain the existing 16,000-byte regression headroom (less than 0.5%);
-// this adjusts only the failing core entry, with no change to peer exclusions or measurement.
-// The prior 4,834,973-byte baseline and allowance chronology are preserved at:
-// https://github.com/aceshooting/lyra-ui/blob/a3d7f307e9486e622c6d81bc9969932ffefdce82/scripts/check-packed-consumer.mjs#L140-L394
+// Packed core/all.js measured 4,897,862 raw bytes and 1,179,387 gzip bytes across
+// all 15 emitted files after adding country, currency, time-zone, and unit pickers and shared
+// selection fixes. The all.js registration contract covers all 292 expected tags.
+// Retain the existing 16,000-byte regression headroom (less than 0.5%); this adjusts only
+// the core raw entry, without changing peer exclusions, other profiles, or measurement.
+// The prior 4,860,094-byte reviewed baseline and allowance chronology are preserved at:
+// https://github.com/aceshooting/lyra-ui/blob/0d81d0fa219a264212e3b97c2fd325424c7c4a66/scripts/check-packed-consumer.mjs#L141-L156
 const coreRawBudget = {
-  reviewedV254MeasurementBytes: 4_860_094,
+  reviewedCoreMeasurementBytes: 4_897_862,
   selectedRegressionHeadroomBytes: 16_000,
 };
 
@@ -178,7 +176,7 @@ const bundleEntries = {
     // Measures the entire non-optional registration graph from `all.js`; the bare package root
     // has its separate tree-shaking canary below. The reviewed raw sum includes every emitted file.
     maxRawBytes:
-      coreRawBudget.reviewedV254MeasurementBytes +
+      coreRawBudget.reviewedCoreMeasurementBytes +
       coreRawBudget.selectedRegressionHeadroomBytes,
   },
   // The other half of the registration split, and the reason the `core` budget above could move to

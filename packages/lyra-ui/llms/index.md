@@ -63,10 +63,10 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-locale-picker` · lr-locale-picker.js · `stable` since `6.0.0` — a closed-list locale switcher over the library's own locale registry.
 - `lr-toggle` · lr-toggle.js · `experimental` since `21.0.0` — a two-state button that owns its `pressed` state.
 - `lr-toggle-group` · lr-toggle-group.js · `experimental` since `21.0.0` — a set of `<lr-toggle>` children behind one tab stop.
-- `lr-currency-picker` · lr-currency-picker.js · `experimental` since `unreleased` — a form-associated currency-code selector.
-- `lr-country-picker` · lr-country-picker.js · `experimental` since `unreleased` — a form-associated country and territory selector.
-- `lr-time-zone-picker` · lr-time-zone-picker.js · `experimental` since `unreleased` — a form-associated time-zone identifier selector.
-- `lr-unit-picker` · lr-unit-picker.js · `experimental` since `unreleased` — a form-associated measurement-unit identifier selector.
+- `lr-currency-picker` · lr-currency-picker.js · `experimental` since `25.5.0` — a form-associated currency-code selector.
+- `lr-country-picker` · lr-country-picker.js · `experimental` since `25.5.0` — a form-associated country and territory selector.
+- `lr-time-zone-picker` · lr-time-zone-picker.js · `experimental` since `25.5.0` — a form-associated time-zone identifier selector.
+- `lr-unit-picker` · lr-unit-picker.js · `experimental` since `25.5.0` — a form-associated measurement-unit identifier selector.
 
 ## Data display, dashboards & flow canvas — `components/data/` (26)
 

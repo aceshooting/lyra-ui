@@ -322,6 +322,11 @@ for the same value) shows the `loadingText` placeholder instead, so a value seed
 catalogue has ever answered never flashes an unexplained, unbadged machine key. Once the fetch
 settles — success or failure — the raw value returns, badged if it still matches nothing.
 
+With local options and no loading state, before the browser first reads the option slot,
+including during SSR, a committed value renders as its raw code without an unavailable badge,
+synthetic unknown option or custom unknown label. Once the slot has been observed, even when
+empty, ordinary matched/unmatched presentation applies.
+
 **Methods:** `focus(options?)`, `blur()`, `select()`, `setSelectionRange()`, and `setRangeText()`
 forward to the internal input. `setRangeText()` synchronizes the filter query and visible options.
 `show(): Promise<void>` and `hide(): Promise<void>` settle after `lr-after-show` and

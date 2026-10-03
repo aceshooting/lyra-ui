@@ -311,7 +311,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-tree"></a>`lr-tree` | data | `import '@aceshooting/lyra-ui/components/lr-tree.js';` | none | `lr-empty`, `lr-live-region`, `lr-tree-item` | none | 48 KiB |
 | <a id="lr-tree-item"></a>`lr-tree-item` | data | `import '@aceshooting/lyra-ui/components/lr-tree-item.js';` | none | none | none | 36.9 KiB |
 | <a id="lr-typing-indicator"></a>`lr-typing-indicator` | conversation | `import '@aceshooting/lyra-ui/components/lr-typing-indicator.js';` | none | none | none | 20.4 KiB |
-| <a id="lr-unit-picker"></a>`lr-unit-picker` | forms | `import '@aceshooting/lyra-ui/components/lr-unit-picker.js';` | none | `lr-combobox`, `lr-option`, `lr-select` | `lr-empty` | 95.5 KiB |
+| <a id="lr-unit-picker"></a>`lr-unit-picker` | forms | `import '@aceshooting/lyra-ui/components/lr-unit-picker.js';` | none | `lr-combobox`, `lr-option`, `lr-select` | `lr-empty` | 95.6 KiB |
 | <a id="lr-usage-badge"></a>`lr-usage-badge` | conversation | `import '@aceshooting/lyra-ui/components/lr-usage-badge.js';` | none | none | none | 42.8 KiB |
 | <a id="lr-video"></a>`lr-video` | media | `import '@aceshooting/lyra-ui/components/lr-video.js';` | `dompurify` | `lr-icon` | none | 39 KiB |
 | <a id="lr-video-playlist"></a>`lr-video-playlist` | media | `import '@aceshooting/lyra-ui/components/lr-video-playlist.js';` | `dompurify` | `lr-icon`, `lr-video` | none | 46.1 KiB |

@@ -5,7 +5,7 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-unit-picker.js';` (stable tag alias; registers the tag)
 - **Class** `LyraUnitPicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/unit-picker/unit-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
-- **Status** `experimental` since `unreleased` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `experimental` since `25.5.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
 - **Deprecations** none
 - **Optional peers** none
@@ -18,7 +18,8 @@
 
 A form-associated measurement-unit selector. Import
 `@aceshooting/lyra-ui/components/lr-unit-picker.js`. It follows the
-[shared field contract](#lr-country-picker), with `.units` accepting
+[shared field contract](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/components/lr-country-picker.md),
+with `.units` accepting
 `LyraUnitCatalog = readonly string[] | readonly LyraUnitEntry[]`.
 The default catalog contains the 45 standard ECMA-402 simple units. `value=''` selects nothing;
 identifiers are trimmed and case-sensitive, limited to 256 characters. Caller catalogs may include
@@ -26,14 +27,16 @@ custom or compound units. `Intl.NumberFormat` resolves localized singular names 
 unsupported identifiers fall back to their code. Literal `label` and `symbol` overrides, including
 empty strings, take precedence. `searchable` matches identifiers, localized/literal names and
 symbols. Selection edits no amount and performs no unit conversion. Catalog types and name
-resolution are documented [below](#country-time-zone-and-unit-catalog-helpers).
+resolution are documented in the
+[catalog helper reference](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md#country-time-zone-and-unit-catalog-helpers).
 
 **Field API:** `label`, `hint`, `errorText` (`error-text`), `placeholder`, `accessibleLabel`
 (`aria-label`), `name`, `form`, `value`, `defaultValue`, `required`, `disabled`, `customError`
 (`custom-error`), `size`, `clearable`, `searchable`, `topLayer` (`top-layer`),
 `positioningStrategy` (`positioning-strategy`), `autocomplete`, `inputMode` (`inputmode`),
 `enterKeyHint` (`enterkeyhint`), `spellcheck`, `autocapitalize`, `autocorrect`, and readonly `input`.
-Defaults and form/editing methods follow the [shared contract](#lr-country-picker), including
+Defaults and form/editing methods follow the
+[shared contract](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/components/lr-country-picker.md), including
 `getForm()`, `checkValidity()`, `reportValidity()`, `setCustomValidity(message)` and
 `resetValidity()` for the owning form and consumer validation messages.
 

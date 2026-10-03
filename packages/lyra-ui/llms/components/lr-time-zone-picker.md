@@ -5,7 +5,7 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-time-zone-picker.js';` (stable tag alias; registers the tag)
 - **Class** `LyraTimeZonePicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/time-zone-picker/time-zone-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
-- **Status** `experimental` since `unreleased` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `experimental` since `25.5.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
 - **Deprecations** none
 - **Optional peers** none
@@ -18,7 +18,8 @@
 
 A form-associated identifier selector. Import
 `@aceshooting/lyra-ui/components/lr-time-zone-picker.js`. It follows the
-[shared field contract](#lr-country-picker), with `.timeZones` accepting
+[shared field contract](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/components/lr-country-picker.md),
+with `.timeZones` accepting
 `LyraTimeZoneCatalog = readonly string[] | readonly LyraTimeZoneEntry[]`.
 Default options are `UTC` followed by the runtime's supported primary IANA identifiers, or only
 `UTC` when that catalog API is unavailable. Supply the same explicit catalog on server and client
@@ -28,15 +29,16 @@ Identifiers are trimmed and case-sensitive, limited to 256 characters, and never
 Caller catalogs can retain aliases or custom identifiers. Default labels replace underscores
 with spaces; `label` overrides provide other display names, and `searchable` matches both.
 Selection does not change the application's time zone or calculate offsets, clocks or daylight
-saving transitions. Catalog types and `getTimeZoneCodes()` are documented
-[below](#country-time-zone-and-unit-catalog-helpers).
+saving transitions. Catalog types and `getTimeZoneCodes()` are documented in the
+[catalog helper reference](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md#country-time-zone-and-unit-catalog-helpers).
 
 **Field API:** `label`, `hint`, `errorText` (`error-text`), `placeholder`, `accessibleLabel`
 (`aria-label`), `name`, `form`, `value`, `defaultValue`, `required`, `disabled`, `customError`
 (`custom-error`), `size`, `clearable`, `searchable`, `topLayer` (`top-layer`),
 `positioningStrategy` (`positioning-strategy`), `autocomplete`, `inputMode` (`inputmode`),
 `enterKeyHint` (`enterkeyhint`), `spellcheck`, `autocapitalize`, `autocorrect`, and readonly `input`.
-Defaults and form/editing methods follow the [shared contract](#lr-country-picker), including
+Defaults and form/editing methods follow the
+[shared contract](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/components/lr-country-picker.md), including
 `getForm()`, `checkValidity()`, `reportValidity()`, `setCustomValidity(message)` and
 `resetValidity()` for the owning form and consumer validation messages.
 

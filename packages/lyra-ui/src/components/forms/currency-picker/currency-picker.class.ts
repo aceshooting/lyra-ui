@@ -98,7 +98,7 @@ const currencySpellcheckConverter = {
  * @event {FocusEvent} focus - Re-dispatched from the visible control as a bubbling, composed event.
  * @event {FocusEvent} blur - Re-dispatched from the visible control as a bubbling, composed event.
  * @status experimental
- * @since unreleased
+ * @since 25.5.0
  */
 export class LyraCurrencyPicker extends FormAssociated(CurrencyPickerBase, valueAdapter) {
   // GENERATED DEFAULT-STRING SLICE: START

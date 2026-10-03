@@ -17,7 +17,7 @@ const bundleBudgets = JSON.parse(
   ),
 );
 
-test('caps the packed core raw sum at the reviewed 25.4 measurement plus unchanged headroom', () => {
+test('caps the packed core raw sum at the reviewed core measurement plus unchanged headroom', () => {
   const block = checkerSource.match(/const coreRawBudget = \{(?<body>[\s\S]*?)\n\};/u);
   assert.ok(block?.groups?.body, 'coreRawBudget must remain an inspectable measured budget');
 
@@ -26,16 +26,16 @@ test('caps the packed core raw sum at the reviewed 25.4 measurement plus unchang
       .map((match) => [match.groups.name, Number(match.groups.value.replaceAll('_', ''))]),
   );
   assert.deepEqual(terms, {
-    reviewedV254MeasurementBytes: 4_860_094,
+    reviewedCoreMeasurementBytes: 4_897_862,
     selectedRegressionHeadroomBytes: 16_000,
   });
-  const ceiling = terms.reviewedV254MeasurementBytes + terms.selectedRegressionHeadroomBytes;
-  assert.equal(ceiling, 4_876_094);
-  assert.ok(terms.selectedRegressionHeadroomBytes / terms.reviewedV254MeasurementBytes < 0.005,
+  const ceiling = terms.reviewedCoreMeasurementBytes + terms.selectedRegressionHeadroomBytes;
+  assert.equal(ceiling, 4_913_862);
+  assert.ok(terms.selectedRegressionHeadroomBytes / terms.reviewedCoreMeasurementBytes < 0.005,
     'the existing raw regression headroom must remain below 0.5%');
   assert.match(
     checkerSource,
-    /maxRawBytes:\s*coreRawBudget\.reviewedV254MeasurementBytes\s*\+\s*coreRawBudget\.selectedRegressionHeadroomBytes\s*,/u,
+    /maxRawBytes:\s*coreRawBudget\.reviewedCoreMeasurementBytes\s*\+\s*coreRawBudget\.selectedRegressionHeadroomBytes\s*,/u,
     'the core bundle entry must use the exact reviewed measurement and selected headroom',
   );
   const overageGate = checkerSource.match(/if \(config\.maxRawBytes != null && output\.rawBytes > config\.maxRawBytes\) \{[\s\S]*?\n  \}/u)?.[0];

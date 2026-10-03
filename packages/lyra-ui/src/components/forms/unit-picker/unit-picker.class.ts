@@ -47,7 +47,7 @@ const defaultEntries = Object.freeze(UNIT_CODES.map((code) => Object.freeze({ co
  * @event {FocusEvent} focus - Re-dispatched from the visible control, bubbling and composed.
  * @event {FocusEvent} blur - Re-dispatched from the visible control, bubbling and composed.
  * @status experimental
- * @since unreleased
+ * @since 25.5.0
  */
 export class LyraUnitPicker extends LyraCatalogPickerBase {
   // GENERATED DEFAULT-STRING SLICE: START

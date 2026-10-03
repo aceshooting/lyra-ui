@@ -53,7 +53,7 @@ function normalizeCountry(value: unknown): string {
  * @event {FocusEvent} focus - Re-dispatched from the visible control, bubbling and composed.
  * @event {FocusEvent} blur - Re-dispatched from the visible control, bubbling and composed.
  * @status experimental
- * @since unreleased
+ * @since 25.5.0
  */
 export class LyraCountryPicker extends LyraCatalogPickerBase {
   // GENERATED DEFAULT-STRING SLICE: START

@@ -5,7 +5,7 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-country-picker.js';` (stable tag alias; registers the tag)
 - **Class** `LyraCountryPicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/country-picker/country-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
-- **Status** `experimental` since `unreleased` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `experimental` since `25.5.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
 - **Deprecations** none
 - **Optional peers** none
@@ -21,7 +21,8 @@ Import `@aceshooting/lyra-ui/components/lr-country-picker.js`. The default catal
 249-code ISO alpha-2 list. `value` defaults to `''`; valid two-letter values are trimmed and
 uppercased, and no country is inferred. `.countries` accepts
 `LyraCountryCatalog = readonly string[] | readonly LyraCountryEntry[]`; the entry and headless
-catalog helper are documented [below](#country-time-zone-and-unit-catalog-helpers).
+catalog helper are documented in the
+[catalog helper reference](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md#country-time-zone-and-unit-catalog-helpers).
 
 `flags` defaults to `true`; set `.flags = false` or `flags="false"` to hide flags in both the
 trigger and offered rows. Emoji need no optional peer, assets or network request. Platform fonts
@@ -36,6 +37,10 @@ normalized identifier wins, and caller order is preserved. `group` adds headings
 rows, `disabled` prevents selection, and literal `label` overrides include explicit empty strings.
 A nonempty unknown, malformed or disabled selected value stays visible and invalid until cleared
 or replaced. It is never silently replaced or added as a selectable row.
+
+**SSR:** All three render declarative shadow DOM with catalog rows and the committed identifier
+without browser globals. Country flag emoji need no asset loader. Interactive selection requires
+hydration; use the same explicit catalog and locale on server and client for consistent options.
 
 `label=''`, `hint=''`, `errorText=''` (`error-text`) and the `label`, `hint`, `error` slots supply
 field chrome. `accessibleLabel=null` (attribute `aria-label`) overrides the actual control's name;

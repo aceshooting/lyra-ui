@@ -48,7 +48,7 @@ export interface LyraTimeZonePickerEventMap extends LyraCatalogPickerEventMap {}
  * @event {FocusEvent} focus - Re-dispatched from the visible control, bubbling and composed.
  * @event {FocusEvent} blur - Re-dispatched from the visible control, bubbling and composed.
  * @status experimental
- * @since unreleased
+ * @since 25.5.0
  */
 export class LyraTimeZonePicker extends LyraCatalogPickerBase {
   // GENERATED DEFAULT-STRING SLICE: START
