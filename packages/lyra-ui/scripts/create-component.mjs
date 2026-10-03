@@ -368,6 +368,8 @@ function commandStep(id, args, env) {
 function verificationSteps(testPath) {
   return [
     commandStep('manifest', ['run', 'manifest']),
+    commandStep('tag-aliases', ['run', 'tag-aliases']),
+    commandStep('manifest', ['run', 'manifest']),
     commandStep('component-metadata', ['run', 'component-metadata']),
     commandStep('registrations', ['run', 'registrations']),
     commandStep('manifest', ['run', 'manifest']),

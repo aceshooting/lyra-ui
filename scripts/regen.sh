@@ -86,10 +86,17 @@ pnpm manifest
 step "component inventory from digest-pinned public upstream manifests"
 pnpm --filter @aceshooting/lyra-ui component-inventory
 
+# Registration aliases are source modules included by the manifest analyzer.
+step "tag aliases for the manifest module graph"
+pnpm --filter @aceshooting/lyra-ui tag-aliases
+
+# Metadata predicts the annotated manifest hash from this complete module set.
+step "manifest including registration aliases"
+pnpm manifest
+
 step "component release metadata and source annotations"
 pnpm --filter @aceshooting/lyra-ui component-metadata
 
-# Registration aliases are source modules included by the manifest analyzer.
 step "registration entries, root allowlist, tag aliases, and sideEffects"
 pnpm registrations
 

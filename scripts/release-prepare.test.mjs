@@ -37,6 +37,8 @@ test('release preparation runs every per-package generator in dependency order',
     'package-metadata',
     'manifest',
     'component-inventory',
+    'tag-aliases',
+    'manifest',
     'component-metadata:history',
     'registrations',
     'manifest',
@@ -72,7 +74,9 @@ test('release preparation refreshes immutable release history between manifest g
   const lines = render(releasePreparationSteps(['@aceshooting/lyra-ui']));
   const manifest = indexAfter(lines, 'pnpm --filter @aceshooting/lyra-ui --if-present run manifest');
   const inventory = indexAfter(lines, 'pnpm --filter @aceshooting/lyra-ui --if-present run component-inventory', manifest);
-  const history = indexAfter(lines, 'pnpm --filter @aceshooting/lyra-ui --if-present run component-metadata:history', inventory);
+  const aliases = indexAfter(lines, 'pnpm --filter @aceshooting/lyra-ui --if-present run tag-aliases', inventory);
+  const aliasManifest = indexAfter(lines, 'pnpm --filter @aceshooting/lyra-ui --if-present run manifest', aliases);
+  const history = indexAfter(lines, 'pnpm --filter @aceshooting/lyra-ui --if-present run component-metadata:history', aliasManifest);
   const registrations = indexAfter(lines, 'pnpm --filter @aceshooting/lyra-ui --if-present run registrations', history);
   const refreshedManifest = indexAfter(lines, 'pnpm --filter @aceshooting/lyra-ui --if-present run manifest', registrations);
   indexAfter(lines, 'pnpm --filter @aceshooting/lyra-ui --if-present run component-inventory', refreshedManifest);

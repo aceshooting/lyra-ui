@@ -657,6 +657,8 @@ function assertCanonicalRegenOrder(source) {
     'pnpm --filter @aceshooting/lyra-ui default-string-slices',
     'pnpm manifest',
     'pnpm --filter @aceshooting/lyra-ui component-inventory',
+    'pnpm --filter @aceshooting/lyra-ui tag-aliases',
+    'pnpm manifest',
     'pnpm --filter @aceshooting/lyra-ui component-metadata',
     'pnpm registrations',
     'pnpm manifest',
@@ -683,7 +685,7 @@ function assertCanonicalRegenOrder(source) {
     cursor = next;
   }
   const expectedCounts = new Map([
-    ['pnpm manifest', 2],
+    ['pnpm manifest', 3],
     ['pnpm --filter @aceshooting/lyra-ui component-inventory', 2],
   ]);
   for (const command of expectedCommands) {

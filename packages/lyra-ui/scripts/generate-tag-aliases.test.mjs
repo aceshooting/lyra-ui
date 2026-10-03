@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { create, ts } from '@custom-elements-manifest/analyzer';
 import { PACKAGE_GENERATORS } from '../../../scripts/release-prepare.mjs';
 import { compactManifest } from './manifest-compact.mjs';
+import { applyComponentMetadataToManifest, currentHistoryRecord, sha256 } from './component-metadata.mjs';
+import { nextWriteMetadata } from './generate-component-metadata.mjs';
 
 import {
   deriveTagAliases,
@@ -108,7 +110,7 @@ const regenerationSequences = [
 ];
 
 for (const [label, steps] of regenerationSequences) {
-  test(`${label} analyzes added and removed tag aliases before publishing its final manifest`, (context) => {
+  test(`${label} records the final manifest hash with added and removed tag aliases`, (context) => {
     const packageDir = mkdtempSync(path.join(tmpdir(), 'lyra-manifest-alias-order-'));
     context.after(() => rmSync(packageDir, { recursive: true, force: true }));
     const componentDir = path.join(packageDir, 'src/components');
@@ -128,27 +130,68 @@ for (const [label, steps] of regenerationSequences) {
     writeFileSync(inventoryFile, JSON.stringify(previousInventory));
     generateTagAliases({ packageDir });
 
-    const analyze = () => compactManifest(create({
-      modules: readdirSync(componentDir, { recursive: true })
-        .filter(file => file.endsWith('.ts')).sort()
-        .map(file => ts.createSourceFile(
-          `src/components/${file.replaceAll(path.sep, '/')}`,
-          readFileSync(path.join(componentDir, file), 'utf8'), ts.ScriptTarget.ES2015, true,
-        )),
-    }));
+    const version = '1.0.0';
+    const renderManifest = manifest => `${JSON.stringify(manifest)}\n`;
+    const emptyManifest = { schemaVersion: '1.0.0', modules: [] };
+    const taggedCurrent = {
+      ...currentHistoryRecord(version, renderManifest(emptyManifest), emptyManifest),
+      tag: 'lyra-ui@1.0.0', manifestPresent: true,
+    };
+    let metadata = {
+      profiles: { fixture: {
+        status: 'experimental', rationale: 'An explicit fixture component profile.',
+        graduationCriteria: 'Verify the generated public contract before release.',
+      } },
+      assignments: { fixture: ['lr-widget'] }, deprecations: [], exportDeprecations: [],
+      history: { releases: [], taggedCurrent, current: currentHistoryRecord(version, renderManifest(emptyManifest), emptyManifest) },
+    };
+    const immutableHistory = structuredClone({ releases: metadata.history.releases, taggedCurrent });
+    const analyze = () => {
+      const manifest = create({
+        modules: readdirSync(componentDir, { recursive: true })
+          .filter(file => file.endsWith('.ts')).sort()
+          .map(file => ts.createSourceFile(
+            `src/components/${file.replaceAll(path.sep, '/')}`,
+            readFileSync(path.join(componentDir, file), 'utf8'), ts.ScriptTarget.ES2015, true,
+          )),
+      });
+      applyComponentMetadataToManifest(metadata, manifest, { packageVersion: version });
+      return compactManifest(manifest);
+    };
     let writtenManifest;
     let manifestWrites = 0;
+    let metadataWrites = 0;
     for (const step of steps) {
       if (step === 'component-inventory') writeFileSync(inventoryFile, JSON.stringify(currentInventory));
-      if (step === 'registrations' || step === 'tag-aliases') generateTagAliases({ packageDir });
+      if (step === 'tag-aliases') generateTagAliases({ packageDir });
+      if (step === 'registrations') {
+        assert.equal(metadataWrites, 1, 'package exports consume the refreshed metadata aggregate');
+        assert.deepEqual(generateTagAliases({ packageDir }).stale, [], 'full registration generation sees already-current aliases');
+      }
+      if (step === 'component-metadata' || step === 'component-metadata:history') {
+        metadata = nextWriteMetadata(metadata, {
+          releases: metadata.history.releases, taggedCurrent: metadata.history.taggedCurrent,
+          current: currentHistoryRecord(version, renderManifest(writtenManifest), writtenManifest),
+          rolloverCurrent: false, packageVersion: version,
+        });
+        const projected = structuredClone(writtenManifest);
+        applyComponentMetadataToManifest(metadata, projected, { packageVersion: version });
+        const predicted = compactManifest(projected);
+        metadata.history.current = currentHistoryRecord(version, renderManifest(predicted), predicted);
+        metadataWrites += 1;
+      }
       if (step === 'manifest') {
         writtenManifest = analyze();
         manifestWrites += 1;
       }
     }
 
-    assert.ok(manifestWrites >= 2, 'bootstrap analysis precedes final analysis');
+    assert.equal(manifestWrites, 3, 'bootstrap, alias-inclusive, and final annotated analysis each run once');
+    assert.equal(metadataWrites, 1, 'metadata records the complete input without repeated reconciliation');
     assert.deepEqual(writtenManifest, analyze(), 'a check after regeneration must see exactly the final written manifest');
+    assert.equal(metadata.history.current.manifestSha256, sha256(renderManifest(writtenManifest)),
+      'metadata predicts the exact final bytes, including the trailing newline and alias modules');
+    assert.deepEqual({ releases: metadata.history.releases, taggedCurrent: metadata.history.taggedCurrent }, immutableHistory);
     assert.deepEqual(generateTagAliases({ packageDir, check: true }).stale, []);
     const modules = new Map(writtenManifest.modules.map(module => [module.path, module]));
     assert.equal(modules.has('src/components/lr-removed.ts'), false, 'removed generated aliases leave the manifest');

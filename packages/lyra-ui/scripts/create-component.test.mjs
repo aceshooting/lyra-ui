@@ -275,6 +275,8 @@ test('creates a complete populated component scaffold and runs focused three-eng
     steps.map((step) => step.id),
     [
       'manifest',
+      'tag-aliases',
+      'manifest',
       'component-metadata',
       'registrations',
       'manifest',
@@ -359,10 +361,10 @@ test('scaffold refreshes its manifest after generating the new tag alias', async
     packageDir, family: 'utility', name: 'status-panel',
     runStep(step) {
       const result = inner(step);
-      if (step.id === 'registrations') generateTagAliases({ packageDir });
+      if (step.id === 'tag-aliases' || step.id === 'registrations') generateTagAliases({ packageDir });
       if (step.id === 'manifest' && existsSync(aliasFile)) manifestAfterAliases = true;
-      if (step.id === 'component-inventory') {
-        assert.equal(manifestAfterAliases, true, 'inventory verification consumes the manifest including the new alias');
+      if (step.id === 'component-metadata' || step.id === 'component-inventory') {
+        assert.equal(manifestAfterAliases, true, 'metadata and inventory consume the manifest including the new alias');
       }
       return result;
     },
@@ -556,10 +558,12 @@ test('scaffold enrolls its family source before manifest without writing the gen
   const aggregatePath = join(packageDir, 'scripts/fixtures/component-metadata.json');
   const original = readFileSync(aggregatePath, 'utf8');
   const inner = successfulRunner(packageDir, []);
+  let firstManifest = true;
   await scaffoldComponent({
     packageDir, family: 'utility', name: 'status-panel',
     runStep(step) {
-      if (step.id === 'manifest') {
+      if (step.id === 'manifest' && firstManifest) {
+        firstManifest = false;
         const sources = readComponentMetadataSources(packageDir);
         assert.deepEqual(assembleComponentMetadata(sources).assignments['new-component-experimental'], ['lr-status-panel']);
         assert.equal(readFileSync(aggregatePath, 'utf8'), original);
@@ -585,10 +589,10 @@ test('a late scaffold failure restores family and history writes made by metadat
         commitComponentMetadataWritePlan(plan);
         return { metadataWrites: [...result.metadataWrites, ...plan.entries.filter(entry => entry.original !== entry.expected)] };
       }
-      if (step.id === 'registrations') throw new Error('late registration failure');
+      if (step.id === 'component-inventory') throw new Error('late inventory failure');
       return result;
     },
-  }), /late registration failure/);
+  }), /late inventory failure/);
   for (const { file, original } of before) assert.equal(readFileSync(file, 'utf8'), original);
 });
 
@@ -620,7 +624,7 @@ test('a late independent edit to a written family survives scaffold rollback wit
     packageDir, family: 'utility', name: 'status-panel',
     runStep(step) {
       const result = inner(step);
-      if (step.id === 'registrations') {
+      if (step.id === 'component-inventory') {
         independent = `${readFileSync(file, 'utf8')}\n`;
         writeFileSync(file, independent);
         throw new Error('late independent edit');
@@ -636,11 +640,15 @@ test('rollback restores the generator preimage including an earlier independent 
   const file = join(packageDir, 'scripts/fixtures/component-metadata/history.json');
   const independent = JSON.stringify({ history: { note: 'independent history context' } });
   const inner = successfulRunner(packageDir, []);
+  let firstManifest = true;
   await assert.rejects(scaffoldComponent({
     packageDir, family: 'utility', name: 'status-panel',
     runStep(step) {
       const result = inner(step);
-      if (step.id === 'manifest') writeFileSync(file, independent);
+      if (step.id === 'manifest' && firstManifest) {
+        firstManifest = false;
+        writeFileSync(file, independent);
+      }
       if (step.id === 'component-metadata') {
         const sources = readComponentMetadataSources(packageDir);
         const metadata = assembleComponentMetadata(sources);
@@ -649,10 +657,10 @@ test('rollback restores the generator preimage including an earlier independent 
         commitComponentMetadataWritePlan(plan);
         return { metadataWrites: [...result.metadataWrites, ...plan.entries.filter(entry => entry.original !== entry.expected)] };
       }
-      if (step.id === 'registrations') throw new Error('registration failed');
+      if (step.id === 'component-inventory') throw new Error('inventory failed');
       return result;
     },
-  }), /registration failed/);
+  }), /inventory failed/);
   assert.equal(readFileSync(file, 'utf8'), independent);
 });
 
@@ -661,15 +669,19 @@ test('rollback preserves a conflicting family write chain across generator trans
   const file = join(packageDir, 'scripts/fixtures/component-metadata/families/utility.json');
   const inner = successfulRunner(packageDir, []);
   let afterGenerator;
+  let firstManifest = true;
   await assert.rejects(scaffoldComponent({
     packageDir, family: 'utility', name: 'status-panel',
     runStep(step) {
       const result = inner(step);
-      if (step.id === 'manifest') writeFileSync(file, `${readFileSync(file, 'utf8')}\n`);
+      if (step.id === 'manifest' && firstManifest) {
+        firstManifest = false;
+        writeFileSync(file, `${readFileSync(file, 'utf8')}\n`);
+      }
       if (step.id === 'component-metadata') afterGenerator = readFileSync(file, 'utf8');
-      if (step.id === 'registrations') throw new Error('registration failed');
+      if (step.id === 'component-inventory') throw new Error('inventory failed');
       return result;
     },
-  }), /registration failed; rollback preserved concurrent changes/);
+  }), /inventory failed; rollback preserved concurrent changes/);
   assert.equal(readFileSync(file, 'utf8'), afterGenerator);
 });
