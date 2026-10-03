@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { DocxEditorInstance } from '@docx-editor.dev/core';
 import type { OoxmlElement, OoxmlNode, OoxmlPart } from '@docx-editor.dev/core/store';
-import { qualifyTableCommand, tableAvailability, tableContext, TABLE_READ_LIMITS } from './eigenpal-tables.js';
+import { qualifyTableCommand, tableAvailability, tableContext } from './eigenpal-tables.js';
 import type { DocxTableAction } from './types.js';
 
 const WORD = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
@@ -30,7 +30,7 @@ function fixture(rows = 2, columns = 2) {
     parentNodeOf: (_part: OoxmlPart, target: string) => parents.get(target) ?? null };
   const rebuild = () => { nodes.clear(); parents.clear(); index(root); };
   rebuild();
-  const qualify = (action: DocxTableAction = { type: 'delete-table' }, limits = TABLE_READ_LIMITS) => { rebuild(); return qualifyTableCommand(editor, readers, action, limits); };
+  const qualify = (action: DocxTableAction = { type: 'delete-table' }, limits?: Parameters<typeof qualifyTableCommand>[3]) => { rebuild(); return qualifyTableCommand(editor, readers, action, limits); };
   return { f, el, grid, table, root, body, outside, rows: rowNodes, editor, part, readers, qualify, rebuild };
 }
 const children = (node: OoxmlNode) => (node as unknown as { children: OoxmlNode[] }).children;
@@ -120,7 +120,7 @@ test('merges anywhere, nested tables, wrappers and ambiguous structural records 
 
 test('canonical reads refuse unsupported identity, scopes and bounded resource excess', () => {
   for (const [limit, value] of [['parts', 0], ['nodes', 1], ['depth', 2], ['cells', 1], ['attributes', -1]] as const) {
-    const h = fixture(); assert.deepEqual(h.qualify(undefined, { ...TABLE_READ_LIMITS, [limit]: value }), { ok: false, code: 'resource-limit' });
+    const h = fixture(); assert.deepEqual(h.qualify(undefined, { [limit]: value }), { ok: false, code: 'resource-limit' });
   }
   for (const mode of ['scope', 'rectangle', 'range', 'missing', 'surface', 'part', 'root']) {
     const h = fixture();

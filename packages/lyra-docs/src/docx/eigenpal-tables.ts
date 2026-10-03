@@ -5,7 +5,7 @@ import { DOCX_LIMITS } from './commands.js';
 
 export type TableReaders = Pick<typeof import('@docx-editor.dev/core/store'), 'findNode' | 'parentNodeOf'>;
 const WORD = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
-export const TABLE_READ_LIMITS = Object.freeze({ parts: 128, nodes: 20_000, depth: 64, attributes: 64, cells: 4_000 });
+const TABLE_READ_LIMITS = Object.freeze({ parts: 128, nodes: 20_000, depth: 64, attributes: 64, cells: 4_000 });
 const word = (node: OoxmlNode, name: string): node is OoxmlElement =>
   node.kind !== 'textValue' && node.namespaceUri === WORD && node.localName === name;
 const refusal = (code: 'unsupported' | 'resource-limit' | 'stale-selection'): DocxResult<never> => ({ ok: false, code });
@@ -35,7 +35,8 @@ export function tableAvailability(editor: DocxEditorInstance, action: DocxTableA
 
 /** Explicit-operation guard. The upstream ancestry index can do a cold whole-part build. */
 export function qualifyTableCommand(editor: DocxEditorInstance, readers: TableReaders, action: DocxTableAction,
-  limits = TABLE_READ_LIMITS): DocxResult<{ command: EditorCommand; valid(): boolean }> {
+  limits: Partial<typeof TABLE_READ_LIMITS> = {}): DocxResult<{ command: EditorCommand; valid(): boolean }> {
+  const readLimits = { ...TABLE_READ_LIMITS, ...limits };
   const surface = editor.surface;
   if (!surface) return refusal('unsupported');
   const session = surface.session, generation = editor.mountGeneration, revision = session.packageRevision();
@@ -52,9 +53,9 @@ export function qualifyTableCommand(editor: DocxEditorInstance, readers: TableRe
       state.selection.head.paragraphId === paragraphId && state.selection.anchor.offset === offset && state.selection.head.offset === offset;
   };
   const pkg = session.currentPackage(), part = session.part();
-  if (pkg.parts.size > limits.parts) return refusal('resource-limit');
+  if (pkg.parts.size > readLimits.parts) return refusal('resource-limit');
   if (pkg.parts.get(pkg.mainDocumentPart) !== part || !word(part.root, 'document')) return refusal('unsupported');
-  if (part.root.children.length > limits.nodes) return refusal('resource-limit');
+  if (part.root.children.length > readLimits.nodes) return refusal('resource-limit');
   let body: OoxmlElement | null = null;
   for (const child of part.root.children) {
     if (!word(child, 'body') || body) return refusal('unsupported');
@@ -64,7 +65,7 @@ export function qualifyTableCommand(editor: DocxEditorInstance, readers: TableRe
   let cursor = readers.findNode(part, paragraphId);
   if (!cursor || !word(cursor, 'p')) return refusal('unsupported');
   while (cursor) {
-    if (ancestors.length >= limits.depth) return refusal('resource-limit');
+    if (ancestors.length >= readLimits.depth) return refusal('resource-limit');
     ancestors.push(cursor);
     cursor = readers.parentNodeOf(part, cursor.id);
   }
@@ -83,14 +84,14 @@ export function qualifyTableCommand(editor: DocxEditorInstance, readers: TableRe
   const forbidden = new Set(['gridSpan', 'vMerge', 'hMerge', 'gridBefore', 'gridAfter', 'sdt', 'ins', 'del', 'moveFrom', 'moveTo', 'tblPrChange', 'trPrChange', 'tcPrChange']);
   while (stack.length) {
     const frame = stack.pop()!, node = frame.node;
-    if (++nodes > limits.nodes || frame.depth > limits.depth) return refusal('resource-limit');
+    if (++nodes > readLimits.nodes || frame.depth > readLimits.depth) return refusal('resource-limit');
     if (ids.has(node.id)) return refusal('unsupported');
     ids.add(node.id);
     if (node.kind === 'textValue') {
       if (frame.parent === 'tbl' || frame.parent === 'tr' || frame.parent === 'tc' || frame.parent === 'tblGrid') return refusal('unsupported');
       continue;
     }
-    if (node.attributes.length > limits.attributes || node.children.length + stack.length > limits.nodes - nodes) return refusal('resource-limit');
+    if (node.attributes.length > readLimits.attributes || node.children.length + stack.length > readLimits.nodes - nodes) return refusal('resource-limit');
     if (forbidden.has(node.localName)) return refusal('unsupported');
     if (['tbl', 'tr', 'tc', 'tblGrid', 'gridCol'].includes(node.localName) && node.namespaceUri !== WORD) return refusal('unsupported');
     const name = node.namespaceUri === WORD ? node.localName : '';
@@ -115,7 +116,7 @@ export function qualifyTableCommand(editor: DocxEditorInstance, readers: TableRe
       if (node === selectedRow) rowIndex = frame.row;
     }
     if (name === 'tc') {
-      if (++cells > limits.cells) return refusal('resource-limit');
+      if (++cells > readLimits.cells) return refusal('resource-limit');
       const index = rowSizes[frame.row]!;
       rowSizes[frame.row] = index + 1;
       if (node === selectedCell) columnIndex = index;
