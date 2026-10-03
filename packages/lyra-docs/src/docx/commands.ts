@@ -1,10 +1,11 @@
-import type { DocxAction, DocxResult } from './types.js';
+import type { DocxAction, DocxResult, DocxTableAction } from './types.js';
 import { isSafeDocxHyperlink } from './hyperlink-policy.js';
 import { isDocxXmlText } from './xml-text.js';
 
 export const DOCX_LIMITS = Object.freeze({
   styleId: 128, styleLabel: 128, styles: 256, fonts: 128, fontFamily: 64,
   href: 2048, text: 4096, query: 256, matches: 100, context: 48,
+  tableRows: 20, tableColumns: 20, tableCells: 400,
 });
 const invalid = Object.freeze({ ok: false, code: 'invalid-option' } as const);
 const limited = Object.freeze({ ok: false, code: 'resource-limit' } as const);
@@ -49,6 +50,24 @@ export function normalizeDocxAction(value: unknown): DocxResult<DocxAction> {
     if (!action || typeof action.type !== 'string') return invalid;
     const type = action.type;
     switch (type) {
+      case 'insert-table': {
+        if (!keys(action, ['type', 'rows', 'columns']) || typeof action.rows !== 'number' ||
+          typeof action.columns !== 'number' || !Number.isSafeInteger(action.rows) ||
+          !Number.isSafeInteger(action.columns) || action.rows < 1 || action.columns < 1) return invalid;
+        if (action.rows > DOCX_LIMITS.tableRows || action.columns > DOCX_LIMITS.tableColumns ||
+          action.rows * action.columns > DOCX_LIMITS.tableCells) return limited;
+        return success(Object.freeze({ type, rows: action.rows, columns: action.columns }));
+      }
+      case 'insert-table-row':
+        if (!keys(action, ['type', 'where']) || (action.where !== 'above' && action.where !== 'below')) return invalid;
+        return success(Object.freeze({ type, where: action.where }));
+      case 'insert-table-column':
+        if (!keys(action, ['type', 'where']) || (action.where !== 'left' && action.where !== 'right')) return invalid;
+        return success(Object.freeze({ type, where: action.where }));
+      case 'delete-table-row':
+      case 'delete-table-column':
+      case 'delete-table':
+        return keys(action, ['type']) ? success(Object.freeze({ type })) : invalid;
       case 'paragraph-style': {
         if (!keys(action, ['type', 'styleId'])) return invalid;
         const id = text(action.styleId, DOCX_LIMITS.styleId);
@@ -115,4 +134,10 @@ export function normalizeDocxSearch(query: unknown, options?: unknown): DocxResu
 /** Empty replacement is deliberate deletion; whitespace and authored Unicode are preserved. */
 export function normalizeDocxReplacement(value: unknown): DocxResult<string> {
   return authoredText(value);
+}
+
+export function isDocxTableAction(action: DocxAction): action is DocxTableAction {
+  return typeof action !== 'string' && (action.type === 'insert-table' || action.type === 'insert-table-row' ||
+    action.type === 'insert-table-column' || action.type === 'delete-table-row' ||
+    action.type === 'delete-table-column' || action.type === 'delete-table');
 }

@@ -1,4 +1,6 @@
 import type { DocxEditorInstance, SelectionPin } from '@docx-editor.dev/core';
+import { isDocxTableAction, normalizeDocxAction } from './commands.js';
+import { tableAvailability, tableContext, qualifyTableCommand } from './eigenpal-tables.js';
 import { loadDocxEngine } from './engine-loader.js';
 import { createEigenpalEditing, eigenpalCommand } from './eigenpal-editing.js';
 import type { DocxEngineModule } from './engine-loader.js';
@@ -30,11 +32,30 @@ export async function openEigenpalDocument(
   let composing = false;
   let compositionVersion = 0;
   let saving = false;
+  let executingTable = false;
+  let nativeSettling = false;
+  const nativeInputEvents = new Set<Event>();
+  let nativeDispatchOverflow = false;
+  const nativeDispatching = () => {
+    for (const event of nativeInputEvents) if (event.eventPhase === Event.NONE) nativeInputEvents.delete(event);
+    return nativeDispatchOverflow || nativeInputEvents.size > 0;
+  };
+  let nativeSettlementVersion = 0;
+  let nativeSettlementTimer: ReturnType<typeof setTimeout> | undefined;
+  const clearNativeSettlement = () => {
+    nativeSettling = false;
+    nativeInputEvents.clear();
+    nativeDispatchOverflow = false;
+    nativeSettlementVersion++;
+    clearTimeout(nativeSettlementTimer);
+    nativeSettlementTimer = undefined;
+  };
   let suppressSelection = 0;
   let muteSelection = 0;
   let selectionEpoch = 0;
   let pendingState = false;
   let ready = false;
+  let inspected: ReturnType<DocxEnginePort['inspect']> | null = null;
   const listeners = new Set<(event: DocxEngineEvent) => void>();
   const releases: (() => void)[] = [];
   const pins = new Map<object, SelectionPin>();
@@ -55,6 +76,7 @@ export async function openEigenpalDocument(
     queueMicrotask(() => { if (pendingState) refreshState(); });
   };
   const editing = createEigenpalEditing(current, action => {
+    if (nativeDispatching()) return { ok: false, code: 'busy' };
     muteSelection++;
     let result: DocxResult<void>;
     try { result = action(); }
@@ -68,7 +90,7 @@ export async function openEigenpalDocument(
   }, () => {
     if (destroyed) return { ok: false, code: 'destroyed' };
     if (fault) return { ok: false, code: 'engine-failed' };
-    if (saving) return { ok: false, code: 'busy' };
+    if (saving || executingTable || nativeDispatching()) return { ok: false, code: 'busy' };
     if (composing) return { ok: false, code: 'composing' };
     if (operation.readOnly) return { ok: false, code: 'read-only' };
     if (!owned()) return { ok: false, code: 'destroyed' };
@@ -77,12 +99,14 @@ export async function openEigenpalDocument(
   const destroy = () => {
     if (destroyed) return;
     destroyed = true;
+    clearNativeSettlement();
     mount.inert = true;
     for (const release of releases.splice(0)) {
       try { release(); } catch { /* Finish releasing independent resources. */ }
     }
     listeners.clear();
     pins.clear();
+    inspected = null;
     editing.dispose();
     const previous = editor;
     editor = null;
@@ -94,7 +118,7 @@ export async function openEigenpalDocument(
     releases.push(() => mount.removeEventListener(name, listener, capture));
   };
   const blockedInput: EventListener = event => {
-    if (!saving && listeners.size > 0) return;
+    if (!saving && !executingTable && listeners.size > 0) return;
     event.preventDefault();
     event.stopImmediatePropagation();
   };
@@ -102,6 +126,25 @@ export async function openEigenpalDocument(
     'pointerdown', 'pointerup', 'pointermove', 'click', 'dblclick', 'compositionstart']) {
     listen(name, blockedInput, true);
   }
+  listen('beforeinput', event => {
+    if (destroyed) return;
+    nativeSettling = true;
+    nativeDispatching();
+    if (nativeInputEvents.size < 64) nativeInputEvents.add(event);
+    else nativeDispatchOverflow = true;
+    const version = ++nativeSettlementVersion;
+    clearTimeout(nativeSettlementTimer);
+    // Two task boundaries put release behind the core text timer even when native
+    // event dispatch performs a microtask checkpoint between listener callbacks.
+    nativeSettlementTimer = setTimeout(() => {
+      if (destroyed || version !== nativeSettlementVersion) return;
+      nativeSettlementTimer = setTimeout(() => {
+        if (destroyed || version !== nativeSettlementVersion) return;
+        clearNativeSettlement();
+        if (owned() && !destroyed) refreshState();
+      }, 0);
+    }, 0);
+  }, true);
   listen('compositionstart', () => {
     composing = true;
     compositionVersion++;
@@ -145,11 +188,21 @@ export async function openEigenpalDocument(
 
     const port: DocxEnginePort = {
       inspect() {
+        // Layout-derived public getters flush pending text. Keep the last copied
+        // context during dispatch/queued input; the owned release refreshes it.
+        if (nativeSettling && inspected) {
+          const state = current().surface?.state();
+          const selection: DocxSelection['kind'] = !state ? 'none' : state.cellSelection || inspected.selection === 'other' ? 'other' :
+            state.selection.anchor.paragraphId === state.selection.head.paragraphId &&
+            state.selection.anchor.offset === state.selection.head.offset ? 'caret' : 'text';
+          return { ...inspected, selection, composing };
+        }
         const snapshot = current().snapshot();
         if (snapshot.parseError) throw new Error('Engine failed');
         const selection: DocxSelection['kind'] = snapshot.image ? 'other' : !snapshot.selection ? 'none' :
           snapshot.selectionCollapsed ? 'caret' : 'text';
-        return { selection, composing, formatting: editing.formatting() };
+        inspected = { selection, composing, formatting: editing.formatting(), table: tableContext(current()) };
+        return inspected;
       },
       subscribe(listener) {
         listeners.add(listener);
@@ -161,9 +214,56 @@ export async function openEigenpalDocument(
         };
       },
       can(command) {
-        return editing.can(command);
+        if (isDocxTableAction(command)) return tableAvailability(current(), command, inspected?.table ?? null);
+        return nativeSettling ? { enabled: false, reason: 'busy' } : editing.can(command);
       },
-      execute(command, token) {
+      execute(command, token, validateSettled) {
+        const normalized = normalizeDocxAction(command);
+        if (!normalized.ok) return normalized;
+        command = normalized.value;
+        if (nativeDispatching()) return { ok: false, code: 'busy' };
+        if (isDocxTableAction(command)) {
+          if (saving || executingTable || nativeDispatching()) return { ok: false, code: 'busy' };
+          if (composing) return { ok: false, code: 'composing' };
+          if (operation.readOnly) return { ok: false, code: 'read-only' };
+          if (!owned() || destroyed) return { ok: false, code: 'destroyed' };
+          if (!module.tableReaders || !validateSettled) return { ok: false, code: 'unsupported' };
+          if (token && !pins.has(token)) return { ok: false, code: 'stale-selection' };
+          executingTable = true;
+          suppressSelection++;
+          try {
+            const active = current(), surface = active.surface;
+            if (!surface) return { ok: false, code: 'unsupported' };
+            // Capture listeners suspend input without inert/blur or a mode/layout change.
+            surface.flushPendingInput();
+            clearNativeSettlement();
+            refreshState();
+            const settled = validateSettled();
+            if (!settled.ok) return settled;
+            const epoch = selectionEpoch;
+            const qualified = qualifyTableCommand(active, module.tableReaders, command);
+            if (!qualified.ok) return qualified;
+            const validate = (): DocxResult<void> => {
+              if (!owned() || destroyed) return { ok: false, code: 'destroyed' };
+              if (fault) return { ok: false, code: 'engine-failed' };
+              if (composing) return { ok: false, code: 'composing' };
+              const facade = validateSettled();
+              if (!facade.ok) return facade;
+              if (editor !== active || epoch !== selectionEpoch || !qualified.value.valid() ||
+                (token && !pins.has(token))) return { ok: false, code: 'stale-selection' };
+              return { ok: true, value: undefined };
+            };
+            const before = validate();
+            if (!before.ok) return before;
+            const capable = active.can(qualified.value.command);
+            const after = validate();
+            if (!after.ok) return after;
+            if (!capable.ok) return { ok: false, code: 'unsupported' };
+            const result = active.exec(qualified.value.command);
+            if (!destroyed) refreshState();
+            return result.ok ? { ok: true, value: undefined } : { ok: false, code: 'unsupported' };
+          } finally { suppressSelection--; executingTable = false; }
+        }
         if (token && !pins.has(token)) return { ok: false, code: 'stale-selection' };
         suppressSelection++;
         try {
@@ -171,6 +271,12 @@ export async function openEigenpalDocument(
           refreshState();
           return result.ok ? { ok: true, value: undefined } : { ok: false, code: 'unsupported' };
         } finally { suppressSelection--; }
+      },
+      refreshTableLabels(labels) {
+        if (destroyed || saving || executingTable || nativeSettling || !owned()) return false;
+        const { insertRowBelow, insertColumnRight } = labels;
+        current().setTableInteractionLabel(key => key === 'table.insertRowBelow' ? insertRowBelow : insertColumnRight);
+        return true;
       },
       paragraphStyles: editing.paragraphStyles,
       fontFamilies: editing.fontFamilies,
@@ -199,7 +305,7 @@ export async function openEigenpalDocument(
         if (pin && editor && !destroyed) editor.releaseSelection(pin);
       },
       async save(signal) {
-        if (signal.aborted || composing || saving) throw new Error('Save unavailable');
+        if (signal.aborted || composing || saving || executingTable) throw new Error('Save unavailable');
         const document = mount.ownerDocument;
         const hadFocus = mount.contains(document.activeElement);
         const wasInert = mount.inert;

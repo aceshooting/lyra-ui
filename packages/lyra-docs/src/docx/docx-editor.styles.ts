@@ -55,7 +55,8 @@ export const styles = css`
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
 
-  [part='alignment-actions'], [part='list-actions'], [part='link-actions'] {
+  [part='alignment-actions'], [part='list-actions'], [part='link-actions'],
+  [part='table-tools'], [part='table-actions'], [part='table-dialog-actions'] {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -84,13 +85,21 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
   }
 
-  [part='link-fields'] {
+  [part='link-fields'], [part='table-fields'] {
     display: grid;
     box-sizing: border-box;
     gap: var(--lr-space-s);
     min-inline-size: 0;
     inline-size: min(var(--lr-size-20rem), 100%);
     padding: var(--lr-space-s);
+  }
+
+  [part='table-tools'] { flex: 1 1 100%; }
+  [part='table-context'], [part='table-hint'] {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
   }
 
   [part='find'] {

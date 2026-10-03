@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { cpus, availableParallelism, totalmem, platform, arch } from 'node:os';
 import { readFile } from 'node:fs/promises';
 import { strFromU8, unzipSync } from 'fflate';
-import { performanceDocxFixture, performanceFixtureParagraphs, performanceFixtureSentinel } from '../test/performance-fixture.mjs';
+import { performanceDocxFixture, performanceFixtureParagraphs, performanceFixtureSentinel, performanceTableFixture } from '../test/performance-fixture.mjs';
 import { wordText } from '../test/xml.mjs';
 
 const typingSamples = 20;
@@ -149,6 +149,74 @@ export async function measureDocxPerformance({ browser, url }) {
     result.freshLargeOpenMs = round(result.freshLargeOpenMs);
     result.saveMs = round(result.saveMs);
     result.warmReopenMs = round(result.warmReopenMs);
-    return result;
   } finally { await large.context.close(); }
+  result.table = await measureTablePerformance(browser, url);
+  return result;
+}
+
+
+async function measureTablePerformance(browser, url) {
+  const run = await freshPage(browser, url);
+  try {
+    const fixture = performanceTableFixture();
+    const opened = await run.page.evaluate(bytes => document.querySelector('#performance-editor').open(Uint8Array.from(bytes)), [...fixture]);
+    assert.equal(opened.ok, true, JSON.stringify(opened));
+    await run.page.locator('#performance-editor .docx-pages').getByText('T1_1', { exact: true }).click();
+    await run.page.keyboard.press('ArrowLeft');
+    const measurements = await run.page.evaluate(() => {
+      const element = document.querySelector('#performance-editor');
+      const action = { type: 'insert-table-row', where: 'below' };
+      const unchanged = element.snapshot().revision;
+      const readsStarted = performance.now();
+      for (let index = 0; index < 1000; index++) {
+        if (!element.can(action).enabled || element.snapshot().revision !== unchanged) throw Error('Advisory read changed document');
+      }
+      const advisory1000Ms = performance.now() - readsStarted;
+      const executeMs = [], undoMs = [];
+      for (let index = 0; index < 10; index++) {
+        const before = element.snapshot().revision.value;
+        let started = performance.now();
+        const inserted = element.execute(action); executeMs.push(performance.now() - started);
+        if (!inserted.ok || element.snapshot().revision.value !== before + 1 || element.snapshot().table?.rows !== 20)
+          throw Error(`Table insertion failed: ${JSON.stringify(inserted)}`);
+        started = performance.now();
+        const undone = element.execute('undo'); undoMs.push(performance.now() - started);
+        if (!undone.ok || element.snapshot().revision.value !== before + 2 || element.snapshot().table?.rows !== 19)
+          throw Error('Table undo did not restore 19 rows');
+      }
+      return { advisory1000Ms, executeMs, undoMs };
+    });
+    await run.page.locator('#performance-editor .docx-pages').getByText('T1_1', { exact: true }).click();
+    await run.page.keyboard.press('ArrowLeft');
+    await run.page.evaluate(() => {
+      const element = document.querySelector('#performance-editor'); window.__tablePaintSamples = [];
+      element.addEventListener('beforeinput', event => {
+        if (event.inputType !== 'insertText') return;
+        const started = performance.now(), revision = element.snapshot().revision.value;
+        const afterCommit = () => {
+          if (element.snapshot().revision.value <= revision) { requestAnimationFrame(afterCommit); return; }
+          requestAnimationFrame(() => requestAnimationFrame(() => window.__tablePaintSamples.push(performance.now() - started)));
+        };
+        requestAnimationFrame(afterCommit);
+      }, { capture: true });
+    });
+    for (let index = 0; index < typingSamples; index++) {
+      await run.page.keyboard.insertText(String(index % 10));
+      await run.page.waitForFunction(expected => window.__tablePaintSamples.length >= expected, index + 1);
+    }
+    const saved = await run.page.evaluate(async () => {
+      const saved = await document.querySelector('#performance-editor').save();
+      if (!saved.ok) throw Error(`Table save failed: ${JSON.stringify(saved)}`);
+      return [...saved.value.bytes];
+    });
+    const xml = strFromU8(unzipSync(Uint8Array.from(saved))['word/document.xml']);
+    assert.ok(wordText(xml).includes('01234567890123456789'), 'Table typing sample missing from saved document');
+    assert.ok(wordText(xml).includes('T18_19'), 'Last table cell missing after operation/typing samples');
+    assert.equal((xml.match(/<w:tr[ >]/gu) ?? []).length, 19);
+    assert.deepEqual(run.pageErrors, []);
+    return { rows: 19, columns: 20, cells: 380, bytes: fixture.length, savedBytes: saved.length,
+      method: 'Synchronous public execution includes bounded canonical qualification and core layout. Each insertion reaches 20x20 and is undone; no cold-index guarantee. Advisory reads assert unchanged revision. Native typing is measured inside the target table through two postcommit animation frames.',
+      advisory1000Ms: round(measurements.advisory1000Ms), execute: summarize(measurements.executeMs), undo: summarize(measurements.undoMs),
+      inputToTwoFrames: summarize(await run.page.evaluate(() => window.__tablePaintSamples)) };
+  } finally { await run.context.close(); }
 }

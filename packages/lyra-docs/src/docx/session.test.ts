@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { createInternalDocxSession } from './session.js';
+import { createInternalDocxSession, refreshInternalDocxTableLabels } from './session.js';
 import type { DocxEngineEvent, DocxEnginePort, DocxSessionPort } from './engine-port.js';
 import type {
   DocxAction, DocxCommandAvailability, DocxResult, DocxSelection, DocxSource, DocxFormatting
@@ -940,4 +940,139 @@ test('document identity generation failure cleans readiness resources without pu
     assert.equal(f.subscriptions, 0);
     assert.equal(f.claimsReleased, 1);
   } finally { globalThis.crypto.randomUUID = original; }
+});
+
+test('table settlement checks expected revision and leases after prior typing commits', async () => {
+  for (const stale of ['revision', 'lease', 'none']) {
+    const { session, engine, f, revision } = await opened();
+    f.selection = 'caret'; f.emit('user-selection');
+    f.selection = 'caret'; f.emit('user-selection');
+    const lease = value(session.retainSelection());
+    let tableWrites = 0;
+    engine.execute = (_action, _token, validate) => {
+      assert.equal(typeof validate, 'function');
+      f.emit('change');
+      const checked = validate!();
+      if (!checked.ok) return checked;
+      tableWrites++; f.emit('change'); return { ok: true, value: undefined };
+    };
+    const result = session.execute({ type: 'insert-table', rows: 2, columns: 2 },
+      stale === 'revision' ? { expectedRevision: revision } : stale === 'lease' ? { selection: lease } : {});
+    if (stale === 'revision') refusal(result, 'stale-revision');
+    else if (stale === 'lease') refusal(result, 'stale-selection');
+    else assert.equal(result.ok, true);
+    assert.equal(tableWrites, stale === 'none' ? 1 : 0);
+    assert.equal(session.snapshot().revision?.value, stale === 'none' ? 2 : 1);
+  }
+});
+
+test('synchronous table ownership blocks reentrant commands, navigation, focus and save', async () => {
+  const { session, engine, f } = await opened();
+  f.selection = 'caret'; f.emit('user-selection');
+  const match = value(session.find('alpha')).matches[0]!;
+  const nested: unknown[] = [];
+  engine.execute = (_action, _token, validate) => {
+    assert.equal(validate!().ok, true);
+    nested.push(session.execute('bold'), session.execute({ type: 'delete-table' }), session.focus(),
+      session.retainSelection(), session.selectMatch(match.id), session.replaceMatch(match.id, 'x'), session.can({ type: 'delete-table' }));
+    f.emit('change');
+    return { ok: true, value: undefined };
+  };
+  const result = session.execute({ type: 'delete-table' });
+  assert.equal(result.ok, true);
+  for (const value of nested.slice(0, 6)) assert.deepEqual(value, { ok: false, code: 'busy' });
+  assert.deepEqual(nested[6], { enabled: false, reason: 'busy' });
+  assert.equal(session.snapshot().revision?.value, 1);
+  assert.equal(session.can('bold').enabled, true);
+});
+
+test('table guard detects changed selection generation, released leases and terminal ownership', async () => {
+  for (const effect of ['selection', 'lease', 'revision', 'destroy', 'detach', 'composition', 'fault']) {
+    const { session, engine, f } = await opened();
+  f.selection = 'caret'; f.emit('user-selection');
+    const lease = value(session.retainSelection());
+    let writes = 0;
+    engine.execute = (_action, _token, validate) => {
+      assert.equal(validate!().ok, true);
+      if (effect === 'selection') { f.emit('user-selection'); f.emit('user-selection'); }
+      if (effect === 'lease') lease.release();
+      if (effect === 'revision') f.emit('change');
+      if (effect === 'destroy') session.destroy();
+      if (effect === 'detach') f.detach();
+      if (effect === 'composition') { f.composing = true; f.emit('composition'); }
+      if (effect === 'fault') { f.inspectThrows = true; f.emit('state'); }
+      const valid = validate!();
+      if (!valid.ok) return valid;
+      writes++; return { ok: true, value: undefined };
+    };
+    const result = session.execute({ type: 'delete-table' }, effect === 'lease' ? { selection: lease } : {});
+    assert.equal(result.ok, false, effect);
+    assert.equal(writes, 0, effect);
+  }
+});
+
+test('table refusals and thrown preflight release synchronous ownership without document changes', async () => {
+  for (const throwing of [false, true]) {
+    const { session, engine, f, revision } = await opened();
+    f.selection = 'caret'; f.emit('user-selection');
+    const receipt = value(await session.save());
+    engine.execute = () => { if (throwing) throw Error('private'); return { ok: false, code: 'unsupported' }; };
+    refusal(session.execute({ type: 'delete-table' }), 'unsupported');
+    assert.deepEqual(session.snapshot().revision, revision);
+    assert.equal(session.can('bold').enabled, true);
+    assert.equal(session.acknowledgeSaved(receipt).ok, true);
+    assert.equal(f.executes, 0);
+  }
+});
+
+test('execute option accessors and invalid table actions never touch engine capabilities or mutation', async () => {
+  const { session, f } = await opened(); const lease = value(session.retainSelection()); const before = f.canCalls;
+  for (const options of [null, [], { extra: true }, { expectedRevision: { documentId: 'x', value: NaN } },
+    { get selection() { throw Error('getter'); } }, { get expectedRevision() { throw Error('getter'); } }, { selection: 'forged' }]) {
+    refusal(session.execute({ type: 'delete-table' }, options as never), 'invalid-option');
+  }
+  refusal(session.execute({ type: 'insert-table', rows: 0, columns: 2 }), 'invalid-option');
+  refusal(session.execute({ type: 'insert-table', rows: 0, columns: 2 }, { selection: lease }), 'invalid-option');
+  assert.equal(f.released.length, 0);
+  assert.equal(f.canCalls, before); assert.equal(f.executes, 0);
+});
+
+test('table context is copied, immutable and identity-stable across unchanged engine state', async () => {
+  const { session, engine, f } = await opened();
+  f.selection = 'caret'; f.emit('user-selection');
+  const inspect = engine.inspect, table = { rows: 2, columns: 3, rowIndex: 0, columnIndex: 1 };
+  engine.inspect = () => ({ ...inspect(), table });
+  f.emit('state'); const first = session.snapshot();
+  assert.deepEqual(first.table, table); assert.notEqual(first.table, table); assert.equal(Object.isFrozen(first.table), true);
+  f.emit('state'); assert.equal(session.snapshot(), first);
+  table.rowIndex = 1; f.emit('state'); assert.equal(session.snapshot().table?.rowIndex, 1);
+  engine.inspect = inspect; f.emit('state'); assert.equal(session.snapshot().table, null);
+});
+
+
+test('internal table label refresh is copied presentation state and stops at busy or terminal ownership', async () => {
+  const { session, engine, f } = await opened();
+  const labels = { insertRowBelow: 'Below', insertColumnRight: 'Right' };
+  const before = session.snapshot();
+  assert.equal(refreshInternalDocxTableLabels(session, labels), false);
+  let calls = 0;
+  engine.refreshTableLabels = copy => {
+    calls++;
+    assert.notEqual(copy, labels);
+    assert.equal(Object.isFrozen(copy), true);
+    return true;
+  };
+  assert.equal(refreshInternalDocxTableLabels(session, labels), true);
+  assert.equal(session.snapshot(), before);
+  assert.equal(f.executes, 0);
+  f.saveGate = deferred<Uint8Array>();
+  const saving = session.save();
+  assert.equal(refreshInternalDocxTableLabels(session, labels), false);
+  f.saveGate.resolve(f.output); await saving;
+  engine.refreshTableLabels = () => { throw Error('label fault'); };
+  assert.equal(refreshInternalDocxTableLabels(session, labels), false);
+  session.destroy();
+  assert.equal(refreshInternalDocxTableLabels(session, labels), false);
+  assert.equal(refreshInternalDocxTableLabels({} as never, labels), false);
+  assert.equal(calls, 1);
 });

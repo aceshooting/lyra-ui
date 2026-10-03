@@ -107,6 +107,11 @@ docxEditorFontFamily, docxEditorFontSize, docxEditorTextColor,
 docxEditorAutomaticColor, docxEditorColorUnknown, docxEditorLink,
 docxEditorLinkUrl, docxEditorLinkHint, docxEditorLinkText,
 docxEditorApplyLink, docxEditorRemoveLink,
+docxEditorTable, docxEditorInsertTable, docxEditorTableRows,
+docxEditorTableColumns, docxEditorTableSizeHint, docxEditorTableStale,
+docxEditorTableDimensions, docxEditorTableCell, docxEditorTableRowAbove,
+docxEditorTableRowBelow, docxEditorTableColumnLeft, docxEditorTableColumnRight,
+docxEditorTableDeleteRow, docxEditorTableDeleteColumn, docxEditorTableDelete,
 docxEditorCancel, docxEditorFind, docxEditorFindQuery,
 docxEditorFindSubmit, docxEditorMatchCase, docxEditorWholeWord,
 docxEditorFindCount, docxEditorFindTruncated, docxEditorPrevious,
@@ -118,6 +123,25 @@ Press **Alt+F10** to move focus from the document to the toolbar. The arrow keys
 move between enabled formatting controls (with RTL-aware direction); **Home**
 and **End** move to the first and last control. **Escape** closes the dirty
 replacement prompt or returns focus from the toolbar to the document.
+
+The table controls insert a rectangular table with a default of 2 rows and 2
+columns. Both dimensions accept whole numbers from 1 to 20. When a table cell
+is selected, contextual buttons insert a row above/below or a column left/right,
+or delete the current row, column or table. Displayed row and column coordinates
+start at one; the session snapshot uses zero-based coordinates. Contextual
+availability is advisory: unsupported table topology can still be refused on
+execution, with the localized editing message.
+
+The insertion dialog retains its original selection. Changing the document or
+selection invalidates that intent: close the dialog and reopen it at the desired
+caret. Cancel and Escape return to the insert trigger; successful insertion
+returns to the document, unless focus has moved elsewhere during closing.
+Composition keystrokes remain native. The table controls and native engine table
+insertion labels use the current scoped strings without replacing the mount.
+Table parts include `table-tools`, `table-insert-popover`, `table-insert-trigger`,
+`table-fields`, `table-rows`, `table-columns`, `table-hint`,
+`table-dialog-actions`, `table-insert-apply`, `table-insert-cancel`,
+`table-context`, `table-actions`, and `table-button`.
 
 ### Events
 
@@ -258,7 +282,8 @@ to a result without dirtying the document. `replaceMatch()` replaces one
 result as one undoable edit. Replace-all is not supported. Catalog enumeration
 and search are demand-driven and do not run for ordinary typing.
 
-`can()` validates the actual proposed edit, including that a paragraph style
+`can()` temporarily reports `busy` for formatting/history actions while native input settles;
+this prevents capability reads from committing queued typing. It otherwise validates the actual proposed edit, including that a paragraph style
 exists in the current document and that a link meets the safe URL policy.
 Links may target HTTPS, `mailto:`, or a same-document fragment; HTTP is
 refused, and destinations are never fetched. Family names are limited to 64
@@ -379,3 +404,43 @@ guarantees.
 The package remains private and is excluded from Changesets version preparation.
 See [LICENSE](LICENSE), [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), and
 [`THIRD_PARTY_LICENSES/`](THIRD_PARTY_LICENSES/) for licensing details.
+
+### Simple table actions
+
+The session and element `execute()` APIs accept `insert-table` with integer
+`rows` and `columns` from 1 to 20, `insert-table-row` with `where: 'above' | 'below'`,
+`insert-table-column` with `where: 'left' | 'right'`, and `delete-table-row`,
+`delete-table-column`, or `delete-table`. Each successful change is one undoable
+engine command. The Lyra toolbar exposes these actions through the insertion
+dialog and contextual table controls described above.
+
+Lyra table commands require a collapsed body caret. New tables require a caret outside
+an existing table. Row, column, and whole-table deletion operate only on ordinary
+rectangular, unnested tables. Merge markers, nested tables, structural wrappers,
+ambiguous structures, non-body selections, and cell rectangles are refused.
+Growth is limited to 20 rows, 20 columns, and 400 cells; larger imported simple
+tables may be reduced within the bounded inspection limits.
+
+These bounds and simple-topology checks apply to the session/element actions and
+Lyra toolbar controls. Core-owned table insertion furniture and native resize
+gestures execute through the engine's own route and do not pass through these
+Lyra guards. Their localized labels do not extend this qualification to those
+mutations. The editor does not promise document-wide authoring bounds; native
+gesture integration remains an open qualification requirement.
+
+`snapshot().table` contains copied `rows`, `columns`, and zero-based `rowIndex` and
+`columnIndex`, or `null` when the rendered selection context is unavailable. It
+is advisory: neither a non-null context nor an enabled `can(tableAction)` proves
+that canonical topology permits execution. Table availability reads are pure and
+do not scan document trees. Execution performs the bounded canonical check and
+can return `unsupported` or `resource-limit` even when `can()` reports enabled.
+The target-table traversal has explicit limits; a cold engine ancestry index may
+also traverse the admitted document body.
+
+An explicit table command settles previously queued native text before checking
+its final revision and selection guard. Thus a stale table request can return
+`stale-revision` after a prior user typing change commits; the table is unchanged.
+Invalid action fields are rejected before settlement. Retained selection leases
+invalidated by that typing change return `stale-selection`. Reentrant edits are
+blocked while the synchronous table command owns the input surface. Table
+qualification does not save, finalize form values, or export the document.

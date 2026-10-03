@@ -3,7 +3,7 @@ export type DocxStatus = 'idle' | 'opening' | 'ready' | 'error' | 'destroyed';
 export type DocxCommand = 'bold' | 'italic' | 'underline' | 'undo' | 'redo';
 export type DocxAlignment = 'left' | 'center' | 'right' | 'justify';
 /**
- * Formatting actions. Style ids are at most 128 code units and must identify a document paragraph style.
+ * Formatting and simple table actions. Style ids are at most 128 code units and must identify a document paragraph style.
  * Font families accept 1–64 Unicode letters, numbers, combining marks, spaces or - . + _.
  * Font sizes are 1–1638 points in half-point steps. Colors are #RRGGBB or auto.
  * Links accept HTTPS without credentials, mailto or fragments, at most 2048 code units;
@@ -18,8 +18,24 @@ export type DocxEdit =
   | Readonly<{ type: 'font-size'; points: number }>
   | Readonly<{ type: 'text-color'; color: string }>
   | Readonly<{ type: 'link'; href: string; text?: string }>
-  | Readonly<{ type: 'remove-link' }>;
+  | Readonly<{ type: 'remove-link' }>
+  | DocxTableAction;
+/** Simple, unnested table authoring. Inserted/grown tables are at most 20 by 20 cells. */
+export type DocxTableAction =
+  | Readonly<{ type: 'insert-table'; rows: number; columns: number }>
+  | Readonly<{ type: 'insert-table-row'; where: 'above' | 'below' }>
+  | Readonly<{ type: 'insert-table-column'; where: 'left' | 'right' }>
+  | Readonly<{ type: 'delete-table-row' }>
+  | Readonly<{ type: 'delete-table-column' }>
+  | Readonly<{ type: 'delete-table' }>;
 export type DocxAction = DocxCommand | DocxEdit;
+/** Rendered selection context, advisory only; execution checks canonical topology. */
+export interface DocxTableContext {
+  readonly rows: number;
+  readonly columns: number;
+  readonly rowIndex: number | null;
+  readonly columnIndex: number | null;
+}
 export type DocxRevision = Readonly<{ documentId: string; value: number }>;
 export type DocxSource = Readonly<{ kind: 'blank' }> | Readonly<{ kind: 'docx'; bytes: Uint8Array }>;
 export type DocxRefusalCode =
@@ -97,6 +113,7 @@ export interface DocxSnapshot {
   readonly composing: boolean;
   readonly selection: DocxSelection;
   readonly formatting: DocxFormatting;
+  readonly table: DocxTableContext | null;
   readonly commands: Readonly<Record<DocxCommand, DocxCommandAvailability>>;
   readonly error: Readonly<{ code: DocxRefusalCode }> | null;
 }
@@ -116,6 +133,7 @@ export interface DocxSession {
   /** No initial callback. Read state before and after subscribing. */
   subscribe(listener: () => void): () => void;
   open(source: DocxSource, options?: { signal?: AbortSignal }): Promise<DocxResult<DocxRevision>>;
+  /** Table availability is advisory and pure; execute verifies canonical topology and bounds. */
   can(command: DocxAction): DocxCommandAvailability;
   retainSelection(): DocxResult<DocxSelectionLease>;
   execute(command: DocxAction, options?: {

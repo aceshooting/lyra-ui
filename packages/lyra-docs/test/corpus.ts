@@ -86,3 +86,27 @@ export function searchLimitFixture(): Uint8Array {
     `<w:p><w:r><w:t>needle ${index + 1}</w:t></w:r></w:p>`).join('');
   return docxFixture({ 'word/document.xml': `<w:document xmlns:w="${word}"><w:body>${paragraphs}</w:body></w:document>` }, 6);
 }
+
+export function tableFixture(kind: string): Uint8Array {
+  const p = (text: string) => `<w:p><w:r><w:t>${text}</w:t></w:r></w:p>`;
+  const cell = (text: string, properties = '', extra = '') => `<w:tc><w:tcPr>${properties}</w:tcPr>${p(text)}${extra}</w:tc>`;
+  const table = (rows: number, columns: number, prefix = 'A') => `<w:tbl><w:tblPr/><w:tblGrid>${'<w:gridCol w:w="1500"/>'.repeat(columns)}</w:tblGrid>${Array.from({ length: rows }, (_, row) => `<w:tr>${Array.from({ length: columns }, (_, column) => cell(`${prefix}${row}${column}`)).join('')}</w:tr>`).join('')}</w:tbl>`;
+  let body = table(3, 3);
+  if (kind === 'table-merged') body = `<w:tbl><w:tblGrid>${'<w:gridCol w:w="1800"/>'.repeat(3)}</w:tblGrid><w:tr>${cell('Merged', '<w:gridSpan w:val="2"/>')}${cell('Right')}</w:tr><w:tr>${cell('A10')}${cell('A11')}${cell('A12')}</w:tr></w:tbl>`;
+  if (kind === 'table-vmerge') body = `<w:tbl><w:tblGrid>${'<w:gridCol w:w="1800"/>'.repeat(2)}</w:tblGrid><w:tr>${cell('Merged', '<w:vMerge w:val="restart"/>')}${cell('Right')}</w:tr><w:tr>${cell('', '<w:vMerge/>')}${cell('A11')}</w:tr></w:tbl>`;
+  if (kind === 'table-nested') body = `<w:tbl><w:tblGrid><w:gridCol w:w="5400"/></w:tblGrid><w:tr>${cell('Outer', '', table(2, 2, 'N') + p('Tail'))}</w:tr></w:tbl>`;
+  if (kind === 'table-single') body = table(1, 1);
+  if (kind === 'table-limit') body = table(20, 2);
+  if (kind === 'table-overlimit') body = table(21, 2);
+  const entries = unzipSync(representativeFixture());
+  if (kind === 'table-protected-form') {
+    body = '<w:p><w:bookmarkStart w:id="0" w:name="Target"/><w:r><w:t>Current value</w:t></w:r><w:bookmarkEnd w:id="0"/></w:p><w:p><w:fldSimple w:instr=" REF Target "><w:r><w:t>Stale value</w:t></w:r></w:fldSimple></w:p><w:p><w:r><w:fldChar w:fldCharType="begin"><w:ffData><w:name w:val="Text1"/><w:enabled/><w:textInput><w:type w:val="number"/><w:default w:val="123"/><w:format w:val="0.00"/></w:textInput></w:ffData></w:fldChar></w:r><w:r><w:instrText xml:space="preserve"> FORMTEXT </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>123.00</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p><w:sdt><w:sdtPr><w:id w:val="42"/><w:tag w:val="probe"/><w:text/></w:sdtPr><w:sdtContent><w:p><w:r><w:t>Controlled text</w:t></w:r></w:p></w:sdtContent></w:sdt>';
+    entries['word/settings.xml'] = strToU8(`<w:settings xmlns:w="${word}"><w:documentProtection w:edit="forms" w:enforcement="1"/></w:settings>`);
+    entries['[Content_Types].xml'] = strToU8(strFromU8(entries['[Content_Types].xml']!).replace('</Types>', '<Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/></Types>'));
+    entries['word/_rels/document.xml.rels'] = strToU8(strFromU8(entries['word/_rels/document.xml.rels']!).replace('</Relationships>', `<Relationship Id="rIdSettings" Type="${officeRel}settings" Target="settings.xml"/></Relationships>`));
+  }
+  let xml = `<w:document xmlns:w="${word}"><w:body>${p('Before')}${body}${p('After')}</w:body></w:document>`;
+  if (kind === 'table-alt') xml = xml.replaceAll('w:', 'x:').replace('xmlns:w=', 'xmlns:x=');
+  entries['word/document.xml'] = strToU8(xml);
+  return zipSync(entries, { level: 6 });
+}

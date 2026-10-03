@@ -1,4 +1,4 @@
-import { createDocxSession, type DocxSession, type DocxSnapshot, type DocxAction, type DocxEdit, type DocxCommand, type DocxFormatting, type DocxParagraphStyles, type DocxFontFamilies, type DocxSearchOptions, type DocxSearchResults, type DocxSearchMatch } from '@aceshooting/lyra-docs/docx';
+import { createDocxSession, type DocxSession, type DocxSnapshot, type DocxAction, type DocxEdit, type DocxCommand, type DocxFormatting, type DocxTableAction, type DocxTableContext, type DocxParagraphStyles, type DocxFontFamilies, type DocxSearchOptions, type DocxSearchResults, type DocxSearchMatch } from '@aceshooting/lyra-docs/docx';
 import type { LyraDocxEditor } from '@aceshooting/lyra-docs/docx/editor.class';
 // @ts-expect-error DOCX-specific contracts belong to the format subpath.
 import type { DocxSession as RootSession } from '@aceshooting/lyra-docs';
@@ -16,13 +16,20 @@ import type { EditorCommand } from '@aceshooting/lyra-docs/docx';
 // @ts-expect-error Validation helpers are internal implementation details.
 import { normalizeDocxAction } from '@aceshooting/lyra-docs/docx';
 
-export type EditingExportWitness = [DocxAction, DocxEdit, DocxCommand, DocxFormatting, DocxParagraphStyles,
+export type EditingExportWitness = [DocxTableAction, DocxTableContext, DocxAction, DocxEdit, DocxCommand, DocxFormatting, DocxParagraphStyles,
   DocxFontFamilies, DocxSearchOptions, DocxSearchResults, DocxSearchMatch, EditorCommand];
 void normalizeDocxAction;
 
 function editingContracts(session: DocxSession): void {
   const legacy: DocxCommand = 'bold';
   session.execute(legacy);
+  const table: DocxEdit = { type: 'insert-table', rows: 2, columns: 3 };
+  session.execute(table);
+  session.can({ type: 'delete-table' });
+  // @ts-expect-error Only row insertion directions are accepted.
+  session.execute({ type: 'insert-table-row', where: 'left' });
+  // @ts-expect-error Engine column naming is not public.
+  session.execute({ type: 'insert-table', rows: 2, cols: 3 });
   session.can({ type: 'font-size', points: 14 });
   session.execute({ type: 'alignment', value: 'justify' });
   session.execute({ type: 'toggle-list', kind: 'numbered' });
@@ -32,6 +39,12 @@ function editingContracts(session: DocxSession): void {
   session.selectMatch('opaque');
   session.replaceMatch('opaque', '');
   const snapshot = session.snapshot();
+  if (snapshot.table) {
+    // @ts-expect-error Table context is immutable.
+    snapshot.table.rows = 7;
+    // @ts-expect-error Canonical engine identity is private.
+    snapshot.table.tableId;
+  }
   // @ts-expect-error Snapshot formatting is immutable.
   snapshot.formatting.fontFamily = 'Arial';
   // @ts-expect-error Engine alignment vocabulary does not leak.

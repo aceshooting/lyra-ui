@@ -1,6 +1,6 @@
 import type {
   DocxAction, DocxCommandAvailability, DocxResult, DocxSelection,
-  DocxSource, DocxFormatting, DocxParagraphStyles, DocxFontFamilies
+  DocxSource, DocxFormatting, DocxParagraphStyles, DocxFontFamilies, DocxTableContext
 } from './types.js';
 
 /** Internal ownership seam; no browser validation is implemented here. */
@@ -14,6 +14,7 @@ export type DocxEngineEvent = 'change' | 'user-selection' | 'focus-selection' | 
 interface DocxEngineState {
   readonly selection: DocxSelection['kind'];
   readonly composing: boolean;
+  readonly table?: Readonly<DocxTableContext> | null;
   readonly formatting: Readonly<DocxFormatting>;
 }
 /** Private search addresses never cross the public session boundary. */
@@ -28,13 +29,16 @@ export interface DocxEngineSearchOptions {
   readonly wholeWord: boolean;
   readonly limit: number;
 }
+export type DocxTableLabels = Readonly<{ insertRowBelow: string; insertColumnRight: string }>;
 /** DOCX-specific engine seam. An implementation must qualify these guarantees. */
 export interface DocxEnginePort {
   inspect(): DocxEngineState;
+  /** Presentation only; must not lay out, flush input or mutate the document. */
+  refreshTableLabels?(labels: DocxTableLabels): boolean;
   /** A change event is one committed document change, never initial loading. */
   subscribe(listener: (event: DocxEngineEvent) => void): () => void;
   can(command: DocxAction): DocxCommandAvailability;
-  execute(command: DocxAction, retainedSelection?: object): DocxResult<void>;
+  execute(command: DocxAction, retainedSelection?: object, validateSettled?: () => DocxResult<void>): DocxResult<void>;
   paragraphStyles(): DocxParagraphStyles;
   fontFamilies(): DocxFontFamilies;
   find(query: string, options: DocxEngineSearchOptions): { readonly matches: readonly DocxEngineMatch[]; readonly truncated: boolean };

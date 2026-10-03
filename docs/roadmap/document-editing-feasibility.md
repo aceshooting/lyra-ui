@@ -15,10 +15,12 @@ are not included. Existing viewers, including `<lr-docx-viewer>`, remain in `@ac
 
 The selected mount uses connected, empty light DOM. Shadow DOM mounts fail closed. The toolbar
 includes New/Open/Save and the original five string commands (bold, italic, underline, undo, and
-redo); the current editing tools add paragraph, alignment, list, font, color, link, find and
-replace-one controls. The current increment passes 51 focused checks in each of Chromium, Firefox
-and WebKit, with synthetic OOXML checks for the exercised edits and protected parts. Broader user,
-corpus and interoperability qualification remains open. Saving returns bytes and a revision
+redo); the editing tools add paragraph, alignment, list, font, color, link, find and replace-one,
+plus bounded simple-table insertion and contextual row/column/table actions. The basic-editing
+increment has focused browser checks in Chromium, Firefox and WebKit; synthetic OOXML checks cover
+the exercised edits and protected parts. Simple-table qualification covers the Lyra API and
+toolbar operations described below, not every native engine gesture. Broader user, corpus and
+interoperability qualification remains open. Saving returns bytes and a revision
 receipt; the host persists those bytes and acknowledges the same receipt to clear dirty state. The
 host owns storage and any URL-fetch policy.
 
@@ -149,14 +151,25 @@ oversized and malformed input, selected preservation cases, mount removal, abort
 axe on the populated component. The run recorded no external browser requests or page, console, or
 request errors.
 
+The final expanded browser suite passed 91 focused checks in each of Chromium, Firefox and WebKit
+(273 browser-check runs total), including Lyra API and toolbar cases for rectangular simple-table
+insertion, row/column insertion, and row/column/table deletion. The tested cases include
+stale-intent handling, history and save/reopen. The 20-row, 20-column and 400-cell growth limits,
+simple-topology checks, and stale selection/revision guards apply to these Lyra commands. Native
+engine insertion and resize gestures bypass these commands and have no public veto/disable hook;
+their gesture policy remains a production gate. This evidence does not qualify arbitrary tables or
+general table layout/preservation fidelity. The same final run passed 179 Node/tooling tests.
+Coverage was 3,337/3,345 lines and statements (99.76%), 329/331 functions (99.39%), and 2,600/2,802
+branches (92.79%).
+
 These checks do not qualify every user input method, document feature, or external application.
 The categories below keep content preservation separate from what renders and what users can edit.
 
 | Area | What current evidence establishes | What it does not establish |
 | --- | --- | --- |
-| Preserve | In the synthetic representative fixture, selected opaque parts (`custom/payload.bin`, `customXml/item1.xml`, and an image payload) retain their original hashes through edit, save, and reopen. Selected text, numbering, list, and table structures remain in the saved output. | General preservation of arbitrary OPC extensions, all relationships or unsupported OOXML, or round trips through Word and LibreOffice. |
-| Render | The public core mounts and renders its paginated editing surface in all three tested engines. Tests verify text, narrow allocation, and theme/locale updates. | The representative list, table and image are covered by saved-output checks, not separate layout assertions. Word-equivalent page layout, fonts and shaping, or broad document fidelity remain unqualified. |
-| Edit | Native Unicode text entry, selection, the original five toolbar commands, and the expanded parameterized editing/search actions pass the focused 51-check-per-engine browser increment and associated synthetic OOXML checks. | Broader real-document coverage, clipboard, advanced tables, review, tracked-change authoring, or collaboration. Replace-all is intentionally omitted. |
+| Preserve | In the synthetic representative fixture, selected opaque parts (`custom/payload.bin`, `customXml/item1.xml`, and an image payload) retain their original hashes through edit, save, and reopen. Selected text, numbering, list, and tested simple-table structures remain in the saved output. | General preservation of arbitrary OPC extensions, all relationships or unsupported OOXML, arbitrary tables, or round trips through Word and LibreOffice. |
+| Render | The public core mounts and renders its paginated editing surface in all three tested engines. Tests verify text, narrow allocation, and theme/locale updates. | Simple-table command and saved-output checks do not establish table layout fidelity. Word-equivalent page layout, fonts and shaping, image rendering, or broad document fidelity remain unqualified. |
+| Edit | Native Unicode text entry, selection, the original five toolbar commands, expanded parameterized editing/search actions, and bounded Lyra simple-table API/toolbar actions pass focused browser increments and associated synthetic OOXML checks. | Broader real-document coverage, clipboard, advanced/merged/nested tables, native insertion/resize gesture policy, review, tracked-change authoring, or collaboration. Replace-all is intentionally omitted. |
 | Refuse | Bounded preflight rejects malformed XML, DTDs, unsupported relationships, external resources, ZIP64/encrypted input, unsupported image formats, and resource-limit violations before engine open. Safe HTTPS, `mailto:`, and fragment-only hyperlinks are allowed. | Safety of arbitrary document content or every behavior of the external engine outside this bounded admission path. |
 
 ## DOCX admission limits
@@ -241,6 +254,17 @@ browser and OS caches may be warm, and the measurements establish neither a
 performance guarantee nor an optimization relative to the historical samples.
 Retained memory remains unqualified.
 
+The separate final simple-table diagnostic used Node 22.23.2, Chromium 153.0.8010.12 and an Intel
+Core i7-7820X Linux host with 16 visible CPUs. In 20 samples, paragraph typing measured from
+`beforeinput` through two post-commit frames had an 87.1 ms median and 105.1 ms p95; typing in a
+380-cell table measured 82.2 ms median and 95.2 ms p95. Ten row insertions taking a 19-by-20 table
+to 20-by-20 measured 66.6 ms median and 105.5 ms p95; each insertion was followed by a separately
+timed undo. One thousand advisory table reads took 2.9 ms without changing the document revision.
+These are host-specific diagnostic samples, not guarantees. The paragraph fixture matches the
+separately recorded 2,000-paragraph, 218,577-byte input, but the runs used different hardware; no
+cross-run performance claim is made. Cold engine-index work is not bounded by the advisory-read
+timing.
+
 ## Qualification still required
 
 - Human testing of native IME/composition, assistive technology, touch selection, and keyboard
@@ -254,8 +278,9 @@ Retained memory remains unqualified.
   interoperability corpus.
 - Repeated open/save/destroy memory measurements and cleanup evidence for browser-managed buffers
   and any future fonts, workers, or shaping assets.
-- Broader text, layout, table, image, accessibility, and editing qualification before adding
-  capabilities to the supported contract.
+- Broader text/layout qualification, arbitrary and advanced table coverage (including native
+  insertion/resize gesture policy), image rendering/editing, accessibility, and editing
+  qualification before adding further capabilities to the supported contract.
 
 The package remains private while these items are open. The browser suite and the resource limits
 are evidence for the current experimental slice only; they do not complete feasibility, DOCX

@@ -147,3 +147,28 @@ test('authored text refuses characters XML cannot preserve before document mutat
     assert.deepEqual(normalizeDocxAction(value), { ok: true, value });
   }
 });
+
+test('table actions validate dimensions, directions and own fields before engine activity', () => {
+  for (const value of [
+    { type: 'insert-table', rows: 1, columns: 1 }, { type: 'insert-table', rows: 20, columns: 20 },
+    { type: 'insert-table-row', where: 'above' }, { type: 'insert-table-row', where: 'below' },
+    { type: 'insert-table-column', where: 'left' }, { type: 'insert-table-column', where: 'right' },
+    { type: 'delete-table-row' }, { type: 'delete-table-column' }, { type: 'delete-table' },
+  ]) {
+    const result = normalizeDocxAction(value);
+    assert.deepEqual(result, { ok: true, value });
+    if (result.ok) { assert.notEqual(result.value, value); assert.equal(Object.isFrozen(result.value), true); }
+  }
+  for (const rows of [0, -1, 1.5, NaN, Infinity, '2', null, undefined]) {
+    assert.deepEqual(normalizeDocxAction({ type: 'insert-table', rows, columns: 2 }), invalid);
+    assert.deepEqual(normalizeDocxAction({ type: 'insert-table', rows: 2, columns: rows }), invalid);
+  }
+  for (const [rows, columns] of [[21, 1], [1, 21], [Number.MAX_SAFE_INTEGER, 2]]) {
+    assert.deepEqual(normalizeDocxAction({ type: 'insert-table', rows, columns }), limited);
+  }
+  for (const value of [{ type: 'insert-table-row', where: 'left' }, { type: 'insert-table-column', where: 'above' },
+    { type: 'delete-table', rows: 1 }, { type: 'insert-table', rows: 2, columns: 2, extra: true },
+    { type: 'insert-table', get rows() { throw new Error('getter'); }, columns: 2 }]) {
+    assert.deepEqual(normalizeDocxAction(value), invalid);
+  }
+});

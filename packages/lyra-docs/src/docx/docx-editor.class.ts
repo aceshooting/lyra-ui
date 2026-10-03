@@ -6,9 +6,11 @@ import { resolveLyraScopedString } from '@aceshooting/lyra-ui/localization.js';
 import { tag } from '@aceshooting/lyra-ui/utilities/prefix.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '@aceshooting/lyra-ui/utilities/announcer.js';
 import { createDocxSession } from './create-session.js';
+import { refreshInternalDocxTableLabels } from './session.js';
+import { captureTableToolIntent, tableInsertDraft } from './table-tools.js';
 import type {
   DocxCommand, DocxEdit, DocxRefusalCode, DocxResult, DocxRevision, DocxSaveReceipt,
-  DocxSelectionLease, DocxSession, DocxSnapshot, DocxSource, DocxSearchResults,
+  DocxSelectionLease, DocxSession, DocxSnapshot, DocxSource, DocxSearchResults, DocxTableAction,
 } from './types.js';
 import { DOCX_EDITOR_STRINGS } from './strings.js';
 import { styles } from './docx-editor.styles.js';
@@ -41,6 +43,15 @@ const inputTag = unsafeStatic(tag('input'));
 const checkboxTag = unsafeStatic(tag('checkbox'));
 const alignments = ['left', 'center', 'right', 'justify'] as const;
 const listKinds = ['bullet', 'numbered'] as const;
+const tableActions = [
+  ['row-above', { type: 'insert-table-row', where: 'above' }, 'docxEditorTableRowAbove'],
+  ['row-below', { type: 'insert-table-row', where: 'below' }, 'docxEditorTableRowBelow'],
+  ['column-left', { type: 'insert-table-column', where: 'left' }, 'docxEditorTableColumnLeft'],
+  ['column-right', { type: 'insert-table-column', where: 'right' }, 'docxEditorTableColumnRight'],
+  ['delete-row', { type: 'delete-table-row' }, 'docxEditorTableDeleteRow'],
+  ['delete-column', { type: 'delete-table-column' }, 'docxEditorTableDeleteColumn'],
+  ['delete-table', { type: 'delete-table' }, 'docxEditorTableDelete'],
+] as const;
 const maxInputBytes = 4 * 1024 * 1024;
 const refused = <T>(code: DocxRefusalCode): DocxResult<T> => ({ ok: false, code });
 
@@ -87,6 +98,19 @@ const refused = <T>(code: DocxRefusalCode): DocxResult<T> => ({ ok: false, code 
  * @csspart link-apply - Applies a validated link.
  * @csspart link-remove - Removes the current link.
  * @csspart link-cancel - Closes the link editor.
+ * @csspart table-tools - Table insertion and contextual editing controls.
+ * @csspart table-insert-popover - Table dimensions dialog.
+ * @csspart table-insert-trigger - Opens the table insertion dialog.
+ * @csspart table-fields - Table dimension fields and controls.
+ * @csspart table-rows - Requested row count, from 1 to 20.
+ * @csspart table-columns - Requested column count, from 1 to 20.
+ * @csspart table-hint - Dimension limits or stale-selection guidance.
+ * @csspart table-dialog-actions - Insert and cancel controls.
+ * @csspart table-insert-apply - Inserts the requested rectangular table.
+ * @csspart table-insert-cancel - Cancels table insertion.
+ * @csspart table-context - Current table dimensions and available cell coordinates.
+ * @csspart table-actions - Contextual row, column and whole-table actions.
+ * @csspart table-button - A table action, identified by data-table-action.
  * @csspart find - On-demand search and single-match replacement surface.
  * @csspart find-toggle - Opens and closes the find surface.
  * @csspart find-query - Search query field.
@@ -141,6 +165,13 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   @state() private linkHref = '';
   @state() private linkText = '';
   @state() private editError: DocxRefusalCode | null = null;
+  @state() private tableRows = '2';
+  @state() private tableColumns = '2';
+  @state() private tableDialogOpen = false;
+  private tableIntent: ReturnType<typeof captureTableToolIntent> = null;
+  private tableDialogGeneration = 0;
+  private cancelTableFocusReturn: (() => void) | null = null;
+  private tableLabelState: { session: DocxSession; row: string; column: string } | null = null;
 
   private mount: HTMLDivElement | null = null;
   private session: DocxSession | null = null;
@@ -194,6 +225,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
 
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
+    this.refreshTableLabels();
     const enabled = this.enabledToolbarButtons();
     if (enabled.length && !enabled.some(button => button.getAttribute('data-tool-key') === this.toolbarKey))
       this.toolbarKey = enabled[0]!.getAttribute('data-tool-key') ?? 'bold';
@@ -225,6 +257,14 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   }
 
   private clearEditingDrafts(): void {
+    this.tableDialogGeneration++;
+    this.cancelTableFocusReturn?.();
+    this.releaseTableIntent();
+    this.tableDialogOpen = false;
+    this.tableRows = '2';
+    this.tableColumns = '2';
+    this.tableLabelState = null;
+    void this.tablePopover()?.hide({ focusTrigger: false });
     this.pickerFocusReturn = false;
     this.paragraphStyleItems = [];
     this.fontFamilyItems = [];
@@ -246,6 +286,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     if (next.selection.version !== previous?.selection.version ||
         next.revision?.documentId !== previous?.revision?.documentId || next.revision?.value !== previous?.revision?.value)
       this.releaseToolbarSelection();
+    if (this.tableIntent && !this.tableIntent.valid(this.session)) this.tableIntent.release();
     this.currentSnapshot = next;
     if (previous?.revision?.documentId !== next.revision?.documentId ||
         previous?.revision?.value !== next.revision?.value) {
@@ -539,6 +580,101 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     return text ? { type: 'link', href, text } : { type: 'link', href };
   }
 
+  private refreshTableLabels(): void {
+    const session = this.session;
+    if (!session) return;
+    const row = this.localize('docxEditorTableRowBelow');
+    const column = this.localize('docxEditorTableColumnRight');
+    const previous = this.tableLabelState;
+    if (previous?.session === session && previous.row === row && previous.column === column) return;
+    if (refreshInternalDocxTableLabels(session, { insertRowBelow: row, insertColumnRight: column }))
+      this.tableLabelState = { session, row, column };
+  }
+
+  private tablePopover() {
+    return this.renderRoot.querySelector<HTMLElement & { open: boolean; hide(options?: { focusTrigger?: boolean }): Promise<void> }>(
+      '[part="table-insert-popover"]');
+  }
+
+  private releaseTableIntent(): void {
+    this.tableIntent?.release();
+    this.tableIntent = null;
+  }
+
+  private prepareTableIntent(): void {
+    if (this.tableDialogOpen) return;
+    this.releaseToolbarSelection();
+    this.releaseTableIntent();
+    this.tableIntent = captureTableToolIntent(this.session);
+  }
+
+  private onTableActivationKey(event: KeyboardEvent): void {
+    if ((event.key === 'Enter' || event.key === ' ') && !event.isComposing && event.keyCode !== 229) this.prepareTableIntent();
+  }
+
+  private openTableDialog(event: Event): void {
+    if (!this.tableIntent?.valid(this.session)) { event.preventDefault(); this.releaseTableIntent(); return; }
+    this.tableDialogGeneration++;
+    this.cancelTableFocusReturn?.();
+    this.tableRows = '2';
+    this.tableColumns = '2';
+    this.tableDialogOpen = true;
+    this.editError = null;
+  }
+
+  private onTableDialogHidden(): void {
+    if (this.tablePopover()?.open) return;
+    this.tableDialogOpen = false;
+    this.releaseTableIntent();
+  }
+
+  private closeTableDialog(returnToEditor: boolean): void {
+    this.cancelTableFocusReturn?.();
+    const session = this.session;
+    const generation = this.tableDialogGeneration;
+    const selectionVersion = session?.snapshot().selection.version;
+    const popover = this.tablePopover();
+    if (!popover) return;
+    const document = this.ownerDocument;
+    let cancelled = false;
+    const cancel = () => {
+      cancelled = true;
+      document.removeEventListener('focusin', cancel, true);
+      document.removeEventListener('pointerdown', cancel, true);
+      if (this.cancelTableFocusReturn === cancel) this.cancelTableFocusReturn = null;
+    };
+    this.cancelTableFocusReturn = cancel;
+    document.addEventListener('focusin', cancel, true);
+    document.addEventListener('pointerdown', cancel, true);
+    void popover.hide({ focusTrigger: false }).then(() => {
+      const shouldFocus = !cancelled && this.isConnected && this.session === session && generation === this.tableDialogGeneration &&
+        !popover.open && session?.snapshot().selection.version === selectionVersion;
+      cancel();
+      if (!shouldFocus) return;
+      if (returnToEditor) this.focusEditor();
+      else this.renderRoot.querySelector<HTMLElement>('[part="table-insert-trigger"]')?.focus();
+    }, cancel);
+  }
+
+  private runTableEdit(action: DocxTableAction, fromDialog = false): void {
+    const session = this.session;
+    const intent = this.tableIntent;
+    const result = intent?.execute(session, action) ?? refused<DocxRevision>('stale-selection');
+    this.syncSession();
+    if (result.ok) {
+      this.editError = null;
+      if (fromDialog) this.closeTableDialog(true);
+      else if (this.isConnected && this.session === session) this.focusEditor();
+    } else this.reportEditRefusal(result.code);
+    if (!fromDialog) this.releaseTableIntent();
+  }
+
+  private insertTable(): void {
+    const action = tableInsertDraft(this.tableRows, this.tableColumns);
+    if (!action) return;
+    this.runTableEdit(action, true);
+  }
+
   private runFind(): void {
     if (!this.findActionAvailable() || !this.query) return;
     const result = this.find(this.query, { matchCase: this.matchCase, wholeWord: this.wholeWord, limit: 100 });
@@ -591,6 +727,15 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       const first = targets[0];
       (first ?? this.renderRoot.querySelector<HTMLElement>('[part="new-button"]'))?.focus();
       if (first) this.toolbarKey = first.getAttribute('data-tool-key') ?? 'bold';
+      return;
+    }
+    if ((event.isComposing || event.keyCode === 229) && event.composedPath().some(node => node instanceof HTMLElement &&
+      node.getAttribute('part') === 'table-insert-popover')) return;
+    if (event.key === 'Escape' && this.tableDialogOpen && event.composedPath().some(node => node instanceof HTMLElement &&
+      node.getAttribute('part') === 'table-insert-popover')) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.closeTableDialog(false);
       return;
     }
     if (event.key === 'Escape' && this.pendingAction) {
@@ -876,6 +1021,58 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     </${popoverTag}>`;
   }
 
+  private renderTableTools(): TemplateResult {
+    const draft = tableInsertDraft(this.tableRows, this.tableColumns);
+    const intentValid = this.tableIntent?.valid(this.session) ?? false;
+    const table = this.currentSnapshot?.table;
+    const number = (value: number) => value.toLocaleString(this.effectiveLocale);
+    const context = table ? this.localize('docxEditorTableDimensions', undefined,
+      { rows: number(table.rows), columns: number(table.columns) }) : '';
+    const cell = table?.rowIndex != null && table.columnIndex != null ? this.localize('docxEditorTableCell', undefined,
+      { row: number(table.rowIndex + 1), column: number(table.columnIndex + 1) }) : '';
+    return html`<div part="table-tools" role="group" aria-label=${this.localize('docxEditorTable')}>
+      <${popoverTag} part="table-insert-popover" popup-role="dialog" placement="bottom-start"
+        aria-label=${this.localize('docxEditorInsertTable')}
+        @lr-show=${(event: Event) => this.openTableDialog(event)} @lr-after-hide=${() => this.onTableDialogHidden()}>
+        <${buttonTag} slot="trigger" part="table-insert-trigger" data-tool-key="table-insert" size="s" appearance="quiet"
+          tabindex=${this.toolbarKey === 'table-insert' ? '0' : '-1'}
+          ?disabled=${!this.can({ type: 'insert-table', rows: 2, columns: 2 }).enabled}
+          @pointerdown=${() => this.prepareTableIntent()} @focusin=${() => this.prepareTableIntent()}
+          @keydown=${(event: KeyboardEvent) => this.onTableActivationKey(event)}>${this.localize('docxEditorInsertTable')}</${buttonTag}>
+        <div part="table-fields" @keydown=${(event: KeyboardEvent) => {
+          if (event.key === 'Enter' && !event.isComposing && event.keyCode !== 229 && event.composedPath().some(node => node instanceof HTMLElement &&
+              ['table-rows', 'table-columns'].includes(node.getAttribute('part') ?? ''))) {
+            event.preventDefault(); event.stopPropagation(); this.insertTable();
+          }
+        }}>
+          <${numberInputTag} part="table-rows" size="s" autofocus label=${this.localize('docxEditorTableRows')}
+            min="1" max="20" step="1" .value=${this.tableRows}
+            @lr-input=${(event: CustomEvent<{ value: string }>) => { event.stopPropagation(); this.tableRows = event.detail.value; }}
+            @lr-change=${(event: Event) => event.stopPropagation()}></${numberInputTag}>
+          <${numberInputTag} part="table-columns" size="s" label=${this.localize('docxEditorTableColumns')}
+            min="1" max="20" step="1" .value=${this.tableColumns}
+            @lr-input=${(event: CustomEvent<{ value: string }>) => { event.stopPropagation(); this.tableColumns = event.detail.value; }}
+            @lr-change=${(event: Event) => event.stopPropagation()}></${numberInputTag}>
+          <p part="table-hint">${this.localize(this.tableDialogOpen && !intentValid ? 'docxEditorTableStale' : 'docxEditorTableSizeHint')}</p>
+          <div part="table-dialog-actions">
+            <${buttonTag} part="table-insert-apply" size="s"
+              ?disabled=${!intentValid || !draft || !this.can(draft).enabled}
+              @click=${() => this.insertTable()}>${this.localize('docxEditorInsertTable')}</${buttonTag}>
+            <${buttonTag} part="table-insert-cancel" size="s" appearance="quiet"
+              @click=${() => this.closeTableDialog(false)}>${this.localize('docxEditorCancel')}</${buttonTag}>
+          </div>
+        </div>
+      </${popoverTag}>
+      ${table ? html`<span part="table-context"><bdi>${context}</bdi> <bdi>${cell}</bdi></span>
+        <div part="table-actions">${tableActions.map(([key, action, label]) => html`
+          <${buttonTag} part="table-button" data-table-action=${key} data-tool-key=${`table-${key}`} size="s" appearance="quiet"
+            tabindex=${this.toolbarKey === `table-${key}` ? '0' : '-1'} ?disabled=${!this.can(action).enabled}
+            @pointerdown=${() => this.prepareTableIntent()} @focusin=${() => this.prepareTableIntent()}
+            @keydown=${(event: KeyboardEvent) => this.onTableActivationKey(event)}
+            @click=${() => this.runTableEdit(action)}>${this.localize(label)}</${buttonTag}>`)}</div>` : nothing}
+    </div>`;
+  }
+
   private renderFind(): TemplateResult {
     if (!this.findOpen) return html``;
     const results = this.searchResults;
@@ -937,6 +1134,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
           </div>
           <div part="format-actions">${commands.map(command => this.renderCommand(command))}</div>
           ${this.renderEditingTools()}
+          ${this.renderTableTools()}
         </div>
         ${this.pendingAction ? html`
           <div part="confirm" role="group" aria-label=${this.localize('docxEditorDiscardQuestion')}>

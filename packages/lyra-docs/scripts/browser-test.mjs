@@ -9,6 +9,7 @@ import { createRequire } from 'node:module';
 import { build } from 'vite';
 import { chromium, firefox, webkit } from 'playwright';
 import { zipEntry, zipEntryBytes } from '../test/zip.mjs';
+import { runTableEditing } from './tables-browser.mjs';
 import { assertExternalHyperlink, wordText } from '../test/xml.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -1305,6 +1306,7 @@ async function runBrowser(name, url, { lazyEntry, engineEntry }) {
       if (results.violations.length) record.axeViolations = results.violations.map(({ id, nodes }) => ({ id, nodes: nodes.map(node => ({ target: node.target, details: node.any.map(check => check.data), summary: node.failureSummary })) }));
       assert.deepEqual(results.violations.map(({ id, nodes }) => ({ id, targets: nodes.map(node => node.target) })), []);
     });
+    await runTableEditing(page, check, { createEditor, saveEditor, assertProtectedParts });
     await runBasicEditing(page, check);
     await runEditorWorkflows(page, check);
     assert.deepEqual(record.pageErrors, [], 'Browser page errors');

@@ -150,11 +150,17 @@ DOCX work; do not create a second rich-text engine solely to discard it in the n
 - [x] Open blank documents, caller-provided bytes and local files; report normalized refusals. The
   component does not fetch URLs.
 - [ ] Evaluate optional bounded URL loading with the same external-resource and cancellation rules.
-- [ ] Support and qualify common paragraph/run styles, hyperlinks/bookmarks, numbered lists, basic
-  tables and embedded images for rendering and editing, with insertion, deletion and resize
-  commands where supported. Paragraph style, alignment/list, font, color and link actions plus
-  bounded find/replace-one pass focused browser and synthetic OOXML checks; tables, images and
-  broader round-trip qualification remain later work.
+- [x] Qualify bounded simple-table actions through the Lyra API and toolbar: insert a rectangular
+  table and insert/delete rows and columns or delete the table, including history and save/reopen.
+  These controls require a collapsed body caret and operate only on simple rectangular, unnested
+  tables; API/toolbar growth is limited to 20 rows, 20 columns and 400 cells. Stale selection or
+  revision intent is refused. These guards do not constrain or veto native engine insertion/resize
+  gestures, so their policy remains a production gate.
+- [ ] Support and qualify common paragraph/run styles, hyperlinks/bookmarks, numbered lists, and
+  embedded images for rendering and editing, along with broader table behavior. Paragraph style,
+  alignment/list, font, color and link actions plus bounded find/replace-one have focused browser
+  and synthetic OOXML evidence. Image rendering/editing, broad table rendering and round-trip
+  qualification remain later work.
 - [ ] Establish a preservation/rendering/editing capability matrix for relationships, media,
   extensions and unknown OOXML parts. Selected opaque parts survive the current synthetic edit,
   save and reopen fixture; this does not prove general part preservation or usability.
