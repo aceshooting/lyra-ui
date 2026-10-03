@@ -7563,7 +7563,9 @@ saving transitions. Catalog types and `getTimeZoneCodes()` are documented
 (`custom-error`), `size`, `clearable`, `searchable`, `topLayer` (`top-layer`),
 `positioningStrategy` (`positioning-strategy`), `autocomplete`, `inputMode` (`inputmode`),
 `enterKeyHint` (`enterkeyhint`), `spellcheck`, `autocapitalize`, `autocorrect`, and readonly `input`.
-Defaults and form/editing methods follow the [shared contract](#lr-country-picker).
+Defaults and form/editing methods follow the [shared contract](#lr-country-picker), including
+`getForm()`, `checkValidity()`, `reportValidity()`, `setCustomValidity(message)` and
+`resetValidity()` for the owning form and consumer validation messages.
 
 **Events:** `input`, `lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`.
 **Slots:** `label`, `hint`, `error`.
@@ -7597,7 +7599,9 @@ resolution are documented [below](#country-time-zone-and-unit-catalog-helpers).
 (`custom-error`), `size`, `clearable`, `searchable`, `topLayer` (`top-layer`),
 `positioningStrategy` (`positioning-strategy`), `autocomplete`, `inputMode` (`inputmode`),
 `enterKeyHint` (`enterkeyhint`), `spellcheck`, `autocapitalize`, `autocorrect`, and readonly `input`.
-Defaults and form/editing methods follow the [shared contract](#lr-country-picker).
+Defaults and form/editing methods follow the [shared contract](#lr-country-picker), including
+`getForm()`, `checkValidity()`, `reportValidity()`, `setCustomValidity(message)` and
+`resetValidity()` for the owning form and consumer validation messages.
 
 **Events:** `input`, `lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`.
 **Slots:** `label`, `hint`, `error`.

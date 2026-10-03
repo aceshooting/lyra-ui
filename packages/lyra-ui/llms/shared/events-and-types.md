@@ -584,6 +584,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-control-group': LyraControlGroupReactProps;
   'lr-conversation-item': LyraConversationItemReactProps;
   'lr-copy-button': LyraCopyButtonReactProps;
+  'lr-country-picker': LyraCountryPickerReactProps;
   'lr-csv-viewer': LyraCsvViewerReactProps;
   'lr-currency-picker': LyraCurrencyPickerReactProps;
   'lr-dashboard-grid': LyraDashboardGridReactProps;
@@ -782,6 +783,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-thread-list': LyraThreadListReactProps;
   'lr-time-input': LyraTimeInputReactProps;
   'lr-time-range': LyraTimeRangeReactProps;
+  'lr-time-zone-picker': LyraTimeZonePickerReactProps;
   'lr-timeline': LyraTimelineReactProps;
   'lr-timeline-item': LyraTimelineItemReactProps;
   'lr-toast': LyraToastReactProps;
@@ -804,6 +806,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-tree': LyraTreeReactProps;
   'lr-tree-item': LyraTreeItemReactProps;
   'lr-typing-indicator': LyraTypingIndicatorReactProps;
+  'lr-unit-picker': LyraUnitPickerReactProps;
   'lr-usage-badge': LyraUsageBadgeReactProps;
   'lr-video': LyraVideoReactProps;
   'lr-video-playlist': LyraVideoPlaylistReactProps;
@@ -1013,6 +1016,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-control-group': LyraComponentTypeMap['lr-control-group']['element'];
   'lr-conversation-item': LyraComponentTypeMap['lr-conversation-item']['element'];
   'lr-copy-button': LyraComponentTypeMap['lr-copy-button']['element'];
+  'lr-country-picker': LyraComponentTypeMap['lr-country-picker']['element'];
   'lr-csv-viewer': LyraComponentTypeMap['lr-csv-viewer']['element'];
   'lr-currency-picker': LyraComponentTypeMap['lr-currency-picker']['element'];
   'lr-dashboard-grid': LyraComponentTypeMap['lr-dashboard-grid']['element'];
@@ -1211,6 +1215,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-thread-list': LyraComponentTypeMap['lr-thread-list']['element'];
   'lr-time-input': LyraComponentTypeMap['lr-time-input']['element'];
   'lr-time-range': LyraComponentTypeMap['lr-time-range']['element'];
+  'lr-time-zone-picker': LyraComponentTypeMap['lr-time-zone-picker']['element'];
   'lr-timeline': LyraComponentTypeMap['lr-timeline']['element'];
   'lr-timeline-item': LyraComponentTypeMap['lr-timeline-item']['element'];
   'lr-toast': LyraComponentTypeMap['lr-toast']['element'];
@@ -1233,6 +1238,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-tree': LyraComponentTypeMap['lr-tree']['element'];
   'lr-tree-item': LyraComponentTypeMap['lr-tree-item']['element'];
   'lr-typing-indicator': LyraComponentTypeMap['lr-typing-indicator']['element'];
+  'lr-unit-picker': LyraComponentTypeMap['lr-unit-picker']['element'];
   'lr-usage-badge': LyraComponentTypeMap['lr-usage-badge']['element'];
   'lr-video': LyraComponentTypeMap['lr-video']['element'];
   'lr-video-playlist': LyraComponentTypeMap['lr-video-playlist']['element'];
@@ -1319,6 +1325,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-control-group': LyraControlGroupSvelteProps;
   'lr-conversation-item': LyraConversationItemSvelteProps;
   'lr-copy-button': LyraCopyButtonSvelteProps;
+  'lr-country-picker': LyraCountryPickerSvelteProps;
   'lr-csv-viewer': LyraCsvViewerSvelteProps;
   'lr-currency-picker': LyraCurrencyPickerSvelteProps;
   'lr-dashboard-grid': LyraDashboardGridSvelteProps;
@@ -1517,6 +1524,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-thread-list': LyraThreadListSvelteProps;
   'lr-time-input': LyraTimeInputSvelteProps;
   'lr-time-range': LyraTimeRangeSvelteProps;
+  'lr-time-zone-picker': LyraTimeZonePickerSvelteProps;
   'lr-timeline': LyraTimelineSvelteProps;
   'lr-timeline-item': LyraTimelineItemSvelteProps;
   'lr-toast': LyraToastSvelteProps;
@@ -1539,6 +1547,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-tree': LyraTreeSvelteProps;
   'lr-tree-item': LyraTreeItemSvelteProps;
   'lr-typing-indicator': LyraTypingIndicatorSvelteProps;
+  'lr-unit-picker': LyraUnitPickerSvelteProps;
   'lr-usage-badge': LyraUsageBadgeSvelteProps;
   'lr-video': LyraVideoSvelteProps;
   'lr-video-playlist': LyraVideoPlaylistSvelteProps;
@@ -1737,6 +1746,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-control-group': LyraControlGroupVueProps;
   'lr-conversation-item': LyraConversationItemVueProps;
   'lr-copy-button': LyraCopyButtonVueProps;
+  'lr-country-picker': LyraCountryPickerVueProps;
   'lr-csv-viewer': LyraCsvViewerVueProps;
   'lr-currency-picker': LyraCurrencyPickerVueProps;
   'lr-dashboard-grid': LyraDashboardGridVueProps;
@@ -1935,6 +1945,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-thread-list': LyraThreadListVueProps;
   'lr-time-input': LyraTimeInputVueProps;
   'lr-time-range': LyraTimeRangeVueProps;
+  'lr-time-zone-picker': LyraTimeZonePickerVueProps;
   'lr-timeline': LyraTimelineVueProps;
   'lr-timeline-item': LyraTimelineItemVueProps;
   'lr-toast': LyraToastVueProps;
@@ -1957,6 +1968,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-tree': LyraTreeVueProps;
   'lr-tree-item': LyraTreeItemVueProps;
   'lr-typing-indicator': LyraTypingIndicatorVueProps;
+  'lr-unit-picker': LyraUnitPickerVueProps;
   'lr-usage-badge': LyraUsageBadgeVueProps;
   'lr-video': LyraVideoVueProps;
   'lr-video-playlist': LyraVideoPlaylistVueProps;
