@@ -7,17 +7,17 @@ corresponding full license texts and upstream notices are included in
 
 ## DOCX engine and stylesheet
 
-`@docx-editor.dev/core@2.24.0` is copyright 2026 EigenPal Inc. and is
+`@docx-editor.dev/core@2.25.0` is copyright 2026 EigenPal Inc. and is
 licensed under Apache-2.0. The upstream package source is published at
 [github.com/eigenpal/docx-editor/tree/main/packages/core](https://github.com/eigenpal/docx-editor/tree/main/packages/core),
 and the exact public package is
-[`@docx-editor.dev/core@2.24.0`](https://www.npmjs.com/package/@docx-editor.dev/core/v/2.24.0).
+[`@docx-editor.dev/core@2.25.0`](https://www.npmjs.com/package/@docx-editor.dev/core/v/2.25.0).
 Lyra Docs redistributes the package's `dist/editor.css` stylesheet unchanged.
 The Apache-2.0 license text is included in
-[`THIRD_PARTY_LICENSES/docx-editor-core-2.24.0-Apache-2.0.txt`](THIRD_PARTY_LICENSES/docx-editor-core-2.24.0-Apache-2.0.txt).
+[`THIRD_PARTY_LICENSES/docx-editor-core-2.25.0-Apache-2.0.txt`](THIRD_PARTY_LICENSES/docx-editor-core-2.25.0-Apache-2.0.txt).
 
 The upstream package's
-[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_LICENSES/docx-editor-core-2.24.0-THIRD_PARTY_NOTICES.md)
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_LICENSES/docx-editor-core-2.25.0-THIRD_PARTY_NOTICES.md)
 is included verbatim. It attributes bundled `harfbuzzjs@1.6.1` to its project
 authors under MIT and identifies the separately distributed HarfBuzz asset.
 The upstream HarfBuzz license is included at
@@ -27,8 +27,8 @@ The upstream HarfBuzz license is included at
 
 The workspace installs these runtime packages with Lyra Docs:
 
-- `fflate@0.8.2` — MIT; copyright 2023 Arjun Barrett. The full license is
-  [`THIRD_PARTY_LICENSES/fflate-0.8.2-MIT.txt`](THIRD_PARTY_LICENSES/fflate-0.8.2-MIT.txt).
+- `fflate@0.8.3` — MIT; copyright 2026 Arjun Barrett. The full license is
+  [`THIRD_PARTY_LICENSES/fflate-0.8.3-MIT.txt`](THIRD_PARTY_LICENSES/fflate-0.8.3-MIT.txt).
 - `saxes@6.0.0` — ISC; copyright Contributors. Its `xmlchars@2.2.0`
   dependency is MIT; copyright Louis-Dominique Dubeau and contributors. Full
   texts are in [`THIRD_PARTY_LICENSES/saxes-6.0.0-ISC.txt`](THIRD_PARTY_LICENSES/saxes-6.0.0-ISC.txt)

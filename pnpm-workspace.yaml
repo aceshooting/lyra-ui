@@ -7,18 +7,18 @@ overrides:
   'nanoid@<3.3.18': 3.3.18
 minimumReleaseAgeExclude:
   - '@aceshooting/lyra-flags@0.1.0'
-  - '@secretlint/config-creator@13.0.4 || 13.0.6'
-  - '@secretlint/config-loader@13.0.4 || 13.0.6'
-  - '@secretlint/core@13.0.4 || 13.0.6'
-  - '@secretlint/formatter@13.0.4 || 13.0.6'
-  - '@secretlint/node@13.0.4 || 13.0.6'
-  - '@secretlint/profiler@13.0.4 || 13.0.6'
-  - '@secretlint/resolver@13.0.4 || 13.0.6'
-  - '@secretlint/secretlint-rule-preset-recommend@13.0.4 || 13.0.6'
-  - '@secretlint/source-creator@13.0.4 || 13.0.6'
-  - '@secretlint/types@13.0.4 || 13.0.6'
-  - '@secretlint/walker@13.0.4 || 13.0.6'
-  - secretlint@13.0.4 || 13.0.6
+  - '@secretlint/config-creator@13.0.4 || 13.0.6 || 13.0.7'
+  - '@secretlint/config-loader@13.0.4 || 13.0.6 || 13.0.7'
+  - '@secretlint/core@13.0.4 || 13.0.6 || 13.0.7'
+  - '@secretlint/formatter@13.0.4 || 13.0.6 || 13.0.7'
+  - '@secretlint/node@13.0.4 || 13.0.6 || 13.0.7'
+  - '@secretlint/profiler@13.0.4 || 13.0.6 || 13.0.7'
+  - '@secretlint/resolver@13.0.4 || 13.0.6 || 13.0.7'
+  - '@secretlint/secretlint-rule-preset-recommend@13.0.4 || 13.0.6 || 13.0.7'
+  - '@secretlint/source-creator@13.0.4 || 13.0.6 || 13.0.7'
+  - '@secretlint/types@13.0.4 || 13.0.6 || 13.0.7'
+  - '@secretlint/walker@13.0.4 || 13.0.6 || 13.0.7'
+  - secretlint@13.0.4 || 13.0.6 || 13.0.7
   - '@publint/pack@0.1.6'
   - publint@0.3.22 || 0.3.23 || 0.3.25
   - '@storybook/addon-a11y@10.5.4 || 10.5.6 || 10.5.7 || 10.5.8 || 10.5.9 || 10.5.10 || 10.6.1'
@@ -122,6 +122,8 @@ minimumReleaseAgeExclude:
   - sharp@0.35.5
   - '@types/d3-zoom@3.0.9'
   - '@types/node@26.6.4'
+  - '@docx-editor.dev/core@2.25.0'
+  - '@docx-editor.dev/i18n@2.25.0'
 allowBuilds:
   esbuild: true
   rs-module-lexer: true

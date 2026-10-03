@@ -32,14 +32,15 @@ assert.deepEqual(manifest.exports, {
 });
 assert.deepEqual(manifest.files, ['dist', 'README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'THIRD_PARTY_LICENSES']);
 assert.deepEqual(manifest.dependencies, {
-  '@aceshooting/lyra-ui': 'workspace:*', fflate: '^0.8.2', lit: '^3.3.3', saxes: '^6.0.0',
+  '@aceshooting/lyra-ui': 'workspace:*', fflate: '^0.8.3', lit: '^3.3.3', saxes: '^6.0.0',
 });
 assert.equal(Object.keys(manifest.optionalDependencies ?? {}).length, 0);
-assert.deepEqual(manifest.peerDependencies, { '@docx-editor.dev/core': '2.24.0' });
+assert.deepEqual(manifest.peerDependencies, { '@docx-editor.dev/core': '2.25.0' });
 assert.deepEqual(manifest.peerDependenciesMeta, { '@docx-editor.dev/core': { optional: true } });
 assert.equal(manifest.devDependencies['@docx-editor.dev/core'], manifest.peerDependencies['@docx-editor.dev/core']);
 assert.deepEqual(Object.keys(manifest.devDependencies).sort(), [
-  '@docx-editor.dev/core', '@types/node', 'axe-core', 'playwright', 'typescript', 'vite',
+  '@docx-editor.dev/core', '@types/node', 'axe-core', 'istanbul-lib-coverage', 'istanbul-lib-report',
+  'istanbul-reports', 'playwright', 'typescript', 'v8-to-istanbul', 'vite',
 ]);
 assert(JSON.parse(read('.changeset/config.json')).ignore.includes(manifest.name));
 for (const file of readdirSync(path.join(repoRoot, '.changeset'))) {
