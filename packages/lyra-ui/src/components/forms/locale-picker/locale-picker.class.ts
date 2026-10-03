@@ -52,7 +52,7 @@ import {
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_localePickerLabel, LYRA_DEFAULT_localePickerRequired, LYRA_DEFAULT_retry, LYRA_DEFAULT_statusError } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_localePickerEmpty, LYRA_DEFAULT_localePickerLabel, LYRA_DEFAULT_localePickerRequired, LYRA_DEFAULT_localePickerSearchLabel, LYRA_DEFAULT_retry, LYRA_DEFAULT_statusError } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
@@ -307,8 +307,10 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     ...super.defaultStrings,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     loading: LYRA_DEFAULT_loading,
+    localePickerEmpty: LYRA_DEFAULT_localePickerEmpty,
     localePickerLabel: LYRA_DEFAULT_localePickerLabel,
     localePickerRequired: LYRA_DEFAULT_localePickerRequired,
+    localePickerSearchLabel: LYRA_DEFAULT_localePickerSearchLabel,
     retry: LYRA_DEFAULT_retry,
     statusError: LYRA_DEFAULT_statusError,
   };

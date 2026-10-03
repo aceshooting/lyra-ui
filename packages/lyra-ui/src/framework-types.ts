@@ -124,6 +124,7 @@ import type { LyraCodeEditor, LyraCodeEditorEventMap } from './components/forms/
 import type { LyraColorPicker, LyraColorPickerEventMap } from './components/forms/color-picker/color-picker.class.js';
 import type { LyraCombobox, LyraComboboxEventMap } from './components/forms/combobox/combobox.class.js';
 import type { LyraOption, LyraOptionEventMap } from './components/forms/combobox/option.class.js';
+import type { LyraCountryCatalog, LyraCountryPicker, LyraCountryPickerEventMap } from './components/forms/country-picker/country-picker.class.js';
 import type { LyraCurrencyPicker, LyraCurrencyPickerEventMap } from './components/forms/currency-picker/currency-picker.class.js';
 import type { LyraDateInput, LyraDateInputEventMap } from './components/forms/date-picker/date-input.class.js';
 import type { LyraDatePicker, LyraDatePickerEventMap } from './components/forms/date-picker/date-picker.class.js';
@@ -146,9 +147,11 @@ import type { LyraSwatchPicker, LyraSwatchPickerEventMap } from './components/fo
 import type { LyraSwitch, LyraSwitchEventMap } from './components/forms/switch/switch.class.js';
 import type { LyraTextarea, LyraTextareaEventMap } from './components/forms/textarea/textarea.class.js';
 import type { LyraTimeRange, LyraTimeRangeEventMap } from './components/forms/time-range/time-range.class.js';
+import type { LyraTimeZoneCatalog, LyraTimeZonePicker, LyraTimeZonePickerEventMap } from './components/forms/time-zone-picker/time-zone-picker.class.js';
 import type { LyraToggleGroup, LyraToggleGroupEventMap } from './components/forms/toggle-group/toggle-group.class.js';
 import type { LyraToggle, LyraToggleEventMap } from './components/forms/toggle/toggle.class.js';
 import type { LyraTokenInput, LyraTokenInputEventMap } from './components/forms/token-input/token-input.class.js';
+import type { LyraUnitCatalog, LyraUnitPicker, LyraUnitPickerEventMap } from './components/forms/unit-picker/unit-picker.class.js';
 import type { LyraAppRailGroup, LyraAppRailGroupEventMap } from './components/layout/app-rail-group/app-rail-group.class.js';
 import type { LyraAppRailItem, LyraAppRailItemEventMap } from './components/layout/app-rail/app-rail-item.class.js';
 import type { LyraAppRail, LyraAppRailEventMap } from './components/layout/app-rail/app-rail.class.js';
@@ -3327,6 +3330,63 @@ export interface LyraComponentTypeMap {
       'tooltip-placement'?: LyraCopyButton['tooltipPlacement'];
     };
   };
+  'lr-country-picker': {
+    element: LyraCountryPicker;
+    properties: LyraElementProperties<
+      LyraCountryPicker,
+      | 'accessibleLabel'
+      | 'autocapitalize'
+      | 'autocomplete'
+      | 'autocorrect'
+      | 'clearable'
+      | 'countries'
+      | 'customError'
+      | 'defaultValue'
+      | 'disabled'
+      | 'enterKeyHint'
+      | 'errorText'
+      | 'flags'
+      | 'form'
+      | 'hint'
+      | 'inputMode'
+      | 'label'
+      | 'locale'
+      | 'name'
+      | 'placeholder'
+      | 'positioningStrategy'
+      | 'required'
+      | 'searchable'
+      | 'size'
+      | 'spellcheck'
+      | 'strings'
+      | 'topLayer'
+      | 'value',
+      {
+        countries: LyraCountryCatalog | null | undefined;
+        defaultValue: string | null;
+        form: HTMLFormElement | string | null;
+      }
+    >;
+    events: LyraCountryPickerEventMap;
+    eventNames:       | 'blur'
+      | 'change'
+      | 'focus'
+      | 'input'
+      | 'lr-change'
+      | 'lr-input'
+      | 'lr-invalid';
+    cssNames: never;
+    attributeAliases: {
+      'aria-label'?: LyraCountryPicker['accessibleLabel'];
+      'custom-error'?: LyraCountryPicker['customError'];
+      'enterkeyhint'?: LyraCountryPicker['enterKeyHint'];
+      'error-text'?: LyraCountryPicker['errorText'];
+      'inputmode'?: LyraCountryPicker['inputMode'];
+      'positioning-strategy'?: LyraCountryPicker['positioningStrategy'];
+      'top-layer'?: LyraCountryPicker['topLayer'];
+      'value'?: LyraCountryPicker['defaultValue'];
+    };
+  };
   'lr-csv-viewer': {
     element: LyraCsvViewer;
     properties: LyraElementProperties<
@@ -3360,21 +3420,28 @@ export interface LyraComponentTypeMap {
     properties: LyraElementProperties<
       LyraCurrencyPicker,
       | 'accessibleLabel'
+      | 'autocapitalize'
+      | 'autocomplete'
+      | 'autocorrect'
       | 'clearable'
       | 'currencies'
       | 'customError'
       | 'defaultValue'
       | 'disabled'
+      | 'enterKeyHint'
       | 'errorText'
       | 'form'
       | 'hint'
+      | 'inputMode'
       | 'label'
       | 'locale'
       | 'name'
       | 'placeholder'
       | 'positioningStrategy'
       | 'required'
+      | 'searchable'
       | 'size'
+      | 'spellcheck'
       | 'strings'
       | 'topLayer'
       | 'value',
@@ -3394,7 +3461,9 @@ export interface LyraComponentTypeMap {
     attributeAliases: {
       'aria-label'?: LyraCurrencyPicker['accessibleLabel'];
       'custom-error'?: LyraCurrencyPicker['customError'];
+      'enterkeyhint'?: LyraCurrencyPicker['enterKeyHint'];
       'error-text'?: LyraCurrencyPicker['errorText'];
+      'inputmode'?: LyraCurrencyPicker['inputMode'];
       'positioning-strategy'?: LyraCurrencyPicker['positioningStrategy'];
       'top-layer'?: LyraCurrencyPicker['topLayer'];
       'value'?: LyraCurrencyPicker['defaultValue'];
@@ -6890,12 +6959,17 @@ export interface LyraComponentTypeMap {
     element: LyraLocalePicker;
     properties: LyraElementProperties<
       LyraLocalePicker,
+      | 'autocapitalize'
+      | 'autocomplete'
+      | 'autocorrect'
       | 'customError'
       | 'defaultValue'
       | 'disabled'
+      | 'enterKeyHint'
       | 'errorText'
       | 'form'
       | 'hint'
+      | 'inputMode'
       | 'label'
       | 'locale'
       | 'localeLoader'
@@ -6904,7 +6978,9 @@ export interface LyraComponentTypeMap {
       | 'open'
       | 'optionDisplay'
       | 'required'
+      | 'searchable'
       | 'size'
+      | 'spellcheck'
       | 'strings'
       | 'topLayer'
       | 'triggerDisplay'
@@ -6947,7 +7023,9 @@ export interface LyraComponentTypeMap {
       | '--lr-positioning-strategy';
     attributeAliases: {
       'custom-error'?: LyraLocalePicker['customError'];
+      'enterkeyhint'?: LyraLocalePicker['enterKeyHint'];
       'error-text'?: LyraLocalePicker['errorText'];
+      'inputmode'?: LyraLocalePicker['inputMode'];
       'option-display'?: LyraLocalePicker['optionDisplay'];
       'top-layer'?: LyraLocalePicker['topLayer'];
       'trigger-display'?: LyraLocalePicker['triggerDisplay'];
@@ -11913,6 +11991,62 @@ export interface LyraComponentTypeMap {
       'start-label'?: LyraTimeRange['startLabel'];
     };
   };
+  'lr-time-zone-picker': {
+    element: LyraTimeZonePicker;
+    properties: LyraElementProperties<
+      LyraTimeZonePicker,
+      | 'accessibleLabel'
+      | 'autocapitalize'
+      | 'autocomplete'
+      | 'autocorrect'
+      | 'clearable'
+      | 'customError'
+      | 'defaultValue'
+      | 'disabled'
+      | 'enterKeyHint'
+      | 'errorText'
+      | 'form'
+      | 'hint'
+      | 'inputMode'
+      | 'label'
+      | 'locale'
+      | 'name'
+      | 'placeholder'
+      | 'positioningStrategy'
+      | 'required'
+      | 'searchable'
+      | 'size'
+      | 'spellcheck'
+      | 'strings'
+      | 'timeZones'
+      | 'topLayer'
+      | 'value',
+      {
+        defaultValue: string | null;
+        form: HTMLFormElement | string | null;
+        timeZones: LyraTimeZoneCatalog | null | undefined;
+      }
+    >;
+    events: LyraTimeZonePickerEventMap;
+    eventNames:       | 'blur'
+      | 'change'
+      | 'focus'
+      | 'input'
+      | 'lr-change'
+      | 'lr-input'
+      | 'lr-invalid';
+    cssNames: never;
+    attributeAliases: {
+      'aria-label'?: LyraTimeZonePicker['accessibleLabel'];
+      'custom-error'?: LyraTimeZonePicker['customError'];
+      'enterkeyhint'?: LyraTimeZonePicker['enterKeyHint'];
+      'error-text'?: LyraTimeZonePicker['errorText'];
+      'inputmode'?: LyraTimeZonePicker['inputMode'];
+      'positioning-strategy'?: LyraTimeZonePicker['positioningStrategy'];
+      'top-layer'?: LyraTimeZonePicker['topLayer'];
+      'value'?: LyraTimeZonePicker['defaultValue'];
+    };
+  };
   'lr-timeline': {
     element: LyraTimeline;
     properties: LyraElementProperties<
@@ -12707,6 +12841,62 @@ export interface LyraComponentTypeMap {
       | '--lr-typing-indicator-gap';
     attributeAliases: {
       'label-placement'?: LyraTypingIndicator['labelPlacement'];
+    };
+  };
+  'lr-unit-picker': {
+    element: LyraUnitPicker;
+    properties: LyraElementProperties<
+      LyraUnitPicker,
+      | 'accessibleLabel'
+      | 'autocapitalize'
+      | 'autocomplete'
+      | 'autocorrect'
+      | 'clearable'
+      | 'customError'
+      | 'defaultValue'
+      | 'disabled'
+      | 'enterKeyHint'
+      | 'errorText'
+      | 'form'
+      | 'hint'
+      | 'inputMode'
+      | 'label'
+      | 'locale'
+      | 'name'
+      | 'placeholder'
+      | 'positioningStrategy'
+      | 'required'
+      | 'searchable'
+      | 'size'
+      | 'spellcheck'
+      | 'strings'
+      | 'topLayer'
+      | 'units'
+      | 'value',
+      {
+        defaultValue: string | null;
+        form: HTMLFormElement | string | null;
+        units: LyraUnitCatalog | null | undefined;
+      }
+    >;
+    events: LyraUnitPickerEventMap;
+    eventNames:       | 'blur'
+      | 'change'
+      | 'focus'
+      | 'input'
+      | 'lr-change'
+      | 'lr-input'
+      | 'lr-invalid';
+    cssNames: never;
+    attributeAliases: {
+      'aria-label'?: LyraUnitPicker['accessibleLabel'];
+      'custom-error'?: LyraUnitPicker['customError'];
+      'enterkeyhint'?: LyraUnitPicker['enterKeyHint'];
+      'error-text'?: LyraUnitPicker['errorText'];
+      'inputmode'?: LyraUnitPicker['inputMode'];
+      'positioning-strategy'?: LyraUnitPicker['positioningStrategy'];
+      'top-layer'?: LyraUnitPicker['topLayer'];
+      'value'?: LyraUnitPicker['defaultValue'];
     };
   };
   'lr-usage-badge': {

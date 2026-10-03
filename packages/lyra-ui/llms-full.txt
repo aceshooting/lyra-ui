@@ -37,7 +37,7 @@ sibling's file for the shared prose. Either way it costs a few hundred tokens in
 whole catalog. `llms/index.md` maps every tag to its family and entry point.
 
 - **Foundation** — base class, form association, events, i18n, theming, TypeScript, frameworks, SSR, packaging (`llms/shared.md`)
-- **Form controls & inputs** — 32 tags in `components/forms/`
+- **Form controls & inputs** — 35 tags in `components/forms/`
 - **Data display, dashboards & flow canvas** — 26 tags in `components/data/`
 - **Layout, navigation & structure** — 40 tags in `components/layout/`
 - **Overlays, status & feedback** — 22 tags in `components/overlays/`
@@ -3136,6 +3136,8 @@ arrowPadding?: number; hoverBridge?: HTMLElement; onPlaced?: (result: PlacementR
   `validationMessage`, and `willValidate`; `setFormValue(next)`; `getForm()`; `checkValidity()`;
   `reportValidity()`; `setCustomValidity(message)`; `resetValidity()`; `formResetCallback()`; and
   `formStateRestoreCallback(state, reason)`.
+  Writing `null` to `defaultValue` removes its markup value and resets the default to the adapter's
+  empty value; reading it still returns `TValue`. This does not overwrite a dirty live value.
   The exact callable signatures are `attachInternalsSafely(host: HTMLElement): ElementInternals`,
   `createFallbackInternals(): ElementInternals`, `createStringArrayFormDataState(name: string,
 values: readonly string[]): FormData`, `readStringArrayFormDataState(state: string | File |
@@ -3148,7 +3150,8 @@ toFormValue(value: TValue): FormSubmissionValue; toFormState?(value: TValue):
 FormSubmissionValue; isEmpty?(value: TValue): boolean; fromAttribute?(attribute: string): TValue;
 toAttribute?(value: TValue): string | null; fromFormState?(state: FormSubmissionValue): TValue }`
   and `FormAssociatedInterface<TValue> { internals: ElementInternals; get name(): string; set
-name(next: string | null); value: TValue; defaultValue: TValue; customError: string | null;
+name(next: string | null); value: TValue; get defaultValue(): TValue;
+set defaultValue(next: TValue | null); customError: string | null;
 disabled: boolean; required: boolean; readonly effectiveDisabled: boolean; get form():
 HTMLFormElement | null; set form(owner: FormOwnerValue); readonly labels: NodeList; readonly
 validity: ValidityState; readonly validationMessage: string; readonly willValidate: boolean;
@@ -3994,6 +3997,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-control-group': LyraControlGroupReactProps;
   'lr-conversation-item': LyraConversationItemReactProps;
   'lr-copy-button': LyraCopyButtonReactProps;
+  'lr-country-picker': LyraCountryPickerReactProps;
   'lr-csv-viewer': LyraCsvViewerReactProps;
   'lr-currency-picker': LyraCurrencyPickerReactProps;
   'lr-dashboard-grid': LyraDashboardGridReactProps;
@@ -4192,6 +4196,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-thread-list': LyraThreadListReactProps;
   'lr-time-input': LyraTimeInputReactProps;
   'lr-time-range': LyraTimeRangeReactProps;
+  'lr-time-zone-picker': LyraTimeZonePickerReactProps;
   'lr-timeline': LyraTimelineReactProps;
   'lr-timeline-item': LyraTimelineItemReactProps;
   'lr-toast': LyraToastReactProps;
@@ -4214,6 +4219,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-tree': LyraTreeReactProps;
   'lr-tree-item': LyraTreeItemReactProps;
   'lr-typing-indicator': LyraTypingIndicatorReactProps;
+  'lr-unit-picker': LyraUnitPickerReactProps;
   'lr-usage-badge': LyraUsageBadgeReactProps;
   'lr-video': LyraVideoReactProps;
   'lr-video-playlist': LyraVideoPlaylistReactProps;
@@ -4423,6 +4429,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-control-group': LyraComponentTypeMap['lr-control-group']['element'];
   'lr-conversation-item': LyraComponentTypeMap['lr-conversation-item']['element'];
   'lr-copy-button': LyraComponentTypeMap['lr-copy-button']['element'];
+  'lr-country-picker': LyraComponentTypeMap['lr-country-picker']['element'];
   'lr-csv-viewer': LyraComponentTypeMap['lr-csv-viewer']['element'];
   'lr-currency-picker': LyraComponentTypeMap['lr-currency-picker']['element'];
   'lr-dashboard-grid': LyraComponentTypeMap['lr-dashboard-grid']['element'];
@@ -4621,6 +4628,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-thread-list': LyraComponentTypeMap['lr-thread-list']['element'];
   'lr-time-input': LyraComponentTypeMap['lr-time-input']['element'];
   'lr-time-range': LyraComponentTypeMap['lr-time-range']['element'];
+  'lr-time-zone-picker': LyraComponentTypeMap['lr-time-zone-picker']['element'];
   'lr-timeline': LyraComponentTypeMap['lr-timeline']['element'];
   'lr-timeline-item': LyraComponentTypeMap['lr-timeline-item']['element'];
   'lr-toast': LyraComponentTypeMap['lr-toast']['element'];
@@ -4643,6 +4651,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-tree': LyraComponentTypeMap['lr-tree']['element'];
   'lr-tree-item': LyraComponentTypeMap['lr-tree-item']['element'];
   'lr-typing-indicator': LyraComponentTypeMap['lr-typing-indicator']['element'];
+  'lr-unit-picker': LyraComponentTypeMap['lr-unit-picker']['element'];
   'lr-usage-badge': LyraComponentTypeMap['lr-usage-badge']['element'];
   'lr-video': LyraComponentTypeMap['lr-video']['element'];
   'lr-video-playlist': LyraComponentTypeMap['lr-video-playlist']['element'];
@@ -4729,6 +4738,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-control-group': LyraControlGroupSvelteProps;
   'lr-conversation-item': LyraConversationItemSvelteProps;
   'lr-copy-button': LyraCopyButtonSvelteProps;
+  'lr-country-picker': LyraCountryPickerSvelteProps;
   'lr-csv-viewer': LyraCsvViewerSvelteProps;
   'lr-currency-picker': LyraCurrencyPickerSvelteProps;
   'lr-dashboard-grid': LyraDashboardGridSvelteProps;
@@ -4927,6 +4937,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-thread-list': LyraThreadListSvelteProps;
   'lr-time-input': LyraTimeInputSvelteProps;
   'lr-time-range': LyraTimeRangeSvelteProps;
+  'lr-time-zone-picker': LyraTimeZonePickerSvelteProps;
   'lr-timeline': LyraTimelineSvelteProps;
   'lr-timeline-item': LyraTimelineItemSvelteProps;
   'lr-toast': LyraToastSvelteProps;
@@ -4949,6 +4960,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-tree': LyraTreeSvelteProps;
   'lr-tree-item': LyraTreeItemSvelteProps;
   'lr-typing-indicator': LyraTypingIndicatorSvelteProps;
+  'lr-unit-picker': LyraUnitPickerSvelteProps;
   'lr-usage-badge': LyraUsageBadgeSvelteProps;
   'lr-video': LyraVideoSvelteProps;
   'lr-video-playlist': LyraVideoPlaylistSvelteProps;
@@ -5147,6 +5159,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-control-group': LyraControlGroupVueProps;
   'lr-conversation-item': LyraConversationItemVueProps;
   'lr-copy-button': LyraCopyButtonVueProps;
+  'lr-country-picker': LyraCountryPickerVueProps;
   'lr-csv-viewer': LyraCsvViewerVueProps;
   'lr-currency-picker': LyraCurrencyPickerVueProps;
   'lr-dashboard-grid': LyraDashboardGridVueProps;
@@ -5345,6 +5358,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-thread-list': LyraThreadListVueProps;
   'lr-time-input': LyraTimeInputVueProps;
   'lr-time-range': LyraTimeRangeVueProps;
+  'lr-time-zone-picker': LyraTimeZonePickerVueProps;
   'lr-timeline': LyraTimelineVueProps;
   'lr-timeline-item': LyraTimelineItemVueProps;
   'lr-toast': LyraToastVueProps;
@@ -5367,6 +5381,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-tree': LyraTreeVueProps;
   'lr-tree-item': LyraTreeItemVueProps;
   'lr-typing-indicator': LyraTypingIndicatorVueProps;
+  'lr-unit-picker': LyraUnitPickerVueProps;
   'lr-usage-badge': LyraUsageBadgeVueProps;
   'lr-video': LyraVideoVueProps;
   'lr-video-playlist': LyraVideoPlaylistVueProps;
@@ -12472,8 +12487,8 @@ A closed-list locale switcher over the library's own locale registry. First-part
 Web Awesome equivalent). With `locales` unset (the default), the offered rows are exactly
 `getRegisteredLyraLocales()` — every locale with strings registered via `registerLyraLocale()`,
 plus `en` — kept live via `subscribeLyraLocaleRegistry()`. Built directly on `lr-select`'s
-trigger-button/`aria-activedescendant` listbox technique, not composed from it — a plain closed
-list, no filter/free-text mode.
+trigger-button/`aria-activedescendant` listbox technique, not composed from it. Optional
+`searchable` adds a text filter; free text never becomes a locale selection.
 
 Host `aria-describedby` references resolve onto the role=combobox trigger before its local error and
 hint guidance. The relationship tracks missing IDs, target replacement, removal/reinsertion,
@@ -12504,6 +12519,18 @@ readonly LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; cou
   the catalog while the listbox is open keeps keyboard navigation valid: an active row beyond the
   new end is rehomed to the last remaining row. Arrow/Home/End/typeahead changes scroll the active
   owned option into nearest view after render; replacement and disconnect cancel stale scrolls.
+- `searchable: boolean = false` — add a search field inside the open menu. Substring matching
+  ignores case and accents across language tags, native names, localized names and caller labels;
+  for example, `eng` finds English. Filtering emits no selection events and does not invoke a
+  locale loader. Arrow keys and Enter select an offered match; ordinary text editing and IME
+  composition remain native. Empty results show localized guidance. Closing, disabling, resetting,
+  reconnecting or turning search off clears unfinished filtering. The default keeps the existing
+  compact list without an input.
+- `autocomplete: string = 'off'`, `inputMode: string = ''` (attribute `inputmode`),
+  `enterKeyHint: string = ''` (attribute `enterkeyhint`), `spellcheck: boolean = false`,
+  `autocapitalize: string = ''`, `autocorrect: boolean = true` — native guidance for the filter.
+  The readonly `input: HTMLInputElement | null` exposes it in searchable mode. After directly
+  editing `input.value`, dispatch a native `input` event to update the matches.
 - `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-popover>`:
   always shows the open listbox in the browser top layer, placed `fixed` whatever the positioning
   strategy resolves to, so it paints above a sibling surface stacked higher than a `z-index`ed fixed
@@ -12629,7 +12656,9 @@ visually hidden in flag-only mode), `listbox`, `option`, `option-flag` (present 
 `optionDisplay` is `label-tag`, and absent from the DOM entirely under `optionDisplay="label"`),
 `expand-icon`,
 `hint`, `error`, `load-status` (the optional localized loading or failure message), and
-`load-retry` (the retry button shown after a locale load fails).
+`load-retry` (the retry button shown after a locale load fails), `search-input` (the opt-in
+filter) and `empty` (the no-match message). Search uses the localized `localePickerSearchLabel`
+and `localePickerEmpty` string keys.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
 `[part="form-control-label"]` — the one `::after` rule described under "The required-field marker"
@@ -13222,7 +13251,7 @@ toggles join, and `var(--lr-space-2xs)` when vertical) and `--lr-toggle-group-wr
 ## `lr-currency-picker`
 
 A form-associated, single-currency selector with a compact ISO-code trigger and localized currency
-names and symbols in its options. It composes `lr-select` and `lr-option`; no additional popover,
+names and symbols in its options. It composes `lr-select` (or `lr-combobox` when searchable) and `lr-option`; no additional popover,
 currency-name table or optional peer is needed. Selection changes the field value only: exchange
 rates, amount conversion, persistence and the application's display-currency preference belong to
 the application. Selecting a currency does not change the interface language.
@@ -13235,7 +13264,7 @@ subset. Omitted, `undefined` or `null` restores the default catalog; `[]` means 
 
 `currencies` accepts `LyraCurrencyCatalog = readonly string[] | readonly LyraCurrencyEntry[]`.
 Each `LyraCurrencyEntry { readonly code: string; readonly label?: string; readonly symbol?: string;
-readonly disabled?: boolean }` supplies one option. Names and symbols come from `Intl` using the field's
+readonly group?: string; readonly disabled?: boolean }` supplies one option. Names and symbols come from `Intl` using the field's
 effective locale, with code fallbacks where display data is unavailable. Caller labels/symbols,
 including explicit empty strings, override that presentation. The catalog is copied; reassign it
 to change options. At most 512 rows are examined, invalid rows are skipped, and the first valid
@@ -13263,8 +13292,18 @@ constraints, leaving `value`, `defaultValue` and interaction state unchanged.
 `topLayer` (attribute `top-layer`) defaults to `false`; enable it inside clipped headers or dialogs.
 An explicit `positioningStrategy` (attribute `positioning-strategy`) of `"fixed"` or `"absolute"`
 overrides inherited `--lr-positioning-strategy`.
-Keyboard navigation and ISO-code type-ahead use the select contract. This is a closed list, without
-a text-search field or currency-name filtering.
+Keyboard navigation and ISO-code type-ahead use the select contract by default. Set
+`searchable` (default `false`) to enable a text filter matching codes, localized names, literal
+labels, and regular/narrow symbols. Typing only filters; it does not change `value` or emit
+selection events. A query matching the current displayed code follows the combobox convention
+of showing the complete list. An empty or unmatched query never creates a currency.
+`group` supplies caller-owned headings for contiguous rows; order is never rearranged.
+`autocomplete='off'`, `inputMode=''` (attribute `inputmode`), `enterKeyHint=''`
+(attribute `enterkeyhint`), `spellcheck=false`,
+`autocapitalize=''`, and `autocorrect=true` forward native editing guidance in searchable mode.
+The readonly `input: HTMLInputElement | null` exposes that native filter (null in compact mode).
+After directly changing its DOM value, dispatch a native `input` event to update filtering.
+Mode changes, reset and reconnect clear unfinished filtering without changing the reset default.
 
 **Events:** An accepted user choice or clear updates `value` synchronously, then emits exactly one
 `input`, `lr-input`, `change`, `lr-change` sequence. The prefixed details are
@@ -13278,7 +13317,8 @@ bind `currencies` to supply rows.
 
 **CSS parts:** `form-control`, `form-control-label`, `hint`, `error`;
 `select-trigger`, `select-display-input`, `select-listbox`, `select-option`, `select-option-sub`,
-`select-clear-button`. The composed select inherits shared form-control and surface tokens.
+`select-clear-button`, `select-group-label`. Both composed controls preserve these part names
+and inherit shared form-control and surface tokens.
 
 ```html
 <script type="module">
@@ -13293,6 +13333,262 @@ bind `currencies` to supply rows.
 
 <lr-currency-picker name="currency" label="Display currency" value="EUR"></lr-currency-picker>
 ```
+
+## Currency catalog and rate helpers
+
+- **`currency-helpers`** — Registration-free data helpers.
+  Import: `@aceshooting/lyra-ui/currency.js`.
+  `CURRENCY_CODES: readonly LyraCurrencyCode[]` is the frozen, pinned 178-code ISO catalog,
+  including `XTS` and `XXX`; `LyraCurrencyCode` is its literal code union. The picker's omitted
+  catalog excludes those two sentinel codes. Custom three-letter codes remain supported.
+  `getCurrencyCatalog(locale: string, currencies?: LyraCurrencyCatalog): readonly LyraCurrencyDisplayEntry[]`
+  returns frozen localized rows for the full catalog or a caller-ordered subset; `[]` stays empty.
+  `LyraCurrencyCatalog` and `LyraCurrencyEntry` have the shapes documented under
+  [`lr-currency-picker`](#lr-currency-picker).
+  `LyraCurrencyDisplayEntry { readonly code: string; readonly label: string; readonly symbol: string; readonly narrowSymbol: string; readonly disabled: boolean; readonly group?: string }`
+  includes both ordinary and narrow symbols. Explicit caller labels/symbols take precedence;
+  unsupported display data falls back to the code. Input catalogs use the picker's 512-row bound.
+
+  `LyraCurrencyRateSnapshot { readonly base: string; readonly date: string | null; readonly rates: Readonly<Partial<Record<string, number>>> }`
+  stores units of each quoted currency per one unit of `base`. Missing quotes remain unavailable.
+  `date` is provider as-of metadata: explicit `null` when unknown, otherwise a nonblank string of
+  at most 128 UTF-16 code units. It is preserved, never replaced with a fetch timestamp.
+  `LyraCurrencyRateLoadOptions { readonly signal?: AbortSignal }` controls one load.
+  `LyraCurrencyRateLoader = (context: { readonly signal: AbortSignal }) => Promise<unknown>`
+  is a caller-owned adapter returning the snapshot shape.
+  `LyraCurrencyRateSource = LyraCurrencyRateSnapshot | LyraCurrencyRateLoader` accepts saved
+  data or that adapter; there is no default exchange-rate service.
+
+  `normalizeCurrencyRates(input: unknown): LyraCurrencyRateSnapshot` validates, clones and
+  freezes the whole snapshot and its rate table. Codes are trimmed, uppercased three-letter
+  ASCII identifiers, without requiring ISO membership. Records must have plain or null prototypes
+  and own data fields; arrays, accessors, duplicate normalized codes and nonpositive/nonfinite
+  quotes are rejected. At most 512 currencies are accepted, including the base. Only an omitted
+  base quote is inserted as `1`; a supplied base quote must equal `1`. Malformed data throws
+  `TypeError`, and an oversized table throws `RangeError`.
+
+  `loadCurrencyRates(source: LyraCurrencyRateSource, options?: LyraCurrencyRateLoadOptions): Promise<LyraCurrencyRateSnapshot>`
+  normalizes static data or invokes the loader once. A pre-aborted signal prevents invocation;
+  aborting in flight rejects promptly with the signal's reason, even if the provider ignores it.
+  Late results are discarded and provider failures otherwise retain their original identity.
+  Calls are independent: the application owns transport, authentication, response-size limits,
+  caching, persistence and protection against an older request replacing newer state.
+
+  `convertCurrency(amount: number, from: string, to: string, snapshot: LyraCurrencyRateSnapshot): number`
+  converts finite signed amounts using the shared base, without monetary rounding. Both quotes
+  are required even for zero or same-currency requests. Malformed inputs throw `TypeError`;
+  missing quotes, overflow or a nonzero result that underflows to zero throw `RangeError`.
+  Keep original prices and historical snapshot policy in the application. Restrict a rate-backed
+  picker's catalog to the snapshot's actual quote keys, rather than offering every ISO code.
+
+```ts
+import { convertCurrency, normalizeCurrencyRates } from '@aceshooting/lyra-ui/currency.js';
+
+const snapshot = normalizeCurrencyRates({
+  base: 'EUR',
+  date: '2026-09-08',
+  rates: { USD: 1.1, GBP: 0.85 }
+});
+const supportedCurrencies = Object.keys(snapshot.rates); // Includes the base EUR.
+const displayedAmount = convertCurrency(100, 'EUR', 'USD', snapshot);
+// Bind supportedCurrencies to the currency picker's currencies property.
+```
+
+## `lr-country-picker`
+
+A form-associated country/territory selector with localized names and decorative emoji flags.
+Import `@aceshooting/lyra-ui/components/lr-country-picker.js`. The default catalog is the pinned
+249-code ISO alpha-2 list. `value` defaults to `''`; valid two-letter values are trimmed and
+uppercased, and no country is inferred. `.countries` accepts
+`LyraCountryCatalog = readonly string[] | readonly LyraCountryEntry[]`; the entry and headless
+catalog helper are documented [below](#country-time-zone-and-unit-catalog-helpers).
+
+`flags` defaults to `true`; set `.flags = false` or `flags="false"` to hide flags in both the
+trigger and offered rows. Emoji need no optional peer, assets or network request. Platform fonts
+may display regional-indicator letters; the visible country name remains the identifying text.
+The `flag` CSS part styles decorative flags in both locations.
+
+**Shared field contract.** The country, time-zone and unit pickers compose `lr-select` by default
+and `lr-combobox` when `searchable` is `true` (default `false`). Their catalogs are copied and
+frozen; reassign to change rows. Omitted, `undefined` or `null` restores defaults, and `[]` offers
+no options. At most 1024 input rows are examined; invalid rows are skipped, the first valid
+normalized identifier wins, and caller order is preserved. `group` adds headings for contiguous
+rows, `disabled` prevents selection, and literal `label` overrides include explicit empty strings.
+A nonempty unknown, malformed or disabled selected value stays visible and invalid until cleared
+or replaced. It is never silently replaced or added as a selectable row.
+
+`label=''`, `hint=''`, `errorText=''` (`error-text`) and the `label`, `hint`, `error` slots supply
+field chrome. `accessibleLabel=null` (attribute `aria-label`) overrides the actual control's name;
+otherwise labels or the localized Country, Time zone or Unit name apply. External
+`aria-labelledby` and `aria-describedby` relationships are forwarded to the control.
+`placeholder` defaults to localized Select; an explicit empty string stays empty.
+`size='m'`, `clearable=false`, `topLayer=false` (`top-layer`), and optional
+`positioningStrategy: 'fixed' | 'absolute'` (`positioning-strategy`) follow the select contract.
+An omitted positioning strategy inherits `--lr-positioning-strategy`.
+
+`name`, `form`, `required`, `disabled`, `value`, `defaultValue`, fieldset disablement and native
+form submission/reset follow the shared form contracts. The form owns the committed identifier,
+never filter text. `getForm()`, `checkValidity()`, `reportValidity()` and
+`setCustomValidity(message)` operate on the outer field. `customError: string | null = null`
+(`custom-error`, reflected) supplies a consumer error; `resetValidity()` clears that error and
+rechecks current constraints without changing the value or interaction state. Reset restores
+the normalized default and clears transient filtering while preserving a custom error.
+`focus(options?)`, `blur()` and `click()` forward to the visible control.
+
+In searchable mode, typing filters identifiers and display names; unit symbols are also matched.
+It emits no selection event and cannot create a value. A query matching the current displayed
+label follows the combobox convention of showing the full list. Mode changes, reset and reconnect
+clear unfinished filtering. Native guidance forwards `autocomplete='off'`, `inputMode=''`
+(`inputmode`), `enterKeyHint=''` (`enterkeyhint`), `spellcheck=false`, `autocapitalize=''`,
+and `autocorrect=true` (HTML `on`/`off`).
+The readonly `input: HTMLInputElement | null` exposes the filter, or null in compact mode.
+After directly editing its DOM value, dispatch a native `input` event to refilter. Keyboard
+selection, disabled-row navigation, IME handling and popup behavior follow the composed control.
+
+**Events:** `input`, `lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`.
+
+An accepted user choice or clear synchronously updates the form value, then emits one
+`input`, `lr-input`, `change`, `lr-change` sequence. Prefixed details have readonly `value: string`
+and `previousValue: string`, exported as `LyraCountryChangeDetail`, `LyraTimeZoneChangeDetail`
+and `LyraUnitChangeDetail` from their respective component modules. Reselecting the current value,
+programmatic updates, catalog/locale changes and resets emit no selection events. Native `focus`
+and `blur` relay once; canceling `lr-invalid` suppresses native validation UI.
+
+**CSS parts:** `form-control`, `form-control-label`, `hint`, `error`, `select-trigger`,
+`select-display-input`, `select-listbox`, `select-option`, `select-option-sub`, `select-group-label`
+and `select-clear-button`; country additionally exposes `flag`. The three field slots are the only content slots; supply options through
+the catalog property. Shared form-control and surface tokens apply, including RTL and dark themes.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/lr-country-picker.js';
+</script>
+<lr-country-picker name="country" label="Country" searchable></lr-country-picker>
+```
+
+## `lr-time-zone-picker`
+
+A form-associated identifier selector. Import
+`@aceshooting/lyra-ui/components/lr-time-zone-picker.js`. It follows the
+[shared field contract](#lr-country-picker), with `.timeZones` accepting
+`LyraTimeZoneCatalog = readonly string[] | readonly LyraTimeZoneEntry[]`.
+Default options are `UTC` followed by the runtime's supported primary IANA identifiers, or only
+`UTC` when that catalog API is unavailable. Supply the same explicit catalog on server and client
+when their time-zone data may differ. `value=''` selects nothing automatically.
+
+Identifiers are trimmed and case-sensitive, limited to 256 characters, and never canonicalized.
+Caller catalogs can retain aliases or custom identifiers. Default labels replace underscores
+with spaces; `label` overrides provide other display names, and `searchable` matches both.
+Selection does not change the application's time zone or calculate offsets, clocks or daylight
+saving transitions. Catalog types and `getTimeZoneCodes()` are documented
+[below](#country-time-zone-and-unit-catalog-helpers).
+
+**Field API:** `label`, `hint`, `errorText` (`error-text`), `placeholder`, `accessibleLabel`
+(`aria-label`), `name`, `form`, `value`, `defaultValue`, `required`, `disabled`, `customError`
+(`custom-error`), `size`, `clearable`, `searchable`, `topLayer` (`top-layer`),
+`positioningStrategy` (`positioning-strategy`), `autocomplete`, `inputMode` (`inputmode`),
+`enterKeyHint` (`enterkeyhint`), `spellcheck`, `autocapitalize`, `autocorrect`, and readonly `input`.
+Defaults and form/editing methods follow the [shared contract](#lr-country-picker), including
+`getForm()`, `checkValidity()`, `reportValidity()`, `setCustomValidity(message)` and
+`resetValidity()` for the owning form and consumer validation messages.
+
+**Events:** `input`, `lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`.
+**Slots:** `label`, `hint`, `error`.
+**CSS parts:** `form-control`, `form-control-label`, `hint`, `error`, `select-trigger`,
+`select-display-input`, `select-listbox`, `select-option`, `select-option-sub`, `select-group-label`,
+`select-clear-button`.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/lr-time-zone-picker.js';
+</script>
+<lr-time-zone-picker name="zone" label="Time zone" value="UTC" searchable></lr-time-zone-picker>
+```
+
+## `lr-unit-picker`
+
+A form-associated measurement-unit selector. Import
+`@aceshooting/lyra-ui/components/lr-unit-picker.js`. It follows the
+[shared field contract](#lr-country-picker), with `.units` accepting
+`LyraUnitCatalog = readonly string[] | readonly LyraUnitEntry[]`.
+The default catalog contains the 45 standard ECMA-402 simple units. `value=''` selects nothing;
+identifiers are trimmed and case-sensitive, limited to 256 characters. Caller catalogs may include
+custom or compound units. `Intl.NumberFormat` resolves localized singular names and short symbols;
+unsupported identifiers fall back to their code. Literal `label` and `symbol` overrides, including
+empty strings, take precedence. `searchable` matches identifiers, localized/literal names and
+symbols. Selection edits no amount and performs no unit conversion. Catalog types and name
+resolution are documented [below](#country-time-zone-and-unit-catalog-helpers).
+
+**Field API:** `label`, `hint`, `errorText` (`error-text`), `placeholder`, `accessibleLabel`
+(`aria-label`), `name`, `form`, `value`, `defaultValue`, `required`, `disabled`, `customError`
+(`custom-error`), `size`, `clearable`, `searchable`, `topLayer` (`top-layer`),
+`positioningStrategy` (`positioning-strategy`), `autocomplete`, `inputMode` (`inputmode`),
+`enterKeyHint` (`enterkeyhint`), `spellcheck`, `autocapitalize`, `autocorrect`, and readonly `input`.
+Defaults and form/editing methods follow the [shared contract](#lr-country-picker), including
+`getForm()`, `checkValidity()`, `reportValidity()`, `setCustomValidity(message)` and
+`resetValidity()` for the owning form and consumer validation messages.
+
+**Events:** `input`, `lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`.
+**Slots:** `label`, `hint`, `error`.
+**CSS parts:** `form-control`, `form-control-label`, `hint`, `error`, `select-trigger`,
+`select-display-input`, `select-listbox`, `select-option`, `select-option-sub`, `select-group-label`,
+`select-clear-button`.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/lr-unit-picker.js';
+</script>
+<lr-unit-picker name="unit" label="Measurement unit" value="meter" searchable></lr-unit-picker>
+```
+
+## Country, time-zone and unit catalog helpers
+
+These granular modules register no custom elements. Country/unit name resolution returns frozen
+rows with `code`, resolved `label`, `searchText`, optional `symbol`, `group` and `disabled`.
+Their `SelectionCatalogRow` return type is also available as a type-only package-root export.
+Both helpers use the shared 1024-row bound, preserve order and explicit empty display overrides,
+and skip invalid or duplicate rows. Pass the application's locale explicitly.
+
+- **`selection-catalog-types`** — Type-only import: `@aceshooting/lyra-ui`.
+  `SelectionCatalogEntry { readonly code: string; readonly label?: string; readonly symbol?: string;
+  readonly group?: string; readonly disabled?: boolean }` is the shared caller-row shape.
+  `SelectionCatalogRow extends SelectionCatalogEntry { readonly label: string; readonly searchText: string;
+  readonly code: string; readonly symbol?: string; readonly group?: string; readonly disabled?: boolean }`
+  is the resolved display row; its signature includes the inherited fields. The country and unit
+  name helpers return readonly arrays of these frozen rows.
+
+- **`catalog-picker-events`** — Type-only import: `@aceshooting/lyra-ui`.
+  `LyraCatalogPickerChangeDetail { readonly value: string; readonly previousValue: string }`
+  is the shared committed-selection detail. `LyraCountryChangeDetail`, `LyraTimeZoneChangeDetail`
+  and `LyraUnitChangeDetail` name this same shape from their respective component modules.
+  `LyraCatalogPickerEventMap { 'lr-input': CustomEvent<LyraCatalogPickerChangeDetail>;
+  'lr-change': CustomEvent<LyraCatalogPickerChangeDetail>; 'lr-invalid': CustomEvent<null>;
+  input: Event; change: Event; focus: FocusEvent; blur: FocusEvent }`
+  is the shared event contract extended by each picker-specific event map.
+
+- **`country-catalog`** — Import: `@aceshooting/lyra-ui/countries.js`.
+  `COUNTRY_CODES: readonly LyraCountryCode[]` is the frozen ISO alpha-2 list;
+  `LyraCountryCode` is its literal code union.
+  `LyraCountryEntry { readonly code: string; readonly label?: string; readonly group?: string; readonly disabled?: boolean }`
+  and `LyraCountryCatalog = readonly string[] | readonly LyraCountryEntry[]` describe caller rows.
+  `resolveCountryNames(countries: LyraCountryCatalog, locale: string): readonly SelectionCatalogRow[]`
+  trims/uppercases two-letter codes and resolves localized region names with code fallbacks.
+
+- **`time-zone-catalog`** — Import: `@aceshooting/lyra-ui/time-zones.js`.
+  `LyraTimeZoneEntry { readonly code: string; readonly label?: string; readonly group?: string; readonly disabled?: boolean }`
+  and `LyraTimeZoneCatalog = readonly string[] | readonly LyraTimeZoneEntry[]` describe caller rows.
+  `getTimeZoneCodes(): readonly string[]` returns a frozen list of `UTC` followed by the runtime's
+  sorted primary IANA identifiers, capped at 1024 entries. The fallback is `['UTC']`; it does not
+  inspect or select the user's current zone.
+
+- **`unit-catalog`** — Import: `@aceshooting/lyra-ui/units.js`.
+  `UNIT_CODES: readonly LyraUnitCode[]` is the frozen standard simple-unit list;
+  `LyraUnitCode` is its literal code union.
+  `LyraUnitEntry { readonly code: string; readonly label?: string; readonly symbol?: string; readonly group?: string; readonly disabled?: boolean }`
+  and `LyraUnitCatalog = readonly string[] | readonly LyraUnitEntry[]` describe caller rows.
+  `resolveUnitNames(units: LyraUnitCatalog, locale: string): readonly SelectionCatalogRow[]`
+  resolves localized singular names and short symbols, retaining caller overrides and using the
+  identifier when `Intl` cannot format it. It never converts a measurement.
 
 # Data display, dashboards & flow canvas (`components/data/`)
 

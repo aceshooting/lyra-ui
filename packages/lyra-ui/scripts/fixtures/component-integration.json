@@ -6,10 +6,10 @@
     "gzip": "esbuild bundle=true format=esm minify=true, then gzip level 9; optional peer packages and subpaths externalized. A byte-identical bundle SHA-256 retains its canonical gzip count across zlib patch versions."
   },
   "summary": {
-    "componentCount": 304,
-    "measuredGzipCount": 304,
+    "componentCount": 307,
+    "measuredGzipCount": 307,
     "missingGzipCount": 0,
-    "averageGzipKib": 45.9
+    "averageGzipKib": 46.5
   },
   "components": [
     {
@@ -121,9 +121,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 92631,
+        "bytes": 92636,
         "kib": 90.5,
-        "bundleSha256": "512d23d254ecde7edafea58891eb844599beae7ed57894dbf79d91313183e453",
+        "bundleSha256": "201d2c473fae11a539d1dfca99b7449eae349e06527fb9fc8a5107c334de5a29",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -245,9 +245,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 236821,
+        "bytes": 236819,
         "kib": 231.3,
-        "bundleSha256": "de4caf14eee269fbb3d81467efa0635203e8487f829095661a247bd9ab710a6e",
+        "bundleSha256": "c93e50b24df378a2f7ee898c76aa2f51381164dd8bcad9989016b4fe9b398633",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -331,9 +331,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 63272,
+        "bytes": 63277,
         "kib": 61.8,
-        "bundleSha256": "3e8d29593edbd2a1798dc026539d3e21a0c4ff940c2494a1229617eb52bcd388",
+        "bundleSha256": "be9ee319e74b3f945ed0335089f4a4a02e4b77fd6383b92a490a771d399be8a1",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -353,7 +353,7 @@
         "status": "measured",
         "bytes": 22478,
         "kib": 22,
-        "bundleSha256": "7f0ff97b9f44ef5a39fc28695187249005cc9964c7be3fabd0062fcd76a4cb32",
+        "bundleSha256": "be79a0131462578c9603e4fc927a0d28815c5375689a720f1dba6824fca1d09f",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -371,9 +371,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 38902,
+        "bytes": 38903,
         "kib": 38,
-        "bundleSha256": "fc3b6adbaf5e66474783135841b0ac8b75fcddfcddf960b1f55a02be3f92743f",
+        "bundleSha256": "41bfdd7a6699e5b420e03915d43b2aa6b72c212ff9a9c93ae7c711ec65bea37d",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -705,7 +705,7 @@
         "status": "measured",
         "bytes": 20981,
         "kib": 20.5,
-        "bundleSha256": "f1978ec7f6677cee108d44905c0bc7553b28af1be82d0b6bb85a1b433f6f52b3",
+        "bundleSha256": "ed2d4773a571565c86ca2c5d91335983747dba59dcd744192224b3d4c809382c",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -743,9 +743,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 29063,
+        "bytes": 29066,
         "kib": 28.4,
-        "bundleSha256": "5f2ee2de9a8250bcf439c55b2129f75b250ce9379897fe497414247980248241",
+        "bundleSha256": "cf48af8d33507042cd2894759253a6836309cd56fd8460d769f4fa3fe23672da",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -793,7 +793,7 @@
         "status": "measured",
         "bytes": 21666,
         "kib": 21.2,
-        "bundleSha256": "a3c38c8c2742fe4fb010afbd15ac1f404510192e0558c24e388b2b13d6a20a60",
+        "bundleSha256": "a6d54a3be754d83a21cdf24776bb3310e922e89f87ae829205a25a5b926e9b84",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -981,7 +981,7 @@
         "status": "measured",
         "bytes": 42461,
         "kib": 41.5,
-        "bundleSha256": "c757e73403c3e071f03bf66778a6cbc3f582b1dd57caed1517c777cf23d78d5e",
+        "bundleSha256": "110570ee6710e562bf4e11205c54f1c3ed192c6877c81616a81dde239be3a3c0",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -1026,9 +1026,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 31499,
+        "bytes": 31507,
         "kib": 30.8,
-        "bundleSha256": "5d1c60b210f19de0a0c2f0fbe87c92f7e9dab33b9be3547abce536e7d70651eb",
+        "bundleSha256": "3e4057a790488e7b479464fa0e4c9f28dc8e55403bd36e9c7a43c72c23a7888d",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -1211,9 +1211,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 42629,
+        "bytes": 42631,
         "kib": 41.6,
-        "bundleSha256": "a2319f8e103aea410d4d2d441d64a4f59715054d88f68b407a8b0cf1477fc94e",
+        "bundleSha256": "43c6db59494e8604cf4b0c85805836fae172b5db7be677ed811303abb37ebbb1",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -1260,9 +1260,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 44311,
+        "bytes": 44309,
         "kib": 43.3,
-        "bundleSha256": "2b2b4bfb09cb6a564935da4edf92d137b9b84de28949a75c18c1839f0982644a",
+        "bundleSha256": "5b0472ec50670e7cf8ad5f10cbca8cd421c32410479cfea39e2eebc6301e140e",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -1305,9 +1305,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 36168,
+        "bytes": 36176,
         "kib": 35.3,
-        "bundleSha256": "91fe193ad45b9039653977ff3a9295518dda9857baeef29eff4745d46336b435",
+        "bundleSha256": "74ae4449a7a32f4254de0b32a4a1e8a890dc70178763b65c519251311722cb61",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -1325,9 +1325,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 61493,
+        "bytes": 61502,
         "kib": 60.1,
-        "bundleSha256": "013f99787aa0bd68b2bc4ab207f9bb1c063dff79ccc34c3b1386b6b9168763db",
+        "bundleSha256": "401c369496206feab784b6b5352fcb4e1b56527d5e39dd9e49f831fb970878d0",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -1438,7 +1438,7 @@
         "status": "measured",
         "bytes": 28913,
         "kib": 28.2,
-        "bundleSha256": "2e843c8103c16714999ae977bf9e18b03c0499f63c30b308bc55d4e31063f9dd",
+        "bundleSha256": "b7db6439057e8e6fa49809decd3bdb3e7e38cd204aa1f724114a7e2416b1413f",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -1468,9 +1468,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 137371,
+        "bytes": 137378,
         "kib": 134.2,
-        "bundleSha256": "de65404d7a69c0b2f844157f647e55c2c7e95312150afc70fcf4928d3fdadb91",
+        "bundleSha256": "4814cdbc042532e53f176ae1bf65034fcce4c7e83d16ae9774e5a4324ac9f0f1",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -1493,9 +1493,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 51176,
+        "bytes": 51177,
         "kib": 50,
-        "bundleSha256": "0b7f6fe985e79157f5ac7bbee8087bf3e56ff72cad82c2c706056fc04c2e3305",
+        "bundleSha256": "017849b1ca3e88c0d2356abe80d7e7c92adc3bfea4f6496b2fb583af1df3effb",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -1533,9 +1533,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 43311,
+        "bytes": 43314,
         "kib": 42.3,
-        "bundleSha256": "bcf2d8d4708dc3735cbe8d210240731a270206a8f002823c3d5fd719d8ad89e8",
+        "bundleSha256": "748aa46bc2ba1f593d6fe325485cf5a742a4cbede29bcc20752859a490feb4b7",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -1649,7 +1649,7 @@
         "status": "measured",
         "bytes": 24022,
         "kib": 23.5,
-        "bundleSha256": "8fddcdf253a244e11f5f23ea0da154634385f64c536d92c0cd997817a092f402",
+        "bundleSha256": "ba69c03b5f14c6f7517bf43d675ae2bee4835714c055608df8729fe997c7f1bd",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -1673,6 +1673,32 @@
         "bytes": 66861,
         "kib": 65.3,
         "bundleSha256": "525d4658e358307b0ef8d09565ab37d6fa4e0d8056547a1353456375aa50f48c",
+        "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
+      }
+    },
+    {
+      "tag": "lr-country-picker",
+      "family": "forms",
+      "imports": {
+        "registration": "@aceshooting/lyra-ui/components/lr-country-picker.js",
+        "class": "@aceshooting/lyra-ui/components/forms/country-picker/country-picker.class.js"
+      },
+      "peers": [],
+      "dependencies": {
+        "direct": [
+          "lr-combobox",
+          "lr-option",
+          "lr-select"
+        ],
+        "transitive": [
+          "lr-empty"
+        ]
+      },
+      "gzip": {
+        "status": "measured",
+        "bytes": 98526,
+        "kib": 96.2,
+        "bundleSha256": "d78fc3bb45b0deff191d98d2593e2d6c2159f6cd3fc7279e360e0c296da6c753",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -1710,16 +1736,19 @@
       "peers": [],
       "dependencies": {
         "direct": [
+          "lr-combobox",
           "lr-option",
           "lr-select"
         ],
-        "transitive": []
+        "transitive": [
+          "lr-empty"
+        ]
       },
       "gzip": {
         "status": "measured",
-        "bytes": 77239,
-        "kib": 75.4,
-        "bundleSha256": "b0a8873a0e4f919e9f51f099a5ea5fbd08b37ac8e6dc91a7d3c4fe6b09d899fe",
+        "bytes": 98429,
+        "kib": 96.1,
+        "bundleSha256": "188cdf2936c399ac988ac3e7780b716b54426cf1aecd8c8752f3131f27bf67ae",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -1829,9 +1858,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 73399,
+        "bytes": 73408,
         "kib": 71.7,
-        "bundleSha256": "bbfbc3cc357ab596fe0851fb59f111e6ffc8c476b36f55f1d3446dfec7c43a80",
+        "bundleSha256": "e1d61115cd98c489ffcbcb8d1512067eca8a8f6ee40538ea3ff0a1d3828a4290",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -1982,7 +2011,7 @@
         "status": "measured",
         "bytes": 50488,
         "kib": 49.3,
-        "bundleSha256": "a00d57eeb35b932b8221c3b05f979eb483ed27ad077c8ec278a0f7b841a6878a",
+        "bundleSha256": "7352b2bc5930e3563eb8e2789628f15ab2e50c12da260979c413eba4bb6440b0",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -2014,9 +2043,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 131956,
+        "bytes": 131965,
         "kib": 128.9,
-        "bundleSha256": "9f0c3dea9bcb1413de2d33a1989c54a118f54489b08705c0361fdc2932f31fb9",
+        "bundleSha256": "7c3a7625706bb702397f5f454916beb36b3d814b0e606826d7bf10754591f0ee",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -2064,7 +2093,7 @@
         "status": "measured",
         "bytes": 64981,
         "kib": 63.5,
-        "bundleSha256": "2d5c8bcc4c38832a110eb407a92badeae25359eb9bf981c1477fcd843e8d24a6",
+        "bundleSha256": "44591dabe3e91d27b7bf636a876e1e3cde6f5966003d97ee7a93fdc2482c2db2",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -2261,9 +2290,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 44175,
+        "bytes": 44180,
         "kib": 43.1,
-        "bundleSha256": "1528cff49d93fee3e3ad6a40895769f16e97405e2e6e1748103fa3d5fcee262f",
+        "bundleSha256": "1bc2b0eb05871e41430eef4b14ac1d2729449b61124f98fd6af37326d118c2c1",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -2286,7 +2315,7 @@
         "status": "measured",
         "bytes": 50112,
         "kib": 48.9,
-        "bundleSha256": "34b5d27b730657e8f5f73137aaa144163ff4465874cbb7c70ca0307ab9422539",
+        "bundleSha256": "ef507bec1247275d88a32e7c71a76173dc2523a5139fd3a5321767b414aeb509",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -2326,9 +2355,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 41151,
+        "bytes": 41158,
         "kib": 40.2,
-        "bundleSha256": "e3b5a4334fd89338dd111cbd4afe9515ea5146e7d854eb9c9d1830cb51390650",
+        "bundleSha256": "3d3c8996ec57d890be209fbbcff8b092eb665e4940ae52e2c55a2b613ea33ae5",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -2374,7 +2403,7 @@
         "status": "measured",
         "bytes": 51748,
         "kib": 50.5,
-        "bundleSha256": "09a38420b6212fef0b600cbe32b037d27ef54ae2a23f12369420520724dff992",
+        "bundleSha256": "44f44e02897b9aa3fcdfb209903475e9268029cce2b33bf54ff8110ba03bebdd",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -2523,9 +2552,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 147541,
+        "bytes": 147551,
         "kib": 144.1,
-        "bundleSha256": "95634914e20b24765cb08b3d06893af2df86e50525c1f9815bfae1abe14fd6cd",
+        "bundleSha256": "bc08ac8f6421c43d9fe9efded3f46b55183066ca21dcd35abef0a06526a22f2d",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -2571,9 +2600,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 168453,
+        "bytes": 168455,
         "kib": 164.5,
-        "bundleSha256": "574cda6aeb9286e2694277c8ee43d99a0f34852a612c2fe1b24058f21619fc65",
+        "bundleSha256": "7061f5eecb7d34a40cfca00ffc170ec237478d8358dddd54e70e92ae4b9e9f7e",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -2611,9 +2640,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 24509,
+        "bytes": 24510,
         "kib": 23.9,
-        "bundleSha256": "4d00faaec510354547081f2ff2bcb0d89e8e8a7595a6d5a731b2a86490a87c92",
+        "bundleSha256": "e47060fb090a8ecd8e2d16953d4e81f1bc9a61d351db2595d7514b19f603b01f",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -2695,9 +2724,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 160582,
+        "bytes": 160589,
         "kib": 156.8,
-        "bundleSha256": "9950adf5e3912fa65827b844cf5d1128d20a2dba664d647cc7fe623d94cc13a1",
+        "bundleSha256": "a6fbad709409a7ec48ac0afd020a44f9d0da6e39ed4390382de6de82b5b94d46",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -2717,9 +2746,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 27664,
+        "bytes": 27666,
         "kib": 27,
-        "bundleSha256": "4ba10481c8e21d177ca000750b32872e5a22fd4ee2943f930e970d4947024334",
+        "bundleSha256": "715e9c5597da49c835860b6513cb3fa9d52485b9853f0fe0b9410ad728bbede3",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -2782,7 +2811,7 @@
         "status": "measured",
         "bytes": 27145,
         "kib": 26.5,
-        "bundleSha256": "5b3f16c221b4c0cae899c152d94ce9dcca8d96a8ba0c04b700d0ddb99e89a472",
+        "bundleSha256": "91bb40567757f9ed1c451fb830db38363f56433106410679bc81a72ba4eab911",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -2900,9 +2929,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 22821,
+        "bytes": 22820,
         "kib": 22.3,
-        "bundleSha256": "12c038bc650bde7898f39f092792fc80d5dea3e419af8ad6d15ac5365dfab75c",
+        "bundleSha256": "2b7439cc4026946306926412d8eddffde4504e66b421350eb98bd0f9d0ef5e43",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -3013,9 +3042,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 29062,
+        "bytes": 29061,
         "kib": 28.4,
-        "bundleSha256": "b081ab1885a2983cb41be5870b175765ef95080fcebbc92866315a79e8b7f96f",
+        "bundleSha256": "c86427c68be8193725aa3f381b85106415a1eedc70694ebbf4134f77e8c22689",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -3039,9 +3068,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 92373,
+        "bytes": 92381,
         "kib": 90.2,
-        "bundleSha256": "7eef0a6d9edea5008484d96d80f74f83feff0097c0ab07dd631afc34e61d6899",
+        "bundleSha256": "5cebad59acbc8efb9f2e724297cc149e926cc6e64730e453ad4531f62b7164cc",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -3108,9 +3137,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 50488,
+        "bytes": 50487,
         "kib": 49.3,
-        "bundleSha256": "65e9675a2da020556d4f9e67686c11dfa38dbe6a6bf0bfc14589bce748d740b6",
+        "bundleSha256": "71ccab2dccb0bb708728501fd99c9d210877af99e3d3247722dbda32b763e882",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -3180,7 +3209,7 @@
         "status": "measured",
         "bytes": 41580,
         "kib": 40.6,
-        "bundleSha256": "7ae9c673fdc77a211f24699b18bcd3985e570effda96280f95eb48dd15f2fb36",
+        "bundleSha256": "0a6ab6cd687210e79e1ccc02775c68d48a1186bf171330b35ab05062ce78d635",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -3291,7 +3320,7 @@
         "status": "measured",
         "bytes": 40209,
         "kib": 39.3,
-        "bundleSha256": "12ba20564862b29713ee62fe14ebea5a3a5bb308383316064eae86551e6f0c12",
+        "bundleSha256": "f73fd1b7cf28a107b32139aea46499d447178cc0a24865448505c243817b8f6e",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -3334,9 +3363,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 37625,
-        "kib": 36.7,
-        "bundleSha256": "3a7bfd78aed030012a105076da7e5475cf470f43f6cbd6a1e9936f808771a448",
+        "bytes": 37634,
+        "kib": 36.8,
+        "bundleSha256": "6b551948ae329b1b31ae18c810b27d1b39f0272290e2e37d535b980a96517c31",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -3529,9 +3558,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 141237,
+        "bytes": 141245,
         "kib": 137.9,
-        "bundleSha256": "56b61570b9a25edb5a7c3f020fc326ca670d98158c348acfacda6189c07cfc3e",
+        "bundleSha256": "3c15e28e939c4638aa9d29a24747b43056e4f88e9ff336a30158ffaec43db9d3",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -3549,9 +3578,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 38125,
+        "bytes": 38131,
         "kib": 37.2,
-        "bundleSha256": "83b93b641c94f249200a9a7b5b487941bf2afdc244d1b589027684571ffce5c4",
+        "bundleSha256": "981b1b2fb8fa0d557ec374153dcd76323a938e8eb60790fe0013ba7feb41c568",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -3621,9 +3650,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 46593,
+        "bytes": 46590,
         "kib": 45.5,
-        "bundleSha256": "16f1aa9275b9caef8341d184a38f91766546a8108f44e65d69ac9fccdbdabf0f",
+        "bundleSha256": "c093ac48a41366fc391b49d21c9c78ce00855931281b0396bd204670de1a9377",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -3665,9 +3694,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 62548,
-        "kib": 61.1,
-        "bundleSha256": "88a74438c45234509b5f63094664c2f59fca70bcb6151593e914a4095e791f90",
+        "bytes": 64157,
+        "kib": 62.7,
+        "bundleSha256": "3798455c4ee971456767b461d0dc9950396cfb5713bd875a23b263417b13136a",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -3689,9 +3718,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 54317,
+        "bytes": 54316,
         "kib": 53,
-        "bundleSha256": "d9e931f58c45e4b798cd0028e7dad7031064246bc610a0addc2a5b76829567e2",
+        "bundleSha256": "1fb8860cdffd297ed3f7cc372613815f5f380b3433e3ec9b2cc6a597e717a9e6",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -3714,9 +3743,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 61301,
+        "bytes": 61300,
         "kib": 59.9,
-        "bundleSha256": "2ab5c7bc48256fefb2f74f83e80f2b32fa6a47624be4113b20a55856f2680443",
+        "bundleSha256": "8ec5f673cf0e6fe444053c1ad3abd3e8f6b43ce1b102693736d9465519c981bf",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -3835,9 +3864,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 43156,
+        "bytes": 43157,
         "kib": 42.1,
-        "bundleSha256": "1ce08cbde208d45bd827a9ecaae697c209839ce0d2019ad9912db71edc317c2b",
+        "bundleSha256": "b424cc997d598be436ad5bcadd3c1baec4898a1a7d87fb4966b789ec783e8f56",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -4001,7 +4030,7 @@
         "status": "measured",
         "bytes": 40558,
         "kib": 39.6,
-        "bundleSha256": "83df9fc0f38fc4f91aa70b2b900334e068cf2f1ddd04ba51f12bf6ea3bd0790d",
+        "bundleSha256": "9aaa113c5603103c34ed1fb28cfd0b18dd47c89d270816ead1a840b8704bd779",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -4130,9 +4159,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 49265,
+        "bytes": 49268,
         "kib": 48.1,
-        "bundleSha256": "df837dd1e2326e4e775f73fbb17ec7c05171ce966d3ed241a2f8f3766cc44789",
+        "bundleSha256": "16fc708c749705fea8711ac0f2bb6028031faefd5756b4ae135d382610f1decc",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -4170,9 +4199,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 37674,
+        "bytes": 37682,
         "kib": 36.8,
-        "bundleSha256": "707a6b20cce35534868cf76fd05f01ce3c4c1f48bd881e9a520ff61f8b44973f",
+        "bundleSha256": "20dc4607c997843a81275a496b278ecf9b3a0bc5227b05e497069466b4b57967",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -4308,9 +4337,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 38418,
+        "bytes": 38427,
         "kib": 37.5,
-        "bundleSha256": "2e4b8b117991d5f122eeb6c4273b7709ebe26e8218c25bdfe474d745871c6219",
+        "bundleSha256": "17f99e01612593872ba39428a9816f82ecaf7aa98b219102f1d55031eb1c90b8",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -4348,9 +4377,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 37307,
+        "bytes": 37315,
         "kib": 36.4,
-        "bundleSha256": "7c634bc1a046ed0bf8774fc298734b25babc0e326c01ffa0c944d3c5b0d7fddd",
+        "bundleSha256": "983133a4765786efa721a8133a73aecf637f3ee5ccb07d9ead5ecaed4301649d",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -4394,7 +4423,7 @@
         "status": "measured",
         "bytes": 44550,
         "kib": 43.5,
-        "bundleSha256": "07062b11138702a4288e3ee1887ac37f05867434510219874b82d5c655dda262",
+        "bundleSha256": "25b295f4aed06d852555e7e8835fe5f06bd6b875a87d7eac72a9500758587667",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -4412,9 +4441,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 33361,
+        "bytes": 33362,
         "kib": 32.6,
-        "bundleSha256": "81f5ed0aab7a51bf5b6f94463ed0cb48789c3a616337b750615144ade78382d6",
+        "bundleSha256": "c191cc49c6fb90dd454e7ef6041b109e459c3e15318f4c0f649606bcee3b56dd",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -4434,7 +4463,7 @@
         "status": "measured",
         "bytes": 22460,
         "kib": 21.9,
-        "bundleSha256": "2415243467db4246d8f5b7d8505d5480fb8befa35a42d8a6c02e0c9663fd0c7d",
+        "bundleSha256": "8cc6623abc34c25b301e631143ddd71b6f663891c97f428c2a308fea926c4a21",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -4544,9 +4573,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 46379,
+        "bytes": 46386,
         "kib": 45.3,
-        "bundleSha256": "8db9c4a18911d3d5ba8cfef1576b26351752a5bcc4834a883230cd134d595903",
+        "bundleSha256": "c34c9d93bdeacf7a0b0d4bf55e7998506ec1794eb538a8945f5387b5804bbda8",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -4626,7 +4655,7 @@
         "status": "measured",
         "bytes": 42751,
         "kib": 41.7,
-        "bundleSha256": "4fed25e8e885323115505f8e56c6b99462319758820ce78df148ffb7ec33d80d",
+        "bundleSha256": "b909fa1eaa7f9eb3ac4635e9117faa46a3192ce1393309009b8041cac15b6818",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -4649,7 +4678,7 @@
         "status": "measured",
         "bytes": 31608,
         "kib": 30.9,
-        "bundleSha256": "6cf276047828e86e0743b544370ff691f4acc7fd0c2103713e1da9df9025311d",
+        "bundleSha256": "a2b7031fac3dc33f04d9fa9c5c939e4a2467d0613409d4a63f5a53e29bcb9958",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -4791,9 +4820,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 149767,
+        "bytes": 149775,
         "kib": 146.3,
-        "bundleSha256": "5121b3ac3cd5bdceea8303c79407980c69f6dc83b7bdf2efa3e7560604ece6bf",
+        "bundleSha256": "c3fadb65c7078b11e66050436df4515ee4eb4c1ae2fa7b84d72fe129e82b3c87",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -4814,9 +4843,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 51606,
+        "bytes": 51612,
         "kib": 50.4,
-        "bundleSha256": "eed05fb91e143fb651b7a1780555e89ee0be89c1563163aabeee7025900636ce",
+        "bundleSha256": "a74f94e151f94a58342188a40cf31434204185d204f125ede8b85ddc3bcdf578",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -4834,9 +4863,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 28914,
+        "bytes": 28913,
         "kib": 28.2,
-        "bundleSha256": "32db2a4e62bf835d826cd02adf1fdb1006e05439957d1b622db87b14df8f988f",
+        "bundleSha256": "b96f3e6014389903d85cc2c33c6122843e7a356d6184d1f59b89c4e7fb471a8a",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -4865,9 +4894,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 84800,
+        "bytes": 84799,
         "kib": 82.8,
-        "bundleSha256": "f57ad2c130f282ff725f2d575f543c571a2e0a9cc7e676f00eeb0890d7625311",
+        "bundleSha256": "ecec8c9aff9ee3d998f8813a9cb605d4e87653cc3132ccfb19a0b7aeae2c6568",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -4997,9 +5026,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 36240,
+        "bytes": 36242,
         "kib": 35.4,
-        "bundleSha256": "b1e916232a3b4932a0940448cf9d2ddfd0f4473c06e208338e41adb27bb319b1",
+        "bundleSha256": "664dfde0150990ce501a5a0effe8c6e00c1c154e06fb915a32bcd8c40da106da",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -5035,9 +5064,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 113320,
+        "bytes": 113321,
         "kib": 110.7,
-        "bundleSha256": "188668f35191d4c1620cbf325b6b9234160108c3b6cc2db8d150875df29e4754",
+        "bundleSha256": "b89242dffccd7a085bcb699aee449de09b01fb360b63a4b654f2715898411f23",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -5103,9 +5132,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 29113,
+        "bytes": 29115,
         "kib": 28.4,
-        "bundleSha256": "65cdb1e9e2fb5ea404e5140b7c2648a2ecd8b2cfc5f0679bfdfc440178873c36",
+        "bundleSha256": "52edbaa3740016b65ce7784e8bfbcce8afbe4060a9a0ec73e0184d2c2ab0f7a2",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -5297,9 +5326,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 20381,
+        "bytes": 20373,
         "kib": 19.9,
-        "bundleSha256": "3703fb3ed3289b361e1d0582640eadfe65a9f791fd912d727c35cbe5fdfeae73",
+        "bundleSha256": "ffb91a450f5106dac722686de451e9753b668d2dd4f3812164868fcdcb0a163b",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -5372,9 +5401,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 64332,
+        "bytes": 64340,
         "kib": 62.8,
-        "bundleSha256": "ee07d57b092ed70a21e73366409e7b8aac5be5a7cfdc78aa55fe1164a91d2166",
+        "bundleSha256": "c6442c338be0bbfae473d17e4cba094550e51feb29088a39794aa14e676c8d4c",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -5399,9 +5428,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 52976,
+        "bytes": 52977,
         "kib": 51.7,
-        "bundleSha256": "8e70204126f304854fbe9a844559b87087c1aa381ea0a2f770b2a3039a9ee287",
+        "bundleSha256": "dd6a7b8087921c23c249c6e1708f1ded12b105e1c20194ee97aee3db72d766bb",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -5427,9 +5456,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 105204,
+        "bytes": 105214,
         "kib": 102.7,
-        "bundleSha256": "d2f43b2732ec7c03fbb81da961a2cc72b4bd9816828ae0abe7081f0c7a5d25d2",
+        "bundleSha256": "99de22b4373329e2bc7723e01186ee34512ac3b115ef37d78fc23e5c3244561d",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -5517,9 +5546,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 70234,
+        "bytes": 70240,
         "kib": 68.6,
-        "bundleSha256": "043d7dc7668aa090f37995662086bf75b79c00f5c90a00027e318ca3fcd03f36",
+        "bundleSha256": "3a3b159d550db6abb6d62ec5fdb202ca64470e51e43f8be76828f6d714d9c4ce",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -5641,7 +5670,7 @@
         "status": "measured",
         "bytes": 21715,
         "kib": 21.2,
-        "bundleSha256": "25d90ea6ed81fbe06854f871748e6338646fc083a8b7553c8a1598c415b1583b",
+        "bundleSha256": "dfb626dbeefa9f27e1ad3265bfbc3b00e4b3cdf3078d38438af57beb919c8ab9",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -5684,9 +5713,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 60657,
+        "bytes": 60665,
         "kib": 59.2,
-        "bundleSha256": "6373268db97045de6687cafdcf8b0bd936602ed6ca1108244a03b8d95ff1647a",
+        "bundleSha256": "570d634658ef0568248e23bb914ef727a4c69e4c4c2d50866e2ddd41b58a7e68",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -5727,9 +5756,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 22179,
+        "bytes": 22180,
         "kib": 21.7,
-        "bundleSha256": "ab922b2dbe3c39307584d782ff6b5f70e6830e99fbcebc20a3d6b673eb9939b8",
+        "bundleSha256": "017dec1e78e4816bee11fce68c8789ae4c38b429f5abb0f4f7393ac5e8d5e318",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -5769,7 +5798,7 @@
         "status": "measured",
         "bytes": 24953,
         "kib": 24.4,
-        "bundleSha256": "8171ec5f7dac71df758e1300936c2d492c5448102bae69deb57582405e6777f0",
+        "bundleSha256": "814214bbeb0db07dcef6936433bbe85c9863d14f16ede8a9dc70b61a77d575c9",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -5814,9 +5843,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 28117,
+        "bytes": 28118,
         "kib": 27.5,
-        "bundleSha256": "8ee96f64b3b2b045db6b012af57e2acbbc53d4dadf4c53c45856cf532418c0f9",
+        "bundleSha256": "595d379ac19f522b194e84dd5c471295685325d64f90916afa5db3ce8f220c88",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -5999,9 +6028,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 39761,
+        "bytes": 39760,
         "kib": 38.8,
-        "bundleSha256": "14830802e31a6d4de98b9745b2d1b9eb3da780fc44276fb0f7e3836ae3aec31e",
+        "bundleSha256": "97e0eacf7dad8d313450c7c4799ddd36c38dad789b35a7574fe4feb55b49939a",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -6059,9 +6088,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 20508,
+        "bytes": 20507,
         "kib": 20,
-        "bundleSha256": "b141d48f7467dd96e6c7de667ea2db7f450e0cebb0aae162dc0641010dbd98df",
+        "bundleSha256": "6339a5737188e4babd637bd50e8a7f572b8b73704577e631bfff8c6830a55d03",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -6146,7 +6175,7 @@
         "status": "measured",
         "bytes": 30580,
         "kib": 29.9,
-        "bundleSha256": "66d751aa0d2099b7bbbd597874c2361e77b5e5055c406830075f838e8e80d834",
+        "bundleSha256": "23baf4e40dbb9d724a0cf08d7c83d18d107edff266bd21d9eaf8341c4b6031fe",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -6188,9 +6217,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 46802,
+        "bytes": 46799,
         "kib": 45.7,
-        "bundleSha256": "451f0ab20fe7f6ef6e6027b2c6b0501e0848a87ed8aae8c22cfc6db88822b8a5",
+        "bundleSha256": "5824af87cf4c8a696d636148284b1d8739b1cff314004fc00e840f8832479d02",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -6232,9 +6261,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 38321,
+        "bytes": 38323,
         "kib": 37.4,
-        "bundleSha256": "319ffdb40ae3d126a2d68e4f0052cd9be22f71cf39a3f3a6275a0c3f019995af",
+        "bundleSha256": "34d87bdff5512fc21e6b839cb5521e6afd2613f0d9af75da15a9366af93a2980",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -6279,7 +6308,7 @@
         "status": "measured",
         "bytes": 54841,
         "kib": 53.6,
-        "bundleSha256": "9b67fa1c18d5340b9bd52ccd8c99c5af6280cf0d3f91c925f773d523723f8f1f",
+        "bundleSha256": "fcfcdc98beac490d349766ac7d4f9de80f4f3cb2d03c1c79749db5568da8190d",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -6297,9 +6326,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 62987,
+        "bytes": 62995,
         "kib": 61.5,
-        "bundleSha256": "28656807d7b71706bb989637978f89924d1fb21ff9eed4f85d5934df80f4b3a9",
+        "bundleSha256": "be26c292d7c57dd092fd5a6f23eb05a4618cb3641a05a89b61ed43d97e1deecc",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -6324,6 +6353,32 @@
       }
     },
     {
+      "tag": "lr-time-zone-picker",
+      "family": "forms",
+      "imports": {
+        "registration": "@aceshooting/lyra-ui/components/lr-time-zone-picker.js",
+        "class": "@aceshooting/lyra-ui/components/forms/time-zone-picker/time-zone-picker.class.js"
+      },
+      "peers": [],
+      "dependencies": {
+        "direct": [
+          "lr-combobox",
+          "lr-option",
+          "lr-select"
+        ],
+        "transitive": [
+          "lr-empty"
+        ]
+      },
+      "gzip": {
+        "status": "measured",
+        "bytes": 97560,
+        "kib": 95.3,
+        "bundleSha256": "5877473c0d2d411b24c5fb790781e3d7ce65bea617f982457c4b63db7bb70776",
+        "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
+      }
+    },
+    {
       "tag": "lr-timeline",
       "family": "data",
       "imports": {
@@ -6343,7 +6398,7 @@
         "status": "measured",
         "bytes": 34235,
         "kib": 33.4,
-        "bundleSha256": "23e71f611da78c0c57aca19dfd52a5ce09372a7e0128f5195ebea90215115d59",
+        "bundleSha256": "b3efe3b481a4a09d4260f7aba2f75797e585133b49ea40383439ac37b1e4278f",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -6385,9 +6440,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 37077,
+        "bytes": 37076,
         "kib": 36.2,
-        "bundleSha256": "9275c6d770a91eaa408ec87e334e3024e170ff1f23680de70dcb5def51f4481b",
+        "bundleSha256": "97c28fe5329adc12a1baa2ab0d1afbdcb834d4f0c1a4f1e7562e81837ba92866",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -6405,9 +6460,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 34516,
+        "bytes": 34517,
         "kib": 33.7,
-        "bundleSha256": "1cafe2a54a87ca9c23516d1178c5e78681c4f4a16be4d592cbbceac21db22812",
+        "bundleSha256": "99a4ed7b19ab58f2763d1db3f9252bedd737b96e190501eec2329458058fbf71",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -6560,9 +6615,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 90438,
+        "bytes": 90445,
         "kib": 88.3,
-        "bundleSha256": "5b1ab0480274e89287bd7fd5f57331396fad93bc1f0dd46018231053f8b35627",
+        "bundleSha256": "e8875857029adf1d889c29d1541c92ac6ac47f1d0c6ae53799d38310894cbe27",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -6632,7 +6687,7 @@
         "status": "measured",
         "bytes": 53978,
         "kib": 52.7,
-        "bundleSha256": "6b5ada10c49a8f8c61cb6eb9f0173a290c4afd5f738d43e6448ee8a4c22b3e4a",
+        "bundleSha256": "1808411e5b6b12eaac4868256b532b01c9f5e40fd1669ba90f56e24c0f5f4177",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -6726,9 +6781,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 38451,
-        "kib": 37.5,
-        "bundleSha256": "16066a0912f334ef3b55c49d3bf7d4f95d39f0ba0073a6f4e63c6a405795be67",
+        "bytes": 38452,
+        "kib": 37.6,
+        "bundleSha256": "7667cbbcbfeb038eb03d8c68569f7de93504c302d7bff544170670f85b7ca1fb",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -6772,7 +6827,7 @@
         "status": "measured",
         "bytes": 49169,
         "kib": 48,
-        "bundleSha256": "67a73ac9402808fb4fe5866e7666fa6007305ea0b70d14e9167f1b6de027546f",
+        "bundleSha256": "62c5c937965928e17cbf210d0a927227ce4db72ec91614431d40600b40e39547",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -6790,9 +6845,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 37758,
+        "bytes": 37761,
         "kib": 36.9,
-        "bundleSha256": "8df50bd89e7026acb5f4fcbf363565f16b842959861a2c5ecae2f18f9864d4ab",
+        "bundleSha256": "14558be98b50af5f978244699f414ad48762c48b722b1e89ba18d1a167a601b7",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -6817,6 +6872,32 @@
       }
     },
     {
+      "tag": "lr-unit-picker",
+      "family": "forms",
+      "imports": {
+        "registration": "@aceshooting/lyra-ui/components/lr-unit-picker.js",
+        "class": "@aceshooting/lyra-ui/components/forms/unit-picker/unit-picker.class.js"
+      },
+      "peers": [],
+      "dependencies": {
+        "direct": [
+          "lr-combobox",
+          "lr-option",
+          "lr-select"
+        ],
+        "transitive": [
+          "lr-empty"
+        ]
+      },
+      "gzip": {
+        "status": "measured",
+        "bytes": 97829,
+        "kib": 95.5,
+        "bundleSha256": "2b2054fdb75cc0adb323c5e28ffab6933ff7e9658231e2f856d2ac0aad6d23df",
+        "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
+      }
+    },
+    {
       "tag": "lr-usage-badge",
       "family": "conversation",
       "imports": {
@@ -6830,9 +6911,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 43801,
+        "bytes": 43804,
         "kib": 42.8,
-        "bundleSha256": "77d6b40c2ab43f14fefbddd0cdb5d343467c9dc8344c502a1d30050bd18f4595",
+        "bundleSha256": "6341a0ac90ae00f856aeb17d09b0ad5dfe142635e48b9753a3ec7a7a53cf34f2",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -6881,7 +6962,7 @@
         "status": "measured",
         "bytes": 47217,
         "kib": 46.1,
-        "bundleSha256": "7b179fc334f6ac52b6594fc24eecb433eb9431f082cf184b9525afea665c173f",
+        "bundleSha256": "b723019ae67ba33536645d30c5a032f66f8cf081a1a6e7b09d3abd8dc8bce85d",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -6941,7 +7022,7 @@
         "status": "measured",
         "bytes": 57933,
         "kib": 56.6,
-        "bundleSha256": "472b9f8fd611f637a01b6b72e0daeca64d676b4b98386bf38e8a8c57094727b9",
+        "bundleSha256": "40a5a6e18c41c87438c2be23b7257b012b1fd55544bbbbd65209b901edfc544a",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -6959,9 +7040,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 40635,
+        "bytes": 40640,
         "kib": 39.7,
-        "bundleSha256": "bc6284fa7984c5e48f02c0aa05e5e4f6680d6b413c0a30f860465e665e44f357",
+        "bundleSha256": "4525c752972f57606c0ff42bf09a1de8934e4aa2a10cab2195f1b34602cff78d",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -7053,9 +7134,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 27121,
+        "bytes": 27123,
         "kib": 26.5,
-        "bundleSha256": "32dda4ea2e044d297b734e2cc5dd213e32a4ac173666c05c95e42a7a164d9d0d",
+        "bundleSha256": "77703aea6f656685d075b11641fbbe396adeecfd65b1164f69ae91f2ab76b4f8",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     }

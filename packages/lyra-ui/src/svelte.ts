@@ -186,6 +186,8 @@ export type LyraConversationItemSvelteProps = LyraSvelteElementProps<'lr-convers
 
 export type LyraCopyButtonSvelteProps = LyraSvelteElementProps<'lr-copy-button'>;
 
+export type LyraCountryPickerSvelteProps = LyraSvelteElementProps<'lr-country-picker'>;
+
 export type LyraCsvViewerSvelteProps = LyraSvelteElementProps<'lr-csv-viewer'>;
 
 export type LyraCurrencyPickerSvelteProps = LyraSvelteElementProps<'lr-currency-picker'>;
@@ -582,6 +584,8 @@ export type LyraTimeInputSvelteProps = LyraSvelteElementProps<'lr-time-input'>;
 
 export type LyraTimeRangeSvelteProps = LyraSvelteElementProps<'lr-time-range'>;
 
+export type LyraTimeZonePickerSvelteProps = LyraSvelteElementProps<'lr-time-zone-picker'>;
+
 export type LyraTimelineSvelteProps = LyraSvelteElementProps<'lr-timeline'>;
 
 export type LyraTimelineItemSvelteProps = LyraSvelteElementProps<'lr-timeline-item'>;
@@ -625,6 +629,8 @@ export type LyraTreeSvelteProps = LyraSvelteElementProps<'lr-tree'>;
 export type LyraTreeItemSvelteProps = LyraSvelteElementProps<'lr-tree-item'>;
 
 export type LyraTypingIndicatorSvelteProps = LyraSvelteElementProps<'lr-typing-indicator'>;
+
+export type LyraUnitPickerSvelteProps = LyraSvelteElementProps<'lr-unit-picker'>;
 
 export type LyraUsageBadgeSvelteProps = LyraSvelteElementProps<'lr-usage-badge'>;
 
@@ -722,6 +728,7 @@ export interface LyraSvelteElements {
   'lr-control-group': LyraControlGroupSvelteProps;
   'lr-conversation-item': LyraConversationItemSvelteProps;
   'lr-copy-button': LyraCopyButtonSvelteProps;
+  'lr-country-picker': LyraCountryPickerSvelteProps;
   'lr-csv-viewer': LyraCsvViewerSvelteProps;
   'lr-currency-picker': LyraCurrencyPickerSvelteProps;
   'lr-dashboard-grid': LyraDashboardGridSvelteProps;
@@ -920,6 +927,7 @@ export interface LyraSvelteElements {
   'lr-thread-list': LyraThreadListSvelteProps;
   'lr-time-input': LyraTimeInputSvelteProps;
   'lr-time-range': LyraTimeRangeSvelteProps;
+  'lr-time-zone-picker': LyraTimeZonePickerSvelteProps;
   'lr-timeline': LyraTimelineSvelteProps;
   'lr-timeline-item': LyraTimelineItemSvelteProps;
   'lr-toast': LyraToastSvelteProps;
@@ -942,6 +950,7 @@ export interface LyraSvelteElements {
   'lr-tree': LyraTreeSvelteProps;
   'lr-tree-item': LyraTreeItemSvelteProps;
   'lr-typing-indicator': LyraTypingIndicatorSvelteProps;
+  'lr-unit-picker': LyraUnitPickerSvelteProps;
   'lr-usage-badge': LyraUsageBadgeSvelteProps;
   'lr-video': LyraVideoSvelteProps;
   'lr-video-playlist': LyraVideoPlaylistSvelteProps;
@@ -1029,6 +1038,7 @@ export interface LyraElementTagNameMap {
   'lr-control-group': LyraComponentTypeMap['lr-control-group']['element'];
   'lr-conversation-item': LyraComponentTypeMap['lr-conversation-item']['element'];
   'lr-copy-button': LyraComponentTypeMap['lr-copy-button']['element'];
+  'lr-country-picker': LyraComponentTypeMap['lr-country-picker']['element'];
   'lr-csv-viewer': LyraComponentTypeMap['lr-csv-viewer']['element'];
   'lr-currency-picker': LyraComponentTypeMap['lr-currency-picker']['element'];
   'lr-dashboard-grid': LyraComponentTypeMap['lr-dashboard-grid']['element'];
@@ -1227,6 +1237,7 @@ export interface LyraElementTagNameMap {
   'lr-thread-list': LyraComponentTypeMap['lr-thread-list']['element'];
   'lr-time-input': LyraComponentTypeMap['lr-time-input']['element'];
   'lr-time-range': LyraComponentTypeMap['lr-time-range']['element'];
+  'lr-time-zone-picker': LyraComponentTypeMap['lr-time-zone-picker']['element'];
   'lr-timeline': LyraComponentTypeMap['lr-timeline']['element'];
   'lr-timeline-item': LyraComponentTypeMap['lr-timeline-item']['element'];
   'lr-toast': LyraComponentTypeMap['lr-toast']['element'];
@@ -1249,6 +1260,7 @@ export interface LyraElementTagNameMap {
   'lr-tree': LyraComponentTypeMap['lr-tree']['element'];
   'lr-tree-item': LyraComponentTypeMap['lr-tree-item']['element'];
   'lr-typing-indicator': LyraComponentTypeMap['lr-typing-indicator']['element'];
+  'lr-unit-picker': LyraComponentTypeMap['lr-unit-picker']['element'];
   'lr-usage-badge': LyraComponentTypeMap['lr-usage-badge']['element'];
   'lr-video': LyraComponentTypeMap['lr-video']['element'];
   'lr-video-playlist': LyraComponentTypeMap['lr-video-playlist']['element'];

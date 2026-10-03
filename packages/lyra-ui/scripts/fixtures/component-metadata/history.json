@@ -24427,7 +24427,7 @@
     "current": {
       "version": "25.4.0",
       "sourceCommit": null,
-      "manifestSha256": "2c8762db418a3846be752b0a3f58377d5de5fde3e047ee71c0b1be3ca854f24f",
+      "manifestSha256": "7defd514457989a49de43dfb3493705a756ad11b8074ed18be06ff48e6504191",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",
@@ -24502,6 +24502,7 @@
         "lr-control-group",
         "lr-conversation-item",
         "lr-copy-button",
+        "lr-country-picker",
         "lr-csv-viewer",
         "lr-currency-picker",
         "lr-dashboard-grid",
@@ -24700,6 +24701,7 @@
         "lr-thread-list",
         "lr-time-input",
         "lr-time-range",
+        "lr-time-zone-picker",
         "lr-timeline",
         "lr-timeline-item",
         "lr-toast",
@@ -24722,6 +24724,7 @@
         "lr-tree",
         "lr-tree-item",
         "lr-typing-indicator",
+        "lr-unit-picker",
         "lr-usage-badge",
         "lr-video",
         "lr-video-playlist",

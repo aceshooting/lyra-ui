@@ -2,7 +2,7 @@
 
 # Component index
 
-304 custom elements, grouped by the source family they live in.
+307 custom elements, grouped by the source family they live in.
 
 **Reading one component.** Its reference file path is derived from the tag — no search needed:
 `llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`): import path, optional peers,
@@ -30,7 +30,7 @@ and testing and utilities (`llms/shared/testing-and-utilities.md`). The combined
 compatibility guide remains at `llms/shared.md`. Design tokens: `llms/tokens.md`.
 Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.md`.
 
-## Form controls & inputs — `components/forms/` (32)
+## Form controls & inputs — `components/forms/` (35)
 
 - `lr-combobox` · lr-combobox.js · `stable` since `4.0.0` — a filterable single/multi select that combines a text input with a listbox.
 - `lr-option` · lr-option.js · `stable` since `4.0.0` — a selectable option for `<lr-combobox>` and `<lr-select>`.
@@ -64,6 +64,9 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-toggle` · lr-toggle.js · `experimental` since `21.0.0` — a two-state button that owns its `pressed` state.
 - `lr-toggle-group` · lr-toggle-group.js · `experimental` since `21.0.0` — a set of `<lr-toggle>` children behind one tab stop.
 - `lr-currency-picker` · lr-currency-picker.js · `experimental` since `unreleased` — a form-associated currency-code selector.
+- `lr-country-picker` · lr-country-picker.js · `experimental` since `unreleased` — a form-associated country and territory selector.
+- `lr-time-zone-picker` · lr-time-zone-picker.js · `experimental` since `unreleased` — a form-associated time-zone identifier selector.
+- `lr-unit-picker` · lr-unit-picker.js · `experimental` since `unreleased` — a form-associated measurement-unit identifier selector.
 
 ## Data display, dashboards & flow canvas — `components/data/` (26)
 

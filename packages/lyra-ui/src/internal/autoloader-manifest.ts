@@ -301,6 +301,10 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     optionalPeers: [],
     load: () => import('../components/utility/copy-button/copy-button.class.js').then((module) => module.LyraCopyButton),
   },
+  'lr-country-picker': {
+    optionalPeers: [],
+    load: () => import('../components/forms/country-picker/country-picker.class.js').then((module) => module.LyraCountryPicker),
+  },
   'lr-csv-viewer': {
     optionalPeers: ['papaparse'],
     load: () => import('../components/viewers/csv-viewer/csv-viewer.class.js').then((module) => module.LyraCsvViewer),
@@ -1093,6 +1097,10 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     optionalPeers: [],
     load: () => import('../components/forms/time-range/time-range.class.js').then((module) => module.LyraTimeRange),
   },
+  'lr-time-zone-picker': {
+    optionalPeers: [],
+    load: () => import('../components/forms/time-zone-picker/time-zone-picker.class.js').then((module) => module.LyraTimeZonePicker),
+  },
   'lr-timeline': {
     optionalPeers: [],
     load: () => import('../components/data/timeline/timeline.class.js').then((module) => module.LyraTimeline),
@@ -1180,6 +1188,10 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
   'lr-typing-indicator': {
     optionalPeers: [],
     load: () => import('../components/conversation/typing-indicator/typing-indicator.class.js').then((module) => module.LyraTypingIndicator),
+  },
+  'lr-unit-picker': {
+    optionalPeers: [],
+    load: () => import('../components/forms/unit-picker/unit-picker.class.js').then((module) => module.LyraUnitPicker),
   },
   'lr-usage-badge': {
     optionalPeers: [],

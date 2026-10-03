@@ -102,6 +102,7 @@ import type { LyraCodeEditorEventMap } from '../components/forms/code-editor/cod
 import type { LyraColorPickerEventMap } from '../components/forms/color-picker/color-picker.class.js';
 import type { LyraComboboxEventMap } from '../components/forms/combobox/combobox.class.js';
 import type { LyraOptionEventMap } from '../components/forms/combobox/option.class.js';
+import type { LyraCountryPickerEventMap } from '../components/forms/country-picker/country-picker.class.js';
 import type { LyraCurrencyPickerEventMap } from '../components/forms/currency-picker/currency-picker.class.js';
 import type { LyraDateInputEventMap } from '../components/forms/date-picker/date-input.class.js';
 import type { LyraDatePickerEventMap } from '../components/forms/date-picker/date-picker.class.js';
@@ -122,9 +123,11 @@ import type { LyraSwatchPickerEventMap } from '../components/forms/swatch-picker
 import type { LyraSwitchEventMap } from '../components/forms/switch/switch.class.js';
 import type { LyraTextareaEventMap } from '../components/forms/textarea/textarea.class.js';
 import type { LyraTimeRangeEventMap } from '../components/forms/time-range/time-range.class.js';
+import type { LyraTimeZonePickerEventMap } from '../components/forms/time-zone-picker/time-zone-picker.class.js';
 import type { LyraToggleGroupEventMap } from '../components/forms/toggle-group/toggle-group.class.js';
 import type { LyraToggleEventMap } from '../components/forms/toggle/toggle.class.js';
 import type { LyraTokenInputEventMap } from '../components/forms/token-input/token-input.class.js';
+import type { LyraUnitPickerEventMap } from '../components/forms/unit-picker/unit-picker.class.js';
 import type { LyraAppRailGroupEventMap } from '../components/layout/app-rail-group/app-rail-group.class.js';
 import type { LyraAppRailItemEventMap } from '../components/layout/app-rail/app-rail-item.class.js';
 import type { LyraAppRailEventMap } from '../components/layout/app-rail/app-rail.class.js';
@@ -324,6 +327,7 @@ export interface LyraTagEventTypes {
   'lr-context-meter': LyraContextMeterEventMap;
   'lr-conversation-item': LyraConversationItemEventMap;
   'lr-copy-button': LyraCopyButtonEventMap;
+  'lr-country-picker': LyraCountryPickerEventMap;
   'lr-csv-viewer': LyraCsvViewerEventMap;
   'lr-currency-picker': LyraCurrencyPickerEventMap;
   'lr-dashboard-grid': LyraDashboardGridEventMap;
@@ -490,6 +494,7 @@ export interface LyraTagEventTypes {
   'lr-thread-list': LyraThreadListEventMap;
   'lr-time-input': LyraTimeInputEventMap;
   'lr-time-range': LyraTimeRangeEventMap;
+  'lr-time-zone-picker': LyraTimeZonePickerEventMap;
   'lr-timeline': LyraTimelineEventMap;
   'lr-toast': LyraToastEventMap;
   'lr-toast-item': LyraToastItemEventMap;
@@ -510,6 +515,7 @@ export interface LyraTagEventTypes {
   'lr-transcript-feed': LyraTranscriptFeedEventMap;
   'lr-tree': LyraTreeEventMap;
   'lr-tree-item': LyraTreeItemEventMap;
+  'lr-unit-picker': LyraUnitPickerEventMap;
   'lr-video': LyraVideoEventMap;
   'lr-video-playlist': LyraVideoPlaylistEventMap;
   'lr-virtual-list': LyraVirtualListEventMap;
@@ -556,6 +562,7 @@ export const LYRA_EVENT_CANCELABLE: {
   'lr-context-inspector': { 'lr-export-request': true },
   'lr-context-menu': { 'lr-hide': true, 'lr-select': true, 'lr-show': true },
   'lr-context-meter': { 'lr-segment-activate-request': true },
+  'lr-country-picker': { 'lr-invalid': true },
   'lr-currency-picker': { 'lr-invalid': true },
   'lr-data-grid': { 'lr-cell-contextmenu': true, 'lr-retry-request': true, 'lr-sort-request': true },
   'lr-date-input': { 'lr-hide': true, 'lr-invalid': true, 'lr-show': true },
@@ -619,6 +626,7 @@ export const LYRA_EVENT_CANCELABLE: {
   'lr-thread-list': { 'lr-group-toggle-request': true, 'lr-retry-request': true },
   'lr-time-input': { 'lr-hide': true, 'lr-invalid': true, 'lr-show': true },
   'lr-time-range': { 'lr-invalid': true },
+  'lr-time-zone-picker': { 'lr-invalid': true },
   'lr-toast-item': { 'lr-hide': true, 'lr-show': true },
   'lr-toggle': { 'lr-toggle-toggle-request': true },
   'lr-toggle-group': { 'lr-toggle-group-toggle-request': true },
@@ -630,6 +638,7 @@ export const LYRA_EVENT_CANCELABLE: {
   'lr-tool-timeline': { 'lr-tool-approval-decide-request': true },
   'lr-tooltip': { 'lr-hide': true, 'lr-show': true },
   'lr-tour': { 'lr-tour-end-request': true, 'lr-tour-step-change-request': true },
+  'lr-unit-picker': { 'lr-invalid': true },
   'lr-voice-picker': { 'lr-invalid': true, 'lr-preview-request': true },
   'lr-widget': { 'lr-collapse-request': true, 'lr-fullscreen-request': true, 'lr-view-request': true },
 };

@@ -91,6 +91,7 @@ import type { LyraTreeItemEventMap } from './components/data/tree/tree-item.clas
 import type { LyraTreeEventMap } from './components/data/tree/tree.class.js';
 import type { LyraWordCloudEventMap } from './components/data/word-cloud/word-cloud.class.js';
 import type { LyraButtonEventMap } from './components/forms/button/button.class.js';
+import type { LyraCatalogPickerEventMap } from './components/forms/catalog-picker-base.js';
 import type { LyraCheckboxGroupEventMap } from './components/forms/checkbox-group/checkbox-group.class.js';
 import type { LyraCheckboxEventMap } from './components/forms/checkbox/checkbox.class.js';
 import type { LyraCodeEditorEventMap } from './components/forms/code-editor/code-editor.class.js';
@@ -536,17 +537,20 @@ export type LyraCellMoveEvent = LyraDashboardGridEventMap['lr-cell-move'];
 export type LyraCellResizeEvent = LyraDashboardGridEventMap['lr-cell-resize'];
 
 /**
- * `lr-change` — dispatched by 34 components: `<lr-chat-composer>`, `<lr-checkbox-group>`,
+ * `lr-change` — dispatched by 37 components: `<lr-chat-composer>`, `<lr-checkbox-group>`,
  * `<lr-checkbox>`, `<lr-code-editor>`, `<lr-color-picker>`, `<lr-combobox>`,
- * `<lr-currency-picker>`, `<lr-emoji-picker>`, `<lr-input>`, `<lr-locale-picker>`,
- * `<lr-model-select>`, `<lr-model-settings-panel>`, `<lr-native-time-input>`, `<lr-number-input>`,
- * `<lr-phone-input>`, `<lr-prompt-input>`, `<lr-prompt-studio>`, `<lr-radio-button>`,
- * `<lr-radio-group>`, `<lr-radio>`, `<lr-rating>`, `<lr-segmented>`, `<lr-select>`, `<lr-slider>`,
- * `<lr-swatch-picker>`, `<lr-switch>`, `<lr-textarea>`, `<lr-time-input>`, `<lr-time-range>`,
+ * `<lr-country-picker>`, `<lr-currency-picker>`, `<lr-emoji-picker>`, `<lr-input>`,
+ * `<lr-locale-picker>`, `<lr-model-select>`, `<lr-model-settings-panel>`,
+ * `<lr-native-time-input>`, `<lr-number-input>`, `<lr-phone-input>`, `<lr-prompt-input>`,
+ * `<lr-prompt-studio>`, `<lr-radio-button>`, `<lr-radio-group>`, `<lr-radio>`, `<lr-rating>`,
+ * `<lr-segmented>`, `<lr-select>`, `<lr-slider>`, `<lr-swatch-picker>`, `<lr-switch>`,
+ * `<lr-textarea>`, `<lr-time-input>`, `<lr-time-range>`, `<lr-time-zone-picker>`,
  * `<lr-toggle-group>`, `<lr-toggle>`, `<lr-token-input>`, `<lr-tool-select-dialog>`,
- * `<lr-voice-picker>`; detail union of 31, e.g. `LyraChatComposerEventMap['lr-change']`.
+ * `<lr-unit-picker>`, `<lr-voice-picker>`; detail union of 32, e.g.
+ * `LyraCatalogPickerEventMap['lr-change']`.
  */
 export type LyraChangeEvent =
+  | LyraCatalogPickerEventMap['lr-change']
   | LyraChatComposerEventMap['lr-change']
   | LyraCheckboxEventMap['lr-change']
   | LyraCheckboxGroupEventMap['lr-change']
@@ -1437,17 +1441,19 @@ export type LyraIngestionRetryEvent = LyraKnowledgeBaseAdminEventMap['lr-ingesti
 export type LyraInitialFocusEvent = LyraDialogEventMap['lr-initial-focus'];
 
 /**
- * `lr-input` — dispatched by 27 components: `<lr-agent-workspace>`, `<lr-chat-composer>`,
+ * `lr-input` — dispatched by 30 components: `<lr-agent-workspace>`, `<lr-chat-composer>`,
  * `<lr-checkbox>`, `<lr-code-editor>`, `<lr-color-picker>`, `<lr-condition-builder>`,
- * `<lr-currency-picker>`, `<lr-emoji-picker>`, `<lr-filter-bar>`, `<lr-graph-query-builder>`,
- * `<lr-input>`, `<lr-native-time-input>`, `<lr-number-input>`, `<lr-phone-input>`,
- * `<lr-prompt-input>`, `<lr-radio-button>`, `<lr-radio-group>`, `<lr-radio>`, `<lr-rubric-form>`,
- * `<lr-select>`, `<lr-slider>`, `<lr-switch>`, `<lr-textarea>`, `<lr-time-input>`,
- * `<lr-time-range>`, `<lr-token-input>`, `<lr-tool-param-form>`; detail union of 24, e.g.
+ * `<lr-country-picker>`, `<lr-currency-picker>`, `<lr-emoji-picker>`, `<lr-filter-bar>`,
+ * `<lr-graph-query-builder>`, `<lr-input>`, `<lr-native-time-input>`, `<lr-number-input>`,
+ * `<lr-phone-input>`, `<lr-prompt-input>`, `<lr-radio-button>`, `<lr-radio-group>`, `<lr-radio>`,
+ * `<lr-rubric-form>`, `<lr-select>`, `<lr-slider>`, `<lr-switch>`, `<lr-textarea>`,
+ * `<lr-time-input>`, `<lr-time-range>`, `<lr-time-zone-picker>`, `<lr-token-input>`,
+ * `<lr-tool-param-form>`, `<lr-unit-picker>`; detail union of 25, e.g.
  * `LyraAgentWorkspaceEventMap['lr-input']`.
  */
 export type LyraInputEvent =
   | LyraAgentWorkspaceEventMap['lr-input']
+  | LyraCatalogPickerEventMap['lr-input']
   | LyraChatComposerEventMap['lr-input']
   | LyraCheckboxEventMap['lr-input']
   | LyraCodeEditorEventMap['lr-input']
@@ -1500,18 +1506,20 @@ export type LyraIntersectEvent = LyraIntersectionObserverEventMap['lr-intersect'
 export type LyraIntersectionEvent = LyraIntersectionObserverEventMap['lr-intersection'];
 
 /**
- * `lr-invalid` — dispatched by 34 components: `<lr-button>`, `<lr-chat-composer>`,
+ * `lr-invalid` — dispatched by 37 components: `<lr-button>`, `<lr-chat-composer>`,
  * `<lr-checkbox-group>`, `<lr-checkbox>`, `<lr-code-editor>`, `<lr-color-picker>`,
- * `<lr-combobox>`, `<lr-currency-picker>`, `<lr-date-input>`, `<lr-emoji-picker>`,
- * `<lr-file-input>`, `<lr-graph-query-builder>`, `<lr-input>`, `<lr-known-date>`,
- * `<lr-locale-picker>`, `<lr-model-select>`, `<lr-native-time-input>`, `<lr-number-input>`,
- * `<lr-otp-input>`, `<lr-phone-input>`, `<lr-radio-button>`, `<lr-radio-group>`, `<lr-radio>`,
- * `<lr-rating>`, `<lr-rubric-form>`, `<lr-select>`, `<lr-slider>`, `<lr-switch>`, `<lr-textarea>`,
- * `<lr-time-input>`, `<lr-time-range>`, `<lr-token-input>`, `<lr-tool-param-form>`,
- * `<lr-voice-picker>`; detail union of 31, e.g. `LyraButtonEventMap['lr-invalid']`.
+ * `<lr-combobox>`, `<lr-country-picker>`, `<lr-currency-picker>`, `<lr-date-input>`,
+ * `<lr-emoji-picker>`, `<lr-file-input>`, `<lr-graph-query-builder>`, `<lr-input>`,
+ * `<lr-known-date>`, `<lr-locale-picker>`, `<lr-model-select>`, `<lr-native-time-input>`,
+ * `<lr-number-input>`, `<lr-otp-input>`, `<lr-phone-input>`, `<lr-radio-button>`,
+ * `<lr-radio-group>`, `<lr-radio>`, `<lr-rating>`, `<lr-rubric-form>`, `<lr-select>`,
+ * `<lr-slider>`, `<lr-switch>`, `<lr-textarea>`, `<lr-time-input>`, `<lr-time-range>`,
+ * `<lr-time-zone-picker>`, `<lr-token-input>`, `<lr-tool-param-form>`, `<lr-unit-picker>`,
+ * `<lr-voice-picker>`; detail union of 32, e.g. `LyraButtonEventMap['lr-invalid']`.
  */
 export type LyraInvalidEvent =
   | LyraButtonEventMap['lr-invalid']
+  | LyraCatalogPickerEventMap['lr-invalid']
   | LyraChatComposerEventMap['lr-invalid']
   | LyraCheckboxEventMap['lr-invalid']
   | LyraCheckboxGroupEventMap['lr-invalid']

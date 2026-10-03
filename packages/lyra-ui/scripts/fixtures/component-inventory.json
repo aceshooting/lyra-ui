@@ -35396,6 +35396,841 @@
       }
     },
     {
+      "tag": "lr-country-picker",
+      "family": "forms",
+      "classModule": "src/components/forms/country-picker/country-picker.class.ts",
+      "registrationModule": "src/components/forms/country-picker/country-picker.ts",
+      "rootIncluded": true,
+      "rootExclusion": null,
+      "optionalPeers": [],
+      "maturity": {
+        "status": "experimental",
+        "since": "unreleased",
+        "deprecated": null,
+        "profile": "new-component-experimental",
+        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
+        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "deprecations": []
+      },
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "accessibility": "automated",
+        "ledger": "scripts/fixtures/component-qualification.json"
+      },
+      "dependencies": {
+        "direct": [
+          "lr-combobox",
+          "lr-option",
+          "lr-select"
+        ],
+        "transitive": [
+          "lr-empty"
+        ],
+        "ledger": "scripts/fixtures/component-integration.json"
+      },
+      "counterparts": [],
+      "surface": {
+        "attributes": [
+          {
+            "name": "aria-label",
+            "property": "accessibleLabel",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "autocapitalize",
+            "property": "autocapitalize",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "autocomplete",
+            "property": "autocomplete",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "off"
+          },
+          {
+            "name": "autocorrect",
+            "property": "autocorrect",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
+          },
+          {
+            "name": "clearable",
+            "property": "clearable",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "custom-error",
+            "property": "customError",
+            "type": "string | null",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "disabled",
+            "property": "disabled",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "enterkeyhint",
+            "property": "enterKeyHint",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "error-text",
+            "property": "errorText",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "flags",
+            "property": "flags",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
+          },
+          {
+            "name": "form",
+            "property": "form",
+            "type": "HTMLFormElement | string | null",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "hint",
+            "property": "hint",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "inputmode",
+            "property": "inputMode",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "label",
+            "property": "label",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "locale",
+            "property": "locale",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "name",
+            "property": "name",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "placeholder",
+            "property": "placeholder",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "positioning-strategy",
+            "property": "positioningStrategy",
+            "type": "PlaceStrategy | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "required",
+            "property": "required",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "searchable",
+            "property": "searchable",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "size",
+            "property": "size",
+            "type": "LyraSize",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
+          },
+          {
+            "name": "spellcheck",
+            "property": "spellcheck",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "top-layer",
+            "property": "topLayer",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "value",
+            "property": "defaultValue",
+            "type": "string | null",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          }
+        ],
+        "properties": [
+          {
+            "name": "accessibleLabel",
+            "attribute": "aria-label",
+            "type": "string | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "autocapitalize",
+            "attribute": "autocapitalize",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "autocomplete",
+            "attribute": "autocomplete",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "off"
+          },
+          {
+            "name": "autocorrect",
+            "attribute": "autocorrect",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
+          },
+          {
+            "name": "clearable",
+            "attribute": "clearable",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "countries",
+            "attribute": null,
+            "type": "LyraCountryCatalog | null | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "customError",
+            "attribute": "custom-error",
+            "type": "string | null",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "defaultValue",
+            "attribute": "value",
+            "type": "string | null",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "disabled",
+            "attribute": "disabled",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "enterKeyHint",
+            "attribute": "enterkeyhint",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "errorText",
+            "attribute": "error-text",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "flags",
+            "attribute": "flags",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
+          },
+          {
+            "name": "form",
+            "attribute": "form",
+            "type": "HTMLFormElement | string | null",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "hint",
+            "attribute": "hint",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "inputMode",
+            "attribute": "inputmode",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "label",
+            "attribute": "label",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "labels",
+            "attribute": null,
+            "type": "NodeList",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "locale",
+            "attribute": "locale",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "name",
+            "attribute": "name",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "placeholder",
+            "attribute": "placeholder",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "positioningStrategy",
+            "attribute": "positioning-strategy",
+            "type": "PlaceStrategy | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "required",
+            "attribute": "required",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "searchable",
+            "attribute": "searchable",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "size",
+            "attribute": "size",
+            "type": "LyraSize",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
+          },
+          {
+            "name": "spellcheck",
+            "attribute": "spellcheck",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "topLayer",
+            "attribute": "top-layer",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "validationMessage",
+            "attribute": null,
+            "type": "string",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "validity",
+            "attribute": null,
+            "type": "ValidityState",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "value",
+            "attribute": null,
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "willValidate",
+            "attribute": null,
+            "type": "boolean",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
+        "slots": [
+          {
+            "name": "error",
+            "deprecated": null
+          },
+          {
+            "name": "hint",
+            "deprecated": null
+          },
+          {
+            "name": "label",
+            "deprecated": null
+          }
+        ],
+        "events": [
+          {
+            "name": "blur",
+            "type": "FocusEvent",
+            "cancelable": "never",
+            "constructor": "FocusEvent",
+            "bubbles": true,
+            "composed": true
+          },
+          {
+            "name": "change",
+            "type": "Event",
+            "cancelable": "never",
+            "constructor": "Event"
+          },
+          {
+            "name": "focus",
+            "type": "FocusEvent",
+            "cancelable": "never",
+            "constructor": "FocusEvent",
+            "bubbles": true,
+            "composed": true
+          },
+          {
+            "name": "input",
+            "type": "Event",
+            "cancelable": "never",
+            "constructor": "Event"
+          },
+          {
+            "name": "lr-change",
+            "type": "CustomEvent<LyraCatalogPickerChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-input",
+            "type": "CustomEvent<LyraCatalogPickerChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-invalid",
+            "type": "CustomEvent<null>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          }
+        ],
+        "parts": [
+          {
+            "name": "error",
+            "deprecated": null
+          },
+          {
+            "name": "flag",
+            "deprecated": null
+          },
+          {
+            "name": "form-control",
+            "deprecated": null
+          },
+          {
+            "name": "form-control-label",
+            "deprecated": null
+          },
+          {
+            "name": "hint",
+            "deprecated": null
+          },
+          {
+            "name": "select-clear-button",
+            "deprecated": null
+          },
+          {
+            "name": "select-display-input",
+            "deprecated": null
+          },
+          {
+            "name": "select-group-label",
+            "deprecated": null
+          },
+          {
+            "name": "select-listbox",
+            "deprecated": null
+          },
+          {
+            "name": "select-option",
+            "deprecated": null
+          },
+          {
+            "name": "select-option-sub",
+            "deprecated": null
+          },
+          {
+            "name": "select-trigger",
+            "deprecated": null
+          }
+        ],
+        "cssProperties": [],
+        "cssStates": [],
+        "methods": [
+          {
+            "name": "blur",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "checkValidity",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "click",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "focus",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "options",
+                    "type": "FocusOptions",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "formStateRestoreCallback",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "state",
+                    "type": "FormSubmissionValue",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "reason",
+                    "type": "'autocomplete' | 'restore'",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "getForm",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "HTMLFormElement | null"
+              }
+            ]
+          },
+          {
+            "name": "reportValidity",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "resetValidity",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "setCustomValidity",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "message",
+                    "type": "string",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          }
+        ],
+        "staticProperties": [],
+        "staticMethods": [],
+        "moduleExports": [],
+        "form": {
+          "associated": true,
+          "properties": [
+            "defaultValue",
+            "disabled",
+            "form",
+            "labels",
+            "name",
+            "required",
+            "validationMessage",
+            "validity",
+            "value",
+            "willValidate"
+          ],
+          "methods": [
+            "checkValidity",
+            "getForm",
+            "reportValidity",
+            "setCustomValidity"
+          ]
+        },
+        "native": {
+          "forwardedEvents": [
+            "blur",
+            "change",
+            "focus",
+            "input"
+          ],
+          "delegatedMethods": [
+            "blur",
+            "click",
+            "focus"
+          ]
+        }
+      }
+    },
+    {
       "tag": "lr-csv-viewer",
       "family": "viewers",
       "classModule": "src/components/viewers/csv-viewer/csv-viewer.class.ts",
@@ -35781,10 +36616,13 @@
       },
       "dependencies": {
         "direct": [
+          "lr-combobox",
           "lr-option",
           "lr-select"
         ],
-        "transitive": [],
+        "transitive": [
+          "lr-empty"
+        ],
         "ledger": "scripts/fixtures/component-integration.json"
       },
       "counterparts": [],
@@ -35799,6 +36637,36 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "autocapitalize",
+            "property": "autocapitalize",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "autocomplete",
+            "property": "autocomplete",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "off"
+          },
+          {
+            "name": "autocorrect",
+            "property": "autocorrect",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "clearable",
@@ -35831,6 +36699,16 @@
             "default": false
           },
           {
+            "name": "enterkeyhint",
+            "property": "enterKeyHint",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "error-text",
             "property": "errorText",
             "type": "string",
@@ -35853,6 +36731,16 @@
           {
             "name": "hint",
             "property": "hint",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "inputmode",
+            "property": "inputMode",
             "type": "string",
             "reflects": false,
             "inferred": false,
@@ -35919,6 +36807,16 @@
             "default": false
           },
           {
+            "name": "searchable",
+            "property": "searchable",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "size",
             "property": "size",
             "type": "LyraSize",
@@ -35927,6 +36825,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "m"
+          },
+          {
+            "name": "spellcheck",
+            "property": "spellcheck",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "top-layer",
@@ -35959,6 +36867,36 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "autocapitalize",
+            "attribute": "autocapitalize",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "autocomplete",
+            "attribute": "autocomplete",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "off"
+          },
+          {
+            "name": "autocorrect",
+            "attribute": "autocorrect",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "clearable",
@@ -36010,6 +36948,16 @@
             "default": false
           },
           {
+            "name": "enterKeyHint",
+            "attribute": "enterkeyhint",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "errorText",
             "attribute": "error-text",
             "type": "string",
@@ -36032,6 +36980,25 @@
           {
             "name": "hint",
             "attribute": "hint",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "input",
+            "attribute": null,
+            "type": "HTMLInputElement | null",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "inputMode",
+            "attribute": "inputmode",
             "type": "string",
             "readonly": false,
             "reflects": false,
@@ -36107,6 +37074,16 @@
             "default": false
           },
           {
+            "name": "searchable",
+            "attribute": "searchable",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "size",
             "attribute": "size",
             "type": "LyraSize",
@@ -36115,6 +37092,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "m"
+          },
+          {
+            "name": "spellcheck",
+            "attribute": "spellcheck",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "topLayer",
@@ -36248,6 +37235,10 @@
           },
           {
             "name": "select-display-input",
+            "deprecated": null
+          },
+          {
+            "name": "select-group-label",
             "deprecated": null
           },
           {
@@ -75522,6 +76513,36 @@
       "surface": {
         "attributes": [
           {
+            "name": "autocapitalize",
+            "property": "autocapitalize",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "autocomplete",
+            "property": "autocomplete",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "off"
+          },
+          {
+            "name": "autocorrect",
+            "property": "autocorrect",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
+          },
+          {
             "name": "custom-error",
             "property": "customError",
             "type": "string | null",
@@ -75538,6 +76559,16 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "enterkeyhint",
+            "property": "enterKeyHint",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "error-text",
@@ -75562,6 +76593,16 @@
           {
             "name": "hint",
             "property": "hint",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "inputmode",
+            "property": "inputMode",
             "type": "string",
             "reflects": false,
             "inferred": false,
@@ -75627,6 +76668,16 @@
             "hasDefault": false
           },
           {
+            "name": "searchable",
+            "property": "searchable",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "size",
             "property": "size",
             "type": "LyraSize",
@@ -75635,6 +76686,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "m"
+          },
+          {
+            "name": "spellcheck",
+            "property": "spellcheck",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "top-layer",
@@ -75678,6 +76739,36 @@
         ],
         "properties": [
           {
+            "name": "autocapitalize",
+            "attribute": "autocapitalize",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "autocomplete",
+            "attribute": "autocomplete",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "off"
+          },
+          {
+            "name": "autocorrect",
+            "attribute": "autocorrect",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
+          },
+          {
             "name": "customError",
             "attribute": "custom-error",
             "type": "string | null",
@@ -75714,6 +76805,16 @@
             "hasDefault": false
           },
           {
+            "name": "enterKeyHint",
+            "attribute": "enterkeyhint",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "errorText",
             "attribute": "error-text",
             "type": "string",
@@ -75736,6 +76837,25 @@
           {
             "name": "hint",
             "attribute": "hint",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "input",
+            "attribute": null,
+            "type": "HTMLInputElement | null",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "inputMode",
+            "attribute": "inputmode",
             "type": "string",
             "readonly": false,
             "reflects": false,
@@ -75828,6 +76948,16 @@
             "hasDefault": false
           },
           {
+            "name": "searchable",
+            "attribute": "searchable",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "size",
             "attribute": "size",
             "type": "LyraSize",
@@ -75836,6 +76966,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "m"
+          },
+          {
+            "name": "spellcheck",
+            "attribute": "spellcheck",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "topLayer",
@@ -75952,6 +77092,10 @@
         ],
         "parts": [
           {
+            "name": "empty",
+            "deprecated": null
+          },
+          {
             "name": "error",
             "deprecated": null
           },
@@ -75997,6 +77141,10 @@
           },
           {
             "name": "option-tag",
+            "deprecated": null
+          },
+          {
+            "name": "search-input",
             "deprecated": null
           },
           {
@@ -134252,6 +135400,817 @@
       }
     },
     {
+      "tag": "lr-time-zone-picker",
+      "family": "forms",
+      "classModule": "src/components/forms/time-zone-picker/time-zone-picker.class.ts",
+      "registrationModule": "src/components/forms/time-zone-picker/time-zone-picker.ts",
+      "rootIncluded": true,
+      "rootExclusion": null,
+      "optionalPeers": [],
+      "maturity": {
+        "status": "experimental",
+        "since": "unreleased",
+        "deprecated": null,
+        "profile": "new-component-experimental",
+        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
+        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "deprecations": []
+      },
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "accessibility": "automated",
+        "ledger": "scripts/fixtures/component-qualification.json"
+      },
+      "dependencies": {
+        "direct": [
+          "lr-combobox",
+          "lr-option",
+          "lr-select"
+        ],
+        "transitive": [
+          "lr-empty"
+        ],
+        "ledger": "scripts/fixtures/component-integration.json"
+      },
+      "counterparts": [],
+      "surface": {
+        "attributes": [
+          {
+            "name": "aria-label",
+            "property": "accessibleLabel",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "autocapitalize",
+            "property": "autocapitalize",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "autocomplete",
+            "property": "autocomplete",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "off"
+          },
+          {
+            "name": "autocorrect",
+            "property": "autocorrect",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
+          },
+          {
+            "name": "clearable",
+            "property": "clearable",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "custom-error",
+            "property": "customError",
+            "type": "string | null",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "disabled",
+            "property": "disabled",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "enterkeyhint",
+            "property": "enterKeyHint",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "error-text",
+            "property": "errorText",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "form",
+            "property": "form",
+            "type": "HTMLFormElement | string | null",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "hint",
+            "property": "hint",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "inputmode",
+            "property": "inputMode",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "label",
+            "property": "label",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "locale",
+            "property": "locale",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "name",
+            "property": "name",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "placeholder",
+            "property": "placeholder",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "positioning-strategy",
+            "property": "positioningStrategy",
+            "type": "PlaceStrategy | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "required",
+            "property": "required",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "searchable",
+            "property": "searchable",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "size",
+            "property": "size",
+            "type": "LyraSize",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
+          },
+          {
+            "name": "spellcheck",
+            "property": "spellcheck",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "top-layer",
+            "property": "topLayer",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "value",
+            "property": "defaultValue",
+            "type": "string | null",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          }
+        ],
+        "properties": [
+          {
+            "name": "accessibleLabel",
+            "attribute": "aria-label",
+            "type": "string | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "autocapitalize",
+            "attribute": "autocapitalize",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "autocomplete",
+            "attribute": "autocomplete",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "off"
+          },
+          {
+            "name": "autocorrect",
+            "attribute": "autocorrect",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
+          },
+          {
+            "name": "clearable",
+            "attribute": "clearable",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "customError",
+            "attribute": "custom-error",
+            "type": "string | null",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "defaultValue",
+            "attribute": "value",
+            "type": "string | null",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "disabled",
+            "attribute": "disabled",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "enterKeyHint",
+            "attribute": "enterkeyhint",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "errorText",
+            "attribute": "error-text",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "form",
+            "attribute": "form",
+            "type": "HTMLFormElement | string | null",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "hint",
+            "attribute": "hint",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "inputMode",
+            "attribute": "inputmode",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "label",
+            "attribute": "label",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "labels",
+            "attribute": null,
+            "type": "NodeList",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "locale",
+            "attribute": "locale",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "name",
+            "attribute": "name",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "placeholder",
+            "attribute": "placeholder",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "positioningStrategy",
+            "attribute": "positioning-strategy",
+            "type": "PlaceStrategy | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "required",
+            "attribute": "required",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "searchable",
+            "attribute": "searchable",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "size",
+            "attribute": "size",
+            "type": "LyraSize",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
+          },
+          {
+            "name": "spellcheck",
+            "attribute": "spellcheck",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "timeZones",
+            "attribute": null,
+            "type": "LyraTimeZoneCatalog | null | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "topLayer",
+            "attribute": "top-layer",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "validationMessage",
+            "attribute": null,
+            "type": "string",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "validity",
+            "attribute": null,
+            "type": "ValidityState",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "value",
+            "attribute": null,
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "willValidate",
+            "attribute": null,
+            "type": "boolean",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
+        "slots": [
+          {
+            "name": "error",
+            "deprecated": null
+          },
+          {
+            "name": "hint",
+            "deprecated": null
+          },
+          {
+            "name": "label",
+            "deprecated": null
+          }
+        ],
+        "events": [
+          {
+            "name": "blur",
+            "type": "FocusEvent",
+            "cancelable": "never",
+            "constructor": "FocusEvent",
+            "bubbles": true,
+            "composed": true
+          },
+          {
+            "name": "change",
+            "type": "Event",
+            "cancelable": "never",
+            "constructor": "Event"
+          },
+          {
+            "name": "focus",
+            "type": "FocusEvent",
+            "cancelable": "never",
+            "constructor": "FocusEvent",
+            "bubbles": true,
+            "composed": true
+          },
+          {
+            "name": "input",
+            "type": "Event",
+            "cancelable": "never",
+            "constructor": "Event"
+          },
+          {
+            "name": "lr-change",
+            "type": "CustomEvent<LyraCatalogPickerChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-input",
+            "type": "CustomEvent<LyraCatalogPickerChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-invalid",
+            "type": "CustomEvent<null>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          }
+        ],
+        "parts": [
+          {
+            "name": "error",
+            "deprecated": null
+          },
+          {
+            "name": "form-control",
+            "deprecated": null
+          },
+          {
+            "name": "form-control-label",
+            "deprecated": null
+          },
+          {
+            "name": "hint",
+            "deprecated": null
+          },
+          {
+            "name": "select-clear-button",
+            "deprecated": null
+          },
+          {
+            "name": "select-display-input",
+            "deprecated": null
+          },
+          {
+            "name": "select-group-label",
+            "deprecated": null
+          },
+          {
+            "name": "select-listbox",
+            "deprecated": null
+          },
+          {
+            "name": "select-option",
+            "deprecated": null
+          },
+          {
+            "name": "select-option-sub",
+            "deprecated": null
+          },
+          {
+            "name": "select-trigger",
+            "deprecated": null
+          }
+        ],
+        "cssProperties": [],
+        "cssStates": [],
+        "methods": [
+          {
+            "name": "blur",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "checkValidity",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "click",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "focus",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "options",
+                    "type": "FocusOptions",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "formStateRestoreCallback",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "state",
+                    "type": "FormSubmissionValue",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "reason",
+                    "type": "'autocomplete' | 'restore'",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "getForm",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "HTMLFormElement | null"
+              }
+            ]
+          },
+          {
+            "name": "reportValidity",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "resetValidity",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "setCustomValidity",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "message",
+                    "type": "string",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          }
+        ],
+        "staticProperties": [],
+        "staticMethods": [],
+        "moduleExports": [],
+        "form": {
+          "associated": true,
+          "properties": [
+            "defaultValue",
+            "disabled",
+            "form",
+            "labels",
+            "name",
+            "required",
+            "validationMessage",
+            "validity",
+            "value",
+            "willValidate"
+          ],
+          "methods": [
+            "checkValidity",
+            "getForm",
+            "reportValidity",
+            "setCustomValidity"
+          ]
+        },
+        "native": {
+          "forwardedEvents": [
+            "blur",
+            "change",
+            "focus",
+            "input"
+          ],
+          "delegatedMethods": [
+            "blur",
+            "click",
+            "focus"
+          ]
+        }
+      }
+    },
+    {
       "tag": "lr-timeline",
       "family": "data",
       "classModule": "src/components/data/timeline/timeline.class.ts",
@@ -143434,6 +145393,817 @@
         "native": {
           "forwardedEvents": [],
           "delegatedMethods": []
+        }
+      }
+    },
+    {
+      "tag": "lr-unit-picker",
+      "family": "forms",
+      "classModule": "src/components/forms/unit-picker/unit-picker.class.ts",
+      "registrationModule": "src/components/forms/unit-picker/unit-picker.ts",
+      "rootIncluded": true,
+      "rootExclusion": null,
+      "optionalPeers": [],
+      "maturity": {
+        "status": "experimental",
+        "since": "unreleased",
+        "deprecated": null,
+        "profile": "new-component-experimental",
+        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
+        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "deprecations": []
+      },
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "accessibility": "automated",
+        "ledger": "scripts/fixtures/component-qualification.json"
+      },
+      "dependencies": {
+        "direct": [
+          "lr-combobox",
+          "lr-option",
+          "lr-select"
+        ],
+        "transitive": [
+          "lr-empty"
+        ],
+        "ledger": "scripts/fixtures/component-integration.json"
+      },
+      "counterparts": [],
+      "surface": {
+        "attributes": [
+          {
+            "name": "aria-label",
+            "property": "accessibleLabel",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "autocapitalize",
+            "property": "autocapitalize",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "autocomplete",
+            "property": "autocomplete",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "off"
+          },
+          {
+            "name": "autocorrect",
+            "property": "autocorrect",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
+          },
+          {
+            "name": "clearable",
+            "property": "clearable",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "custom-error",
+            "property": "customError",
+            "type": "string | null",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "disabled",
+            "property": "disabled",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "enterkeyhint",
+            "property": "enterKeyHint",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "error-text",
+            "property": "errorText",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "form",
+            "property": "form",
+            "type": "HTMLFormElement | string | null",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "hint",
+            "property": "hint",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "inputmode",
+            "property": "inputMode",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "label",
+            "property": "label",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "locale",
+            "property": "locale",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "name",
+            "property": "name",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "placeholder",
+            "property": "placeholder",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "positioning-strategy",
+            "property": "positioningStrategy",
+            "type": "PlaceStrategy | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "required",
+            "property": "required",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "searchable",
+            "property": "searchable",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "size",
+            "property": "size",
+            "type": "LyraSize",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
+          },
+          {
+            "name": "spellcheck",
+            "property": "spellcheck",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "top-layer",
+            "property": "topLayer",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "value",
+            "property": "defaultValue",
+            "type": "string | null",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          }
+        ],
+        "properties": [
+          {
+            "name": "accessibleLabel",
+            "attribute": "aria-label",
+            "type": "string | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "autocapitalize",
+            "attribute": "autocapitalize",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "autocomplete",
+            "attribute": "autocomplete",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "off"
+          },
+          {
+            "name": "autocorrect",
+            "attribute": "autocorrect",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
+          },
+          {
+            "name": "clearable",
+            "attribute": "clearable",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "customError",
+            "attribute": "custom-error",
+            "type": "string | null",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "defaultValue",
+            "attribute": "value",
+            "type": "string | null",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "disabled",
+            "attribute": "disabled",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "enterKeyHint",
+            "attribute": "enterkeyhint",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "errorText",
+            "attribute": "error-text",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "form",
+            "attribute": "form",
+            "type": "HTMLFormElement | string | null",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "hint",
+            "attribute": "hint",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "inputMode",
+            "attribute": "inputmode",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "label",
+            "attribute": "label",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "labels",
+            "attribute": null,
+            "type": "NodeList",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "locale",
+            "attribute": "locale",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "name",
+            "attribute": "name",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "placeholder",
+            "attribute": "placeholder",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "positioningStrategy",
+            "attribute": "positioning-strategy",
+            "type": "PlaceStrategy | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "required",
+            "attribute": "required",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "searchable",
+            "attribute": "searchable",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "size",
+            "attribute": "size",
+            "type": "LyraSize",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
+          },
+          {
+            "name": "spellcheck",
+            "attribute": "spellcheck",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "topLayer",
+            "attribute": "top-layer",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "units",
+            "attribute": null,
+            "type": "LyraUnitCatalog | null | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "validationMessage",
+            "attribute": null,
+            "type": "string",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "validity",
+            "attribute": null,
+            "type": "ValidityState",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "value",
+            "attribute": null,
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "willValidate",
+            "attribute": null,
+            "type": "boolean",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
+        "slots": [
+          {
+            "name": "error",
+            "deprecated": null
+          },
+          {
+            "name": "hint",
+            "deprecated": null
+          },
+          {
+            "name": "label",
+            "deprecated": null
+          }
+        ],
+        "events": [
+          {
+            "name": "blur",
+            "type": "FocusEvent",
+            "cancelable": "never",
+            "constructor": "FocusEvent",
+            "bubbles": true,
+            "composed": true
+          },
+          {
+            "name": "change",
+            "type": "Event",
+            "cancelable": "never",
+            "constructor": "Event"
+          },
+          {
+            "name": "focus",
+            "type": "FocusEvent",
+            "cancelable": "never",
+            "constructor": "FocusEvent",
+            "bubbles": true,
+            "composed": true
+          },
+          {
+            "name": "input",
+            "type": "Event",
+            "cancelable": "never",
+            "constructor": "Event"
+          },
+          {
+            "name": "lr-change",
+            "type": "CustomEvent<LyraCatalogPickerChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-input",
+            "type": "CustomEvent<LyraCatalogPickerChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-invalid",
+            "type": "CustomEvent<null>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          }
+        ],
+        "parts": [
+          {
+            "name": "error",
+            "deprecated": null
+          },
+          {
+            "name": "form-control",
+            "deprecated": null
+          },
+          {
+            "name": "form-control-label",
+            "deprecated": null
+          },
+          {
+            "name": "hint",
+            "deprecated": null
+          },
+          {
+            "name": "select-clear-button",
+            "deprecated": null
+          },
+          {
+            "name": "select-display-input",
+            "deprecated": null
+          },
+          {
+            "name": "select-group-label",
+            "deprecated": null
+          },
+          {
+            "name": "select-listbox",
+            "deprecated": null
+          },
+          {
+            "name": "select-option",
+            "deprecated": null
+          },
+          {
+            "name": "select-option-sub",
+            "deprecated": null
+          },
+          {
+            "name": "select-trigger",
+            "deprecated": null
+          }
+        ],
+        "cssProperties": [],
+        "cssStates": [],
+        "methods": [
+          {
+            "name": "blur",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "checkValidity",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "click",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "focus",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "options",
+                    "type": "FocusOptions",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "formStateRestoreCallback",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "state",
+                    "type": "FormSubmissionValue",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "reason",
+                    "type": "'autocomplete' | 'restore'",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "getForm",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "HTMLFormElement | null"
+              }
+            ]
+          },
+          {
+            "name": "reportValidity",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "resetValidity",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "setCustomValidity",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "message",
+                    "type": "string",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          }
+        ],
+        "staticProperties": [],
+        "staticMethods": [],
+        "moduleExports": [],
+        "form": {
+          "associated": true,
+          "properties": [
+            "defaultValue",
+            "disabled",
+            "form",
+            "labels",
+            "name",
+            "required",
+            "validationMessage",
+            "validity",
+            "value",
+            "willValidate"
+          ],
+          "methods": [
+            "checkValidity",
+            "getForm",
+            "reportValidity",
+            "setCustomValidity"
+          ]
+        },
+        "native": {
+          "forwardedEvents": [
+            "blur",
+            "change",
+            "focus",
+            "input"
+          ],
+          "delegatedMethods": [
+            "blur",
+            "click",
+            "focus"
+          ]
         }
       }
     },

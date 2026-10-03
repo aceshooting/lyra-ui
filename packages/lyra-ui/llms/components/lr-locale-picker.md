@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -20,8 +20,8 @@ A closed-list locale switcher over the library's own locale registry. First-part
 Web Awesome equivalent). With `locales` unset (the default), the offered rows are exactly
 `getRegisteredLyraLocales()` — every locale with strings registered via `registerLyraLocale()`,
 plus `en` — kept live via `subscribeLyraLocaleRegistry()`. Built directly on `lr-select`'s
-trigger-button/`aria-activedescendant` listbox technique, not composed from it — a plain closed
-list, no filter/free-text mode.
+trigger-button/`aria-activedescendant` listbox technique, not composed from it. Optional
+`searchable` adds a text filter; free text never becomes a locale selection.
 
 Host `aria-describedby` references resolve onto the role=combobox trigger before its local error and
 hint guidance. The relationship tracks missing IDs, target replacement, removal/reinsertion,
@@ -52,6 +52,18 @@ readonly LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; cou
   the catalog while the listbox is open keeps keyboard navigation valid: an active row beyond the
   new end is rehomed to the last remaining row. Arrow/Home/End/typeahead changes scroll the active
   owned option into nearest view after render; replacement and disconnect cancel stale scrolls.
+- `searchable: boolean = false` — add a search field inside the open menu. Substring matching
+  ignores case and accents across language tags, native names, localized names and caller labels;
+  for example, `eng` finds English. Filtering emits no selection events and does not invoke a
+  locale loader. Arrow keys and Enter select an offered match; ordinary text editing and IME
+  composition remain native. Empty results show localized guidance. Closing, disabling, resetting,
+  reconnecting or turning search off clears unfinished filtering. The default keeps the existing
+  compact list without an input.
+- `autocomplete: string = 'off'`, `inputMode: string = ''` (attribute `inputmode`),
+  `enterKeyHint: string = ''` (attribute `enterkeyhint`), `spellcheck: boolean = false`,
+  `autocapitalize: string = ''`, `autocorrect: boolean = true` — native guidance for the filter.
+  The readonly `input: HTMLInputElement | null` exposes it in searchable mode. After directly
+  editing `input.value`, dispatch a native `input` event to update the matches.
 - `topLayer: boolean = false` (attribute `top-layer`, reflected) — same contract as `<lr-popover>`:
   always shows the open listbox in the browser top layer, placed `fixed` whatever the positioning
   strategy resolves to, so it paints above a sibling surface stacked higher than a `z-index`ed fixed
@@ -177,7 +189,9 @@ visually hidden in flag-only mode), `listbox`, `option`, `option-flag` (present 
 `optionDisplay` is `label-tag`, and absent from the DOM entirely under `optionDisplay="label"`),
 `expand-icon`,
 `hint`, `error`, `load-status` (the optional localized loading or failure message), and
-`load-retry` (the retry button shown after a locale load fails).
+`load-retry` (the retry button shown after a locale load fails), `search-input` (the opt-in
+filter) and `empty` (the no-match message). Search uses the localized `localePickerSearchLabel`
+and `localePickerEmpty` string keys.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
 `[part="form-control-label"]` — the one `::after` rule described under "The required-field marker"

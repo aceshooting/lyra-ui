@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 10 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -17,7 +17,7 @@
 ## `lr-currency-picker`
 
 A form-associated, single-currency selector with a compact ISO-code trigger and localized currency
-names and symbols in its options. It composes `lr-select` and `lr-option`; no additional popover,
+names and symbols in its options. It composes `lr-select` (or `lr-combobox` when searchable) and `lr-option`; no additional popover,
 currency-name table or optional peer is needed. Selection changes the field value only: exchange
 rates, amount conversion, persistence and the application's display-currency preference belong to
 the application. Selecting a currency does not change the interface language.
@@ -30,7 +30,7 @@ subset. Omitted, `undefined` or `null` restores the default catalog; `[]` means 
 
 `currencies` accepts `LyraCurrencyCatalog = readonly string[] | readonly LyraCurrencyEntry[]`.
 Each `LyraCurrencyEntry { readonly code: string; readonly label?: string; readonly symbol?: string;
-readonly disabled?: boolean }` supplies one option. Names and symbols come from `Intl` using the field's
+readonly group?: string; readonly disabled?: boolean }` supplies one option. Names and symbols come from `Intl` using the field's
 effective locale, with code fallbacks where display data is unavailable. Caller labels/symbols,
 including explicit empty strings, override that presentation. The catalog is copied; reassign it
 to change options. At most 512 rows are examined, invalid rows are skipped, and the first valid
@@ -58,8 +58,18 @@ constraints, leaving `value`, `defaultValue` and interaction state unchanged.
 `topLayer` (attribute `top-layer`) defaults to `false`; enable it inside clipped headers or dialogs.
 An explicit `positioningStrategy` (attribute `positioning-strategy`) of `"fixed"` or `"absolute"`
 overrides inherited `--lr-positioning-strategy`.
-Keyboard navigation and ISO-code type-ahead use the select contract. This is a closed list, without
-a text-search field or currency-name filtering.
+Keyboard navigation and ISO-code type-ahead use the select contract by default. Set
+`searchable` (default `false`) to enable a text filter matching codes, localized names, literal
+labels, and regular/narrow symbols. Typing only filters; it does not change `value` or emit
+selection events. A query matching the current displayed code follows the combobox convention
+of showing the complete list. An empty or unmatched query never creates a currency.
+`group` supplies caller-owned headings for contiguous rows; order is never rearranged.
+`autocomplete='off'`, `inputMode=''` (attribute `inputmode`), `enterKeyHint=''`
+(attribute `enterkeyhint`), `spellcheck=false`,
+`autocapitalize=''`, and `autocorrect=true` forward native editing guidance in searchable mode.
+The readonly `input: HTMLInputElement | null` exposes that native filter (null in compact mode).
+After directly changing its DOM value, dispatch a native `input` event to update filtering.
+Mode changes, reset and reconnect clear unfinished filtering without changing the reset default.
 
 **Events:** An accepted user choice or clear updates `value` synchronously, then emits exactly one
 `input`, `lr-input`, `change`, `lr-change` sequence. The prefixed details are
@@ -73,7 +83,8 @@ bind `currencies` to supply rows.
 
 **CSS parts:** `form-control`, `form-control-label`, `hint`, `error`;
 `select-trigger`, `select-display-input`, `select-listbox`, `select-option`, `select-option-sub`,
-`select-clear-button`. The composed select inherits shared form-control and surface tokens.
+`select-clear-button`, `select-group-label`. Both composed controls preserve these part names
+and inherit shared form-control and surface tokens.
 
 ```html
 <script type="module">

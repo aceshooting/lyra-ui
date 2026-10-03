@@ -184,6 +184,8 @@ export type LyraConversationItemReactProps = LyraReactElementProps<'lr-conversat
 
 export type LyraCopyButtonReactProps = LyraReactElementProps<'lr-copy-button'>;
 
+export type LyraCountryPickerReactProps = LyraReactElementProps<'lr-country-picker'>;
+
 export type LyraCsvViewerReactProps = LyraReactElementProps<'lr-csv-viewer'>;
 
 export type LyraCurrencyPickerReactProps = LyraReactElementProps<'lr-currency-picker'>;
@@ -580,6 +582,8 @@ export type LyraTimeInputReactProps = LyraReactElementProps<'lr-time-input'>;
 
 export type LyraTimeRangeReactProps = LyraReactElementProps<'lr-time-range'>;
 
+export type LyraTimeZonePickerReactProps = LyraReactElementProps<'lr-time-zone-picker'>;
+
 export type LyraTimelineReactProps = LyraReactElementProps<'lr-timeline'>;
 
 export type LyraTimelineItemReactProps = LyraReactElementProps<'lr-timeline-item'>;
@@ -623,6 +627,8 @@ export type LyraTreeReactProps = LyraReactElementProps<'lr-tree'>;
 export type LyraTreeItemReactProps = LyraReactElementProps<'lr-tree-item'>;
 
 export type LyraTypingIndicatorReactProps = LyraReactElementProps<'lr-typing-indicator'>;
+
+export type LyraUnitPickerReactProps = LyraReactElementProps<'lr-unit-picker'>;
 
 export type LyraUsageBadgeReactProps = LyraReactElementProps<'lr-usage-badge'>;
 
@@ -720,6 +726,7 @@ export interface LyraReactIntrinsicElements {
   'lr-control-group': LyraControlGroupReactProps;
   'lr-conversation-item': LyraConversationItemReactProps;
   'lr-copy-button': LyraCopyButtonReactProps;
+  'lr-country-picker': LyraCountryPickerReactProps;
   'lr-csv-viewer': LyraCsvViewerReactProps;
   'lr-currency-picker': LyraCurrencyPickerReactProps;
   'lr-dashboard-grid': LyraDashboardGridReactProps;
@@ -918,6 +925,7 @@ export interface LyraReactIntrinsicElements {
   'lr-thread-list': LyraThreadListReactProps;
   'lr-time-input': LyraTimeInputReactProps;
   'lr-time-range': LyraTimeRangeReactProps;
+  'lr-time-zone-picker': LyraTimeZonePickerReactProps;
   'lr-timeline': LyraTimelineReactProps;
   'lr-timeline-item': LyraTimelineItemReactProps;
   'lr-toast': LyraToastReactProps;
@@ -940,6 +948,7 @@ export interface LyraReactIntrinsicElements {
   'lr-tree': LyraTreeReactProps;
   'lr-tree-item': LyraTreeItemReactProps;
   'lr-typing-indicator': LyraTypingIndicatorReactProps;
+  'lr-unit-picker': LyraUnitPickerReactProps;
   'lr-usage-badge': LyraUsageBadgeReactProps;
   'lr-video': LyraVideoReactProps;
   'lr-video-playlist': LyraVideoPlaylistReactProps;

@@ -947,7 +947,7 @@
       "module": "src/autoloader.ts",
       "exportName": "AutoloaderErrorEventDetail",
       "kind": "interface",
-      "fingerprint": "909b23c6e093841f4399",
+      "fingerprint": "da8c78136840be9116f2",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -963,7 +963,7 @@
       "module": "src/autoloader.ts",
       "exportName": "AutoloaderEventDetail",
       "kind": "interface",
-      "fingerprint": "8bb96e5300e8110792db",
+      "fingerprint": "685d509311e17f912372",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -1011,7 +1011,7 @@
       "module": "src/autoloader.ts",
       "exportName": "discover",
       "kind": "function",
-      "fingerprint": "5d09c067a8d75c5ece6b",
+      "fingerprint": "11971715f6b23f48e7e7",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -1027,7 +1027,7 @@
       "module": "src/autoloader.ts",
       "exportName": "start",
       "kind": "function",
-      "fingerprint": "5eb6b384e9f393ccde29",
+      "fingerprint": "3c95692ef1ecf7f81f72",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -14015,7 +14015,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "81ad4f5a555e4712fc64",
+      "fingerprint": "accd071720d43143d357",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -14400,7 +14400,7 @@
       "module": "src/internal/form-associated.ts",
       "exportName": "FormAssociated",
       "kind": "function",
-      "fingerprint": "d5904bfeb229eb4c2648",
+      "fingerprint": "d61010403548791e725a",
       "routes": [
         "src/all.ts",
         "src/lyra.ts",
@@ -14420,7 +14420,7 @@
       "module": "src/internal/form-associated.ts",
       "exportName": "FormAssociatedInterface",
       "kind": "interface",
-      "fingerprint": "ac603340553d062caff9",
+      "fingerprint": "2c3d855c887a4640070c",
       "routes": [
         "src/all.ts",
         "src/lyra.ts",
@@ -14922,7 +14922,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "9487c1c48640ed77c2f1",
+      "fingerprint": "9a8d335418d8db0d7cf8",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15056,7 +15056,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "a146e6f50a5433c63917",
+      "fingerprint": "486f429156bcbc9c3c38",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15640,7 +15640,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "0e1b44da2d1b99e30bf4",
+      "fingerprint": "2130d4fc1ce99aba585a",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15656,7 +15656,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "4be9dc6977e331ad5fe8",
+      "fingerprint": "4ac0fb6d085a796139c0",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15672,7 +15672,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "f762dd63877910175e2f",
+      "fingerprint": "aa55b0848519d681707a",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16199,7 +16199,7 @@
       "module": "src/localization.ts",
       "exportName": "resolveLyraScopedString",
       "kind": "function",
-      "fingerprint": "92073f9a031d230a1691",
+      "fingerprint": "04d72dbd7c6bbcaa0648",
       "routes": [
         "src/localization.ts",
         "src/utilities/index.ts"
@@ -16216,7 +16216,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "00cd9d8f33640b601c6a",
+      "fingerprint": "071d114f7c375e522c43",
       "routes": [
         "src/vue.ts"
       ],
@@ -16625,7 +16625,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "edffca3325ed2dae7b36",
+      "fingerprint": "89d4726a1e5652e21044",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -16650,7 +16650,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocaleDelta",
       "kind": "function",
-      "fingerprint": "e826365b96bd1b35ecfa",
+      "fingerprint": "b7439b7d3a17f278c5a9",
       "routes": [
         "src/localization.ts"
       ],
@@ -17210,13 +17210,14 @@
       "module": "src/components/forms/currency-picker/currency-types.ts",
       "exportName": "LyraCurrencyEntry",
       "kind": "interface",
-      "fingerprint": "3828370185c7b9905ab5",
+      "fingerprint": "a8df6edddf975b7b0044",
       "routes": [
         "src/all.ts",
         "src/components/forms/currency-picker/currency-picker.class.ts",
         "src/components/forms/currency-picker/currency-picker.ts",
         "src/components/forms/index.ts",
         "src/components/lr-currency-picker.ts",
+        "src/currency.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
       ],
@@ -17248,6 +17249,319 @@
         "kind": "component",
         "tag": "lr-currency-picker",
         "declaration": "LyraCurrencyChangeDetail"
+      }
+    },
+    {
+      "module": "src/components/forms/currency-picker/currency-types.ts",
+      "exportName": "LyraCurrencyDisplayEntry",
+      "kind": "interface",
+      "fingerprint": "e1b977d2fe50089a6ea3",
+      "routes": [
+        "src/all.ts",
+        "src/currency.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/forms.md",
+      "family": "forms",
+      "locator": {
+        "kind": "utility",
+        "name": "currency-helpers",
+        "declaration": "LyraCurrencyDisplayEntry"
+      }
+    },
+    {
+      "module": "src/currency.ts",
+      "exportName": "getCurrencyCatalog",
+      "kind": "function",
+      "fingerprint": "a866a0da5c4096d4d3ba",
+      "routes": [
+        "src/all.ts",
+        "src/currency.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/forms.md",
+      "family": "forms",
+      "locator": {
+        "kind": "utility",
+        "name": "currency-helpers",
+        "declaration": "getCurrencyCatalog"
+      }
+    },
+    {
+      "module": "src/currency.ts",
+      "exportName": "LyraCurrencyRateSnapshot",
+      "kind": "interface",
+      "fingerprint": "2cb2d5a4165ad90dd49f",
+      "routes": [
+        "src/all.ts",
+        "src/currency.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/forms.md",
+      "family": "forms",
+      "locator": {
+        "kind": "utility",
+        "name": "currency-helpers",
+        "declaration": "LyraCurrencyRateSnapshot"
+      }
+    },
+    {
+      "module": "src/currency.ts",
+      "exportName": "LyraCurrencyRateLoadOptions",
+      "kind": "interface",
+      "fingerprint": "31f61bf611d347f17e22",
+      "routes": [
+        "src/all.ts",
+        "src/currency.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/forms.md",
+      "family": "forms",
+      "locator": {
+        "kind": "utility",
+        "name": "currency-helpers",
+        "declaration": "LyraCurrencyRateLoadOptions"
+      }
+    },
+    {
+      "module": "src/currency.ts",
+      "exportName": "normalizeCurrencyRates",
+      "kind": "function",
+      "fingerprint": "3380dedde70869a96ae6",
+      "routes": [
+        "src/all.ts",
+        "src/currency.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/forms.md",
+      "family": "forms",
+      "locator": {
+        "kind": "utility",
+        "name": "currency-helpers",
+        "declaration": "normalizeCurrencyRates"
+      }
+    },
+    {
+      "module": "src/currency.ts",
+      "exportName": "loadCurrencyRates",
+      "kind": "function",
+      "fingerprint": "137704259a1f824d40a5",
+      "routes": [
+        "src/all.ts",
+        "src/currency.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/forms.md",
+      "family": "forms",
+      "locator": {
+        "kind": "utility",
+        "name": "currency-helpers",
+        "declaration": "loadCurrencyRates"
+      }
+    },
+    {
+      "module": "src/currency.ts",
+      "exportName": "convertCurrency",
+      "kind": "function",
+      "fingerprint": "1c5375233c0c29d77df4",
+      "routes": [
+        "src/all.ts",
+        "src/currency.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/forms.md",
+      "family": "forms",
+      "locator": {
+        "kind": "utility",
+        "name": "currency-helpers",
+        "declaration": "convertCurrency"
+      }
+    },
+    {
+      "module": "src/countries.ts",
+      "exportName": "LyraCountryEntry",
+      "kind": "interface",
+      "fingerprint": "82c1db2b66c83e9cbd9e",
+      "routes": [
+        "src/all.ts",
+        "src/components/forms/country-picker/country-picker.class.ts",
+        "src/components/forms/country-picker/country-picker.ts",
+        "src/components/forms/index.ts",
+        "src/components/lr-country-picker.ts",
+        "src/countries.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/forms.md",
+      "family": "forms",
+      "locator": {
+        "kind": "utility",
+        "name": "country-catalog",
+        "declaration": "LyraCountryEntry"
+      }
+    },
+    {
+      "module": "src/countries.ts",
+      "exportName": "resolveCountryNames",
+      "kind": "function",
+      "fingerprint": "55793f5c5218ab0a18cb",
+      "routes": [
+        "src/all.ts",
+        "src/countries.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/forms.md",
+      "family": "forms",
+      "locator": {
+        "kind": "utility",
+        "name": "country-catalog",
+        "declaration": "resolveCountryNames"
+      }
+    },
+    {
+      "module": "src/time-zones.ts",
+      "exportName": "LyraTimeZoneEntry",
+      "kind": "interface",
+      "fingerprint": "82c1db2b66c83e9cbd9e",
+      "routes": [
+        "src/all.ts",
+        "src/components/forms/index.ts",
+        "src/components/forms/time-zone-picker/time-zone-picker.class.ts",
+        "src/components/forms/time-zone-picker/time-zone-picker.ts",
+        "src/components/lr-time-zone-picker.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/time-zones.ts"
+      ],
+      "document": "llms/forms.md",
+      "family": "forms",
+      "locator": {
+        "kind": "utility",
+        "name": "time-zone-catalog",
+        "declaration": "LyraTimeZoneEntry"
+      }
+    },
+    {
+      "module": "src/time-zones.ts",
+      "exportName": "getTimeZoneCodes",
+      "kind": "function",
+      "fingerprint": "bdc59b68d56d2a1485ba",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/time-zones.ts"
+      ],
+      "document": "llms/forms.md",
+      "family": "forms",
+      "locator": {
+        "kind": "utility",
+        "name": "time-zone-catalog",
+        "declaration": "getTimeZoneCodes"
+      }
+    },
+    {
+      "module": "src/units.ts",
+      "exportName": "LyraUnitEntry",
+      "kind": "interface",
+      "fingerprint": "a8df6edddf975b7b0044",
+      "routes": [
+        "src/all.ts",
+        "src/components/forms/index.ts",
+        "src/components/forms/unit-picker/unit-picker.class.ts",
+        "src/components/forms/unit-picker/unit-picker.ts",
+        "src/components/lr-unit-picker.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/units.ts"
+      ],
+      "document": "llms/forms.md",
+      "family": "forms",
+      "locator": {
+        "kind": "utility",
+        "name": "unit-catalog",
+        "declaration": "LyraUnitEntry"
+      }
+    },
+    {
+      "module": "src/units.ts",
+      "exportName": "resolveUnitNames",
+      "kind": "function",
+      "fingerprint": "abc603eb5c2dfe09e46b",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/units.ts"
+      ],
+      "document": "llms/forms.md",
+      "family": "forms",
+      "locator": {
+        "kind": "utility",
+        "name": "unit-catalog",
+        "declaration": "resolveUnitNames"
+      }
+    },
+    {
+      "module": "src/internal/selection-catalog.ts",
+      "exportName": "SelectionCatalogEntry",
+      "kind": "interface",
+      "fingerprint": "a8df6edddf975b7b0044",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/forms.md",
+      "family": "forms",
+      "locator": {
+        "kind": "utility",
+        "name": "selection-catalog-types",
+        "declaration": "SelectionCatalogEntry"
+      }
+    },
+    {
+      "module": "src/internal/selection-catalog.ts",
+      "exportName": "SelectionCatalogRow",
+      "kind": "interface",
+      "fingerprint": "63f65e8678a04a97b11c",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/forms.md",
+      "family": "forms",
+      "locator": {
+        "kind": "utility",
+        "name": "selection-catalog-types",
+        "declaration": "SelectionCatalogRow"
+      }
+    },
+    {
+      "module": "src/components/forms/catalog-picker-base.ts",
+      "exportName": "LyraCatalogPickerChangeDetail",
+      "kind": "interface",
+      "fingerprint": "1a82076ff3ff741b0cac",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/forms.md",
+      "family": "forms",
+      "locator": {
+        "kind": "utility",
+        "name": "catalog-picker-events",
+        "declaration": "LyraCatalogPickerChangeDetail"
       }
     }
   ],

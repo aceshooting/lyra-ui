@@ -179,6 +179,8 @@ export type LyraConversationItemVueProps = LyraVueCustomElement<'lr-conversation
 
 export type LyraCopyButtonVueProps = LyraVueCustomElement<'lr-copy-button'>;
 
+export type LyraCountryPickerVueProps = LyraVueCustomElement<'lr-country-picker'>;
+
 export type LyraCsvViewerVueProps = LyraVueCustomElement<'lr-csv-viewer'>;
 
 export type LyraCurrencyPickerVueProps = LyraVueCustomElement<'lr-currency-picker'>;
@@ -575,6 +577,8 @@ export type LyraTimeInputVueProps = LyraVueCustomElement<'lr-time-input'>;
 
 export type LyraTimeRangeVueProps = LyraVueCustomElement<'lr-time-range'>;
 
+export type LyraTimeZonePickerVueProps = LyraVueCustomElement<'lr-time-zone-picker'>;
+
 export type LyraTimelineVueProps = LyraVueCustomElement<'lr-timeline'>;
 
 export type LyraTimelineItemVueProps = LyraVueCustomElement<'lr-timeline-item'>;
@@ -618,6 +622,8 @@ export type LyraTreeVueProps = LyraVueCustomElement<'lr-tree'>;
 export type LyraTreeItemVueProps = LyraVueCustomElement<'lr-tree-item'>;
 
 export type LyraTypingIndicatorVueProps = LyraVueCustomElement<'lr-typing-indicator'>;
+
+export type LyraUnitPickerVueProps = LyraVueCustomElement<'lr-unit-picker'>;
 
 export type LyraUsageBadgeVueProps = LyraVueCustomElement<'lr-usage-badge'>;
 
@@ -715,6 +721,7 @@ export interface LyraVueGlobalComponents {
   'lr-control-group': LyraControlGroupVueProps;
   'lr-conversation-item': LyraConversationItemVueProps;
   'lr-copy-button': LyraCopyButtonVueProps;
+  'lr-country-picker': LyraCountryPickerVueProps;
   'lr-csv-viewer': LyraCsvViewerVueProps;
   'lr-currency-picker': LyraCurrencyPickerVueProps;
   'lr-dashboard-grid': LyraDashboardGridVueProps;
@@ -913,6 +920,7 @@ export interface LyraVueGlobalComponents {
   'lr-thread-list': LyraThreadListVueProps;
   'lr-time-input': LyraTimeInputVueProps;
   'lr-time-range': LyraTimeRangeVueProps;
+  'lr-time-zone-picker': LyraTimeZonePickerVueProps;
   'lr-timeline': LyraTimelineVueProps;
   'lr-timeline-item': LyraTimelineItemVueProps;
   'lr-toast': LyraToastVueProps;
@@ -935,6 +943,7 @@ export interface LyraVueGlobalComponents {
   'lr-tree': LyraTreeVueProps;
   'lr-tree-item': LyraTreeItemVueProps;
   'lr-typing-indicator': LyraTypingIndicatorVueProps;
+  'lr-unit-picker': LyraUnitPickerVueProps;
   'lr-usage-badge': LyraUsageBadgeVueProps;
   'lr-video': LyraVideoVueProps;
   'lr-video-playlist': LyraVideoPlaylistVueProps;
