@@ -1,0 +1,75 @@
+diff --git a/src/index.ts b/src/index.ts
+--- a/src/index.ts
++++ b/src/index.ts
+@@ -1,6 +1,6 @@
+ import { TestRunnerCoreConfig, fetchSourceMap } from '@web/test-runner-core';
+ import { Profiler } from 'inspector';
+-import { CoverageMapData } from 'istanbul-lib-coverage';
++import { createCoverageMap } from 'istanbul-lib-coverage';
+ import LruCache from 'lru-cache';
+ import { readFile } from 'node:fs/promises';
+ import { extname, isAbsolute, join, posix, sep } from 'path';
+@@ -63,7 +63,7 @@
+ ) {
+   const included = getMatcher(config?.coverageConfig?.include);
+   const excluded = getMatcher(config?.coverageConfig?.exclude);
+-  const istanbulCoverage: CoverageMapData = {};
++  const istanbulCoverage = createCoverageMap({});
+ 
+   for (const entry of coverage) {
+     const url = new URL(entry.url);
+@@ -108,7 +108,7 @@
+           await converter.load();
+ 
+           converter.applyCoverage(entry.functions);
+-          Object.assign(istanbulCoverage, converter.toIstanbul());
++          istanbulCoverage.merge(converter.toIstanbul());
+         }
+       } catch (error) {
+         console.error(`Error while generating code coverage for ${entry.url}.`);
+@@ -117,7 +117,7 @@
+     }
+   }
+ 
+-  return istanbulCoverage;
++  return istanbulCoverage.toJSON();
+ }
+ 
+ export { V8Coverage };
+diff --git a/dist/index.js b/dist/index.js
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -5,6 +5,7 @@
+ Object.defineProperty(exports, "__esModule", { value: true });
+ exports.v8ToIstanbul = v8ToIstanbul;
+ const test_runner_core_1 = require("@web/test-runner-core");
++const istanbul_lib_coverage_1 = require("istanbul-lib-coverage");
+ const lru_cache_1 = __importDefault(require("lru-cache"));
+ const promises_1 = require("node:fs/promises");
+ const path_1 = require("path");
+@@ -46,7 +47,7 @@
+ async function v8ToIstanbul(config, testFiles, coverage, userAgent) {
+     const included = getMatcher(config?.coverageConfig?.include);
+     const excluded = getMatcher(config?.coverageConfig?.exclude);
+-    const istanbulCoverage = {};
++    const istanbulCoverage = (0, istanbul_lib_coverage_1.createCoverageMap)({});
+     for (const entry of coverage) {
+         const url = new URL(entry.url);
+         const path = url.pathname;
+@@ -84,7 +85,7 @@
+                     const converter = (0, v8_to_istanbul_1.default)(filePath, 0, sources);
+                     await converter.load();
+                     converter.applyCoverage(entry.functions);
+-                    Object.assign(istanbulCoverage, converter.toIstanbul());
++                    istanbulCoverage.merge(converter.toIstanbul());
+                 }
+             }
+             catch (error) {
+@@ -93,6 +94,6 @@
+             }
+         }
+     }
+-    return istanbulCoverage;
++    return istanbulCoverage.toJSON();
+ }
+ //# sourceMappingURL=index.js.map

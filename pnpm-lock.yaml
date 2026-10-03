@@ -168,6 +168,9 @@ overrides:
   js-yaml@>=4.0.0 <4.3.1: 4.3.1
   nanoid@<3.3.18: 3.3.18
 
+patchedDependencies:
+  '@web/test-runner-coverage-v8@1.0.0': 1678e3d6a33f48e696cbc7599b4588a07e2b653412890cde7fe8729e53f02ddc
+
 importers:
 
   .:
@@ -7818,7 +7821,7 @@ snapshots:
   '@web/test-runner-chrome@1.0.1(supports-color@10.2.2)(yauzl@2.10.0)':
     dependencies:
       '@web/test-runner-core': 1.0.0(supports-color@10.2.2)
-      '@web/test-runner-coverage-v8': 1.0.0(supports-color@10.2.2)
+      '@web/test-runner-coverage-v8': 1.0.0(patch_hash=1678e3d6a33f48e696cbc7599b4588a07e2b653412890cde7fe8729e53f02ddc)(supports-color@10.2.2)
       chrome-launcher: 0.15.2(supports-color@10.2.2)
       puppeteer-core: 25.4.0(yauzl@2.10.0)
     transitivePeerDependencies:
@@ -7870,7 +7873,7 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@web/test-runner-coverage-v8@1.0.0(supports-color@10.2.2)':
+  '@web/test-runner-coverage-v8@1.0.0(patch_hash=1678e3d6a33f48e696cbc7599b4588a07e2b653412890cde7fe8729e53f02ddc)(supports-color@10.2.2)':
     dependencies:
       '@web/test-runner-core': 1.0.0(supports-color@10.2.2)
       istanbul-lib-coverage: 3.2.2
@@ -7906,7 +7909,7 @@ snapshots:
   '@web/test-runner-playwright@1.0.0(supports-color@10.2.2)':
     dependencies:
       '@web/test-runner-core': 1.0.0(supports-color@10.2.2)
-      '@web/test-runner-coverage-v8': 1.0.0(supports-color@10.2.2)
+      '@web/test-runner-coverage-v8': 1.0.0(patch_hash=1678e3d6a33f48e696cbc7599b4588a07e2b653412890cde7fe8729e53f02ddc)(supports-color@10.2.2)
       playwright: 1.63.0
     transitivePeerDependencies:
       - bufferutil
