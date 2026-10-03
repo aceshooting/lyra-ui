@@ -1,5 +1,15 @@
 # Changelog
 
+## 25.6.0
+
+### Minor Changes
+
+- 2abd8e5: Add a `pressed` property to buttons so toggle state reaches the native control without placing ARIA toggle attributes on the custom-element host. The property supports true, false and mixed state; existing host `aria-pressed` values remain the fallback when it is unset.
+
+### Patch Changes
+
+- a50faaf: Keep popover disclosure state on the semantic trigger control, including the native control inside a Lyra button with a roving tabindex. Restore authored ARIA when controls change or disconnect, and avoid generated expansion state on generic wrappers or incompatible roles.
+
 ## 25.5.0
 
 ### Minor Changes
