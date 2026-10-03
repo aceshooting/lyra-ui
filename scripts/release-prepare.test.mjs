@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   assertCleanWorktree,
+  normalizeReleaseChangelog,
   PACKAGE_GENERATORS,
   releaseCommitSubject,
   releasedPackages,
@@ -199,14 +200,44 @@ test('release preparation checks the exact Node patch and a clean tree before bu
   const nodeCheck = source.indexOf('await checkNodeVersionAtRoot(repoRoot)');
   const cleanTree = source.indexOf("assertCleanWorktree(git(['status', '--porcelain']))");
   const bump = source.indexOf("run('pnpm', ['changeset', 'version'])");
+  const normalize = source.indexOf('normalizeReleaseChangelog(changelog, version)');
   const install = source.indexOf("run('pnpm', ['install'])");
   const generators = source.indexOf('releasePreparationSteps(released.map');
   assert.ok(nodeCheck > 0 && nodeCheck < cleanTree, 'the exact Node patch is checked first');
   assert.ok(cleanTree < bump, 'a dirty tree is refused before the bump');
-  assert.ok(bump < install && install < generators, 'the lockfile refresh follows the bump');
+  assert.ok(bump < normalize && normalize < install && install < generators,
+    'new release notes are normalized after the bump and before archival and packaging');
 
   assert.doesNotThrow(() => assertCleanWorktree(''));
   assert.throws(() => assertCleanWorktree(' M README.md\n'), /Working tree is not clean[\s\S]*README\.md/u);
+});
+
+test('new release notes normalize blank indentation without changing Markdown or published history', () => {
+  for (const eol of ['\n', '\r\n']) {
+    const preamble = ['# Changelog', '  ', ''].join(eol);
+    const current = [
+      '## 25.5.0', '', '### Minor Changes', '',
+      '- abc123: First paragraph.', '  ', '  Second paragraph.  ', '\t',
+      '    nestedExample();', ' \t ', '  Final paragraph.', '', '',
+    ].join(eol);
+    const expected = [
+      '## 25.5.0', '', '### Minor Changes', '',
+      '- abc123: First paragraph.', '', '  Second paragraph.  ', '',
+      '    nestedExample();', '', '  Final paragraph.', '', '',
+    ].join(eol);
+    const published = ['## 25.4.0', '', '- Published paragraph.', '  ', '  Prior continuation.', ''].join(eol);
+    const normalized = normalizeReleaseChangelog(preamble + current + published, '25.5.0');
+    assert.equal(normalized, preamble + expected + published);
+    assert.equal(normalizeReleaseChangelog(normalized, '25.5.0'), normalized);
+    assert.equal(normalizeReleaseChangelog(preamble + current, '25.5.0'), preamble + expected);
+  }
+});
+
+test('release changelog normalization rejects missing and duplicate exact release headings', () => {
+  assert.throws(() => normalizeReleaseChangelog('# Changelog\n\n## 25.5.01\n', '25.5.0'),
+    /Expected exactly one changelog heading for 25\.5\.0; found 0/u);
+  assert.throws(() => normalizeReleaseChangelog('## 25.5.0\n\n## 25.5.0\n', '25.5.0'),
+    /Expected exactly one changelog heading for 25\.5\.0; found 2/u);
 });
 
 test('the released set is the publishable version delta, with stable release tags', () => {

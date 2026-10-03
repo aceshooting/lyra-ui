@@ -1398,6 +1398,13 @@ async function runBundle(fixtureDir, entry, config, noOptionalPeers, maplibreMaj
     violations.push('the Vite consumer did not emit MapLibre v6’s module worker');
   }
   if (violations.length > 0) {
+    console.error(JSON.stringify({
+      entry,
+      emittedFileCount: output.files.length,
+      rawBytes: output.rawBytes,
+      gzipBytes: output.gzipBytes,
+      initialGzipBytes,
+    }));
     throw new Error(
       `${entry} bundle is out of budget across ${output.files.length} files: ${violations.join('; ')}`,
     );

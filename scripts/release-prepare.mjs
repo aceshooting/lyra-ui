@@ -6,7 +6,7 @@
 // publish all run on GitHub through .github/workflows/release.yml.
 
 import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -107,6 +107,20 @@ export function releaseCommitSubject(packages) {
   return `chore(release): ${packages.map(({ name, version }) => `${name}@${version}`).join(', ')}`;
 }
 
+/** Remove Changesets' indentation on blank lines only within the newly generated release. */
+export function normalizeReleaseChangelog(text, version) {
+  const headings = [...text.matchAll(/^## ([^\r\n]+)\r?$/gmu)];
+  const matching = headings.filter((heading) => heading[1] === version);
+  if (matching.length !== 1) {
+    throw new Error(`Expected exactly one changelog heading for ${version}; found ${matching.length}.`);
+  }
+  const heading = matching[0];
+  const start = heading.index;
+  const end = headings[headings.indexOf(heading) + 1]?.index ?? text.length;
+  const release = text.slice(start, end).replace(/^[\t ]+(?=\r?$)/gmu, '');
+  return text.slice(0, start) + release + text.slice(end);
+}
+
 function readWorkspacePackages(root = repoRoot) {
   const packagesRoot = path.join(root, 'packages');
   return readdirSync(packagesRoot, { withFileTypes: true })
@@ -175,6 +189,13 @@ async function main(argv) {
     if (remoteTag !== '' || localTag.status === 0) {
       throw new Error(`Release tag '${tag}' already exists; restore the bumped files and investigate.`);
     }
+  }
+
+  for (const { directory, version } of released) {
+    const changelogPath = path.join(repoRoot, directory, 'CHANGELOG.md');
+    const changelog = readFileSync(changelogPath, 'utf8');
+    const normalized = normalizeReleaseChangelog(changelog, version);
+    if (normalized !== changelog) writeFileSync(changelogPath, normalized);
   }
 
   run('pnpm', ['install']);
