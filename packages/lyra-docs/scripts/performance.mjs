@@ -3,6 +3,7 @@ import { cpus, availableParallelism, totalmem, platform, arch } from 'node:os';
 import { readFile } from 'node:fs/promises';
 import { strFromU8, unzipSync } from 'fflate';
 import { performanceDocxFixture, performanceFixtureParagraphs, performanceFixtureSentinel } from '../test/performance-fixture.mjs';
+import { wordText } from '../test/xml.mjs';
 
 const typingSamples = 20;
 
@@ -131,8 +132,9 @@ export async function measureDocxPerformance({ browser, url }) {
     result.saveMs = saved.elapsedMs;
     result.savedBytes = saved.bytes.length;
     const xml = strFromU8(unzipSync(Uint8Array.from(saved.bytes))['word/document.xml']);
-    assert.ok(xml.includes(performanceFixtureSentinel), 'Last fixture paragraph missing from saved document');
-    assert.ok(xml.replace(/<[^>]+>/g, '').includes('01234567890123456789'), 'Typed sample missing from saved document');
+    const text = wordText(xml);
+    assert.ok(text.includes(performanceFixtureSentinel), 'Last fixture paragraph missing from saved document');
+    assert.ok(text.includes('01234567890123456789'), 'Typed sample missing from saved document');
 
     result.warmReopenMs = await large.page.evaluate(async bytes => {
       const element = document.querySelector('#performance-editor');

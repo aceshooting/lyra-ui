@@ -9,6 +9,7 @@ import { createRequire } from 'node:module';
 import { build } from 'vite';
 import { chromium, firefox, webkit } from 'playwright';
 import { zipEntry, zipEntryBytes } from '../test/zip.mjs';
+import { assertExternalHyperlink, wordText } from '../test/xml.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..');
@@ -315,9 +316,9 @@ async function runBasicEditing(page, check) {
       return popover?.querySelector('[part="link-trigger"]')?.shadowRoot?.querySelector('[part~="base"]')?.getAttribute('aria-expanded') === 'false';
     });
     const bytes = await saveEditor(page, 'basic-link');
-    assert.match(zipEntry(bytes, 'word/document.xml'), /<w:hyperlink\b/u);
-    assert.ok([...zipEntry(bytes, 'word/document.xml').matchAll(/<w:t\b[^>]*>(.*?)<\/w:t>/gu)].map(match => match[1]).join('').includes('Linked words'), 'Saved link must retain the native inserted text');
-    assert.ok(zipEntry(bytes, 'word/_rels/document.xml.rels').includes('https://example.test/linked'));
+    assertExternalHyperlink(zipEntry(bytes, 'word/document.xml'), zipEntry(bytes, 'word/_rels/document.xml.rels'), {
+      text: 'Linked words', target: 'https://example.test/linked'
+    });
     assertProtectedParts(bytes, source);
     const refused = await page.locator('#basic-link').evaluate(element => ({
       http: element.execute({ type: 'link', href: 'http://example.test/unsafe' }),
@@ -333,8 +334,9 @@ async function runBasicEditing(page, check) {
     }, bytes);
     assert.equal(reopened.ok, true, JSON.stringify(reopened));
     const roundTrip = await saveEditor(page, 'basic-link-reopened');
-    assert.match(zipEntry(roundTrip, 'word/document.xml'), /<w:hyperlink\b/u);
-    assert.ok(zipEntry(roundTrip, 'word/_rels/document.xml.rels').includes('https://example.test/linked'));
+    assertExternalHyperlink(zipEntry(roundTrip, 'word/document.xml'), zipEntry(roundTrip, 'word/_rels/document.xml.rels'), {
+      text: 'Linked words', target: 'https://example.test/linked'
+    });
     assertProtectedParts(roundTrip, source);
     await selectLinkedWords('basic-link-reopened');
     await page.locator('#basic-link-reopened [part="link-trigger"]').click();
@@ -342,7 +344,7 @@ async function runBasicEditing(page, check) {
     const unlinked = await saveEditor(page, 'basic-link-reopened');
     assert.equal((zipEntry(unlinked, 'word/document.xml').match(/<w:hyperlink\b/gu) ?? []).length,
       (zipEntry(roundTrip, 'word/document.xml').match(/<w:hyperlink\b/gu) ?? []).length - 1);
-    assert.ok(zipEntry(unlinked, 'word/document.xml').includes('Linked words'));
+    assert.ok(wordText(zipEntry(unlinked, 'word/document.xml')).includes('Linked words'));
     const undo = await page.locator('#basic-link-reopened').evaluate(element => element.execute('undo'));
     assert.equal(undo.ok, true, JSON.stringify(undo));
     assert.match(zipEntry(await saveEditor(page, 'basic-link-reopened'), 'word/document.xml'), /<w:hyperlink\b/u);

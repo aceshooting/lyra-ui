@@ -32,7 +32,7 @@ const tests = (await readdir(testDirectory)).filter(name => name.endsWith('.test
   .sort().map(name => resolve(testDirectory, name));
 if (!tests.length) throw new Error('Coverage cannot run without unit test files');
 const unitStatus = run(process.execPath, [
-  '--test', '--test-concurrency=2', ...tests, 'scripts/package.test.mjs', 'scripts/coverage.test.mjs',
+  '--test', '--test-concurrency=2', ...tests, 'scripts/package.test.mjs', 'scripts/coverage.test.mjs', 'test/xml.test.mjs',
 ], { NODE_V8_COVERAGE: resolve(coverage, 'node-v8') });
 const browserStatus = run(process.execPath, ['scripts/browser-test.mjs'], {
   DOCX_COVERAGE: '1', DOCX_BROWSERS: 'chromium', DOCX_PERFORMANCE: '0',
