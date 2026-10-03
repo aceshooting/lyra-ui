@@ -3,15 +3,6 @@
 > Detail behind the "Dev commands and gates" section of [AGENTS.md](../../AGENTS.md). The digest
 > there is the contract; this file carries the full gate lists, ordering rationale, and incidents.
 
-## Remote test workspace hygiene
-
-Use `ssh cygnus` for contributor builds, tests, and benchmarks. Treat task directories under
-`~/work` as disposable: after verification and a successful commit/push, remove the task's
-checkouts, build outputs, logs, downloaded toolchains, and caches. Check for active processes and
-uncommitted changes first. Preserve any unreleased source changes and useful test evidence in a
-small local recovery archive before deleting them from Cygnus; do not leave large test trees on
-its limited disk or remove another active task's files.
-
 ## `contract-policy` (most of `pnpm lint`'s time)
 
 `pnpm lint` recurses through the workspace. For `@aceshooting/lyra-ui`, its exact expansion is
@@ -486,7 +477,7 @@ and the release flow below.
 
 Releases run in four steps; nothing is tagged or published from a workstation.
 
-Before starting those steps for **every release**, run `./scripts/upgrade.sh` on `ssh cygnus`
+Before starting those steps for **every release**, run `./scripts/upgrade.sh`
 with the exact `.nvmrc` Node patch. An author-run upgrade for this release satisfies this step:
 wait for it to finish, then review and verify its output instead of running a duplicate or
 concurrent upgrade. The release starts with the latest stable dependencies in the
