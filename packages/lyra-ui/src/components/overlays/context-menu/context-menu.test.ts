@@ -818,7 +818,7 @@ describe('<lr-context-menu>', () => {
       });
     }
 
-    it('does not open for moved, cancelled, short, multi-touch, mouse, barrel-button or disabled presses', async () => {
+    it('does not open after a held press moves beyond the threshold', async () => {
       const el = await basic();
       const events = record(el);
       const plain = byId(el, 'plain');
@@ -828,29 +828,83 @@ describe('<lr-context-menu>', () => {
       touch('pointermove', plain, x + 20, y);
       await aTimeout(HOLD_MS);
       touch('pointerup', plain, x + 20, y);
+      expect(events.count('lr-show')).to.equal(0);
+      expect(el.open).to.equal(false);
+    });
+
+    it('does not open after a held press is cancelled', async () => {
+      const el = await basic();
+      const events = record(el);
+      const plain = byId(el, 'plain');
+      const [x, y] = center(plain);
 
       touch('pointerdown', plain, x, y);
       touch('pointercancel', plain, x, y);
       await aTimeout(HOLD_MS);
+      expect(events.count('lr-show')).to.equal(0);
+      expect(el.open).to.equal(false);
+    });
+
+    it('does not open after a short press ends before the hold delay', async () => {
+      const el = await basic();
+      const events = record(el);
+      const plain = byId(el, 'plain');
+      const [x, y] = center(plain);
 
       touch('pointerdown', plain, x, y);
       await aTimeout(200);
       touch('pointerup', plain, x, y);
       await aTimeout(HOLD_MS - 200);
+      expect(events.count('lr-show')).to.equal(0);
+      expect(el.open).to.equal(false);
+    });
+
+    it('does not open after a second touch interrupts a held press', async () => {
+      const el = await basic();
+      const events = record(el);
+      const plain = byId(el, 'plain');
+      const [x, y] = center(plain);
 
       touch('pointerdown', plain, x, y);
       touch('pointerdown', plain, x + 30, y, { pointerId: 8, isPrimary: false });
       await aTimeout(HOLD_MS);
       touch('pointerup', plain, x, y);
       touch('pointerup', plain, x + 30, y, { pointerId: 8, isPrimary: false });
+      expect(events.count('lr-show')).to.equal(0);
+      expect(el.open).to.equal(false);
+    });
+
+    it('does not open after a mouse button is held', async () => {
+      const el = await basic();
+      const events = record(el);
+      const plain = byId(el, 'plain');
+      const [x, y] = center(plain);
 
       touch('pointerdown', plain, x, y, { pointerType: 'mouse' });
       await aTimeout(HOLD_MS);
       touch('pointerup', plain, x, y, { pointerType: 'mouse' });
+      expect(events.count('lr-show')).to.equal(0);
+      expect(el.open).to.equal(false);
+    });
+
+    it('does not open after a pen barrel button is held', async () => {
+      const el = await basic();
+      const events = record(el);
+      const plain = byId(el, 'plain');
+      const [x, y] = center(plain);
 
       touch('pointerdown', plain, x, y, { pointerType: 'pen', button: 2 });
       await aTimeout(HOLD_MS);
       touch('pointerup', plain, x, y, { pointerType: 'pen' });
+      expect(events.count('lr-show')).to.equal(0);
+      expect(el.open).to.equal(false);
+    });
+
+    it('does not open when disabled during a held press', async () => {
+      const el = await basic();
+      const events = record(el);
+      const plain = byId(el, 'plain');
+      const [x, y] = center(plain);
 
       touch('pointerdown', plain, x, y);
       await aTimeout(200);
@@ -859,6 +913,7 @@ describe('<lr-context-menu>', () => {
       touch('pointerup', plain, x, y);
 
       expect(events.count('lr-show')).to.equal(0);
+      expect(el.open).to.equal(false);
     });
 
     it('swallows the click that ends the opening press, but not a later click', async () => {

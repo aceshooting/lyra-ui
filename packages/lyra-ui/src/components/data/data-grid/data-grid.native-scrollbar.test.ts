@@ -1,6 +1,6 @@
 import { expect, waitUntil } from '@open-wc/testing';
 
-import { resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import './data-grid.js';
 import type { LyraDataGrid } from './data-grid.js';
 import type { DataGridColumn } from './data-grid-types.js';
@@ -181,6 +181,27 @@ it('keeps pinned header, body, and footer columns aligned after a physical horiz
         if (event.isTrusted) trustedDragScrolls += 1;
       });
 
+      const nativeThumbHitInset = Math.max(
+        4,
+        Math.ceil(scrollbarThickness / 2),
+      );
+      // Native pointer commands can complete before the browser applies their hover state.
+      // Confirm the physical thumb landing before pressing; refresh its coordinates after
+      // the hover helper scrolls the fixture into view.
+      await hoverUntilMatched(
+        body,
+        `${direction} pointer did not reach the physical horizontal scrollbar`,
+        (rect) => [
+          rect.left + body.clientLeft +
+            (direction === 'rtl' ? body.clientWidth - nativeThumbHitInset : nativeThumbHitInset),
+          rect.bottom - scrollbarThickness / 2,
+        ],
+      );
+      expect(
+        Math.abs(logicalOffset()),
+        `${direction} landing on the scrollbar must preserve its logical inline start`,
+      ).to.be.at.most(1);
+
       const scrollbarRect = body.getBoundingClientRect();
       // `getBoundingClientRect()` includes a simultaneously visible vertical scrollbar, whose
       // side differs by direction. `clientLeft` starts the actual horizontal track after it.
@@ -190,10 +211,6 @@ it('keeps pinned header, body, and footer columns aligned after a physical horiz
       // Native engines impose different minimum thumb lengths. Hit a physical track endpoint for
       // start/end instead of estimating the thumb centre, then retain a middle coordinate only
       // while the thumb is known to cover it.
-      const nativeThumbHitInset = Math.max(
-        4,
-        Math.ceil(scrollbarThickness / 2),
-      );
       const physicalTrackStart = Math.ceil(trackLeft + nativeThumbHitInset);
       const physicalTrackEnd = Math.floor(trackRight - nativeThumbHitInset);
       const logicalStartTrackEdge =
@@ -206,10 +223,6 @@ it('keeps pinned header, body, and footer columns aligned after a physical horiz
       // source-pixel-to-scroll-distance quantum rather than necessarily the exact JS maximum.
       const physicalEndpointTolerance = Math.ceil(body.scrollWidth / trackWidth);
 
-      await sendMouse({
-        type: 'move',
-        position: [Math.round(logicalStartTrackEdge), scrollbarY],
-      });
       const offsetBeforePointerDown = logicalOffset();
       const trustedScrollsBeforePointerDown = trustedDragScrolls;
       await sendMouse({ type: 'down' });

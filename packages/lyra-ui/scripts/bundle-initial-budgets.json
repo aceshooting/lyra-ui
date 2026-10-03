@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard marginal gzip KiB ceilings for splitting-aware production ESM. Each route adds one anchored component to the representative shell in $baseline. Initial bytes include only the entry and transitively static chunks; dynamic chunks remain covered by total-cost budgets. Ceilings retain at most 4% drift. Locale-picker's optional text filter adds localized matching, editable input and IME handling, keyboard focus/navigation, and an empty state. Its reviewed 24,921-byte initial marginal measurement retains a 2% allowance at 25,419 bytes; the shell, optional-peer exclusions and other ceilings are unchanged.",
+  "$comment": "Hard marginal gzip KiB ceilings for splitting-aware production ESM. Each route adds one anchored component to the representative shell in $baseline. Initial bytes include only the entry and transitively static chunks; dynamic chunks remain covered by total-cost budgets. Ceilings retain at most 4% drift. Locale-picker's optional text filter adds localized matching, editable input and IME handling, keyboard focus/navigation, and an empty state. Its reviewed 24,921-byte initial marginal measurement retains a 2% allowance at 25,419 bytes; the shell, optional-peer exclusions and other ceilings are unchanged. Semantic popover trigger ownership measures 16,828 initial marginal gzip bytes versus 16,403 for published 25.5.0 under the same toolchain and dependencies. Its 17,038-byte ceiling preserves the previous 210-byte allowance; the 51,948-byte shell and every other route ceiling are unchanged.",
   "$baseline": [
     "dist/components/data/stat/stat.js",
     "dist/components/overlays/callout/callout.js",
@@ -20,7 +20,7 @@
     "dist/components/forms/select/select.js": 29.888671875,
     "dist/components/layout/app-rail/app-rail-item.js": 4.5986328125,
     "dist/components/layout/menu/menu.js": 15.7783203125,
-    "dist/components/overlays/overlay/popover.js": 16.2236328125,
+    "dist/components/overlays/overlay/popover.js": 16.638671875,
     "dist/components/overlays/overlay/tooltip.js": 15.4658203125,
     "dist/components/overlays/popup/popup.js": 4.3125,
     "dist/components/retrieval/citation-badge/citation-badge.js": 5.6513671875,

@@ -806,6 +806,18 @@ catalog or presentation modules; restoring only the previous select class and st
 previous layout bundle byte for byte. The layout ceiling is 354,402 bytes, preserving its previous
 184-byte allowance. All other direct-entry, initial-route and aggregate ceilings remain unchanged.
 
+The button toggle-state and semantic popover trigger changes measure 354,760 gzip bytes for the
+layout family, compared with 354,241 bytes for published 25.5.0 under the same pinned Node
+22.23.2, esbuild 0.28.1, locked dependencies and measurement settings. The layout ceiling is
+354,944 bytes, retaining the existing 184-byte allowance above its reviewed measurement. The
+splitting-aware popover route increases from 68,351 to 68,776 initial gzip bytes over an unchanged
+51,948-byte shell: its marginal cost rises from 16,403 to 16,828 bytes. The 17,038-byte marginal
+ceiling preserves the previous 210-byte allowance. The added cost covers native toggle-state
+normalization, semantic trigger eligibility, composed-control replacement tracking and late custom
+trigger upgrades; generic wrappers no longer receive generated widget ARIA. No heavy peer becomes
+eager, and all other ceilings, shell imports, peer exclusions and measurement settings remain
+unchanged.
+
 The 22.0.0 bundle review keeps those measurement options unchanged. A direct entry-point bundle
 preserves all exports and inlines relative dynamic imports; `all.js` also re-exports the root API.
 That gate measures 1,271,937 gzip bytes, versus 1,261,698 for published 21.2.0. It differs from the
