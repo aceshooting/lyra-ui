@@ -1,6 +1,6 @@
 import type {
-  DocxCommand, DocxCommandAvailability, DocxResult, DocxSelection,
-  DocxSource
+  DocxAction, DocxCommandAvailability, DocxResult, DocxSelection,
+  DocxSource, DocxFormatting, DocxParagraphStyles, DocxFontFamilies
 } from './types.js';
 
 /** Internal ownership seam; no browser validation is implemented here. */
@@ -14,14 +14,32 @@ export type DocxEngineEvent = 'change' | 'user-selection' | 'focus-selection' | 
 interface DocxEngineState {
   readonly selection: DocxSelection['kind'];
   readonly composing: boolean;
+  readonly formatting: Readonly<DocxFormatting>;
+}
+/** Private search addresses never cross the public session boundary. */
+interface DocxEngineMatch {
+  readonly token: object;
+  readonly text: string;
+  readonly before: string;
+  readonly after: string;
+}
+export interface DocxEngineSearchOptions {
+  readonly matchCase: boolean;
+  readonly wholeWord: boolean;
+  readonly limit: number;
 }
 /** DOCX-specific engine seam. An implementation must qualify these guarantees. */
 export interface DocxEnginePort {
   inspect(): DocxEngineState;
   /** A change event is one committed document change, never initial loading. */
   subscribe(listener: (event: DocxEngineEvent) => void): () => void;
-  can(command: DocxCommand): DocxCommandAvailability;
-  execute(command: DocxCommand, retainedSelection?: object): DocxResult<void>;
+  can(command: DocxAction): DocxCommandAvailability;
+  execute(command: DocxAction, retainedSelection?: object): DocxResult<void>;
+  paragraphStyles(): DocxParagraphStyles;
+  fontFamilies(): DocxFontFamilies;
+  find(query: string, options: DocxEngineSearchOptions): { readonly matches: readonly DocxEngineMatch[]; readonly truncated: boolean };
+  selectMatch(token: object): DocxResult<void>;
+  replaceMatch(token: object, text: string): DocxResult<void>;
   focus(): void;
   retainSelection(): object;
   releaseSelection(token: object): void;

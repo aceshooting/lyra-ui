@@ -183,3 +183,34 @@ describe('default engine build output', () => {
     expect(source).to.contain('shiki/onig.wasm');
   });
 });
+
+
+describe('fine-grained highlighter failure caching', () => {
+  it('keeps rejected engines as a plain-text fallback without sharing failed frozen snapshots', async () => {
+    const originalWarn = console.warn;
+    const warnings: unknown[][] = [];
+    const warningKey = 'lyra-fine-grained-shiki-highlighter-unavailable';
+    (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings?.delete(warningKey);
+    let calls = 0;
+    setShikiCoreEngine(async () => {
+      calls++;
+      throw new Error('application engine asset unavailable');
+    });
+    console.warn = (...args: unknown[]) => { warnings.push(args); };
+    try {
+      const grammar = Object.freeze(testGrammar());
+      const first = Object.freeze({ [grammar.name]: grammar });
+      expect(await loadShikiHighlighterCore(first)).to.equal(null);
+      expect(await loadShikiHighlighterCore(first)).to.equal(null);
+      expect(calls).to.equal(1);
+      const replacement = Object.freeze({ [grammar.name]: grammar });
+      expect(await loadShikiHighlighterCore(replacement)).to.equal(null);
+      expect(calls).to.equal(2);
+      expect(warnings.length).to.equal(1);
+      expect(String(warnings[0]?.[0])).to.contain('Code is rendered as plain text');
+    } finally {
+      console.warn = originalWarn;
+      __resetShikiCoreEngineForTesting();
+    }
+  });
+});

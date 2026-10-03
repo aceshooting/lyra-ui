@@ -1,12 +1,9 @@
-import type { DocxEditorInstance, EditorCommand, SelectionPin } from '@docx-editor.dev/core';
+import type { DocxEditorInstance, SelectionPin } from '@docx-editor.dev/core';
 import { loadDocxEngine } from './engine-loader.js';
+import { createEigenpalEditing, eigenpalCommand } from './eigenpal-editing.js';
 import type { DocxEngineModule } from './engine-loader.js';
 import type { DocxEngineEvent, DocxEnginePort } from './engine-port.js';
-import type { DocxCommand, DocxResult, DocxSelection, DocxSessionOptions, DocxSource } from './types.js';
-
-function engineCommand(command: DocxCommand): EditorCommand {
-  return command === 'undo' || command === 'redo' ? { type: command } : { type: 'toggleMark', mark: command };
-}
+import type { DocxResult, DocxSelection, DocxSessionOptions, DocxSource } from './types.js';
 
 /** The engine owns only this child, so teardown never removes later host-authored siblings. */
 export async function openEigenpalDocument(
@@ -34,6 +31,9 @@ export async function openEigenpalDocument(
   let compositionVersion = 0;
   let saving = false;
   let suppressSelection = 0;
+  let muteSelection = 0;
+  let selectionEpoch = 0;
+  let pendingState = false;
   let ready = false;
   const listeners = new Set<(event: DocxEngineEvent) => void>();
   const releases: (() => void)[] = [];
@@ -45,6 +45,35 @@ export async function openEigenpalDocument(
   const emit = (event: DocxEngineEvent) => {
     if (!destroyed) for (const listener of [...listeners]) listener(event);
   };
+  const refreshState = () => {
+    pendingState = false;
+    emit('state');
+  };
+  const refreshAfterChange = () => {
+    if (pendingState) return;
+    pendingState = true;
+    queueMicrotask(() => { if (pendingState) refreshState(); });
+  };
+  const editing = createEigenpalEditing(current, action => {
+    muteSelection++;
+    let result: DocxResult<void>;
+    try { result = action(); }
+    finally { muteSelection--; }
+    if (result.ok) {
+      const epoch = ++selectionEpoch;
+      emit('user-selection');
+      if (epoch !== selectionEpoch) return { ok: false, code: 'stale-selection' };
+    }
+    return result;
+  }, () => {
+    if (destroyed) return { ok: false, code: 'destroyed' };
+    if (fault) return { ok: false, code: 'engine-failed' };
+    if (saving) return { ok: false, code: 'busy' };
+    if (composing) return { ok: false, code: 'composing' };
+    if (operation.readOnly) return { ok: false, code: 'read-only' };
+    if (!owned()) return { ok: false, code: 'destroyed' };
+    return { ok: true, value: undefined };
+  });
   const destroy = () => {
     if (destroyed) return;
     destroyed = true;
@@ -54,6 +83,7 @@ export async function openEigenpalDocument(
     }
     listeners.clear();
     pins.clear();
+    editing.dispose();
     const previous = editor;
     editor = null;
     try { previous?.destroy(); }
@@ -91,9 +121,17 @@ export async function openEigenpalDocument(
     editor = module.createDocxEditor({ container: mount, mode: operation.readOnly ? 'view' : 'edit',
       locale: options.locale, translate: options.translate });
     releases.push(editor.on('change', change => {
-      if (ready && !change.source) emit('change');
+      if (ready && !change.source) {
+        editing.invalidateSearch();
+        // The core commits before finalizing selection formatting. Record the revision
+        // now, then read derived state after command dispatch or native input settles.
+        refreshAfterChange();
+        emit('change');
+      }
     }));
     releases.push(editor.on('selectionChange', () => {
+      if (muteSelection) return;
+      selectionEpoch++;
       const inside = mount.contains(mount.ownerDocument.activeElement);
       emit(suppressSelection ? 'state' : inside ? 'user-selection' : 'focus-selection');
     }));
@@ -111,7 +149,7 @@ export async function openEigenpalDocument(
         if (snapshot.parseError) throw new Error('Engine failed');
         const selection: DocxSelection['kind'] = snapshot.image ? 'other' : !snapshot.selection ? 'none' :
           snapshot.selectionCollapsed ? 'caret' : 'text';
-        return { selection, composing };
+        return { selection, composing, formatting: editing.formatting() };
       },
       subscribe(listener) {
         listeners.add(listener);
@@ -123,18 +161,25 @@ export async function openEigenpalDocument(
         };
       },
       can(command) {
-        const result = current().can(engineCommand(command));
-        if (!result.ok) return { enabled: false, reason: 'unsupported' };
-        return { enabled: true, ...(command === 'undo' || command === 'redo' ? {} :
-          { active: current().isActive(engineCommand(command)) }) };
+        return editing.can(command);
       },
       execute(command, token) {
         if (token && !pins.has(token)) return { ok: false, code: 'stale-selection' };
         suppressSelection++;
         try {
-          const result = current().exec(engineCommand(command));
+          const result = current().exec(eigenpalCommand(command));
+          refreshState();
           return result.ok ? { ok: true, value: undefined } : { ok: false, code: 'unsupported' };
         } finally { suppressSelection--; }
+      },
+      paragraphStyles: editing.paragraphStyles,
+      fontFamilies: editing.fontFamilies,
+      find: editing.find,
+      selectMatch: editing.selectMatch,
+      replaceMatch(token, text) {
+        const result = editing.replaceMatch(token, text);
+        if (pendingState) refreshState();
+        return result;
       },
       focus() {
         suppressSelection++;

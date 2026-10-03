@@ -2515,6 +2515,77 @@ describe('bounded hostile input snapshots', () => {
   });
 });
 
+describe('lr-tool-param-form hostile enum descriptors', () => {
+  it('bounds nested arrays without submitting a truncated parameter tree', async () => {
+    const form = await fixture<HTMLFormElement>(html`<form><lr-tool-param-form name="args"></lr-tool-param-form></form>`);
+    const el = form.querySelector<LyraToolParamForm>('lr-tool-param-form')!;
+    let nested: unknown = 'deep leaf';
+    for (let depth = 0; depth < 32; depth++) nested = [nested];
+    el.value = { nested };
+    await el.updateComplete;
+    let retained = el.value['nested'];
+    let depth = 0;
+    while (Array.isArray(retained)) {
+      expect(Object.isFrozen(retained)).to.equal(true);
+      depth++;
+      retained = retained[0];
+    }
+    expect(depth).to.be.greaterThan(0).and.lessThan(32);
+    expect(retained).to.equal(undefined);
+    expect(el.validity.customError).to.equal(true);
+    expect(new FormData(form).has('args')).to.equal(false);
+    el.value = { nested: ['safe leaf'] };
+    await el.updateComplete;
+    expect(el.validity.customError).to.equal(false);
+    expect(JSON.parse(String(new FormData(form).get('args')))).to.deep.equal({ nested: ['safe leaf'] });
+  });
+
+  it('omits unreadable enum fields while keeping safe fields and restoring validity after repair', async () => {
+    const el = await fixture<LyraToolParamForm>(html`<lr-tool-param-form></lr-tool-param-form>`);
+    const revoked = Proxy.revocable(['unsafe'], {});
+    revoked.revoke();
+    const deniedLength = new Proxy(['unsafe'], {
+      getOwnPropertyDescriptor(target, key) {
+        if (key === 'length') return undefined;
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    });
+    const invalidLength = new Proxy(['unsafe'], {
+      getOwnPropertyDescriptor(target, key) {
+        if (key === 'length') return { value: -1, writable: true, enumerable: false, configurable: false };
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    });
+    const deniedIndex = new Proxy(['unsafe'], {
+      getOwnPropertyDescriptor(target, key) {
+        if (key === '0') throw new Error('enum index descriptor denied');
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    });
+    const deniedProperty = new Proxy({ type: 'string' as const }, {
+      ownKeys() { throw new Error('property descriptors denied'); },
+    });
+    el.schema = {
+      type: 'object',
+      properties: {
+        revoked: { type: 'string', enum: revoked.proxy },
+        deniedLength: { type: 'string', enum: deniedLength },
+        invalidLength: { type: 'string', enum: invalidLength },
+        deniedIndex: { type: 'string', enum: deniedIndex },
+        deniedProperty,
+        safe: { type: 'string', enum: ['retained'] },
+      },
+    };
+    await el.updateComplete;
+    expect(Object.keys(el.schema.properties)).to.deep.equal(['safe']);
+    expect(el.validity.customError).to.equal(true);
+    expect(field(el, 'safe').querySelectorAll('lr-option').length).to.equal(1);
+    el.schema = { type: 'object', properties: { safe: { type: 'string' } } };
+    await el.updateComplete;
+    expect(el.validity.customError).to.equal(false);
+  });
+});
+
 describe("lr-tool-param-form contains the composed lr-select's lr-activate", () => {
   const containmentCase = async (key: 'units' | 'notify', selected: string): Promise<void> => {
     const el = (await fixture(

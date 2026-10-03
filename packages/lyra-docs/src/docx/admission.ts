@@ -1,5 +1,6 @@
 import { Inflate } from 'fflate';
 import { SaxesParser } from 'saxes';
+import { isSafeDocxHyperlink } from './hyperlink-policy.js';
 import type { DocxRefusalCode, DocxResult } from './types.js';
 
 const MiB = 1024 * 1024;
@@ -143,12 +144,6 @@ function internalTarget(part: string, target: string): string {
   }
   return parts.join('/');
 }
-function safeHyperlink(value: string): boolean {
-  if (/[\x00-\x20\x7f\\]/.test(value)) return false;
-  if (value.startsWith('#')) return true;
-  try { const url = new URL(value); return (url.protocol === 'https:' && Boolean(url.hostname) && !url.username && !url.password) || url.protocol === 'mailto:'; }
-  catch { return false; }
-}
 async function inspectXml(bytes: Uint8Array, name: string, info: PackageInfo, signal?: AbortSignal): Promise<void> {
   if (bytes.length > LIMITS.xml) reject('resource-limit');
   const text = decoder.decode(bytes);
@@ -187,7 +182,7 @@ async function inspectXml(bytes: Uint8Array, name: string, info: PackageInfo, si
       if (!id || ids.has(id) || !type || !target || (mode && mode !== 'External' && mode !== 'Internal')) reject();
       ids.add(id);
       if (mode === 'External') {
-        if (type !== OFFICE_REL + 'hyperlink' || !safeHyperlink(target)) reject('external-resource');
+        if (type !== OFFICE_REL + 'hyperlink' || !isSafeDocxHyperlink(target)) reject('external-resource');
       } else if (!(type === OFFICE_REL + 'hyperlink' && target.startsWith('#'))) {
         const resolved = internalTarget(name, target);
         if (!info.names.has(resolved)) reject();

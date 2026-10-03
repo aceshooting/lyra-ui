@@ -77,6 +77,17 @@ for (const file of files(path.join(packageRoot, 'src'))) {
 }
 assert.match(read('packages/lyra-docs/src/docx/index.ts'), /export \{ createDocxSession \} from '\.\/create-session\.js';/u);
 assert.match(read('packages/lyra-docs/src/index.ts'), /export \{\};\s*$/u);
+const editorClassSource = read('packages/lyra-docs/src/docx/docx-editor.class.ts');
+const editorEntrySource = read('packages/lyra-docs/src/docx/editor.ts');
+const controlTags = [...editorClassSource.matchAll(/\bunsafeStatic\(tag\('([a-z][a-z0-9-]*)'\)\)/gu)]
+  .map((match) => match[1]);
+const registrationTags = [...editorEntrySource.matchAll(/^import '@aceshooting\/lyra-ui\/components\/lr-([a-z][a-z0-9-]*)\.js';$/gmu)]
+  .map((match) => match[1]);
+assert(controlTags.length > 0, 'Editor class has no Lyra control tag inventory');
+assert.equal(new Set(controlTags).size, controlTags.length, 'Duplicate editor control tag');
+assert.equal(new Set(registrationTags).size, registrationTags.length, 'Duplicate editor control registration');
+assert.deepEqual(registrationTags.sort(), controlTags.sort(),
+  'Editor entry must register exactly its rendered Lyra controls through granular tag imports');
 // Only documented subpaths are public; implementations remain behind the export map.
 const dist = path.join(packageRoot, 'dist');
 if (existsSync(dist)) {

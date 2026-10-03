@@ -1015,7 +1015,7 @@ it("resolves a popover host onto lr-button's focused internal control", async ()
     ariaControlsElements?: Element[];
   };
 
-  expect(trigger.getAttribute('aria-controls')).to.equal(el.id);
+  expect(trigger.hasAttribute('aria-controls')).to.equal(false);
   if (Reflect.has(focusedControl, 'ariaControlsElements')) {
     expect(focusedControl.ariaControlsElements?.length).to.equal(1);
     expect((focusedControl.ariaControlsElements?.[0]) === (el)).to.equal(true);
@@ -1038,7 +1038,7 @@ it("resolves a dropdown host onto lr-icon-button's focused internal control", as
     ariaControlsElements?: Element[];
   };
 
-  expect(trigger.getAttribute('aria-controls')).to.equal(el.id);
+  expect(trigger.hasAttribute('aria-controls')).to.equal(false);
   if (Reflect.has(focusedControl, 'ariaControlsElements')) {
     expect(focusedControl.ariaControlsElements?.length).to.equal(1);
     expect((focusedControl.ariaControlsElements?.[0]) === (el)).to.equal(true);
@@ -1059,7 +1059,7 @@ it('owns ARIA and restores focus on the real control inside a consumer popover t
   const focusedControl = wrapper.shadowRoot!.querySelector('button')!;
   await el.updateComplete;
 
-  expect(wrapper.getAttribute('aria-haspopup')).to.equal('dialog');
+  expect(wrapper.hasAttribute('aria-haspopup')).to.equal(false);
   expect(focusedControl.getAttribute('aria-haspopup')).to.equal('dialog');
   expect(focusedControl.getAttribute('aria-expanded')).to.equal('false');
   if (Reflect.has(focusedControl, 'ariaControlsElements')) {

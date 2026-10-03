@@ -91,6 +91,35 @@ function shrinkAnchorTimeouts(el: StubTextViewer): void {
 }
 
 describe('TextViewerTarget mixin', () => {
+  it('clears a retained search after disconnection without reacquiring rendering resources', async () => {
+    const el = await stubFixture();
+    await el.search('fox');
+    el.remove();
+    let detail: { query: string; matchCount: number; activeIndex: number } | undefined;
+    el.addEventListener('lr-search-change', event => { detail = event.detail; });
+    expect(() => el.clearSearch()).to.not.throw();
+    expect(detail).to.include({ query: '', matchCount: 0, activeIndex: -1 });
+    expect(internals(el).searchHandle === undefined).to.equal(true);
+    expect(internals(el).searchMatches.length).to.equal(0);
+  });
+
+  it('does not scroll a stale match when a search-change listener synchronously replaces the document text', async () => {
+    const el = await stubFixture();
+    expect(await el.search('fox')).to.equal(2);
+    const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+    let staleScrolls = 0;
+    for (const paragraph of body.querySelectorAll('p')) {
+      paragraph.scrollIntoView = () => { staleScrolls += 1; };
+    }
+    const replace = (): void => { body.textContent = 'A replacement document without the previous query'; };
+    el.addEventListener('lr-search-change', replace, { once: true });
+    await el.searchNext();
+    expect(staleScrolls).to.equal(0);
+    await waitUntil(() => internals(el).searchMatches.length === 0, 'the replaced document recomputes its match count');
+    expect(internals(el).searchActiveIndex).to.equal(-1);
+    expect(await el.searchPrevious()).to.equal(false);
+  });
+
   it('search(query) finds matches, sets activeIndex to 0, emits lr-search-change, and scrolls the active match', async () => {
     const el = await stubFixture();
     const firstParagraph = el.shadowRoot!.querySelector('#section-one') as HTMLElement;

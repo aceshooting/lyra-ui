@@ -13,10 +13,14 @@ const test = {
   async sessionFactory() {
     return (await import('../src/docx/create-session.js')).createDocxSession;
   },
-  async fixture(kind: 'accepted' | 'external' | 'malformed' | 'representative' | 'large') {
-    if (kind === 'representative' || kind === 'large') {
+  async fixture(kind: 'accepted' | 'external' | 'malformed' | 'representative' | 'large' | 'basic-editing' | 'mixed-formatting' | 'search-limit') {
+    if (kind === 'representative' || kind === 'large' || kind === 'basic-editing' || kind === 'mixed-formatting' || kind === 'search-limit') {
       const corpus = await import('./corpus.js');
-      return kind === 'representative' ? corpus.representativeFixture() : corpus.largeFixture();
+      if (kind === 'representative') return corpus.representativeFixture();
+      if (kind === 'basic-editing') return corpus.basicEditingFixture();
+      if (kind === 'mixed-formatting') return corpus.mixedFormattingFixture();
+      if (kind === 'search-limit') return corpus.searchLimitFixture();
+      return corpus.largeFixture();
     }
     const { docxFixture, relationship } = await import('../src/docx/admission-fixtures.js');
     if (kind === 'accepted') return docxFixture();

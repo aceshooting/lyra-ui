@@ -3370,3 +3370,56 @@ describe("adversarial rendition boundaries", () => {
     }
   });
 });
+
+
+describe('ebook search aggregation ceilings', () => {
+  it('caps the aggregate across separately valid sections and unloads inspected sections', async () => {
+    const fake = fakeBookWithFeatures({ first: 'needle', second: 'needle' });
+    let unloads = 0;
+    for (const [section, item] of fake.book.spine.spineItems.entries()) {
+      item.find = () => Array.from({ length: 6_000 }, (_, index) => ({
+        cfi: `epubcfi(/6/${section + 2}!/4/${index})`, excerpt: 'needle',
+      }));
+      item.unload = () => { unloads++; };
+    }
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraEbookViewer>(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`);
+      await waitUntil(() => (el as unknown as { book?: unknown }).book !== undefined);
+      let detail: { matchCountExact: boolean } | undefined;
+      el.addEventListener('lr-search-change', (event) => { detail = event.detail; });
+      expect(await el.search('needle')).to.equal(10_000);
+      expect(detail?.matchCountExact).to.equal(false);
+      expect(unloads).to.equal(2);
+    } finally { restore(); }
+  });
+
+  it('returns an empty TOC when a formerly ready book rejects readiness during reload', async () => {
+    const el = await fixture<LyraEbookViewer>(html`<lr-ebook-viewer></lr-ebook-viewer>`);
+    (el as unknown as { book?: unknown }).book = {
+      ready: Promise.reject(new Error('book reload failed')),
+      getNavigation: () => { throw new Error('navigation must not be read before ready'); },
+    };
+    expect(await el.getToc()).to.deep.equal([]);
+  });
+});
+
+
+it('marks search counts inexact when inspecting results leaves no budget to retain a match', async () => {
+  const fake = fakeBookWithFeatures({ first: 'needle' });
+  const cfi = 'epubcfi(/6/2!/4/2)';
+  fake.book.spine.spineItems[0]!.find = () => [{
+    cfi, excerpt: 'x'.repeat(4_000_000 - 1 - cfi.length),
+  }];
+  __setEpubJsForTesting(fake.factory as never);
+  const restore = stubFetch();
+  try {
+    const el = await fixture<LyraEbookViewer>(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`);
+    await waitUntil(() => (el as unknown as { book?: unknown }).book !== undefined);
+    let exact: boolean | undefined;
+    el.addEventListener('lr-search-change', (event) => { exact = event.detail.matchCountExact; });
+    expect(await el.search('needle')).to.equal(0);
+    expect(exact).to.equal(false);
+  } finally { restore(); }
+});

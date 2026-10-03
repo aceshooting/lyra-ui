@@ -2439,3 +2439,41 @@ describe("recording-state cssprop escape hatch", () => {
     await expect(el).to.be.accessible();
   });
 });
+
+it('retires a held permission request when the interaction mode changes', async () => {
+  const capture = stubDeferredCapture();
+  try {
+    const el = await fixture<LyraPushToTalk>(html`<lr-push-to-talk></lr-push-to-talk>`);
+    const button = trigger(el);
+    let starts = 0;
+    el.addEventListener('lr-record-start', () => { starts += 1; });
+    button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 812 }));
+    await el.updateComplete;
+    expect(el.state).to.equal('requesting');
+    el.mode = 'toggle';
+    await el.updateComplete;
+    expect(el.state).to.equal('idle');
+    const cancelled = oneEvent(el, 'lr-record-cancel');
+    capture.resolve();
+    await cancelled;
+    expect(starts).to.equal(0);
+    expect(capture.stream.getTracks()[0]!.stopped).to.equal(true);
+  } finally { capture.restore(); }
+});
+
+it('uses the recorder default format when none of the preferred MIME types are supported', async () => {
+  const restore = stubSuccessfulCapture();
+  const originalSupport = FakeMediaRecorder.isTypeSupported;
+  FakeMediaRecorder.isTypeSupported = () => false;
+  try {
+    const el = await fixture<LyraPushToTalk>(html`<lr-push-to-talk></lr-push-to-talk>`);
+    expect(await el.start()).to.equal(true);
+    const stopped = oneEvent(el, 'lr-record-stop');
+    el.stop();
+    expect((await stopped).detail.blob.type).to.equal('audio/webm');
+    expect(el.state).to.equal('idle');
+  } finally {
+    FakeMediaRecorder.isTypeSupported = originalSupport;
+    restore();
+  }
+});

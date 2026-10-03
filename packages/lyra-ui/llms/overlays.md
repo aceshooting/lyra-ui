@@ -1738,10 +1738,16 @@ If the import fails, leave the native disclosure visible and usable.
 To preserve the previous Lyra-shaped defaults explicitly, use
 `placement="bottom-start" distance="4" without-arrow`; origin-aware migration emits those tokens.
 
-The slotted trigger receives `aria-haspopup`, `aria-expanded`, and `aria-controls`. With no slotted
-trigger, a live HTML `for` target receives the identical ownership contract. A wrapper/custom
-trigger's composed descendant that actually receives focus receives the same semantics and becomes
-the focus-return target. The component supplies the real popup to the shared relationship owner;
+The slotted trigger owns interaction; with no slotted trigger, a live HTML `for` target owns it.
+Only its semantic focus target receives `aria-haspopup`, `aria-expanded`, and `aria-controls`.
+For wrapper/custom triggers such as `lr-button`, the composed native control receives these
+attributes and becomes the focus-return target; the generic host receives no generated trigger
+ARIA, including when the host forwards a roving `tabindex` to its native control. Native triggers
+and focusable hosts with an authored role supporting expansion (such as `button`) own their state
+directly; roles such as `img` and ordinary text fields receive no generated expansion state.
+Ownership follows replacement controls and waits for an unresolved slotted or `for` custom trigger
+to upgrade.
+The component supplies the real popup to the shared relationship owner;
 because current browsers reject a light-DOM reference into a private shadow tree, that inward edge
 is exposed as the public `lr-popover` host. Target insertion, removal, replacement, `id` changes,
 and late custom-element upgrade are tracked live. Authored relationship tokens compose, generated

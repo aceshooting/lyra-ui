@@ -633,6 +633,11 @@ after a `test:coverage` run has written `coverage/`) sets each metric to
 `floor(measured − margin)`, default margin 1.5 points, and records the measurement and date it used
 alongside the floors.
 
+Use `--minimum-lines 99.6 --minimum-statements 99.6` when a complete measurement supports those
+reviewed minima. The generator refuses a minimum above the measured result, requires the exact
+JSON summary for a statement minimum, and retains the minima on later ordinary refreshes. Branch
+and function floors continue to use their measured margins unless already higher.
+
 - `pnpm --filter @aceshooting/lyra-ui check:coverage-floors` is the non-mutating mode. Locally it
   runs after `test:coverage`; CI runs it after the four raw shard artifacts pass fail-closed merge
   validation. It fails both ways: a floor **above** the measurement (the suite cannot pass) and a

@@ -10,6 +10,8 @@ import type { Placement } from '@floating-ui/dom';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel, nextId, resolveAccessibleTrigger } from '../../../internal/a11y.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
+import { collectComposedFocusTargets } from '../../../internal/focus-navigation.js';
+import { CustomElementUpgradeObserver } from '../../../internal/custom-element-upgrade-observer.js';
 import {
   acquireAriaOwnership,
   type AriaOwnershipLease,
@@ -56,6 +58,21 @@ import { LYRA_DEFAULT_menuLabel, LYRA_DEFAULT_popover } from '../../../internal/
 
 /** Default anchor-offset distance (px), passed to Floating UI's `offset()` middleware. */
 const DEFAULT_DISTANCE = 8;
+
+// WAI-ARIA 1.2 aria-expanded roles, including inherited support. A semantic role alone does not
+// make an image, heading or text field a disclosure control.
+const EXPANDABLE_TRIGGER_ROLES = new Set([
+  'application', 'button', 'checkbox', 'combobox', 'gridcell', 'link', 'listbox', 'menuitem',
+  'row', 'rowheader', 'tab', 'treeitem', 'columnheader', 'menuitemcheckbox', 'menuitemradio', 'switch',
+]);
+
+function supportsTriggerExpansion(element: HTMLElement): boolean {
+  const role = element.getAttribute('role')?.trim().split(/\s+/)[0];
+  if (role) return EXPANDABLE_TRIGGER_ROLES.has(role);
+  if (element.matches('button, a[href], select, summary')) return true;
+  return element.localName === 'input' && ['button', 'submit', 'reset', 'image', 'checkbox']
+    .includes((element as HTMLInputElement).type);
+}
 
 /** Monotonic connection order makes initial same-root ownership deterministic even when several
  * server-rendered popovers release their hydration guards in different tasks. */
@@ -165,9 +182,10 @@ export interface LyraPopoverEventMap {
  * pointer travelling from the trigger to the popup never leaves both at once.
  *
  * Interaction/ARIA ownership is resolved separately from positioning. A slotted trigger wins and
- * receives the click listener plus `aria-haspopup`, `aria-expanded`, and `aria-controls`; without
- * one, a live HTML element resolved by `for` owns the same contract. A wrapper/custom trigger's
- * real composed focus target receives the same owned semantics and is the focus-return target. A
+ * receives the click listener; without one, a live HTML element resolved by `for` owns interaction.
+ * Only its semantic composed focus target receives `aria-haspopup`, `aria-expanded`, and
+ * `aria-controls`, and becomes the focus-return target. Generic wrapper hosts receive no generated
+ * trigger ARIA. Native controls and authored roles supporting expansion retain their own state. A
  * direct `.anchor` is positioning-only. `showAt()`'s virtual anchor wins positioning and
  * deliberately has no DOM interaction/ARIA owner while active.
  * The component supplies the real shadow popup to the shared relationship controller. Current
@@ -534,8 +552,11 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   private observedDirectAnchor?: Element;
   private observedDirectAnchorWasConnected = false;
   private stopAnchorIdentityObservation?: () => void;
-  private triggerAria?: AriaOwnershipLease;
   private accessibleTriggerAria?: AriaOwnershipLease;
+  private accessibleTriggerObserver?: MutationObserver;
+  private readonly triggerUpgrades = new CustomElementUpgradeObserver(() => {
+    if (this.isConnected) this.syncTriggerA11y();
+  });
   /** The virtual anchor set by `showAt()`, taking priority over `trigger` for positioning while
    *  set. Cleared whenever the popover closes, so a later `open = true` with no fresh `showAt()`
    *  call reverts to plain trigger-based behavior. */
@@ -950,6 +971,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     this.triggerElement?.removeEventListener('keydown', this.onExternalTriggerKeyDown);
     if (this.triggerElement) this.unbindTriggerInteractions(this.triggerElement);
     this.triggerElement = next;
+    this.triggerUpgrades.disconnect();
     if (this.triggerElement && this.triggerElement !== this.slottedTrigger) {
       this.triggerElement.addEventListener('click', this.onTriggerClick);
       this.triggerElement.addEventListener('keydown', this.onExternalTriggerKeyDown);
@@ -1175,7 +1197,6 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     }
   }
   private syncTriggerA11y(): void {
-    const trigger = this.triggerElement ?? null;
     // SSR/hydration shims can connect the host before Lit establishes a render root. The trigger
     // still receives its state immediately; the first completed render resynchronizes `controls`
     // to the real popup without reading through an unavailable root during upgrade.
@@ -1190,15 +1211,16 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
       },
       controls: popup ? [popup] : [],
     };
-    if (this.triggerAria) this.triggerAria.update(trigger, contribution);
-    else this.triggerAria = acquireAriaOwnership(trigger, contribution);
-
     const accessibleTrigger = this.accessibleTrigger;
-    const distinctAccessibleTrigger = accessibleTrigger !== trigger ? accessibleTrigger : null;
+    this.observeAccessibleTrigger(accessibleTrigger);
+    // An unresolved/disabled custom trigger may still resolve to its generic host. Do not give
+    // that wrapper widget state while waiting for its real control to become available.
+    const semanticTrigger = accessibleTrigger && supportsTriggerExpansion(accessibleTrigger)
+      ? accessibleTrigger : null;
     if (this.accessibleTriggerAria) {
-      this.accessibleTriggerAria.update(distinctAccessibleTrigger, contribution);
+      this.accessibleTriggerAria.update(semanticTrigger, contribution);
     } else {
-      this.accessibleTriggerAria = acquireAriaOwnership(distinctAccessibleTrigger, contribution);
+      this.accessibleTriggerAria = acquireAriaOwnership(semanticTrigger, contribution);
     }
     if (this.overlayHandle?.isActive() && !this.virtualAnchor) {
       this.overlayHandle.updateRestoreFocusTo(accessibleTrigger);
@@ -1206,14 +1228,53 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   }
 
   private get accessibleTrigger(): HTMLElement | null {
-    return this.triggerElement ? resolveAccessibleTrigger(this.triggerElement) : null;
+    const trigger = this.triggerElement;
+    if (!trigger) return null;
+    const resolved = resolveAccessibleTrigger(trigger);
+    // Roving controls forward a host tabindex to their native control. That generic host is not
+    // itself the semantic focus target, despite its explicit tabindex.
+    if (resolved === trigger && !trigger.hasAttribute('role')
+      && !trigger.matches('button, a[href], input, select, textarea, summary')) {
+      return collectComposedFocusTargets(trigger, { includeRoot: false, mode: 'programmatic' })
+        .elements[0] ?? trigger;
+    }
+    return resolved;
+  }
+
+  private observeAccessibleTrigger(target: HTMLElement | null): void {
+    this.accessibleTriggerObserver?.disconnect();
+    const trigger = this.triggerElement;
+    if (!trigger || !this.isConnected) return;
+    const view = this.ownerDocument.defaultView;
+    if (view?.MutationObserver) {
+      this.accessibleTriggerObserver ??= new view.MutationObserver(() => {
+        if (this.isConnected) this.syncTriggerA11y();
+      });
+      const roots = new Set<Node>([trigger]);
+      if (trigger.shadowRoot) roots.add(trigger.shadowRoot);
+      let current: Node | null = target;
+      while (current && current !== trigger) {
+        const root: Node = current.getRootNode();
+        if (root.nodeType !== 11 || !('host' in root)) break;
+        roots.add(root);
+        current = (root as ShadowRoot).host;
+      }
+      for (const root of roots) this.accessibleTriggerObserver.observe(root, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['role', 'tabindex', 'disabled', 'href', 'type'],
+      });
+    }
+    this.triggerUpgrades.observeElement(trigger);
   }
 
   private releaseTriggerA11y(): void {
+    this.accessibleTriggerObserver?.disconnect();
+    this.accessibleTriggerObserver = undefined;
+    this.triggerUpgrades.disconnect();
     this.accessibleTriggerAria?.release();
     this.accessibleTriggerAria = undefined;
-    this.triggerAria?.release();
-    this.triggerAria = undefined;
   }
   private onTriggerSlotChange = (event: Event): void => {
     this.collectTriggerFromSlot(event.target as HTMLSlotElement);

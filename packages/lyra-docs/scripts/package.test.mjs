@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { planReleaseTags } from '../../../scripts/release-integrity.mjs';
 
 test('root and session entries resolve without a DOM, engine, fetch or stylesheet side effects', async () => {
@@ -31,6 +32,30 @@ test('the class entry does not register the editor or its controls', () => {
   globalThis.fetch = () => { throw new Error('Unexpected fetch'); };
   const { LyraDocxEditor } = await import('@aceshooting/lyra-docs/docx/editor.class');
   if (typeof LyraDocxEditor !== 'function') throw new Error('Missing editor class');`;
+  execFileSync(process.execPath, ['--input-type=module', '-e', source], { stdio: 'pipe' });
+});
+
+test('the registration entry defines the editor and every rendered Lyra control', () => {
+  const editorClass = readFileSync(new URL('../src/docx/docx-editor.class.ts', import.meta.url), 'utf8');
+  const controls = [...editorClass.matchAll(/\bunsafeStatic\(tag\('([a-z][a-z0-9-]*)'\)\)/gu)]
+    .map((match) => `lr-${match[1]}`);
+  assert(controls.length > 0);
+  const source = `const definitions = new Map();
+    globalThis.customElements = {
+      get: name => definitions.get(name),
+      define: (name, ctor) => {
+        if (definitions.has(name)) throw new Error('Duplicate registration: ' + name);
+        definitions.set(name, ctor);
+      }
+    };
+    globalThis.fetch = () => { throw new Error('Unexpected fetch'); };
+    await import('@aceshooting/lyra-docs/docx/editor');
+    const required = ${JSON.stringify(['lr-docx-editor', ...controls].sort())};
+    const missing = required.filter(name => !definitions.has(name));
+    if (missing.length) throw new Error('Missing registrations: ' + missing.join(', '));
+    const { LyraDocxEditor } = await import('@aceshooting/lyra-docs/docx/editor.class');
+    if (definitions.get('lr-docx-editor') !== LyraDocxEditor)
+      throw new Error('Editor registration does not use the public class');`;
   execFileSync(process.execPath, ['--input-type=module', '-e', source], { stdio: 'pipe' });
 });
 

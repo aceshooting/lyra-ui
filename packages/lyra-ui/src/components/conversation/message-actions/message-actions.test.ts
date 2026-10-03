@@ -1504,3 +1504,49 @@ describe("reveal-on-interaction with a slotted menu", () => {
     );
   });
 });
+
+it('reverts a prevented built-in feedback request and fails closed after its control is removed', async () => {
+  const el = await fixture<LyraMessageActions>(html`<lr-message-actions .controls=${['feedback']}></lr-message-actions>`);
+  let submissionId = '';
+  el.addEventListener('lr-feedback-submit-request', (event) => {
+    event.preventDefault();
+    submissionId = event.detail.submissionId;
+  });
+  const feedback = el.shadowRoot!.querySelector('lr-message-feedback')!;
+  feedback.shadowRoot!.querySelector<HTMLButtonElement>('[part="down-button"]')!.click();
+  expect(el.feedbackPending).to.equal(true);
+  expect(el.revertPendingSubmit(submissionId)).to.equal(true);
+  expect(el.feedbackPending).to.equal(false);
+  el.controls = [];
+  await el.updateComplete;
+  expect(el.finalizePendingSubmit(submissionId)).to.equal(false);
+});
+
+it('preserves a consumer tabindex change while later plain toolbar actions remain navigable', async () => {
+  const el = await fixture<LyraMessageActions>(html`<lr-message-actions>
+    <button id="consumer-stop">Consumer</button><button id="surviving-stop">Survivor</button>
+  </lr-message-actions>`);
+  const consumer = el.querySelector<HTMLButtonElement>('#consumer-stop')!;
+  const survivor = el.querySelector<HTMLButtonElement>('#surviving-stop')!;
+  await waitUntil(() => consumer.tabIndex === 0);
+  consumer.tabIndex = 4;
+  await aTimeout(0);
+  el.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(new KeyboardEvent('keydown', {
+    key: 'End', bubbles: true, composed: true,
+  }));
+  expect(consumer.tabIndex).to.equal(4);
+  expect(survivor.tabIndex).to.equal(0);
+  expect(document.activeElement?.id).to.equal('surviving-stop');
+});
+
+it('continues navigation when a provider focus operation throws', async () => {
+  const el = await fixture<LyraMessageActions>(html`<lr-message-actions>
+    <test-closed-toolbar-provider></test-closed-toolbar-provider><button id="focus-fallback">Fallback</button>
+  </lr-message-actions>`);
+  const provider = el.querySelector('test-closed-toolbar-provider') as ClosedToolbarProvider;
+  provider.action.focus = (): never => { throw new Error('provider focus unavailable'); };
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  base.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, composed: true }));
+  base.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true }));
+  expect(document.activeElement?.id).to.equal('focus-fallback');
+});

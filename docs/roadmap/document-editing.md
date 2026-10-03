@@ -4,7 +4,7 @@ Status: private experimental implementation and qualification in progress. No do
 shipped or promised for the current release. All existing file viewers, including the lightweight,
 read-only `lr-docx-viewer`, stay in `@aceshooting/lyra-ui`. Editing belongs in the optional
 `@aceshooting/lyra-docs` companion. The current component is `<lr-docx-editor>` and the exact
-optional engine peer is `@docx-editor.dev/core@2.24.0`; neither choice establishes general DOCX
+optional runtime engine peer is `@docx-editor.dev/core@2.25.0`; neither choice establishes general DOCX
 support or completes a roadmap phase.
 
 The [implementation and qualification record](document-editing-feasibility.md) records verified
@@ -36,10 +36,11 @@ pass; creating the package does not make an editor available in the current Lyra
 
 Use the public framework-independent core behind original Lyra controls, without importing its
 React/Vue application or complete feature set. The runtime peer is
-`@docx-editor.dev/core@2.24.0`; a separate read-only source reference at public commit
-[`42c6c267`](https://github.com/eigenpal/docx-editor/tree/42c6c267) is core 2.25 and is reference
-material only. Lyra owns the public component, Lit interface, supported commands, lifecycle,
-accessibility, theming and integration contract.
+`@docx-editor.dev/core@2.25.0`, dynamically loaded when a document opens. The
+[public core implementation](https://github.com/eigenpal/docx-editor/tree/42c6c267) is reference
+material; the runtime is the published 2.25.0 package. Lyra owns the
+public component, Lit interface, supported commands, lifecycle, accessibility, theming and
+integration contract.
 Copying isolated parser/layout files is not automatically a smaller solution: those modules share
 document identity, styles, resources, transactions and serialization invariants.
 
@@ -84,8 +85,11 @@ interactive increment. Later phases do not postpone those requirements.
   RTL, larger real documents and round trips through Word and LibreOffice. Current preservation
   checks cover selected opaque parts in a synthetic fixture only.
 - [ ] Measure production JS/CSS, lazy chunks, WASM, fonts, opening time, typing latency and retained
-  memory. Current evidence records emitted JS, CSS and WASM plus one fixture's timings; fonts,
-  retained memory and a qualified lazy-loading budget remain open.
+  memory. Current evidence records emitted JS, CSS and WASM plus a final diagnostic run on a
+  2,000-paragraph fixture: 1,868.9 ms fresh open, 111.8 ms save, 1,602.8 ms warm reopen, and
+  128.1 ms median / 146.3 ms p95 from input through two animation frames. These are individual-run
+  observations, not guarantees or optimization claims. Fonts, retained memory and a qualified
+  lazy-loading budget remain open; see the [performance and bundle record](document-editing-feasibility.md#bundle-and-performance-observations).
 
 Exit: a documented engine/DOM/packaging decision, license inventory and reproducible baseline.
 Stop or narrow the proposal if supported integration or preservation cannot be demonstrated.
@@ -110,17 +114,31 @@ Exit: lifecycle and public API tests pass, with no engine import or initializati
 
 ### 2. Basic rich-text editing
 
-The private implementation currently supports paragraph text entry, text selection, bold, italic,
-underline, undo and redo. It does not yet provide the broader rich-text feature set below.
+The private implementation includes paragraph text entry and selection, the original five string
+commands (bold, italic, underline, undo and redo), and a parameterized `DocxAction` API for
+paragraph styles, four alignments, bullet/numbered lists, font family and size, text color, links,
+find, match navigation and replace-one. The current increment passes 51 focused checks in each
+of Chromium, Firefox and WebKit, including the listed actions through undo/redo and save/reopen,
+and checks preservation of protected synthetic OPC parts. This qualifies those exercised cases;
+the phase remains open for broader inputs, interoperability and user qualification.
 
-- [ ] Support paragraphs, headings, bold/italic/underline, links, lists, alignment and selections.
+- [ ] Expand qualification of paragraph styles, headings, bold/italic/underline, links, lists,
+  alignment and selections through editing, undo/redo, save/reopen and browser interaction. The
+  current 51-check-per-engine increment covers focused synthetic cases. The API validates style
+  membership and safe links; links allow HTTPS, `mailto:` and fragment-only targets, and refuse
+  HTTP. Replace-one is a single undoable edit; replace-all is not supported.
+- [ ] Verify formatting-value semantics and on-demand catalogs/search, including mixed or
+  unavailable values, stale match refusal, result/context bounds, and that typing does not trigger
+  catalog reads or searches. Color reads as `null` because the editor uses `getSelectionFormatting()`,
+  whose result omits color; although `snapshot().formatting` exposes color, the editor does not
+  consume it for this contract.
 - [x] Provide undo/redo and localized status messages; add Alt+F10 toolbar entry with arrow,
   Home/End and Escape navigation.
 - [x] Compose the initial five-command toolbar from Lyra controls, retaining selection for toolbar
   actions and exposing command availability and active formatting state.
-- [ ] Add editing shortcuts beyond toolbar access, clipboard handling and find/replace; qualify
-  localized feedback across input methods and authored document styling independently from the
-  surrounding Lyra look.
+- [ ] Add editing shortcuts beyond toolbar access and clipboard handling; qualify the implemented
+  find/replace controls, localized feedback across input methods, and authored document styling
+  independently from the surrounding Lyra look.
 - [ ] Verify keyboard-only use, IME/composition, Unicode, mixed-direction text, text zoom, touch
   selection, accessible names and read-only mode. Document supported input/output formats.
 
@@ -134,8 +152,9 @@ DOCX work; do not create a second rich-text engine solely to discard it in the n
 - [ ] Evaluate optional bounded URL loading with the same external-resource and cancellation rules.
 - [ ] Support and qualify common paragraph/run styles, hyperlinks/bookmarks, numbered lists, basic
   tables and embedded images for rendering and editing, with insertion, deletion and resize
-  commands where supported. The current command set is limited to bold, italic, underline, undo
-  and redo.
+  commands where supported. Paragraph style, alignment/list, font, color and link actions plus
+  bounded find/replace-one pass focused browser and synthetic OOXML checks; tables, images and
+  broader round-trip qualification remain later work.
 - [ ] Establish a preservation/rendering/editing capability matrix for relationships, media,
   extensions and unknown OOXML parts. Selected opaque parts survive the current synthetic edit,
   save and reopen fixture; this does not prove general part preservation or usability.

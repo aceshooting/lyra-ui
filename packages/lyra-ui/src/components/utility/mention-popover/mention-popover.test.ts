@@ -1858,3 +1858,38 @@ it('clamps its rendered floating surface width through the shared popover-viewpo
   );
   expect(box.getBoundingClientRect().width).to.be.at.most(100.5);
 });
+
+it('falls back to the nearest earlier enabled suggestion and exposes no active option when every row is disabled', async () => {
+  const el = await fixture<LyraMentionPopover>(html`<lr-mention-popover open .activeIndex=${2} .items=${[
+    { suggestionId: 'first', label: 'First' },
+    { suggestionId: 'second', label: 'Second', disabled: true },
+    { suggestionId: 'third', label: 'Third', disabled: true },
+  ]}></lr-mention-popover>`);
+  expect(el.activeDescendantElement?.dataset['id']).to.equal('first');
+  const event = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true });
+  const selected = oneEvent(el, 'lr-mention-select');
+  expect(el.handleKeyDown(event)).to.equal(true);
+  expect((await selected).detail.suggestionId).to.equal('first');
+  el.items = [{ suggestionId: 'disabled', label: 'Disabled', disabled: true }];
+  el.open = true;
+  await el.updateComplete;
+  expect(el.activeDescendantId).to.equal(null);
+  const enter = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true });
+  expect(el.handleKeyDown(enter)).to.equal(false);
+  expect(enter.defaultPrevented).to.equal(false);
+});
+
+it('restores focus to a connected non-text anchor after closing a focused suggestion', async () => {
+  const wrapper = await fixture<HTMLElement>(html`<div><button id="mention-button-anchor">Mention</button><lr-mention-popover .items=${ITEMS}></lr-mention-popover></div>`);
+  const el = wrapper.querySelector('lr-mention-popover') as LyraMentionPopover;
+  const anchor = wrapper.querySelector<HTMLButtonElement>('button')!;
+  el.anchor = anchor;
+  el.open = true;
+  await el.updateComplete;
+  expect(await el.focusActiveOption()).to.equal(true);
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('option');
+  el.open = false;
+  await el.updateComplete;
+  await waitUntil(() => document.activeElement === anchor);
+  expect(document.activeElement?.id).to.equal('mention-button-anchor');
+});

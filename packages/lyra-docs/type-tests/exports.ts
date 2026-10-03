@@ -1,4 +1,4 @@
-import { createDocxSession, type DocxSession, type DocxSnapshot } from '@aceshooting/lyra-docs/docx';
+import { createDocxSession, type DocxSession, type DocxSnapshot, type DocxAction, type DocxEdit, type DocxCommand, type DocxFormatting, type DocxParagraphStyles, type DocxFontFamilies, type DocxSearchOptions, type DocxSearchResults, type DocxSearchMatch } from '@aceshooting/lyra-docs/docx';
 import type { LyraDocxEditor } from '@aceshooting/lyra-docs/docx/editor.class';
 // @ts-expect-error DOCX-specific contracts belong to the format subpath.
 import type { DocxSession as RootSession } from '@aceshooting/lyra-docs';
@@ -10,3 +10,42 @@ import type { DocxSessionPort } from '@aceshooting/lyra-docs/docx/engine-port';
 export type ExportWitness = [DocxSession, DocxSnapshot, RootSession, DocxSessionPort, LyraDocxEditor];
 void createInternalDocxSession;
 void createDocxSession;
+
+// @ts-expect-error Engine command representations are not public.
+import type { EditorCommand } from '@aceshooting/lyra-docs/docx';
+// @ts-expect-error Validation helpers are internal implementation details.
+import { normalizeDocxAction } from '@aceshooting/lyra-docs/docx';
+
+export type EditingExportWitness = [DocxAction, DocxEdit, DocxCommand, DocxFormatting, DocxParagraphStyles,
+  DocxFontFamilies, DocxSearchOptions, DocxSearchResults, DocxSearchMatch, EditorCommand];
+void normalizeDocxAction;
+
+function editingContracts(session: DocxSession): void {
+  const legacy: DocxCommand = 'bold';
+  session.execute(legacy);
+  session.can({ type: 'font-size', points: 14 });
+  session.execute({ type: 'alignment', value: 'justify' });
+  session.execute({ type: 'toggle-list', kind: 'numbered' });
+  session.paragraphStyles();
+  session.fontFamilies();
+  session.find('literal', { matchCase: true, wholeWord: true, limit: 10 });
+  session.selectMatch('opaque');
+  session.replaceMatch('opaque', '');
+  const snapshot = session.snapshot();
+  // @ts-expect-error Snapshot formatting is immutable.
+  snapshot.formatting.fontFamily = 'Arial';
+  // @ts-expect-error Engine alignment vocabulary does not leak.
+  session.execute({ type: 'alignment', value: 'both' });
+  // @ts-expect-error Engine numbered-list spelling does not leak.
+  session.execute({ type: 'toggle-list', kind: 'ordered' });
+  // @ts-expect-error Raw engine mark commands are not public.
+  session.execute({ type: 'setMarkAttr', mark: 'fontSize', attr: 'val', value: 28 });
+  const found = session.find('literal');
+  if (found.ok) {
+    // @ts-expect-error Search matches are immutable.
+    found.value.matches.push({ id: 'forged', text: '', before: '', after: '' });
+    // @ts-expect-error Engine location addresses do not leak.
+    found.value.matches[0]?.blockId;
+  }
+}
+void editingContracts;

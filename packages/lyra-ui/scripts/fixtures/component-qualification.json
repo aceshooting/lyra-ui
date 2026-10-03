@@ -479,6 +479,12 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/agent-tools/activity-feed/activity-feed-tail-cancel.test.ts",
+              "test": "exposes a warning-specific styling part on a populated warning entry",
+              "target": "feed",
+              "state": "populated"
+            },
+            {
               "file": "src/components/agent-tools/activity-feed/activity-feed.test.ts",
               "test": "is accessible expanded, with entries, icons, variants, and timestamps",
               "target": "el",
@@ -654,6 +660,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/activity-feed/activity-feed-tail-cancel.test.ts",
           "src/components/agent-tools/activity-feed/activity-feed.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -3758,6 +3765,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/audio-visualizer/audio-visualizer-observer-recovery.test.ts",
           "src/components/conversation/audio-visualizer/audio-visualizer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -4834,6 +4842,7 @@
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
+          "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
           "src/components/charts/chart/histogram.test.ts",
@@ -5062,6 +5071,7 @@
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
+          "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
           "src/components/charts/chart/histogram.test.ts",
@@ -5985,6 +5995,7 @@
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
+          "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
           "src/components/charts/chart/histogram.test.ts",
@@ -8103,6 +8114,7 @@
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
+          "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
           "src/components/charts/chart/histogram.test.ts",
@@ -8475,7 +8487,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "rtl",
           "narrowAllocation",
           "visual",
           "forcedColors",
@@ -8515,9 +8526,14 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/conversation/chat-viewport/chat-viewport-boundaries.test.ts",
+              "test": "attributes RTL left-gutter scrollbar gestures to user scrolling and releases follow",
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "applicable",
@@ -8617,7 +8633,6 @@
         }
       },
       "knownLimitations": [
-        "No component-local rendered RTL assertion is recorded.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -8631,6 +8646,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/conversation/chat-viewport/chat-viewport-async-announcements.test.ts",
+          "src/components/conversation/chat-viewport/chat-viewport-boundaries.test.ts",
           "src/components/conversation/chat-viewport/chat-viewport.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -11163,8 +11179,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/command-palette/command-palette.test.ts",
-              "test": "selects the active command with Enter and ignores Enter when no enabled command exists",
+              "file": "src/components/layout/command-palette/command-palette-native-scroll.test.ts",
+              "test": "keeps keyboard selection visible while coalescing actual result-list scroll events",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -11284,6 +11300,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/command-palette/command-palette-native-scroll.test.ts",
           "src/components/layout/command-palette/command-palette-remediation.test.ts",
           "src/components/layout/command-palette/command-palette-search-sizing.test.ts",
           "src/components/layout/command-palette/command-palette.test.ts",
@@ -14470,6 +14487,7 @@
           "src/components/data/data-grid/data-grid-columns.test.ts",
           "src/components/data/data-grid/data-grid-export.test.ts",
           "src/components/data/data-grid/data-grid-interaction.test.ts",
+          "src/components/data/data-grid/data-grid-measured-shrink.test.ts",
           "src/components/data/data-grid/data-grid-ownership.test.ts",
           "src/components/data/data-grid/data-grid-processing.test.ts",
           "src/components/data/data-grid/data-grid-remediation.test.ts",
@@ -17064,6 +17082,7 @@
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
+          "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
           "src/components/charts/chart/histogram.test.ts",
@@ -17769,7 +17788,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1113,
+              "line": 1135,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -18000,6 +18019,7 @@
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
           "src/components/layout/menu/menu-remediation.test.ts",
+          "src/components/layout/menu/menu-submenu-lifecycle.test.ts",
           "src/components/layout/menu/menu.test.ts",
           "src/components/layout/menu/positioning-strategy.test.ts"
         ],
@@ -23619,6 +23639,12 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/retrieval/grounding-summary/grounding-summary-projection.test.ts",
+              "test": "renders evidence and warning headings at the requested level ${level}",
+              "target": "summary",
+              "state": "populated"
+            },
+            {
               "file": "src/components/retrieval/grounding-summary/grounding-summary.test.ts",
               "test": "is accessible fully populated with stats, warnings, and evidence",
               "target": "el",
@@ -23755,6 +23781,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/retrieval/grounding-summary/grounding-summary-projection.test.ts",
           "src/components/retrieval/grounding-summary/grounding-summary.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -24542,6 +24569,7 @@
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
+          "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
           "src/components/charts/chart/histogram.test.ts",
@@ -26089,6 +26117,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/utility/intersection-observer/intersection-observer-boundaries.test.ts",
           "src/components/utility/intersection-observer/intersection-observer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -26430,6 +26459,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/utility/json-viewer/json-viewer-admission.test.ts",
           "src/components/utility/json-viewer/json-viewer-remediation.test.ts",
           "src/components/utility/json-viewer/json-viewer.test.ts"
         ],
@@ -27647,6 +27677,7 @@
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
+          "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
           "src/components/charts/chart/histogram.test.ts",
@@ -27876,6 +27907,7 @@
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
+          "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
           "src/components/charts/chart/histogram.test.ts",
@@ -28498,8 +28530,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/map/map-public-boundaries.test.ts",
-              "test": "contains a public peer fit failure and recovers after the required style is restored",
+              "file": "src/components/media/map/map-peer-recovery.test.ts",
+              "test": "contains a peer source failure on initial load and clears the unusable map",
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -28552,6 +28584,7 @@
           "src/components/media/map/map-legend-icon.test.ts",
           "src/components/media/map/map-legend-scroll.test.ts",
           "src/components/media/map/map-loader.test.ts",
+          "src/components/media/map/map-peer-recovery.test.ts",
           "src/components/media/map/map-public-boundaries.test.ts",
           "src/components/media/map/map-remediation.test.ts",
           "src/components/media/map/map-style-failure-supersession.test.ts",
@@ -29943,6 +29976,7 @@
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
           "src/components/layout/menu/menu-remediation.test.ts",
+          "src/components/layout/menu/menu-submenu-lifecycle.test.ts",
           "src/components/layout/menu/menu.test.ts",
           "src/components/layout/menu/positioning-strategy.test.ts"
         ],
@@ -30182,6 +30216,7 @@
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
           "src/components/layout/menu/menu-remediation.test.ts",
+          "src/components/layout/menu/menu-submenu-lifecycle.test.ts",
           "src/components/layout/menu/menu.test.ts",
           "src/components/layout/menu/positioning-strategy.test.ts"
         ],
@@ -30365,6 +30400,7 @@
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
           "src/components/layout/menu/menu-remediation.test.ts",
+          "src/components/layout/menu/menu-submenu-lifecycle.test.ts",
           "src/components/layout/menu/menu.test.ts",
           "src/components/layout/menu/positioning-strategy.test.ts"
         ],
@@ -32048,6 +32084,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/multi-split/multi-split-collapse-api.test.ts",
+          "src/components/layout/multi-split/multi-split-native-close.test.ts",
           "src/components/layout/multi-split/multi-split-remediation.test.ts",
           "src/components/layout/multi-split/multi-split-trigger.test.ts",
           "src/components/layout/multi-split/multi-split.test.ts"
@@ -35666,6 +35703,7 @@
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
+          "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
           "src/components/charts/chart/histogram.test.ts",
@@ -35870,6 +35908,7 @@
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
+          "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
           "src/components/charts/chart/histogram.test.ts",
@@ -36282,6 +36321,60 @@
               "test": "passes an accessibility audit while hover-opened with the bridge rendered",
               "target": "el",
               "state": "populated"
+            },
+            {
+              "file": "src/components/overlays/overlay/popover.test.ts",
+              "test": "does not add expansion state to an incompatible trigger: ${markup}",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/overlays/overlay/popover.test.ts",
+              "test": "keeps a populated Lyra button popover accessible with one semantic trigger owner",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/overlays/overlay/popover.test.ts",
+              "test": "keeps a populated Lyra button popover accessible with one semantic trigger owner",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/overlays/overlay/popover.test.ts",
+              "test": "keeps authored semantic hosts as owners while generic unresolved triggers receive no state",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/overlays/overlay/popover.test.ts",
+              "test": "keeps disabled custom hosts free of widget state and restores control ownership when enabled",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/overlays/overlay/popover.test.ts",
+              "test": "moves semantic ownership when a Lyra button changes its native control",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/overlays/overlay/popover.test.ts",
+              "test": "owns the native control and restores focus for a roving Lyra trigger at tabindex ${tabIndex}",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/overlays/overlay/popover.test.ts",
+              "test": "tracks a late external custom trigger upgrade and releases its semantic owner on disconnect",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/overlays/overlay/popover.test.ts",
+              "test": "waits for a late custom trigger upgrade before assigning widget state",
+              "target": "el",
+              "state": "populated"
             }
           ],
           "exemption": null
@@ -36394,7 +36487,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1113,
+              "line": 1135,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -38302,6 +38395,7 @@
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
+          "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
           "src/components/charts/chart/histogram.test.ts",
@@ -42158,6 +42252,7 @@
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
+          "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
           "src/components/charts/chart/histogram.test.ts",
@@ -52605,7 +52700,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1113,
+              "line": 1135,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -54523,6 +54618,12 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/layout/virtual-list/virtual-list-indexed-groups.test.ts",
+              "test": "accounts for unsorted sparse group markers before indexed rows and retires markers outside the window",
+              "target": "list",
+              "state": "populated"
+            },
+            {
               "file": "src/components/layout/virtual-list/virtual-list.test.ts",
               "test": "is accessible with a populated, windowed item list",
               "target": "el",
@@ -54670,6 +54771,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/virtual-list/virtual-list-border-scroll.test.ts",
+          "src/components/layout/virtual-list/virtual-list-indexed-groups.test.ts",
           "src/components/layout/virtual-list/virtual-list-scaled-scroll.test.ts",
           "src/components/layout/virtual-list/virtual-list-window-scroll.test.ts",
           "src/components/layout/virtual-list/virtual-list.test.ts"

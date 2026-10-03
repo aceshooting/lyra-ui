@@ -1063,7 +1063,7 @@ describe('lyraThemeBootstrap script-tag configuration', () => {
     ['names with no data- prefix', 'x y'],
     ['a name containing a quote', 'data-x"y'],
     ['a name containing =', 'data-x=y'],
-    ['a name containing a control character', 'data-x y'],
+    ['a name containing a control character', 'data-x\0y'],
     ['a duplicated name', 'data-lr-theme data-lr-theme'],
     ['an empty list', ''],
   ];

@@ -46,7 +46,9 @@
     "build": "node scripts/build.mjs",
     "lint": "tsc --noEmit -p tsconfig.test.json && node scripts/check-package.mjs",
     "test": "pnpm build && tsc --noEmit -p tsconfig.exports.json && tsc -p tsconfig.test.json && node --test --test-concurrency=2 .test-output/src/docx/*.test.js scripts/package.test.mjs",
-    "test:browser": "node scripts/browser-test.mjs"
+    "test:browser": "node scripts/browser-test.mjs",
+    "test:coverage": "node scripts/coverage.mjs",
+    "test:coverage:tooling": "node --test scripts/coverage.test.mjs"
   },
   "devDependencies": {
     "@types/node": "26.6.4",

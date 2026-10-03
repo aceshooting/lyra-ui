@@ -2121,3 +2121,63 @@ describe('-bg custom properties and their deprecated -background aliases', () =>
     expect(await paints(`${declarations('background', 50)} ${declarations('bg', 0)}`)).to.deep.equal(expected(0));
   });
 });
+
+it('recomputes an active search when its inherited locale changes', async () => {
+  const wrapper = await fixture<HTMLElement>(html`<div lang="en"><lr-diff-view .strings=${{ viewerSearchNoMatches: 'No matching lines' }} .newText=${'I'}></lr-diff-view></div>`);
+  const el = wrapper.querySelector('lr-diff-view') as LyraDiffView;
+  await el.updateComplete;
+  expect(await el.search('i')).to.equal(1);
+  const changes: number[] = [];
+  el.addEventListener('lr-search-change', (event) => changes.push(event.detail.matchCount));
+  wrapper.lang = 'tr';
+  await waitUntil(() => changes.includes(0));
+  expect(el.shadowRoot!.querySelectorAll('[data-match]').length).to.equal(0);
+});
+
+it('contains a synchronous optional highlighter failure and retains the plain diff', async () => {
+  const el = await fixture<LyraDiffView>(html`<lr-diff-view .oldText=${'before'} .newText=${'after'}></lr-diff-view>`);
+  const loader = el as unknown as { loadHighlighterCore: () => Promise<never> };
+  loader.loadHighlighterCore = (): never => { throw new Error('loader unavailable'); };
+  el.languages = { text: { name: 'text', scopeName: 'source.text', patterns: [] } };
+  el.language = 'text';
+  await el.updateComplete;
+  expect(el.shadowRoot!.textContent).to.contain('- before');
+  expect(el.shadowRoot!.textContent).to.contain('+ after');
+});
+
+it('removes the copied confirmation after its real timeout while retaining the copy action', async () => {
+  const restore = stubClipboard(navigator, { writeText: async () => {} });
+  try {
+    const el = await fixture<LyraDiffView>(html`<lr-diff-view copyable .newText=${'after'}></lr-diff-view>`);
+    const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="copy-button"]')!;
+    const copied = oneEvent(el, 'lr-copy');
+    button.click();
+    await copied;
+    await el.updateComplete;
+    expect(button.textContent).to.contain('Copied');
+    await waitUntil(() => !button.textContent?.includes('Copied'), 'confirmation expires', { timeout: 2500 });
+    expect(button.textContent).to.contain('Copy');
+  } finally {
+    restore();
+  }
+});
+
+it('retains a plain diff when language name discovery throws', async () => {
+  const el = await fixture<LyraDiffView>(html`<lr-diff-view .newText=${'visible'} language="text"></lr-diff-view>`);
+  const languages = new Proxy({}, {
+    ownKeys(): never { throw new Error('grammar names unavailable'); },
+  });
+  el.languages = languages;
+  await el.updateComplete;
+  expect(el.shadowRoot!.textContent).to.contain('+ visible');
+});
+
+it('reports a bounded lower search count when more than ten thousand diff lines match', async () => {
+  const el = await fixture<LyraDiffView>(html`<lr-diff-view .maxLines=${20_000} .newText=${Array(10_001).fill('hit').join('\n')}></lr-diff-view>`);
+  let detail: { matchCount: number; matchCountExact: boolean } | undefined;
+  el.addEventListener('lr-search-change', (event) => { detail = event.detail; });
+  expect(await el.search('hit')).to.equal(10_000);
+  expect(detail?.matchCount).to.equal(10_000);
+  expect(detail?.matchCountExact).to.equal(false);
+  expect(el.shadowRoot!.querySelectorAll('[data-active-match]').length).to.equal(1);
+});

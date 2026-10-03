@@ -3,8 +3,10 @@ import { test } from 'node:test';
 import { createInternalDocxSession } from './session.js';
 import type { DocxEngineEvent, DocxEnginePort, DocxSessionPort } from './engine-port.js';
 import type {
-  DocxCommand, DocxCommandAvailability, DocxResult, DocxSelection, DocxSource
+  DocxAction, DocxCommandAvailability, DocxResult, DocxSelection, DocxSource, DocxFormatting
 } from './types.js';
+const formatting: DocxFormatting = Object.freeze({ paragraphStyleId: null, alignment: null,
+  fontFamily: null, fontSizePoints: null, color: null, bulletList: false, numberedList: false });
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -34,6 +36,12 @@ function fixture(readOnly = false) {
     released: [] as object[],
     selection: 'text' as DocxSelection['kind'],
     composing: false,
+    formatting,
+    styleReads: 0,
+    fontReads: 0,
+    searches: 0,
+    navigations: 0,
+    replacements: [] as string[],
     canCalls: 0,
     executes: 0,
     focuses: 0,
@@ -54,13 +62,18 @@ function fixture(readOnly = false) {
   const engine: DocxEnginePort = {
     inspect() {
       if (f.inspectThrows) throw new Error('private document details');
-      return { selection: f.selection, composing: f.composing };
+      return { selection: f.selection, composing: f.composing, formatting: f.formatting };
     },
     subscribe(next) {
       listener = next; f.subscriptions++;
       return () => { listener = undefined; f.subscriptions--; };
     },
-    can(_command: DocxCommand) { f.canCalls++; return f.availability; },
+    can(_command: DocxAction) { f.canCalls++; return f.availability; },
+    paragraphStyles() { f.styleReads++; return Object.freeze({ items: Object.freeze([]), truncated: false }); },
+    fontFamilies() { f.fontReads++; return Object.freeze({ items: Object.freeze([]), truncated: false }); },
+    find() { f.searches++; return { matches: [{ token: {}, text: 'alpha', before: '', after: ' beta' }], truncated: false }; },
+    selectMatch() { f.navigations++; f.emit('user-selection'); return { ok: true, value: undefined }; },
+    replaceMatch(_token, text) { f.replacements.push(text); f.emit('user-selection'); f.emit('change'); return { ok: true, value: undefined }; },
     execute() {
       f.executes++;
       if (f.executeThrows) throw new Error('private document details');
@@ -99,6 +112,216 @@ async function opened(readOnly = false, source: DocxSource = { kind: 'docx', byt
   return { ...context, session, revision };
 }
 
+test('basic editing exposes formatting, catalogs and bounded search without engine polling', async () => {
+  const { session, f } = await opened();
+  assert.equal('formatting' in session.snapshot(), true);
+  assert.equal('paragraphStyles' in session, true);
+  assert.equal('fontFamilies' in session, true);
+  assert.equal('find' in session, true);
+  assert.equal('selectMatch' in session, true);
+  assert.equal('replaceMatch' in session, true);
+  const calls = f.canCalls;
+  session.snapshot(); session.snapshot();
+  assert.equal(f.canCalls, calls);
+});
+
+test('parameterized edits validate before engine calls and keep existing revision and lease gates', async () => {
+  const { session, f } = await opened();
+  const invalid = { type: 'font-size', points: Infinity } as const;
+  const before = f.canCalls;
+  assert.deepEqual(session.can(invalid), { enabled: false, reason: 'invalid-option' });
+  refusal(session.execute(invalid), 'invalid-option');
+  assert.equal(f.canCalls, before);
+  assert.equal(f.executes, 0);
+  const lease = value(session.retainSelection());
+  const revision = session.snapshot().revision!;
+  const edited = value(session.execute({ type: 'alignment', value: 'center' }, { expectedRevision: revision, selection: lease }));
+  assert.equal(edited.value, revision.value + 1);
+  assert.equal(f.released.length, 1);
+  refusal(session.execute({ type: 'alignment', value: 'left' }, { expectedRevision: revision }), 'stale-revision');
+});
+
+test('formatting state is immutable and stable, with no catalog, search or save work on input', async () => {
+  const { session, f, engine } = await opened();
+  let saves = 0;
+  engine.save = async () => { saves++; return new Uint8Array(); };
+  const first = session.snapshot();
+  f.formatting = { ...formatting };
+  f.emit('state');
+  assert.equal(session.snapshot(), first);
+  f.formatting = { ...formatting, fontFamily: 'Arial', fontSizePoints: 14 };
+  f.emit('state');
+  const changed = session.snapshot();
+  assert.notEqual(changed, first);
+  assert.equal(changed.formatting.fontFamily, 'Arial');
+  assert.ok(Object.isFrozen(changed.formatting));
+  f.emit('change');
+  assert.equal(session.snapshot().formatting, changed.formatting);
+  assert.deepEqual([f.styleReads, f.fontReads, f.searches, saves], [0, 0, 0, 0]);
+  value(session.paragraphStyles()); value(session.fontFamilies());
+  assert.deepEqual([f.styleReads, f.fontReads], [1, 1]);
+});
+
+test('search ids are opaque, revision stamped and invalidated by new queries and committed edits', async () => {
+  const { session, f } = await opened();
+  const foreign = await opened();
+  const first = value(session.find('alpha'));
+  assert.equal(first.revision, session.snapshot().revision);
+  assert.ok(Object.isFrozen(first)); assert.ok(Object.isFrozen(first.matches)); assert.ok(Object.isFrozen(first.matches[0]));
+  assert.deepEqual(Object.keys(first.matches[0]!).sort(), ['after', 'before', 'id', 'text']);
+  const id = first.matches[0]!.id;
+  refusal(session.selectMatch('forged'), 'stale-search');
+  refusal(foreign.session.selectMatch(id), 'stale-search');
+  const before = session.snapshot();
+  value(session.selectMatch(id));
+  assert.equal(session.snapshot().selection.version, before.selection.version + 1);
+  assert.equal(session.snapshot().revision, before.revision);
+  assert.equal(session.snapshot().dirty, false);
+  f.emit('focus-selection');
+  value(session.selectMatch(id));
+  const next = value(session.find('beta'));
+  refusal(session.selectMatch(id), 'stale-search');
+  f.emit('change');
+  refusal(session.selectMatch(next.matches[0]!.id), 'stale-search');
+  session.destroy();
+  refusal(session.selectMatch(next.matches[0]!.id), 'destroyed');
+});
+
+test('read-only search navigation is allowed while replacement and composed search are refused', async () => {
+  const { session, f } = await opened(true);
+  const found = value(session.find('alpha'));
+  const id = found.matches[0]!.id;
+  value(session.selectMatch(id));
+  refusal(session.replaceMatch(id, 'changed'), 'read-only');
+  assert.deepEqual(f.replacements, []);
+  f.composing = true; f.emit('composition');
+  refusal(session.find('alpha'), 'composing');
+  refusal(session.selectMatch(id), 'composing');
+});
+
+test('replace one validates before selection, preserves Unicode and accepts empty deletion', async () => {
+  const { session, f } = await opened();
+  let found = value(session.find('alpha'));
+  const id = found.matches[0]!.id;
+  refusal(session.replaceMatch(id, 'x'.repeat(4097)), 'resource-limit');
+  assert.equal(f.navigations, 0); assert.deepEqual(f.replacements, []);
+  const revision = value(session.replaceMatch(id, '🙂 e\u0301'));
+  assert.deepEqual(f.replacements, ['🙂 e\u0301']);
+  assert.equal(revision.value, found.revision.value + 1);
+  refusal(session.replaceMatch(id, 'again'), 'stale-search');
+  found = value(session.find('alpha'));
+  value(session.replaceMatch(found.matches[0]!.id, ''));
+  assert.deepEqual(f.replacements, ['🙂 e\u0301', '']);
+});
+
+test('invalid XML authoring leaves the selection, revision and search match usable', async () => {
+  const { session, f } = await opened();
+  const found = value(session.find('alpha'));
+  const id = found.matches[0]!.id;
+  const before = session.snapshot();
+  for (const text of ['\u0000', '\u000b', '\ufffe', '\ud800', '\udfff']) {
+    refusal(session.replaceMatch(id, text), 'invalid-option');
+    refusal(session.execute({ type: 'link', href: '#bookmark', text }), 'invalid-option');
+    assert.equal(session.can({ type: 'link', href: '#bookmark', text }).reason, 'invalid-option');
+  }
+  assert.equal(f.navigations, 0);
+  assert.equal(f.executes, 0);
+  assert.deepEqual(f.replacements, []);
+  assert.equal(session.snapshot(), before);
+  value(session.replaceMatch(id, '🙂 東京'));
+  assert.deepEqual(f.replacements, ['🙂 東京']);
+});
+
+test('search and catalog callbacks cannot return successful data after terminal or revision changes', async () => {
+  for (const action of ['find', 'paragraphStyles', 'fontFamilies'] as const) {
+    const { session, engine } = await opened();
+    const original = engine[action].bind(engine);
+    if (action === 'find') engine.find = (...args) => { session.destroy(); return (original as typeof engine.find)(...args); };
+    else if (action === 'paragraphStyles') engine.paragraphStyles = () => { session.destroy(); return { items: [], truncated: false }; };
+    else engine.fontFamilies = () => { session.destroy(); return { items: [], truncated: false }; };
+    refusal<unknown>(action === 'find' ? session.find('alpha') : session[action](), 'destroyed');
+  }
+  const { session, f, engine } = await opened();
+  const original = engine.find;
+  engine.find = (...args) => { f.emit('change'); return original(...args); };
+  refusal(session.find('alpha'), 'stale-revision');
+});
+
+test('reentrant queries preserve the newest registry and invalidate older work', async () => {
+  const { session, engine } = await opened();
+  const original = engine.find;
+  let latest = '';
+  engine.find = (query, options) => {
+    if (query === 'outer') latest = value(session.find('inner')).matches[0]!.id;
+    return original(query, options);
+  };
+  refusal(session.find('outer'), 'stale-search');
+  value(session.selectMatch(latest));
+});
+
+test('search navigation options reject malformed records and never invoke accessors', async () => {
+  const { session, f } = await opened();
+  const id = value(session.find('alpha')).matches[0]!.id;
+  let getters = 0;
+  for (const options of [null, [], { unexpected: true }, { expectedRevision: { documentId: 'x', value: Infinity } },
+    { get expectedRevision() { getters++; return session.snapshot().revision; } }]) {
+    refusal(session.selectMatch(id, options as never), 'invalid-option');
+    refusal(session.replaceMatch(id, 'new', options as never), 'invalid-option');
+  }
+  assert.equal(getters, 0); assert.equal(f.navigations, 0); assert.deepEqual(f.replacements, []);
+});
+
+test('search navigation refuses symbolic or proxy options without invalidating the current match', async () => {
+  const { session, f } = await opened();
+  const id = value(session.find('alpha')).matches[0]!.id;
+  for (const options of [{ [Symbol('untrusted')]: true },
+    { expectedRevision: { documentId: 'foreign', value: -1 } },
+    new Proxy({}, { getPrototypeOf() { throw new Error('untrusted prototype'); } }),
+    new Proxy({}, { ownKeys() { throw new Error('untrusted keys'); } }),
+    new Proxy({ expectedRevision: {} }, { getOwnPropertyDescriptor() { return undefined; } })]) {
+    refusal(session.selectMatch(id, options as never), 'invalid-option');
+    refusal(session.replaceMatch(id, 'replacement', options as never), 'invalid-option');
+  }
+  assert.equal(f.navigations, 0);
+  assert.deepEqual(f.replacements, []);
+  value(session.selectMatch(id));
+  assert.equal(f.navigations, 1);
+});
+
+test('search navigation and replacement accept the current expected revision and refuse foreign revisions before engine work', async () => {
+  const { session, f } = await opened();
+  const found = value(session.find('alpha'));
+  const id = found.matches[0]!.id;
+  const foreign = { documentId: 'foreign-document', value: found.revision.value };
+  refusal(session.selectMatch(id, { expectedRevision: foreign }), 'stale-revision');
+  refusal(session.replaceMatch(id, 'replacement', { expectedRevision: foreign }), 'stale-revision');
+  assert.equal(f.navigations, 0);
+  assert.deepEqual(f.replacements, []);
+  value(session.selectMatch(id, { expectedRevision: found.revision }));
+  assert.equal(f.navigations, 1);
+  const replaced = value(session.replaceMatch(id, 'replacement', { expectedRevision: found.revision }));
+  assert.deepEqual(f.replacements, ['replacement']);
+  assert.equal(replaced.documentId, found.revision.documentId);
+  assert.equal(replaced.value, found.revision.value + 1);
+});
+
+test('lease release rechecks composition and search generation before navigation or replacement', async () => {
+  for (const action of ['select', 'replace'] as const) {
+    for (const change of ['composition', 'query'] as const) {
+      const { session, f, engine } = await opened();
+      const id = value(session.find('alpha')).matches[0]!.id;
+      value(session.retainSelection());
+      engine.releaseSelection = () => {
+        if (change === 'composition') { f.composing = true; f.emit('composition'); }
+        else value(session.find('new'));
+      };
+      const result = action === 'select' ? session.selectMatch(id) : session.replaceMatch(id, 'new');
+      refusal<unknown>(result, change === 'composition' ? 'composing' : 'stale-search');
+      assert.equal(f.navigations, 0); assert.deepEqual(f.replacements, []);
+    }
+  }
+});
+
 test('construction owns one mount without opening an engine and caches frozen state', () => {
   const { f, create } = fixture();
   const session = value(create());
@@ -112,6 +335,26 @@ test('construction owns one mount without opening an engine and caches frozen st
   assert.equal(f.claimsReleased, 1);
   assert.equal(session.snapshot().status, 'destroyed');
   assert.equal(value(create()).snapshot().status, 'idle');
+});
+
+test('ownership lost during synchronous mount claiming releases the claim without creating or opening a session', () => {
+  for (const kind of ['callback', 'invalid', 'throws']) {
+    const { f, create, port } = fixture();
+    let releases = 0;
+    port.claimMount = (_mount, onLost) => {
+      if (kind === 'callback') onLost();
+      return { ok: true, value: {
+        valid() {
+          if (kind === 'throws') throw new Error('mount inspection unavailable');
+          return kind !== 'invalid';
+        },
+        release() { releases++; }
+      } };
+    };
+    refusal(create(), 'invalid-mount');
+    assert.equal(releases, 1);
+    assert.equal(f.opens, 0);
+  }
 });
 
 test('invalid options and preflight calls do not spend the idle session', async () => {
@@ -414,7 +657,7 @@ test('initial inspection destroying then returning or throwing never establishes
     engine.inspect = () => {
       session.destroy();
       if (throws) throw new Error('private document details');
-      return { selection: 'text', composing: false };
+      return { selection: 'text', composing: false, formatting };
     };
     refusal(await session.open({ kind: 'blank' }), 'destroyed');
     assert.equal(session.snapshot().status, 'destroyed');
@@ -429,7 +672,7 @@ test('runtime inspection destroying the session cannot mutate its terminal snaps
   let terminal = session.snapshot();
   engine.inspect = () => {
     session.destroy(); terminal = session.snapshot();
-    return { selection: 'text', composing: true };
+    return { selection: 'text', composing: true, formatting };
   };
   f.emit('change');
   assert.equal(session.snapshot(), terminal);

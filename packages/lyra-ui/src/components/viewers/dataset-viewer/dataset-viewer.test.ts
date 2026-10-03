@@ -11,6 +11,7 @@ import './dataset-viewer.js';
 import type { LyraDatasetViewer } from './dataset-viewer.js';
 import { findDocumentRenderer } from '../document-viewer/registry.js';
 import { LyraResourceLimitError } from '../../../internal/resource-loader.js';
+import { VIEWER_SEARCH_WORK_LIMIT } from '../viewer-search-limits.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const TAB_DATA = 'name\tage\tcity\nAda\t30\tLondon\nGrace\t85\tArlington';
@@ -1624,4 +1625,39 @@ it('keeps a stable items reference and keyFunction on the composed lr-virtual-li
   } finally {
     restore();
   }
+});
+
+
+describe('dataset header and cell search ceilings', () => {
+  for (const location of ['header', 'body'] as const) {
+    it(`reports an inexact lower bound when the ${location} exceeds search work`, async () => {
+      const el = await fixture<LyraDatasetViewer>(html`<lr-dataset-viewer></lr-dataset-viewer>`);
+      const oversized = 'x'.repeat(VIEWER_SEARCH_WORK_LIMIT);
+      (el as unknown as { fetchState: unknown }).fetchState = {
+        kind: 'loaded',
+        table: {
+          fields: location === 'header' ? [oversized] : ['value'],
+          rows: location === 'header' ? [{ [oversized]: 'hit' }] : [{ value: oversized }, { value: 'hit' }],
+        },
+      };
+      let exact: boolean | undefined;
+      el.addEventListener('lr-search-change', (event) => { exact = event.detail.matchCountExact; });
+      expect(await el.search('hit')).to.equal(0);
+      expect(exact).to.equal(false);
+      el.clearSearch();
+      expect(exact).to.equal(true);
+    });
+  }
+
+  it('caps matches in the header before searching later body cells', async () => {
+    const el = await fixture<LyraDatasetViewer>(html`<lr-dataset-viewer></lr-dataset-viewer>`);
+    const fields = Array.from({ length: 1_001 }, (_, index) => `hit-${index}`);
+    (el as unknown as { fetchState: unknown }).fetchState = {
+      kind: 'loaded', table: { fields, rows: [{ [fields[0]!]: 'hit' }] },
+    };
+    let detail: { matchCount: number; matchCountExact: boolean } | undefined;
+    el.addEventListener('lr-search-change', (event) => { detail = event.detail; });
+    expect(await el.search('hit')).to.equal(1_000);
+    expect(detail).to.deep.include({ matchCount: 1_000, matchCountExact: false });
+  });
 });

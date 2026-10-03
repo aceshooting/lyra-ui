@@ -54,13 +54,13 @@ export const AccessibleName: Story = {
   `,
 };
 
-/** Lyra buttons preserve the trigger relationship across their own shadow boundary: the
- *  popover points `aria-controls` at its public host and the focused native button receives that
- *  target through `ariaControlsElements` in supporting browsers. */
+/** The semantic native control alone owns expanded state and the popup relationship; the
+ *  generic Lyra button host remains free of generated widget ARIA. */
 export const LyraButtonTrigger: Story = {
-  render: () => html`
-    <lr-popover>
-      <lr-button slot="trigger">Open details</lr-button>
+  parameters: { docs: { description: { story: 'The native button inside `lr-button` owns popup state and controls the public popover host. Ownership follows a replacement native control and restores authored attributes when the popover disconnects.' } } },
+  render: (_args, context) => html`
+    <lr-popover .open=${context.viewMode !== 'docs'}>
+      <lr-button slot="trigger" tabindex="0">Open details</lr-button>
       <p>Floating content controlled by the Lyra button.</p>
     </lr-popover>
   `,

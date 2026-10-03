@@ -1,10 +1,24 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { admitDocx } from './admission.js';
+import { normalizeDocxAction } from './commands.js';
 import { docxFixture, DOCUMENT_XML, relationship } from './admission-fixtures.js';
 
 const invalid = { ok: false, code: 'invalid-document' };
 const limited = { ok: false, code: 'resource-limit' };
+
+test('authored hyperlink targets use the same admission policy after serialization', async () => {
+  const credentialHref = new URL('https://example.com');
+  credentialHref.username = 'user';
+  credentialHref.password = 'pass';
+  for (const href of ['https://example.com/path', 'mailto:person@example.com', '#bookmark',
+    'http://example.com', credentialHref.href, 'https://example.com/back\\slash',
+    'javascript:alert(1)', 'https://example.com/path with space']) {
+    const authored = normalizeDocxAction({ type: 'link', href });
+    const admitted = await admitDocx(docxFixture({ 'word/_rels/document.xml.rels': relationship(href, 'hyperlink') }));
+    assert.equal(admitted.ok, authored.ok, href);
+  }
+});
 
 test('accepts stored and deflated DOCX without changing input or unknown parts', async () => {
   for (const level of [0, 6] as const) {

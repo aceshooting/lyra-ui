@@ -7,8 +7,8 @@ import { tag } from '@aceshooting/lyra-ui/utilities/prefix.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '@aceshooting/lyra-ui/utilities/announcer.js';
 import { createDocxSession } from './create-session.js';
 import type {
-  DocxCommand, DocxRefusalCode, DocxResult, DocxRevision, DocxSaveReceipt,
-  DocxSelectionLease, DocxSession, DocxSnapshot, DocxSource,
+  DocxCommand, DocxEdit, DocxRefusalCode, DocxResult, DocxRevision, DocxSaveReceipt,
+  DocxSelectionLease, DocxSession, DocxSnapshot, DocxSource, DocxSearchResults,
 } from './types.js';
 import { DOCX_EDITOR_STRINGS } from './strings.js';
 import { styles } from './docx-editor.styles.js';
@@ -31,6 +31,16 @@ const commandLabels = {
 } as const satisfies Record<DocxCommand, string>;
 const commands: readonly DocxCommand[] = ['bold', 'italic', 'underline', 'undo', 'redo'];
 const buttonTag = unsafeStatic(tag('button'));
+const selectTag = unsafeStatic(tag('select'));
+const optionTag = unsafeStatic(tag('option'));
+const comboboxTag = unsafeStatic(tag('combobox'));
+const numberInputTag = unsafeStatic(tag('number-input'));
+const colorPickerTag = unsafeStatic(tag('color-picker'));
+const popoverTag = unsafeStatic(tag('popover'));
+const inputTag = unsafeStatic(tag('input'));
+const checkboxTag = unsafeStatic(tag('checkbox'));
+const alignments = ['left', 'center', 'right', 'justify'] as const;
+const listKinds = ['bullet', 'numbered'] as const;
 const maxInputBytes = 4 * 1024 * 1024;
 const refused = <T>(code: DocxRefusalCode): DocxResult<T> => ({ ok: false, code });
 
@@ -58,11 +68,42 @@ const refused = <T>(code: DocxRefusalCode): DocxResult<T> => ({ ok: false, code 
  * @csspart file-input - Native local DOCX file picker.
  * @csspart format-actions - Formatting and history controls.
  * @csspart format-button - One formatting or history control, identified by data-command.
+ * @csspart editing-tools - Paragraph, alignment, list, font, color and link tools.
+ * @csspart paragraph-style - Actual styles offered by the current document.
+ * @csspart alignment-actions - Four paragraph alignment actions.
+ * @csspart list-actions - Bullet and numbered list actions.
+ * @csspart edit-button - One alignment or list action.
+ * @csspart font-family - Font family picker with on-demand suggestions.
+ * @csspart font-size - Font size field in points.
+ * @csspart text-color - Hex text color picker; a missing snapshot color is not inferred.
+ * @csspart color-state - Identifies a color unavailable through the editor selection contract.
+ * @csspart color-auto - Applies automatic authored text color.
+ * @csspart link-popover - URL and optional text editor.
+ * @csspart link-trigger - Opens the link editor.
+ * @csspart link-fields - Link form contents.
+ * @csspart link-href - URL field.
+ * @csspart link-text - Optional replacement text field.
+ * @csspart link-actions - Apply, remove and cancel controls.
+ * @csspart link-apply - Applies a validated link.
+ * @csspart link-remove - Removes the current link.
+ * @csspart link-cancel - Closes the link editor.
+ * @csspart find - On-demand search and single-match replacement surface.
+ * @csspart find-toggle - Opens and closes the find surface.
+ * @csspart find-query - Search query field.
+ * @csspart find-match-case - Case-sensitive option.
+ * @csspart find-whole-word - Whole-word option.
+ * @csspart find-submit - Runs a bounded search.
+ * @csspart find-count - Match count and truncation notice.
+ * @csspart find-previous - Selects the previous match.
+ * @csspart find-next - Selects the next match.
+ * @csspart find-replace - Replacement text field.
+ * @csspart find-replace-button - Replaces one selected match.
  * @csspart confirm - Dirty document replacement confirmation.
  * @csspart discard-button - Confirms replacement of unsaved content.
  * @csspart keep-button - Cancels replacement of unsaved content.
  * @csspart document - Scrollable engine surface.
  * @csspart error - Localized load or save failure.
+ * @csspart edit-error - Localized editing refusal.
  * @csspart status - Filename and current document state.
  * @csspart filename - The local file name or untitled fallback.
  * @csspart state - Current load, dirty or save state.
@@ -87,17 +128,30 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   @state() private openingFile = false;
   @state() private wasDisconnected = false;
   @state() private pendingAction: 'new' | 'open' | null = null;
-  @state() private toolbarIndex = 0;
+  @state() private toolbarKey = 'bold';
+  @state() private paragraphStyleItems: readonly { id: string; label: string }[] = [];
+  @state() private fontFamilyItems: readonly string[] = [];
+  @state() private findOpen = false;
+  @state() private searchResults: DocxSearchResults | null = null;
+  @state() private searchIndex = -1;
+  @state() private query = '';
+  @state() private matchCase = false;
+  @state() private wholeWord = false;
+  @state() private replacement = '';
+  @state() private linkHref = '';
+  @state() private linkText = '';
+  @state() private editError: DocxRefusalCode | null = null;
 
   private mount: HTMLDivElement | null = null;
   private session: DocxSession | null = null;
   private unsubscribeSession: (() => void) | null = null;
   private toolbarSelection: DocxSelectionLease | null = null;
-  private openInProgress = false;
+  @state() private openInProgress = false;
   private sourceReadSequence = 0;
   private politeSink: AnnouncementSink | null = null;
   private assertiveSink: AnnouncementSink | null = null;
   private announcementsArmed = false;
+  private pickerFocusReturn = false;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -124,9 +178,11 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     this.mount = null;
     this.currentSnapshot = null;
     this.openInProgress = false;
+    this.openingFile = false;
     this.localError = null;
     this.wasDisconnected = true;
     this.pendingAction = null;
+    this.clearEditingDrafts();
     this.emit('lr-change', { snapshot: null });
     this.politeSink?.release();
     this.politeSink = null;
@@ -138,6 +194,9 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
 
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
+    const enabled = this.enabledToolbarButtons();
+    if (enabled.length && !enabled.some(button => button.getAttribute('data-tool-key') === this.toolbarKey))
+      this.toolbarKey = enabled[0]!.getAttribute('data-tool-key') ?? 'bold';
     if (this.mount) {
       this.mount.setAttribute('aria-label', this.editorLabel());
       this.mount.title = this.localize('docxEditorShortcut');
@@ -145,15 +204,6 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     if (!this.announcementsArmed && this.wasDisconnected)
       this.politeSink?.announce(this.localize('docxEditorDisconnected'));
     this.announcementsArmed = true;
-  }
-
-  protected override willUpdate(changed: PropertyValues): void {
-    super.willUpdate(changed);
-    if (changed.has('currentSnapshot')) {
-      const enabled = commands.filter(command => this.currentSnapshot?.commands[command].enabled);
-      if (enabled.length > 0 && !enabled.includes(commands[this.toolbarIndex]!))
-        this.toolbarIndex = commands.indexOf(enabled[0]!);
-    }
   }
 
   /** Current immutable session state, or null before opening and after disconnect. */
@@ -171,6 +221,21 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     this.session?.destroy();
     this.session = null;
     this.mount?.replaceChildren();
+    this.clearEditingDrafts();
+  }
+
+  private clearEditingDrafts(): void {
+    this.pickerFocusReturn = false;
+    this.paragraphStyleItems = [];
+    this.fontFamilyItems = [];
+    this.searchResults = null;
+    this.searchIndex = -1;
+    this.editError = null;
+    this.findOpen = false;
+    this.query = '';
+    this.replacement = '';
+    this.linkHref = '';
+    this.linkText = '';
   }
 
   private syncSession(): void {
@@ -178,7 +243,15 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     const previous = this.currentSnapshot;
     const next = this.session.snapshot();
     if (next === previous) return;
+    if (next.selection.version !== previous?.selection.version ||
+        next.revision?.documentId !== previous?.revision?.documentId || next.revision?.value !== previous?.revision?.value)
+      this.releaseToolbarSelection();
     this.currentSnapshot = next;
+    if (previous?.revision?.documentId !== next.revision?.documentId ||
+        previous?.revision?.value !== next.revision?.value) {
+      this.searchResults = null;
+      this.searchIndex = -1;
+    }
     this.emit('lr-change', { snapshot: next });
     if (this.announcementsArmed && next.status === 'opening' && previous?.status !== 'opening')
       this.politeSink?.announce(this.localize('docxEditorOpening'));
@@ -279,6 +352,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       if (options.signal?.aborted || sourceRead !== this.sourceReadSequence) return refused('aborted');
       return await this.load({ kind: 'docx', bytes }, options.name ?? input.name, options.signal);
     } catch {
+      if (options.signal?.aborted || sourceRead !== this.sourceReadSequence) return refused('aborted');
       this.reportError('open-failed');
       return refused('open-failed');
     } finally {
@@ -293,14 +367,41 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     return this.load({ kind: 'blank' }, '', options.signal);
   }
 
-  can(command: DocxCommand) {
+  can(command: DocxCommand | DocxEdit) {
     return this.session?.can(command) ?? { enabled: false, reason: 'not-ready' as const };
   }
 
-  /** Execute one currently supported editing or history command. */
-  execute(command: DocxCommand, options: { expectedRevision?: DocxRevision; selection?: DocxSelectionLease } = {}): DocxResult<DocxRevision> {
+  /** Execute a supported formatting, editing or history command. */
+  execute(command: DocxCommand | DocxEdit, options: { expectedRevision?: DocxRevision; selection?: DocxSelectionLease } = {}): DocxResult<DocxRevision> {
     if (!this.session) return refused('not-ready');
     const result = this.session.execute(command, options);
+    this.syncSession();
+    return result;
+  }
+
+  /** Inspect paragraph styles in the open document on demand. */
+  paragraphStyles() { return this.session?.paragraphStyles() ?? refused('not-ready'); }
+
+  /** Inspect candidate font families on demand; this does not load font assets. */
+  fontFamilies() { return this.session?.fontFamilies() ?? refused('not-ready'); }
+
+  /** Search the current revision without changing document content. */
+  find(query: string, options: { matchCase?: boolean; wholeWord?: boolean; limit?: number } = {}) {
+    return this.session?.find(query, options) ?? refused('not-ready');
+  }
+
+  /** Navigate to a revision-stamped result of the latest search. */
+  selectMatch(id: string, options: { expectedRevision?: DocxRevision } = {}) {
+    if (!this.session) return refused<void>('not-ready');
+    const result = this.session.selectMatch(id, options);
+    this.syncSession();
+    return result;
+  }
+
+  /** Replace one match, including deletion with an empty string. */
+  replaceMatch(id: string, text: string, options: { expectedRevision?: DocxRevision } = {}) {
+    if (!this.session) return refused<DocxRevision>('not-ready');
+    const result = this.session.replaceMatch(id, text, options);
     this.syncSession();
     return result;
   }
@@ -338,9 +439,148 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   }
 
   private retainToolbarSelection(): void {
-    this.releaseToolbarSelection();
+    if (this.toolbarSelection) return;
     const result = this.session?.retainSelection();
     if (result?.ok) this.toolbarSelection = result.value;
+  }
+
+  private reportEditRefusal(code: DocxRefusalCode): void {
+    this.editError = code;
+    this.emit('lr-error', { code });
+    if (this.announcementsArmed) this.assertiveSink?.announce(this.localize('docxEditorEditUnavailable'));
+  }
+
+  private runEdit(edit: DocxEdit, returnFocus = true): void {
+    const lease = this.toolbarSelection;
+    this.toolbarSelection = null;
+    const result = this.execute(edit, lease ? { selection: lease } : {});
+    lease?.release();
+    if (result.ok) this.editError = null;
+    else this.reportEditRefusal(result.code);
+    if (returnFocus) this.focusEditor();
+  }
+
+  private loadParagraphStyles(): void {
+    this.pickerFocusReturn = false;
+    this.retainToolbarSelection();
+    const result = this.paragraphStyles();
+    if (result.ok) this.paragraphStyleItems = result.value.items;
+    else this.reportEditRefusal(result.code);
+  }
+
+  private loadFontFamilies(): void {
+    this.pickerFocusReturn = false;
+    this.retainToolbarSelection();
+    const result = this.fontFamilies();
+    if (result.ok) this.fontFamilyItems = result.value.items;
+    else this.reportEditRefusal(result.code);
+  }
+
+  private onParagraphStyleChange(event: CustomEvent<{ value: string | string[] }>): void {
+    event.stopPropagation();
+    if (typeof event.detail.value === 'string' && event.detail.value) {
+      this.pickerFocusReturn = true;
+      this.runEdit({ type: 'paragraph-style', styleId: event.detail.value }, false);
+    }
+  }
+
+  private onFontFamilyChange(event: CustomEvent<{ value: string | string[] }>): void {
+    event.stopPropagation();
+    if (typeof event.detail.value === 'string' && event.detail.value) {
+      this.pickerFocusReturn = true;
+      this.runEdit({ type: 'font-family', family: event.detail.value }, false);
+    }
+  }
+
+  private onFontSizeChange(event: CustomEvent<{ value: string }>): void {
+    event.stopPropagation();
+    const points = Number(event.detail.value);
+    this.runEdit({ type: 'font-size', points });
+  }
+
+  private onColorChange(event: Event): void {
+    event.stopPropagation();
+    const color = (event.currentTarget as HTMLElement & { value: string }).value;
+    this.pickerFocusReturn = true;
+    this.runEdit({ type: 'text-color', color }, false);
+    if (!this.editError) void (event.currentTarget as HTMLElement & { hide(): Promise<void> }).hide();
+  }
+
+  private onPickerClosed(): void {
+    this.releaseToolbarSelection();
+    if (this.pickerFocusReturn) {
+      this.pickerFocusReturn = false;
+      queueMicrotask(() => { if (this.isConnected) this.focusEditor(); });
+    }
+  }
+
+  private openLinkEditor(): void {
+    this.retainToolbarSelection();
+    this.linkHref = '';
+    this.linkText = '';
+  }
+
+  private closeLinkEditor(returnFocus = true): void {
+    const popover = this.renderRoot.querySelector<HTMLElement & { hide(options?: { focusTrigger?: boolean }): Promise<void> }>('[part="link-popover"]');
+    void popover?.hide({ focusTrigger: false }).then(() => {
+      this.releaseToolbarSelection();
+      if (returnFocus) this.focusEditor();
+    });
+  }
+
+  private applyLink(): void {
+    this.runEdit(this.linkEdit(), false);
+    if (this.editError === null) this.closeLinkEditor();
+  }
+
+  private linkEdit(): DocxEdit {
+    const href = this.linkHref.trim();
+    const text = this.linkText;
+    return text ? { type: 'link', href, text } : { type: 'link', href };
+  }
+
+  private runFind(): void {
+    if (!this.findActionAvailable() || !this.query) return;
+    const result = this.find(this.query, { matchCase: this.matchCase, wholeWord: this.wholeWord, limit: 100 });
+    if (!result.ok) { this.reportEditRefusal(result.code); return; }
+    this.editError = null;
+    this.searchResults = result.value;
+    this.searchIndex = -1;
+    if (this.announcementsArmed) this.politeSink?.announce(this.localize('docxEditorFindCount', undefined,
+      { count: result.value.matches.length }));
+  }
+
+  private navigateMatch(direction: -1 | 1): void {
+    if (!this.findActionAvailable()) return;
+    const results = this.searchResults;
+    if (!results?.matches.length) return;
+    const index = this.searchIndex < 0 && direction === -1 ? results.matches.length - 1 :
+      (this.searchIndex + direction + results.matches.length) % results.matches.length;
+    const match = results.matches[index];
+    if (!match) return;
+    const result = this.selectMatch(match.id, { expectedRevision: results.revision });
+    if (result.ok) { this.searchIndex = index; this.editError = null; }
+    else { this.searchResults = null; this.searchIndex = -1; this.reportEditRefusal(result.code); }
+  }
+
+  private replaceCurrentMatch(): void {
+    if (!this.findActionAvailable(true)) return;
+    const results = this.searchResults;
+    const match = results?.matches[this.searchIndex];
+    if (!match || !results) return;
+    const result = this.replaceMatch(match.id, this.replacement, { expectedRevision: results.revision });
+    if (result.ok) {
+      this.searchResults = null;
+      this.searchIndex = -1;
+      this.editError = null;
+      if (this.announcementsArmed) this.politeSink?.announce(this.localize('docxEditorReplaced'));
+    } else this.reportEditRefusal(result.code);
+  }
+
+  private findActionAvailable(replacing = false): boolean {
+    const snapshot = this.currentSnapshot;
+    return snapshot?.status === 'ready' && !snapshot.composing && snapshot.activity !== 'saving' &&
+      (!replacing || !snapshot.readOnly);
   }
 
   private onHostKeyDown = (event: KeyboardEvent): void => {
@@ -350,7 +590,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       const targets = this.enabledToolbarButtons();
       const first = targets[0];
       (first ?? this.renderRoot.querySelector<HTMLElement>('[part="new-button"]'))?.focus();
-      if (first) this.toolbarIndex = commands.indexOf(first.getAttribute('data-command') as DocxCommand);
+      if (first) this.toolbarKey = first.getAttribute('data-tool-key') ?? 'bold';
       return;
     }
     if (event.key === 'Escape' && this.pendingAction) {
@@ -359,19 +599,38 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       this.focusEditor();
       return;
     }
-    const formatTarget = event.composedPath().find(node => node instanceof HTMLElement &&
-      node.getAttribute('part') === 'format-button' && this.renderRoot.contains(node));
-    if (formatTarget && ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+    if (event.key === 'Escape' && event.composedPath().some(node => node instanceof HTMLElement &&
+      node.getAttribute('part') === 'link-popover')) {
+      event.preventDefault();
+      this.closeLinkEditor();
+      return;
+    }
+    if (event.key === 'Escape' && this.findOpen && event.composedPath().some(node => node instanceof HTMLElement &&
+      node.getAttribute('part') === 'find')) {
+      event.preventDefault();
+      this.findOpen = false;
+      this.focusEditor();
+      return;
+    }
+    if (event.key === 'Escape' && event.composedPath().some(node => node instanceof HTMLElement &&
+      ['paragraph-style', 'font-family', 'text-color'].includes(node.getAttribute('part') ?? '') &&
+      Boolean((node as HTMLElement & { open?: boolean }).open))) {
+      this.pickerFocusReturn = true;
+      return;
+    }
+    const toolbarTarget = event.composedPath().find(node => node instanceof HTMLElement &&
+      node.hasAttribute('data-tool-key') && this.renderRoot.contains(node));
+    if (toolbarTarget && ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
       const targets = this.enabledToolbarButtons();
       if (targets.length === 0) return;
       event.preventDefault();
-      const current = Math.max(0, targets.indexOf(formatTarget as HTMLElement));
+      const current = Math.max(0, targets.indexOf(toolbarTarget as HTMLElement));
       const forward = this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
       const next = event.key === 'Home' ? 0 : event.key === 'End' ? targets.length - 1 :
         event.key === forward ? (current + 1) % targets.length : (current - 1 + targets.length) % targets.length;
       const target = targets[next];
       if (target) {
-        this.toolbarIndex = commands.indexOf(target.getAttribute('data-command') as DocxCommand);
+        this.toolbarKey = target.getAttribute('data-tool-key') ?? 'bold';
         target.focus();
       }
       return;
@@ -383,8 +642,14 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     }
   };
 
+  private onToolbarFocusIn = (event: FocusEvent): void => {
+    const target = event.composedPath().find(node => node instanceof HTMLElement &&
+      node.hasAttribute('data-tool-key') && this.renderRoot.contains(node)) as HTMLElement | undefined;
+    if (target) this.toolbarKey = target.getAttribute('data-tool-key') ?? 'bold';
+  };
+
   private enabledToolbarButtons(): HTMLElement[] {
-    return [...this.renderRoot.querySelectorAll<HTMLElement>('[part="format-button"]')]
+    return [...this.renderRoot.querySelectorAll<HTMLElement>('[data-tool-key]')]
       .filter(button => !button.hasAttribute('disabled') && !button.hidden && !button.inert &&
         !button.closest('[inert]') && button.getAttribute('aria-hidden') !== 'true');
   }
@@ -411,31 +676,47 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       });
       return;
     }
-    if (action === 'new') void this.newDocument().then(result => {
-      if (result.ok) this.focusEditor();
-      else this.renderRoot.querySelector<HTMLElement>('[part="new-button"]')?.focus();
-    });
-    else this.openFilePicker();
+    if (action === 'new') {
+      const sourceRead = this.sourceReadSequence + 1;
+      const pending = this.newDocument();
+      void pending.then(async result => {
+        await this.updateComplete;
+        if (!this.isConnected || sourceRead !== this.sourceReadSequence) return;
+        if (result.ok) this.focusEditor();
+        else this.renderRoot.querySelector<HTMLElement>('[part="new-button"]')?.focus();
+      });
+    } else this.openFilePicker();
   }
 
   private confirmToolbarAction(): void {
     const action = this.pendingAction;
     this.pendingAction = null;
-    if (action === 'new') void this.newDocument().then(result => {
-      if (result.ok) this.focusEditor();
-      else this.renderRoot.querySelector<HTMLElement>('[part="new-button"]')?.focus();
-    });
-    else if (action === 'open') this.openFilePicker();
+    if (action === 'new') {
+      const sourceRead = this.sourceReadSequence + 1;
+      const pending = this.newDocument();
+      void pending.then(async result => {
+        await this.updateComplete;
+        if (!this.isConnected || sourceRead !== this.sourceReadSequence) return;
+        if (result.ok) this.focusEditor();
+        else this.renderRoot.querySelector<HTMLElement>('[part="new-button"]')?.focus();
+      });
+    } else if (action === 'open') this.openFilePicker();
   }
 
   private onFileSelected = (event: Event): void => {
     const input = event.currentTarget as HTMLInputElement;
     const file = input.files?.item(0);
     input.value = '';
-    if (file) void this.open(file).then(result => {
-      if (result.ok) this.focusEditor();
-      else this.renderRoot.querySelector<HTMLElement>('[part="open-button"]')?.focus();
-    });
+    if (file) {
+      const sourceRead = this.sourceReadSequence + 1;
+      const pending = this.open(file);
+      void pending.then(async result => {
+        await this.updateComplete;
+        if (!this.isConnected || sourceRead !== this.sourceReadSequence) return;
+        if (result.ok) this.focusEditor();
+        else this.renderRoot.querySelector<HTMLElement>('[part="open-button"]')?.focus();
+      });
+    }
   };
 
   private statusText(): string {
@@ -456,15 +737,184 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     return html`<${buttonTag}
       part="format-button"
       data-command=${command}
+      data-tool-key=${command}
       data-active=${active === true ? 'true' : 'false'}
       size="s"
       appearance=${active === true ? 'filled' : active === 'mixed' ? 'filled-outlined' : 'quiet'}
       ?disabled=${!availability?.enabled}
-      tabindex=${availability?.enabled && this.toolbarIndex === commands.indexOf(command) ? '0' : '-1'}
+      tabindex=${availability?.enabled && this.toolbarKey === command ? '0' : '-1'}
       .pressed=${formatting ? active === 'mixed' ? 'mixed' : active === true : null}
       @pointerdown=${() => { if (formatting) this.retainToolbarSelection(); }}
       @click=${() => this.runToolbarCommand(command)}
     >${this.localize(commandLabels[command])}</${buttonTag}>`;
+  }
+
+  private renderAlignment(value: typeof alignments[number]): TemplateResult {
+    const edit: DocxEdit = { type: 'alignment', value };
+    const active = this.currentSnapshot?.formatting.alignment === value;
+    const key = `docxEditorAlign${value[0]!.toUpperCase()}${value.slice(1)}`;
+    return html`<${buttonTag} part="edit-button" data-edit="alignment" data-value=${value}
+      data-tool-key=${`alignment-${value}`}
+      size="s" appearance=${active ? 'filled' : 'quiet'} .pressed=${active}
+      ?disabled=${!this.can(edit).enabled}
+      tabindex=${this.toolbarKey === `alignment-${value}` ? '0' : '-1'}
+      @pointerdown=${() => this.retainToolbarSelection()}
+      @click=${() => this.runEdit(edit)}>${this.localize(key)}</${buttonTag}>`;
+  }
+
+  private renderList(kind: typeof listKinds[number]): TemplateResult {
+    const edit: DocxEdit = { type: 'toggle-list', kind };
+    const active = kind === 'bullet' ? this.currentSnapshot?.formatting.bulletList :
+      this.currentSnapshot?.formatting.numberedList;
+    return html`<${buttonTag} part="edit-button" data-edit="toggle-list" data-kind=${kind}
+      data-tool-key=${`toggle-list-${kind}`}
+      size="s" appearance=${active ? 'filled' : 'quiet'} .pressed=${Boolean(active)}
+      ?disabled=${!this.can(edit).enabled}
+      tabindex=${this.toolbarKey === `toggle-list-${kind}` ? '0' : '-1'}
+      @pointerdown=${() => this.retainToolbarSelection()}
+      @click=${() => this.runEdit(edit)}>${this.localize(kind === 'bullet' ? 'docxEditorBullets' : 'docxEditorNumbering')}</${buttonTag}>`;
+  }
+
+  private renderEditingTools(): TemplateResult {
+    const ready = this.currentSnapshot?.status === 'ready';
+    const editable = ready && !this.currentSnapshot?.readOnly && !this.currentSnapshot?.composing &&
+      this.currentSnapshot?.activity !== 'saving';
+    const formatting = this.currentSnapshot?.formatting;
+    const color = formatting?.color ?? '';
+    return html`<div part="editing-tools" role="group" aria-label=${this.localize('docxEditorFormatting')}>
+      <${selectTag} part="paragraph-style" data-edit="paragraph-style" size="s"
+        aria-label=${this.localize('docxEditorParagraphStyle')}
+        placeholder=${this.localize('docxEditorParagraphStyle')}
+        .value=${formatting?.paragraphStyleId ?? ''} ?disabled=${!editable}
+        @pointerdown=${() => this.retainToolbarSelection()}
+        @lr-show=${() => this.loadParagraphStyles()}
+        @lr-after-hide=${() => this.onPickerClosed()}
+        @lr-change=${(event: CustomEvent<{ value: string | string[] }>) => this.onParagraphStyleChange(event)}>
+        ${formatting?.paragraphStyleId && !this.paragraphStyleItems.some(item => item.id === formatting.paragraphStyleId) ?
+          html`<${optionTag} value=${formatting.paragraphStyleId}>${formatting.paragraphStyleId}</${optionTag}>` : nothing}
+        ${this.paragraphStyleItems.map(item => html`<${optionTag} value=${item.id}>${item.label}</${optionTag}>`)}
+      </${selectTag}>
+      <div part="alignment-actions" role="group" aria-label=${this.localize('docxEditorAlignment')}>
+        ${alignments.map(value => this.renderAlignment(value))}
+      </div>
+      <div part="list-actions" role="group" aria-label=${this.localize('docxEditorLists')}>
+        ${listKinds.map(kind => this.renderList(kind))}
+      </div>
+      <${comboboxTag} part="font-family" data-edit="font-family" size="s" allow-custom-value
+        aria-label=${this.localize('docxEditorFontFamily')}
+        placeholder=${this.localize('docxEditorFontFamily')}
+        .value=${formatting?.fontFamily ?? []} ?disabled=${!editable}
+        @pointerdown=${() => this.retainToolbarSelection()}
+        @lr-show=${() => this.loadFontFamilies()}
+        @lr-after-hide=${() => this.onPickerClosed()}
+        @lr-change=${(event: CustomEvent<{ value: string | string[] }>) => this.onFontFamilyChange(event)}>
+        ${formatting?.fontFamily && !this.fontFamilyItems.includes(formatting.fontFamily) ?
+          html`<${optionTag} value=${formatting.fontFamily}>${formatting.fontFamily}</${optionTag}>` : nothing}
+        ${this.fontFamilyItems.map(family => html`<${optionTag} value=${family}>${family}</${optionTag}>`)}
+      </${comboboxTag}>
+      <${numberInputTag} part="font-size" data-edit="font-size" size="s"
+        aria-label=${this.localize('docxEditorFontSize')}
+        placeholder=${this.localize('docxEditorFontSize')}
+        min="1" max="1638" step="0.5" inputmode="decimal"
+        .value=${formatting?.fontSizePoints == null ? '' : String(formatting.fontSizePoints)}
+        ?disabled=${!editable}
+        @pointerdown=${() => this.retainToolbarSelection()}
+        @lr-change=${(event: CustomEvent<{ value: string }>) => this.onFontSizeChange(event)}></${numberInputTag}>
+      <${colorPickerTag} part="text-color" data-edit="text-color" size="s" format="hex"
+        aria-label=${this.localize('docxEditorTextColor')}
+        .value=${color} data-color-known=${formatting?.color == null ? 'false' : 'true'} ?disabled=${!editable}
+        @pointerdown=${() => this.retainToolbarSelection()}
+        @lr-change=${(event: Event) => this.onColorChange(event)}
+        @lr-after-hide=${() => this.onPickerClosed()}></${colorPickerTag}>
+      ${ready && formatting?.color == null ? html`<span part="color-state">${this.localize('docxEditorColorUnknown')}</span>` : nothing}
+      <${buttonTag} part="color-auto" data-edit="text-color-auto" data-tool-key="text-color-auto"
+        size="s" appearance="quiet" tabindex=${this.toolbarKey === 'text-color-auto' ? '0' : '-1'}
+        ?disabled=${!this.can({ type: 'text-color', color: 'auto' }).enabled}
+        @pointerdown=${() => this.retainToolbarSelection()}
+        @click=${() => this.runEdit({ type: 'text-color', color: 'auto' })}>${this.localize('docxEditorAutomaticColor')}</${buttonTag}>
+      ${this.renderLinkEditor(Boolean(editable))}
+      <${buttonTag} part="find-toggle" data-tool-key="find" size="s" appearance=${this.findOpen ? 'filled' : 'quiet'}
+        tabindex=${this.toolbarKey === 'find' ? '0' : '-1'}
+        .pressed=${this.findOpen} ?disabled=${!ready}
+        @click=${() => { this.findOpen = !this.findOpen; if (this.findOpen) void this.updateComplete.then(() =>
+          this.renderRoot.querySelector<HTMLElement>('[part="find-query"]')?.focus()); }}>
+        ${this.localize('docxEditorFind')}
+      </${buttonTag}>
+    </div>`;
+  }
+
+  private renderLinkEditor(editable: boolean): TemplateResult {
+    return html`<${popoverTag} part="link-popover" data-edit="link" popup-role="dialog"
+      aria-label=${this.localize('docxEditorLink')}
+      @lr-show=${() => this.openLinkEditor()}
+      @lr-after-hide=${() => this.releaseToolbarSelection()}>
+      <${buttonTag} slot="trigger" part="link-trigger" data-tool-key="link" size="s" appearance="quiet"
+        tabindex=${this.toolbarKey === 'link' ? '0' : '-1'}
+        ?disabled=${!editable} @pointerdown=${() => this.retainToolbarSelection()}>
+        ${this.localize('docxEditorLink')}
+      </${buttonTag}>
+      <div part="link-fields">
+        <${inputTag} part="link-href" type="text" inputmode="url" size="s" label=${this.localize('docxEditorLinkUrl')}
+          hint=${this.localize('docxEditorLinkHint')}
+          .value=${this.linkHref} @lr-input=${(event: CustomEvent<{ value: string }>) => { this.linkHref = event.detail.value; }}
+          @lr-change=${(event: Event) => event.stopPropagation()}></${inputTag}>
+        <${inputTag} part="link-text" size="s" label=${this.localize('docxEditorLinkText')}
+          .value=${this.linkText} @lr-input=${(event: CustomEvent<{ value: string }>) => { this.linkText = event.detail.value; }}
+          @lr-change=${(event: Event) => event.stopPropagation()}></${inputTag}>
+        <div part="link-actions">
+          <${buttonTag} part="link-apply" size="s" ?disabled=${!this.can(this.linkEdit()).enabled}
+            @click=${() => this.applyLink()}>${this.localize('docxEditorApplyLink')}</${buttonTag}>
+          <${buttonTag} part="link-remove" data-edit="remove-link" size="s" appearance="quiet"
+            ?disabled=${!this.can({ type: 'remove-link' }).enabled}
+            @click=${() => { this.runEdit({ type: 'remove-link' }, false); if (!this.editError) this.closeLinkEditor(); }}>
+            ${this.localize('docxEditorRemoveLink')}
+          </${buttonTag}>
+          <${buttonTag} part="link-cancel" size="s" appearance="quiet"
+            @click=${() => this.closeLinkEditor()}>${this.localize('docxEditorCancel')}</${buttonTag}>
+        </div>
+      </div>
+    </${popoverTag}>`;
+  }
+
+  private renderFind(): TemplateResult {
+    if (!this.findOpen) return html``;
+    const results = this.searchResults;
+    const count = results?.matches.length ?? 0;
+    const available = this.findActionAvailable();
+    const replaceAvailable = this.findActionAvailable(true);
+    return html`<div part="find" role="search" aria-label=${this.localize('docxEditorFind')}>
+      <${inputTag} part="find-query" type="search" size="s" label=${this.localize('docxEditorFindQuery')}
+        .value=${this.query} @lr-input=${(event: CustomEvent<{ value: string }>) => {
+          this.query = event.detail.value; this.searchResults = null; this.searchIndex = -1;
+        }} @lr-change=${(event: Event) => event.stopPropagation()}
+        @keydown=${(event: KeyboardEvent) => {
+          if (event.key === 'Enter' && !event.isComposing) { event.preventDefault(); this.runFind(); }
+        }}></${inputTag}>
+      <${checkboxTag} part="find-match-case" size="s" .checked=${this.matchCase}
+        @lr-change=${(event: CustomEvent<{ checked: boolean }>) => {
+          event.stopPropagation(); this.matchCase = event.detail.checked; this.searchResults = null;
+        }}>${this.localize('docxEditorMatchCase')}</${checkboxTag}>
+      <${checkboxTag} part="find-whole-word" size="s" .checked=${this.wholeWord}
+        @lr-change=${(event: CustomEvent<{ checked: boolean }>) => {
+          event.stopPropagation(); this.wholeWord = event.detail.checked; this.searchResults = null;
+        }}>${this.localize('docxEditorWholeWord')}</${checkboxTag}>
+      <${buttonTag} part="find-submit" size="s" appearance="quiet"
+        ?disabled=${!this.query || !available}
+        @click=${() => this.runFind()}>${this.localize('docxEditorFindSubmit')}</${buttonTag}>
+      <span part="find-count">${results ? this.localize('docxEditorFindCount', undefined, { count }) : nothing}
+        ${results?.truncated ? this.localize('docxEditorFindTruncated') : nothing}</span>
+      <${buttonTag} part="find-previous" size="s" appearance="quiet" ?disabled=${!count || !available}
+        @click=${() => this.navigateMatch(-1)}>${this.localize('docxEditorPrevious')}</${buttonTag}>
+      <${buttonTag} part="find-next" size="s" appearance="quiet" ?disabled=${!count || !available}
+        @click=${() => this.navigateMatch(1)}>${this.localize('docxEditorNext')}</${buttonTag}>
+      <${inputTag} part="find-replace" size="s" label=${this.localize('docxEditorReplacement')}
+        .value=${this.replacement} ?disabled=${this.currentSnapshot?.readOnly || !count}
+        @lr-input=${(event: CustomEvent<{ value: string }>) => { this.replacement = event.detail.value; }}
+        @lr-change=${(event: Event) => event.stopPropagation()}></${inputTag}>
+      <${buttonTag} part="find-replace-button" size="s" appearance="quiet"
+        ?disabled=${!replaceAvailable || this.searchIndex < 0 || !count}
+        @click=${() => this.replaceCurrentMatch()}>${this.localize('docxEditorReplace')}</${buttonTag}>
+    </div>`;
   }
 
   override render(): TemplateResult {
@@ -472,7 +922,8 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     const hasError = this.currentSnapshot?.status === 'error' || this.localError !== null;
     return html`
       <section part="base" aria-label=${this.editorLabel()}>
-        <div part="toolbar" role="toolbar" aria-label=${this.editorLabel()}>
+        <div part="toolbar" role="toolbar" aria-label=${this.editorLabel()}
+          @focusin=${this.onToolbarFocusIn}>
           <div part="file-actions">
             <${buttonTag} part="new-button" size="s" appearance="quiet" ?disabled=${this.openInProgress}
               @click=${() => this.requestToolbarAction('new')}>${this.localize('docxEditorNew')}</${buttonTag}>
@@ -485,6 +936,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
               tabindex="-1" aria-hidden="true" @change=${this.onFileSelected}>
           </div>
           <div part="format-actions">${commands.map(command => this.renderCommand(command))}</div>
+          ${this.renderEditingTools()}
         </div>
         ${this.pendingAction ? html`
           <div part="confirm" role="group" aria-label=${this.localize('docxEditorDiscardQuestion')}>
@@ -495,8 +947,10 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
               @click=${() => { this.pendingAction = null; this.focusEditor(); }}>${this.localize('docxEditorKeep')}</${buttonTag}>
           </div>
         ` : nothing}
-        <div part="document"><slot name="document"></slot></div>
+        ${this.renderFind()}
+        <div part="document" role="region" tabindex="0" aria-label=${this.editorLabel()}><slot name="document"></slot></div>
         ${hasError ? html`<p part="error">${this.localize('docxEditorError')}</p>` : nothing}
+        ${this.editError ? html`<p part="edit-error">${this.localize('docxEditorEditUnavailable')}</p>` : nothing}
         <div part="status">
           <span part="filename">${this.filename || this.localize('docxEditorUntitled')}</span>
           <span part="state">${status}</span>

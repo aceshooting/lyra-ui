@@ -1,3 +1,4 @@
+import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { CONTENT_TYPES, docxFixture } from '../src/docx/admission-fixtures.js';
 
 const word = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
@@ -45,5 +46,43 @@ export function representativeFixture(): Uint8Array {
 export function largeFixture(paragraphCount = 2000): Uint8Array {
   const paragraphs = Array.from({ length: paragraphCount }, (_, index) =>
     `<w:p><w:r><w:t>Paragraph ${String(index + 1).padStart(4, '0')} keeps layout work measurable.</w:t></w:r></w:p>`).join('');
+  return docxFixture({ 'word/document.xml': `<w:document xmlns:w="${word}"><w:body>${paragraphs}</w:body></w:document>` }, 6);
+}
+
+/** Original OOXML fixture with a real custom style, a link and text split across runs. */
+export function basicEditingFixture(): Uint8Array {
+  const entries = unzipSync(representativeFixture());
+  const styles = `<w:styles xmlns:w="${word}">
+    <w:style w:type="paragraph" w:styleId="Normal" w:default="1"><w:name w:val="Normal"/></w:style>
+    <w:style w:type="paragraph" w:styleId="CustomHeading"><w:name w:val="Custom Heading"/><w:basedOn w:val="Normal"/></w:style>
+  </w:styles>`;
+  const extra = `<w:p><w:r><w:t>Caf</w:t></w:r><w:r><w:t>é 東</w:t></w:r><w:r><w:t>京 alpha</w:t></w:r></w:p>
+    <w:p><w:r><w:t>Alpha alphabeta Café 東京</w:t></w:r></w:p>
+    <w:p><w:hyperlink r:id="rIdExistingLink"><w:r><w:t>Existing link</w:t></w:r></w:hyperlink></w:p>`;
+  entries['[Content_Types].xml'] = strToU8(strFromU8(entries['[Content_Types].xml']!).replace('</Types>',
+    '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>'));
+  entries['word/_rels/document.xml.rels'] = strToU8(strFromU8(entries['word/_rels/document.xml.rels']!).replace('</Relationships>',
+    `<Relationship Id="rIdStyles" Type="${officeRel}styles" Target="styles.xml"/><Relationship Id="rIdExistingLink" Type="${officeRel}hyperlink" Target="https://example.test/original" TargetMode="External"/></Relationships>`));
+  entries['word/document.xml'] = strToU8(strFromU8(entries['word/document.xml']!).replace('</w:body>', `${extra}</w:body>`));
+  entries['word/styles.xml'] = strToU8(styles);
+  return zipSync(entries, { level: 6 });
+}
+
+/** Two explicitly different paragraph and run formats, with opaque parts retained. */
+export function mixedFormattingFixture(): Uint8Array {
+  const entries = unzipSync(basicEditingFixture());
+  entries['word/document.xml'] = strToU8(`<w:document xmlns:w="${word}"><w:body>
+    <w:p><w:pPr><w:pStyle w:val="Normal"/><w:jc w:val="left"/></w:pPr>
+      <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="24"/></w:rPr><w:t>First mixed paragraph</w:t></w:r></w:p>
+    <w:p><w:pPr><w:pStyle w:val="CustomHeading"/><w:jc w:val="center"/></w:pPr>
+      <w:r><w:rPr><w:rFonts w:ascii="Courier New" w:hAnsi="Courier New"/><w:sz w:val="30"/></w:rPr><w:t>Second mixed paragraph</w:t></w:r></w:p>
+    </w:body></w:document>`);
+  return zipSync(entries, { level: 6 });
+}
+
+/** More matches than the public result ceiling, without a large archive. */
+export function searchLimitFixture(): Uint8Array {
+  const paragraphs = Array.from({ length: 115 }, (_, index) =>
+    `<w:p><w:r><w:t>needle ${index + 1}</w:t></w:r></w:p>`).join('');
   return docxFixture({ 'word/document.xml': `<w:document xmlns:w="${word}"><w:body>${paragraphs}</w:body></w:document>` }, 6);
 }

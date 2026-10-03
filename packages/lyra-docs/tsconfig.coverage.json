@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.test.json",
+  "compilerOptions": {
+    "outDir": ".coverage-output",
+    "sourceMap": true,
+    "inlineSources": true
+  }
+}

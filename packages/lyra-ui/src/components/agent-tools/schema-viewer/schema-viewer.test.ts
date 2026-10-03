@@ -1002,3 +1002,70 @@ describe('lr-json-schema-viewer namespaced custom properties and their deprecate
     expect(indent(rtl)).to.equal('5px');
   });
 });
+
+it('omits branches whose enumeration fails while preserving later schema siblings', () => {
+  const rejectedRecord = (): Record<string, JsonSchemaNode> => new Proxy({ visible: { type: 'string' } }, {
+    ownKeys(): never { throw new Error('enumeration unavailable'); },
+  });
+  const rejectedArray = (): JsonSchemaNode[] => new Proxy([{}], {
+    ownKeys(): never { throw new Error('array enumeration unavailable'); },
+  });
+  const el = document.createElement('lr-json-schema-viewer');
+  el.schema = {
+    type: 'object',
+    default: rejectedRecord(),
+    examples: rejectedArray(),
+    properties: rejectedRecord(),
+    items: rejectedArray(),
+    allOf: [rejectedRecord() as JsonSchemaNode, { type: 'string' }],
+    description: 'Still available',
+  };
+  const snapshot = el.schema as unknown as Record<string, unknown>;
+  for (const key of ['default', 'examples', 'properties', 'items']) {
+    expect(Object.hasOwn(snapshot, key), key).to.equal(false);
+  }
+  const composition = snapshot['allOf'] as readonly JsonSchemaNode[];
+  expect(0 in composition).to.equal(false);
+  expect(composition[1]!.type).to.equal('string');
+  expect(snapshot['description']).to.equal('Still available');
+
+  el.schema = rejectedRecord() as JsonSchemaNode;
+  expect(el.schema === null).to.equal(true);
+});
+
+it('omits an array with an unreadable length and retains valid constraint siblings', () => {
+  const unreadableLength = new Proxy([1], {
+    getOwnPropertyDescriptor(target, key): PropertyDescriptor | undefined {
+      if (key === 'length') throw new Error('length unavailable');
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const el = document.createElement('lr-json-schema-viewer');
+  el.schema = { type: 'string', examples: unreadableLength, title: 'Valid title' };
+  expect(Object.hasOwn(el.schema!, 'examples')).to.equal(false);
+  expect(el.schema!.title).to.equal('Valid title');
+});
+
+it('truncates owned arrays at the admitted node prefix when the schema node budget is exhausted', () => {
+  for (const keyword of ['examples', 'items']) {
+    const el = document.createElement('lr-json-schema-viewer');
+    const entries = Array.from({ length: 50_000 }, () => ({ type: 'string' }));
+    el.schema = { type: 'array', [keyword]: entries };
+    const snapshot = (el.schema as unknown as Record<string, unknown>)[keyword] as readonly JsonSchemaNode[];
+    expect(snapshot.length).to.equal(keyword === 'examples' ? 49_998 : 49_999);
+    expect(snapshot.at(-1)!.type).to.equal('string');
+    expect(Object.isFrozen(snapshot)).to.equal(true);
+    expect(entries.length).to.equal(50_000);
+  }
+});
+
+it('owns non-index tuple metadata through the same descriptor-safe value boundary', () => {
+  const items = [{ type: 'string' }] as JsonSchemaNode[] & { note?: { label: string } };
+  items.note = { label: 'Tuple metadata' };
+  const el = document.createElement('lr-json-schema-viewer');
+  el.schema = { type: 'array', items };
+  items.note.label = 'Changed by caller';
+  const snapshot = el.schema!.items as JsonSchemaNode[] & { note: { label: string } };
+  expect(snapshot.note.label).to.equal('Tuple metadata');
+  expect(Object.isFrozen(snapshot.note)).to.equal(true);
+});

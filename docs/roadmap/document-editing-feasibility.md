@@ -8,19 +8,34 @@ contract, and its phases remain open until their full exit conditions are met.
 ## Current decision and boundary
 
 `@aceshooting/lyra-docs` contains the experimental `<lr-docx-editor>` component and a session API.
-The runtime engine is the exact optional peer `@docx-editor.dev/core@2.24.0`, dynamically loaded
+The runtime engine is the exact optional peer `@docx-editor.dev/core@2.25.0`, dynamically loaded
 when a document opens. Lyra owns the public Lit surface, native controls, admission checks,
 lifecycle, and host persistence contract. The engine's framework adapters and any Pro-only packages
 are not included. Existing viewers, including `<lr-docx-viewer>`, remain in `@aceshooting/lyra-ui`.
 
-The selected mount uses connected, empty light DOM. Shadow DOM mounts fail closed. The component
-has a New/Open/Save toolbar and five editing commands: bold, italic, underline, undo, and redo.
-Saving returns bytes and a revision receipt; the host persists those bytes and acknowledges the
-same receipt to clear dirty state. The host owns storage and any URL-fetch policy.
+The selected mount uses connected, empty light DOM. Shadow DOM mounts fail closed. The toolbar
+includes New/Open/Save and the original five string commands (bold, italic, underline, undo, and
+redo); the current editing tools add paragraph, alignment, list, font, color, link, find and
+replace-one controls. The current increment passes 51 focused checks in each of Chromium, Firefox
+and WebKit, with synthetic OOXML checks for the exercised edits and protected parts. Broader user,
+corpus and interoperability qualification remains open. Saving returns bytes and a revision
+receipt; the host persists those bytes and acknowledges the same receipt to clear dirty state. The
+host owns storage and any URL-fetch policy.
 
-The implementation depends on public core 2.24.0. The
+The first implementation increment depended on public core 2.24.0. It introduced the original
+five string commands: bold, italic, underline, undo and redo. The subsequent basic-editing
+increment adds a parameterized `DocxAction` contract for paragraph style, alignment, bullet and
+numbered lists, font family/size, text color, links, and bounded find, match navigation and
+replace-one. Replace-all is omitted because the pinned core does not offer the required atomic,
+single-undo operation. Catalog and search work is demand-driven, never per-keystroke. Formatting
+color reads as `null` because the editor derives formatting through `getSelectionFormatting()`,
+whose result omits color. Although `snapshot().formatting` exposes color, the editor does not
+consume it for this contract. Links accept
+HTTPS, `mailto:`, and fragment-only targets; HTTP is refused. The current browser evidence for
+these actions is recorded below, alongside the earlier first-increment results. The
 [public core 2.25 source reference](https://github.com/eigenpal/docx-editor/tree/42c6c267) is
-reference material only; it is not the runtime package or an implementation source. Current license
+read-only reference material; the runtime is the published 2.25.0 package, not that source checkout
+or an implementation source. Current license
 texts and attribution are documented in
 [`packages/lyra-docs/THIRD_PARTY_NOTICES.md`](../../packages/lyra-docs/THIRD_PARTY_NOTICES.md).
 
@@ -117,11 +132,17 @@ and [Pro terms](https://github.com/eigenpal/docx-editor/blob/7267e125c0b7ddede8c
 Preserving an existing revision is not tracked-change authoring, and public interfaces for review,
 collaboration or export do not establish a free implementation of those capabilities.
 
-## Current browser evidence
+## Browser evidence
 
-The recorded browser evidence passed 23 checks in each of Chromium, Firefox, and WebKit: 69
-browser-check runs total. The checks
-cover lazy editor loading, typing and revisions, localized controls, toolbar selection retention,
+The first-increment browser evidence passed 23 checks in each of Chromium, Firefox, and WebKit: 69
+browser-check runs total. The expanded basic-editing increment passes 51 checks in each engine:
+153 browser-check runs total for that increment. Its checks exercise paragraph styles, all four
+alignments, bullet and numbered lists, font family and size, safe link actions, bounded find,
+match navigation, replace-one, undo/redo and save/reopen. They include mixed and null-to-concrete
+formatting values, history behavior and rejection of XML 1.0 control characters. Separate
+synthetic OOXML checks verify protected-part preservation through the exercised edits. These
+results qualify only those cases and fixtures. The first-increment checks cover
+lazy editor loading, typing and revisions, localized controls, toolbar selection retention,
 dirty replacement and veto, undo/redo, responsive rendering down to 320px, explicit save and
 acknowledgement, reopen, two independent editors, live theme and locale changes, read-only mode,
 oversized and malformed input, selected preservation cases, mount removal, abort/disconnect, and
@@ -135,7 +156,7 @@ The categories below keep content preservation separate from what renders and wh
 | --- | --- | --- |
 | Preserve | In the synthetic representative fixture, selected opaque parts (`custom/payload.bin`, `customXml/item1.xml`, and an image payload) retain their original hashes through edit, save, and reopen. Selected text, numbering, list, and table structures remain in the saved output. | General preservation of arbitrary OPC extensions, all relationships or unsupported OOXML, or round trips through Word and LibreOffice. |
 | Render | The public core mounts and renders its paginated editing surface in all three tested engines. Tests verify text, narrow allocation, and theme/locale updates. | The representative list, table and image are covered by saved-output checks, not separate layout assertions. Word-equivalent page layout, fonts and shaping, or broad document fidelity remain unqualified. |
-| Edit | Native Unicode text entry, selection, the five toolbar commands, undo/redo, revision updates, and explicit serialization pass the tested browser cases. | Headings, links, bookmarks, alignment, clipboard, find/replace, advanced tables, review, tracked-change authoring, or collaboration. |
+| Edit | Native Unicode text entry, selection, the original five toolbar commands, and the expanded parameterized editing/search actions pass the focused 51-check-per-engine browser increment and associated synthetic OOXML checks. | Broader real-document coverage, clipboard, advanced tables, review, tracked-change authoring, or collaboration. Replace-all is intentionally omitted. |
 | Refuse | Bounded preflight rejects malformed XML, DTDs, unsupported relationships, external resources, ZIP64/encrypted input, unsupported image formats, and resource-limit violations before engine open. Safe HTTPS, `mailto:`, and fragment-only hyperlinks are allowed. | Safety of arbitrary document content or every behavior of the external engine outside this bounded admission path. |
 
 ## DOCX admission limits
@@ -166,12 +187,22 @@ or fragment targets.
 
 ## Bundle and performance observations
 
-The current browser evidence build emits 3,305,053 bytes of JavaScript (983,794 bytes gzipped at
-level 6), 218,362 bytes of CSS (31,625 bytes gzipped), and 426,620 bytes of WASM (174,437 bytes
-gzipped). The emitted HarfBuzz WASM was not requested in the recorded browser cases. These are
-emitted test-build asset sizes, not compressed HTTP transfer measurements or a release budget.
+The previously recorded first-increment browser evidence build emitted 3,305,053 bytes of
+JavaScript (983,794 bytes gzipped at level 6), 218,362 bytes of CSS (31,625 bytes gzipped), and
+426,620 bytes of WASM (174,437 bytes gzipped). The emitted HarfBuzz WASM was not requested in the
+recorded browser cases. These are emitted test-build asset sizes, not compressed HTTP transfer
+measurements or a release budget.
 
-Before/current measurements on the same 2,000-paragraph fixture were:
+The final expanded-increment normal browser build emitted 3,651,712 bytes of
+JavaScript (1,055,466 bytes gzipped at level 6), 219,039 bytes of CSS
+(31,720 bytes gzipped), and 426,620 bytes of WASM (174,437 bytes gzipped).
+The lazy editor entry was 509,778 bytes (122,290 gzipped), and the engine chunk
+was 2,795,708 bytes (816,742 gzipped). These measurements come from the normal
+production browser-test build, not the source-mapped coverage build. They are
+emitted asset sizes, not compressed HTTP transfer measurements or a release
+budget.
+
+Before/current measurements for the first increment on the same 2,000-paragraph fixture were:
 
 | Measurement | Before | Current |
 | --- | ---: | ---: |
@@ -195,6 +226,20 @@ selection. The same-environment save samples dropped from 1,354.1 to 88.6 millis
 change. Open and reopen are single samples subject to run-to-run variation; their differences do
 not establish an optimization effect. None of these observations are latency guarantees or a
 general performance claim. Retained memory remains unqualified.
+
+The final expanded-increment diagnostic run used the normal production browser
+build with Chromium 153.0.8010.12, Node 22.23.2, and a 2,000-paragraph,
+218,577-byte stored DOCX fixture with every tenth paragraph RTL. Fresh blank
+open took 285.5 ms; fresh large-document open took 1,868.9 ms; save took
+111.8 ms and produced 32,238 bytes; warm reopen took 1,602.8 ms. Across 20
+input-to-two-animation-frame samples, median was 128.1 ms and p95 was 146.3 ms
+(range 116.8–178.1 ms). Opening includes engine loading, layout and two
+animation frames. Input timing runs from `beforeinput` through two animation
+frames in the page. The host exposed 60 logical CPUs with affinity to CPUs
+0–59 and no cgroup CPU quota. These are single-run diagnostic observations;
+browser and OS caches may be warm, and the measurements establish neither a
+performance guarantee nor an optimization relative to the historical samples.
+Retained memory remains unqualified.
 
 ## Qualification still required
 

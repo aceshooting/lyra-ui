@@ -1,5 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './popover.js';
+import '../../forms/button/button.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { LyraPopover } from './popover.class.js';
 import {
   __setAnchoredOverlayRuntimeLoaderForTesting,
@@ -33,6 +35,214 @@ async function basic(): Promise<LyraPopover> {
     </lr-popover>
   `) as Promise<LyraPopover>;
 }
+
+it('keeps a populated Lyra button popover accessible with one semantic trigger owner', async () => {
+  const el = await fixture<LyraPopover>(html`
+    <lr-popover style="--show-duration:0ms;--hide-duration:0ms">
+      <lr-button slot="trigger">Open details</lr-button>
+      <button>Detail action</button>
+    </lr-popover>
+  `);
+  const wrapper = el.querySelector('lr-button')!;
+  await wrapper.updateComplete;
+  await expect(el).to.be.accessible();
+  await el.show();
+  await expect(el).to.be.accessible();
+  const control = wrapper.shadowRoot!.querySelector('button')!;
+  expect(control.getAttribute('aria-expanded')).to.equal('true');
+  expect(control.getAttribute('aria-haspopup')).to.equal('dialog');
+  expect(wrapper.hasAttribute('aria-expanded')).to.equal(false);
+  expect(wrapper.hasAttribute('aria-haspopup')).to.equal(false);
+  expect(wrapper.hasAttribute('aria-controls')).to.equal(false);
+  await el.hide({ focusTrigger: false });
+  expect(control.getAttribute('aria-expanded')).to.equal('false');
+});
+
+for (const tabIndex of [-1, 0]) {
+  it(`owns the native control and restores focus for a roving Lyra trigger at tabindex ${tabIndex}`, async () => {
+    const el = await fixture<LyraPopover>(html`
+      <lr-popover style="--show-duration:0ms;--hide-duration:0ms">
+        <lr-button slot="trigger" tabindex=${tabIndex}>Open details</lr-button>
+        <button>Detail action</button>
+      </lr-popover>
+    `);
+    const wrapper = el.querySelector('lr-button')!;
+    await wrapper.updateComplete;
+    const control = wrapper.shadowRoot!.querySelector('button')!;
+    expect(control.getAttribute('aria-expanded')).to.equal('false');
+    expect(control.getAttribute('aria-haspopup')).to.equal('dialog');
+    expect(wrapper.hasAttribute('aria-expanded')).to.equal(false);
+    await el.show();
+    expect(control.getAttribute('aria-expanded')).to.equal('true');
+    if (Reflect.has(control, 'ariaControlsElements')) {
+      expect(control.ariaControlsElements?.includes(el)).to.equal(true);
+    } else expect(control.getAttribute('aria-controls')).to.equal(el.id);
+    await expect(el).to.be.accessible();
+    await focusByKeyboard(el.querySelector('button')!);
+    await el.hide();
+    expect(wrapper.shadowRoot!.activeElement === control).to.equal(true);
+    expect(control.getAttribute('aria-expanded')).to.equal('false');
+  });
+}
+
+for (const markup of [
+  '<span role="img" tabindex="0" aria-label="Details">Details</span>',
+  '<h2 tabindex="0">Details</h2>',
+  '<section role="region" tabindex="0" aria-label="Details">Details</section>',
+  '<input type="text" aria-label="Details">',
+]) {
+  it(`does not add expansion state to an incompatible trigger: ${markup}`, async () => {
+    const el = await fixture<LyraPopover>(`<lr-popover>${markup}<p>Details</p></lr-popover>`);
+    const control = el.firstElementChild!;
+    control.setAttribute('slot', 'trigger');
+    await el.updateComplete;
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+    expect(control.hasAttribute('aria-expanded')).to.equal(false);
+    expect(control.hasAttribute('aria-haspopup')).to.equal(false);
+    await expect(el).to.be.accessible();
+  });
+}
+
+it('moves semantic ownership when a Lyra button changes its native control', async () => {
+  const el = await fixture<LyraPopover>(html`
+    <lr-popover><lr-button slot="trigger">Open details</lr-button><p>Details</p></lr-popover>
+  `);
+  const wrapper = el.querySelector('lr-button')!;
+  await wrapper.updateComplete;
+  const original = wrapper.shadowRoot!.querySelector('button')!;
+  wrapper.href = '#details';
+  await wrapper.updateComplete;
+  const link = wrapper.shadowRoot!.querySelector('a')!;
+  await waitUntil(() => link.getAttribute('aria-expanded') === 'false');
+  expect(original.hasAttribute('aria-expanded')).to.equal(false);
+  expect(wrapper.hasAttribute('aria-expanded')).to.equal(false);
+  expect(link.getAttribute('aria-haspopup')).to.equal('dialog');
+  await expect(el).to.be.accessible();
+  el.remove();
+  expect(link.hasAttribute('aria-expanded')).to.equal(false);
+  expect(link.hasAttribute('aria-haspopup')).to.equal(false);
+  expect(link.getAttribute('aria-controls') ?? '').to.equal('');
+  if ('ariaControlsElements' in link) expect(link.ariaControlsElements?.length ?? 0).to.equal(0);
+});
+
+it('updates eligibility when an input trigger changes between button and text', async () => {
+  const el = await fixture<LyraPopover>(html`
+    <lr-popover><input slot="trigger" type="button" value="Details" aria-controls="authored-target"><p>Details</p></lr-popover>
+  `);
+  const control = el.querySelector('input')!;
+  expect(control.getAttribute('aria-expanded')).to.equal('false');
+  control.type = 'text';
+  await waitUntil(() => !control.hasAttribute('aria-expanded'));
+  expect(control.hasAttribute('aria-haspopup')).to.equal(false);
+  expect(control.getAttribute('aria-controls')).to.equal('authored-target');
+  control.type = 'button';
+  await waitUntil(() => control.getAttribute('aria-expanded') === 'false');
+  expect(control.getAttribute('aria-haspopup')).to.equal('dialog');
+});
+
+it('restores authored semantic target baselines after replacement and disconnect', async () => {
+  const el = await fixture<LyraPopover>(html`
+    <lr-popover>
+      <span slot="trigger"><button aria-expanded="true" aria-haspopup="menu">Open</button></span>
+      <p>Details</p>
+    </lr-popover>
+  `);
+  const wrapper = el.querySelector('span')!;
+  const original = wrapper.querySelector('button')!;
+  expect(original.getAttribute('aria-expanded')).to.equal('false');
+  expect(wrapper.hasAttribute('aria-expanded')).to.equal(false);
+  const replacement = document.createElement('button');
+  replacement.textContent = 'Replacement';
+  replacement.setAttribute('aria-haspopup', 'listbox');
+  original.replaceWith(replacement);
+  await waitUntil(() => replacement.getAttribute('aria-haspopup') === 'dialog');
+  expect(original.getAttribute('aria-expanded')).to.equal('true');
+  expect(original.getAttribute('aria-haspopup')).to.equal('menu');
+  el.remove();
+  expect(replacement.getAttribute('aria-haspopup')).to.equal('listbox');
+  expect(replacement.hasAttribute('aria-expanded')).to.equal(false);
+  expect(replacement.hasAttribute('aria-controls')).to.equal(false);
+});
+
+it('keeps authored semantic hosts as owners while generic unresolved triggers receive no state', async () => {
+  const el = await fixture<LyraPopover>(html`
+    <lr-popover><span slot="trigger" role="button" tabindex="0">Open</span><p>Details</p></lr-popover>
+  `);
+  const wrapper = el.querySelector('span')!;
+  expect(wrapper.getAttribute('aria-expanded')).to.equal('false');
+  expect(wrapper.getAttribute('aria-haspopup')).to.equal('dialog');
+  await expect(el).to.be.accessible();
+  wrapper.removeAttribute('role');
+  await waitUntil(() => !wrapper.hasAttribute('aria-expanded'));
+  expect(wrapper.hasAttribute('aria-haspopup')).to.equal(false);
+  expect(wrapper.hasAttribute('aria-controls')).to.equal(false);
+  wrapper.setAttribute('role', 'button');
+  await waitUntil(() => wrapper.getAttribute('aria-expanded') === 'false');
+});
+
+it('waits for a late custom trigger upgrade before assigning widget state', async () => {
+  const name = `test-popover-upgrade-${Date.now()}`;
+  const el = await fixture<LyraPopover>(`<lr-popover><${name} slot="trigger"></${name}><p>Details</p></lr-popover>`);
+  const wrapper = el.querySelector<HTMLElement>('[slot="trigger"]')!;
+  expect(wrapper.hasAttribute('aria-expanded')).to.equal(false);
+  customElements.define(name, class extends HTMLElement {
+    constructor() {
+      super();
+      const button = document.createElement('button');
+      button.textContent = 'Open';
+      this.attachShadow({ mode: 'open' }).append(button);
+    }
+  });
+  await waitUntil(() => wrapper.shadowRoot?.querySelector('button')?.getAttribute('aria-expanded') === 'false');
+  expect(wrapper.hasAttribute('aria-expanded')).to.equal(false);
+  await expect(el).to.be.accessible();
+});
+
+it('tracks a late external custom trigger upgrade and releases its semantic owner on disconnect', async () => {
+  const name = `test-popover-external-upgrade-${Date.now()}`;
+  const fixtureRoot = await fixture<HTMLElement>(`<div><${name} id="late-external-trigger"></${name}><lr-popover for="late-external-trigger"><p>Details</p></lr-popover></div>`);
+  const el = fixtureRoot.querySelector<LyraPopover>('lr-popover')!;
+  const wrapper = fixtureRoot.querySelector<HTMLElement>('[id="late-external-trigger"]')!;
+  expect(wrapper.hasAttribute('aria-expanded')).to.equal(false);
+  customElements.define(name, class extends HTMLElement {
+    constructor() {
+      super();
+      const button = document.createElement('button');
+      button.textContent = 'Open external details';
+      button.setAttribute('aria-haspopup', 'listbox');
+      this.attachShadow({ mode: 'open' }).append(button);
+    }
+  });
+  await waitUntil(() => wrapper.shadowRoot?.querySelector('button')?.getAttribute('aria-haspopup') === 'dialog');
+  const control = wrapper.shadowRoot!.querySelector('button')!;
+  expect(control.getAttribute('aria-expanded')).to.equal('false');
+  expect(wrapper.hasAttribute('aria-expanded')).to.equal(false);
+  await expect(el).to.be.accessible();
+  el.remove();
+  expect(control.hasAttribute('aria-expanded')).to.equal(false);
+  expect(control.getAttribute('aria-haspopup')).to.equal('listbox');
+  expect(control.getAttribute('aria-controls') ?? '').to.equal('');
+  if ('ariaControlsElements' in control) expect(control.ariaControlsElements?.length ?? 0).to.equal(0);
+});
+
+it('keeps disabled custom hosts free of widget state and restores control ownership when enabled', async () => {
+  const el = await fixture<LyraPopover>(html`
+    <lr-popover><lr-button slot="trigger" disabled>Open</lr-button><p>Details</p></lr-popover>
+  `);
+  const wrapper = el.querySelector('lr-button')!;
+  await wrapper.updateComplete;
+  expect(wrapper.hasAttribute('aria-expanded')).to.equal(false);
+  await expect(el).to.be.accessible();
+  wrapper.disabled = false;
+  await wrapper.updateComplete;
+  const control = wrapper.shadowRoot!.querySelector('button')!;
+  await waitUntil(() => control.getAttribute('aria-expanded') === 'false');
+  expect(wrapper.hasAttribute('aria-expanded')).to.equal(false);
+  wrapper.disabled = true;
+  await wrapper.updateComplete;
+  await waitUntil(() => !control.hasAttribute('aria-expanded'));
+  expect(wrapper.hasAttribute('aria-expanded')).to.equal(false);
+});
 
 it('keeps popover rendering and lifecycle available behind a throwing internals accessor', async () => {
   const prototype = LyraPopover.prototype as unknown as object;

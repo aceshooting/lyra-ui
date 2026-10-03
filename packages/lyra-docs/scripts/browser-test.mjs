@@ -27,6 +27,758 @@ const evidence = {
 const protectedParts = ['custom/payload.bin', 'customXml/item1.xml', 'word/media/pixel.png'];
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 
+async function createEditor(page, id, fixture = null) {
+  const source = fixture ? [...await page.evaluate(kind => window.__docxTest.fixture(kind), fixture)] : null;
+  const opened = await page.evaluate(async ({ id, source }) => {
+    const element = document.createElement('lr-docx-editor');
+    element.id = id;
+    document.querySelector('#fixture').append(element);
+    return source ? element.open(Uint8Array.from(source)) : element.newDocument();
+  }, { id, source });
+  assert.equal(opened.ok, true, `${id}: ${JSON.stringify(opened)}`);
+  await page.locator(`#${id} .docx-pages`).waitFor({ state: 'visible' });
+  return source;
+}
+
+async function saveEditor(page, id) {
+  const result = await page.locator(`#${id}`).evaluate(async element => {
+    const saved = await element.save();
+    return saved.ok ? { ok: true, bytes: [...saved.value.bytes], dirty: element.snapshot().dirty } : saved;
+  });
+  assert.equal(result.ok, true, `${id}: ${JSON.stringify(result)}`);
+  return result.bytes;
+}
+
+async function selectDocumentText(page, id) {
+  await page.locator(`#${id} .docx-pages`).click();
+  await page.keyboard.press('ControlOrMeta+A');
+}
+
+function assertProtectedParts(bytes, source) {
+  for (const part of protectedParts) {
+    assert.equal(sha256(zipEntryBytes(bytes, part)), sha256(zipEntryBytes(source, part)), `Protected part changed: ${part}`);
+  }
+}
+
+async function runBasicEditing(page, check) {
+  let basicSource;
+  await check('basic editing fixture opens with actual paragraph styles and preserved OPC parts', async () => {
+    basicSource = await createEditor(page, 'basic-style', 'basic-editing');
+    const catalogs = await page.locator('#basic-style').evaluate(element => ({
+      styles: element.paragraphStyles(), fonts: element.fontFamilies(),
+      absent: element.can({ type: 'paragraph-style', styleId: 'Heading1' }),
+      sourceText: element.querySelector('.docx-pages')?.textContent ?? ''
+    }));
+    assert.equal(catalogs.styles.ok, true, JSON.stringify(catalogs.styles));
+    assert.ok(catalogs.styles.value.items.some(item => item.id === 'CustomHeading' && item.label === 'Custom Heading'));
+    assert.equal(catalogs.styles.value.items.some(item => item.id === 'Heading1'), false);
+    assert.deepEqual(catalogs.absent, { enabled: false, reason: 'invalid-option' });
+    assert.equal(catalogs.fonts.ok, true, JSON.stringify(catalogs.fonts));
+    assert.ok(catalogs.sourceText.includes('Café 東京'));
+  });
+  await check('paragraph select keeps selection, edits style, and undo/redo round trips', async () => {
+    await selectDocumentText(page, 'basic-style');
+    const select = page.locator('#basic-style lr-select[data-edit="paragraph-style"]');
+    await select.getByRole('combobox').click();
+    await select.locator('[part="option"][data-value="CustomHeading"]').click();
+    const styled = await saveEditor(page, 'basic-style');
+    assert.match(zipEntry(styled, 'word/document.xml'), /<w:pStyle\b[^>]*w:val="CustomHeading"/u);
+    assertProtectedParts(styled, basicSource);
+    const history = await page.locator('#basic-style').evaluate(element => ({
+      undo: element.execute('undo'), redo: element.execute('redo')
+    }));
+    assert.equal(history.undo.ok, true, JSON.stringify(history));
+    assert.equal(history.redo.ok, true, JSON.stringify(history));
+    const redone = await saveEditor(page, 'basic-style');
+    assert.match(zipEntry(redone, 'word/document.xml'), /<w:pStyle\b[^>]*w:val="CustomHeading"/u);
+    assertProtectedParts(redone, basicSource);
+    const reopened = await page.evaluate(async bytes => {
+      const element = document.createElement('lr-docx-editor');
+      element.id = 'basic-style-reopened';
+      document.querySelector('#fixture').append(element);
+      const result = await element.open(Uint8Array.from(bytes));
+      return { result, text: element.querySelector('.docx-pages')?.textContent ?? '', styles: element.paragraphStyles() };
+    }, redone);
+    assert.equal(reopened.result.ok, true, JSON.stringify(reopened.result));
+    assert.ok(reopened.text.includes('Café 東京'));
+    assert.equal(reopened.styles.ok, true, JSON.stringify(reopened.styles));
+    assert.ok(reopened.styles.value.items.some(item => item.id === 'CustomHeading'));
+  });
+  await check('mixed selections expose unavailable values and match selection restores concrete formatting', async () => {
+    const source = await createEditor(page, 'basic-mixed', 'mixed-formatting');
+    await selectDocumentText(page, 'basic-mixed');
+    const mixed = await page.locator('#basic-mixed').evaluate(element => element.snapshot().formatting);
+    for (const name of ['paragraphStyleId', 'alignment', 'fontFamily', 'fontSizePoints'])
+      assert.equal(mixed[name], null, `Mixed ${name} must not be inferred from one paragraph`);
+    const selected = await page.locator('#basic-mixed').evaluate(element => {
+      const found = element.find('First mixed paragraph');
+      if (!found.ok) return { found };
+      const result = element.selectMatch(found.value.matches[0].id);
+      return { result, formatting: element.snapshot().formatting };
+    });
+    assert.equal(selected.result.ok, true, JSON.stringify(selected));
+    assert.equal(selected.formatting.paragraphStyleId, 'Normal');
+    assert.equal(selected.formatting.alignment, 'left');
+    assert.equal(selected.formatting.fontFamily, 'Arial');
+    assert.equal(selected.formatting.fontSizePoints, 12);
+    assertProtectedParts(await saveEditor(page, 'basic-mixed'), source);
+  });
+  await check('alignment controls serialize all four values including Word both for justify', async () => {
+    const source = await createEditor(page, 'basic-alignment', 'basic-editing');
+    await page.locator('#basic-alignment .docx-pages').getByText('Corpus opening', { exact: true }).click();
+    await page.keyboard.insertText('Aligned paragraph');
+    for (const [value, serialized] of [['left', 'left'], ['center', 'center'], ['right', 'right'], ['justify', 'both']]) {
+      await page.locator(`#basic-alignment [data-edit="alignment"][data-value="${value}"]`).click();
+      assert.equal(await page.locator('#basic-alignment').evaluate(element => element.snapshot().formatting.alignment), value);
+      const bytes = await saveEditor(page, 'basic-alignment');
+      assertProtectedParts(bytes, source);
+      assert.match(zipEntry(bytes, 'word/document.xml'), new RegExp(`<w:jc\\b[^>]*w:val="${serialized}"`, 'u'));
+    }
+    const bytes = await saveEditor(page, 'basic-alignment');
+    const reopened = await page.evaluate(async source => {
+      const element = document.createElement('lr-docx-editor');
+      element.id = 'basic-alignment-reopened';
+      document.querySelector('#fixture').append(element);
+      return element.open(Uint8Array.from(source));
+    }, bytes);
+    assert.equal(reopened.ok, true, JSON.stringify(reopened));
+    const roundTrip = await saveEditor(page, 'basic-alignment-reopened');
+    assert.match(zipEntry(roundTrip, 'word/document.xml'), /<w:jc\b[^>]*w:val="both"/u);
+    assertProtectedParts(roundTrip, source);
+  });
+  await check('bullet and numbered buttons create undoable list structure', async () => {
+    for (const kind of ['bullet', 'numbered']) {
+      const id = `basic-${kind}`;
+      const source = await createEditor(page, id, 'basic-editing');
+      await page.locator(`#${id} .docx-pages`).getByText('Corpus opening', { exact: true }).click();
+      await page.keyboard.insertText(`${kind} item`);
+      await page.locator(`#${id} [data-edit="toggle-list"][data-kind="${kind}"]`).click();
+      const bytes = await saveEditor(page, id);
+      assertProtectedParts(bytes, source);
+      assert.match(zipEntry(bytes, 'word/document.xml'), /<w:numPr(?:\s|>)/u);
+      assert.match(zipEntry(bytes, 'word/numbering.xml'), kind === 'bullet' ? /w:val="bullet"/u : /w:val="decimal"/u);
+      const result = await page.locator(`#${id}`).evaluate(element => ({ undo: element.execute('undo'), redo: element.execute('redo') }));
+      assert.equal(result.undo.ok, true, JSON.stringify(result));
+      assert.equal(result.redo.ok, true, JSON.stringify(result));
+      const redone = await saveEditor(page, id);
+      assert.match(zipEntry(redone, 'word/document.xml'), /<w:numPr(?:\s|>)/u);
+      assertProtectedParts(redone, source);
+    }
+  });
+  await check('font family, half-point size, and color controls serialize run formatting', async () => {
+    const source = await createEditor(page, 'basic-type', 'basic-editing');
+    await page.locator('#basic-type .docx-pages').getByText('Corpus opening', { exact: true }).click();
+    await page.keyboard.insertText('Typography sample');
+    await selectDocumentText(page, 'basic-type');
+    const family = page.locator('#basic-type lr-combobox[data-edit="font-family"]');
+    await family.locator('[part="combobox-input"]').fill('Arial');
+    await family.locator('[part="combobox-input"]').press('Enter');
+    assert.match(zipEntry(await saveEditor(page, 'basic-type'), 'word/document.xml'), /<w:rFonts\b[^>]*Arial/u);
+    assert.equal((await page.locator('#basic-type').evaluate(element => element.execute('undo'))).ok, true);
+    assert.equal(/<w:rFonts\b[^>]*Arial/u.test(zipEntry(await saveEditor(page, 'basic-type'), 'word/document.xml')), false);
+    assert.equal((await page.locator('#basic-type').evaluate(element => element.execute('redo'))).ok, true);
+    await selectDocumentText(page, 'basic-type');
+    const size = page.locator('#basic-type lr-number-input[data-edit="font-size"]');
+    await size.locator('[part="input"]').fill('14.5');
+    await size.locator('[part="input"]').press('Tab');
+    await selectDocumentText(page, 'basic-type');
+    const color = page.locator('#basic-type lr-color-picker[data-edit="text-color"]');
+    await color.locator('[part="trigger"]').click();
+    await color.locator('[part="input"]').fill('#D02030');
+    await color.locator('[part="input"]').press('Enter');
+    const bytes = await saveEditor(page, 'basic-type');
+    const xml = zipEntry(bytes, 'word/document.xml');
+    assert.match(xml, /<w:rFonts\b[^>]*Arial/u);
+    assert.match(xml, /<w:sz\b[^>]*w:val="29"/u);
+    assert.match(xml, /<w:color\b[^>]*w:val="D02030"/u);
+    assertProtectedParts(bytes, source);
+    assert.equal((await page.locator('#basic-type').evaluate(element => element.execute('undo'))).ok, true);
+    assert.equal(/<w:color\b[^>]*w:val="D02030"/u.test(zipEntry(await saveEditor(page, 'basic-type'), 'word/document.xml')), false);
+    assert.equal((await page.locator('#basic-type').evaluate(element => element.execute('redo'))).ok, true);
+    assert.match(zipEntry(await saveEditor(page, 'basic-type'), 'word/document.xml'), /<w:color\b[^>]*w:val="D02030"/u);
+    const reopened = await page.evaluate(async source => {
+      const element = document.createElement('lr-docx-editor');
+      element.id = 'basic-type-reopened';
+      document.querySelector('#fixture').append(element);
+      return element.open(Uint8Array.from(source));
+    }, bytes);
+    assert.equal(reopened.ok, true, JSON.stringify(reopened));
+    const roundTrip = await saveEditor(page, 'basic-type-reopened');
+    const reopenedXml = zipEntry(roundTrip, 'word/document.xml');
+    const reopenedText = [...reopenedXml.matchAll(/<w:t\b[^>]*>([\s\S]*?)<\/w:t>/gu)].map(match => match[1]).join('');
+    assert.ok(reopenedText.includes('Typography sample'));
+    assert.match(reopenedXml, /<w:rFonts\b[^>]*Arial/u);
+    assert.match(reopenedXml, /<w:sz\b[^>]*w:val="29"/u);
+    assert.match(reopenedXml, /<w:color\b[^>]*w:val="D02030"/u);
+    assertProtectedParts(roundTrip, source);
+  });
+  await check('automatic color and invalid formatting inputs have bounded behavior', async () => {
+    await selectDocumentText(page, 'basic-type');
+    await page.locator('#basic-type [data-edit="text-color-auto"]').click();
+    assert.match(zipEntry(await saveEditor(page, 'basic-type'), 'word/document.xml'), /<w:color\b[^>]*w:val="auto"/u);
+    const result = await page.locator('#basic-type').evaluate(element => {
+      const before = element.snapshot().revision;
+      const refusals = [
+        element.execute({ type: 'font-size', points: 2.25 }),
+        element.execute({ type: 'font-size', points: Number.POSITIVE_INFINITY }),
+        element.execute({ type: 'font-family', family: 'A,'.repeat(40) }),
+        element.execute({ type: 'text-color', color: '#XYZXYZ' }),
+        element.execute({ type: 'paragraph-style', styleId: 'MissingStyle' })
+      ];
+      return { refusals, unchanged: before === element.snapshot().revision, color: element.snapshot().formatting.color };
+    });
+    assert.ok(result.refusals.every(entry => !entry.ok), JSON.stringify(result));
+    assert.equal(result.unchanged, true);
+    assert.equal(result.color, null);
+  });
+  await check('link popover inserts safe relationship and remove-link is undoable', async () => {
+    const source = await createEditor(page, 'basic-link', 'basic-editing');
+    await page.locator('#basic-link .docx-pages').getByText('Corpus opening', { exact: true }).click();
+    await page.keyboard.insertText('Linked words');
+    const selectLinkedWords = id => page.locator(`#${id}`).evaluate(element => {
+      const found = element.find('Linked words');
+      return found.ok ? element.selectMatch(found.value.matches[0].id) : found;
+    });
+    assert.equal((await selectLinkedWords('basic-link')).ok, true);
+    const triggerState = () => page.locator('#basic-link').evaluate(element => {
+      const popover = element.shadowRoot.querySelector('[part="link-popover"]');
+      const host = popover?.querySelector('[part="link-trigger"]');
+      const native = host?.shadowRoot?.querySelector('[part~="base"]');
+      return { hostExpanded: host?.getAttribute('aria-expanded') ?? null,
+        nativeExpanded: native?.getAttribute('aria-expanded') ?? null,
+        controls: native?.getAttribute('aria-controls') ?? null, popoverId: popover?.id ?? null,
+        controlsPublicHost: native && 'ariaControlsElements' in native ? native.ariaControlsElements?.includes(popover) ?? false : null };
+    });
+    const closed = await triggerState();
+    assert.equal(closed.hostExpanded, null);
+    assert.equal(closed.nativeExpanded, 'false');
+    assert.ok(closed.popoverId);
+    if (closed.controlsPublicHost === null) assert.equal(closed.controls, closed.popoverId);
+    else assert.equal(closed.controlsPublicHost, true);
+    await page.locator('#basic-link [part="link-trigger"]').click();
+    await page.waitForFunction(() => {
+      const popover = document.querySelector('#basic-link')?.shadowRoot?.querySelector('[part="link-popover"]');
+      return popover?.querySelector('[part="link-trigger"]')?.shadowRoot?.querySelector('[part~="base"]')?.getAttribute('aria-expanded') === 'true';
+    });
+    const expanded = await triggerState();
+    assert.equal(expanded.hostExpanded, null);
+    assert.equal(expanded.nativeExpanded, 'true');
+    if (expanded.controlsPublicHost === null) assert.equal(expanded.controls, closed.popoverId);
+    else assert.equal(expanded.controlsPublicHost, true);
+    await page.locator('#basic-link [part="link-href"] [part="input"]').fill('https://example.test/linked');
+    await page.locator('#basic-link [part="link-apply"]').click();
+    await page.waitForFunction(() => {
+      const popover = document.querySelector('#basic-link')?.shadowRoot?.querySelector('[part="link-popover"]');
+      return popover?.querySelector('[part="link-trigger"]')?.shadowRoot?.querySelector('[part~="base"]')?.getAttribute('aria-expanded') === 'false';
+    });
+    const bytes = await saveEditor(page, 'basic-link');
+    assert.match(zipEntry(bytes, 'word/document.xml'), /<w:hyperlink\b/u);
+    assert.ok(zipEntry(bytes, 'word/_rels/document.xml.rels').includes('https://example.test/linked'));
+    assertProtectedParts(bytes, source);
+    const refused = await page.locator('#basic-link').evaluate(element => ({
+      http: element.execute({ type: 'link', href: 'http://example.test/unsafe' }),
+      script: element.execute({ type: 'link', href: 'javascript:alert(1)' })
+    }));
+    assert.deepEqual(refused.http, { ok: false, code: 'invalid-option' });
+    assert.deepEqual(refused.script, { ok: false, code: 'invalid-option' });
+    const reopened = await page.evaluate(async source => {
+      const element = document.createElement('lr-docx-editor');
+      element.id = 'basic-link-reopened';
+      document.querySelector('#fixture').append(element);
+      return element.open(Uint8Array.from(source));
+    }, bytes);
+    assert.equal(reopened.ok, true, JSON.stringify(reopened));
+    const roundTrip = await saveEditor(page, 'basic-link-reopened');
+    assert.match(zipEntry(roundTrip, 'word/document.xml'), /<w:hyperlink\b/u);
+    assert.ok(zipEntry(roundTrip, 'word/_rels/document.xml.rels').includes('https://example.test/linked'));
+    assertProtectedParts(roundTrip, source);
+    assert.equal((await selectLinkedWords('basic-link-reopened')).ok, true);
+    await page.locator('#basic-link-reopened [part="link-trigger"]').click();
+    await page.locator('#basic-link-reopened [part="link-remove"]').click();
+    const unlinked = await saveEditor(page, 'basic-link-reopened');
+    assert.equal((zipEntry(unlinked, 'word/document.xml').match(/<w:hyperlink\b/gu) ?? []).length,
+      (zipEntry(roundTrip, 'word/document.xml').match(/<w:hyperlink\b/gu) ?? []).length - 1);
+    assert.ok(zipEntry(unlinked, 'word/document.xml').includes('Linked words'));
+    const undo = await page.locator('#basic-link-reopened').evaluate(element => element.execute('undo'));
+    assert.equal(undo.ok, true, JSON.stringify(undo));
+    assert.match(zipEntry(await saveEditor(page, 'basic-link-reopened'), 'word/document.xml'), /<w:hyperlink\b/u);
+  });
+  await check('literal find spans OOXML runs without dirtying the revision', async () => {
+    const result = await page.locator('#basic-style-reopened').evaluate(element => {
+      const before = element.snapshot();
+      const found = element.find('Café 東京');
+      if (!found.ok || !found.value.matches.length) return { found };
+      const first = found.value.matches[0];
+      const selected = element.selectMatch(first.id, { expectedRevision: found.value.revision });
+      const after = element.snapshot();
+      return {
+        found, selected, sameRevision: before.revision === after.revision, sameDirty: before.dirty === after.dirty,
+        selectionAdvanced: after.selection.version > before.selection.version,
+        frozen: Object.isFrozen(found.value) && Object.isFrozen(first),
+      };
+    });
+    assert.equal(result.found.ok, true, JSON.stringify(result));
+    assert.equal(result.found.value.matches.length, 2);
+    assert.equal(result.found.value.matches[0].text, 'Café 東京');
+    assert.equal(result.selected.ok, true, JSON.stringify(result));
+    assert.equal(result.sameRevision, true);
+    assert.equal(result.sameDirty, true);
+    assert.equal(result.selectionAdvanced, true);
+    assert.equal(result.frozen, true);
+    for (const match of result.found.value.matches) {
+      assert.ok(match.before.length <= 48 && match.after.length <= 48);
+    }
+  });
+  await check('find options, stale ids, foreign ids and bounded results refuse safely', async () => {
+    const result = await page.locator('#basic-style-reopened').evaluate(element => {
+      const first = element.find('alpha', { matchCase: true, wholeWord: true });
+      const id = first.ok ? first.value.matches[0]?.id : '';
+      const second = element.find('Alpha', { matchCase: true, wholeWord: true });
+      return {
+        first, second,
+        stale: element.selectMatch(id),
+        forged: element.replaceMatch('forged', 'X'),
+        wrongRevision: second.ok && second.value.matches[0]
+          ? element.selectMatch(second.value.matches[0].id, { expectedRevision: { documentId: 'foreign', value: 0 } }) : null
+      };
+    });
+    assert.equal(result.first.ok, true, JSON.stringify(result));
+    assert.equal(result.first.value.matches.length, 1, 'whole-word alpha included alphabeta');
+    assert.equal(result.second.ok, true, JSON.stringify(result));
+    assert.equal(result.second.value.matches.length, 1);
+    assert.deepEqual(result.stale, { ok: false, code: 'stale-search' });
+    assert.deepEqual(result.forged, { ok: false, code: 'stale-search' });
+    assert.equal(result.wrongRevision.ok, false);
+    await createEditor(page, 'basic-limit', 'search-limit');
+    const limited = await page.locator('#basic-limit').evaluate(element => element.find('needle'));
+    assert.equal(limited.ok, true, JSON.stringify(limited));
+    assert.equal(limited.value.matches.length, 100);
+    assert.equal(limited.value.truncated, true);
+    const foreign = await page.evaluate(() => {
+      const first = document.querySelector('#basic-style-reopened');
+      const second = document.querySelector('#basic-limit');
+      const found = first.find('Café');
+      return found.ok ? second.selectMatch(found.value.matches[0].id) : found;
+    });
+    assert.deepEqual(foreign, { ok: false, code: 'stale-search' });
+  });
+  await check('mailto and fragment links survive bounded edits, save and reopen', async () => {
+    for (const [name, href] of [['mail', 'mailto:reader@example.test'], ['fragment', '#chapter']]) {
+      const id = `basic-link-${name}`;
+      const source = await createEditor(page, id, 'basic-editing');
+      const applied = await page.locator(`#${id}`).evaluate((element, href) => {
+        const found = element.find('Café 東京');
+        if (!found.ok) return found;
+        const selected = element.selectMatch(found.value.matches[0].id);
+        return selected.ok ? element.execute({ type: 'link', href, text: 'Bounded link' }) : selected;
+      }, href);
+      assert.equal(applied.ok, true, JSON.stringify(applied));
+      const bytes = await saveEditor(page, id);
+      assertProtectedParts(bytes, source);
+      const checkTarget = data => {
+        const xml = zipEntry(data, 'word/document.xml');
+        assert.match(xml, /<w:hyperlink\b/u);
+        assert.ok(xml.includes('Bounded link'));
+        const relationships = zipEntry(data, 'word/_rels/document.xml.rels');
+        assert.ok(relationships.includes(href) || (name === 'fragment' && /w:anchor="chapter"/u.test(xml)));
+      };
+      checkTarget(bytes);
+      const reopened = await page.locator(`#${id}`).evaluate((element, data) => element.open(Uint8Array.from(data)), bytes);
+      assert.equal(reopened.ok, true, JSON.stringify(reopened));
+      const roundTrip = await saveEditor(page, id);
+      checkTarget(roundTrip);
+      assertProtectedParts(roundTrip, source);
+    }
+  });
+  await check('XML-invalid authored text is refused before any content or revision changes', async () => {
+    await createEditor(page, 'basic-xml-text', 'basic-editing');
+    const result = await page.locator('#basic-xml-text').evaluate(element => {
+      const invalid = ['\u0000', '\u000b', '\ufffe', '\ud800', '\udc00'];
+      const found = element.find('Café 東京');
+      if (!found.ok) return { found };
+      const before = element.snapshot().revision;
+      const links = invalid.map(text => element.execute({ type: 'link', href: 'https://example.test', text }));
+      const replacements = invalid.map(text => element.replaceMatch(found.value.matches[0].id, text));
+      const unchanged = element.snapshot().revision === before;
+      const valid = element.replaceMatch(found.value.matches[0].id, '😀 東京\tline\nnext\rend');
+      return { found, links, replacements, unchanged, valid };
+    });
+    assert.equal(result.found.ok, true, JSON.stringify(result));
+    for (const refusal of [...result.links, ...result.replacements])
+      assert.deepEqual(refusal, { ok: false, code: 'invalid-option' });
+    assert.equal(result.unchanged, true);
+    assert.equal(result.valid.ok, true, JSON.stringify(result));
+    const saved = await saveEditor(page, 'basic-xml-text');
+    assert.ok(zipEntry(saved, 'word/document.xml').includes('😀'));
+    assertProtectedParts(saved, basicSource);
+  });
+  await check('empty replacement deletes one match and one undo restores it', async () => {
+    await createEditor(page, 'basic-delete', 'basic-editing');
+    const result = await page.locator('#basic-delete').evaluate(element => {
+      const found = element.find('Café 東京');
+      if (!found.ok) return { found };
+      const before = element.snapshot().revision;
+      const replaced = element.replaceMatch(found.value.matches[0].id, '', { expectedRevision: found.value.revision });
+      const stale = element.replaceMatch(found.value.matches[0].id, 'stale');
+      return { found, replaced, stale, advanced: element.snapshot().revision.value === before.value + 1 };
+    });
+    assert.equal(result.found.ok, true, JSON.stringify(result));
+    assert.equal(result.replaced.ok, true, JSON.stringify(result));
+    assert.deepEqual(result.stale, { ok: false, code: 'stale-search' });
+    assert.equal(result.advanced, true);
+    const deleted = await saveEditor(page, 'basic-delete');
+    assert.equal(zipEntry(deleted, 'word/document.xml').includes('Café 東京'), true, 'The second match must remain');
+    assertProtectedParts(deleted, basicSource);
+    const undo = await page.locator('#basic-delete').evaluate(element => element.execute('undo'));
+    assert.equal(undo.ok, true, JSON.stringify(undo));
+    const restored = await page.locator('#basic-delete').evaluate(element => element.find('Café 東京'));
+    assert.equal(restored.ok, true, JSON.stringify(restored));
+    assert.equal(restored.value.matches.length, 2);
+  });
+  await check('find Previous wraps to last, then fresh Next starts at first', async () => {
+    await createEditor(page, 'basic-navigation', 'basic-editing');
+    const id = 'basic-navigation';
+    await page.locator(`#${id} [part="find-toggle"]`).click();
+    await page.locator(`#${id} [part="find-query"] [part="input"]`).fill('Café 東京');
+    const composing = await page.locator(`#${id}`).evaluate(async element => {
+      const field = element.shadowRoot.querySelector('[part="find-query"]');
+      const input = field.shadowRoot.querySelector('[part="input"]');
+      input.dispatchEvent(new KeyboardEvent('keydown', {
+        key: 'Enter', isComposing: true, bubbles: true, composed: true, cancelable: true,
+      }));
+      await element.updateComplete;
+      return element.shadowRoot.querySelector('[part="find-count"]').textContent.trim();
+    });
+    assert.equal(composing, '', 'IME confirmation must not submit a find query');
+    await page.locator(`#${id} [part="find-submit"]`).click();
+    await page.locator(`#${id} [part="find-previous"]`).click();
+    await page.locator(`#${id} [part="find-replace"] [part="input"]`).fill('Last only');
+    await page.locator(`#${id} [part="find-replace-button"]`).click();
+    const last = zipEntry(await saveEditor(page, id), 'word/document.xml');
+    assert.ok(last.includes('Last only'));
+    assert.ok(last.indexOf('Last only') > last.indexOf('Alpha alphabeta'), 'Previous selected the first match');
+    const remaining = await page.locator(`#${id}`).evaluate(element => element.find('Café 東京'));
+    assert.equal(remaining.ok, true, JSON.stringify(remaining));
+    assert.equal(remaining.value.matches.length, 1);
+    await page.locator(`#${id} [part="find-submit"]`).click();
+    await page.locator(`#${id} [part="find-next"]`).click();
+    await page.locator(`#${id} [part="find-replace"] [part="input"]`).fill('First only');
+    await page.locator(`#${id} [part="find-replace-button"]`).click();
+    const bytes = await saveEditor(page, id);
+    const first = zipEntry(bytes, 'word/document.xml');
+    assert.ok(first.includes('First only'));
+    assert.ok(first.indexOf('First only') < first.indexOf('Alpha alphabeta'), 'Next skipped the first match');
+    assert.ok(first.indexOf('Last only') > first.indexOf('Alpha alphabeta'));
+    assertProtectedParts(bytes, basicSource);
+  });
+  await check('find pane navigates and replaces one match through native controls', async () => {
+    const id = 'basic-style-reopened';
+    await page.locator(`#${id} [part="find-toggle"]`).click();
+    await page.locator(`#${id} [part="find-query"] [part="input"]`).fill('Café 東京');
+    await page.locator(`#${id} [part="find-submit"]`).click();
+    assert.match((await page.locator(`#${id} [part="find-count"]`).textContent()) ?? '', /2/u);
+    await page.locator(`#${id} [part="find-next"]`).click();
+    await page.locator(`#${id} [part="find-replace"] [part="input"]`).fill('Replaced 東京');
+    await page.locator(`#${id} [part="find-replace-button"]`).click();
+    const changed = await saveEditor(page, id);
+    assert.ok(zipEntry(changed, 'word/document.xml').includes('Replaced 東京'));
+    assertProtectedParts(changed, basicSource);
+    const undo = await page.locator(`#${id}`).evaluate(element => element.execute('undo'));
+    assert.equal(undo.ok, true, JSON.stringify(undo));
+    const restored = await saveEditor(page, id);
+    assert.equal(zipEntry(restored, 'word/document.xml').includes('Replaced 東京'), false);
+    assert.ok(zipEntry(restored, 'word/document.xml').includes('Café'));
+  });
+  await check('read-only search selects matches but refuses replacement', async () => {
+    const source = await page.evaluate(() => window.__docxTest.fixture('basic-editing'));
+    const result = await page.evaluate(async bytes => {
+      const element = document.createElement('lr-docx-editor');
+      element.id = 'basic-readonly';
+      element.readOnly = true;
+      document.querySelector('#fixture').append(element);
+      const opened = await element.open(Uint8Array.from(bytes));
+      if (!opened.ok) return { opened };
+      const found = element.find('Café 東京');
+      if (!found.ok || !found.value.matches.length) return { opened, found };
+      const before = element.snapshot();
+      const selected = element.selectMatch(found.value.matches[0].id);
+      const replaced = element.replaceMatch(found.value.matches[0].id, 'Forbidden');
+      return { opened, found, selected, replaced, sameRevision: before.revision === element.snapshot().revision };
+    }, [...source]);
+    assert.equal(result.opened.ok, true, JSON.stringify(result));
+    assert.equal(result.found.ok, true, JSON.stringify(result));
+    assert.equal(result.selected.ok, true, JSON.stringify(result));
+    assert.deepEqual(result.replaced, { ok: false, code: 'read-only' });
+    assert.equal(result.sameRevision, true);
+  });
+  await check('ordinary typing avoids catalogs, find and save', async () => {
+    await createEditor(page, 'basic-typing');
+    await page.locator('#basic-typing').evaluate(element => {
+      element.__catalogSpy = { paragraphStyles: 0, fontFamilies: 0, find: 0, save: 0 };
+      element.__catalogOriginals = {};
+      for (const name of Object.keys(element.__catalogSpy)) {
+        element.__catalogOriginals[name] = element[name];
+        element[name] = function (...args) {
+          this.__catalogSpy[name]++;
+          return this.__catalogOriginals[name].apply(this, args);
+        };
+      }
+    });
+    await page.locator('#basic-typing .docx-pages').click();
+    for (const character of 'ordinary') await page.keyboard.insertText(character);
+    await page.waitForFunction(() => {
+      const editor = document.querySelector('#basic-typing');
+      return editor?.snapshot()?.revision?.value > 0 && editor.querySelector('.docx-pages')?.textContent.includes('ordinary');
+    });
+    const result = await page.locator('#basic-typing').evaluate(element => {
+      const calls = { ...element.__catalogSpy };
+      for (const [name, original] of Object.entries(element.__catalogOriginals)) element[name] = original;
+      return { calls, text: element.querySelector('.docx-pages')?.textContent ?? '' };
+    });
+    assert.deepEqual(result.calls, { paragraphStyles: 0, fontFamilies: 0, find: 0, save: 0 });
+    assert.ok(result.text.includes('ordinary'));
+  });
+  await check('open find pane remains accessible in narrow RTL layout', async () => {
+    const element = page.locator('#basic-style-reopened');
+    await element.evaluate(async editor => {
+      editor.setAttribute('dir', 'rtl');
+      await editor.updateComplete;
+    });
+    await page.setViewportSize({ width: 320, height: 780 });
+    const fontSize = await element.evaluate(editor => {
+      const input = editor.shadowRoot.querySelector('[part="font-size"]').shadowRoot.querySelector('[part="input"]');
+      const context = document.createElement('canvas').getContext('2d');
+      context.font = getComputedStyle(input).font;
+      return { width: input.getBoundingClientRect().width, required: context.measureText('14.5').width };
+    });
+    assert.ok(fontSize.width >= fontSize.required, 'The font-size field must visibly fit a fractional value at 320px');
+    const results = await page.evaluate(() => window.axe.run(document.querySelector('#basic-style-reopened'),
+      { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] } }));
+    assert.deepEqual(results.violations.map(({ id, nodes }) => ({ id, targets: nodes.map(node => node.target) })), []);
+    assert.ok(await element.locator('[part="find"]').isVisible());
+    await page.setViewportSize({ width: 1440, height: 900 });
+  });
+}
+
+async function runEditorWorkflows(page, check) {
+  // Earlier suites have completed; keep native pointer coordinates bounded for this independent suite.
+  await page.evaluate(() => document.querySelector('#fixture').replaceChildren());
+  await check('leaving an unchanged size field and reselecting text retains the new formatting target', async () => {
+    const id = 'workflow-selection';
+    await createEditor(page, id);
+    const editor = page.locator(`#${id}`);
+    await editor.locator('.docx-pages').click();
+    await page.keyboard.insertText('Selection lease');
+    await editor.locator('[part="font-size"]').click();
+    assert.equal(await editor.evaluate(element => {
+      const field = element.shadowRoot.activeElement;
+      return field?.getAttribute('part') === 'font-size' && field.shadowRoot.activeElement?.getAttribute('part') === 'input';
+    }), true, 'The native pointer action must focus the font-size input');
+    await selectDocumentText(page, id);
+    const before = await editor.evaluate(element => element.snapshot().revision.value);
+    await editor.locator('[data-command="bold"]').click();
+    const after = await editor.evaluate(element => element.snapshot());
+    assert.ok(after.revision.value > before, 'Reselecting after an unchanged field must not retain a stale toolbar lease');
+    assert.match(zipEntry(await saveEditor(page, id), 'word/document.xml'), /<w:b(?:\s|\/|>)/u);
+  });
+  await check('native file picking opens, rejects, and restores focus without retaining input files', async () => {
+    const id = 'workflow-files';
+    await page.evaluate(id => {
+      const element = document.createElement('lr-docx-editor');
+      element.id = id;
+      document.querySelector('#fixture').append(element);
+    }, id);
+    const editor = page.locator(`#${id}`);
+    const choose = async (kind, name) => {
+      const bytes = await page.evaluate(kind => window.__docxTest.fixture(kind), kind);
+      const pending = page.waitForEvent('filechooser');
+      await editor.locator('[part="open-button"]').click();
+      await (await pending).setFiles({ name, mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: Buffer.from(bytes) });
+    };
+    await choose('accepted', 'picked.docx');
+    await page.waitForFunction(id => document.querySelector(`#${id}`)?.snapshot()?.status === 'ready', id);
+    assert.equal(await editor.locator('[part="filename"]').textContent(), 'picked.docx');
+    assert.equal(await editor.locator('[part="file-input"]').inputValue(), '');
+    await choose('malformed', 'broken.docx');
+    await page.waitForFunction(id => document.querySelector(`#${id}`)?.snapshot()?.status === 'error', id);
+    assert.equal(await editor.locator('p[part="error"]').isVisible(), true);
+    assert.equal(await editor.locator('[part="open-button"]').getByRole('button').isDisabled(), false,
+      'A refused file must leave Open available for recovery');
+    await page.waitForFunction(id => document.querySelector(`#${id}`)?.shadowRoot.activeElement?.getAttribute('part') === 'open-button', id);
+    assert.equal(await editor.evaluate(element => element.shadowRoot.activeElement?.getAttribute('part')), 'open-button');
+    const failedRead = await editor.evaluate(element => element.open({ size: 1, name: 'unreadable.docx',
+      arrayBuffer: () => Promise.reject(new Error('Test file read refusal')) }));
+    assert.deepEqual(failedRead, { ok: false, code: 'open-failed' });
+    await choose('accepted', 'recovered.docx');
+    await page.waitForFunction(id => document.querySelector(`#${id}`)?.snapshot()?.status === 'ready', id);
+    assert.equal(await editor.locator('[part="filename"]').textContent(), 'recovered.docx');
+  });
+  await check('New and Open discard confirmation support keyboard cancellation and explicit replacement', async () => {
+    const id = 'workflow-discard';
+    await page.evaluate(id => {
+      const element = document.createElement('lr-docx-editor');
+      element.id = id;
+      document.querySelector('#fixture').append(element);
+    }, id);
+    const editor = page.locator(`#${id}`);
+    await editor.locator('[part="new-button"]').click();
+    await page.waitForFunction(id => document.querySelector(`#${id}`)?.snapshot()?.status === 'ready', id);
+    const original = await editor.evaluate(element => element.snapshot().revision.documentId);
+    await editor.locator('[part="new-button"]').click();
+    await editor.locator('[part="keep-button"]').press('Escape');
+    assert.equal(await editor.locator('[part="confirm"]').count(), 0);
+    assert.equal(await editor.evaluate(element => element.snapshot().revision.documentId), original);
+    await editor.locator('[part="new-button"]').click();
+    await editor.locator('[part="discard-button"]').click();
+    await page.waitForFunction(({ id, original }) => {
+      const state = document.querySelector(`#${id}`)?.snapshot();
+      return state?.status === 'ready' && state.revision.documentId !== original;
+    }, { id, original });
+    const blank = await editor.evaluate(element => element.snapshot().revision.documentId);
+    await editor.locator('[part="open-button"]').click();
+    assert.equal(await editor.locator('[part="confirm"]').isVisible(), true);
+    const bytes = await page.evaluate(() => window.__docxTest.fixture('accepted'));
+    const pending = page.waitForEvent('filechooser');
+    await editor.locator('[part="discard-button"]').click();
+    await (await pending).setFiles({ name: 'replacement.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: Buffer.from(bytes) });
+    await page.waitForFunction(({ id, blank }) => {
+      const state = document.querySelector(`#${id}`)?.snapshot();
+      return state?.status === 'ready' && state.revision.documentId !== blank;
+    }, { id, blank });
+    assert.equal(await editor.locator('[part="filename"]').textContent(), 'replacement.docx');
+    assert.equal(await editor.locator('[part="confirm"]').count(), 0);
+  });
+  await check('a superseded native file read cannot steal focus from the replacement document', async () => {
+    const id = 'workflow-file-focus';
+    await createEditor(page, id, 'accepted');
+    const editor = page.locator(`#${id}`);
+    const bytes = await page.evaluate(() => window.__docxTest.fixture('accepted'));
+    await page.evaluate(bytes => {
+      window.__fileBufferOriginal = File.prototype.arrayBuffer;
+      File.prototype.arrayBuffer = function () {
+        if (this.name !== 'delayed.docx') return window.__fileBufferOriginal.call(this);
+        return new Promise(resolve => {
+          window.__releaseFileRead = () => resolve(Uint8Array.from(bytes).buffer);
+        });
+      };
+    }, [...bytes]);
+    try {
+      const chooser = page.waitForEvent('filechooser');
+      await editor.locator('[part="open-button"]').click();
+      await (await chooser).setFiles({ name: 'delayed.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: Buffer.from(bytes) });
+      await page.waitForFunction(() => typeof window.__releaseFileRead === 'function');
+      const result = await editor.evaluate(async element => {
+        const opened = await element.newDocument();
+        const focused = element.focusEditor();
+        const before = element.snapshot().revision;
+        window.__releaseFileRead();
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        return { opened, focused, before, after: element.snapshot().revision,
+          focusRetained: element.querySelector('[slot="document"]').contains(document.activeElement) };
+      });
+      assert.equal(result.opened.ok, true);
+      assert.equal(result.focused.ok, true);
+      assert.deepEqual(result.after, result.before);
+      assert.equal(result.focusRetained, true, 'Late File completion must not move focus back to Open');
+    } finally {
+      await page.evaluate(() => {
+        File.prototype.arrayBuffer = window.__fileBufferOriginal;
+        delete window.__fileBufferOriginal;
+        delete window.__releaseFileRead;
+      });
+    }
+  });
+  await check('Escape closes link, find and style editors and returns document focus', async () => {
+    const id = 'workflow-escape';
+    await createEditor(page, id, 'basic-editing');
+    const editor = page.locator(`#${id}`);
+    await editor.locator('[part="link-trigger"]').click();
+    await editor.locator('[part="link-href"] [part="input"]').press('Escape');
+    await page.waitForFunction(id => !document.querySelector(`#${id}`)?.shadowRoot.querySelector('[part="link-popover"]').open, id);
+    await editor.locator('[part="find-toggle"]').click();
+    await editor.locator('[part="find-query"] [part="input"]').press('Escape');
+    assert.equal(await editor.locator('[part="find"]').count(), 0);
+    const select = editor.locator('[part="paragraph-style"]');
+    await select.getByRole('combobox').click();
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(id => !document.querySelector(`#${id}`)?.shadowRoot.querySelector('[part="paragraph-style"]').open, id);
+    await page.waitForFunction(id => document.querySelector(`#${id}`)?.querySelector('[slot="document"]')?.contains(document.activeElement), id);
+  });
+  await check('find options update search and invalid size edits show localized refusal without changing content', async () => {
+    const id = 'workflow-options';
+    await createEditor(page, id, 'basic-editing');
+    const editor = page.locator(`#${id}`);
+    await editor.locator('[part="find-toggle"]').click();
+    await editor.locator('[part="find-query"] [part="input"]').fill('Alpha');
+    await editor.locator('[part="find-match-case"]').getByRole('checkbox').click();
+    await editor.locator('[part="find-whole-word"]').getByRole('checkbox').click();
+    await editor.locator('[part="find-query"] [part="input"]').press('Enter');
+    assert.match((await editor.locator('[part="find-count"]').textContent()) ?? '', /1/u);
+    const before = await editor.evaluate(element => element.snapshot().revision);
+    await editor.locator('[part="font-size"] [part="input"]').fill('0');
+    await editor.locator('[part="font-size"] [part="input"]').press('Tab');
+    await editor.locator('[part="edit-error"]').waitFor({ state: 'visible' });
+    assert.deepEqual(await editor.evaluate(element => element.snapshot().revision), before);
+    assert.equal((await editor.locator('[part="edit-error"]').textContent()).includes('invalid-option'), false);
+  });
+  await check('superseded public searches refuse stale pane navigation and replacement', async () => {
+    const id = 'workflow-stale-search';
+    await createEditor(page, id, 'basic-editing');
+    const editor = page.locator(`#${id}`);
+    await editor.locator('[part="find-toggle"]').click();
+    await editor.locator('[part="find-query"] [part="input"]').fill('Café 東京');
+    await editor.locator('[part="find-submit"]').click();
+    const before = await editor.evaluate(element => element.snapshot().revision);
+    await editor.evaluate(element => element.find('Existing link'));
+    await editor.locator('[part="find-next"]').click();
+    await editor.locator('[part="edit-error"]').waitFor({ state: 'visible' });
+    assert.equal(await editor.locator('[part="find-next"]').getByRole('button').isDisabled(), true);
+    await editor.locator('[part="find-submit"]').click();
+    await editor.locator('[part="find-next"]').click();
+    await editor.locator('[part="find-replace"] [part="input"]').fill('Must not appear');
+    await editor.evaluate(element => element.find('Existing link'));
+    await editor.locator('[part="find-replace-button"]').click();
+    await editor.locator('[part="edit-error"]').waitFor({ state: 'visible' });
+    assert.deepEqual(await editor.evaluate(element => element.snapshot().revision), before);
+    assert.equal(zipEntry(await saveEditor(page, id), 'word/document.xml').includes('Must not appear'), false);
+  });
+  await check('catalog failures and unsupported link ranges render localized edit feedback', async () => {
+    const id = 'workflow-edit-refusals';
+    await createEditor(page, id, 'basic-editing');
+    const editor = page.locator(`#${id}`);
+    await editor.evaluate(element => { element.strings = { docxEditorEditUnavailable: 'Editing unavailable marker' }; });
+    for (const [method, part] of [['paragraphStyles', 'paragraph-style'], ['fontFamilies', 'font-family']]) {
+      await editor.evaluate((element, method) => {
+        element.__catalogOriginal = element[method];
+        element.__catalogCalls = 0;
+        element[method] = () => { element.__catalogCalls++; return { ok: false, code: 'engine-failed' }; };
+      }, method);
+      try {
+        const field = editor.locator(`[part="${part}"]`);
+        if (method === 'paragraphStyles') await field.getByRole('combobox').click();
+        else await field.locator('[part="combobox-input"]').press('ArrowDown');
+        await editor.locator('[part="edit-error"]').waitFor({ state: 'visible' });
+        assert.equal(await editor.evaluate(element => element.__catalogCalls), 1);
+        assert.equal(await editor.locator('[part="edit-error"]').textContent(), 'Editing unavailable marker');
+        await page.keyboard.press('Escape');
+      } finally {
+        await editor.evaluate((element, method) => {
+          element[method] = element.__catalogOriginal; delete element.__catalogOriginal; delete element.__catalogCalls;
+        }, method);
+      }
+    }
+    await selectDocumentText(page, id);
+    const before = await editor.evaluate(element => element.snapshot().revision);
+    await editor.locator('[part="link-trigger"]').click();
+    await editor.locator('[part="link-href"] [part="input"]').fill('https://example.test/refused-range');
+    await editor.locator('[part="link-apply"]').click();
+    assert.equal(await editor.locator('[part="edit-error"]').textContent(), 'Editing unavailable marker');
+    assert.deepEqual(await editor.evaluate(element => element.snapshot().revision), before);
+    assert.equal(await editor.evaluate(element => element.shadowRoot.querySelector('[part="link-popover"]').open), true);
+    await editor.locator('[part="link-href"] [part="input"]').press('Escape');
+  });
+}
+
 async function filesUnder(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
   return (await Promise.all(entries.map(async entry => entry.isDirectory()
@@ -44,7 +796,7 @@ async function bundle() {
       outDir: output,
       emptyOutDir: true,
       manifest: true,
-      sourcemap: false,
+      sourcemap: process.env.DOCX_COVERAGE === '1',
       rollupOptions: { input: resolve(root, 'test/browser.html') }
     }
   });
@@ -92,6 +844,8 @@ async function runBrowser(name, url, { lazyEntry, engineEntry }) {
   const record = evidence.browsers[name] = { checks: [], requests: [], externalRequests: [], pageErrors: [], consoleErrors: [], requestFailures: [], startupWallMs: null, saveWallMs: null, saveBytes: null };
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
   const page = await context.newPage();
+  const captureCoverage = process.env.DOCX_COVERAGE === '1' && name === 'chromium';
+  if (captureCoverage) await page.coverage.startJSCoverage({ resetOnNavigation: false });
   page.setDefaultTimeout(30_000);
   page.on('request', request => {
     const target = new URL(request.url());
@@ -368,12 +1122,20 @@ async function runBrowser(name, url, { lazyEntry, engineEntry }) {
           const bytes = await window.__docxTest.fixture(kind);
           const opened = await element.open(bytes);
           await element.updateComplete;
-          return { opened, errorVisible: Boolean(element.shadowRoot.querySelector('[part="error"]')?.getClientRects().length), expected };
+          const family = element.shadowRoot.querySelector('[part="font-family"]');
+          await family.updateComplete;
+          return { opened, unknownFont: Boolean(family.shadowRoot.querySelector('[part="unknown-value"]')),
+            errorVisible: Boolean(element.shadowRoot.querySelector('[part="error"]')?.getClientRects().length), expected };
         }, { kind, expected });
         assert.deepEqual(result.opened, { ok: false, code: expected });
         assert.equal(result.errorVisible, true, `${kind} did not show a visible fallback`);
+        assert.equal(result.unknownFont, false, 'A missing formatting value must clear font selection');
       }
       const results = await page.evaluate(async () => window.axe.run(document.querySelector('#refused-malformed'), { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] } }));
+      if (results.violations.length) record.fallbackAxeViolations = results.violations.map(({ id, nodes }) => ({
+        id, nodes: nodes.map(node => ({ target: node.target, summary: node.failureSummary,
+          checks: [...node.any, ...node.all, ...node.none].map(check => ({ id: check.id, data: check.data, message: check.message })) }))
+      }));
       assert.deepEqual(results.violations.map(({ id, nodes }) => ({ id, targets: nodes.map(node => node.target) })), []);
     });
     await check('one mount has one owner through transient removal', async () => {
@@ -423,6 +1185,54 @@ async function runBrowser(name, url, { lazyEntry, engineEntry }) {
       assert.equal(result.ancestorStatus, 'destroyed');
       assert.equal(result.adoptionStatus, 'destroyed');
     });
+    await check('superseded file reads cannot report errors on a new document', async () => {
+      const result = await page.evaluate(async () => {
+        const element = document.createElement('lr-docx-editor');
+        document.querySelector('#fixture').append(element);
+        let rejectRead;
+        const read = new Promise((_resolve, reject) => { rejectRead = reject; });
+        const errors = [];
+        element.addEventListener('lr-error', event => errors.push(event.detail.code));
+        const pending = element.open({ size: 1, name: 'old.docx', arrayBuffer: () => read });
+        const opened = await element.newDocument();
+        rejectRead(new Error('Old file read failed'));
+        const stale = await pending;
+        await element.updateComplete;
+        const failed = Boolean(element.shadowRoot.querySelector('[part="error"]'));
+        element.remove();
+        return { opened, stale, errors, failed };
+      });
+      assert.equal(result.opened.ok, true, JSON.stringify(result));
+      assert.deepEqual(result.stale, { ok: false, code: 'aborted' });
+      assert.deepEqual(result.errors, []);
+      assert.equal(result.failed, false);
+    });
+    await check('disconnect clears pending file status and discards late read errors', async () => {
+      const result = await page.evaluate(async () => {
+        const element = document.createElement('lr-docx-editor');
+        element.strings = { docxEditorOpening: 'Pending file marker', docxEditorDisconnected: 'Disconnected marker' };
+        document.querySelector('#fixture').append(element);
+        let rejectRead;
+        const read = new Promise((_resolve, reject) => { rejectRead = reject; });
+        const errors = [];
+        element.addEventListener('lr-error', event => errors.push(event.detail.code));
+        const pending = element.open({ size: 1, name: 'detached.docx', arrayBuffer: () => read });
+        await element.updateComplete;
+        const before = element.shadowRoot.querySelector('[part="state"]').textContent;
+        element.remove();
+        document.querySelector('#fixture').append(element);
+        await element.updateComplete;
+        const after = element.shadowRoot.querySelector('[part="state"]').textContent;
+        rejectRead(new Error('Detached file read failed'));
+        const stale = await pending;
+        element.remove();
+        return { before, after, stale, errors };
+      });
+      assert.equal(result.before, 'Pending file marker');
+      assert.equal(result.after, 'Disconnected marker');
+      assert.deepEqual(result.stale, { ok: false, code: 'aborted' });
+      assert.deepEqual(result.errors, []);
+    });
     await check('abort and disconnect settle cleanly', async () => {
       const result = await page.evaluate(async () => {
         const element = document.createElement('lr-docx-editor');
@@ -449,6 +1259,8 @@ async function runBrowser(name, url, { lazyEntry, engineEntry }) {
       if (results.violations.length) record.axeViolations = results.violations.map(({ id, nodes }) => ({ id, nodes: nodes.map(node => ({ target: node.target, details: node.any.map(check => check.data), summary: node.failureSummary })) }));
       assert.deepEqual(results.violations.map(({ id, nodes }) => ({ id, targets: nodes.map(node => node.target) })), []);
     });
+    await runBasicEditing(page, check);
+    await runEditorWorkflows(page, check);
     assert.deepEqual(record.pageErrors, [], 'Browser page errors');
     assert.deepEqual(record.requestFailures, [], 'Browser request failures');
     assert.deepEqual(record.consoleErrors, [], 'Browser console errors');
@@ -466,8 +1278,16 @@ async function runBrowser(name, url, { lazyEntry, engineEntry }) {
     await page.screenshot({ path: resolve(screenshots, `${name}-failure.png`), fullPage: true }).catch(() => {});
     throw error;
   } finally {
-    await context.close();
-    await browser.close();
+    try {
+      if (captureCoverage) {
+        const entries = await page.coverage.stopJSCoverage();
+        await mkdir(resolve(root, 'coverage'), { recursive: true });
+        await writeFile(resolve(root, 'coverage/browser-v8.json'), `${JSON.stringify(entries)}\n`);
+      }
+    } finally {
+      await context.close();
+      await browser.close();
+    }
   }
 }
 

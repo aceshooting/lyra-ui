@@ -1,12 +1,13 @@
 # @aceshooting/lyra-docs
 
 `@aceshooting/lyra-docs` is a private, experimental companion package for the
-native Lyra DOCX editor. It uses the public `@docx-editor.dev/core@2.24.0`
+native Lyra DOCX editor. Its runtime uses the public `@docx-editor.dev/core@2.25.0`
 engine as an optional peer. Existing document viewers, including
 `<lr-docx-viewer>`, remain in `@aceshooting/lyra-ui`.
 
 The editor supports opening local DOCX files or caller-provided bytes, a blank
-document, a small set of editing commands, and explicit save receipts. This
+document, paragraph and text formatting, bounded find and replace-one, and
+explicit save receipts. This
 package is private; its current editor and format support do not establish
 general Word compatibility or a shipping support commitment.
 
@@ -35,13 +36,15 @@ opening a file. Load `@aceshooting/lyra-ui/theme.css` first so the editor and it
 Lyra controls inherit the public theme. The engine is dynamically loaded on the
 first open, so importing the session API or registering the custom element does
 not initialize it.
-`@docx-editor.dev/core` is an exact `2.24.0` peer dependency and development
+`@docx-editor.dev/core` is an exact `2.25.0` peer dependency and development
 dependency; consumers may omit it until they use the editor.
 
 ## Custom element
 
-The initial toolbar has **New**, **Open**, and **Save**, plus **Bold**,
-**Italic**, **Underline**, **Undo**, and **Redo**. The host owns saved bytes and
+The toolbar has **New**, **Open**, and **Save**, plus **Bold**, **Italic**,
+**Underline**, **Undo**, and **Redo**. Its editing tools also support paragraph
+styles, alignment, bullet and numbered lists, font family and size, text color,
+hyperlinks, and find/replace-one. The host owns saved bytes and
 durable storage. Changes do not send document bytes. A save is explicit, and the
 host must persist its receipt and acknowledge that receipt before the editor
 clears its dirty state:
@@ -75,14 +78,41 @@ The `read-only` property is applied when the next document is opened. It stays
 fixed for that session; changing the property does not alter an already open
 session. Read-only sessions still allow selection, focus, and export.
 
+Scalar formatting values are reported in the session snapshot when the public
+engine can derive them. Missing, mixed, or unavailable scalar values are
+`null`; color is `null` because the editor derives formatting from
+`getSelectionFormatting()`, whose result does not include color. Although
+`snapshot().formatting` exposes color, the editor does not consume it for this
+contract. `bulletList` and `numberedList` remain booleans from the engine's
+`isActive` query, so `false` may include a mixed selection; the API does not
+invent a mixed state for lists. The editor does not infer color from the last
+action. Paragraph style and font catalogs are read only when requested (for
+example, when a picker opens), not on each keystroke. A style action must refer
+to a style present in the open document.
+
 The component's localizable messages use these keys through Lyra's inherited
-`strings` property: `docxEditorLabel`, `docxEditorNew`, `docxEditorOpen`,
-`docxEditorSave`, `docxEditorBold`, `docxEditorItalic`, `docxEditorUnderline`,
-`docxEditorUndo`, `docxEditorRedo`, `docxEditorUntitled`, `docxEditorIdle`,
-`docxEditorOpening`, `docxEditorReady`, `docxEditorUnsaved`,
-`docxEditorSaving`, `docxEditorError`, `docxEditorDisconnected`,
-`docxEditorShortcut`, `docxEditorDiscardQuestion`, `docxEditorDiscard`, and
-`docxEditorKeep`.
+`strings` property:
+
+```text
+docxEditorLabel, docxEditorNew, docxEditorOpen, docxEditorSave,
+docxEditorBold, docxEditorItalic, docxEditorUnderline, docxEditorUndo,
+docxEditorRedo, docxEditorUntitled, docxEditorIdle, docxEditorOpening,
+docxEditorReady, docxEditorUnsaved, docxEditorSaving, docxEditorError,
+docxEditorDisconnected, docxEditorShortcut, docxEditorDiscardQuestion,
+docxEditorDiscard, docxEditorKeep, docxEditorFormatting,
+docxEditorParagraphStyle, docxEditorAlignment, docxEditorAlignLeft,
+docxEditorAlignCenter, docxEditorAlignRight, docxEditorAlignJustify,
+docxEditorLists, docxEditorBullets, docxEditorNumbering,
+docxEditorFontFamily, docxEditorFontSize, docxEditorTextColor,
+docxEditorAutomaticColor, docxEditorColorUnknown, docxEditorLink,
+docxEditorLinkUrl, docxEditorLinkHint, docxEditorLinkText,
+docxEditorApplyLink, docxEditorRemoveLink,
+docxEditorCancel, docxEditorFind, docxEditorFindQuery,
+docxEditorFindSubmit, docxEditorMatchCase, docxEditorWholeWord,
+docxEditorFindCount, docxEditorFindTruncated, docxEditorPrevious,
+docxEditorNext, docxEditorReplacement, docxEditorReplace,
+docxEditorReplaced, docxEditorEditUnavailable
+```
 
 Press **Alt+F10** to move focus from the document to the toolbar. The arrow keys
 move between enabled formatting controls (with RTL-aware direction); **Home**
@@ -93,16 +123,27 @@ replacement prompt or returns focus from the toolbar to the document.
 
 | Event | Detail and behavior |
 | --- | --- |
-| `lr-before-open` | Cancelable; emitted before replacing a dirty document. Call `preventDefault()` to veto a programmatic New or Open. |
-| `lr-ready` | The opened document revision. |
-| `lr-change` | The current snapshot, or `null` after disconnect. It never includes document bytes. |
-| `lr-selection-change` | Selection kind and version. |
-| `lr-error` | A normalized refusal code without document contents or engine error text. |
-| `lr-save` | Explicit save receipt, including the bytes that the host must persist. |
+| `lr-before-open` | Cancelable; `{ kind, currentRevision }` before replacing a dirty document. Call `preventDefault()` to veto a programmatic New or Open. |
+| `lr-ready` | `{ revision }` for the opened document. |
+| `lr-change` | `{ snapshot }`, where the snapshot may be `null` after disconnect. It never includes document bytes. |
+| `lr-selection-change` | `{ selection }` with selection kind and version. |
+| `lr-error` | `{ code }`, a normalized refusal without document contents or engine error text. |
+| `lr-save` | `{ receipt }`, including the bytes that the host must persist. |
 
 New and Open from the toolbar show an in-editor confirmation when the current
 document is dirty. Programmatic `newDocument()` and `open()` do not show that
 confirmation; use the cancelable `lr-before-open` event to apply a host policy.
+
+The component exposes `snapshot()`, `open(input, options)`,
+`newDocument(options)`, `can(action)`, `execute(action, options)`,
+`paragraphStyles()`, `fontFamilies()`, `find(query, options)`,
+`selectMatch(id, options)`, `replaceMatch(id, text, options)`, `save(options)`,
+`acknowledgeSaved(receipt)`, and `focusEditor()`. The editing and search
+methods use the same action, result, revision, and bounds contract described
+in the session API below. `open()` accepts a `Uint8Array` or `File`;
+`newDocument()` opens a blank document. These methods return `DocxResult`
+values except `snapshot()`; `open()`, `newDocument()`, and `save()` return
+`Promise<DocxResult<...>>`.
 
 ### Styling hooks
 
@@ -116,8 +157,12 @@ mounts are unsupported.
 | `base`, `toolbar`, `file-actions`, `format-actions` | Editor surface and toolbar groups |
 | `new-button`, `open-button`, `save-button`, `format-button`, `file-input` | File and formatting controls; `format-button` identifies its command with `data-command` |
 | `confirm`, `discard-button`, `keep-button` | Dirty-document replacement confirmation |
+| `editing-tools`, `paragraph-style`, `alignment-actions`, `list-actions`, `edit-button` | Paragraph and text formatting controls; `edit-button` identifies its action with `data-edit` |
+| `font-family`, `font-size`, `text-color`, `color-auto`, `color-state` | Font and text-color controls; `color-state` reports when the engine cannot expose the current text color |
+| `link-popover`, `link-trigger`, `link-fields`, `link-href`, `link-text`, `link-actions`, `link-apply`, `link-remove`, `link-cancel` | Hyperlink editor and actions |
+| `find-toggle`, `find`, `find-query`, `find-match-case`, `find-whole-word`, `find-submit`, `find-count`, `find-previous`, `find-next`, `find-replace`, `find-replace-button` | Demand-driven find and replace-one controls |
 | `document` | Scrollable document surface |
-| `error`, `status`, `filename`, `state` | Error, file name, and editor state |
+| `error`, `edit-error`, `status`, `filename`, `state` | Load/save or edit error, file name, and editor state |
 
 Import `@aceshooting/lyra-docs/docx/editor.css` to style engine content. It is
 not injected into the page by the element.
@@ -156,9 +201,78 @@ try {
 ```
 
 The session reports immutable state through `snapshot()` and `subscribe()`.
-`open()` accepts a blank source or DOCX bytes. `can()` reports whether a command
-is available; `execute()` runs one of the five supported commands. Use
-`retainSelection()` when host controls need to preserve an editor selection
+`open()` accepts a blank source or DOCX bytes. `can()` reports whether a
+`DocxAction` is available; `execute()` runs one of the five string commands or
+one parameterized edit action. The original `DocxCommand` remains
+`bold | italic | underline | undo | redo`; parameterized actions are:
+
+```ts
+type DocxEdit =
+  | { type: 'paragraph-style'; styleId: string }
+  | { type: 'alignment'; value: 'left' | 'center' | 'right' | 'justify' }
+  | { type: 'toggle-list'; kind: 'bullet' | 'numbered' }
+  | { type: 'font-family'; family: string }
+  | { type: 'font-size'; points: number }
+  | { type: 'text-color'; color: string }
+  | { type: 'link'; href: string; text?: string }
+  | { type: 'remove-link' };
+type DocxAction = DocxCommand | DocxEdit;
+interface DocxFormatting {
+  readonly paragraphStyleId: string | null;
+  readonly alignment: 'left' | 'center' | 'right' | 'justify' | null;
+  readonly fontFamily: string | null;
+  readonly fontSizePoints: number | null;
+  readonly color: string | null;
+  readonly bulletList: boolean;
+  readonly numberedList: boolean;
+}
+```
+
+The cached `snapshot()` includes immutable `formatting: DocxFormatting`.
+Scalar fields are `null` when absent, mixed, or not derivable; the boolean list
+fields come from `isActive`, where `false` can include a mixed selection.
+`paragraphStyles()` returns `DocxResult<DocxParagraphStyles>` with
+`{ items: { id, label }[], truncated }`; `fontFamilies()` returns
+`DocxResult<DocxFontFamilies>` with `{ items: string[], truncated }`. Both are
+on-demand. Search methods are:
+
+```ts
+find(query: string, options?: {
+  matchCase?: boolean;
+  wholeWord?: boolean;
+  limit?: number;
+}): DocxResult<DocxSearchResults>;
+selectMatch(id: string, options?: { expectedRevision?: DocxRevision }): DocxResult<void>;
+replaceMatch(
+  id: string,
+  text: string,
+  options?: { expectedRevision?: DocxRevision },
+): DocxResult<DocxRevision>;
+```
+
+Find returns at most 100 revision-scoped rows `{ id, text, before, after }`,
+with at most 48 code units of context per side, plus the revision and a
+`truncated` flag. Search uses literal text, not regular expressions; a later
+query or committed edit invalidates earlier match ids. `selectMatch()` moves
+to a result without dirtying the document. `replaceMatch()` replaces one
+result as one undoable edit. Replace-all is not supported. Catalog enumeration
+and search are demand-driven and do not run for ordinary typing.
+
+`can()` validates the actual proposed edit, including that a paragraph style
+exists in the current document and that a link meets the safe URL policy.
+Links may target HTTPS, `mailto:`, or a same-document fragment; HTTP is
+refused, and destinations are never fetched. Family names are limited to 64
+Unicode code points; font size is 1–1638 points in half-point steps; colors
+are `#RRGGBB` or `auto`; style ids are limited to 128 code units; link URLs to
+2048 and link/replacement text to 4096 code units. Catalogs cap at 256 styles
+and 128 font choices. Search queries are 1–256 code units, and returned
+matches are capped at 100. Invalid or over-limit arguments are refused before
+calling the engine. Link destinations, link text, and replacement text must
+contain valid XML 1.0 characters. TAB, LF, and CR are accepted; forbidden
+control characters, U+FFFE/U+FFFF, and unpaired UTF-16 surrogates are refused
+before the document changes.
+
+Use `retainSelection()` when host controls need to preserve an editor selection
 while focus moves outside the document surface. `focus()` returns focus to the
 editing surface. `save()` returns bytes and a receipt; the session never writes
 to storage on its own. Always destroy the session when finished.
@@ -204,9 +318,20 @@ Shadow DOM mount mode.
 Native IME and touch behavior, font fidelity beyond rejecting embedded fonts,
 advanced editing, broader DOCX compatibility, Word and LibreOffice
 interoperability, and collaboration still need qualification. The browser
-checks cover Chromium, Firefox, and WebKit.
+checks cover Chromium, Firefox, and WebKit. The current basic-editing increment
+passes 51 focused checks per engine (153 across Chromium, Firefox, and WebKit)
+and associated synthetic OOXML preservation checks. Those results cover the
+exercised actions and fixtures; human input and
+assistive-technology review, real-document and font coverage, external
+word-processor round trips, and retained-memory behavior remain open.
 Performance runs record a fixed fixture and environment for comparison; they
 do not support a general speed claim.
+The final normal production browser run used a 2,000-paragraph, 218,577-byte
+stored DOCX: fresh large open 1,868.9 ms, save 111.8 ms, warm reopen 1,602.8
+ms, and input-to-two-animation-frame median/p95 of 128.1/146.3 ms across 20
+samples. Browser and OS caches may be warm; these are diagnostic values, not
+latency guarantees. Full environment and bundle details are in the
+[qualification record](../../docs/roadmap/document-editing-feasibility.md#bundle-and-performance-observations).
 
 ## Development checks
 
@@ -220,7 +345,24 @@ pnpm --filter @aceshooting/lyra-docs build
 pnpm --filter @aceshooting/lyra-docs lint
 pnpm --filter @aceshooting/lyra-docs test
 DOCX_BROWSERS=chromium,firefox,webkit pnpm --filter @aceshooting/lyra-docs test:browser
+pnpm --filter @aceshooting/lyra-docs test:coverage
 ```
+
+The coverage command combines Node and Chromium native V8 ranges, remaps them
+to TypeScript, and inventories all emitted executable source files, including
+files that were not loaded (those receive zero line coverage). It writes
+`coverage/coverage-summary.json`, `coverage/coverage-metadata.json`,
+`coverage/coverage-gaps.json`, `coverage/lcov.info`, and `coverage/index.html`.
+The metadata marks coverage complete only when both the unit and browser suites
+pass; an incomplete run cannot qualify a coverage result. V8 cannot enumerate
+functions or branches in unloaded modules, and the report flags those metrics
+as incomplete. Its statement count is based on V8 line counters, so statements
+and lines share that denominator. The current complete run passes 137 Node tests
+and 51 Chromium browser checks, with every emitted runtime module included (15
+modules, including styles). It measures 2,736/2,742 lines and statements
+(99.78%), 272/274 functions (99.27%), and 1,922/2,094 branches (91.78%). CI
+enforces the 99.6% lines/statements floor; branch coverage is reported separately
+and has no floor.
 
 The browser command runs the three engines serially and writes browser evidence
 under `packages/lyra-docs/.browser-output/`. To include the Chromium performance

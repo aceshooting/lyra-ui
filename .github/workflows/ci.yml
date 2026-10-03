@@ -1237,8 +1237,12 @@ jobs:
           DOCX_BROWSERS: ${{ matrix.install_browser }}
         run: |
           pnpm --filter @aceshooting/lyra-ui build
-          pnpm --filter @aceshooting/lyra-docs build
-          pnpm --filter @aceshooting/lyra-docs test:browser
+          if [ "$DOCX_BROWSERS" = 'chromium' ]; then
+            pnpm --filter @aceshooting/lyra-docs test:coverage
+          else
+            pnpm --filter @aceshooting/lyra-docs build
+            pnpm --filter @aceshooting/lyra-docs test:browser
+          fi
       - name: Archive DOCX editor qualification
         if: always() && matrix.shard_index == 1 && (matrix.install_browser == 'chromium' || matrix.install_browser == 'firefox' || matrix.install_browser == 'webkit')
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -1247,5 +1251,9 @@ jobs:
           path: |
             packages/lyra-docs/.browser-output/browser-evidence.json
             packages/lyra-docs/.browser-evidence
+            packages/lyra-docs/coverage/coverage-summary.json
+            packages/lyra-docs/coverage/coverage-metadata.json
+            packages/lyra-docs/coverage/coverage-gaps.json
+            packages/lyra-docs/coverage/lcov.info
           if-no-files-found: warn
           retention-days: 7
