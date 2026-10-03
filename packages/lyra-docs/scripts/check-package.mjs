@@ -18,18 +18,29 @@ assert.equal(manifest.private, true, 'Experimental editors must remain private')
 assert.equal(manifest.type, 'module');
 assert.equal(manifest.engines.node, '>=22');
 assert.equal(manifest.packageManager, JSON.parse(read('package.json')).packageManager);
-assert.equal(manifest.sideEffects, false);
+assert.deepEqual(manifest.sideEffects, [
+  './dist/docx/editor.js', './src/docx/editor.ts', './dist/docx/editor.css',
+]);
 assert.equal(manifest.publishConfig, undefined);
 assert.deepEqual(manifest.exports, {
   '.': { types: './dist/index.d.ts', default: './dist/index.js' },
   './docx': { types: './dist/docx/index.d.ts', default: './dist/docx/index.js' },
+  './docx/editor': { types: './dist/docx/editor.d.ts', default: './dist/docx/editor.js' },
+  './docx/editor.class': { types: './dist/docx/docx-editor.class.d.ts', default: './dist/docx/docx-editor.class.js' },
+  './docx/editor.css': './dist/docx/editor.css',
   './package.json': './package.json',
 });
-assert.deepEqual(manifest.files, ['dist', 'README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md']);
-for (const field of ['dependencies', 'optionalDependencies', 'peerDependencies']) {
-  assert.equal(Object.keys(manifest[field] ?? {}).length, 0, 'No unused runtime dependency');
-}
-assert.deepEqual(Object.keys(manifest.devDependencies).sort(), ['@types/node', 'typescript']);
+assert.deepEqual(manifest.files, ['dist', 'README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'THIRD_PARTY_LICENSES']);
+assert.deepEqual(manifest.dependencies, {
+  '@aceshooting/lyra-ui': 'workspace:*', fflate: '^0.8.2', lit: '^3.3.3', saxes: '^6.0.0',
+});
+assert.equal(Object.keys(manifest.optionalDependencies ?? {}).length, 0);
+assert.deepEqual(manifest.peerDependencies, { '@docx-editor.dev/core': '2.24.0' });
+assert.deepEqual(manifest.peerDependenciesMeta, { '@docx-editor.dev/core': { optional: true } });
+assert.equal(manifest.devDependencies['@docx-editor.dev/core'], manifest.peerDependencies['@docx-editor.dev/core']);
+assert.deepEqual(Object.keys(manifest.devDependencies).sort(), [
+  '@docx-editor.dev/core', '@types/node', 'axe-core', 'playwright', 'typescript', 'vite',
+]);
 assert(JSON.parse(read('.changeset/config.json')).ignore.includes(manifest.name));
 for (const file of readdirSync(path.join(repoRoot, '.changeset'))) {
   if (!file.endsWith('.md')) continue;
@@ -50,27 +61,36 @@ for (const field of ['dependencies', 'optionalDependencies', 'peerDependencies',
 for (const file of files(path.join(repoRoot, 'packages/lyra-ui/src'))) {
   assert(!forbidden.test(readFileSync(file, 'utf8')), `Core editor dependency: ${file}`);
 }
-// Check the relevant pure-TypeScript rules without enrolling this package as a UI component.
+// The companion shares source policies while retaining an independent component inventory.
 for (const file of files(path.join(packageRoot, 'src'))) {
   const source = readFileSync(file, 'utf8');
   assert.deepEqual(findDoubleQuotedStringLiterals(source), [], `String literal policy: ${file}`);
   assert.deepEqual(findNulByteLines(source), [], `NUL byte: ${file}`);
   assert.deepEqual(findBareGlobalIsNaNCalls(source, file), [], `Finite number policy: ${file}`);
-  assert(!/@aceshooting\/lyra-ui|@docx-editor\.dev\/|(?:\.\.\/)+lyra-ui\/|from\s+['"]lit(?:\/|['"])/u.test(source),
-    `Unexpected runtime dependency: ${file}`);
+  assert(!/(?:\.\.\/)+lyra-ui\//u.test(source), `Private core import: ${file}`);
+  assert(!/@docx-editor\.dev\/(?!core(?:['"/]))/u.test(source), `Unqualified engine package: ${file}`);
+  assert(!/@docx-editor\.dev\/core\/src\//u.test(source), `Private engine import: ${file}`);
+  for (const match of source.matchAll(/import\s+(?!type\b)[^;\n]*from\s+['"](@docx-editor\.dev\/[^'"]+)['"]/gu)) {
+    assert.fail(`Eager document engine import: ${file}: ${match[1]}`);
+  }
 }
-assert.equal(read('packages/lyra-docs/src/docx/index.ts').trim(), "export type * from './types.js';");
+assert.match(read('packages/lyra-docs/src/docx/index.ts'), /export \{ createDocxSession \} from '\.\/create-session\.js';/u);
 assert.match(read('packages/lyra-docs/src/index.ts'), /export \{\};\s*$/u);
-// The public build contains declarations and empty ESM only; internal code never ships.
+// Only documented subpaths are public; implementations remain behind the export map.
 const dist = path.join(packageRoot, 'dist');
 if (existsSync(dist)) {
-  assert.deepEqual(files(dist).map((file) => path.relative(dist, file)).sort(), [
-    'docx/index.d.ts', 'docx/index.js', 'docx/types.d.ts', 'docx/types.js', 'index.d.ts', 'index.js',
-  ]);
   for (const file of files(dist)) {
+    assert(/\.(?:js|d\.ts|css)$/u.test(file), `Unexpected build artifact: ${file}`);
+    assert(!/\.test\.|-fixtures\./u.test(file), `Test build artifact: ${file}`);
     const source = readFileSync(file, 'utf8');
-    assert(!/engine-port|session\.js|createInternalDocxSession/u.test(source), `Internal export: ${file}`);
-    if (file.endsWith('.js')) assert.match(source, /^(?:\/\*[\s\S]*?\*\/\s*)?export \{\};\s*$/u);
+    if (/(?:index|types|create-session|docx-editor(?:\.class)?)\.d\.ts$/u.test(file)) {
+      assert(!/@docx-editor\.dev\//u.test(source), `Public engine type leaked: ${file}`);
+    }
   }
+  for (const key of ['.', './docx']) {
+    const publicEntry = path.join(packageRoot, manifest.exports[key].default);
+    assert(!/@docx-editor\.dev|docx-editor\.class/u.test(readFileSync(publicEntry, 'utf8')), `Eager public entry: ${key}`);
+  }
+  assert(existsSync(path.join(dist, 'docx/editor.css')));
 }
 console.log('Document companion private/export/dependency checks passed');

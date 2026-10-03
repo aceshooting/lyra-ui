@@ -106,6 +106,8 @@ jobs:
       - run: pnpm --filter @aceshooting/lyra-ui check:pinned-upstream-manifests
       # lyra-ui's own Chromium suite runs in the build-and-coverage job via test:coverage --
       # this only needs to cover the other workspace package(s), e.g. lyra-flags's own test script.
+      # The document companion consumes Lyra's public declaration entries and controls.
+      - run: pnpm --filter @aceshooting/lyra-ui build
       - run: pnpm --filter '!@aceshooting/lyra-ui' -r test
       - run: pnpm --filter @aceshooting/lyra-docs lint
       # Knip discovers the package's explicit exports and runs a production graph before the
@@ -1227,5 +1229,23 @@ jobs:
         with:
           name: edge-platform-startup-${{ github.run_attempt }}
           path: test-results/edge-startup.log
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Qualify the experimental DOCX editor
+        if: matrix.shard_index == 1 && (matrix.install_browser == 'chromium' || matrix.install_browser == 'firefox' || matrix.install_browser == 'webkit')
+        env:
+          DOCX_BROWSERS: ${{ matrix.install_browser }}
+        run: |
+          pnpm --filter @aceshooting/lyra-ui build
+          pnpm --filter @aceshooting/lyra-docs build
+          pnpm --filter @aceshooting/lyra-docs test:browser
+      - name: Archive DOCX editor qualification
+        if: always() && matrix.shard_index == 1 && (matrix.install_browser == 'chromium' || matrix.install_browser == 'firefox' || matrix.install_browser == 'webkit')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: docx-editor-${{ matrix.install_browser }}-${{ github.run_attempt }}
+          path: |
+            packages/lyra-docs/.browser-output/browser-evidence.json
+            packages/lyra-docs/.browser-evidence
           if-no-files-found: warn
           retention-days: 7

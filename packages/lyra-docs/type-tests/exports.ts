@@ -1,13 +1,12 @@
-import type { DocxSession, DocxSnapshot } from '@aceshooting/lyra-docs/docx';
+import { createDocxSession, type DocxSession, type DocxSnapshot } from '@aceshooting/lyra-docs/docx';
+import type { LyraDocxEditor } from '@aceshooting/lyra-docs/docx/editor.class';
 // @ts-expect-error DOCX-specific contracts belong to the format subpath.
 import type { DocxSession as RootSession } from '@aceshooting/lyra-docs';
 // @ts-expect-error The internal factory is not public.
 import { createInternalDocxSession } from '@aceshooting/lyra-docs/docx';
-// @ts-expect-error No runtime factory exists before adapter qualification.
-import { createDocxSession } from '@aceshooting/lyra-docs/docx';
 // @ts-expect-error Internal engine injection is not an export.
 import type { DocxSessionPort } from '@aceshooting/lyra-docs/docx/engine-port';
 
-export type ExportWitness = [DocxSession, DocxSnapshot, RootSession, DocxSessionPort];
+export type ExportWitness = [DocxSession, DocxSnapshot, RootSession, DocxSessionPort, LyraDocxEditor];
 void createInternalDocxSession;
 void createDocxSession;

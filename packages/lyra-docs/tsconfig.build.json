@@ -7,5 +7,11 @@
     "sourceMap": false,
     "declarationMap": false
   },
-  "include": ["src/index.ts", "src/docx/index.ts"]
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/*-fixtures.ts"
+  ]
 }

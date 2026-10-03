@@ -59,6 +59,8 @@ export type ButtonVariant = LyraVariant | 'default' | 'primary' | 'text';
  *  this component's two own tiers, `link` and `quiet`. */
 export type ButtonAppearance = LyraAppearance | 'link' | 'quiet';
 export type ButtonType = 'button' | 'submit' | 'reset';
+/** Toggle state for the internal native button; `null` leaves toggle mode unset. */
+export type ButtonPressedState = boolean | 'mixed' | null;
 /** Native `formenctype` vocabulary, applied to the submission this button triggers. */
 export type ButtonFormEnctype =
   | 'application/x-www-form-urlencoded'
@@ -114,7 +116,9 @@ export interface LyraButtonEventMap {
  * Description targets follow same-ID replacement, removal, reinsertion, reconnection and document
  * adoption, including transitions between the native button and anchor.
  * Host `aria-haspopup`, `aria-expanded` and `aria-keyshortcuts` values are likewise forwarded to the internal semantic
- * control. `aria-pressed` (`true`, `false`, `mixed`) supports button toggles; `aria-current`
+ * control. The non-reflected `pressed` property (`true`, `false`, `mixed`, or `null`) supports
+ * button toggles without putting `aria-pressed` on the generic host. A host `aria-pressed`
+ * attribute remains supported for compatibility when `pressed` is `null`; `aria-current`
  * (`page`, `step`, `location`, `date`, `time`, `true`, `false`) supports current navigation.
  * These states follow attribute changes, removal and button/link replacement without changing
  * the native role. Empty or unsupported state tokens are omitted from the internal control.
@@ -151,7 +155,8 @@ export interface LyraButtonEventMap {
  * @slot end - Trailing icon/content, rendered after the label.
  * @slot suffix - Shoelace alias for `end`, rendered through the same wrapper.
  * @attr form - ID of an external form owner. The `form` property still reads as the resolved form.
- * @attr aria-pressed - Toggle state forwarded reactively to the internal control: true, false or mixed.
+ * @attr aria-pressed - Compatibility toggle state forwarded to the internal button when `pressed`
+ *   is `null`: true, false or mixed. Prefer the `pressed` property for new toggle buttons.
  * @attr aria-current - Current-item state forwarded reactively to the internal control: page, step, location, date, time, true or false.
  * @attr rel - Independently settable author relationship tokens (no default). `opener` is always
  *   stripped, and any `target` force-adds the non-removable `noopener noreferrer` guard.
@@ -435,6 +440,11 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     | string
     | null = null;
   @property({ attribute: 'aria-pressed' }) private triggerPressed: string | null = null;
+  /** Toggle state on the internal native button. `null` leaves it unset, or uses a host
+   *  `aria-pressed` attribute for compatibility. This property does not reflect to the host,
+   *  where the generic custom element does not own the button role. Links omit it.
+   * @default null */
+  @property({ attribute: false }) pressed: ButtonPressedState = null;
   @property({ attribute: 'aria-current' }) private triggerCurrent: string | null = null;
   @property({ attribute: 'aria-controls' }) private triggerControls:
     | string
@@ -969,8 +979,13 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   }
 
   override render(): TemplateResult {
-    const pressed = ['true', 'false', 'mixed'].includes(this.triggerPressed ?? '')
-      ? this.triggerPressed : nothing;
+    const pressed = this.pressed === 'mixed'
+      ? 'mixed'
+      : typeof this.pressed === 'boolean'
+        ? String(this.pressed)
+        : ['true', 'false', 'mixed'].includes(this.triggerPressed ?? '')
+          ? this.triggerPressed
+          : nothing;
     const current = ['page', 'step', 'location', 'date', 'time', 'true', 'false'].includes(this.triggerCurrent ?? '')
       ? this.triggerCurrent : nothing;
     // Shared inner content, rendered identically in both roots so the extracted variable produces

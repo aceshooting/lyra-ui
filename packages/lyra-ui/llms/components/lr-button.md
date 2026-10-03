@@ -26,6 +26,11 @@ Host `aria-keyshortcuts` and `aria-describedby` follow the internal button or li
 Description IDs resolve in the host root, preserving order, unresolved IDs, and duplicates; source
 replacement, removal, reconnection, and adoption update the relationship. Accessible names and
 `aria-controls` have separate contracts below.
+For toggle buttons, assign the non-reflected `pressed` property. It renders `aria-pressed` on the
+internal native button without placing the state on the generic host. `null` leaves toggle mode
+unset; an existing host `aria-pressed` attribute remains a compatibility fallback. Links never
+receive toggle state. For example, `<lr-button .pressed=${isActive}>Bold</lr-button>` in a Lit
+template binds an explicit boolean, including `false`.
 
 `[part="label"]` shrink-wraps with `text-align: start`, keeping ellipsis at the trailing edge.
 The icon and label stay centered under `--lr-button-justify`, separated by `--lr-button-gap`.
@@ -116,6 +121,10 @@ The icon and label stay centered under `--lr-button-justify`, separated by `--lr
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — accessible name forwarded
   reactively to the internal native button or anchor; changing or removing the attribute after
   mount updates the actual focused control
+- `pressed: boolean | 'mixed' | null = null` (property only) — toggle state on the internal native
+  button. `true`, `false`, and `'mixed'` render the matching `aria-pressed` value; `null` omits it
+  unless a valid host `aria-pressed` attribute supplies the compatibility fallback. An explicit
+  property value takes precedence over that attribute. Anchor mode omits the state
 - `required: boolean = false` (reflected), `validity`, `validationMessage`, and `willValidate` —
   Web Awesome's form-validity surface. A required button needs a non-empty submitter `value`; this
   validation never makes the button a persistent form-data entry. Disabled, loading, and actual

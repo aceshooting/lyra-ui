@@ -2,26 +2,72 @@
   "name": "@aceshooting/lyra-docs",
   "version": "0.1.0",
   "private": true,
-  "description": "Experimental type contracts for optional document editors",
+  "description": "Experimental native Lyra DOCX editor with lazy document engine loading",
   "type": "module",
   "license": "MIT",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "packageManager": "pnpm@12.8.1",
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/docx/editor.js",
+    "./src/docx/editor.ts",
+    "./dist/docx/editor.css"
+  ],
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
-    "./docx": { "types": "./dist/docx/index.d.ts", "default": "./dist/docx/index.js" },
-    "./package.json": "./package.json"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./docx": {
+      "types": "./dist/docx/index.d.ts",
+      "default": "./dist/docx/index.js"
+    },
+    "./package.json": "./package.json",
+    "./docx/editor": {
+      "types": "./dist/docx/editor.d.ts",
+      "default": "./dist/docx/editor.js"
+    },
+    "./docx/editor.class": {
+      "types": "./dist/docx/docx-editor.class.d.ts",
+      "default": "./dist/docx/docx-editor.class.js"
+    },
+    "./docx/editor.css": "./dist/docx/editor.css"
   },
-  "files": ["dist", "README.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    "THIRD_PARTY_LICENSES"
+  ],
   "scripts": {
     "build": "node scripts/build.mjs",
     "lint": "tsc --noEmit -p tsconfig.test.json && node scripts/check-package.mjs",
-    "test": "pnpm build && tsc --noEmit -p tsconfig.exports.json && tsc -p tsconfig.test.json && node --test --test-concurrency=2 .test-output/src/docx/session.test.js scripts/package.test.mjs"
+    "test": "pnpm build && tsc --noEmit -p tsconfig.exports.json && tsc -p tsconfig.test.json && node --test --test-concurrency=2 .test-output/src/docx/*.test.js scripts/package.test.mjs",
+    "test:browser": "node scripts/browser-test.mjs"
   },
   "devDependencies": {
     "@types/node": "26.6.4",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "@docx-editor.dev/core": "2.24.0",
+    "axe-core": "^4.13.0",
+    "playwright": "^1.63.0",
+    "vite": "^8.3.2"
+  },
+  "dependencies": {
+    "@aceshooting/lyra-ui": "workspace:*",
+    "fflate": "^0.8.2",
+    "lit": "^3.3.3",
+    "saxes": "^6.0.0"
+  },
+  "peerDependencies": {
+    "@docx-editor.dev/core": "2.24.0"
+  },
+  "peerDependenciesMeta": {
+    "@docx-editor.dev/core": {
+      "optional": true
+    }
   }
 }

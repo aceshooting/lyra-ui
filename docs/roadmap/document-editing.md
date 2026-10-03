@@ -1,13 +1,15 @@
 # Native document editing
 
-Status: feasibility in progress. No document editor is shipped or promised for the current release.
-All existing file viewers, including the lightweight, read-only `lr-docx-viewer`, stay in
-`@aceshooting/lyra-ui`. Editing belongs in the optional `@aceshooting/lyra-docs` companion.
-Editor component names and the engine remain subject to the first phase's qualification.
+Status: private experimental implementation and qualification in progress. No document editor is
+shipped or promised for the current release. All existing file viewers, including the lightweight,
+read-only `lr-docx-viewer`, stay in `@aceshooting/lyra-ui`. Editing belongs in the optional
+`@aceshooting/lyra-docs` companion. The current component is `<lr-docx-editor>` and the exact
+optional engine peer is `@docx-editor.dev/core@2.24.0`; neither choice establishes general DOCX
+support or completes a roadmap phase.
 
-The [preliminary feasibility findings](document-editing-feasibility.md) record the candidate
-engine, rejected integration path, dependency boundaries and remaining qualification. Basic
-prototype success does not complete the phase or establish document fidelity.
+The [implementation and qualification record](document-editing-feasibility.md) records verified
+browser behavior, the bounded admission policy, asset measurements, and remaining qualification.
+Passing browser checks establish only the specific behaviors and corpus cases they exercise.
 
 ## Objective and boundaries
 
@@ -32,11 +34,12 @@ The companion reuses Lyra's public controls, tokens, localization and accessibil
 Its first implementation remains private and experimental until the applicable release gates
 pass; creating the package does not make an editor available in the current Lyra UI release.
 
-Study useful architecture from
-[EigenPal DOCX Editor](https://github.com/eigenpal/docx-editor/tree/0bc6d8fa8ec5a35bb267ac171e10102617a68535),
-without importing its application, React/Vue interface or complete feature set into Lyra.
-Its framework-independent core is a candidate optional engine. Lyra owns the public component,
-Lit interface, supported commands, lifecycle, accessibility, theming and integration contract.
+Use the public framework-independent core behind original Lyra controls, without importing its
+React/Vue application or complete feature set. The runtime peer is
+`@docx-editor.dev/core@2.24.0`; a separate read-only source reference at public commit
+[`42c6c267`](https://github.com/eigenpal/docx-editor/tree/42c6c267) is core 2.25 and is reference
+material only. Lyra owns the public component, Lit interface, supported commands, lifecycle,
+accessibility, theming and integration contract.
 Copying isolated parser/layout files is not automatically a smaller solution: those modules share
 document identity, styles, resources, transactions and serialization invariants.
 
@@ -72,36 +75,52 @@ interactive increment. Later phases do not postpone those requirements.
 
 - [x] Compare a public optional engine behind native Lyra controls, a cohesive reusable engine
   subset, and an independently maintained editor. Record ownership, licenses and maintenance cost.
-- [ ] Prove mounting, selection, caret, IME and toolbar focus in a small Lit composition. Validate
-  shadow-root support explicitly: document-level focus and selection assumptions may require an
-  upstream correction or a supported, scoped light-DOM surface. Do not patch browser globals.
+- [ ] Qualify mounting, selection, caret, native IME/composition and toolbar focus in a Lit
+  composition. The implemented light-DOM surface passes browser checks for typing, selection,
+  toolbar focus and formatting. Shadow-DOM mounts are explicitly refused; this does not qualify
+  native input methods or complete keyboard and assistive-technology behavior. Do not patch browser
+  globals.
 - [ ] Establish a representative DOCX corpus, including unsupported content, malformed packages,
-  RTL, large documents and round trips through Word and LibreOffice.
+  RTL, larger real documents and round trips through Word and LibreOffice. Current preservation
+  checks cover selected opaque parts in a synthetic fixture only.
 - [ ] Measure production JS/CSS, lazy chunks, WASM, fonts, opening time, typing latency and retained
-  memory. Verify that the companion's format entry points and lazy loading isolate these costs.
+  memory. Current evidence records emitted JS, CSS and WASM plus one fixture's timings; fonts,
+  retained memory and a qualified lazy-loading budget remain open.
 
 Exit: a documented engine/DOM/packaging decision, license inventory and reproducible baseline.
 Stop or narrow the proposal if supported integration or preservation cannot be demonstrated.
 
 ### 1. Shared document and lifecycle contract
 
-- [ ] Define document loading, readiness, dirty state, revision, selection, command availability,
-  error diagnostics, read-only behavior and explicit save/export. Keep engine internals private.
-- [ ] Keep the engine mount stable during Lit updates and design/locale changes. Specify disconnect,
-  reconnect and replacement behavior, including whether undo history and selection survive.
-- [ ] Implement bounded, cancellable resource loading; release observers, listeners, object URLs,
-  fonts, workers and document buffers when no longer owned. Support multiple independent editors.
-- [ ] Design shared controls and event conventions using existing Lyra APIs. Choose provisional
-  editor names only after establishing whether rich text and DOCX need separate public surfaces.
+- [x] Define loading, readiness, dirty state, revisions, selection, command availability, normalized
+  error codes, fixed per-session read-only behavior and explicit save/acknowledgement. Keep engine
+  types private.
+- [x] Keep the engine mount stable during Lit, theme and locale updates. Specify terminal disconnect,
+  reconnect, and dirty-document replacement behavior; undo history and selection do not survive
+  destruction.
+- [x] Bound DOCX archive admission, support cancellation and stale-result guards, release mount
+  ownership and observers, and support independent editor instances.
+- [ ] Qualify release of all retained resources and memory across repeated open/save/destroy cycles.
+  No dedicated engine worker or font assets are configured, and retained-memory results remain
+  inconclusive.
+- [x] Use existing Lyra controls and event conventions. The selected public surface is the
+  `<lr-docx-editor>` component plus the `@aceshooting/lyra-docs/docx` session entry.
 
 Exit: lifecycle and public API tests pass, with no engine import or initialization for non-users.
 
 ### 2. Basic rich-text editing
 
+The private implementation currently supports paragraph text entry, text selection, bold, italic,
+underline, undo and redo. It does not yet provide the broader rich-text feature set below.
+
 - [ ] Support paragraphs, headings, bold/italic/underline, links, lists, alignment and selections.
-- [ ] Provide undo/redo, keyboard shortcuts, clipboard handling, find/replace and localized status.
-- [ ] Compose native Lyra toolbar/menu controls with selection retention and accurate disabled and
-  pressed states. Preserve authored document colors independently from the surrounding Lyra look.
+- [x] Provide undo/redo and localized status messages; add Alt+F10 toolbar entry with arrow,
+  Home/End and Escape navigation.
+- [x] Compose the initial five-command toolbar from Lyra controls, retaining selection for toolbar
+  actions and exposing command availability and active formatting state.
+- [ ] Add editing shortcuts beyond toolbar access, clipboard handling and find/replace; qualify
+  localized feedback across input methods and authored document styling independently from the
+  surrounding Lyra look.
 - [ ] Verify keyboard-only use, IME/composition, Unicode, mixed-direction text, text zoom, touch
   selection, accessible names and read-only mode. Document supported input/output formats.
 
@@ -110,14 +129,20 @@ DOCX work; do not create a second rich-text engine solely to discard it in the n
 
 ### 3. DOCX loading, editing and saving
 
-- [ ] Add explicit local-byte/file loading and optional bounded URL loading; open blank documents
-  and report unsupported or refused content without silently losing it.
-- [ ] Support common paragraph/run styles, hyperlinks/bookmarks, numbered lists, basic tables and
-  embedded images, with insertion, deletion and resize commands where supported.
-- [ ] Preserve untouched relationships, media, extensions and unknown OOXML parts through edits.
-  Separate preservation support from rendering and editing support in the capability matrix.
-- [ ] Save on demand, expose meaningful dirty/revision events, and verify save/reopen plus external
-  application round trips. Do not send full document bytes on every keystroke.
+- [x] Open blank documents, caller-provided bytes and local files; report normalized refusals. The
+  component does not fetch URLs.
+- [ ] Evaluate optional bounded URL loading with the same external-resource and cancellation rules.
+- [ ] Support and qualify common paragraph/run styles, hyperlinks/bookmarks, numbered lists, basic
+  tables and embedded images for rendering and editing, with insertion, deletion and resize
+  commands where supported. The current command set is limited to bold, italic, underline, undo
+  and redo.
+- [ ] Establish a preservation/rendering/editing capability matrix for relationships, media,
+  extensions and unknown OOXML parts. Selected opaque parts survive the current synthetic edit,
+  save and reopen fixture; this does not prove general part preservation or usability.
+- [x] Save on demand, expose dirty/revision/change events and require a host persistence receipt
+  acknowledgement. No document bytes are emitted per keystroke.
+- [ ] Verify representative save/reopen and external application round trips through Word and
+  LibreOffice.
 
 Exit: supported edits survive round trips; unsupported content is preserved or explicitly refused.
 Do not route editing through the existing viewer's lossy semantic HTML conversion.

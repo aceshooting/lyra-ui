@@ -1102,6 +1102,7 @@ export type {
   ButtonType,
   ButtonFormEnctype,
   ButtonFormMethod,
+  ButtonPressedState,
   LyraButtonEventMap,
 } from './components/forms/button/button.class.js';
 

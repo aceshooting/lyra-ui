@@ -40,6 +40,71 @@ describe("lr-button", () => {
     expect(button.type).to.equal("button");
   });
 
+  describe('pressed property', () => {
+    it('leaves the existing native button output unchanged when unset', async () => {
+      const el = await fixture<LyraButton>(html`<lr-button>Save</lr-button>`);
+      const button = el.shadowRoot!.querySelector('button[part~="base"]') as HTMLButtonElement;
+      expect(el.pressed).to.equal(null);
+      expect(el.hasAttribute('pressed')).to.equal(false);
+      expect(el.hasAttribute('aria-pressed')).to.equal(false);
+      expect(button.hasAttribute('aria-pressed')).to.equal(false);
+      await expect(el).to.be.accessible();
+    });
+
+    it('renders true, false, and mixed on the native button without reflecting to the host', async () => {
+      const el = await fixture<LyraButton>(html`<lr-button .pressed=${false}>Monthly</lr-button>`);
+      const button = el.shadowRoot!.querySelector('button[part~="base"]') as HTMLButtonElement;
+      expect(button.getAttribute('aria-pressed')).to.equal('false');
+      expect(el.hasAttribute('pressed')).to.equal(false);
+      expect(el.hasAttribute('aria-pressed')).to.equal(false);
+      await expect(el).to.be.accessible();
+
+      el.pressed = true;
+      await el.updateComplete;
+      expect(button.getAttribute('aria-pressed')).to.equal('true');
+      expect(el.hasAttribute('aria-pressed')).to.equal(false);
+
+      el.pressed = 'mixed';
+      await el.updateComplete;
+      expect(button.getAttribute('aria-pressed')).to.equal('mixed');
+
+      el.pressed = null;
+      await el.updateComplete;
+      expect(button.hasAttribute('aria-pressed')).to.equal(false);
+    });
+
+    it('takes precedence over the compatibility host attribute and restores it when cleared', async () => {
+      const el = await fixture<LyraButton>(html`<lr-button aria-pressed="true">Monthly</lr-button>`);
+      const button = el.shadowRoot!.querySelector('button[part~="base"]') as HTMLButtonElement;
+      expect(button.getAttribute('aria-pressed')).to.equal('true');
+
+      el.pressed = false;
+      await el.updateComplete;
+      expect(button.getAttribute('aria-pressed')).to.equal('false');
+
+      el.setAttribute('aria-pressed', 'mixed');
+      await el.updateComplete;
+      expect(button.getAttribute('aria-pressed')).to.equal('false');
+
+      el.pressed = null;
+      await el.updateComplete;
+      expect(button.getAttribute('aria-pressed')).to.equal('mixed');
+    });
+
+    it('omits the toggle state from links and restores it when returning to button mode', async () => {
+      const el = await fixture<LyraButton>(html`<lr-button .pressed=${true} href="https://example.com">Go</lr-button>`);
+      const anchor = el.shadowRoot!.querySelector('a[part~="base"]') as HTMLAnchorElement;
+      expect(anchor.hasAttribute('aria-pressed')).to.equal(false);
+      expect(el.hasAttribute('aria-pressed')).to.equal(false);
+      await expect(el).to.be.accessible();
+
+      el.removeAttribute('href');
+      await el.updateComplete;
+      const button = el.shadowRoot!.querySelector('button[part~="base"]') as HTMLButtonElement;
+      expect(button.getAttribute('aria-pressed')).to.equal('true');
+    });
+  });
+
   it("reflects variant/appearance/size/disabled as host attributes", async () => {
     const el = (await fixture(
       html`<lr-button variant="danger" appearance="outlined" size="l" disabled

@@ -3,12 +3,28 @@
   "compilerOptions": {
     "rootDir": ".",
     "outDir": ".test-output",
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "paths": {
-      "@aceshooting/lyra-docs": ["./src/index.ts"],
-      "@aceshooting/lyra-docs/docx": ["./src/docx/index.ts"]
+      "@aceshooting/lyra-docs": [
+        "./src/index.ts"
+      ],
+      "@aceshooting/lyra-docs/docx": [
+        "./src/docx/index.ts"
+      ],
+      "@aceshooting/lyra-docs/docx/editor": [
+        "./src/docx/editor.ts"
+      ],
+      "@aceshooting/lyra-docs/docx/editor.class": [
+        "./src/docx/docx-editor.class.ts"
+      ]
     }
   },
-  "include": ["src/**/*.ts", "type-tests/**/*.ts"],
+  "include": [
+    "src/**/*.ts",
+    "type-tests/**/*.ts",
+    "test/**/*.ts"
+  ],
   "exclude": []
 }

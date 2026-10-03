@@ -15,6 +15,10 @@ export interface DocxSessionOptions {
   readonly mount: HTMLElement;
   /** Fixed for the session; selection, focus and export remain available. */
   readonly readOnly?: boolean;
+  /** Initial engine language; document language and authored content are unchanged. */
+  readonly locale?: string;
+  /** Translate engine messages without exposing engine-specific types. */
+  readonly translate?: (key: string, values?: Record<string, string | number>) => string;
 }
 export interface DocxSelection {
   readonly version: number;

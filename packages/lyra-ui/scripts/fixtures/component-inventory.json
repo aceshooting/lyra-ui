@@ -15958,6 +15958,16 @@
             "default": false
           },
           {
+            "name": "pressed",
+            "attribute": null,
+            "type": "ButtonPressedState",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "rel",
             "attribute": "rel",
             "type": "string | undefined",

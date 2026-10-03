@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import { html } from "lit";
 import "./button.js";
+import type { LyraButton } from "./button.class.js";
 
 const meta: Meta = {
   title: "Button",
@@ -24,13 +25,13 @@ export const Default: Story = {
 
 export const ToggleAndCurrent: Story = {
   parameters: {
-    docs: { description: { story: 'A toggle exposes its pressed state on the focused native button. Navigation exposes the current page on the native link. State follows attribute changes and native keyboard activation. For a toggle that owns its pressed state, with a vetoable request and an optional one-tab-stop group, use `lr-toggle` and `lr-toggle-group` instead of flipping `aria-pressed` here.' } },
+    docs: { description: { story: 'The `pressed` property exposes toggle state on the focused native button without adding `aria-pressed` to the host. Navigation exposes the current page on the native link. For a toggle that owns its pressed state, with a vetoable request and an optional one-tab-stop group, use `lr-toggle` and `lr-toggle-group`.' } },
   },
   render: () => html`
     <div style="display:flex;gap:var(--lr-space-m);flex-wrap:wrap">
-      <lr-button aria-pressed="false" @click=${(event: Event) => {
-        const button = event.currentTarget as HTMLElement;
-        button.ariaPressed = button.ariaPressed === 'true' ? 'false' : 'true';
+      <lr-button .pressed=${false} @click=${(event: Event) => {
+        const button = event.currentTarget as LyraButton;
+        button.pressed = button.pressed !== true;
       }}>Monthly</lr-button>
       <lr-button href="#overview" aria-current="page">Overview</lr-button>
     </div>

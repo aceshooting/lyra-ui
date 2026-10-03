@@ -1,1 +1,3 @@
 .test-output/
+.browser-output/
+.browser-evidence/

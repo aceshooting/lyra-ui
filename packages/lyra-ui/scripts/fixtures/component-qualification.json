@@ -6242,7 +6242,25 @@
             },
             {
               "file": "src/components/forms/button/button.test.ts",
+              "test": "leaves the existing native button output unchanged when unset",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/forms/button/button.test.ts",
               "test": "never forwards aria-pressed onto the anchor, while aria-current (global) still reaches it",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/forms/button/button.test.ts",
+              "test": "omits the toggle state from links and restores it when returning to button mode",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/forms/button/button.test.ts",
+              "test": "renders true, false, and mixed on the native button without reflecting to the host",
               "target": "el",
               "state": "populated"
             }

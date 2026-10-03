@@ -1,0 +1,25 @@
+/** English fallbacks for the experimental document editor. Applications may override these
+ * through the element's inherited `strings` property. */
+export const DOCX_EDITOR_STRINGS = Object.freeze({
+  docxEditorLabel: 'Document editor',
+  docxEditorNew: 'New',
+  docxEditorOpen: 'Open',
+  docxEditorSave: 'Save',
+  docxEditorBold: 'Bold',
+  docxEditorItalic: 'Italic',
+  docxEditorUnderline: 'Underline',
+  docxEditorUndo: 'Undo',
+  docxEditorRedo: 'Redo',
+  docxEditorUntitled: 'Untitled document',
+  docxEditorIdle: 'Open a document or create a new one.',
+  docxEditorOpening: 'Opening document…',
+  docxEditorReady: 'Document ready',
+  docxEditorUnsaved: 'Unsaved changes',
+  docxEditorSaving: 'Saving document…',
+  docxEditorError: 'The document could not be opened or saved. Try again or choose another DOCX file.',
+  docxEditorDisconnected: 'The editor was disconnected. Open the document again to continue.',
+  docxEditorShortcut: 'Press Alt+F10 to reach the toolbar.',
+  docxEditorDiscardQuestion: 'Discard unsaved changes?',
+  docxEditorDiscard: 'Discard changes',
+  docxEditorKeep: 'Keep editing',
+});

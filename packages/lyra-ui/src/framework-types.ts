@@ -1694,6 +1694,7 @@ export interface LyraComponentTypeMap {
       | 'name'
       | 'outline'
       | 'pill'
+      | 'pressed'
       | 'rel'
       | 'required'
       | 'size'
