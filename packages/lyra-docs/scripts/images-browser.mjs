@@ -13,7 +13,7 @@ const select = async (page, id, index = 0) => {
 function images(bytes) {
   const result = [], parser = new SaxesParser({ xmlns: true });
   parser.on('opentag', node => {
-    if (node.uri === 'http://schemas.openxmlformats.org/drawingml/2006/main' && node.local === 'ext') {
+    if (node.uri === 'http://schemas.openxmlformats.org/drawingml/2006/main' && node.local === 'ext' && node.attributes.cx) {
       Object.assign(result.at(-1), { innerWidth: Number(node.attributes.cx.value), innerHeight: Number(node.attributes.cy.value) });
     }
     if (node.uri !== 'http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing') return;
@@ -66,6 +66,10 @@ export async function runImageEditing(page, check, { createEditor, saveEditor })
     ['image-simple', { type: 'image-description', title: '', description: '' }],
     ['image-simple', { type: 'delete-image' }],
     ['image-empty-source', { type: 'resize-image', widthPoints: 180, heightPoints: 90 }],
+    ['image-word', { type: 'resize-image', widthPoints: 160, heightPoints: 80 }],
+    ['image-word', { type: 'image-description', title: 'Word picture', description: 'Authored by Word' }],
+    ['image-table', { type: 'resize-image', widthPoints: 90, heightPoints: 45 }],
+    ['image-table', { type: 'delete-image' }],
   ]) await check(`selected image ${kind} ${action.type}${action.description?.includes('\r') ? ' CR/CRLF' : ''} commits once and preserves history/media/reopen`, async () => {
     const id = 'image-api'; await createEditor(page, id, kind); await select(page, id);
     const before = await saveEditor(page, id), initial = await state(page, id);
@@ -187,7 +191,7 @@ export async function runImageEditing(page, check, { createEditor, saveEditor })
     assert.deepEqual(await page.locator(`#${id}`).evaluate(element => element.imageDescription()), { ok: true, value: { title: action.title, description: action.description } });
     await remove(page, id);
   });
-  for (const kind of ['image-picture-lock', 'image-frame-lock', 'image-table', 'image-crop', 'image-rotation', 'image-long-metadata']) {
+  for (const kind of ['image-picture-lock', 'image-frame-lock', 'image-crop', 'image-rotation', 'image-long-metadata']) {
     await check(`selected image ${kind} refusal preserves bytes/revision/history`, async () => {
       const id = 'image-refusal'; await createEditor(page, id, kind); await select(page, id);
       const before = await saveEditor(page, id), initial = await state(page, id);

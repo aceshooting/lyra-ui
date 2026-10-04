@@ -175,7 +175,7 @@ export async function runImageInsertionTools(page, check, { createEditor, saveEd
         if (replace) {
           assert.equal((await page.evaluate(() => window.__insertionOwner.ready)).ok, true);
           const next = await snapshot(page, id);
-          assert.notEqual(next.revision.documentId, initial.revision.documentId); assert.equal(next.revision.value, 0); assert.equal(next.dirty, true);
+          assert.notEqual(next.revision.documentId, initial.revision.documentId); assert.equal(next.revision.value, 0); assert.equal(next.dirty, false);
           assert.equal(await page.locator(`#${id} .docx-pages img`).count(), 0);
         }
         await paints(page);

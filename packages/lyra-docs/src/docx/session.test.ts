@@ -501,6 +501,8 @@ test('invalid options and preflight calls do not spend the idle session', async 
   assert.equal(session.snapshot().status, 'idle');
   assert.equal(f.opens, 0);
   value(await session.open({ kind: 'blank' }));
+  assert.equal(session.snapshot().dirty, false, 'An untouched blank document has nothing to discard');
+  f.emit('change');
   assert.equal(session.snapshot().dirty, true);
 });
 
@@ -629,6 +631,7 @@ test('lease release covers failed execution, composition, content changes and fo
 
 test('saving returns copied bytes, stays dirty until acknowledgement and rejects forged/foreign receipts', async () => {
   const { f, session } = await opened(false, { kind: 'blank' });
+  f.emit('change');
   const receipt = value(await session.save());
   assert.equal(session.snapshot().dirty, true);
   assert.notEqual(receipt.bytes, f.output);
@@ -646,6 +649,7 @@ test('saving returns copied bytes, stays dirty until acknowledgement and rejects
 
 test('starting another save invalidates previous token even if the new save fails', async () => {
   const { f, session } = await opened(false, { kind: 'blank' });
+  f.emit('change');
   const old = value(await session.save());
   f.saveGate = deferred();
   const pending = session.save();
@@ -971,6 +975,7 @@ test('execute and focus report the engine fault caused by their synchronous even
 
 test('acknowledgement and saving observers report an induced fault rather than success or destruction', async () => {
   const acknowledgement = await opened(false, { kind: 'blank' });
+  acknowledgement.f.emit('change');
   const receipt = value(await acknowledgement.session.save());
   acknowledgement.session.subscribe(() => {
     if (!acknowledgement.session.snapshot().dirty) {

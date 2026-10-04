@@ -111,7 +111,14 @@ const lockNames = ['noSelect', 'noMove', 'noResize', 'noChangeAspect', 'noGrp', 
   'noAdjustHandles', 'noChangeArrowheads', 'noChangeShapeType', 'noCrop', 'noDrilldown'];
 for (const placement of ['picture', 'frame'] as const) {
   for (const name of lockNames) {
+    const neutralWhenSet = name === 'noChangeAspect' || name === 'noChangeArrowheads';
     for (const value of ['true', '1', '', 'TRUE', '2', ' false ', 'bogus']) {
+      if (neutralWhenSet && (value === 'true' || value === '1')) {
+        test(`${placement} ${name}=${value} only constrains shape editing and keeps the picture editable`, () => {
+          const h = fixture(); addAttribute(locks(h, placement), name, value); allow(h);
+        });
+        continue;
+      }
       test(`${placement} ${name}=${JSON.stringify(value)} refuses every image operation without mutation`, () => {
         const h = fixture(); addAttribute(locks(h, placement), name, value); refuse(h);
       });
@@ -200,7 +207,7 @@ test('neutral hidden and flip booleans accept only exact false encodings', () =>
   }
 });
 for (const wrapper of ['tbl', 'tc', 'txbxContent', 'sdt', 'sdtContent', 'hyperlink', 'fldSimple', 'ins', 'del', 'moveFrom', 'moveTo', 'customXml', 'smartTag']) {
-  test(`selected image under ${wrapper} is an excluded canonical wrapper`, () => {
+  test(`selected image under ${wrapper} is ${wrapper === 'tbl' || wrapper === 'tc' ? 'a plain table cell' : 'an excluded canonical wrapper'}`, () => {
     const h = fixture();
     if (['hyperlink', 'fldSimple', 'ins', 'del', 'moveFrom', 'moveTo', 'smartTag'].includes(wrapper)) {
       children(h.paragraph).splice(children(h.paragraph).indexOf(h.run), 1, h.node(wrapper, W, [h.run]));
@@ -213,9 +220,17 @@ for (const wrapper of ['tbl', 'tc', 'txbxContent', 'sdt', 'sdtContent', 'hyperli
           : h.node(wrapper, W, [h.paragraph]);
       children(body).splice(position, 1, wrapped);
     }
-    refuse(h);
+    // A complete table/row/cell chain is a plain body container; every other wrapper stays excluded.
+    if (wrapper === 'tbl' || wrapper === 'tc') allow(h); else refuse(h);
   });
 }
+test('partial table chains around a picture paragraph are refused', () => {
+  for (const chain of [['tbl', 'tc'], ['tr', 'tc'], ['tbl', 'tr']]) {
+    const h = fixture(), body = h.find('body'), position = children(body).indexOf(h.paragraph);
+    const wrapped = chain.reduceRight<OoxmlElement>((inner, name) => h.node(name, W, [inner]), h.paragraph);
+    children(body).splice(position, 1, wrapped); refuse(h);
+  }
+});
 test('floating anchors and alternate-content fallback cannot qualify as a plain inline picture', () => {
   const anchor = fixture(); Object.assign(anchor.find('inline'), { localName: 'anchor' }); refuse(anchor);
   const alternate = fixture();

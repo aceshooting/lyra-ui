@@ -53,6 +53,8 @@ export interface DocxEnginePort {
   inspect(): DocxEngineState;
   /** Presentation only; must not lay out, flush input or mutate the document. */
   refreshTableLabels?(labels: DocxTableLabels): boolean;
+  /** Presentation only: the painted node of the selected supported image, for pointer chrome. */
+  selectedImageElement?(): HTMLElement | null;
   /** A change event is one committed document change, never initial loading. */
   subscribe(listener: (event: DocxEngineEvent) => void): () => void;
   can(command: DocxAction): DocxCommandAvailability;

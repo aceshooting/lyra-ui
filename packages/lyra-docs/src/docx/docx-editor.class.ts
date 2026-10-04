@@ -1,12 +1,13 @@
 import { nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { html, unsafeStatic } from 'lit/static-html.js';
 import { property, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '@aceshooting/lyra-ui/utilities/lyra-element.js';
 import { resolveLyraScopedString } from '@aceshooting/lyra-ui/localization.js';
 import { tag } from '@aceshooting/lyra-ui/utilities/prefix.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '@aceshooting/lyra-ui/utilities/announcer.js';
 import { createDocxSession } from './create-session.js';
-import { refreshInternalDocxTableLabels } from './session.js';
+import { internalDocxSelectedImageElement, refreshInternalDocxTableLabels } from './session.js';
 import { captureTableToolIntent, tableInsertDraft } from './table-tools.js';
 import {
   captureImageToolIntent, imageDescriptionDraft, imageDimensionDraft,
@@ -59,7 +60,32 @@ const toolIcons = {
   'table-insert': { path: 'M3 3h18v18H3z M3 9h18 M3 15h18 M9 3v18 M15 3v18', label: 'docxEditorInsertTable' },
   'image-previous': { path: 'M5 5h14v14H5z M5 15l4-4 5 5 M16 9h.01 M3 12H0 M2 10l-2 2 2 2', label: 'docxEditorPreviousImage' },
   'image-next': { path: 'M5 5h14v14H5z M5 15l4-4 5 5 M16 9h.01 M21 12h3 M22 10l2 2-2 2', label: 'docxEditorNextImage' },
+  'image-resize': { path: 'M14 3h7v7 M10 21H3v-7 M21 3l-7 7 M3 21l7-7', label: 'docxEditorResizeImage' },
+  'image-description': { path: 'M3 4h18v16H3z M7 9h10 M7 13h10 M7 17h6', label: 'docxEditorDescribeImage' },
+  'image-delete': { path: 'M4 7h16 M9 7V4h6v3 M6 7l1 14h10l1-14 M10 11v6 M14 11v6', label: 'docxEditorDeleteImage' },
+  'table-row-above': { path: 'M3 13h18v8H3z M12 3v7 M8.5 6.5h7', label: 'docxEditorTableRowAbove' },
+  'table-row-below': { path: 'M3 3h18v8H3z M12 14v7 M8.5 17.5h7', label: 'docxEditorTableRowBelow' },
+  'table-column-left': { path: 'M13 3h8v18h-8z M3 12h7 M6.5 8.5v7', label: 'docxEditorTableColumnLeft' },
+  'table-column-right': { path: 'M3 3h8v18H3z M14 12h7 M17.5 8.5v7', label: 'docxEditorTableColumnRight' },
+  'table-delete-row': { path: 'M3 8h18v8H3z M10 10l4 4 M14 10l-4 4', label: 'docxEditorTableDeleteRow' },
+  'table-delete-column': { path: 'M8 3h8v18H8z M10 10l4 4 M14 10l-4 4', label: 'docxEditorTableDeleteColumn' },
+  'table-delete-table': { path: 'M3 3h18v18H3z M3 9h18 M9 3v18 M13 13l6 6 M19 13l-6 6', label: 'docxEditorTableDelete' },
 } as const;
+/** Tools rendered only in a matching context own their tooltip next to the trigger. */
+const contextualToolIcons = new Set<string>(['image-resize', 'image-description', 'image-delete', 'table-row-above',
+  'table-row-below', 'table-column-left', 'table-column-right', 'table-delete-row', 'table-delete-column', 'table-delete-table']);
+const imageHandles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'] as const;
+type ImageHandle = typeof imageHandles[number];
+interface ImageFrame { left: number; top: number; width: number; height: number }
+interface ImageClip extends ImageFrame { frame: ImageFrame }
+interface ImageDrag {
+  pointerId: number;
+  handle: ImageHandle;
+  x: number;
+  y: number;
+  start: ImageFrame;
+  intent: NonNullable<ReturnType<typeof captureImageToolIntent>>;
+}
 type ToolIcon = keyof typeof toolIcons;
 const commands: readonly DocxCommand[] = ['bold', 'italic', 'underline'];
 const iconTag = unsafeStatic(tag('icon'));
@@ -96,7 +122,7 @@ const refused = <T>(code: DocxRefusalCode): DocxResult<T> => ({ ok: false, code 
  * callers reopen their own saved bytes after reconnect. Save returns bytes without persisting or
  * clearing dirty state; call `acknowledgeSaved()` after durable host persistence.
  *
- * @event lr-before-open - Cancelable when a dirty document would be replaced.
+ * @event lr-before-open - Cancelable when a document with unsaved content would be replaced; an untouched or emptied single blank page is replaced without asking.
  * @event lr-ready - A document finished opening.
  * @event lr-change - Session state or revision changed; no document bytes are included.
  * @event lr-selection-change - Selection kind or version changed.
@@ -124,6 +150,16 @@ const refused = <T>(code: DocxRefusalCode): DocxResult<T> => ({ ok: false, code 
  * @slot table-insert-icon - Decorative icon for the table insert action; the editor retains its accessible name.
  * @slot image-previous-icon - Decorative icon for the image previous action; the editor retains its accessible name.
  * @slot image-next-icon - Decorative icon for the image next action; the editor retains its accessible name.
+ * @slot image-resize-icon - Decorative icon for the image resize action; the editor retains its accessible name.
+ * @slot image-description-icon - Decorative icon for the image description action; the editor retains its accessible name.
+ * @slot image-delete-icon - Decorative icon for the image delete action; the editor retains its accessible name.
+ * @slot table-row-above-icon - Decorative icon for the table row above action; the editor retains its accessible name.
+ * @slot table-row-below-icon - Decorative icon for the table row below action; the editor retains its accessible name.
+ * @slot table-column-left-icon - Decorative icon for the table column left action; the editor retains its accessible name.
+ * @slot table-column-right-icon - Decorative icon for the table column right action; the editor retains its accessible name.
+ * @slot table-delete-row-icon - Decorative icon for the table delete row action; the editor retains its accessible name.
+ * @slot table-delete-column-icon - Decorative icon for the table delete column action; the editor retains its accessible name.
+ * @slot table-delete-table-icon - Decorative icon for the table delete table action; the editor retains its accessible name.
  * @cssprop --lr-docx-editor-document-max-block-size - Document scroll viewport maximum block size; defaults to 30rem. Set a valid length or none to let the document grow. Pages keep 100% scale and scroll horizontally in narrower allocations.
  * @csspart base - The root editor surface.
  * @csspart toolbar - File and formatting controls.
@@ -170,7 +206,10 @@ const refused = <T>(code: DocxRefusalCode): DocxResult<T> => ({ ok: false, code 
  * @csspart image-previous - Selects the previous eligible body image, wrapping at the start.
  * @csspart image-next - Selects the next eligible body image, wrapping at the end.
  * @csspart image-navigation-status - Feedback when no eligible image is available.
- * @csspart image-context - Actual selected image dimensions in points.
+ * @csspart image-context - Selected image dimensions in points, rounded for display.
+ * @csspart image-frame - Selection frame painted over the selected editable image.
+ * @csspart image-handle - One pointer resize handle, identified by data-handle (nw, n, ne, e, se, s, sw, w). Corners keep the aspect ratio; Shift inverts that.
+ * @csspart image-size - Live dimensions shown while a resize handle is dragged.
  * @csspart image-resize-popover - Image dimensions dialog.
  * @csspart image-resize-trigger - Opens the image resize dialog.
  * @csspart image-resize-fields - Dimension fields, ratio option and controls.
@@ -300,6 +339,12 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   private assertiveSink: AnnouncementSink | null = null;
   private announcementsArmed = false;
   private pickerFocusReturn = false;
+  @state() private imageClip: ImageClip | null = null;
+  @state() private imagePreview: (ImageFrame & { widthPoints: number; heightPoints: number }) | null = null;
+  private imageDrag: ImageDrag | null = null;
+  private imageFrameRequest = 0;
+  private imageFrameObserver: ResizeObserver | null = null;
+  private observedImage: HTMLElement | null = null;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -316,11 +361,20 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       this.append(mount);
     }
     this.addEventListener('keydown', this.onHostKeyDown, { capture: true });
+    this.addEventListener('scroll', this.scheduleImageFrame, { capture: true, passive: true });
   }
 
   override disconnectedCallback(): void {
     this.sourceReadSequence++;
     this.removeEventListener('keydown', this.onHostKeyDown, { capture: true });
+    this.removeEventListener('scroll', this.scheduleImageFrame, { capture: true });
+    this.cancelImageDrag();
+    this.ownerDocument.defaultView?.cancelAnimationFrame(this.imageFrameRequest);
+    this.imageFrameRequest = 0;
+    this.imageFrameObserver?.disconnect();
+    this.imageFrameObserver = null;
+    this.observedImage = null;
+    this.imageClip = null;
     this.disposeSession();
     this.mount?.remove();
     this.mount = null;
@@ -343,6 +397,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
     this.refreshTableLabels();
+    if (!(changed as Map<PropertyKey, unknown>).has('imageClip') || changed.size > 1) this.scheduleImageFrame();
     const enabled = this.enabledToolbarButtons();
     if (enabled.length && !enabled.some(button => button.getAttribute('data-tool-key') === this.toolbarKey))
       this.toolbarKey = enabled[0]!.getAttribute('data-tool-key') ?? 'bold';
@@ -363,6 +418,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   }
 
   private disposeSession(): void {
+    this.cancelImageDrag();
     this.toolbarSelection?.release();
     this.toolbarSelection = null;
     this.unsubscribeSession?.();
@@ -473,13 +529,13 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       this.reportError('resource-limit');
       return refused('resource-limit');
     }
-    if (this.currentSnapshot?.dirty) {
+    if (this.hasUnsavedContent()) {
       const priorSession = this.session;
       const priorSnapshot = this.currentSnapshot;
       const priorMount = this.mount;
       const event = this.emit('lr-before-open', {
         kind: source.kind,
-        currentRevision: this.currentSnapshot.revision,
+        currentRevision: this.currentSnapshot?.revision ?? null,
       }, { cancelable: true });
       if (event.defaultPrevented) return refused('aborted');
       if (!this.isConnected || this.mount !== priorMount) return refused('destroyed');
@@ -646,6 +702,15 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
 
   /** Return keyboard focus to the editing surface. */
   focusEditor(): DocxResult<void> { return this.session?.focus() ?? refused('not-ready'); }
+
+  /** Dirty content worth confirming: an edited single page with no text, picture or table has nothing to lose. */
+  private hasUnsavedContent(): boolean {
+    if (!this.currentSnapshot?.dirty) return false;
+    const pages = this.mount?.querySelectorAll('.docx-page');
+    if (pages?.length !== 1) return true;
+    const page = pages[0]!;
+    return Boolean(page.textContent?.trim()) || page.querySelector('img, svg, table, .docx-drawing, .docx-table') !== null;
+  }
 
   private releaseToolbarSelection(): void {
     this.toolbarSelection?.release();
@@ -1227,6 +1292,154 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     if (action) this.runImageEdit(action, true);
   }
 
+  private imageHandlesAvailable(): boolean {
+    const snapshot = this.currentSnapshot;
+    return Boolean(snapshot?.image) && snapshot?.status === 'ready' && !snapshot.readOnly && !snapshot.composing &&
+      snapshot.activity === null && this.imageDialog === null && this.can({ type: 'delete-image' }).enabled;
+  }
+
+  private scheduleImageFrame = (): void => {
+    const view = this.ownerDocument.defaultView;
+    if (!view || this.imageFrameRequest) return;
+    this.imageFrameRequest = view.requestAnimationFrame(() => {
+      this.imageFrameRequest = 0;
+      this.syncImageFrame();
+    });
+  };
+
+  /** Track the painted selected image in document-part coordinates, clipped to the visible viewport. */
+  private syncImageFrame(): void {
+    if (!this.isConnected) return;
+    const image = this.imageHandlesAvailable() || this.imageDrag ? internalDocxSelectedImageElement(this.session) : null;
+    if (image !== this.observedImage) {
+      this.imageFrameObserver?.disconnect();
+      this.observedImage = image;
+      const Observer = this.ownerDocument.defaultView?.ResizeObserver;
+      if (image && Observer) {
+        this.imageFrameObserver ??= new Observer(() => this.scheduleImageFrame());
+        this.imageFrameObserver.observe(image);
+        const documentPart = this.renderRoot.querySelector('[part="document"]');
+        if (documentPart) this.imageFrameObserver.observe(documentPart);
+      }
+    }
+    const documentPart = this.renderRoot.querySelector<HTMLElement>('[part="document"]');
+    const viewport = this.mount?.querySelector<HTMLElement>('[data-lr-docx-viewport]');
+    const next = (() => {
+      if (!image || !documentPart || !viewport) return null;
+      const box = image.getBoundingClientRect(), outer = documentPart.getBoundingClientRect(), view = viewport.getBoundingClientRect();
+      if (!box.width || !box.height) return null;
+      const originX = outer.left + documentPart.clientLeft - documentPart.scrollLeft;
+      const originY = outer.top + documentPart.clientTop - documentPart.scrollTop;
+      const clipLeft = view.left + viewport.clientLeft, clipTop = view.top + viewport.clientTop;
+      const round = (value: number) => Math.round(value * 100) / 100;
+      return {
+        left: round(clipLeft - originX), top: round(clipTop - originY),
+        width: round(viewport.clientWidth), height: round(viewport.clientHeight),
+        frame: { left: round(box.left - clipLeft), top: round(box.top - clipTop), width: round(box.width), height: round(box.height) },
+      };
+    })();
+    const previous = this.imageClip;
+    if (next === previous || (next && previous && next.left === previous.left && next.top === previous.top &&
+        next.width === previous.width && next.height === previous.height && next.frame.left === previous.frame.left &&
+        next.frame.top === previous.frame.top && next.frame.width === previous.frame.width && next.frame.height === previous.frame.height)) return;
+    this.imageClip = next;
+    if (!next && this.imageDrag) this.cancelImageDrag();
+  }
+
+  private startImageDrag(event: PointerEvent, handle: ImageHandle): void {
+    if (event.button !== 0 || this.imageDrag || !event.isPrimary) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const frame = this.imageClip?.frame;
+    if (!frame || !this.imageHandlesAvailable()) return;
+    this.releaseToolbarSelection();
+    const intent = captureImageToolIntent(this.session);
+    if (!intent) return;
+    const target = event.currentTarget as HTMLElement;
+    target.setPointerCapture?.(event.pointerId);
+    this.imageDrag = { pointerId: event.pointerId, handle, x: event.clientX, y: event.clientY, start: { ...frame }, intent };
+    this.imagePreview = { ...frame, ...intent.image };
+  }
+
+  private moveImageDrag(event: PointerEvent): void {
+    const drag = this.imageDrag;
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    event.preventDefault();
+    if (!drag.intent.valid(this.session)) { this.cancelImageDrag(); return; }
+    const { start, handle, intent } = drag;
+    const scaleX = intent.image.widthPoints / start.width, scaleY = intent.image.heightPoints / start.height;
+    const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
+    const east = handle.includes('e'), west = handle.includes('w'), south = handle.includes('s'), north = handle.includes('n');
+    let width = start.width + (east ? dx : west ? -dx : 0);
+    let height = start.height + (south ? dy : north ? -dy : 0);
+    // Corners keep the picture's proportions like word processors do; Shift inverts that choice.
+    if ((handle.length === 2) !== event.shiftKey) {
+      const ratio = start.height / start.width;
+      if (handle === 'n' || handle === 's') width = height / ratio;
+      else if (handle === 'e' || handle === 'w') height = width * ratio;
+      else if (Math.abs(width / start.width - 1) >= Math.abs(height / start.height - 1)) height = width * ratio;
+      else width = height / ratio;
+      const lower = Math.max(1 / scaleX / width, 1 / scaleY / height), upper = Math.min(1440 / scaleX / width, 1440 / scaleY / height);
+      const factor = Math.min(Math.max(1, lower), upper);
+      width *= factor; height *= factor;
+    } else {
+      width = Math.min(Math.max(width, 1 / scaleX), 1440 / scaleX);
+      height = Math.min(Math.max(height, 1 / scaleY), 1440 / scaleY);
+    }
+    const points = (value: number) => Math.min(1440, Math.max(1, Math.round(value * 100) / 100));
+    this.imagePreview = {
+      left: west ? start.left + start.width - width : start.left, top: north ? start.top + start.height - height : start.top,
+      width, height, widthPoints: points(width * scaleX), heightPoints: points(height * scaleY),
+    };
+  }
+
+  private endImageDrag(event: PointerEvent): void {
+    const drag = this.imageDrag, preview = this.imagePreview;
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    event.preventDefault();
+    this.imageDrag = null;
+    this.imagePreview = null;
+    if (!preview) { drag.intent.release(); return; }
+    const action = { type: 'resize-image', widthPoints: preview.widthPoints, heightPoints: preview.heightPoints } as const;
+    if (imageResizeUnchanged(action, drag.intent.image)) { drag.intent.release(); return; }
+    const session = this.session;
+    const result = drag.intent.execute(session, action);
+    this.syncSession();
+    if (result.ok) {
+      this.editError = null;
+      if (this.isConnected && this.session === session) this.focusEditor();
+    } else this.reportEditRefusal(result.code);
+  }
+
+  private cancelImageDrag(): void {
+    const drag = this.imageDrag;
+    this.imageDrag = null;
+    this.imagePreview = null;
+    drag?.intent.release();
+  }
+
+  private renderImageHandles(): TemplateResult | typeof nothing {
+    const clip = this.imageClip;
+    if (!clip) return nothing;
+    const box = this.imagePreview ?? clip.frame;
+    const px = (value: number) => `${value}px`;
+    const preview = this.imagePreview;
+    const dimension = (value: number) => value.toLocaleString(this.effectiveLocale, { maximumFractionDigits: 1 });
+    return html`<div class="image-layer" style=${styleMap({ left: px(clip.left), top: px(clip.top), width: px(clip.width), height: px(clip.height) })}>
+      <div part="image-frame" data-dragging=${preview ? 'true' : 'false'}
+        style=${styleMap({ left: px(box.left), top: px(box.top), width: px(box.width), height: px(box.height) })}>
+        ${imageHandles.map(handle => html`<span part="image-handle" data-handle=${handle} aria-hidden="true"
+          @pointerdown=${(event: PointerEvent) => this.startImageDrag(event, handle)}
+          @pointermove=${(event: PointerEvent) => this.moveImageDrag(event)}
+          @pointerup=${(event: PointerEvent) => this.endImageDrag(event)}
+          @pointercancel=${() => this.cancelImageDrag()}
+          @lostpointercapture=${() => { if (this.imageDrag) this.cancelImageDrag(); }}></span>`)}
+        ${preview ? html`<span part="image-size" aria-hidden="true">${this.localize('docxEditorImageDimensions', undefined,
+          { width: dimension(preview.widthPoints), height: dimension(preview.heightPoints) })}</span>` : nothing}
+      </div>
+    </div>`;
+  }
+
   private runFind(): void {
     if (!this.findActionAvailable() || !this.query) return;
     const result = this.find(this.query, { matchCase: this.matchCase, wholeWord: this.wholeWord, limit: 100 });
@@ -1272,6 +1485,9 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   }
 
   private onHostKeyDown = (event: KeyboardEvent): void => {
+    if (event.key === 'Escape' && this.imageDrag) {
+      event.preventDefault(); event.stopPropagation(); this.cancelImageDrag(); return;
+    }
     if (event.key === 'Escape' && !event.isComposing && event.keyCode !== 229 && (this.insertionPhase === 'reading' || this.insertionPhase === 'draft') &&
         event.composedPath().some(node => node instanceof HTMLElement && node.getAttribute('part') === 'image-insert-dialog')) {
       event.preventDefault(); event.stopPropagation(); this.cancelImageInsertion(true); return;
@@ -1377,7 +1593,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
 
   private requestToolbarAction(action: 'new' | 'open'): void {
     this.releaseToolbarSelection();
-    if (this.currentSnapshot?.dirty) {
+    if (this.hasUnsavedContent()) {
       this.pendingAction = action;
       void this.updateComplete.then(() => {
         if (this.pendingAction === action) this.renderRoot.querySelector<HTMLElement>('[part="keep-button"]')?.focus();
@@ -1443,10 +1659,13 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     return html`<span class="tool-icon" aria-hidden="true"><slot name=${`${name}-icon`}><${iconTag} .path=${toolIcons[name].path}></${iconTag}></slot></span>`;
   }
 
+  private renderTooltip(name: ToolIcon): TemplateResult {
+    return html`<${tooltipTag} for=${`tool-${name}`} content=${this.localize(toolIcons[name].label)} top-layer></${tooltipTag}>`;
+  }
+
   private renderTooltips(): TemplateResult {
-    return html`<div class="tooltips">${(Object.keys(toolIcons) as ToolIcon[]).map(name => html`
-      <${tooltipTag} for=${`tool-${name}`} content=${this.localize(toolIcons[name].label)} top-layer></${tooltipTag}>
-    `)}</div>`;
+    return html`<div class="tooltips">${(Object.keys(toolIcons) as ToolIcon[])
+      .filter(name => !contextualToolIcons.has(name)).map(name => this.renderTooltip(name))}</div>`;
   }
 
   private renderCommand(command: DocxCommand): TemplateResult {
@@ -1728,11 +1947,13 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       </${popoverTag}>
       ${table ? html`<span part="table-context"><bdi>${context}</bdi> <bdi>${cell}</bdi></span>
         <div part="table-actions">${tableActions.map(([key, action, label]) => html`
-          <${buttonTag} part="table-button" data-table-action=${key} data-tool-key=${`table-${key}`} size="s" appearance="quiet"
+          <${buttonTag} part="table-button" id=${`tool-table-${key}`} data-table-action=${key} data-tool-key=${`table-${key}`} size="s" appearance="quiet"
+            aria-label=${this.localize(label)}
             tabindex=${this.toolbarKey === `table-${key}` ? '0' : '-1'} ?disabled=${!this.can(action).enabled}
             @pointerdown=${() => this.prepareTableIntent()} @focusin=${() => this.prepareTableIntent()}
             @keydown=${(event: KeyboardEvent) => this.onTableActivationKey(event)}
-            @click=${() => this.runTableEdit(action)}>${this.localize(label)}</${buttonTag}>`)}</div>` : nothing}
+            @click=${() => this.runTableEdit(action)}>${this.renderToolIcon(`table-${key}`)}</${buttonTag}>`)}
+          <span class="tooltips">${tableActions.map(([key]) => this.renderTooltip(`table-${key}`))}</span></div>` : nothing}
     </div>`;
   }
 
@@ -1745,7 +1966,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     const fieldsDisabled = !intentValid || !available;
     const resize = imageResizeDraft(this.imageWidth, this.imageHeight);
     const description = imageDescriptionDraft(this.imageTitle, this.imageDescriptionText);
-    const dimension = (value: number) => value.toLocaleString(this.effectiveLocale, { maximumFractionDigits: 4 });
+    const dimension = (value: number) => value.toLocaleString(this.effectiveLocale, { maximumFractionDigits: 1 });
     const context = image ? this.localize('docxEditorImageDimensions', undefined,
       { width: dimension(image.widthPoints), height: dimension(image.heightPoints) }) : '';
     return html`<div part="image-tools" role="group" aria-label=${this.localize('docxEditorImage')}>
@@ -1762,11 +1983,11 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
         aria-label=${this.localize('docxEditorResizeImage')}
         @lr-show=${(event: Event) => this.openImageDialog(event, 'resize')}
         @lr-after-hide=${() => this.onImageDialogHidden('resize')}>
-        <${buttonTag} slot="trigger" part="image-resize-trigger" data-tool-key="image-resize" size="s" appearance="quiet" wrap
-          tabindex=${this.toolbarKey === 'image-resize' ? '0' : '-1'}
+        <${buttonTag} slot="trigger" part="image-resize-trigger" id="tool-image-resize" data-tool-key="image-resize" size="s" appearance="quiet"
+          aria-label=${this.localize('docxEditorResizeImage')} tabindex=${this.toolbarKey === 'image-resize' ? '0' : '-1'}
           ?disabled=${!available || this.imageDialog === 'description'}
           @pointerdown=${() => this.prepareImageIntent()} @focusin=${() => this.prepareImageIntent()}
-          @keydown=${(event: KeyboardEvent) => this.onImageActivationKey(event)}>${this.localize('docxEditorResizeImage')}</${buttonTag}>
+          @keydown=${(event: KeyboardEvent) => this.onImageActivationKey(event)}>${this.renderToolIcon('image-resize')}</${buttonTag}>
         <div part="image-resize-fields" @focusin=${this.onImageFieldFocus} @keydown=${(event: KeyboardEvent) => {
           if (event.key === 'Enter' && !event.isComposing && event.keyCode !== 229 && event.composedPath().some(node =>
             node instanceof HTMLElement && ['image-width', 'image-height'].includes(node.getAttribute('part') ?? ''))) {
@@ -1799,11 +2020,11 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
         aria-label=${this.localize('docxEditorDescribeImage')}
         @lr-show=${(event: Event) => this.openImageDialog(event, 'description')}
         @lr-after-hide=${() => this.onImageDialogHidden('description')}>
-        <${buttonTag} slot="trigger" part="image-description-trigger" data-tool-key="image-description" size="s" appearance="quiet" wrap
-          tabindex=${this.toolbarKey === 'image-description' ? '0' : '-1'}
+        <${buttonTag} slot="trigger" part="image-description-trigger" id="tool-image-description" data-tool-key="image-description" size="s" appearance="quiet"
+          aria-label=${this.localize('docxEditorDescribeImage')} tabindex=${this.toolbarKey === 'image-description' ? '0' : '-1'}
           ?disabled=${!available || this.imageDialog === 'resize'}
           @pointerdown=${() => this.prepareImageIntent()} @focusin=${() => this.prepareImageIntent()}
-          @keydown=${(event: KeyboardEvent) => this.onImageActivationKey(event)}>${this.localize('docxEditorDescribeImage')}</${buttonTag}>
+          @keydown=${(event: KeyboardEvent) => this.onImageActivationKey(event)}>${this.renderToolIcon('image-description')}</${buttonTag}>
         <div part="image-description-fields" @focusin=${this.onImageFieldFocus} @keydown=${(event: KeyboardEvent) => {
           if (event.key === 'Enter' && !event.isComposing && event.keyCode !== 229 && event.composedPath().some(node =>
             node instanceof HTMLElement && node.getAttribute('part') === 'image-title')) {
@@ -1829,11 +2050,12 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
           </div>
         </div>
       </${popoverTag}>
-      <${buttonTag} part="image-delete" data-tool-key="image-delete" size="s" appearance="quiet" wrap
-        tabindex=${this.toolbarKey === 'image-delete' ? '0' : '-1'} ?disabled=${!available || this.imageDialog !== null}
+      <${buttonTag} part="image-delete" id="tool-image-delete" data-tool-key="image-delete" size="s" appearance="quiet"
+        aria-label=${this.localize('docxEditorDeleteImage')} tabindex=${this.toolbarKey === 'image-delete' ? '0' : '-1'} ?disabled=${!available || this.imageDialog !== null}
         @pointerdown=${() => this.prepareImageIntent()} @focusin=${() => this.prepareImageIntent()}
         @keydown=${(event: KeyboardEvent) => this.onImageActivationKey(event)}
-        @click=${() => this.runImageEdit({ type: 'delete-image' })}>${this.localize('docxEditorDeleteImage')}</${buttonTag}>`}
+        @click=${() => this.runImageEdit({ type: 'delete-image' })}>${this.renderToolIcon('image-delete')}</${buttonTag}>
+      <span class="tooltips">${this.renderTooltip('image-resize')}${this.renderTooltip('image-description')}${this.renderTooltip('image-delete')}</span>`}
     </div>`;
   }
 
@@ -1919,7 +2141,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
           </div>
         ` : nothing}
         ${this.renderFind()}
-        <div part="document" role="region" tabindex="0" aria-label=${this.editorLabel()}><slot name="document"></slot></div>
+        <div part="document" role="region" tabindex="0" aria-label=${this.editorLabel()}><slot name="document"></slot>${this.renderImageHandles()}</div>
         ${hasError ? html`<p part="error">${this.localize('docxEditorError')}</p>` : nothing}
         ${this.editError ? html`<p part="edit-error">${this.localize('docxEditorEditUnavailable')}</p>` : nothing}
         <div part="status">

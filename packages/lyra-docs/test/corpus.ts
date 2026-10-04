@@ -137,7 +137,18 @@ export function imageFixture(kind = 'image-simple'): Uint8Array {
     .replaceAll('id="1"', `id="${id}"`).replace('<wp:docPr ', `<wp:docPr title="Title ${id}" descr="Description ${id}" `);
   let first = picture(1);
   if (kind === 'image-picture-lock') first = first.replace('<pic:cNvPicPr/>', '<pic:cNvPicPr><a:picLocks noResize="1"/></pic:cNvPicPr>');
-  if (kind === 'image-frame-lock') first = first.replace('<a:graphic>', '<wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic>');
+  if (kind === 'image-frame-lock') first = first.replace('<a:graphic>', '<wp:cNvGraphicFramePr><a:graphicFrameLocks noMove="1"/></wp:cNvGraphicFramePr><a:graphic>');
+  // Markup Word writes around an ordinary inline picture: ids, effect extent, aspect locks, extension lists and line/fill defaults.
+  if (kind === 'image-word') first = first
+    .replace('<w:p>', '<w:p><w:pPr><w:pStyle w:val="Caption"/></w:pPr>')
+    .replace('<wp:inline>', '<wp:inline distT="0" distB="0" distL="0" distR="0" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" wp14:anchorId="1A2B3C4D" wp14:editId="5E6F7A8B">')
+    .replace(/(<wp:extent [^>]*\/>)/, '$1<wp:effectExtent l="0" t="0" r="0" b="0"/>')
+    .replace(/<wp:docPr ([^>]*)\/>/, '<wp:docPr $1><a:extLst><a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}"><a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{00000000-0000-0000-0000-000000000001}"/></a:ext></a:extLst></wp:docPr>')
+    .replace('<a:graphic>', '<wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic>')
+    .replace('<pic:cNvPicPr/>', '<pic:cNvPicPr><a:picLocks noChangeAspect="1" noChangeArrowheads="1"/></pic:cNvPicPr>')
+    .replace('<a:blip r:embed="rIdImage"/>', '<a:blip r:embed="rIdImage" cstate="print"><a:extLst><a:ext uri="{28A0092B-C50C-407E-A947-70E740481C1C}"><a14:useLocalDpi xmlns:a14="http://schemas.microsoft.com/office/drawing/2010/main" val="0"/></a:ext></a:extLst></a:blip>')
+    .replace('<pic:spPr>', '<pic:spPr bwMode="auto">')
+    .replace('</a:prstGeom>', '</a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln>');
   if (kind === 'image-hidden') first = first.replace('<wp:docPr ', '<wp:docPr hidden="1" ');
   if (kind === 'image-crop') first = first.replace('<a:stretch>', '<a:srcRect l="1000"/><a:stretch>');
   if (kind === 'image-empty-source') first = first.replace('<a:stretch>', '<a:srcRect/><a:stretch>');

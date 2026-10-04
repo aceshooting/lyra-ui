@@ -32,7 +32,9 @@ test('image navigation chooses document order, wraps, and copies only private ta
 });
 
 test('navigation skips unsupported structures and keeps singleton selection unchanged', () => {
-  for (const kind of ['image-picture-lock', 'image-frame-lock', 'image-table', 'image-hidden', 'image-crop', 'image-rotation']) {
+  const table = fixture('image-table');
+  assert.equal(target(selectImageTarget(table.editor, null, 'next')).drawingId, table.drawings[0]!.id, 'table-cell pictures are navigable');
+  for (const kind of ['image-picture-lock', 'image-frame-lock', 'image-hidden', 'image-crop', 'image-rotation']) {
     const h = fixture(kind), selected = target(selectImageTarget(h.editor, null, 'next'));
     assert.equal(selected.drawingId, h.drawings[1]!.id, kind);
     assert.equal(target(selectImageTarget(h.editor, selected.drawingId, 'next')).unchanged, true, kind);

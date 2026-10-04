@@ -420,7 +420,7 @@ async function runTableToolbar(page, check, { createEditor, saveEditor, assertPr
       element.__tableMount = element.querySelector('[slot="document"]').firstElementChild;
       element.strings = { docxEditorTableRowBelow: 'Ligne dessous', docxEditorTableColumnRight: 'Colonne à droite' };
     });
-    assert.equal(await page.locator(`#${id} [data-table-action="row-below"]`).textContent(), 'Ligne dessous');
+    assert.equal(await page.locator(`#${id} [data-table-action="row-below"]`).getAttribute('aria-label'), 'Ligne dessous');
     assert.equal(await page.locator(`#${id}`).evaluate(element => element.__tableMount === element.querySelector('[slot="document"]').firstElementChild), true);
     // Row hover exposes core-owned insertion furniture; changing strings refreshes its current label.
     const rowBox = await page.locator(`#${id} .docx-pages`).getByText('A11', { exact: true }).evaluate(element => {

@@ -187,8 +187,14 @@ tools. Navigation changes selection without changing document content or history
 selecting the sole already selected target is unchanged. Use **Alt+F10** and the
 toolbar's arrow keys to reach them without a pointer.
 
+Selecting an editable image paints a frame with eight resize handles over it. Drag a
+corner to scale proportionally or an edge to change one axis; hold Shift to invert that
+choice. The live size is shown while dragging, Escape or a lost pointer cancels, and
+release commits one undoable resize through the same bounded 1–1440 pt path as the
+dialog. Read-only documents and unsupported images show no handles.
+
 Selected image context adds **Resize image**, **Image description**, and **Delete
-image** controls. Resize and Description open separate dialogs with one Apply
+image** icon controls. Resize and Description open separate dialogs with one Apply
 and Cancel each. Dimensions start from the actual committed values in points;
 the initial aspect-ratio option uses the captured original dimensions when either
 axis changes. Turn it off to edit the axes independently. Description reads the
@@ -208,7 +214,7 @@ Apply. The exact scope and limits are in **Selected existing image actions** bel
 
 | Event | Detail and behavior |
 | --- | --- |
-| `lr-before-open` | Cancelable; `{ kind, currentRevision }` before replacing a dirty document. Call `preventDefault()` to veto a programmatic New or Open. |
+| `lr-before-open` | Cancelable; `{ kind, currentRevision }` before replacing a document with unsaved content. Call `preventDefault()` to veto a programmatic New or Open. |
 | `lr-ready` | `{ revision }` for the opened document. |
 | `lr-change` | `{ snapshot }`, where the snapshot may be `null` after disconnect. It never includes document bytes. |
 | `lr-selection-change` | `{ selection }` with selection kind and version. |
@@ -216,7 +222,8 @@ Apply. The exact scope and limits are in **Selected existing image actions** bel
 | `lr-save` | `{ receipt }`, including the bytes that the host must persist. |
 
 New and Open from the toolbar show an in-editor confirmation when the current
-document is dirty. Programmatic `newDocument()` and `open()` do not show that
+document has unsaved content. A new blank document starts clean, and an edited document
+reduced to one empty page is replaced without asking. Programmatic `newDocument()` and `open()` do not show that
 confirmation; use the cancelable `lr-before-open` event to apply a host policy.
 
 The component exposes `snapshot()`, `open(input, options)`,
@@ -241,8 +248,9 @@ mounts are unsupported.
 Common formatting, alignment, list, insertion and history actions use icons with localized
 accessible names and keyboard/hover tooltips. Wide allocations place file, history,
 insertion, font and paragraph formatting tools on one row; narrower allocations use
-two rows. File and insertion tools scroll horizontally when contextual image or table
-tools need more room, keeping the toolbar height and document position stable.
+two rows. Contextual image and table actions are compact icon buttons with localized
+tooltips, so they fit beside the file and insertion tools; only very narrow allocations
+scroll that row horizontally, keeping the toolbar height and document position stable.
 Formatting groups wrap within narrower widths; keyboard focus reveals offscreen actions.
 Replace a toolbar glyph with a decorative SVG or icon assigned to its named slot:
 
@@ -256,7 +264,11 @@ Icon slots: `new-icon`, `open-icon`, `save-icon`, `undo-icon`, `redo-icon`,
 `bold-icon`, `italic-icon`, `underline-icon`, `alignment-left-icon`,
 `alignment-center-icon`, `alignment-right-icon`, `alignment-justify-icon`,
 `list-bullet-icon`, `list-numbered-icon`, `link-icon`, `find-icon`,
-`image-insert-icon`, `table-insert-icon`, `image-previous-icon`, and `image-next-icon`.
+`image-insert-icon`, `table-insert-icon`, `image-previous-icon`, `image-next-icon`,
+`image-resize-icon`, `image-description-icon`, `image-delete-icon`,
+`table-row-above-icon`, `table-row-below-icon`, `table-column-left-icon`,
+`table-column-right-icon`, `table-delete-row-icon`, `table-delete-column-icon`, and
+`table-delete-table-icon`.
 The editor owns each button's localized name, tooltip, pressed state and action;
 slotted icons must not contain focusable or interactive content. History and image
 navigation icons mirror with the reading direction; alignment icons remain physical. Import
@@ -285,6 +297,7 @@ bringing an offscreen target into view then depends on the host's scroll layout.
 | `link-popover`, `link-trigger`, `link-fields`, `link-href`, `link-text`, `link-actions`, `link-apply`, `link-remove`, `link-cancel` | Hyperlink editor and actions |
 | `image-insert-trigger`, `image-insert-dialog`, `image-insert-file`, `image-insert-fields`, `image-insert-width`, `image-insert-height`, `image-insert-ratio`, `image-insert-title`, `image-insert-description`, `image-insert-hint`, `image-insert-actions`, `image-insert-apply`, `image-insert-cancel`, `image-insert-status` | Local image picker, original-caret draft, dimensions, metadata, actions and refusal feedback |
 | `image-tools`, `image-previous`, `image-next`, `image-navigation-status`, `image-context`, `image-delete` | Image navigation, no-image feedback, selected dimensions, and deletion |
+| `image-frame`, `image-handle`, `image-size` | Selected-image frame, pointer resize handles (`data-handle`), and the live size while dragging |
 | `image-resize-popover`, `image-resize-trigger`, `image-resize-fields`, `image-width`, `image-height`, `image-ratio`, `image-resize-hint`, `image-resize-actions`, `image-resize-apply`, `image-resize-cancel` | Image dimensions dialog and original aspect-ratio option |
 | `image-description-popover`, `image-description-trigger`, `image-description-fields`, `image-title`, `image-description`, `image-description-hint`, `image-description-actions`, `image-description-apply`, `image-description-cancel` | Bounded title and multiline description dialog |
 | `find-toggle`, `find`, `find-query`, `find-match-case`, `find-whole-word`, `find-submit`, `find-count`, `find-previous`, `find-next`, `find-replace`, `find-replace-button` | Demand-driven find and replace-one controls |
@@ -559,20 +572,22 @@ and description at most 2048; both must be valid XML 1.0 text. Empty strings
 clear metadata. Invalid or over-limit arguments are refused before input
 settlement or engine calls. Nothing is coerced or truncated.
 
-This increment supports a narrow plain-picture shape in a body paragraph/run
-without style references: one visible, unlocked inline raster image with positive
+This increment supports plain inline pictures in body paragraphs, including
+paragraphs inside plain table cells: one visible inline raster image with positive
 layout and inner shape extents and one internal PNG, JPEG, or static GIF media
 relationship. The outer document layout extent determines actual size. Resizing
 updates that extent and preserves the inner shape extent; their values need not
-match. Style references
-on the owning selected paragraph/run are refused, as are documents containing hidden rules
-in their styles part, because inherited visibility cannot be established safely.
-Images inside tables, other stories, hyperlinks, tracked changes, content
-controls, or text boxes are refused. Floating/wrapped drawings, hidden content,
-enabled picture/frame locks, crop, rotation, flips, effects, ambiguous or
-unknown drawing structures, unavailable media, and over-limit imported metadata
-are preserved and refused. This does not establish general image editing or
-the eligibility of every ordinary-looking picture.
+match. The markup Word writes around ordinary pictures qualifies: `wp:effectExtent`,
+`wp14` anchor and edit ids, `a:extLst` extension records (preserved verbatim),
+`cstate`, `bwMode="auto"`, empty fill and line, and aspect-ratio or arrowhead locks.
+Paragraph and run style references qualify; documents containing hidden rules in
+their styles part are refused, because inherited visibility cannot be established
+safely. Images inside other stories, hyperlinks, tracked changes, content controls,
+or text boxes are refused. Floating/wrapped drawings, hidden content, other enabled
+picture/frame locks, crop, rotation, flips, effects, ambiguous or unknown drawing
+structures, unavailable media, and over-limit imported metadata are preserved and
+refused. This does not establish general image editing or the eligibility of every
+ordinary-looking picture.
 
 Execution uses bounded explicit inspection: at most 128 canonical parts,
 20000 main-part nodes, depth 64, 64 attributes per element, and 512 nodes in

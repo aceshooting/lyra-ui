@@ -497,7 +497,7 @@ export async function runImageTools(page, check, { createEditor, saveEditor, ass
 
   await check('image dialog keyboard, translations, RTL/LTR 320px and populated accessibility', async () => {
     const id = 'image-ui-accessible'; await createEditor(page, id, 'image-simple'); await selectImage(page, id);
-    assert.equal(await part(page, id, 'image-resize-trigger').textContent(), 'Resize image');
+    assert.equal(await part(page, id, 'image-resize-trigger').getAttribute('aria-label'), 'Resize image');
     for (const direction of ['ltr', 'rtl']) {
       await editor(page, id).evaluate((element, direction) => {
         element.setAttribute('dir', direction); element.style.inlineSize = '320px';

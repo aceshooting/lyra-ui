@@ -10,6 +10,7 @@ const WP = 'http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawi
 const A = 'http://schemas.openxmlformats.org/drawingml/2006/main';
 const PIC = 'http://schemas.openxmlformats.org/drawingml/2006/picture';
 const R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+const WP14 = 'http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing';
 const LIMITS = { parts: 128, nodes: 20_000, depth: 64, attributes: 64, drawing: 512 };
 const refused = (code: 'unsupported' | 'resource-limit' | 'stale-selection' | 'no-selection'): DocxResult<never> => ({ ok: false, code });
 type SelectedImage = NonNullable<ReturnType<DocxEditorInstance['getSelectedImage']>>;
@@ -26,7 +27,8 @@ export function copyImage(image: SelectedImage | null | undefined): ImageCopy | 
     !Number.isSafeInteger(image.heightEmu) || image.heightEmu <= 0) return null;
   const readable = image.kind === 'inline' && image.wrap === 'inline' && !image.hidden && ['ready', 'pending'].includes(image.resourceStatus) &&
     image.position === null && image.hyperlink === null && image.rotationDegrees === 0 &&
-    Object.values(image.crop).every(value => value === 0) && Object.values(image.locks).every(value => value === false);
+    Object.values(image.crop).every(value => value === 0) &&
+    Object.entries(image.locks).every(([name, value]) => value === false || name === 'changeAspect');
   const supported = readable && image.resourceStatus === 'ready';
   const description = !readable ? refused('unsupported') : boundedDescription(image.title, image.description);
   return Object.freeze({ id: image.id, context: Object.freeze({ widthPoints: image.widthEmu / 12700,
@@ -112,7 +114,8 @@ function visibleProperties(path: readonly OoxmlElement[], limits: typeof LIMITS)
   for (const owner of path.slice(-2)) for (const property of owner.children) {
     if (!is(property, W, owner.localName === 'p' ? 'pPr' : 'rPr')) continue;
     for (const { node } of walk(property, limits)) {
-      if (element(node) && node.namespaceUri === W && ['pStyle', 'rStyle', 'vanish', 'webHidden', 'specVanish'].includes(node.localName)) reject();
+      // Named styles are safe here: visibleStyles() already refuses packages whose styles can hide content.
+      if (element(node) && node.namespaceUri === W && ['vanish', 'webHidden', 'specVanish'].includes(node.localName)) reject();
     }
   }
 }
@@ -126,30 +129,46 @@ function visibleStyles(pkg: OoxmlPackage, limits: typeof LIMITS): void {
 }
 const permitted: Record<string, readonly string[]> = {
   [`${W}|drawing`]: [`${WP}|inline`],
-  [`${WP}|inline`]: [`${WP}|extent`, `${WP}|docPr`, `${WP}|cNvGraphicFramePr`, `${A}|graphic`],
-  [`${WP}|extent`]: [], [`${WP}|docPr`]: [],
+  [`${WP}|inline`]: [`${WP}|extent`, `${WP}|effectExtent`, `${WP}|docPr`, `${WP}|cNvGraphicFramePr`, `${A}|graphic`],
+  [`${WP}|extent`]: [], [`${WP}|effectExtent`]: [], [`${WP}|docPr`]: [`${A}|extLst`],
   [`${WP}|cNvGraphicFramePr`]: [`${A}|graphicFrameLocks`],
   [`${A}|graphicFrameLocks`]: [], [`${A}|graphic`]: [`${A}|graphicData`],
   [`${A}|graphicData`]: [`${PIC}|pic`],
   [`${PIC}|pic`]: [`${PIC}|nvPicPr`, `${PIC}|blipFill`, `${PIC}|spPr`],
   [`${PIC}|nvPicPr`]: [`${PIC}|cNvPr`, `${PIC}|cNvPicPr`],
-  [`${PIC}|cNvPr`]: [], [`${PIC}|cNvPicPr`]: [`${A}|picLocks`], [`${A}|picLocks`]: [],
-  [`${PIC}|blipFill`]: [`${A}|blip`, `${A}|srcRect`, `${A}|stretch`], [`${A}|blip`]: [], [`${A}|srcRect`]: [],
+  [`${PIC}|cNvPr`]: [`${A}|extLst`], [`${PIC}|cNvPicPr`]: [`${A}|picLocks`], [`${A}|picLocks`]: [],
+  [`${PIC}|blipFill`]: [`${A}|blip`, `${A}|srcRect`, `${A}|stretch`], [`${A}|blip`]: [`${A}|extLst`], [`${A}|srcRect`]: [],
   [`${A}|stretch`]: [`${A}|fillRect`], [`${A}|fillRect`]: [],
-  [`${PIC}|spPr`]: [`${A}|xfrm`, `${A}|prstGeom`],
+  [`${PIC}|spPr`]: [`${A}|xfrm`, `${A}|prstGeom`, `${A}|noFill`, `${A}|ln`],
+  [`${A}|noFill`]: [], [`${A}|ln`]: [`${A}|noFill`],
   [`${A}|xfrm`]: [`${A}|off`, `${A}|ext`], [`${A}|off`]: [], [`${A}|ext`]: [],
   [`${A}|prstGeom`]: [`${A}|avLst`], [`${A}|avLst`]: [],
 };
 const lockNames = ['noGrp', 'noSelect', 'noRot', 'noChangeAspect', 'noMove', 'noResize', 'noEditPoints', 'noAdjustHandles', 'noChangeArrowheads', 'noChangeShapeType', 'noCrop', 'noDrilldown'];
 const attributeNames: Record<string, readonly string[]> = {
-  inline: ['distT', 'distB', 'distL', 'distR'], extent: ['cx', 'cy'], docPr: ['id', 'name', 'title', 'descr', 'hidden'],
-  graphicData: ['uri'], cNvPr: ['id', 'name', 'title', 'descr', 'hidden'], cNvPicPr: ['preferRelativeResize'],
-  blip: ['embed'], blipFill: ['dpi', 'rotWithShape'], spPr: ['bwMode'], xfrm: ['rot', 'flipH', 'flipV'],
+  inline: ['distT', 'distB', 'distL', 'distR', 'anchorId', 'editId'], extent: ['cx', 'cy'], effectExtent: ['l', 't', 'r', 'b'],
+  docPr: ['id', 'name', 'title', 'descr', 'hidden'], graphicData: ['uri'], cNvPr: ['id', 'name', 'title', 'descr', 'hidden'],
+  cNvPicPr: ['preferRelativeResize'], blip: ['embed', 'cstate'], blipFill: ['dpi', 'rotWithShape'], spPr: ['bwMode'],
+  xfrm: ['rot', 'flipH', 'flipV'], ln: ['w'], noFill: [],
   off: ['x', 'y'], ext: ['cx', 'cy'], prstGeom: ['prst'], picLocks: lockNames, graphicFrameLocks: lockNames,
 };
+const namespaces: Record<string, string> = { embed: R, anchorId: WP14, editId: WP14 };
+const extensionList = (node: OoxmlNode): boolean => is(node, A, 'extLst');
+/** Office extension lists are opaque, uniquely identified `a:ext` records that the engine preserves verbatim. */
+function extensions(list: OoxmlElement): void {
+  const uris = new Set<string>();
+  for (const entry of list.children) {
+    if (!is(entry, A, 'ext') || entry.attributes.length !== 1) reject();
+    const uri = attribute(entry, 'uri');
+    if (!uri || !/^\{[0-9A-Fa-f-]{36}\}$/.test(uri) || uris.has(uri)) reject();
+    uris.add(uri);
+  }
+}
 function plainDrawing(nodes: Frame[]): void {
-  for (const { node } of nodes) {
+  for (const { node, path } of nodes) {
+    if (path.some(extensionList)) continue;
     if (!element(node)) reject();
+    if (node.namespaceUri === A && node.localName === 'extLst') { extensions(node); continue; }
     const allowed = permitted[`${node.namespaceUri}|${node.localName}`];
     if (!allowed) reject();
     const seen = new Set<string>();
@@ -161,15 +180,24 @@ function plainDrawing(nodes: Frame[]): void {
     }
     for (const a of node.attributes) {
       if (!(attributeNames[node.localName] ?? []).includes(a.localName) ||
-        a.namespaceUri !== (node.localName === 'blip' && a.localName === 'embed' ? R : '')) reject();
-      if (node.localName === 'inline' && a.value !== '0') reject();
-      if (['preferRelativeResize', 'dpi', 'rotWithShape', 'bwMode'].includes(a.localName)) reject();
+        a.namespaceUri !== ((node.localName === 'blip' || node.localName === 'inline') ? namespaces[a.localName] ?? '' : '')) reject();
+      if (node.localName === 'inline' && a.namespaceUri === WP14 && !/^[0-9A-Fa-f]{8}$/.test(a.value)) reject();
+      if (node.localName === 'inline' && a.namespaceUri === '' && a.value !== '0') reject();
+      if (node.localName === 'effectExtent' && !/^\d{1,9}$/.test(a.value)) reject();
+      if (a.localName === 'cstate' && !['print', 'screen', 'email', 'hqprint', 'none'].includes(a.value)) reject();
+      if (a.localName === 'preferRelativeResize' && !['0', '1', 'false', 'true'].includes(a.value)) reject();
+      if (a.localName === 'dpi' && a.value !== '0') reject();
+      if (a.localName === 'rotWithShape' && !['0', '1', 'false', 'true'].includes(a.value)) reject();
+      if (a.localName === 'bwMode' && a.value !== 'auto') reject();
+      if (a.localName === 'w' && !/^\d{1,8}$/.test(a.value)) reject();
       if (a.localName === 'hidden' && a.value !== '0' && a.value !== 'false') reject();
       if (a.localName === 'rot' && a.value !== '0') reject();
       if (['flipH', 'flipV'].includes(a.localName) && a.value !== '0' && a.value !== 'false') reject();
     }
     if (is(node, A, 'picLocks') || is(node, A, 'graphicFrameLocks')) {
-      for (const a of node.attributes) if (a.namespaceUri !== '' || !lockNames.includes(a.localName) || !['0', 'false'].includes(a.value)) reject();
+      // Aspect and (picture-irrelevant) arrowhead locks only constrain shape editing; every other lock keeps the picture read-only.
+      for (const a of node.attributes) if (a.namespaceUri !== '' || !lockNames.includes(a.localName) ||
+        !(['0', 'false'].includes(a.value) || (['noChangeAspect', 'noChangeArrowheads'].includes(a.localName) && ['1', 'true'].includes(a.value)))) reject();
     }
     if (is(node, A, 'off') && (attribute(node, 'x') !== '0' || attribute(node, 'y') !== '0')) reject();
     if (is(node, A, 'prstGeom') && attribute(node, 'prst') !== 'rect') reject();
@@ -208,8 +236,11 @@ interface DrawingValue { drawingId: string; paragraphId: string; width: number; 
 function inspectDrawing(document: ImageDocument, target: Frame,
   mediaCache = new Map<string, { pixels: number; mimeType: string }>(), budget = { bytes: 0, maximum: Infinity }): DrawingValue {
   const { pkg, part, limits } = document, path = target.path;
-  if (!is(target.node, W, 'drawing') || path.length !== 4 || !is(path[0]!, W, 'document') || !is(path[1]!, W, 'body') ||
-    !is(path[2]!, W, 'p') || !is(path[3]!, W, 'r')) reject();
+  // Body paragraphs, optionally inside plain table cells: document/body/(tbl/tr/tc)*/p/r/drawing.
+  if (!is(target.node, W, 'drawing') || path.length < 4 || (path.length - 4) % 3 !== 0 || !is(path[0]!, W, 'document') ||
+    !is(path[1]!, W, 'body') || !is(path.at(-2)!, W, 'p') || !is(path.at(-1)!, W, 'r')) reject();
+  for (let index = 2; index < path.length - 2; index += 3)
+    if (!is(path[index]!, W, 'tbl') || !is(path[index + 1]!, W, 'tr') || !is(path[index + 2]!, W, 'tc')) reject();
   visibleProperties(path, limits);
   const descendants = document.descendants.get(target.node)!;
   if (descendants.length > limits.drawing) reject('resource-limit');
@@ -230,7 +261,7 @@ function inspectDrawing(document: ImageDocument, target: Frame,
   const metadata = boundedDescription(attribute(properties, 'title') ?? '', attribute(properties, 'descr') ?? '');
   if (!metadata.ok) reject(metadata.code === 'resource-limit' ? 'resource-limit' : 'unsupported');
   const blip = child(fill, A, 'blip'), id = attribute(blip, 'embed', R);
-  if (!id || blip.attributes.length !== 1) reject();
+  if (!id || blip.attributes.some(value => value.localName !== 'embed' && value.localName !== 'cstate')) reject();
   const relations = pkg.relationships.get(part.name) ?? [];
   if (relations.length > limits.nodes) reject('resource-limit');
   const matches = relations.filter(relation => relation.id === id);
@@ -247,7 +278,7 @@ function inspectDrawing(document: ImageDocument, target: Frame,
   }
   const mime = pkg.contentTypes.overrides.get(media.toLowerCase()) ?? pkg.contentTypes.defaults.get(media.split('.').at(-1)!.toLowerCase());
   if (mime !== checked.mimeType) reject();
-  return { drawingId: target.node.id, paragraphId: path[2]!.id, width, height,
+  return { drawingId: target.node.id, paragraphId: path.at(-2)!.id, width, height,
     title: metadata.value.title, description: metadata.value.description };
 }
 

@@ -95,6 +95,11 @@ export function refreshInternalDocxTableLabels(session: DocxSession, labels: Doc
   return session instanceof InternalDocxSession && session.refreshTableLabels(labels);
 }
 
+/** Component-only painted-image bridge for resize handles; absent from the public package barrels. */
+export function internalDocxSelectedImageElement(session: DocxSession | null): HTMLElement | null {
+  return session instanceof InternalDocxSession ? session.selectedImageElement() : null;
+}
+
 class InternalDocxSession implements DocxSession {
   private status: DocxStatus = 'idle';
   private revision: DocxRevision | null = null;
@@ -131,6 +136,11 @@ class InternalDocxSession implements DocxSession {
     if (this.gate() || !this.engine) return false;
     try { return this.engine.refreshTableLabels?.(Object.freeze({ ...labels })) ?? false; }
     catch { return false; }
+  }
+  selectedImageElement(): HTMLElement | null {
+    if (this.gate() || !this.engine || !this.image || !this.imageReady) return null;
+    try { return this.engine.selectedImageElement?.() ?? null; }
+    catch { return null; }
   }
   snapshot() { return this.cached; }
   canInsertImage(): DocxCommandAvailability {
@@ -398,7 +408,8 @@ class InternalDocxSession implements DocxSession {
       this.revision = Object.freeze({ documentId: globalThis.crypto.randomUUID(), value: 0 });
     } catch { return this.failOpen(operation, 'open-failed'); }
     this.end(operation);
-    this.dirty = copy.kind === 'blank';
+    // A fresh blank document has nothing to lose; it becomes dirty on its first committed change.
+    this.dirty = false;
     this.status = 'ready'; this.publish();
     const failure = this.completionFailure();
     return failure ? refused(failure) : ok(this.revision!);

@@ -199,9 +199,55 @@ export async function runEditorLayout(page, check, { createEditor, saveEditor })
         assert.ok(Math.abs(selectedToolbarHeight - toolbarHeight) <= 1, JSON.stringify({ width, index, toolbarHeight, selectedToolbarHeight }));
         const overflow = await images.evaluate(element => element.scrollWidth - element.clientWidth);
         assert.ok(overflow <= 1, JSON.stringify({ width, index, overflow }));
+        const rowOverflow = await images.evaluate(element => {
+          const row = element.shadowRoot.querySelector('.toolbar-row');
+          return row.scrollWidth - row.clientWidth;
+        });
+        if (width >= 1440) assert.ok(rowOverflow <= 1, JSON.stringify({ width, index, rowOverflow }));
       }
     }
     await page.setViewportSize({ width: 1440, height: 900 });
     await images.evaluate(element => element.remove());
+  });
+  await check('dragging image handles resizes the picture as one edit, keeping corner proportions', async () => {
+    await createEditor(page, 'layout-drag', 'image-simple');
+    const host = page.locator('#layout-drag');
+    await host.scrollIntoViewIfNeeded();
+    await host.locator('.docx-pages img').first().click();
+    const handle = host.locator('[part="image-handle"][data-handle="se"]');
+    await handle.waitFor({ state: 'visible' });
+    const before = await host.evaluate(element => ({ ...element.snapshot().image, revision: element.snapshot().revision.value }));
+    const frame = await host.locator('[part="image-frame"]').boundingBox();
+    const image = await host.locator('.docx-pages img').first().boundingBox();
+    assert.ok(Math.abs(frame.x - image.x) <= 1.5 && Math.abs(frame.width - image.width) <= 1.5, JSON.stringify({ frame, image }));
+    const box = await handle.boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 40, box.y + box.height / 2 + 5, { steps: 5 });
+    assert.equal(await host.locator('[part="image-size"]').count(), 1);
+    await page.mouse.up();
+    await page.waitForFunction(revision => document.getElementById('layout-drag').snapshot()?.revision?.value > revision, before.revision);
+    const after = await host.evaluate(element => element.snapshot().image);
+    assert.ok(after.widthPoints > before.widthPoints, JSON.stringify({ before, after }));
+    assert.ok(Math.abs(after.widthPoints / after.heightPoints - before.widthPoints / before.heightPoints) < 0.02, JSON.stringify({ before, after }));
+    assert.equal(await host.evaluate(element => element.snapshot().dirty), true);
+    await page.keyboard.press(process.platform === 'darwin' ? 'Meta+z' : 'Control+z');
+    await page.waitForFunction(width => document.getElementById('layout-drag').snapshot()?.image?.widthPoints === width, before.widthPoints)
+      .catch(() => {});
+    await host.locator('.docx-pages img').first().click();
+    await host.locator('[part="image-handle"][data-handle="e"]').waitFor({ state: 'visible' });
+    const edge = await host.locator('[part="image-handle"][data-handle="e"]').boundingBox();
+    const start = await host.evaluate(element => element.snapshot().image);
+    await page.mouse.move(edge.x + edge.width / 2, edge.y + edge.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(edge.x + edge.width / 2 + 30, edge.y + edge.height / 2, { steps: 3 });
+    await page.keyboard.press('Escape');
+    await page.mouse.up();
+    assert.deepEqual(await host.evaluate(element => element.snapshot().image), start, 'Escape cancels a drag without editing');
+    await host.evaluate(async element => { element.setAttribute('read-only', ''); await element.open(await (await element.save()).value.bytes); });
+    await host.locator('.docx-pages img').first().click();
+    await page.waitForTimeout(200);
+    assert.equal(await host.locator('[part="image-handle"]').count(), 0, 'Read-only documents show no handles');
+    await host.evaluate(element => element.remove());
   });
 }

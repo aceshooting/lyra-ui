@@ -239,6 +239,66 @@ export const styles = css`
     overflow: auto;
   }
 
+  [part='document'] { position: relative; }
+
+  .image-layer {
+    position: absolute;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  [part='image-frame'] {
+    position: absolute;
+    box-sizing: border-box;
+    border: var(--lr-border-width-thin) solid var(--lr-color-brand);
+  }
+  [part='image-frame'][data-dragging='true'] { border-style: dashed; }
+
+  [part='image-handle'] {
+    --_handle-size: var(--lr-space-s);
+    position: absolute;
+    box-sizing: border-box;
+    inline-size: var(--_handle-size);
+    block-size: var(--_handle-size);
+    margin: calc(var(--_handle-size) / -2);
+    border: var(--lr-border-width-thin) solid var(--lr-color-brand);
+    border-radius: var(--lr-radius-xs);
+    background: var(--lr-color-surface);
+    pointer-events: auto;
+    touch-action: none;
+  }
+  [part='image-handle']::before {
+    content: '';
+    position: absolute;
+    inset: calc((var(--lr-icon-button-size) - var(--_handle-size)) / -2);
+  }
+  [part='image-handle']:hover { background: var(--lr-color-brand); }
+  [part='image-handle'][data-handle='nw'] { inset-block-start: 0; left: 0; cursor: nwse-resize; }
+  [part='image-handle'][data-handle='n'] { inset-block-start: 0; left: 50%; cursor: ns-resize; }
+  [part='image-handle'][data-handle='ne'] { inset-block-start: 0; left: 100%; cursor: nesw-resize; }
+  [part='image-handle'][data-handle='e'] { inset-block-start: 50%; left: 100%; cursor: ew-resize; }
+  [part='image-handle'][data-handle='se'] { inset-block-start: 100%; left: 100%; cursor: nwse-resize; }
+  [part='image-handle'][data-handle='s'] { inset-block-start: 100%; left: 50%; cursor: ns-resize; }
+  [part='image-handle'][data-handle='sw'] { inset-block-start: 100%; left: 0; cursor: nesw-resize; }
+  [part='image-handle'][data-handle='w'] { inset-block-start: 50%; left: 0; cursor: ew-resize; }
+
+  [part='image-size'] {
+    position: absolute;
+    inset-block-start: 100%;
+    left: 0;
+    margin-block-start: var(--lr-space-s);
+    padding: var(--lr-space-2xs) var(--lr-space-xs);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-text);
+    color: var(--lr-color-surface);
+    font-size: var(--lr-font-size-sm);
+    white-space: nowrap;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    [part='image-handle'] { transition: background-color var(--lr-transition-fast); }
+  }
+
   [part='document']:hover {
     outline: var(--lr-border-width-thin) solid var(--lr-color-border);
     outline-offset: calc(-1 * var(--lr-border-width-thin));

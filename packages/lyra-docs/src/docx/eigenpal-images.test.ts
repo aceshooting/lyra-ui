@@ -97,7 +97,7 @@ test('copied context and complete bounded metadata never leak engine objects or 
 });
 
 test('locks, excluded topology, metadata and transformations refuse without canonical changes', () => {
-  for (const kind of ['image-picture-lock', 'image-frame-lock', 'image-table', 'image-hidden', 'image-crop', 'image-rotation', 'image-long-metadata']) {
+  for (const kind of ['image-picture-lock', 'image-frame-lock', 'image-hidden', 'image-crop', 'image-rotation', 'image-long-metadata']) {
     const h = fixture(kind), before = JSON.stringify(h.part.root);
     assert.deepEqual(h.qualify(), { ok: false, code: kind === 'image-long-metadata' ? 'resource-limit' : 'unsupported' }, kind);
     assert.equal(JSON.stringify(h.part.root), before);
@@ -155,6 +155,8 @@ test('visibility checks apply to owning properties and refuse inherited hidden s
   assert(h.qualify().ok, 'an unrelated sibling run does not determine image visibility');
   const owner = h.nodes.find(node => node.children.some(child => child === h.drawing))!;
   (owner.children as OoxmlNode[]).unshift({ ...properties, id: 'own-properties', children: [{ ...style, id: 'own-style' }] } as OoxmlElement);
+  assert(h.qualify().ok, 'a named run style cannot hide the picture once styles carry no hidden rules');
+  (owner.children[0] as unknown as { children: OoxmlNode[] }).children.push({ ...style, id: 'own-vanish', localName: 'vanish' } as OoxmlElement);
   assert.deepEqual(h.qualify(), { ok: false, code: 'unsupported' });
   const hidden = fixture();
   (hidden.pkg.parts as Map<string, typeof hidden.part>).set('/word/styles.xml', { ...hidden.part, name: '/word/styles.xml', contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml', root: { ...style, localName: 'vanish', id: 'hidden-style' } as OoxmlElement });
@@ -189,4 +191,29 @@ test('plain raster final size is the outer extent while positive inner geometry 
   assert(h.qualify({ type: 'image-description', title: 'After resize', description: '' }).ok);
   assert(h.qualify({ type: 'delete-image' }).ok);
   assert.deepEqual(h.pkg, before);
+});
+
+test('Word-authored picture markup and table-cell pictures qualify for every image action without canonical changes', () => {
+  for (const kind of ['image-word', 'image-table']) {
+    const h = fixture(kind), before = JSON.stringify(h.part.root);
+    for (const action of [{ type: 'delete-image' }, { type: 'resize-image', widthPoints: 60, heightPoints: 30 },
+      { type: 'image-description', title: 'T', description: 'D' }] as DocxImageAction[]) {
+      assert.equal(h.qualify(action).ok, true, `${kind} ${action.type}`);
+    }
+    assert.equal(JSON.stringify(h.part.root), before);
+    const candidates = imageCandidatesInPackage(h.pkg, h.part);
+    assert.equal(candidates.ok && candidates.value.length, 2, kind);
+  }
+  assert.ok(copyImage({ ...fixture('image-word').selected, locks: { select: false, move: false, resize: false, changeAspect: true } })?.supported);
+  assert.equal(copyImage({ ...fixture('image-word').selected, locks: { select: false, move: false, resize: true, changeAspect: true } })?.supported, false);
+});
+
+test('Word extension lists must be well-formed, unique a:ext records', () => {
+  const h = fixture('image-word'), list = h.nodes.find(node => node.localName === 'extLst')!;
+  const entries = list.children as unknown as OoxmlNode[], entry = entries[0] as OoxmlElement;
+  entries.push(structuredClone(entry)); assert.equal(h.qualify().ok, false, 'duplicate extension uri');
+  entries.pop(); attributes(entry)[0]!.value = 'urn:not-a-guid'; assert.equal(h.qualify().ok, false, 'non-GUID extension uri');
+  attributes(entry)[0]!.value = '{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}'; assert.equal(h.qualify().ok, true);
+  const inline = h.nodes.find(node => node.localName === 'inline')!;
+  attributes(inline).find(value => value.localName === 'anchorId')!.value = 'nothex!!'; assert.equal(h.qualify().ok, false, 'malformed wp14 id');
 });

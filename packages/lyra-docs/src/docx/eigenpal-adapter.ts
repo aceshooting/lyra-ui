@@ -607,6 +607,12 @@ export async function openEigenpalDocument(
         current().setTableInteractionLabel(key => key === 'table.insertRowBelow' ? insertRowBelow : insertColumnRight);
         return true;
       },
+      selectedImageElement() {
+        if (destroyed || saving || executingGuarded || !image?.supported || !owned()) return null;
+        for (const node of mount.querySelectorAll('[data-drawing-node-id]'))
+          if (node.getAttribute('data-drawing-node-id') === image.id) return node instanceof HTMLElement ? node : null;
+        return null;
+      },
       paragraphStyles: editing.paragraphStyles,
       fontFamilies: editing.fontFamilies,
       find: editing.find,
