@@ -3,6 +3,7 @@ import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -32,6 +33,99 @@ test('release checkouts bind directly to the main dispatch commit before using d
   assert.match(release, /needs: \[plan, pack\]/);
   assert.match(release, /SHA: \$\{\{ needs\.plan\.outputs\.sha \}\}/);
   assert.doesNotMatch(release, /actions\/checkout@|cache:|pnpm |scripts\//);
+});
+
+test('publishing uses the verified bundled npm CLI without installing packages', () => {
+  const workflow = read('.github/workflows/publish.yml');
+  const step = workflow.indexOf('      - name: Update npm CLI (trusted publishing needs >=11.5.1)\n');
+  assert.ok(step >= 0);
+  const start = workflow.indexOf('        run: |\n', step) + '        run: |\n'.length;
+  const lines = [];
+  for (const line of workflow.slice(start).split('\n')) {
+    if (line.startsWith('          ')) lines.push(line.slice(10));
+    else if (line === '') lines.push('');
+    else break;
+  }
+  const source = lines.join('\n');
+  const fixture = mkdtempSync(path.join(tmpdir(), 'lyra-npm-cli-'));
+  try {
+    const systemTar = spawnSync('which', ['tar'], { encoding: 'utf8' }).stdout.trim();
+    assert.ok(systemTar);
+    const bin = path.join(fixture, 'bin');
+    const writeExecutable = (name, script) => {
+      const file = path.join(bin, name);
+      writeFileSync(file, script);
+      chmodSync(file, 0o755);
+    };
+    // Use a real archive and digest; only the download and pre-existing npm are substituted.
+    const prepare = (version, name) => {
+      const dir = path.join(fixture, name);
+      const made = spawnSync('mkdir', ['-p', path.join(dir, 'package/bin'), bin]);
+      assert.equal(made.status, 0);
+      writeFileSync(path.join(dir, 'package/package.json'), JSON.stringify({ name: 'npm', version }));
+      const cli = path.join(dir, 'package/bin/npm-cli.js');
+      writeFileSync(cli, `#!/usr/bin/env node\nconst fs = require('node:fs');\nfs.appendFileSync(process.env.CLI_LOG, JSON.stringify(process.argv.slice(2)) + '\\n');\nif (process.argv[2] === '--version') console.log(${JSON.stringify(version)});\n`);
+      chmodSync(cli, 0o755);
+      const archive = path.join(dir, 'npm.tgz');
+      const packed = spawnSync(systemTar, ['-czf', archive, '-C', dir, 'package']);
+      assert.equal(packed.status, 0);
+      return { archive, integrity: `sha512-${createHash('sha512').update(readFileSync(archive)).digest('base64')}` };
+    };
+    const valid = prepare('12.0.1', 'valid');
+    const wrongVersion = prepare('12.0.0', 'wrong-version');
+    const tampered = path.join(fixture, 'tampered.tgz');
+    writeFileSync(tampered, Buffer.concat([readFileSync(valid.archive), Buffer.from('tampered')]));
+    writeExecutable('curl', '#!/usr/bin/env bash\ncp -- "$MOCK_NPM_ARCHIVE" npm.tgz\n');
+    writeExecutable('npm', '#!/usr/bin/env bash\nprintf "%s\\n" "$*" >> "$GLOBAL_NPM_LOG"\nif [[ "$1" == --version ]]; then printf "12.0.1\\n"; fi\n');
+    writeExecutable('tar', '#!/usr/bin/env bash\nprintf "extract\\n" >> "$EXTRACTION_LOG"\nexec "$SYSTEM_TAR" "$@"\n');
+    const run = (name, archive, integrity) => {
+      const cwd = path.join(fixture, name);
+      assert.equal(spawnSync('mkdir', ['-p', cwd]).status, 0);
+      const env = {
+        ...process.env,
+        PATH: `${bin}:${process.env.PATH}`,
+        RUNNER_TEMP: cwd,
+        GITHUB_PATH: path.join(cwd, 'github-path'),
+        CLI_LOG: path.join(cwd, 'cli-log'),
+        GLOBAL_NPM_LOG: path.join(cwd, 'global-npm-log'),
+        EXTRACTION_LOG: path.join(cwd, 'extraction-log'),
+        SYSTEM_TAR: systemTar,
+        MOCK_NPM_ARCHIVE: archive,
+      };
+      writeFileSync(env.GITHUB_PATH, '');
+      const script = source.replace(/NPM_TARBALL_INTEGRITY='[^']+'/u, `NPM_TARBALL_INTEGRITY='${integrity}'`);
+      const result = spawnSync('bash', ['-c', script], { cwd, env, encoding: 'utf8' });
+      const contents = (file) => {
+        try { return readFileSync(file, 'utf8'); } catch { return ''; }
+      };
+      return { result, env, cwd, path: contents(env.GITHUB_PATH), cli: contents(env.CLI_LOG), global: contents(env.GLOBAL_NPM_LOG), extraction: contents(env.EXTRACTION_LOG) };
+    };
+    const corrupt = run('corrupt-run', tampered, valid.integrity);
+    assert.notEqual(corrupt.result.status, 0);
+    assert.equal(corrupt.extraction, '', 'mismatched bytes must never be extracted');
+    assert.equal(corrupt.cli, '', 'mismatched bytes must never execute');
+    assert.equal(corrupt.global, '');
+    assert.equal(corrupt.path, '');
+    const wrong = run('wrong-run', wrongVersion.archive, wrongVersion.integrity);
+    assert.notEqual(wrong.result.status, 0, 'the extracted version must match the pin');
+    assert.equal(wrong.path, '', 'a wrong version must not reach subsequent steps');
+    assert.equal(wrong.global, '');
+    const accepted = run('accepted-run', valid.archive, valid.integrity);
+    assert.equal(accepted.result.status, 0, accepted.result.stderr);
+    assert.equal(accepted.global, '', 'verified bytes must not be passed to a global installer');
+    assert.equal(accepted.extraction, 'extract\n');
+    assert.equal(accepted.cli, '["--version"]\n');
+    assert.ok(accepted.path.trim(), 'subsequent steps must receive the bundled CLI');
+    const handoff = spawnSync('npm', ['publish', 'fixture.tgz', '--access', 'public', '--dry-run'], {
+      cwd: accepted.cwd,
+      env: { ...accepted.env, PATH: `${accepted.path.trim()}:${accepted.env.PATH}` },
+      encoding: 'utf8',
+    });
+    assert.equal(handoff.status, 0, handoff.stderr);
+    assert.equal(readFileSync(accepted.env.CLI_LOG, 'utf8'), '["--version"]\n["publish","fixture.tgz","--access","public","--dry-run"]\n');
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
+  }
 });
 
 test('publish and recovery signing share one credential-free verification workflow', () => {

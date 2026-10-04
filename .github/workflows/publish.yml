@@ -126,9 +126,16 @@ jobs:
             echo "::error::npm@${NPM_VERSION} tarball integrity mismatch: expected $NPM_TARBALL_INTEGRITY, got $actual_integrity"
             exit 1
           fi
-          npm i -g --ignore-scripts ./npm.tgz
+          # Use the verified distribution's bundled dependencies without a global install.
+          npm_cli_dir="$(mktemp -d "$RUNNER_TEMP/npm-cli.XXXXXX")"
+          tar --extract --gzip --file npm.tgz --directory "$npm_cli_dir" --strip-components=1
           rm -f npm.tgz
-          test "$(npm --version)" = "$NPM_VERSION"
+          actual_version="$(node "$npm_cli_dir/bin/npm-cli.js" --version)"
+          test "$actual_version" = "$NPM_VERSION"
+          npm_bin_dir="$npm_cli_dir/runner-bin"
+          mkdir -p "$npm_bin_dir"
+          ln -s "$npm_cli_dir/bin/npm-cli.js" "$npm_bin_dir/npm"
+          echo "$npm_bin_dir" >> "$GITHUB_PATH"
 
       - name: Require an unpublished Docs package for bootstrap after approval
         env:
