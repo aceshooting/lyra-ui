@@ -159,8 +159,14 @@ DOCX work; do not create a second rich-text engine solely to discard it in the n
 - [ ] Support and qualify common paragraph/run styles, hyperlinks/bookmarks, numbered lists, and
   embedded images for rendering and editing, along with broader table behavior. Paragraph style,
   alignment/list, font, color and link actions plus bounded find/replace-one have focused browser
-  and synthetic OOXML evidence. Image rendering/editing, broad table rendering and round-trip
-  qualification remain later work.
+  and synthetic OOXML evidence. The selected-image increment adds resizing, title/description,
+  and deletion for a narrow plain unstyled body inline raster picture shape, with separate
+  contextual dialogs, keyboard-accessible Previous/Next image navigation, original selection
+  intent, and unchanged-request no-ops. Styled or hidden
+  content, enabled locks, transforms, other stories and ambiguous structures are refused; neither
+  snapshot context nor enabled availability proves eligibility. Broad image rendering/editing,
+  native image handles/insertion/paste, broad table rendering, and external round-trip
+  qualification remain open. See the [exact image action scope](../../packages/lyra-docs/README.md#selected-existing-image-actions).
 - [ ] Establish a preservation/rendering/editing capability matrix for relationships, media,
   extensions and unknown OOXML parts. Selected opaque parts survive the current synthetic edit,
   save and reopen fixture; this does not prove general part preservation or usability.

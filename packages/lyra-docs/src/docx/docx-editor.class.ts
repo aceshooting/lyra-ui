@@ -8,9 +8,14 @@ import { acquireAnnouncementSink, type AnnouncementSink } from '@aceshooting/lyr
 import { createDocxSession } from './create-session.js';
 import { refreshInternalDocxTableLabels } from './session.js';
 import { captureTableToolIntent, tableInsertDraft } from './table-tools.js';
+import {
+  captureImageToolIntent, imageDescriptionDraft, imageDimensionDraft,
+  imageRatioPartner, imageResizeDraft, imageResizeUnchanged,
+} from './image-tools.js';
 import type {
   DocxCommand, DocxEdit, DocxRefusalCode, DocxResult, DocxRevision, DocxSaveReceipt,
   DocxSelectionLease, DocxSession, DocxSnapshot, DocxSource, DocxSearchResults, DocxTableAction,
+  DocxImageAction, DocxImageDescription, DocxImageDirection,
 } from './types.js';
 import { DOCX_EDITOR_STRINGS } from './strings.js';
 import { styles } from './docx-editor.styles.js';
@@ -41,6 +46,7 @@ const colorPickerTag = unsafeStatic(tag('color-picker'));
 const popoverTag = unsafeStatic(tag('popover'));
 const inputTag = unsafeStatic(tag('input'));
 const checkboxTag = unsafeStatic(tag('checkbox'));
+const textareaTag = unsafeStatic(tag('textarea'));
 const alignments = ['left', 'center', 'right', 'justify'] as const;
 const listKinds = ['bullet', 'numbered'] as const;
 const tableActions = [
@@ -70,6 +76,7 @@ const refused = <T>(code: DocxRefusalCode): DocxResult<T> => ({ ok: false, code 
  * @event lr-save - Explicit save completed; detail contains the save receipt and bytes.
  * @customElement lr-docx-editor
  * @slot document - Reserved for the component-owned, stable light-DOM engine mount.
+ * @cssprop --lr-docx-editor-document-max-block-size - Document scroll viewport maximum block size; defaults to 30rem. Set a valid length or none to let the document grow. Pages keep 100% scale and scroll horizontally in narrower allocations.
  * @csspart base - The root editor surface.
  * @csspart toolbar - File and formatting controls.
  * @csspart file-actions - New, Open and Save controls.
@@ -111,6 +118,31 @@ const refused = <T>(code: DocxRefusalCode): DocxResult<T> => ({ ok: false, code 
  * @csspart table-context - Current table dimensions and available cell coordinates.
  * @csspart table-actions - Contextual row, column and whole-table actions.
  * @csspart table-button - A table action, identified by data-table-action.
+ * @csspart image-tools - Image navigation and contextual existing inline-image controls.
+ * @csspart image-previous - Selects the previous eligible body image, wrapping at the start.
+ * @csspart image-next - Selects the next eligible body image, wrapping at the end.
+ * @csspart image-navigation-status - Feedback when no eligible image is available.
+ * @csspart image-context - Actual selected image dimensions in points.
+ * @csspart image-resize-popover - Image dimensions dialog.
+ * @csspart image-resize-trigger - Opens the image resize dialog.
+ * @csspart image-resize-fields - Dimension fields, ratio option and controls.
+ * @csspart image-width - Requested width in points.
+ * @csspart image-height - Requested height in points.
+ * @csspart image-ratio - Preserve the captured original aspect ratio.
+ * @csspart image-resize-hint - Dimension limits or stale-selection guidance.
+ * @csspart image-resize-actions - Resize Apply and Cancel controls.
+ * @csspart image-resize-apply - Applies both image dimensions as one edit.
+ * @csspart image-resize-cancel - Cancels resizing.
+ * @csspart image-description-popover - Image title and description dialog.
+ * @csspart image-description-trigger - Opens the image description dialog.
+ * @csspart image-description-fields - Metadata fields and controls.
+ * @csspart image-title - Bounded image title field.
+ * @csspart image-description - Bounded multiline description field.
+ * @csspart image-description-hint - Metadata guidance or stale-selection guidance.
+ * @csspart image-description-actions - Metadata Apply and Cancel controls.
+ * @csspart image-description-apply - Applies both metadata fields as one edit.
+ * @csspart image-description-cancel - Cancels description editing.
+ * @csspart image-delete - Deletes the originally selected image as one edit.
  * @csspart find - On-demand search and single-match replacement surface.
  * @csspart find-toggle - Opens and closes the find surface.
  * @csspart find-query - Search query field.
@@ -172,6 +204,16 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   private tableDialogGeneration = 0;
   private cancelTableFocusReturn: (() => void) | null = null;
   private tableLabelState: { session: DocxSession; row: string; column: string } | null = null;
+  @state() private imageDialog: 'resize' | 'description' | null = null;
+  @state() private imageWidth = '';
+  @state() private imageHeight = '';
+  @state() private imageKeepRatio = true;
+  @state() private imageTitle = '';
+  @state() private imageDescriptionText = '';
+  @state() private imageNavigationEmpty = false;
+  private imageIntent: ReturnType<typeof captureImageToolIntent> = null;
+  private imageDialogGeneration = 0;
+  private cancelImageFocusReturn: (() => void) | null = null;
 
   private mount: HTMLDivElement | null = null;
   private session: DocxSession | null = null;
@@ -257,6 +299,17 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   }
 
   private clearEditingDrafts(): void {
+    this.imageDialogGeneration++;
+    this.cancelImageFocusReturn?.();
+    this.releaseImageIntent();
+    this.imageDialog = null;
+    this.imageWidth = '';
+    this.imageHeight = '';
+    this.imageKeepRatio = true;
+    this.imageTitle = '';
+    this.imageDescriptionText = '';
+    this.imageNavigationEmpty = false;
+    for (const kind of ['resize', 'description'] as const) void this.imagePopover(kind)?.hide({ focusTrigger: false });
     this.tableDialogGeneration++;
     this.cancelTableFocusReturn?.();
     this.releaseTableIntent();
@@ -287,7 +340,9 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
         next.revision?.documentId !== previous?.revision?.documentId || next.revision?.value !== previous?.revision?.value)
       this.releaseToolbarSelection();
     if (this.tableIntent && !this.tableIntent.valid(this.session)) this.tableIntent.release();
+    if (this.imageIntent && !this.imageIntent.valid(this.session)) this.imageIntent.release();
     this.currentSnapshot = next;
+    if (next.image) this.imageNavigationEmpty = false;
     if (previous?.revision?.documentId !== next.revision?.documentId ||
         previous?.revision?.value !== next.revision?.value) {
       this.searchResults = null;
@@ -425,6 +480,18 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
 
   /** Inspect candidate font families on demand; this does not load font assets. */
   fontFamilies() { return this.session?.fontFamilies() ?? refused('not-ready'); }
+
+  /** Read complete bounded title and description from the settled image cache, without changing selection. */
+  imageDescription(): DocxResult<Readonly<DocxImageDescription>> {
+    return this.session?.imageDescription() ?? refused('not-ready');
+  }
+
+  /** Select an eligible body image in document order, wrapping without changing document content. */
+  selectImage(direction: DocxImageDirection): DocxResult<void> {
+    const result = this.session?.selectImage(direction) ?? refused<void>('not-ready');
+    this.syncSession();
+    return result;
+  }
 
   /** Search the current revision without changing document content. */
   find(query: string, options: { matchCase?: boolean; wholeWord?: boolean; limit?: number } = {}) {
@@ -675,6 +742,165 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     this.runTableEdit(action, true);
   }
 
+  private imagePopover(kind: 'resize' | 'description') {
+    return this.renderRoot.querySelector<HTMLElement & { open: boolean; hide(options?: { focusTrigger?: boolean }): Promise<void> }>(
+      `[part="image-${kind}-popover"]`);
+  }
+
+  private navigateImage(direction: DocxImageDirection): void {
+    const result = this.selectImage(direction);
+    this.imageNavigationEmpty = !result.ok && result.code === 'no-selection';
+    if (result.ok) this.editError = null;
+    else if (result.code === 'no-selection') {
+      if (this.announcementsArmed) this.politeSink?.announce(this.localize('docxEditorNoImage'));
+    } else this.reportEditRefusal(result.code);
+  }
+
+  private releaseImageIntent(): void {
+    this.imageIntent?.release();
+    this.imageIntent = null;
+  }
+
+  private prepareImageIntent(): void {
+    if (this.imageDialog) return;
+    this.releaseToolbarSelection();
+    this.releaseImageIntent();
+    this.imageIntent = captureImageToolIntent(this.session);
+  }
+
+  private onImageActivationKey(event: KeyboardEvent): void {
+    if ((event.key === 'Enter' || event.key === ' ') && !event.isComposing && event.keyCode !== 229) this.prepareImageIntent();
+  }
+
+  private openImageDialog(event: Event, kind: 'resize' | 'description'): void {
+    const intent = this.imageIntent;
+    if (!intent?.valid(this.session)) { event.preventDefault(); this.releaseImageIntent(); return; }
+    if (kind === 'description') {
+      const description = intent.description(this.session);
+      if (!description.ok) {
+        event.preventDefault(); this.releaseImageIntent(); this.reportEditRefusal(description.code); return;
+      }
+      this.imageTitle = description.value.title;
+      this.imageDescriptionText = description.value.description;
+    } else {
+      this.imageWidth = imageDimensionDraft(intent.image.widthPoints);
+      this.imageHeight = imageDimensionDraft(intent.image.heightPoints);
+      this.imageKeepRatio = true;
+    }
+    this.imageDialogGeneration++;
+    this.cancelImageFocusReturn?.();
+    this.imageDialog = kind;
+    this.editError = null;
+  }
+
+  private onImageFieldFocus(event: FocusEvent): void {
+    const fields = event.currentTarget;
+    const kind = this.imageDialog;
+    if (!event.isTrusted || !(fields instanceof HTMLElement) || !kind) return;
+    const popover = this.imagePopover(kind);
+    const generation = this.imageDialogGeneration;
+    const parts = ['image-width', 'image-height', 'image-ratio', 'image-title', 'image-description',
+      'image-resize-apply', 'image-resize-cancel', 'image-description-apply', 'image-description-cancel'];
+    const path = event.composedPath();
+    const host = path.find(node => node instanceof HTMLElement && fields.contains(node) &&
+      parts.includes(node.getAttribute('part') ?? '')) as HTMLElement | undefined;
+    const native = path.find(node => node instanceof HTMLElement) as HTMLElement | undefined;
+    const owned = () => {
+      let active = this.shadowRoot?.activeElement;
+      if (active !== host) return false;
+      while (active instanceof HTMLElement && active.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+      return active === native && this.isConnected && this.imageDialog === kind && generation === this.imageDialogGeneration &&
+        popover?.open && fields === popover.querySelector(`[part="image-${kind}-fields"]`);
+    };
+    if (!host || !native || !owned()) return;
+    const content = popover?.shadowRoot?.querySelector<HTMLElement>('[part~="content"]');
+    if (!content?.offsetHeight || !content.clientHeight) return;
+    const clip = content.getBoundingClientRect();
+    const scale = clip.height / content.offsetHeight;
+    if (!Number.isFinite(scale) || scale <= 0) return;
+    const top = Math.max(0, clip.top + content.clientTop * scale);
+    const bottom = Math.min(this.ownerDocument.defaultView?.innerHeight ?? 0,
+      clip.top + (content.clientTop + content.clientHeight) * scale);
+    const box = host.getBoundingClientRect(), nativeBox = native.getBoundingClientRect();
+    const target = box.height <= bottom - top ? box : nativeBox.height <= bottom - top ? nativeBox : null;
+    // Oversized controls keep the browser's own caret scrolling.
+    if (!target || bottom <= top) return;
+    const delta = target.top < top ? target.top - top : target.bottom > bottom ? target.bottom - bottom : 0;
+    const next = Math.min(Math.max(0, content.scrollTop + delta / scale), Math.max(0, content.scrollHeight - content.clientHeight));
+    if (Number.isFinite(next) && next !== content.scrollTop && owned()) content.scrollTop = next;
+  }
+
+  private onImageDialogHidden(kind: 'resize' | 'description'): void {
+    if (this.imagePopover(kind)?.open || this.imageDialog !== kind) return;
+    this.imageDialog = null;
+    this.releaseImageIntent();
+  }
+
+  private closeImageDialog(returnToEditor: boolean): void {
+    const kind = this.imageDialog;
+    if (!kind) return;
+    this.cancelImageFocusReturn?.();
+    const session = this.session;
+    const generation = this.imageDialogGeneration;
+    const selectionVersion = session?.snapshot().selection.version;
+    const popover = this.imagePopover(kind);
+    if (!popover) return;
+    const document = this.ownerDocument;
+    let cancelled = false;
+    const cancel = () => {
+      cancelled = true;
+      document.removeEventListener('focusin', cancel, true);
+      document.removeEventListener('pointerdown', cancel, true);
+      if (this.cancelImageFocusReturn === cancel) this.cancelImageFocusReturn = null;
+    };
+    this.cancelImageFocusReturn = cancel;
+    document.addEventListener('focusin', cancel, true);
+    document.addEventListener('pointerdown', cancel, true);
+    void popover.hide({ focusTrigger: false }).then(() => {
+      const shouldFocus = !cancelled && this.isConnected && this.session === session && generation === this.imageDialogGeneration &&
+        !popover.open && session?.snapshot().selection.version === selectionVersion;
+      cancel();
+      if (!shouldFocus) return;
+      if (returnToEditor) this.focusEditor();
+      else this.renderRoot.querySelector<HTMLElement>(`[part="image-${kind}-trigger"]`)?.focus();
+    }, cancel);
+  }
+
+  private changeImageDimension(event: CustomEvent<{ value: string }>, axis: 'width' | 'height'): void {
+    event.stopPropagation();
+    const value = event.detail.value;
+    if (axis === 'width') this.imageWidth = value;
+    else this.imageHeight = value;
+    if (!this.imageKeepRatio || !this.imageIntent) return;
+    const partner = imageRatioPartner(value, axis, this.imageIntent.image);
+    if (axis === 'width') this.imageHeight = partner ?? '';
+    else this.imageWidth = partner ?? '';
+  }
+
+  private runImageEdit(action: DocxImageAction, fromDialog = false): void {
+    const session = this.session;
+    const result = this.imageIntent?.execute(session, action) ?? refused<DocxRevision>('stale-selection');
+    this.syncSession();
+    if (result.ok) {
+      this.editError = null;
+      if (fromDialog) this.closeImageDialog(true);
+      else if (this.isConnected && this.session === session) this.focusEditor();
+    } else this.reportEditRefusal(result.code);
+    if (!fromDialog) this.releaseImageIntent();
+  }
+
+  private applyImageResize(): void {
+    let action = imageResizeDraft(this.imageWidth, this.imageHeight);
+    if (!action || !this.imageIntent) return;
+    if (imageResizeUnchanged(action, this.imageIntent.image)) action = { type: 'resize-image', ...this.imageIntent.image };
+    this.runImageEdit(action, true);
+  }
+
+  private applyImageDescription(): void {
+    const action = imageDescriptionDraft(this.imageTitle, this.imageDescriptionText);
+    if (action) this.runImageEdit(action, true);
+  }
+
   private runFind(): void {
     if (!this.findActionAvailable() || !this.query) return;
     const result = this.find(this.query, { matchCase: this.matchCase, wholeWord: this.wholeWord, limit: 100 });
@@ -722,6 +948,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   private onHostKeyDown = (event: KeyboardEvent): void => {
     if (event.altKey && event.key === 'F10') {
       event.preventDefault();
+      event.stopPropagation();
       this.retainToolbarSelection();
       const targets = this.enabledToolbarButtons();
       const first = targets[0];
@@ -730,7 +957,11 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       return;
     }
     if ((event.isComposing || event.keyCode === 229) && event.composedPath().some(node => node instanceof HTMLElement &&
-      node.getAttribute('part') === 'table-insert-popover')) return;
+      ['table-insert-popover', 'image-resize-popover', 'image-description-popover'].includes(node.getAttribute('part') ?? ''))) return;
+    if (event.key === 'Escape' && this.imageDialog && event.composedPath().some(node => node instanceof HTMLElement &&
+      node.getAttribute('part') === `image-${this.imageDialog}-popover`)) {
+      event.preventDefault(); event.stopPropagation(); this.closeImageDialog(false); return;
+    }
     if (event.key === 'Escape' && this.tableDialogOpen && event.composedPath().some(node => node instanceof HTMLElement &&
       node.getAttribute('part') === 'table-insert-popover')) {
       event.preventDefault();
@@ -1073,6 +1304,107 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     </div>`;
   }
 
+  private renderImageTools(): TemplateResult {
+    const image = this.currentSnapshot?.image;
+    if (this.currentSnapshot?.status !== 'ready' && !this.imageDialog) return html``;
+    const navigationDisabled = this.currentSnapshot?.status !== 'ready' || this.currentSnapshot.activity !== null || this.currentSnapshot.composing;
+    const intentValid = this.imageIntent?.valid(this.session) ?? false;
+    const available = this.can({ type: 'delete-image' }).enabled;
+    const fieldsDisabled = !intentValid || !available;
+    const resize = imageResizeDraft(this.imageWidth, this.imageHeight);
+    const description = imageDescriptionDraft(this.imageTitle, this.imageDescriptionText);
+    const dimension = (value: number) => value.toLocaleString(this.effectiveLocale, { maximumFractionDigits: 4 });
+    const context = image ? this.localize('docxEditorImageDimensions', undefined,
+      { width: dimension(image.widthPoints), height: dimension(image.heightPoints) }) : '';
+    return html`<div part="image-tools" role="group" aria-label=${this.localize('docxEditorImage')}>
+      <${buttonTag} part="image-previous" data-tool-key="image-previous" size="s" appearance="quiet" wrap
+        tabindex=${this.toolbarKey === 'image-previous' ? '0' : '-1'} ?disabled=${navigationDisabled}
+        @click=${() => this.navigateImage('previous')}>${this.localize('docxEditorPreviousImage')}</${buttonTag}>
+      <${buttonTag} part="image-next" data-tool-key="image-next" size="s" appearance="quiet" wrap
+        tabindex=${this.toolbarKey === 'image-next' ? '0' : '-1'} ?disabled=${navigationDisabled}
+        @click=${() => this.navigateImage('next')}>${this.localize('docxEditorNextImage')}</${buttonTag}>
+      ${this.imageNavigationEmpty ? html`<span part="image-navigation-status">${this.localize('docxEditorNoImage')}</span>` : nothing}
+      ${!image && !this.imageDialog ? nothing : html`
+      <span part="image-context"><bdi>${context}</bdi></span>
+      <${popoverTag} part="image-resize-popover" popup-role="dialog" placement="bottom-start" top-layer
+        aria-label=${this.localize('docxEditorResizeImage')}
+        @lr-show=${(event: Event) => this.openImageDialog(event, 'resize')}
+        @lr-after-hide=${() => this.onImageDialogHidden('resize')}>
+        <${buttonTag} slot="trigger" part="image-resize-trigger" data-tool-key="image-resize" size="s" appearance="quiet" wrap
+          tabindex=${this.toolbarKey === 'image-resize' ? '0' : '-1'}
+          ?disabled=${!available || this.imageDialog === 'description'}
+          @pointerdown=${() => this.prepareImageIntent()} @focusin=${() => this.prepareImageIntent()}
+          @keydown=${(event: KeyboardEvent) => this.onImageActivationKey(event)}>${this.localize('docxEditorResizeImage')}</${buttonTag}>
+        <div part="image-resize-fields" @focusin=${this.onImageFieldFocus} @keydown=${(event: KeyboardEvent) => {
+          if (event.key === 'Enter' && !event.isComposing && event.keyCode !== 229 && event.composedPath().some(node =>
+            node instanceof HTMLElement && ['image-width', 'image-height'].includes(node.getAttribute('part') ?? ''))) {
+            event.preventDefault(); event.stopPropagation(); this.applyImageResize();
+          }
+        }}>
+          <${numberInputTag} part="image-width" size="s" autofocus label=${this.localize('docxEditorImageWidth')}
+            min="1" max="1440" step="any" inputmode="decimal" without-steppers .value=${this.imageWidth} ?disabled=${fieldsDisabled}
+            @lr-input=${(event: CustomEvent<{ value: string }>) => this.changeImageDimension(event, 'width')}
+            @lr-change=${(event: Event) => event.stopPropagation()}></${numberInputTag}>
+          <${numberInputTag} part="image-height" size="s" label=${this.localize('docxEditorImageHeight')}
+            min="1" max="1440" step="any" inputmode="decimal" without-steppers .value=${this.imageHeight} ?disabled=${fieldsDisabled}
+            @lr-input=${(event: CustomEvent<{ value: string }>) => this.changeImageDimension(event, 'height')}
+            @lr-change=${(event: Event) => event.stopPropagation()}></${numberInputTag}>
+          <${checkboxTag} part="image-ratio" size="s" .checked=${this.imageKeepRatio} ?disabled=${fieldsDisabled}
+            @lr-change=${(event: CustomEvent<{ checked: boolean }>) => {
+              event.stopPropagation(); this.imageKeepRatio = event.detail.checked;
+            }}>${this.localize('docxEditorImageRatio')}</${checkboxTag}>
+          <p part="image-resize-hint">${this.localize(this.imageDialog === 'resize' && !intentValid ? 'docxEditorImageStale' : 'docxEditorImageSizeHint')}</p>
+          <div part="image-resize-actions">
+            <${buttonTag} part="image-resize-apply" size="s"
+              ?disabled=${!intentValid || !resize || !this.can(resize).enabled}
+              @click=${() => this.applyImageResize()}>${this.localize('docxEditorImageApply')}</${buttonTag}>
+            <${buttonTag} part="image-resize-cancel" size="s" appearance="quiet"
+              @click=${() => this.closeImageDialog(false)}>${this.localize('docxEditorCancel')}</${buttonTag}>
+          </div>
+        </div>
+      </${popoverTag}>
+      <${popoverTag} part="image-description-popover" popup-role="dialog" placement="bottom-start" top-layer
+        aria-label=${this.localize('docxEditorDescribeImage')}
+        @lr-show=${(event: Event) => this.openImageDialog(event, 'description')}
+        @lr-after-hide=${() => this.onImageDialogHidden('description')}>
+        <${buttonTag} slot="trigger" part="image-description-trigger" data-tool-key="image-description" size="s" appearance="quiet" wrap
+          tabindex=${this.toolbarKey === 'image-description' ? '0' : '-1'}
+          ?disabled=${!available || this.imageDialog === 'resize'}
+          @pointerdown=${() => this.prepareImageIntent()} @focusin=${() => this.prepareImageIntent()}
+          @keydown=${(event: KeyboardEvent) => this.onImageActivationKey(event)}>${this.localize('docxEditorDescribeImage')}</${buttonTag}>
+        <div part="image-description-fields" @focusin=${this.onImageFieldFocus} @keydown=${(event: KeyboardEvent) => {
+          if (event.key === 'Enter' && !event.isComposing && event.keyCode !== 229 && event.composedPath().some(node =>
+            node instanceof HTMLElement && node.getAttribute('part') === 'image-title')) {
+            event.preventDefault(); event.stopPropagation(); this.applyImageDescription();
+          }
+        }}>
+          <${inputTag} part="image-title" size="s" autofocus label=${this.localize('docxEditorImageTitle')}
+            maxlength="256" .value=${this.imageTitle} ?disabled=${fieldsDisabled}
+            @lr-input=${(event: CustomEvent<{ value: string }>) => { event.stopPropagation(); this.imageTitle = event.detail.value; }}
+            @lr-change=${(event: Event) => event.stopPropagation()}></${inputTag}>
+          <${textareaTag} part="image-description" size="s" rows="4" resize="vertical" with-count
+            label=${this.localize('docxEditorImageDescription')} maxlength="2048" .value=${this.imageDescriptionText}
+            ?disabled=${fieldsDisabled}
+            @lr-input=${(event: CustomEvent<{ value: string }>) => { event.stopPropagation(); this.imageDescriptionText = event.detail.value; }}
+            @lr-change=${(event: Event) => event.stopPropagation()}></${textareaTag}>
+          <p part="image-description-hint">${this.localize(this.imageDialog === 'description' && !intentValid ? 'docxEditorImageStale' : 'docxEditorImageDescriptionHint')}</p>
+          <div part="image-description-actions">
+            <${buttonTag} part="image-description-apply" size="s"
+              ?disabled=${!intentValid || !description || !this.can(description).enabled}
+              @click=${() => this.applyImageDescription()}>${this.localize('docxEditorImageApply')}</${buttonTag}>
+            <${buttonTag} part="image-description-cancel" size="s" appearance="quiet"
+              @click=${() => this.closeImageDialog(false)}>${this.localize('docxEditorCancel')}</${buttonTag}>
+          </div>
+        </div>
+      </${popoverTag}>
+      <${buttonTag} part="image-delete" data-tool-key="image-delete" size="s" appearance="quiet" wrap
+        tabindex=${this.toolbarKey === 'image-delete' ? '0' : '-1'} ?disabled=${!available || this.imageDialog !== null}
+        @pointerdown=${() => this.prepareImageIntent()} @focusin=${() => this.prepareImageIntent()}
+        @keydown=${(event: KeyboardEvent) => this.onImageActivationKey(event)}
+        @click=${() => this.runImageEdit({ type: 'delete-image' })}>${this.localize('docxEditorDeleteImage')}</${buttonTag}>`}
+    </div>`;
+  }
+
   private renderFind(): TemplateResult {
     if (!this.findOpen) return html``;
     const results = this.searchResults;
@@ -1135,6 +1467,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
           <div part="format-actions">${commands.map(command => this.renderCommand(command))}</div>
           ${this.renderEditingTools()}
           ${this.renderTableTools()}
+          ${this.renderImageTools()}
         </div>
         ${this.pendingAction ? html`
           <div part="confirm" role="group" aria-label=${this.localize('docxEditorDiscardQuestion')}>

@@ -13,7 +13,8 @@ const test = {
   async sessionFactory() {
     return (await import('../src/docx/create-session.js')).createDocxSession;
   },
-  async fixture(kind: `table-${string}` | 'accepted' | 'external' | 'malformed' | 'representative' | 'large' | 'basic-editing' | 'mixed-formatting' | 'search-limit') {
+  async fixture(kind: `image-${string}` | `table-${string}` | 'accepted' | 'external' | 'malformed' | 'representative' | 'large' | 'basic-editing' | 'mixed-formatting' | 'search-limit') {
+    if (kind.startsWith('image-')) return (await import('./corpus.js')).imageFixture(kind);
     if (kind.startsWith('table-')) return (await import('./corpus.js')).tableFixture(kind);
     if (kind === 'representative' || kind === 'large' || kind === 'basic-editing' || kind === 'mixed-formatting' || kind === 'search-limit') {
       const corpus = await import('./corpus.js');

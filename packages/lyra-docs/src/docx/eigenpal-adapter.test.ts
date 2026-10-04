@@ -18,14 +18,21 @@ function harness() {
   let modeChanges = 0;
   let focusCalls = 0;
   let executions = 0;
+  let created = 0, viewportRemoves = 0;
   let saved = () => Promise.resolve(new Uint8Array([1, 2, 3]).buffer);
   let creation: DocxEditorConfig | undefined;
-  const document = { activeElement: null as unknown, body: {}, createElement: () => child };
+  const document = { activeElement: null as unknown, body: {}, createElement: () => created++ === 0 ? child : viewport };
   const child = Object.assign(new EventTarget(), {
-    className: '', inert: false, ownerDocument: document,
+    className: '', style: {} as Record<string, string>, inert: false, ownerDocument: document,
     setAttribute() {}, contains: (node: unknown) => node === child,
     remove: () => { removed = true; },
   });
+  const viewport = { className: '', style: {} as Record<string, string>, tabIndex: 0,
+    attributes: new Map<string, string>(), children: [] as unknown[],
+    setAttribute(name: string, value: string) { this.attributes.set(name, value); },
+    append(node: unknown) { this.children.push(node); },
+    remove() { viewportRemoves++; removed = true; },
+  };
   const mount = { ownerDocument: document, append() {} } as unknown as HTMLElement;
   const events = new Map<keyof EditorEvents, Set<(payload?: unknown) => void>>();
   const emit = (event: keyof EditorEvents, payload?: unknown) => {
@@ -54,7 +61,7 @@ function harness() {
   const loader = async () => ({ createDocxEditor(config: DocxEditorConfig) {
     creation = config; mode = config.mode ?? 'edit'; return engine;
   } });
-  return { mount, child, document, emit, loader, engine,
+  return { mount, child, viewport, viewportRemoves: () => viewportRemoves, document, emit, loader, engine,
     mode: () => mode, destroyCount: () => destroyCount, removed: () => removed,
     loadCount: () => loadCount, creation: () => creation,
     modeChanges: () => modeChanges, focusCalls: () => focusCalls,
@@ -506,4 +513,490 @@ test('table labels update through the public editor without inspection or mutati
   assert.equal(h.executions(), 0);
   opened.value.destroy();
   assert.equal(opened.value.refreshTableLabels?.(labels), false);
+});
+
+async function imageHarness(options = { kind: 'image-simple', readOnly: false }) {
+  const { readOoxmlPackage } = await import('@docx-editor.dev/core/store');
+  const { imageFixture } = await import('../../test/corpus.js');
+  const parsed = readOoxmlPackage(imageFixture(options.kind)); assert(parsed.ok);
+  const pkg = parsed.package, part = pkg.parts.get(pkg.mainDocumentPart)!;
+  const nodes: import('@docx-editor.dev/core/store').OoxmlElement[] = [];
+  const collect = (node: import('@docx-editor.dev/core/store').OoxmlNode) => { if (node.kind !== 'textValue') { nodes.push(node); node.children.forEach(collect); } }; collect(part.root);
+  const drawing = nodes.find(node => node.localName === 'drawing')!, paragraph = nodes.find(node => node.children.some(run => run.kind !== 'textValue' && run.children.some(child => child === drawing)))!;
+  const h = harness();
+  const f = { revision: 0, id: drawing.id, paragraphId: paragraph.id, offset: 0, calls: 0, flushes: 0, dispatches: 0, reads: 0, imageReads: 0, saves: 0, packages: 0, version: 0, versionReads: 0, owned: true,
+    onFlush() {}, onCan() {}, onPackage() {}, onLayout() {} };
+  const image = { id: drawing.id, widthEmu: 1524000, heightEmu: 762000, kind: 'inline', wrap: 'inline', hidden: false, resourceStatus: 'ready', position: null,
+    hyperlink: null, rotationDegrees: 0, crop: { left: 0, top: 0, right: 0, bottom: 0 }, locks: { select: false, move: false, resize: false, changeAspect: false }, title: 'Title 1', description: 'Description 1' };
+  Object.assign(h.engine, { stateVersion: () => { f.versionReads++; return f.version; }, mountGeneration: 0, surface: {
+    state: () => ({ selection: { anchor: { paragraphId: f.paragraphId, offset: f.offset }, head: { paragraphId: f.paragraphId, offset: f.offset } }, cellSelection: null }),
+    publishedLayout: () => { f.onLayout(); return { revision: f.revision, pages: [{ fragments: nodes.filter(node => node.localName === 'drawing').map(node => {
+      const parent = nodes.find(candidate => candidate.children.some(run => run.kind !== 'textValue' && run.children.some(child => child === node)))!;
+      return { kind: 'paragraph', lines: [{ range: { paragraphId: parent.id, start: 0, end: 1 }, spans: [],
+        drawings: [{ kind: 'inlineDrawing', drawingNodeId: node.id, paragraphId: parent.id, start: 0, accessibility: { hidden: false } }] }] };
+    }) }] }; },
+    revealParagraph: () => true, revealPosition: () => true, storyScope: () => ({ kind: 'body' }), drawingSelectionIntent: () => f.id ? { kind: 'pointer', drawingNodeId: f.id } : { kind: 'none' },
+    flushPendingInput: () => { f.flushes++; f.onFlush(); },
+    session: { part: () => part, currentPackage: () => { f.packages++; f.onPackage(); return pkg; }, packageRevision: () => f.revision },
+  }, snapshot: () => { f.reads++; return { isLoading: false, isOpening: false, parseError: null, page: { total: 1 }, selection: {}, selectionCollapsed: true, image: f.id ? image : null }; },
+  getSelectedImage: () => { f.imageReads++; return image; },
+  can: () => { f.calls++; f.onCan(); return { ok: true }; },
+  exec: () => { f.dispatches++; f.revision++; h.emit('change', { revision: f.revision }); return { ok: true }; } });
+  h.saveWith(() => { f.saves++; return Promise.resolve(new Uint8Array().buffer); });
+  const opened = await openEigenpalDocument({ mount: h.mount }, { kind: 'blank' }, { readOnly: options.readOnly, signal: new AbortController().signal }, () => f.owned, h.loader); assert(opened.ok);
+  const port = opened.value;
+  port.subscribe(() => { port.inspect(); }); port.inspect();
+  return { ...h, port, f, image, nodes };
+}
+
+test('image adapter compares identical values before core capability or mutation and returns copied metadata', async () => {
+  const h = await imageHarness();
+  const before = h.port.inspect(); assert.deepEqual(before.image, { widthPoints: 120, heightPoints: 60 });
+  const description = h.port.imageDescription!(); assert(description.ok); assert(Object.isFrozen(description.value));
+  for (const action of [{ type: 'resize-image', widthPoints: 120, heightPoints: 60 }, { type: 'image-description', title: 'Title 1', description: 'Description 1' }] as const) {
+    assert(h.port.execute(action, undefined, () => ({ ok: true, value: undefined })).ok);
+  }
+  assert.equal(h.f.dispatches, 0); assert.equal(h.f.calls, 0); assert.equal(h.f.revision, 0);
+  assert(h.port.execute({ type: 'resize-image', widthPoints: 144, heightPoints: 72 }, undefined, () => ({ ok: true, value: undefined })).ok);
+  assert.equal(h.f.dispatches, 1); assert.equal(h.f.calls, 1); h.port.destroy();
+});
+
+test('queued image reads never call layout getters, capability, flush or save', async () => {
+  const h = await imageHarness();
+  h.child.dispatchEvent(new Event('beforeinput', { cancelable: true }));
+  const reads = h.f.reads;
+  assert.deepEqual(h.port.imageDescription!(), { ok: false, code: 'busy' });
+  assert.deepEqual(h.port.can({ type: 'delete-image' }), { enabled: false, reason: 'busy' });
+  assert.deepEqual(h.port.inspect().image, { widthPoints: 120, heightPoints: 60 });
+  assert.equal(h.f.reads, reads); assert.equal(h.f.calls, 0); assert.equal(h.f.flushes, 0); assert.equal(h.f.dispatches, 0);
+  assert.equal(h.f.imageReads, 0); assert.equal(h.f.saves, 0); assert.equal(h.f.packages, 0);
+  h.port.destroy();
+});
+
+test('image adapter rejects original intent changed by settlement, capability observer or released and ABA pins', async () => {
+  for (const phase of ['flush', 'can', 'package', 'release', 'aba']) {
+    const h = await imageHarness(); const pin = h.port.retainSelection();
+    if (phase === 'flush') h.f.onFlush = () => { h.f.revision++; };
+    if (phase === 'can') h.f.onCan = () => { h.f.id = 'other'; h.emit('selectionChange'); };
+    if (phase === 'package') h.f.onPackage = () => { h.f.revision++; };
+    if (phase === 'release') h.port.releaseSelection(pin);
+    if (phase === 'aba') { h.f.id = 'other'; h.emit('selectionChange'); h.f.id = h.image.id; h.emit('selectionChange'); }
+    assert.equal(h.port.execute({ type: 'delete-image' }, pin, () => ({ ok: true, value: undefined })).ok, false, phase);
+    assert.equal(h.f.dispatches, 0, phase); h.port.destroy();
+  }
+});
+
+test('queued ordinary input is settled then refuses the cached original image without image dispatch', async () => {
+  const h = await imageHarness();
+  h.child.dispatchEvent(new Event('beforeinput', { cancelable: true }));
+  h.f.id = '';
+  h.f.onFlush = () => { h.f.revision++; h.emit('change', { revision: h.f.revision }); };
+  assert.equal(h.port.execute({ type: 'delete-image' }, undefined, () => h.f.revision ? { ok: false, code: 'stale-revision' } : { ok: true, value: undefined }).ok, false);
+  assert.equal(h.f.flushes, 1); assert.equal(h.f.revision, 1); assert.equal(h.f.dispatches, 0);
+  h.port.destroy();
+});
+
+test('retaining an image refuses a reentrant focus-selection change during core pin acquisition', async () => {
+  const h = await imageHarness(); let releases = 0;
+  h.engine.releaseSelection = () => { releases++; };
+  h.engine.retainSelection = () => {
+    h.f.id = 'another-drawing'; h.image.id = 'another-drawing';
+    h.emit('selectionChange');
+    return Symbol() as unknown as ReturnType<DocxEditorInstance['retainSelection']>;
+  };
+  assert.throws(() => h.port.retainSelection());
+  assert.equal(releases, 1); assert.equal(h.f.dispatches, 0);
+  h.port.destroy();
+});
+
+
+test('image metadata remains available when a committed edit restarts native resource decoding', async () => {
+  const h = await imageHarness();
+  const action = { type: 'image-description', title: 'Picture & "quoted" 😀', description: 'First line\nSecond line: Café 東京' } as const;
+  Object.assign(h.engine, { exec: () => {
+    Object.assign(h.image, { title: action.title, description: action.description, resourceStatus: 'pending' });
+    h.f.dispatches++; h.f.revision++; h.emit('change', { revision: h.f.revision }); return { ok: true };
+  } });
+  assert(h.port.execute(action, undefined, () => ({ ok: true, value: undefined })).ok);
+  assert.deepEqual(h.port.imageDescription!(), { ok: true, value: { title: action.title, description: action.description } });
+  assert.deepEqual(h.port.can({ type: 'delete-image' }), { enabled: false, reason: 'unsupported' });
+  assert.deepEqual(h.port.execute({ type: 'delete-image' }, undefined, () => ({ ok: true, value: undefined })), { ok: false, code: 'unsupported' });
+  h.image.resourceStatus = 'failed'; h.port.inspect();
+  assert.deepEqual(h.port.imageDescription!(), { ok: false, code: 'unsupported' });
+  h.port.destroy();
+});
+
+
+test('owned resource refresh publishes readiness without selection or document changes', async context => {
+  const h = await imageHarness();
+  context.mock.timers.enable({ apis: ['setTimeout'] });
+  h.image.resourceStatus = 'pending'; assert.equal(h.port.inspect().imageReady, false);
+  const pin = h.port.retainSelection();
+  const events: DocxEngineEvent[] = []; h.port.subscribe(event => { events.push(event); });
+  const reads = h.f.reads;
+  h.image.resourceStatus = 'ready'; h.f.version++;
+  context.mock.timers.tick(20);
+  assert.deepEqual(h.port.can({ type: 'delete-image' }), { enabled: true });
+  assert.equal(h.f.reads, reads + 1); assert.deepEqual(events, ['state']);
+  assert.equal(h.port.inspect().imageReady, true);
+  assert.equal(h.f.revision, 0); assert.equal(h.f.dispatches, 0); assert.equal(h.f.flushes, 0);
+  assert(h.port.execute({ type: 'resize-image', widthPoints: 120, heightPoints: 60 }, pin, () => ({ ok: true, value: undefined })).ok);
+  assert.equal(h.f.dispatches, 0); h.port.destroy();
+});
+
+test('resource refresh skips unchanged versions and exhausts without inspection restarting it', async context => {
+  const h = await imageHarness();
+  context.mock.timers.enable({ apis: ['setTimeout'] });
+  h.image.resourceStatus = 'pending'; h.port.inspect();
+  const reads = h.f.reads;
+  for (let attempt = 0; attempt < 15; attempt++) context.mock.timers.tick(1000);
+  assert.equal(h.f.reads, reads);
+  const versions = h.f.versionReads;
+  assert(versions >= 12 && versions <= 14);
+  h.port.inspect();
+  const inspectedVersions = h.f.versionReads;
+  h.image.resourceStatus = 'ready'; h.f.version++;
+  for (let attempt = 0; attempt < 15; attempt++) context.mock.timers.tick(1000);
+  assert.equal(h.f.versionReads, inspectedVersions);
+  assert.deepEqual(h.port.can({ type: 'delete-image' }), { enabled: false, reason: 'unsupported' });
+  h.port.destroy();
+});
+
+test('resource refresh performs no layout reads during native input or composition', async context => {
+  for (const event of ['beforeinput', 'compositionstart']) {
+    const h = await imageHarness();
+    context.mock.timers.enable({ apis: ['setTimeout'] });
+    let refresh: (() => void) | undefined;
+    const original = globalThis.setTimeout;
+    const timer = context.mock.method(globalThis, 'setTimeout', (...args: Parameters<typeof setTimeout>) => {
+      if (args[1] === 16) refresh = () => args[0]();
+      return original(...args);
+    });
+    h.image.resourceStatus = 'pending'; h.port.inspect();
+    assert(refresh);
+    let readsDuring = -1, readsAfter = -1;
+    h.child.addEventListener(event, () => {
+      readsDuring = h.f.reads;
+      h.image.resourceStatus = 'ready'; h.f.version++;
+      refresh!(); readsAfter = h.f.reads;
+    });
+    h.child.dispatchEvent(new Event(event, { cancelable: true }));
+    assert.equal(readsAfter, readsDuring);
+    assert.equal(h.f.flushes, 0); assert.equal(h.f.imageReads, 0); assert.equal(h.f.packages, 0);
+    h.port.destroy(); timer.mock.restore(); context.mock.timers.reset();
+  }
+});
+
+test('stale or destroyed resource refresh does not publish or inspect', async context => {
+  for (const stale of ['revision', 'selection', 'destroy', 'ownership', 'fault']) {
+    const h = await imageHarness();
+    context.mock.timers.enable({ apis: ['setTimeout'] });
+    h.image.resourceStatus = 'pending'; h.port.inspect();
+    if (stale === 'revision') h.f.revision++;
+    if (stale === 'selection') { h.f.id = ''; h.emit('selectionChange'); }
+    if (stale === 'destroy') h.port.destroy();
+    if (stale === 'ownership') h.f.owned = false;
+    if (stale === 'fault') assert.throws(() => h.emit('error'), /Engine unavailable/);
+    const reads = h.f.reads;
+    h.image.resourceStatus = 'ready'; h.f.version++;
+    for (let attempt = 0; attempt < 15; attempt++) context.mock.timers.tick(1000);
+    assert.equal(h.f.reads, reads, stale);
+    h.port.destroy(); context.mock.timers.reset();
+  }
+});
+
+
+test('resource refresh waits through save and cancels after resource failure', async context => {
+  const h = await imageHarness();
+  context.mock.timers.enable({ apis: ['setTimeout'] });
+  h.image.resourceStatus = 'pending'; h.port.inspect();
+  const pending = deferred<ArrayBuffer>(); h.saveWith(() => pending.promise);
+  const save = h.port.save(new AbortController().signal);
+  const reads = h.f.reads;
+  h.image.resourceStatus = 'ready'; h.f.version++;
+  context.mock.timers.tick(16);
+  assert.equal(h.f.reads, reads);
+  pending.resolve(new ArrayBuffer(0)); await save;
+  context.mock.timers.tick(32);
+  assert.equal(h.f.reads, reads + 1);
+  assert.deepEqual(h.port.can({ type: 'delete-image' }), { enabled: true });
+  h.image.resourceStatus = 'pending'; h.port.inspect();
+  h.image.resourceStatus = 'unrenderable'; h.f.version++;
+  context.mock.timers.tick(16);
+  assert.deepEqual(h.port.imageDescription!(), { ok: false, code: 'unsupported' });
+  const failedReads = h.f.reads, versions = h.f.versionReads;
+  for (let attempt = 0; attempt < 15; attempt++) context.mock.timers.tick(1000);
+  assert.equal(h.f.reads, failedReads); assert.equal(h.f.versionReads, versions);
+  h.port.destroy();
+});
+
+
+test('explicit image navigation selects once, focuses and invalidates the original pin without editing', async () => {
+  for (const readOnly of [false, true]) {
+    const h = await imageHarness({ kind: 'image-simple', readOnly });
+    let selections = 0;
+    h.engine.surface!.selectDrawing = (id, paragraphId) => {
+      assert(id !== h.image.id); assert(paragraphId);
+      selections++; h.f.id = id; h.f.paragraphId = paragraphId; h.image.id = id; h.emit('selectionChange'); return true;
+    };
+    const pin = h.port.retainSelection(), events: DocxEngineEvent[] = [];
+    h.port.subscribe(event => { events.push(event); });
+    assert.deepEqual(h.port.selectImage?.('next'), { ok: true, value: undefined });
+    assert.equal(selections, 1); assert.equal(h.focusCalls(), 1);
+    assert.deepEqual(events, ['user-selection']);
+    assert.equal(h.f.dispatches, 0); assert.equal(h.f.revision, 0); assert.equal(h.f.flushes, 0); assert.equal(h.f.calls, 0);
+    if (!readOnly) assert.deepEqual(h.port.execute({ type: 'delete-image' }, pin, () => ({ ok: true, value: undefined })), { ok: false, code: 'stale-selection' });
+    h.port.destroy();
+  }
+});
+
+test('image navigation refuses reentrant target changes before native selection', async () => {
+  for (const phase of ['revision', 'selection', 'generation', 'ownership', 'destroy']) {
+    const h = await imageHarness(); let selections = 0;
+    h.engine.surface!.selectDrawing = () => { selections++; return true; };
+    h.f.onPackage = () => {
+      if (phase === 'revision') h.f.revision++;
+      if (phase === 'selection') h.emit('selectionChange');
+      if (phase === 'generation') Object.assign(h.engine, { mountGeneration: 1 });
+      if (phase === 'ownership') h.f.owned = false;
+      if (phase === 'destroy') h.port.destroy();
+    };
+    assert.equal(h.port.selectImage?.('next').ok, false, phase);
+    assert.equal(selections, 0); assert.equal(h.f.flushes, 0); h.port.destroy();
+  }
+});
+
+test('image navigation refuses unsettled input and composition before canonical inspection', async () => {
+  for (const event of ['beforeinput', 'compositionstart']) {
+    const h = await imageHarness();
+    h.child.dispatchEvent(new Event(event, { cancelable: true }));
+    const packages = h.f.packages;
+    assert.deepEqual(h.port.selectImage?.('next'), { ok: false, code: event === 'beforeinput' ? 'busy' : 'composing' });
+    assert.equal(h.f.packages, packages); assert.equal(h.f.flushes, 0);
+    h.port.destroy();
+  }
+});
+
+
+test('image execution rechecks readiness after settlement even for identical values', async () => {
+  for (const action of [{ type: 'delete-image' }, { type: 'resize-image', widthPoints: 120, heightPoints: 60 }] as const) {
+    const h = await imageHarness();
+    h.f.onFlush = () => { h.image.resourceStatus = 'pending'; };
+    assert.deepEqual(h.port.execute(action, undefined, () => ({ ok: true, value: undefined })), { ok: false, code: 'unsupported' });
+    assert.equal(h.f.calls, 0); assert.equal(h.f.dispatches, 0); h.port.destroy();
+  }
+});
+
+
+test('singleton image navigation is a pure no-op and native refusal preserves selection', async () => {
+  const singleton = await imageHarness({ kind: 'image-picture-lock', readOnly: false });
+  const last = singleton.nodes.filter(node => node.localName === 'drawing').at(-1)!;
+  singleton.f.id = last.id; singleton.image.id = last.id;
+  singleton.f.paragraphId = singleton.nodes.find(node => node.children.some(run => run.kind !== 'textValue' && run.children.some(child => child === last)))!.id;
+  singleton.port.inspect();
+  let selections = 0; singleton.engine.surface!.selectDrawing = () => { selections++; return true; };
+  const events: DocxEngineEvent[] = []; singleton.port.subscribe(event => { events.push(event); });
+  assert.deepEqual(singleton.port.selectImage!('next'), { ok: true, value: undefined });
+  assert.equal(selections, 0); assert.equal(singleton.focusCalls(), 0); assert.deepEqual(events, []);
+  singleton.port.destroy();
+  const h = await imageHarness(), pin = h.port.retainSelection();
+  h.engine.surface!.selectDrawing = () => { selections++; return false; };
+  assert.deepEqual(h.port.selectImage!('next'), { ok: false, code: 'unsupported' });
+  assert.equal(selections, 1); assert.equal(h.focusCalls(), 0);
+  assert(h.port.execute({ type: 'resize-image', widthPoints: 120, heightPoints: 60 }, pin, () => ({ ok: true, value: undefined })).ok);
+  assert.equal(h.f.dispatches, 0); h.port.destroy();
+});
+
+test('image navigation guards save, reentrant commands and invalid directions without extra discovery', async () => {
+  const h = await imageHarness();
+  assert.deepEqual(h.port.selectImage!('invalid' as 'next'), { ok: false, code: 'invalid-option' });
+  assert.equal(h.f.packages, 0);
+  const pending = deferred<ArrayBuffer>(); h.saveWith(() => pending.promise);
+  const save = h.port.save(new AbortController().signal);
+  assert.deepEqual(h.port.selectImage!('next'), { ok: false, code: 'busy' });
+  assert.equal(h.f.packages, 0);
+  pending.resolve(new ArrayBuffer(0)); await save;
+  h.engine.surface!.selectDrawing = (id, paragraphId) => {
+    assert.deepEqual(h.port.selectImage!('previous'), { ok: false, code: 'busy' });
+    assert.deepEqual(h.port.execute({ type: 'delete-image' }), { ok: false, code: 'busy' });
+    h.f.id = id; h.f.paragraphId = paragraphId!; h.image.id = id; return true;
+  };
+  assert.deepEqual(h.port.selectImage!('next'), { ok: true, value: undefined });
+  assert.equal(h.f.packages, 1); assert.equal(h.f.dispatches, 0); assert.equal(h.f.flushes, 0);
+  h.port.destroy();
+});
+
+
+test('singleton navigation rejects cached identity without a live drawing selection', async () => {
+  const h = await imageHarness({ kind: 'image-picture-lock', readOnly: false });
+  const last = h.nodes.filter(node => node.localName === 'drawing').at(-1)!;
+  h.f.id = last.id; h.image.id = last.id; h.port.inspect();
+  h.f.id = 'other';
+  let selections = 0; h.engine.surface!.selectDrawing = () => { selections++; return true; };
+  assert.deepEqual(h.port.selectImage!('next'), { ok: false, code: 'stale-selection' });
+  assert.equal(selections, 0); assert.equal(h.focusCalls(), 0); h.port.destroy();
+});
+
+test('navigation observers cannot redirect selection then receive success or stolen focus', async () => {
+  const h = await imageHarness();
+  h.engine.surface!.selectDrawing = id => { h.f.id = id; h.image.id = id; return true; };
+  h.port.subscribe(event => { if (event === 'user-selection') h.emit('selectionChange'); });
+  assert.deepEqual(h.port.selectImage!('next'), { ok: false, code: 'stale-selection' });
+  assert.equal(h.focusCalls(), 0); assert.equal(h.f.dispatches, 0); h.port.destroy();
+});
+
+
+test('image navigation reveals exactly the verified nonzero image position after selection and before focus', async () => {
+  const h = await imageHarness(), order: string[] = [];
+  let target = '';
+  h.engine.surface!.selectDrawing = (id, paragraphId) => {
+    order.push('select'); target = paragraphId!;
+    h.f.id = id; h.f.paragraphId = target; h.f.offset = 37; h.image.id = id; return true;
+  };
+  h.engine.surface!.revealPosition = paragraphId => {
+    assert.deepEqual(paragraphId, { paragraphId: target, offset: 37 }); order.push('reveal'); assert.equal(h.focusCalls(), 0); return true;
+  };
+  assert.deepEqual(h.port.selectImage!('next'), { ok: true, value: undefined });
+  assert.deepEqual(order, ['select', 'reveal']); assert.equal(h.focusCalls(), 1);
+  assert.equal(h.f.revision, 0); assert.equal(h.f.dispatches, 0); h.port.destroy();
+});
+
+test('failed native image selection never reveals or focuses', async () => {
+  const h = await imageHarness(); let reveals = 0;
+  h.engine.surface!.selectDrawing = () => false;
+  h.engine.surface!.revealPosition = () => { reveals++; return true; };
+  assert.deepEqual(h.port.selectImage!('next'), { ok: false, code: 'unsupported' });
+  assert.equal(reveals, 0); assert.equal(h.focusCalls(), 0); h.port.destroy();
+});
+
+test('image navigation revalidates ownership and actual target around reveal without stealing focus', async () => {
+  for (const phase of ['observer', 'reveal']) for (const changed of ['drawing', 'paragraph', 'offset', 'revision', 'generation', 'ownership', 'destroy']) {
+    const h = await imageHarness(); let reveals = 0;
+    h.engine.surface!.selectDrawing = (id, paragraphId) => {
+      h.f.id = id; h.f.paragraphId = paragraphId!; h.image.id = id; return true;
+    };
+    const redirect = () => {
+      if (changed === 'drawing') h.f.id = 'other';
+      if (changed === 'paragraph') h.f.paragraphId = 'other';
+      if (changed === 'offset') h.f.offset++;
+      if (changed === 'revision') h.f.revision++;
+      if (changed === 'generation') Object.assign(h.engine, { mountGeneration: 1 });
+      if (changed === 'ownership') h.f.owned = false;
+      if (changed === 'destroy') h.port.destroy();
+    };
+    h.port.subscribe(event => { if (event === 'user-selection' && phase === 'observer') redirect(); });
+    h.engine.surface!.revealPosition = () => { reveals++; if (phase === 'reveal') redirect(); return true; };
+    assert.equal(h.port.selectImage!('next').ok, false, `${phase}/${changed}`);
+    assert.equal(reveals, phase === 'observer' ? 0 : 1, `${phase}/${changed}`);
+    assert.equal(h.focusCalls(), 0, `${phase}/${changed}`); assert.equal(h.f.dispatches, 0); h.port.destroy();
+  }
+});
+
+
+test('adapter owns a keyboard-focusable bounded scroll host and removes it without restyling the consumer mount', async () => {
+  const h = harness();
+  const callerStyle = { overflow: 'visible', maxBlockSize: 'none' };
+  Object.assign(h.mount, { className: 'consumer-layout', style: callerStyle });
+  const opened = await openEigenpalDocument({ mount: h.mount }, { kind: 'blank' },
+    { readOnly: false, signal: new AbortController().signal }, () => true, h.loader);
+  assert(opened.ok);
+  assert.equal(h.child.className, 'docx-editor');
+  assert.equal(h.viewport.className, 'docx-editor docx-editor__scroll-container');
+  assert.equal(h.viewport.children[0] === h.child, true);
+  assert.equal(h.viewport.tabIndex, 0);
+  assert.deepEqual(h.creation()?.zoomMode, { type: 'fixed' });
+  assert.equal(h.viewport.attributes.has('data-lr-docx-viewport'), true);
+  assert.deepEqual(h.child.style, {});
+  Object.assign(h.child.style, { width: '816px', height: '1056px' });
+  assert.deepEqual(h.viewport.style, { position: 'relative', display: 'block', overflow: 'auto', minInlineSize: '0', maxInlineSize: '100%',
+    boxSizing: 'border-box', maxBlockSize: 'var(--lr-docx-editor-document-max-block-size, var(--lr-size-30rem, 30rem))' });
+  assert.equal(h.mount.className, 'consumer-layout');
+  assert.deepEqual(callerStyle, { overflow: 'visible', maxBlockSize: 'none' });
+  opened.value.destroy(); opened.value.destroy();
+  assert.equal(h.destroyCount(), 1); assert.equal(h.removed(), true);
+  assert.equal(h.viewportRemoves(), 1);
+  assert.deepEqual(h.child.style, { width: '816px', height: '1056px' });
+  assert.equal(h.mount.className, 'consumer-layout');
+  assert.deepEqual(callerStyle, { overflow: 'visible', maxBlockSize: 'none' });
+});
+
+
+test('ambiguous image layout refuses before native selection and preserves the retained selection', async () => {
+  for (const offset of [1592, 311]) {
+    const h = await imageHarness(), pin = h.port.retainSelection(); let selections = 0;
+    const drawing = h.nodes.filter(node => node.localName === 'drawing')[1]!;
+    const paragraph = h.nodes.find(node => node.children.some(run => run.kind !== 'textValue' && run.children.some(child => child === drawing)))!;
+    const range = (start: number, end: number) => ({ paragraphId: paragraph.id, start, end });
+    h.engine.surface!.publishedLayout = () => ({ revision: h.f.revision, pages: [{ fragments: [{ kind: 'paragraph', lines: [
+      { range: range(offset - 16, offset), spans: [], drawings: [] },
+      { range: range(offset, offset + 1), spans: [], drawings: [{ kind: 'inlineDrawing', drawingNodeId: drawing.id,
+        paragraphId: paragraph.id, start: offset, accessibility: { hidden: false } }] },
+    ] }] }] }) as unknown as ReturnType<NonNullable<typeof h.engine.surface>['publishedLayout']>;
+    h.engine.surface!.selectDrawing = () => { selections++; return false; };
+    assert.deepEqual(h.port.selectImage!('next'), { ok: false, code: 'unsupported' });
+    assert.equal(selections, 0); assert.equal(h.focusCalls(), 0);
+    assert(h.port.execute({ type: 'resize-image', widthPoints: 120, heightPoints: 60 }, pin, () => ({ ok: true, value: undefined })).ok);
+    h.port.destroy();
+  }
+});
+
+test('unexpected false native selection publishes its actual moved caret and invalidates the lease', async () => {
+  const h = await imageHarness(), pin = h.port.retainSelection(), events: DocxEngineEvent[] = [];
+  h.port.subscribe(event => { events.push(event); });
+  h.engine.surface!.selectDrawing = () => { h.f.id = ''; h.f.offset = 7; return false; };
+  assert.deepEqual(h.port.selectImage!('next'), { ok: false, code: 'unsupported' });
+  assert.deepEqual(events, ['user-selection']); assert.equal(h.port.inspect().image, null);
+  assert.equal(h.port.execute({ type: 'delete-image' }, pin, () => ({ ok: true, value: undefined })).ok, false);
+  assert.equal(h.f.dispatches, 0); assert.equal(h.focusCalls(), 0); assert.equal(h.f.offset, 7); h.port.destroy();
+});
+
+test('layout observers cannot replace the original owner or selection before image dispatch', async () => {
+  for (const change of ['revision', 'selection', 'ownership']) {
+    const h = await imageHarness(); let selections = 0;
+    h.f.onLayout = () => {
+      if (change === 'revision') h.f.revision++;
+      if (change === 'selection') h.emit('selectionChange');
+      if (change === 'ownership') h.f.owned = false;
+    };
+    h.engine.surface!.selectDrawing = () => { selections++; return false; };
+    assert.equal(h.port.selectImage!('next').ok, false); assert.equal(selections, 0); h.port.destroy();
+  }
+});
+
+
+test('image navigation refuses stale published layout without selection or flushing', async () => {
+  const h = await imageHarness(); let selections = 0;
+  const published = h.engine.surface!.publishedLayout;
+  h.engine.surface!.publishedLayout = () => ({ ...published(), revision: h.f.revision - 1 });
+  h.engine.surface!.selectDrawing = () => { selections++; return false; };
+  assert.deepEqual(h.port.selectImage!('next'), { ok: false, code: 'unsupported' });
+  assert.equal(selections, 0); assert.equal(h.f.flushes, 0); h.port.destroy();
+});
+
+test('false native image selection refuses mount replacement before publishing or focusing', async () => {
+  for (const phase of ['select', 'readback']) for (const replacement of ['generation', 'session']) {
+    const h = await imageHarness();
+    const events: DocxEngineEvent[] = [];
+    h.port.subscribe(event => { events.push(event); });
+    const state = h.engine.surface!.state;
+    const replace = () => {
+      if (replacement === 'generation') Object.assign(h.engine, { mountGeneration: 1 });
+      else Object.assign(h.engine.surface!, { session: { ...h.engine.surface!.session } });
+    };
+    let selected = false;
+    h.engine.surface!.selectDrawing = () => {
+      selected = true;
+      if (phase === 'select') replace();
+      return false;
+    };
+    h.engine.surface!.state = () => {
+      const value = state();
+      if (selected && phase === 'readback') replace();
+      return value;
+    };
+    assert.deepEqual(h.port.selectImage!('next'), { ok: false, code: 'stale-selection' }, `${phase}/${replacement}`);
+    assert.deepEqual(events, [], `${phase}/${replacement}`);
+    assert.equal(h.focusCalls(), 0); assert.equal(h.f.dispatches, 0);
+    h.port.destroy();
+  }
 });

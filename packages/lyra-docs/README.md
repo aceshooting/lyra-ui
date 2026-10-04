@@ -112,6 +112,12 @@ docxEditorTableColumns, docxEditorTableSizeHint, docxEditorTableStale,
 docxEditorTableDimensions, docxEditorTableCell, docxEditorTableRowAbove,
 docxEditorTableRowBelow, docxEditorTableColumnLeft, docxEditorTableColumnRight,
 docxEditorTableDeleteRow, docxEditorTableDeleteColumn, docxEditorTableDelete,
+docxEditorImage, docxEditorResizeImage, docxEditorDescribeImage,
+docxEditorDeleteImage, docxEditorImageWidth, docxEditorImageHeight,
+docxEditorImageRatio, docxEditorImageSizeHint, docxEditorImageTitle,
+docxEditorImageDescription, docxEditorImageDescriptionHint,
+docxEditorImageStale, docxEditorImageDimensions, docxEditorImageApply,
+docxEditorPreviousImage, docxEditorNextImage, docxEditorNoImage,
 docxEditorCancel, docxEditorFind, docxEditorFindQuery,
 docxEditorFindSubmit, docxEditorMatchCase, docxEditorWholeWord,
 docxEditorFindCount, docxEditorFindTruncated, docxEditorPrevious,
@@ -143,6 +149,31 @@ Table parts include `table-tools`, `table-insert-popover`, `table-insert-trigger
 `table-dialog-actions`, `table-insert-apply`, `table-insert-cancel`,
 `table-context`, `table-actions`, and `table-button`.
 
+**Previous image** and **Next image** select eligible body images in document
+order, wrapping at either end. From a text caret, Next selects the first and
+Previous the last. These navigation controls are available in ready documents,
+including read-only documents, and report when no image is available for the
+tools. Navigation changes selection without changing document content or history;
+selecting the sole already selected target is unchanged. Use **Alt+F10** and the
+toolbar's arrow keys to reach them without a pointer.
+
+Selected image context adds **Resize image**, **Image description**, and **Delete
+image** controls. Resize and Description open separate dialogs with one Apply
+and Cancel each. Dimensions start from the actual committed values in points;
+the initial aspect-ratio option uses the captured original dimensions when either
+axis changes. Turn it off to edit the axes independently. Description reads the
+complete bounded title and multiline description only when its dialog opens;
+empty fields clear existing text. Neither field supplies the control's accessible
+name.
+
+Each dialog retains its original image selection. Changing the document or
+selection disables Apply; close and reopen the dialog after selecting the desired
+image. Cancel and Escape return to that dialog's trigger. Successful Apply returns
+to the document unless focus moved elsewhere during closing. An unchanged Apply
+closes without adding a revision, dirty transition, or history entry. Context and
+availability are advisory; unsupported canonical content can still be refused on
+Apply. The exact scope and limits are in **Selected existing image actions** below.
+
 ### Events
 
 | Event | Detail and behavior |
@@ -160,7 +191,7 @@ confirmation; use the cancelable `lr-before-open` event to apply a host policy.
 
 The component exposes `snapshot()`, `open(input, options)`,
 `newDocument(options)`, `can(action)`, `execute(action, options)`,
-`paragraphStyles()`, `fontFamilies()`, `find(query, options)`,
+`paragraphStyles()`, `fontFamilies()`, `imageDescription()`, `selectImage(direction)`, `find(query, options)`,
 `selectMatch(id, options)`, `replaceMatch(id, text, options)`, `save(options)`,
 `acknowledgeSaved(receipt)`, and `focusEditor()`. The editing and search
 methods use the same action, result, revision, and bounds contract described
@@ -176,6 +207,15 @@ Do not provide content in that slot or move, remove, or reuse the mount. The
 engine needs a connected, empty element in the document's light DOM; Shadow DOM
 mounts are unsupported.
 
+Documents keep their native 100% scale. A narrower allocation scrolls horizontally
+inside the document viewport; the toolbar and dialogs still adapt to the available width.
+The document viewport scrolls within a maximum block size of `30rem`, using
+`--lr-size-30rem` when available. Set `--lr-docx-editor-document-max-block-size`
+to a valid CSS length on the component to change that allocation. Direct session
+hosts can set the same inherited property on their mount. Set it to `none` to
+let the document grow with its content; image selection still works, while
+bringing an offscreen target into view then depends on the host's scroll layout.
+
 | Parts | Purpose |
 | --- | --- |
 | `base`, `toolbar`, `file-actions`, `format-actions` | Editor surface and toolbar groups |
@@ -184,6 +224,9 @@ mounts are unsupported.
 | `editing-tools`, `paragraph-style`, `alignment-actions`, `list-actions`, `edit-button` | Paragraph and text formatting controls; `edit-button` identifies its action with `data-edit` |
 | `font-family`, `font-size`, `text-color`, `color-auto`, `color-state` | Font and text-color controls; `color-state` reports when the engine cannot expose the current text color |
 | `link-popover`, `link-trigger`, `link-fields`, `link-href`, `link-text`, `link-actions`, `link-apply`, `link-remove`, `link-cancel` | Hyperlink editor and actions |
+| `image-tools`, `image-previous`, `image-next`, `image-navigation-status`, `image-context`, `image-delete` | Image navigation, no-image feedback, selected dimensions, and deletion |
+| `image-resize-popover`, `image-resize-trigger`, `image-resize-fields`, `image-width`, `image-height`, `image-ratio`, `image-resize-hint`, `image-resize-actions`, `image-resize-apply`, `image-resize-cancel` | Image dimensions dialog and original aspect-ratio option |
+| `image-description-popover`, `image-description-trigger`, `image-description-fields`, `image-title`, `image-description`, `image-description-hint`, `image-description-actions`, `image-description-apply`, `image-description-cancel` | Bounded title and multiline description dialog |
 | `find-toggle`, `find`, `find-query`, `find-match-case`, `find-whole-word`, `find-submit`, `find-count`, `find-previous`, `find-next`, `find-replace`, `find-replace-button` | Demand-driven find and replace-one controls |
 | `document` | Scrollable document surface |
 | `error`, `edit-error`, `status`, `filename`, `state` | Load/save or edit error, file name, and editor state |
@@ -239,7 +282,11 @@ type DocxEdit =
   | { type: 'font-size'; points: number }
   | { type: 'text-color'; color: string }
   | { type: 'link'; href: string; text?: string }
-  | { type: 'remove-link' };
+  | { type: 'remove-link' }
+  | DocxTableAction
+  | { type: 'resize-image'; widthPoints: number; heightPoints: number }
+  | { type: 'image-description'; title: string; description: string }
+  | { type: 'delete-image' };
 type DocxAction = DocxCommand | DocxEdit;
 interface DocxFormatting {
   readonly paragraphStyleId: string | null;
@@ -444,3 +491,82 @@ Invalid action fields are rejected before settlement. Retained selection leases
 invalidated by that typing change return `stale-selection`. Reentrant edits are
 blocked while the synchronous table command owns the input surface. Table
 qualification does not save, finalize form values, or export the document.
+
+### Selected existing image actions
+
+The session and element accept `resize-image` with both `widthPoints` and
+`heightPoints`, `image-description` with both `title` and `description`, and
+`delete-image`. Each real change is one undoable command. Both dimensions must
+be finite numbers from 1 to 1440 points, inclusive, independently rounded to
+the nearest EMU (1 point = 12700 EMUs). Title is at most 256 UTF-16 code units
+and description at most 2048; both must be valid XML 1.0 text. Empty strings
+clear metadata. Invalid or over-limit arguments are refused before input
+settlement or engine calls. Nothing is coerced or truncated.
+
+This increment supports a narrow plain-picture shape in a body paragraph/run
+without style references: one visible, unlocked inline raster image with positive
+layout and inner shape extents and one internal PNG, JPEG, or static GIF media
+relationship. The outer document layout extent determines actual size. Resizing
+updates that extent and preserves the inner shape extent; their values need not
+match. Style references
+on the owning selected paragraph/run are refused, as are documents containing hidden rules
+in their styles part, because inherited visibility cannot be established safely.
+Images inside tables, other stories, hyperlinks, tracked changes, content
+controls, or text boxes are refused. Floating/wrapped drawings, hidden content,
+enabled picture/frame locks, crop, rotation, flips, effects, ambiguous or
+unknown drawing structures, unavailable media, and over-limit imported metadata
+are preserved and refused. This does not establish general image editing or
+the eligibility of every ordinary-looking picture.
+
+Execution uses bounded explicit inspection: at most 128 canonical parts,
+20000 main-part nodes, depth 64, 64 attributes per element, and 512 nodes in
+the selected drawing. Current raster bytes and content type must agree. The
+qualifier never saves, fetches, decodes/re-encodes media, or repairs unsupported
+content.
+
+`snapshot().image` is `null` or an immutable copied pair `{ widthPoints,
+heightPoints }` describing actual committed EMUs divided by 12700. It exposes
+no media or drawing identifiers, XML, or engine objects. Image selection keeps
+the existing `selection.kind: 'other'` vocabulary. `imageDescription()` returns
+`DocxResult<Readonly<{ title: string; description: string }>>` from the settled
+bounded cache, including for read-only sessions. `snapshot()`, `can(imageAction)`,
+and `imageDescription()` do not settle native input or perform layout/canonical
+reads. A queued input, save, or command can make the metadata read `busy`;
+composition returns `composing`. Unsupported or over-limit metadata is refused,
+never returned partially.
+
+`selectImage('next' | 'previous')` returns `DocxResult<void>` and selects an
+eligible body image through the public session or editor component. It wraps in
+document order, permits read-only navigation, and returns `no-selection` when no
+eligible target exists. It does not settle queued input or create a content edit.
+Selecting a different target invalidates an earlier retained selection lease;
+selecting the already selected singleton is a no-op. Drawing identities remain
+private. Busy, composition, ownership, and terminal gates still apply.
+
+Each navigation performs one bounded canonical traversal using the inspection
+limits above, with at most 256 candidate drawings, 64 qualification attempts,
+and 16 MiB of inspected unique media. Exceeding a bound returns `resource-limit`
+before moving selection. Navigation does not expose an image inventory or use
+DOM image order as selection authority.
+
+Navigation also inspects at most 256 published layout pages and 20,000 layout
+records. An image at an ambiguous line boundary may be unavailable to
+Previous/Next. If its position cannot be resolved uniquely to its own image
+line, navigation returns `unsupported` before changing selection or document
+content; it does not skip to another target. This navigation restriction does
+not change the eligibility of an already selected image for editing.
+
+Image execution always captures the original image intent before explicitly
+settling input. If that settlement changes the document revision or selection,
+the image command refuses even when `expectedRevision` was omitted; earlier
+typing may commit, but the image stays untouched. A retained lease also refuses
+after reselection, including selecting A, then B, then A again. Released,
+replaced, or foreign leases never fall back to the current image. Identical
+committed dimensions or metadata are successful no-ops only for an eligible
+live original intent, with no command dispatch or history/dirty/revision change.
+
+These guards cover the Lyra session/element actions and contextual controls.
+Image insertion, replacement, native resize handles, paste/drop, floating
+layout, and broad native gesture policy remain outside this contract. Admission
+and export limits are unchanged; an edited export is not promised to fit the
+4 MiB input admission ceiling. The package remains private and experimental.

@@ -1,5 +1,9 @@
 import type { DocxEditorInstance, SelectionPin } from '@docx-editor.dev/core';
-import { isDocxTableAction, normalizeDocxAction } from './commands.js';
+import { isDocxImageAction, isDocxTableAction, normalizeDocxAction } from './commands.js';
+import { captureImageIntent, copyImage, qualifyImageCommand } from './eigenpal-images.js';
+import { selectImageTarget } from './eigenpal-image-navigation.js';
+import { qualifyImageLayout } from './eigenpal-image-layout.js';
+import type { ImageCopy, ImageIntent } from './eigenpal-images.js';
 import { tableAvailability, tableContext, qualifyTableCommand } from './eigenpal-tables.js';
 import { loadDocxEngine } from './engine-loader.js';
 import { createEigenpalEditing, eigenpalCommand } from './eigenpal-editing.js';
@@ -25,14 +29,21 @@ export async function openEigenpalDocument(
   mount.className = 'docx-editor';
   mount.setAttribute('data-lr-docx-surface', '');
   mount.inert = true;
-  options.mount.append(mount);
+  const viewport = options.mount.ownerDocument.createElement('div');
+  viewport.className = 'docx-editor docx-editor__scroll-container';
+  viewport.setAttribute('data-lr-docx-viewport', '');
+  viewport.tabIndex = 0;
+  Object.assign(viewport.style, { position: 'relative', display: 'block', overflow: 'auto', minInlineSize: '0', maxInlineSize: '100%',
+    boxSizing: 'border-box', maxBlockSize: 'var(--lr-docx-editor-document-max-block-size, var(--lr-size-30rem, 30rem))' });
+  viewport.append(mount);
+  options.mount.append(viewport);
   let editor: DocxEditorInstance | null = null;
   let destroyed = false;
   let fault = false;
   let composing = false;
   let compositionVersion = 0;
   let saving = false;
-  let executingTable = false;
+  let executingGuarded = false;
   let nativeSettling = false;
   const nativeInputEvents = new Set<Event>();
   let nativeDispatchOverflow = false;
@@ -58,7 +69,8 @@ export async function openEigenpalDocument(
   let inspected: ReturnType<DocxEnginePort['inspect']> | null = null;
   const listeners = new Set<(event: DocxEngineEvent) => void>();
   const releases: (() => void)[] = [];
-  const pins = new Map<object, SelectionPin>();
+  let image: ImageCopy | null = null;
+  const pins = new Map<object, { pin: SelectionPin; image: ImageIntent | null; epoch: number }>();
   const current = () => {
     if (!editor || destroyed || fault) throw new Error('Engine unavailable');
     return editor;
@@ -75,6 +87,54 @@ export async function openEigenpalDocument(
     pendingState = true;
     queueMicrotask(() => { if (pendingState) refreshState(); });
   };
+  type ResourceRefresh = {
+    editor: DocxEditorInstance; generation: number; epoch: number; revision: number; id: string;
+    version: number; attempts: number;
+  };
+  let resourceRefresh: ResourceRefresh | null = null;
+  let resourceTimer: ReturnType<typeof setTimeout> | undefined;
+  const clearResourceRefresh = () => {
+    clearTimeout(resourceTimer);
+    resourceTimer = undefined;
+    resourceRefresh = null;
+  };
+  const sameResourceOwner = (token: ResourceRefresh) => !destroyed && !fault && owned() &&
+    editor === token.editor && editor.mountGeneration === token.generation && selectionEpoch === token.epoch &&
+    editor.surface?.session.packageRevision() === token.revision && image?.id === token.id;
+  const scheduleResourceRefresh = () => {
+    const token = resourceRefresh;
+    if (!token || resourceTimer !== undefined || token.attempts >= 12) return;
+    // Resource repaint advances public stateVersion without necessarily emitting a
+    // selection event. Bound this owned maintenance to one pending image/version.
+    resourceTimer = setTimeout(() => {
+      resourceTimer = undefined;
+      if (resourceRefresh !== token) return;
+      if (!sameResourceOwner(token)) { clearResourceRefresh(); return; }
+      token.attempts++;
+      if (!nativeDispatching() && !nativeSettling && !composing && !saving && !executingGuarded) {
+        const version = token.editor.stateVersion();
+        if (!sameResourceOwner(token)) { clearResourceRefresh(); return; }
+        if (version !== token.version) {
+          token.version = version;
+          refreshState();
+        }
+      }
+      if (resourceRefresh === token) scheduleResourceRefresh();
+    }, Math.min(16 * 2 ** token.attempts, 1000));
+  };
+  const trackResourceRefresh = (active: DocxEditorInstance, pending: boolean, id: string | undefined) => {
+    if (!pending || !id || !active.surface || destroyed || fault || !owned()) {
+      clearResourceRefresh(); return;
+    }
+    const revision = active.surface.session.packageRevision();
+    if (!resourceRefresh || !sameResourceOwner(resourceRefresh)) {
+      clearResourceRefresh();
+      resourceRefresh = { editor: active, generation: active.mountGeneration, epoch: selectionEpoch,
+        revision, id, version: active.stateVersion(), attempts: 0 };
+    }
+    // Keep an exhausted token: ordinary inspections cannot renew its timer budget.
+    scheduleResourceRefresh();
+  };
   const editing = createEigenpalEditing(current, action => {
     if (nativeDispatching()) return { ok: false, code: 'busy' };
     muteSelection++;
@@ -90,7 +150,7 @@ export async function openEigenpalDocument(
   }, () => {
     if (destroyed) return { ok: false, code: 'destroyed' };
     if (fault) return { ok: false, code: 'engine-failed' };
-    if (saving || executingTable || nativeDispatching()) return { ok: false, code: 'busy' };
+    if (saving || executingGuarded || nativeDispatching()) return { ok: false, code: 'busy' };
     if (composing) return { ok: false, code: 'composing' };
     if (operation.readOnly) return { ok: false, code: 'read-only' };
     if (!owned()) return { ok: false, code: 'destroyed' };
@@ -100,6 +160,7 @@ export async function openEigenpalDocument(
     if (destroyed) return;
     destroyed = true;
     clearNativeSettlement();
+    clearResourceRefresh();
     mount.inert = true;
     for (const release of releases.splice(0)) {
       try { release(); } catch { /* Finish releasing independent resources. */ }
@@ -107,18 +168,19 @@ export async function openEigenpalDocument(
     listeners.clear();
     pins.clear();
     inspected = null;
+    image = null;
     editing.dispose();
     const previous = editor;
     editor = null;
     try { previous?.destroy(); }
-    finally { mount.remove(); }
+    finally { viewport.remove(); }
   };
   const listen = (name: string, listener: EventListener, capture = false) => {
     mount.addEventListener(name, listener, capture);
     releases.push(() => mount.removeEventListener(name, listener, capture));
   };
   const blockedInput: EventListener = event => {
-    if (!saving && !executingTable && listeners.size > 0) return;
+    if (!saving && !executingGuarded && listeners.size > 0) return;
     event.preventDefault();
     event.stopImmediatePropagation();
   };
@@ -162,7 +224,7 @@ export async function openEigenpalDocument(
 
   try {
     editor = module.createDocxEditor({ container: mount, mode: operation.readOnly ? 'view' : 'edit',
-      locale: options.locale, translate: options.translate });
+      zoomMode: { type: 'fixed' }, locale: options.locale, translate: options.translate });
     releases.push(editor.on('change', change => {
       if (ready && !change.source) {
         editing.invalidateSearch();
@@ -178,7 +240,7 @@ export async function openEigenpalDocument(
       const inside = mount.contains(mount.ownerDocument.activeElement);
       emit(suppressSelection ? 'state' : inside ? 'user-selection' : 'focus-selection');
     }));
-    releases.push(editor.on('error', () => { fault = true; emit('state'); }));
+    releases.push(editor.on('error', () => { fault = true; clearResourceRefresh(); emit('state'); }));
     editor.load(source.kind === 'blank' ? 'blank' : source.bytes);
     const loaded = await waitForReadiness(editor, operation.signal, owned, () => fault);
     if (!loaded.ok) { destroy(); return loaded; }
@@ -201,7 +263,9 @@ export async function openEigenpalDocument(
         if (snapshot.parseError) throw new Error('Engine failed');
         const selection: DocxSelection['kind'] = snapshot.image ? 'other' : !snapshot.selection ? 'none' :
           snapshot.selectionCollapsed ? 'caret' : 'text';
-        inspected = { selection, composing, formatting: editing.formatting(), table: tableContext(current()) };
+        image = copyImage(snapshot.image);
+        trackResourceRefresh(current(), snapshot.image?.resourceStatus === 'pending', image?.id);
+        inspected = { selection, composing, formatting: editing.formatting(), table: tableContext(current()), image: image?.context ?? null, imageReady: image?.supported ?? false };
         return inspected;
       },
       subscribe(listener) {
@@ -213,7 +277,19 @@ export async function openEigenpalDocument(
           if (listeners.size === 0) mount.inert = true;
         };
       },
+      imageDescription() {
+        if (destroyed) return { ok: false, code: 'destroyed' };
+        if (nativeSettling || saving || executingGuarded) return { ok: false, code: 'busy' };
+        if (composing) return { ok: false, code: 'composing' };
+        return image?.description ?? { ok: false, code: 'no-selection' };
+      },
       can(command) {
+        if (isDocxImageAction(command)) {
+          if (nativeSettling || saving || executingGuarded) return { enabled: false, reason: 'busy' };
+          if (!image) return { enabled: false, reason: 'no-selection' };
+          return !image.description.ok ? { enabled: false, reason: image.description.code } :
+            image.supported ? { enabled: true } : { enabled: false, reason: 'unsupported' };
+        }
         if (isDocxTableAction(command)) return tableAvailability(current(), command, inspected?.table ?? null);
         return nativeSettling ? { enabled: false, reason: 'busy' } : editing.can(command);
       },
@@ -222,14 +298,61 @@ export async function openEigenpalDocument(
         if (!normalized.ok) return normalized;
         command = normalized.value;
         if (nativeDispatching()) return { ok: false, code: 'busy' };
+        if (isDocxImageAction(command)) {
+          if (saving || executingGuarded) return { ok: false, code: 'busy' };
+          if (composing) return { ok: false, code: 'composing' };
+          if (operation.readOnly) return { ok: false, code: 'read-only' };
+          if (!owned() || destroyed) return { ok: false, code: 'destroyed' };
+          if (!validateSettled) return { ok: false, code: 'unsupported' };
+          const active = current(), epoch = selectionEpoch;
+          const retained = token ? pins.get(token) : undefined;
+          if (token && (!retained || retained.epoch !== epoch || !retained.image?.valid())) return { ok: false, code: 'stale-selection' };
+          const intent = retained?.image ?? captureImageIntent(active, image);
+          if (!intent) return { ok: false, code: image ? 'stale-selection' : 'no-selection' };
+          if (!image) return { ok: false, code: 'no-selection' };
+          if (!image.description.ok) return image.description;
+          if (!image.supported) return { ok: false, code: 'unsupported' };
+          executingGuarded = true;
+          suppressSelection++;
+          const validate = (): DocxResult<void> => {
+            if (!owned() || destroyed) return { ok: false, code: 'destroyed' };
+            if (fault) return { ok: false, code: 'engine-failed' };
+            if (composing) return { ok: false, code: 'composing' };
+            const facade = validateSettled();
+            if (!facade.ok) return facade;
+            if (editor !== active || epoch !== selectionEpoch || !intent.valid() || (token && !pins.has(token))) return { ok: false, code: 'stale-selection' };
+            if (!image?.supported) return { ok: false, code: 'unsupported' };
+            if (!image.description.ok) return image.description;
+            return { ok: true, value: undefined };
+          };
+          try {
+            active.surface!.flushPendingInput();
+            clearNativeSettlement();
+            refreshState();
+            const settled = validate();
+            if (!settled.ok) return settled;
+            const qualified = qualifyImageCommand(active, intent, command);
+            if (!qualified.ok) return qualified;
+            const before = validate();
+            if (!before.ok) return before;
+            if (qualified.value.unchanged) return { ok: true, value: undefined };
+            const capable = active.can(qualified.value.command);
+            const after = validate();
+            if (!after.ok) return after;
+            if (!capable.ok) return { ok: false, code: 'unsupported' };
+            const result = active.exec(qualified.value.command);
+            if (!destroyed) refreshState();
+            return result.ok ? { ok: true, value: undefined } : { ok: false, code: 'unsupported' };
+          } finally { suppressSelection--; executingGuarded = false; }
+        }
         if (isDocxTableAction(command)) {
-          if (saving || executingTable || nativeDispatching()) return { ok: false, code: 'busy' };
+          if (saving || executingGuarded || nativeDispatching()) return { ok: false, code: 'busy' };
           if (composing) return { ok: false, code: 'composing' };
           if (operation.readOnly) return { ok: false, code: 'read-only' };
           if (!owned() || destroyed) return { ok: false, code: 'destroyed' };
           if (!module.tableReaders || !validateSettled) return { ok: false, code: 'unsupported' };
           if (token && !pins.has(token)) return { ok: false, code: 'stale-selection' };
-          executingTable = true;
+          executingGuarded = true;
           suppressSelection++;
           try {
             const active = current(), surface = active.surface;
@@ -262,7 +385,7 @@ export async function openEigenpalDocument(
             const result = active.exec(qualified.value.command);
             if (!destroyed) refreshState();
             return result.ok ? { ok: true, value: undefined } : { ok: false, code: 'unsupported' };
-          } finally { suppressSelection--; executingTable = false; }
+          } finally { suppressSelection--; executingGuarded = false; }
         }
         if (token && !pins.has(token)) return { ok: false, code: 'stale-selection' };
         suppressSelection++;
@@ -272,8 +395,108 @@ export async function openEigenpalDocument(
           return result.ok ? { ok: true, value: undefined } : { ok: false, code: 'unsupported' };
         } finally { suppressSelection--; }
       },
+      selectImage(direction) {
+        if (direction !== 'next' && direction !== 'previous') return { ok: false, code: 'invalid-option' };
+        if (destroyed || !owned()) return { ok: false, code: 'destroyed' };
+        if (fault) return { ok: false, code: 'engine-failed' };
+        if (saving || executingGuarded || nativeSettling || nativeDispatching()) return { ok: false, code: 'busy' };
+        if (composing) return { ok: false, code: 'composing' };
+        const active = current(), surface = active.surface, epoch = selectionEpoch;
+        if (!surface) return { ok: false, code: 'unsupported' };
+        const session = surface.session, generation = active.mountGeneration, revision = session.packageRevision();
+        const original = captureImageIntent(active, image);
+        const readSelection = () => {
+          const state = surface.state(), drawing = surface.drawingSelectionIntent();
+          return [state.selection.anchor.paragraphId, state.selection.anchor.offset,
+            state.selection.head.paragraphId, state.selection.head.offset, drawing.kind,
+            'drawingNodeId' in drawing ? drawing.drawingNodeId : null,
+            state.cellSelection !== null, surface.storyScope().kind] as const;
+        };
+        const initialSelection = readSelection();
+        executingGuarded = true;
+        suppressSelection++;
+        try {
+          const target = selectImageTarget(active, image?.id ?? null, direction);
+          if (destroyed || !owned()) return { ok: false, code: 'destroyed' };
+          if (fault) return { ok: false, code: 'engine-failed' };
+          if (composing) return { ok: false, code: 'composing' };
+          if (editor !== active || active.surface !== surface || surface.session !== session ||
+            active.mountGeneration !== generation || session.packageRevision() !== revision || selectionEpoch !== epoch) {
+            return { ok: false, code: 'stale-selection' };
+          }
+          if (!target.ok) return target;
+          if (target.value.unchanged) return original?.valid() && original.paragraphId === target.value.paragraphId ?
+            { ok: true, value: undefined } : { ok: false, code: 'stale-selection' };
+          const published = surface.publishedLayout();
+          const layout: DocxResult<void> = published.revision === revision ? qualifyImageLayout(published, target.value) :
+            { ok: false, code: 'unsupported' };
+          const beforeSelection = readSelection();
+          if (destroyed || !owned()) return { ok: false, code: 'destroyed' };
+          if (fault) return { ok: false, code: 'engine-failed' };
+          if (composing) return { ok: false, code: 'composing' };
+          if (editor !== active || active.surface !== surface || surface.session !== session ||
+            active.mountGeneration !== generation || session.packageRevision() !== revision || selectionEpoch !== epoch ||
+            beforeSelection.some((value, index) => value !== initialSelection[index])) {
+            return { ok: false, code: 'stale-selection' };
+          }
+          if (!layout.ok) return layout;
+          let selected;
+          muteSelection++;
+          try { selected = surface.selectDrawing(target.value.drawingId, target.value.paragraphId); }
+          finally { muteSelection--; }
+          if (!selected) {
+            if (destroyed || !owned()) return { ok: false, code: 'destroyed' };
+            if (editor !== active || active.surface !== surface || surface.session !== session || active.mountGeneration !== generation) {
+              return { ok: false, code: 'stale-selection' };
+            }
+            const actualSelection = readSelection();
+            if (destroyed || !owned()) return { ok: false, code: 'destroyed' };
+            if (editor !== active || active.surface !== surface || surface.session !== session || active.mountGeneration !== generation) {
+              return { ok: false, code: 'stale-selection' };
+            }
+            if (session.packageRevision() !== revision || selectionEpoch !== epoch ||
+              actualSelection.some((value, index) => value !== beforeSelection[index])) {
+              clearResourceRefresh(); selectionEpoch++;
+              emit('user-selection');
+            }
+            return { ok: false, code: fault ? 'engine-failed' : 'unsupported' };
+          }
+          const selectedPosition = { ...surface.state().selection.anchor };
+          const validateSelected = (expectedEpoch: number): DocxResult<void> => {
+            if (destroyed || !owned()) return { ok: false, code: 'destroyed' };
+            if (fault) return { ok: false, code: 'engine-failed' };
+            if (composing) return { ok: false, code: 'composing' };
+            if (editor !== active || active.surface !== surface || surface.session !== session ||
+              active.mountGeneration !== generation || session.packageRevision() !== revision || selectionEpoch !== expectedEpoch) {
+              return { ok: false, code: 'stale-selection' };
+            }
+            const state = surface.state(), drawing = surface.drawingSelectionIntent();
+            if (surface.storyScope().kind !== 'body' || state.cellSelection !== null ||
+              state.selection.anchor.paragraphId !== target.value.paragraphId ||
+              state.selection.head.paragraphId !== target.value.paragraphId ||
+              state.selection.anchor.offset !== selectedPosition.offset ||
+              state.selection.head.offset !== selectedPosition.offset ||
+              !('drawingNodeId' in drawing) || drawing.drawingNodeId !== target.value.drawingId) {
+              return { ok: false, code: 'stale-selection' };
+            }
+            return { ok: true, value: undefined };
+          };
+          const afterSelection = validateSelected(epoch);
+          if (!afterSelection.ok) return afterSelection;
+          clearResourceRefresh();
+          const selectedEpoch = ++selectionEpoch;
+          emit('user-selection');
+          const beforeReveal = validateSelected(selectedEpoch);
+          if (!beforeReveal.ok) return beforeReveal;
+          surface.revealPosition(selectedPosition);
+          const beforeFocus = validateSelected(selectedEpoch);
+          if (!beforeFocus.ok) return beforeFocus;
+          active.focus();
+          return validateSelected(selectedEpoch);
+        } finally { suppressSelection--; executingGuarded = false; }
+      },
       refreshTableLabels(labels) {
-        if (destroyed || saving || executingTable || nativeSettling || !owned()) return false;
+        if (destroyed || saving || executingGuarded || nativeSettling || !owned()) return false;
         const { insertRowBelow, insertColumnRight } = labels;
         current().setTableInteractionLabel(key => key === 'table.insertRowBelow' ? insertRowBelow : insertColumnRight);
         return true;
@@ -293,19 +516,24 @@ export async function openEigenpalDocument(
         finally { suppressSelection--; }
       },
       retainSelection() {
-        const pin = current().retainSelection();
+        const active = current(), epoch = selectionEpoch, intent = captureImageIntent(active, image);
+        const pin = active.retainSelection();
         if (!pin) throw new Error('No selection');
+        if (destroyed || editor !== active || epoch !== selectionEpoch || (intent && !intent.valid())) {
+          if (!destroyed) active.releaseSelection(pin);
+          throw new Error('Selection changed');
+        }
         const token = {};
-        pins.set(token, pin);
+        pins.set(token, { pin, image: intent, epoch });
         return token;
       },
       releaseSelection(token) {
         const pin = pins.get(token);
         pins.delete(token);
-        if (pin && editor && !destroyed) editor.releaseSelection(pin);
+        if (pin && editor && !destroyed) editor.releaseSelection(pin.pin);
       },
       async save(signal) {
-        if (signal.aborted || composing || saving || executingTable) throw new Error('Save unavailable');
+        if (signal.aborted || composing || saving || executingGuarded) throw new Error('Save unavailable');
         const document = mount.ownerDocument;
         const hadFocus = mount.contains(document.activeElement);
         const wasInert = mount.inert;

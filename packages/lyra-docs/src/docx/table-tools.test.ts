@@ -55,3 +55,15 @@ test('table intent refuses replacement, reselection, revision changes and releas
   assert.equal(captureTableToolIntent(f.session), null);
   assert.equal(captureTableToolIntent(null), null);
 });
+
+test('table intent releases a lease when acquisition synchronously changes the selection', () => {
+  const f = fixture(), retain = f.session.retainSelection;
+  f.session.retainSelection = () => {
+    const result = retain();
+    f.change({ selection: { kind: 'caret', version: 2 } });
+    return result;
+  };
+  assert.equal(captureTableToolIntent(f.session), null);
+  assert.equal(f.released(), 1);
+  assert.equal(f.options.length, 0);
+});

@@ -9,6 +9,8 @@ import { createRequire } from 'node:module';
 import { build } from 'vite';
 import { chromium, firefox, webkit } from 'playwright';
 import { zipEntry, zipEntryBytes } from '../test/zip.mjs';
+import { runImageEditing } from './images-browser.mjs';
+import { runImageTools } from './image-tools-browser.mjs';
 import { runTableEditing } from './tables-browser.mjs';
 import { assertExternalHyperlink, wordText } from '../test/xml.mjs';
 
@@ -925,6 +927,11 @@ async function runBrowser(name, url, { lazyEntry, engineEntry }) {
       assert.ok(record.requests.some(path => path.endsWith(`/${lazyEntry}`)));
       assert.equal(record.requests.some(path => path.endsWith(`/${engineEntry}`)), false, 'Engine loaded before document open');
     });
+    if (process.env.DOCX_IMAGES_ONLY) {
+      assert.ok(['core', 'ui', 'all'].includes(process.env.DOCX_IMAGES_ONLY));
+      if (process.env.DOCX_IMAGES_ONLY !== 'ui') await runImageEditing(page, check, { createEditor, saveEditor, assertProtectedParts });
+      if (process.env.DOCX_IMAGES_ONLY !== 'core') await runImageTools(page, check, { createEditor, saveEditor, assertProtectedParts });
+    } else {
     await page.evaluate(() => {
       const element = document.createElement('lr-docx-editor');
       element.id = 'primary';
@@ -1309,6 +1316,9 @@ async function runBrowser(name, url, { lazyEntry, engineEntry }) {
     await runTableEditing(page, check, { createEditor, saveEditor, assertProtectedParts });
     await runBasicEditing(page, check);
     await runEditorWorkflows(page, check);
+    await runImageEditing(page, check, { createEditor, saveEditor, assertProtectedParts });
+    await runImageTools(page, check, { createEditor, saveEditor, assertProtectedParts });
+    }
     assert.deepEqual(record.pageErrors, [], 'Browser page errors');
     assert.deepEqual(record.requestFailures, [], 'Browser request failures');
     assert.deepEqual(record.consoleErrors, [], 'Browser console errors');

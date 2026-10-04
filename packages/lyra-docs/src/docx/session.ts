@@ -1,10 +1,10 @@
 import type { DocxEngineEvent, DocxEnginePort, DocxMountOwnership, DocxSessionPort, DocxTableLabels } from './engine-port.js';
-import { isDocxTableAction, normalizeDocxAction, normalizeDocxReplacement, normalizeDocxSearch } from './commands.js';
+import { isDocxImageAction, isDocxTableAction, normalizeDocxAction, normalizeDocxReplacement, normalizeDocxSearch } from './commands.js';
 import type {
   DocxAction, DocxCommand, DocxCommandAvailability, DocxRefusalCode, DocxResult, DocxRevision,
   DocxSaveReceipt, DocxSelection, DocxSelectionLease, DocxSession,
   DocxSessionOptions, DocxSnapshot, DocxSource, DocxStatus, DocxFormatting,
-  DocxParagraphStyles, DocxFontFamilies, DocxSearchResults, DocxTableAction, DocxTableContext
+  DocxParagraphStyles, DocxFontFamilies, DocxSearchResults, DocxTableAction, DocxTableContext, DocxImageAction, DocxImageContext, DocxImageDescription, DocxImageDirection
 } from './types.js';
 
 const commands: readonly DocxCommand[] = ['bold', 'italic', 'underline', 'undo', 'redo'];
@@ -95,9 +95,12 @@ class InternalDocxSession implements DocxSession {
   private selectionVersion = 0;
   private formatting = emptyFormatting;
   private table: Readonly<DocxTableContext> | null = null;
+  private image: Readonly<DocxImageContext> | null = null;
   private commandOwner: object | null = null;
   private searchVersion = 0;
   private readonly matches = new Map<string, { token: object; revision: DocxRevision }>();
+  private imageReady = false;
+  private publishedImageReady = false;
   private error: DocxRefusalCode | null = null;
   private engine: DocxEnginePort | null = null;
   private unsubscribeEngine: (() => void) | null = null;
@@ -170,7 +173,8 @@ class InternalDocxSession implements DocxSession {
     const activity = this.status === 'ready' && this.operation ? 'saving' : null;
     if (previous && previous.status === this.status && previous.activity === activity &&
         previous.revision === this.revision && previous.dirty === this.dirty && previous.composing === this.composing &&
-        previous.formatting === this.formatting && previous.table === this.table &&
+        previous.formatting === this.formatting && previous.table === this.table && previous.image === this.image &&
+        this.publishedImageReady === this.imageReady &&
         previous.selection.kind === this.selectionKind && previous.selection.version === this.selectionVersion &&
         previous.error?.code === (this.error ?? undefined) && commands.every(command => {
           const a = previous.commands[command], b = available[command];
@@ -178,9 +182,10 @@ class InternalDocxSession implements DocxSession {
         })) return;
     this.cached = Object.freeze({ status: this.status, activity, revision: this.revision, dirty: this.dirty,
       readOnly: this.readOnly, composing: this.composing,
-      formatting: this.formatting, table: this.table,
+      formatting: this.formatting, table: this.table, image: this.image,
       selection: Object.freeze({ version: this.selectionVersion, kind: this.selectionKind }),
       commands: Object.freeze(available), error: this.error ? Object.freeze({ code: this.error }) : null });
+    this.publishedImageReady = this.imageReady;
     const published = this.cached;
     for (const listener of [...this.listeners]) {
       if (!this.listeners.has(listener)) continue;
@@ -226,7 +231,7 @@ class InternalDocxSession implements DocxSession {
   private cleanupEngine() {
     this.clearSearch();
     this.formatting = emptyFormatting;
-    this.table = null;
+    this.table = null; this.image = null; this.imageReady = false;
     this.releaseLease();
     const off = this.unsubscribeEngine;
     this.unsubscribeEngine = null;
@@ -294,6 +299,7 @@ class InternalDocxSession implements DocxSession {
       this.selectionKind = state.selection; this.composing = state.composing;
       this.updateFormatting(state.formatting);
       this.updateTable(state.table ?? null);
+      this.updateImage(state.image ?? null, state.imageReady ?? false);
       this.revision = Object.freeze({ documentId: globalThis.crypto.randomUUID(), value: 0 });
     } catch { return this.failOpen(operation, 'open-failed'); }
     this.end(operation);
@@ -320,6 +326,7 @@ class InternalDocxSession implements DocxSession {
     this.selectionKind = state.selection; this.composing = state.composing;
     this.updateFormatting(state.formatting);
       this.updateTable(state.table ?? null);
+      this.updateImage(state.image ?? null, state.imageReady ?? false);
     this.publish();
   }
   private failEngine() {
@@ -386,6 +393,7 @@ class InternalDocxSession implements DocxSession {
     if (options.expectedRevision && !equalRevision(options.expectedRevision, this.revision)) return refused('stale-revision');
     const supplied = options.selection;
     if (supplied && (this.lease?.lease !== supplied || !equalRevision(this.lease.revision, this.revision))) return refused('stale-selection');
+    if (isDocxImageAction(normalized.value)) return this.executeImage(normalized.value, options);
     if (isDocxTableAction(normalized.value)) return this.executeTable(normalized.value, options);
     const before = this.revision;
     const available = this.can(normalized.value);
@@ -424,6 +432,51 @@ class InternalDocxSession implements DocxSession {
       if (this.commandOwner === owner) this.commandOwner = null;
       this.publish();
     }
+  }
+  private executeImage(command: DocxImageAction, options: { expectedRevision?: DocxRevision; selection?: DocxSelectionLease }): DocxResult<DocxRevision> {
+    if (this.composing) return refused('composing');
+    if (this.readOnly) return refused('read-only');
+    if (!this.image) return refused('no-selection');
+    const engine = this.engine!, owner = {}, supplied = options.selection;
+    const revision = this.revision, selection = this.selectionVersion;
+    const token = supplied ? this.lease!.token : undefined;
+    this.commandOwner = owner;
+    const validate = (): DocxResult<void> => {
+      if (!this.owned()) return refused('destroyed');
+      const failure = this.completionFailure();
+      if (failure) return refused(failure);
+      if (this.commandOwner !== owner || this.engine !== engine || this.operation) return refused('busy');
+      if (this.composing) return refused('composing');
+      if (!equalRevision(revision, this.revision)) return refused('stale-revision');
+      if (selection !== this.selectionVersion || !this.image ||
+        (supplied && this.lease?.lease !== supplied)) return refused('stale-selection');
+      return ok(undefined);
+    };
+    try {
+      const result = engine.execute(command, token, validate);
+      return result.ok ? ok(this.revision!) : result;
+    } finally {
+      if (this.commandOwner === owner) this.commandOwner = null;
+      this.publish();
+    }
+  }
+  imageDescription(): DocxResult<Readonly<DocxImageDescription>> {
+    const gate = this.gate();
+    if (gate) return refused(gate);
+    if (this.composing) return refused('composing');
+    const engine = this.engine!, revision = this.revision, selection = this.selectionVersion;
+    try {
+      const result = engine.imageDescription?.() ?? refused('unsupported');
+      const failure = this.completionFailure() ?? this.gate();
+      if (failure) return refused(failure);
+      if (engine !== this.engine || !equalRevision(revision, this.revision) || selection !== this.selectionVersion) return refused('stale-selection');
+      return result.ok ? ok(Object.freeze({ title: result.value.title, description: result.value.description })) : result;
+    } catch { return refused(this.completionFailure() ?? 'unsupported'); }
+  }
+  private updateImage(value: Readonly<DocxImageContext> | null, ready: boolean) {
+    this.imageReady = !!value && ready;
+    if (value && this.image && value.widthPoints === this.image.widthPoints && value.heightPoints === this.image.heightPoints) return;
+    this.image = value ? Object.freeze({ widthPoints: value.widthPoints, heightPoints: value.heightPoints }) : null;
   }
   private updateTable(value: Readonly<DocxTableContext> | null) {
     if (value && this.table && value.rows === this.table.rows && value.columns === this.table.columns &&
@@ -482,6 +535,28 @@ class InternalDocxSession implements DocxSession {
     if (typeof id !== 'string') return refused('invalid-option');
     const match = this.matches.get(id);
     return match && equalRevision(match.revision, this.revision) ? ok(match) : refused('stale-search');
+  }
+  selectImage(direction: DocxImageDirection): DocxResult<void> {
+    if (direction !== 'next' && direction !== 'previous') return refused('invalid-option');
+    const gate = this.gate();
+    if (gate) return refused(gate);
+    if (this.composing) return refused('composing');
+    const engine = this.engine!, revision = this.revision!, owner = {};
+    if (!engine.selectImage) return refused('unsupported');
+    this.commandOwner = owner;
+    try {
+      const result = engine.selectImage(direction);
+      const failure = this.completionFailure();
+      if (failure) return refused(failure);
+      if (!this.owned()) return refused('destroyed');
+      if (this.engine !== engine || !equalRevision(revision, this.revision)) return refused('stale-revision');
+      if (this.composing) return refused('composing');
+      return result;
+    } catch { return refused(this.completionFailure() ?? 'unsupported'); }
+    finally {
+      if (this.commandOwner === owner) this.commandOwner = null;
+      this.publish();
+    }
   }
   selectMatch(id: string, options: { expectedRevision?: DocxRevision } = {}): DocxResult<void> {
     const normalized = searchRevisionOptions(options);

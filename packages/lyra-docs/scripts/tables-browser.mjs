@@ -348,13 +348,20 @@ async function runTableToolbar(page, check, { createEditor, saveEditor, assertPr
     await dispose(page, id);
   });
   await check('table dialog keyboard, localization, RTL, narrow allocation and populated accessibility', async () => {
-    const id = 'table-dialog-accessible'; await createEditor(page, id, 'table-simple'); await caret(page, id, 'Before');
+    const id = 'table-dialog-accessible'; await createEditor(page, id, 'table-simple');
     await page.locator(`#${id}`).evaluate(element => {
       element.setAttribute('dir', 'rtl'); element.style.inlineSize = '320px';
       element.strings = { docxEditorInsertTable: 'Ajouter un tableau', docxEditorTableRows: 'Lignes',
-        docxEditorTableColumns: 'Colonnes', docxEditorTableRowBelow: 'Ligne dessous', docxEditorTableColumnRight: 'Colonne à droite' };
+          docxEditorTableColumns: 'Colonnes', docxEditorTableRowBelow: 'Ligne dessous', docxEditorTableColumnRight: 'Colonne à droite' };
     });
+    await page.locator(`#${id}`).evaluate(element => element.updateComplete);
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve(true)))));
+    await caret(page, id, 'Before');
     await page.keyboard.press('Alt+F10'); await page.keyboard.press('End');
+    assert.equal(await page.locator(`#${id}`).evaluate(element => element.shadowRoot.activeElement?.getAttribute('part')), 'image-next');
+    await page.keyboard.press('ArrowRight');
+    assert.equal(await page.locator(`#${id}`).evaluate(element => element.shadowRoot.activeElement?.getAttribute('part')), 'image-previous');
+    await page.keyboard.press('ArrowRight');
     assert.equal(await page.locator(`#${id}`).evaluate(element => element.shadowRoot.activeElement?.getAttribute('part')), 'table-insert-trigger');
     await page.keyboard.press('Enter');
     await page.locator(`#${id} [part="table-rows"] input`).waitFor({ state: 'visible' });

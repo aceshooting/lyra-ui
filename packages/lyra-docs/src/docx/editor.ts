@@ -10,5 +10,6 @@ import '@aceshooting/lyra-ui/components/lr-color-picker.js';
 import '@aceshooting/lyra-ui/components/lr-popover.js';
 import '@aceshooting/lyra-ui/components/lr-input.js';
 import '@aceshooting/lyra-ui/components/lr-checkbox.js';
+import '@aceshooting/lyra-ui/components/lr-textarea.js';
 
 defineElement('docx-editor', LyraDocxEditor);

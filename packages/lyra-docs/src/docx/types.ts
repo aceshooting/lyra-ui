@@ -3,7 +3,7 @@ export type DocxStatus = 'idle' | 'opening' | 'ready' | 'error' | 'destroyed';
 export type DocxCommand = 'bold' | 'italic' | 'underline' | 'undo' | 'redo';
 export type DocxAlignment = 'left' | 'center' | 'right' | 'justify';
 /**
- * Formatting and simple table actions. Style ids are at most 128 code units and must identify a document paragraph style.
+ * Formatting, simple table and selected inline-image actions. Style ids are at most 128 code units and must identify a document paragraph style.
  * Font families accept 1–64 Unicode letters, numbers, combining marks, spaces or - . + _.
  * Font sizes are 1–1638 points in half-point steps. Colors are #RRGGBB or auto.
  * Links accept HTTPS without credentials, mailto or fragments, at most 2048 code units;
@@ -19,7 +19,8 @@ export type DocxEdit =
   | Readonly<{ type: 'text-color'; color: string }>
   | Readonly<{ type: 'link'; href: string; text?: string }>
   | Readonly<{ type: 'remove-link' }>
-  | DocxTableAction;
+  | DocxTableAction
+  | DocxImageAction;
 /** Simple, unnested table authoring. Inserted/grown tables are at most 20 by 20 cells. */
 export type DocxTableAction =
   | Readonly<{ type: 'insert-table'; rows: number; columns: number }>
@@ -28,6 +29,22 @@ export type DocxTableAction =
   | Readonly<{ type: 'delete-table-row' }>
   | Readonly<{ type: 'delete-table-column' }>
   | Readonly<{ type: 'delete-table' }>;
+/** Existing plain body inline images; resize uses 1–1440 points on each axis. */
+export type DocxImageAction =
+  | Readonly<{ type: 'resize-image'; widthPoints: number; heightPoints: number }>
+  | Readonly<{ type: 'image-description'; title: string; description: string }>
+  | Readonly<{ type: 'delete-image' }>;
+/** Copied actual dimensions. Advisory only; execution verifies canonical eligibility. */
+export interface DocxImageContext {
+  readonly widthPoints: number;
+  readonly heightPoints: number;
+}
+/** Complete bounded XML text: title <=256 and description <=2048 UTF-16 code units. */
+export interface DocxImageDescription {
+  readonly title: string;
+  readonly description: string;
+}
+export type DocxImageDirection = 'next' | 'previous';
 export type DocxAction = DocxCommand | DocxEdit;
 /** Rendered selection context, advisory only; execution checks canonical topology. */
 export interface DocxTableContext {
@@ -114,6 +131,7 @@ export interface DocxSnapshot {
   readonly selection: DocxSelection;
   readonly formatting: DocxFormatting;
   readonly table: DocxTableContext | null;
+  readonly image: DocxImageContext | null;
   readonly commands: Readonly<Record<DocxCommand, DocxCommandAvailability>>;
   readonly error: Readonly<{ code: DocxRefusalCode }> | null;
 }
@@ -142,6 +160,10 @@ export interface DocxSession {
   }): DocxResult<DocxRevision>;
   /** On-demand document paragraph styles; at most 256 copied entries. */
   paragraphStyles(): DocxResult<DocxParagraphStyles>;
+  /** Pure bounded cached metadata; pending native input returns busy without settlement. */
+  imageDescription(): DocxResult<Readonly<DocxImageDescription>>;
+  /** Select an eligible existing body image in document order, wrapping at each end. */
+  selectImage(direction: DocxImageDirection): DocxResult<void>;
   /** On-demand font choices; at most 128 entries, without downloading fonts. */
   fontFamilies(): DocxResult<DocxFontFamilies>;
   /** Literal search, 1–256 code units. A new search invalidates previous match ids. */

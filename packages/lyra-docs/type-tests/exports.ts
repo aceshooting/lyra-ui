@@ -1,4 +1,4 @@
-import { createDocxSession, type DocxSession, type DocxSnapshot, type DocxAction, type DocxEdit, type DocxCommand, type DocxFormatting, type DocxTableAction, type DocxTableContext, type DocxParagraphStyles, type DocxFontFamilies, type DocxSearchOptions, type DocxSearchResults, type DocxSearchMatch } from '@aceshooting/lyra-docs/docx';
+import { createDocxSession, type DocxSession, type DocxSnapshot, type DocxAction, type DocxEdit, type DocxCommand, type DocxFormatting, type DocxImageDirection, type DocxImageAction, type DocxImageContext, type DocxImageDescription, type DocxTableAction, type DocxTableContext, type DocxParagraphStyles, type DocxFontFamilies, type DocxSearchOptions, type DocxSearchResults, type DocxSearchMatch } from '@aceshooting/lyra-docs/docx';
 import type { LyraDocxEditor } from '@aceshooting/lyra-docs/docx/editor.class';
 // @ts-expect-error DOCX-specific contracts belong to the format subpath.
 import type { DocxSession as RootSession } from '@aceshooting/lyra-docs';
@@ -16,7 +16,7 @@ import type { EditorCommand } from '@aceshooting/lyra-docs/docx';
 // @ts-expect-error Validation helpers are internal implementation details.
 import { normalizeDocxAction } from '@aceshooting/lyra-docs/docx';
 
-export type EditingExportWitness = [DocxTableAction, DocxTableContext, DocxAction, DocxEdit, DocxCommand, DocxFormatting, DocxParagraphStyles,
+export type EditingExportWitness = [DocxImageAction, DocxImageContext, DocxImageDescription, DocxTableAction, DocxTableContext, DocxAction, DocxEdit, DocxCommand, DocxFormatting, DocxParagraphStyles,
   DocxFontFamilies, DocxSearchOptions, DocxSearchResults, DocxSearchMatch, EditorCommand];
 void normalizeDocxAction;
 
@@ -33,10 +33,25 @@ function editingContracts(session: DocxSession): void {
   session.can({ type: 'font-size', points: 14 });
   session.execute({ type: 'alignment', value: 'justify' });
   session.execute({ type: 'toggle-list', kind: 'numbered' });
+  session.execute({ type: 'resize-image', widthPoints: 120, heightPoints: 60 });
+  session.execute({ type: 'image-description', title: '', description: '' });
+  session.execute({ type: 'delete-image' });
+  session.imageDescription();
+  // @ts-expect-error Both image axes are required.
+  session.execute({ type: 'resize-image', widthPoints: 120 });
+  // @ts-expect-error Engine drawing identities do not leak.
+  session.snapshot().image?.id;
+  // @ts-expect-error Image contexts are immutable.
+  session.snapshot().image!.widthPoints = 1;
   session.paragraphStyles();
   session.fontFamilies();
   session.find('literal', { matchCase: true, wholeWord: true, limit: 10 });
   session.selectMatch('opaque');
+  const direction: DocxImageDirection = 'next';
+  session.selectImage(direction);
+  session.selectImage('previous');
+  // @ts-expect-error Only the exact navigation directions are public.
+  session.selectImage('first');
   session.replaceMatch('opaque', '');
   const snapshot = session.snapshot();
   if (snapshot.table) {

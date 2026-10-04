@@ -172,3 +172,37 @@ test('table actions validate dimensions, directions and own fields before engine
     assert.deepEqual(normalizeDocxAction(value), invalid);
   }
 });
+
+test('image actions require complete exact bounded values without coercion or accessors', () => {
+  for (const points of [1, 120.123456, 1440]) {
+    const action = { type: 'resize-image', widthPoints: points, heightPoints: points };
+    const result = normalizeDocxAction(action);
+    assert.deepEqual(result, { ok: true, value: action });
+    if (result.ok) { assert.notEqual(result.value, action); assert(Object.isFrozen(result.value)); }
+  }
+  for (const widthPoints of [0, 0.99, -1, NaN, Infinity, '120', undefined]) {
+    assert.deepEqual(normalizeDocxAction({ type: 'resize-image', widthPoints, heightPoints: 120 }), invalid);
+  }
+  assert.deepEqual(normalizeDocxAction({ type: 'resize-image', widthPoints: 1440.01, heightPoints: 1 }), limited);
+  for (const heightPoints of [0, 0.99, -1, NaN, Infinity, '60', undefined]) {
+    assert.deepEqual(normalizeDocxAction({ type: 'resize-image', widthPoints: 120, heightPoints }), invalid);
+  }
+  assert.deepEqual(normalizeDocxAction({ type: 'resize-image', widthPoints: 1, heightPoints: 1440.01 }), limited);
+  for (const title of ['', '🙂'.repeat(128)]) {
+    const value = { type: 'image-description', title, description: '🙂'.repeat(1024) };
+    assert.deepEqual(normalizeDocxAction(value), { ok: true, value });
+  }
+  for (const value of [{ type: 'image-description', title: 'x'.repeat(257), description: '' },
+    { type: 'image-description', title: '', description: 'x'.repeat(2049) }]) {
+    assert.deepEqual(normalizeDocxAction(value), limited);
+  }
+  let reads = 0;
+  for (const value of [{ type: 'delete-image', extra: 1 }, { type: 'image-description', title: '' },
+    { type: 'image-description', title: '\ud800', description: '' },
+    { type: 'image-description', title: '', description: '\u0000' },
+    { type: 'resize-image', get widthPoints() { reads++; return 120; }, heightPoints: 1 }]) {
+    assert.deepEqual(normalizeDocxAction(value), invalid);
+  }
+  assert.equal(reads, 0);
+  assert.deepEqual(normalizeDocxAction({ type: 'delete-image' }), { ok: true, value: { type: 'delete-image' } });
+});

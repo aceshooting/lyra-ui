@@ -1,10 +1,11 @@
 import { Inflate } from 'fflate';
 import { SaxesParser } from 'saxes';
+import { inspectDocxImage } from './image-bytes.js';
 import { isSafeDocxHyperlink } from './hyperlink-policy.js';
 import type { DocxRefusalCode, DocxResult } from './types.js';
 
 const MiB = 1024 * 1024;
-const LIMITS = { input: 4 * MiB, entries: 2048, entry: 8 * MiB, expanded: 32 * MiB, xml: 4 * MiB, nodes: 150_000, depth: 128, image: 4 * MiB, dimension: 8192, pixels: 16_000_000, totalPixels: 32_000_000, images: 128 };
+const LIMITS = { input: 4 * MiB, entries: 2048, entry: 8 * MiB, expanded: 32 * MiB, xml: 4 * MiB, nodes: 150_000, depth: 128, totalPixels: 32_000_000, images: 128 };
 const REL_NS = 'http://schemas.openxmlformats.org/package/2006/relationships';
 const TYPE_NS = 'http://schemas.openxmlformats.org/package/2006/content-types';
 const WORD_NS = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
@@ -214,76 +215,6 @@ async function inspectXml(bytes: Uint8Array, name: string, info: PackageInfo, si
   if (!root) reject();
 }
 
-function inspectImage(bytes: Uint8Array): number {
-  if (bytes.length > LIMITS.image) reject('resource-limit');
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  let width = 0, height = 0;
-  let format: 'png' | 'gif' | 'jpeg';
-  if (bytes.length >= 33 && [137, 80, 78, 71, 13, 10, 26, 10].every((byte, i) => bytes[i] === byte) && view.getUint32(12) === 0x49484452) {
-    format = 'png';
-    width = view.getUint32(16); height = view.getUint32(20);
-  } else if (bytes.length >= 10 && bytes[0] === 71 && bytes[1] === 73 && bytes[2] === 70 && bytes[3] === 56 && (bytes[4] === 55 || bytes[4] === 57) && bytes[5] === 97) {
-    format = 'gif';
-    width = view.getUint16(6, true); height = view.getUint16(8, true);
-  } else if (bytes[0] === 255 && bytes[1] === 216) {
-    format = 'jpeg';
-    let at = 2;
-    while (at + 4 <= bytes.length) {
-      if (bytes[at++] !== 255) reject();
-      while (bytes[at] === 255) at++;
-      const marker = bytes[at++];
-      if (marker === 0xd9 || marker === 0xda) break;
-      if (marker === 0x01 || (marker !== undefined && marker >= 0xd0 && marker <= 0xd7)) continue;
-      const length = view.getUint16(at);
-      if (length < 2 || at + length > bytes.length) reject();
-      if (marker !== undefined && [0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf].includes(marker)) {
-        if (length < 8) reject();
-        height = view.getUint16(at + 3); width = view.getUint16(at + 5); break;
-      }
-      at += length;
-    }
-  } else reject();
-  if (!width || !height) reject();
-  if (width > LIMITS.dimension || height > LIMITS.dimension || width * height > LIMITS.pixels) reject('resource-limit');
-  if (format === 'png') {
-    let at = 8, ended = false;
-    while (at + 12 <= bytes.length) {
-      const length = view.getUint32(at), kind = view.getUint32(at + 4);
-      if (at + 12 + length > bytes.length || kind === 0x6163544c) reject();
-      at += 12 + length;
-      if (kind === 0x49454e44) { ended = true; break; }
-    }
-    if (!ended || at !== bytes.length) reject();
-  } else if (format === 'gif') {
-    if (bytes.length < 13) reject();
-    const packed = bytes[10]!;
-    let at = 13 + ((packed & 128) ? 3 * (2 ** ((packed & 7) + 1)) : 0);
-    let frames = 0, ended = false;
-    const subblocks = (): void => {
-      while (at < bytes.length) {
-        const size = bytes[at++]!;
-        if (size === 0) return;
-        at += size;
-        if (at > bytes.length) reject();
-      }
-      reject();
-    };
-    while (at < bytes.length) {
-      const block = bytes[at++];
-      if (block === 59) { ended = true; break; }
-      if (block === 33) { at++; subblocks(); continue; }
-      if (block !== 44 || at + 9 > bytes.length || ++frames > 1) reject();
-      const frameWidth = view.getUint16(at + 4, true), frameHeight = view.getUint16(at + 6, true);
-      if (!frameWidth || !frameHeight || frameWidth > width || frameHeight > height) reject();
-      const framePacked = bytes[at + 8]!;
-      at += 9 + ((framePacked & 128) ? 3 * (2 ** ((framePacked & 7) + 1)) : 0);
-      at++; // LZW minimum code size precedes bounded data subblocks.
-      subblocks();
-    }
-    if (!ended || frames !== 1 || at !== bytes.length) reject();
-  }
-  return width * height;
-}
 
 /** Validate the complete package before any engine, decoder or resource resolver receives it. */
 export async function admitDocx(bytes: Uint8Array, signal?: AbortSignal): Promise<DocxResult<void>> {
@@ -302,7 +233,9 @@ export async function admitDocx(bytes: Uint8Array, signal?: AbortSignal): Promis
       if (checkedImages.has(name)) return;
       checkedImages.add(name);
       if (checkedImages.size > LIMITS.images) reject('resource-limit');
-      totalPixels += inspectImage(payload);
+      const image = inspectDocxImage(payload);
+      if (!image.ok) reject(image.code);
+      totalPixels += image.value.pixels;
       if (totalPixels > LIMITS.totalPixels) reject('resource-limit');
     };
     for (const entry of entries) {

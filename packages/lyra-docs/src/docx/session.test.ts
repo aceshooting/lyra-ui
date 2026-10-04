@@ -1076,3 +1076,113 @@ test('internal table label refresh is copied presentation state and stops at bus
   assert.equal(refreshInternalDocxTableLabels({} as never, labels), false);
   assert.equal(calls, 1);
 });
+
+test('image snapshots contain frozen dimensions only and description reads preserve revision and leases', async () => {
+  const { session, engine, f } = await opened();
+  const image = { widthPoints: 120, heightPoints: 60 };
+  engine.inspect = () => ({ selection: 'other', composing: f.composing, formatting, image });
+  engine.imageDescription = () => ({ ok: true, value: { title: 'Title', description: 'Description' } });
+  f.emit('user-selection');
+  const before = session.snapshot(), lease = value(session.retainSelection());
+  assert.deepEqual(before.image, image); assert(Object.isFrozen(before.image));
+  f.emit('state'); assert.equal(session.snapshot(), before);
+  const copied = value(session.imageDescription()); assert(Object.isFrozen(copied));
+  assert.equal(session.snapshot(), before); assert.equal(f.released.length, 0);
+  engine.execute = (_command, _token, validate) => validate!();
+  assert.deepEqual(session.execute({ type: 'resize-image', widthPoints: 120, heightPoints: 60 }, { selection: lease }), { ok: true, value: before.revision });
+  assert.equal(session.snapshot().dirty, false); assert.equal(session.snapshot().revision, before.revision);
+  assert.equal(f.released.length, 1);
+  assert.deepEqual(session.execute({ type: 'delete-image' }, { selection: lease }), { ok: false, code: 'stale-selection' });
+  session.destroy(); assert.equal(session.snapshot().image, null);
+});
+
+test('image execution binds revision and selection before settlement even without caller guards', async () => {
+  for (const event of ['change', 'user-selection', 'composition'] as const) {
+    const { session, engine, f } = await opened();
+    engine.inspect = () => ({ selection: 'other', composing: f.composing, formatting, image: { widthPoints: 120, heightPoints: 60 } });
+    f.emit('user-selection'); const revision = session.snapshot().revision;
+    let actualDispatch = 0;
+    engine.execute = (_command, _token, validate) => {
+      if (event === 'composition') f.composing = true;
+      f.emit(event);
+      const allowed = validate!();
+      if (allowed.ok) actualDispatch++;
+      return allowed;
+    };
+    refusal(session.execute({ type: 'delete-image' }), event === 'change' ? 'stale-revision' : event === 'composition' ? 'composing' : 'stale-selection');
+    assert.equal(actualDispatch, 0);
+    assert.equal(session.snapshot().revision!.value, revision!.value + (event === 'change' ? 1 : 0));
+  }
+});
+
+test('image ownership refuses reentrant work and stale ABA, released or foreign leases', async () => {
+  const { session, engine, f } = await opened();
+  engine.inspect = () => ({ selection: 'other', composing: false, formatting, image: { widthPoints: 120, heightPoints: 60 } });
+  f.emit('user-selection'); const lease = value(session.retainSelection());
+  f.emit('user-selection'); f.emit('user-selection');
+  refusal(session.execute({ type: 'delete-image' }, { selection: lease }), 'stale-selection');
+  refusal(session.execute({ type: 'delete-image' }, { selection: { release() {} } }), 'stale-selection');
+  const released = value(session.retainSelection()); released.release();
+  refusal(session.execute({ type: 'delete-image' }, { selection: released }), 'stale-selection');
+  engine.execute = (_command, _token, validate) => {
+    refusal(session.execute('bold'), 'busy');
+    refusal(session.imageDescription(), 'busy');
+    return validate!();
+  };
+  assert(session.execute({ type: 'delete-image' }).ok);
+  assert.equal(session.snapshot().revision!.value, 0);
+});
+
+test('image metadata read gates and reentrant terminal changes never disclose stale data', async () => {
+  const { session, engine, f } = await opened(true);
+  engine.imageDescription = () => ({ ok: true, value: { title: '', description: '' } });
+  assert(session.imageDescription().ok, 'read-only allows metadata read');
+  f.composing = true; f.emit('composition'); refusal(session.imageDescription(), 'composing');
+  f.composing = false; f.emit('composition');
+  engine.imageDescription = () => { session.destroy(); return { ok: true, value: { title: 'stale', description: 'stale' } }; };
+  refusal(session.imageDescription(), 'destroyed');
+});
+
+
+test('image navigation permits read-only selection, preserves singleton leases, and invalidates only actual moves', async () => {
+  const { session, engine, f } = await opened(true);
+  let move = false;
+  engine.selectImage = () => { if (move) f.emit('user-selection'); return { ok: true, value: undefined }; };
+  const initial = session.snapshot(), lease = value(session.retainSelection());
+  assert(session.selectImage('next').ok); assert.equal(f.released.length, 0);
+  assert.equal(session.snapshot(), initial);
+  move = true; assert(session.selectImage('previous').ok); assert.equal(f.released.length, 1);
+  assert.equal(session.snapshot().revision, initial.revision); assert.equal(session.snapshot().dirty, initial.dirty);
+  assert.equal(session.snapshot().selection.version, initial.selection.version + 1);
+  lease.release(); session.destroy(); refusal(session.selectImage('next'), 'destroyed');
+});
+
+test('image navigation owns reentrant work and refuses invalid options, composition and replacement', async () => {
+  const { session, engine, f } = await opened();
+  refusal(session.selectImage('forged' as never), 'invalid-option');
+  f.composing = true; f.emit('composition'); refusal(session.selectImage('next'), 'composing');
+  f.composing = false; f.emit('composition');
+  engine.selectImage = () => {
+    refusal(session.selectImage('next'), 'busy'); refusal(session.execute('bold'), 'busy');
+    return { ok: true, value: undefined };
+  };
+  assert(session.selectImage('next').ok);
+  engine.selectImage = () => { f.emit('change'); return { ok: true, value: undefined }; };
+  refusal(session.selectImage('next'), 'stale-revision');
+  engine.selectImage = () => { session.destroy(); return { ok: true, value: undefined }; };
+  refusal(session.selectImage('next'), 'destroyed');
+});
+
+
+test('resource readiness publishes a new image snapshot without changing selection intent or leases', async () => {
+  const { session, engine, f } = await opened(); let ready = false;
+  engine.inspect = () => ({ selection: 'other', composing: false, formatting, image: { widthPoints: 120, heightPoints: 60 }, imageReady: ready });
+  f.emit('user-selection'); const before = session.snapshot(), lease = value(session.retainSelection());
+  let published = 0; session.subscribe(() => { published++; });
+  ready = true; f.emit('state');
+  assert.equal(published, 1); assert.notEqual(session.snapshot(), before); assert.deepEqual(session.snapshot(), before);
+  assert.equal(session.snapshot().image, before.image);
+  assert.equal(f.released.length, 0); assert.equal(session.snapshot().selection.version, before.selection.version);
+  const after = session.snapshot(); f.emit('state'); assert.equal(session.snapshot(), after); assert.equal(published, 1);
+  lease.release(); session.destroy();
+});

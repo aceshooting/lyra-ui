@@ -1,6 +1,6 @@
 import type {
   DocxAction, DocxCommandAvailability, DocxResult, DocxSelection,
-  DocxSource, DocxFormatting, DocxParagraphStyles, DocxFontFamilies, DocxTableContext
+  DocxSource, DocxFormatting, DocxParagraphStyles, DocxFontFamilies, DocxTableContext, DocxImageContext, DocxImageDescription, DocxImageDirection
 } from './types.js';
 
 /** Internal ownership seam; no browser validation is implemented here. */
@@ -15,6 +15,8 @@ interface DocxEngineState {
   readonly selection: DocxSelection['kind'];
   readonly composing: boolean;
   readonly table?: Readonly<DocxTableContext> | null;
+  readonly image?: Readonly<DocxImageContext> | null;
+  readonly imageReady?: boolean;
   readonly formatting: Readonly<DocxFormatting>;
 }
 /** Private search addresses never cross the public session boundary. */
@@ -39,6 +41,8 @@ export interface DocxEnginePort {
   subscribe(listener: (event: DocxEngineEvent) => void): () => void;
   can(command: DocxAction): DocxCommandAvailability;
   execute(command: DocxAction, retainedSelection?: object, validateSettled?: () => DocxResult<void>): DocxResult<void>;
+  selectImage?(direction: DocxImageDirection): DocxResult<void>;
+  imageDescription?(): DocxResult<Readonly<DocxImageDescription>>;
   paragraphStyles(): DocxParagraphStyles;
   fontFamilies(): DocxFontFamilies;
   find(query: string, options: DocxEngineSearchOptions): { readonly matches: readonly DocxEngineMatch[]; readonly truncated: boolean };

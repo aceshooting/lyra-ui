@@ -1,10 +1,11 @@
-import type { DocxAction, DocxResult, DocxTableAction } from './types.js';
+import type { DocxAction, DocxResult, DocxTableAction, DocxImageAction } from './types.js';
 import { isSafeDocxHyperlink } from './hyperlink-policy.js';
 import { isDocxXmlText } from './xml-text.js';
 
 export const DOCX_LIMITS = Object.freeze({
   styleId: 128, styleLabel: 128, styles: 256, fonts: 128, fontFamily: 64,
   href: 2048, text: 4096, query: 256, matches: 100, context: 48,
+  imagePoints: 1440, imageTitle: 256, imageDescription: 2048,
   tableRows: 20, tableColumns: 20, tableCells: 400,
 });
 const invalid = Object.freeze({ ok: false, code: 'invalid-option' } as const);
@@ -50,6 +51,25 @@ export function normalizeDocxAction(value: unknown): DocxResult<DocxAction> {
     if (!action || typeof action.type !== 'string') return invalid;
     const type = action.type;
     switch (type) {
+      case 'resize-image': {
+        if (!keys(action, ['type', 'widthPoints', 'heightPoints'])) return invalid;
+        for (const value of [action.widthPoints, action.heightPoints]) {
+          if (typeof value !== 'number' || !Number.isFinite(value) || value < 1) return invalid;
+          if (value > DOCX_LIMITS.imagePoints) return limited;
+        }
+        return success(Object.freeze({ type, widthPoints: action.widthPoints as number, heightPoints: action.heightPoints as number }));
+      }
+      case 'image-description': {
+        if (!keys(action, ['type', 'title', 'description'])) return invalid;
+        const title = text(action.title, DOCX_LIMITS.imageTitle, true);
+        if (!title.ok) return title;
+        const description = text(action.description, DOCX_LIMITS.imageDescription, true);
+        if (!description.ok) return description;
+        if (!isDocxXmlText(title.value) || !isDocxXmlText(description.value)) return invalid;
+        return success(Object.freeze({ type, title: title.value, description: description.value }));
+      }
+      case 'delete-image':
+        return keys(action, ['type']) ? success(Object.freeze({ type })) : invalid;
       case 'insert-table': {
         if (!keys(action, ['type', 'rows', 'columns']) || typeof action.rows !== 'number' ||
           typeof action.columns !== 'number' || !Number.isSafeInteger(action.rows) ||
@@ -140,4 +160,8 @@ export function isDocxTableAction(action: DocxAction): action is DocxTableAction
   return typeof action !== 'string' && (action.type === 'insert-table' || action.type === 'insert-table-row' ||
     action.type === 'insert-table-column' || action.type === 'delete-table-row' ||
     action.type === 'delete-table-column' || action.type === 'delete-table');
+}
+
+export function isDocxImageAction(action: DocxAction): action is DocxImageAction {
+  return typeof action !== 'string' && (action.type === 'resize-image' || action.type === 'image-description' || action.type === 'delete-image');
 }

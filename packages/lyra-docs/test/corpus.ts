@@ -3,7 +3,7 @@ import { CONTENT_TYPES, docxFixture } from '../src/docx/admission-fixtures.js';
 
 const word = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 const officeRel = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/';
-const image = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/nwAAAABJRU5ErkJggg=='), char => char.charCodeAt(0));
+const image = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFAAH/yA9iFgAAAABJRU5ErkJggg=='), char => char.charCodeAt(0));
 
 export const protectedParts = ['custom/payload.bin', 'customXml/item1.xml', 'word/media/pixel.png'] as const;
 
@@ -108,5 +108,55 @@ export function tableFixture(kind: string): Uint8Array {
   let xml = `<w:document xmlns:w="${word}"><w:body>${p('Before')}${body}${p('After')}</w:body></w:document>`;
   if (kind === 'table-alt') xml = xml.replaceAll('w:', 'x:').replace('xmlns:w=', 'xmlns:x=');
   entries['word/document.xml'] = strToU8(xml);
+  return zipSync(entries, { level: 6 });
+}
+
+/** Plain visible existing pictures, sharing one raster resource. */
+export function imageFixture(kind = 'image-simple'): Uint8Array {
+  const entries = unzipSync(representativeFixture());
+  if (kind === 'image-near-limit') {
+    const payload = new Uint8Array(4 * 1024 * 1024 - 32768);
+    let state = 0x2468ace1;
+    for (let index = 0; index < payload.length; index++) {
+      state ^= state << 13; state ^= state >>> 17; state ^= state << 5;
+      payload[index] = state & 255;
+    }
+    entries['custom/payload.bin'] = payload;
+  }
+  entries['word/media/pixel.png'] = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAEAAAAAgCAYAAACinX6EAAAAYklEQVR4nO3QIRXAMBTAwCqpzuFJHJ6XVsaBH3A8L2u/35ls6QCtATpAa4AO0BqgA7QG6ACtATpAa4AO0BqgA7T1P/tM1gAdoDVAB2gN0AFaA3SA1gAdoDVAB2gN0AHa+AEX/pyJHlsX+U4AAAAASUVORK5CYII='), char => char.charCodeAt(0));
+  let xml = strFromU8(entries['word/document.xml']!);
+  const original = xml.match(/<w:p><w:r><w:drawing>[\s\S]*?<\/w:drawing><\/w:r><\/w:p>/)![0];
+  const picture = (id: number) => original.replaceAll('9525', '1524000').replaceAll('cy="1524000"', 'cy="762000"')
+    .replaceAll('id="1"', `id="${id}"`).replace('<wp:docPr ', `<wp:docPr title="Title ${id}" descr="Description ${id}" `);
+  let first = picture(1);
+  if (kind === 'image-picture-lock') first = first.replace('<pic:cNvPicPr/>', '<pic:cNvPicPr><a:picLocks noResize="1"/></pic:cNvPicPr>');
+  if (kind === 'image-frame-lock') first = first.replace('<a:graphic>', '<wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic>');
+  if (kind === 'image-hidden') first = first.replace('<wp:docPr ', '<wp:docPr hidden="1" ');
+  if (kind === 'image-crop') first = first.replace('<a:stretch>', '<a:srcRect l="1000"/><a:stretch>');
+  if (kind === 'image-empty-source') first = first.replace('<a:stretch>', '<a:srcRect/><a:stretch>');
+  if (kind === 'image-rotation') first = first.replace('<a:xfrm>', '<a:xfrm rot="60000">');
+  if (kind === 'image-long-metadata') first = first.replace('Description 1', 'x'.repeat(2049));
+  if (kind === 'image-table') first = `<w:tbl><w:tr><w:tc>${first}</w:tc></w:tr></w:tbl>`;
+  if (kind === 'image-offscreen-inline' || kind === 'image-line-boundary') {
+    const lines = kind === 'image-line-boundary' ? 100 : 20;
+    const label = kind === 'image-line-boundary' ? '' : '<w:t xml:space="preserve">Picture: </w:t>';
+    first = first.replace('<w:p>', `<w:p><w:r>${Array.from({ length: lines }, (_, index) => `<w:t>Earlier line ${index + 1}</w:t><w:br/>`).join('')}${label}</w:r>`);
+  }
+  const paragraph = (value: string) => `<w:p><w:r><w:t>${value}</w:t></w:r></w:p>`;
+  xml = xml.replace(/<w:body>[\s\S]*?<\/w:body>/, `<w:body>${paragraph('Before image')}${first}${paragraph('Between images')}${picture(2)}${paragraph('After image')}</w:body>`);
+  if (kind === 'image-offscreen') xml = xml.replace('<w:body>', `<w:body>${Array.from({ length: 140 }, (_, index) => paragraph(`Earlier paragraph ${index + 1}`)).join('')}`);
+  entries['word/document.xml'] = strToU8(xml);
+  if (kind === 'image-jpeg') {
+    entries['word/media/pixel.jpeg'] = Uint8Array.from(atob('/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCAAgAEADASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAj/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCPAUam8AAAAAAAAAAAAAB//9k='), char => char.charCodeAt(0));
+    delete entries['word/media/pixel.png'];
+    entries['word/_rels/document.xml.rels'] = strToU8(strFromU8(entries['word/_rels/document.xml.rels']!).replace('pixel.png', 'pixel.jpeg'));
+    entries['[Content_Types].xml'] = strToU8(strFromU8(entries['[Content_Types].xml']!).replace('Extension="png" ContentType="image/png"', 'Extension="jpeg" ContentType="image/jpeg"'));
+  }
+  if (kind === 'image-gif') {
+    entries['word/media/pixel.gif'] = Uint8Array.from(atob('R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='), char => char.charCodeAt(0));
+    delete entries['word/media/pixel.png'];
+    entries['word/_rels/document.xml.rels'] = strToU8(strFromU8(entries['word/_rels/document.xml.rels']!).replace('pixel.png', 'pixel.gif'));
+    entries['[Content_Types].xml'] = strToU8(strFromU8(entries['[Content_Types].xml']!).replace('Extension="png" ContentType="image/png"', 'Extension="gif" ContentType="image/gif"'));
+  }
   return zipSync(entries, { level: 6 });
 }

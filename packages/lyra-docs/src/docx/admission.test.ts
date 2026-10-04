@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { crc32 } from 'node:zlib';
 import { admitDocx } from './admission.js';
 import { normalizeDocxAction } from './commands.js';
 import { docxFixture, DOCUMENT_XML, relationship } from './admission-fixtures.js';
@@ -121,7 +122,7 @@ test('returns typed abort before parsing and yields so in-flight cancellation wo
 });
 
 test('accepts directory entries and package-relative image relationships', async () => {
-  const png = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jvUYAAAAASUVORK5CYII=', 'base64'));
+  const png = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=', 'base64'));
   assert.deepEqual(await admitDocx(docxFixture({
     'word/': new Uint8Array(), 'word/media/': new Uint8Array(), 'word/media/a.png': png,
     'word/_rels/document.xml.rels': relationship('media/a.png', 'image', 'Internal')
@@ -186,12 +187,13 @@ test('refuses unqualified embedded fonts and alternate-content resource relation
 });
 
 test('bounds aggregate decoded image pixels and count, deduplicating repeated targets', async () => {
-  const png = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jvUYAAAAASUVORK5CYII=', 'base64'));
+  const png = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=', 'base64'));
   const makeImages = (count: number, width: number, same = false) => {
     const parts: Record<string, string | Uint8Array> = {};
     const image = png.slice();
     new DataView(image.buffer).setUint32(16, width);
     new DataView(image.buffer).setUint32(20, width);
+    new DataView(image.buffer).setUint32(29, crc32(image.subarray(12, 29)));
     let relationships = '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">';
     for (let i = 0; i < count; i++) {
       const name = `custom/${same ? 0 : i}.bin`;
@@ -207,7 +209,7 @@ test('bounds aggregate decoded image pixels and count, deduplicating repeated ta
 });
 
 test('refuses animated PNG and GIF decoded-frame amplification', async () => {
-  const png = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jvUYAAAAASUVORK5CYII=', 'base64'));
+  const png = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=', 'base64'));
   const animatedPng = new Uint8Array(png.length + 20);
   animatedPng.set(png.subarray(0, 33));
   animatedPng.set([0, 0, 0, 8, 97, 99, 84, 76, 0, 0, 0, 2], 33);
@@ -220,4 +222,54 @@ test('refuses animated PNG and GIF decoded-frame amplification', async () => {
   animatedGif[animatedGif.length - 1] = 59;
   assert.deepEqual(await admitDocx(docxFixture({ 'word/media/a.gif': animatedGif })), invalid);
   assert.deepEqual(await admitDocx(docxFixture({ 'word/media/a.gif': gif })), { ok: true, value: undefined });
+});
+
+
+test('rejects truncated JPEG segments and missing scan endings before mounting', async () => {
+  const { imageFixture } = await import('../../test/corpus.js');
+  const { unzipSync, zipSync } = await import('fflate');
+  const parts = unzipSync(imageFixture('image-jpeg'));
+  const name = Object.keys(parts).find(name => name.endsWith('.jpeg'))!;
+  const bytes = parts[name]!;
+  assert.equal((await admitDocx(zipSync(parts))).ok, true);
+  const progressive = Uint8Array.from(atob('/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wgARCAACAAIDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAX/xAAUAQEAAAAAAAAAAAAAAAAAAAAF/9oADAMBAAIQAxAAAAGMEj//xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAEFAn//xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAEDAQE/AX//xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAECAQE/AX//xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAY/An//xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAE/IX//2gAMAwEAAgADAAAAEPf/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAEDAQE/EH//xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAECAQE/EH//xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAE/EH//2Q=='), char => char.charCodeAt(0));
+  assert.equal((await admitDocx(zipSync({ ...parts, [name]: progressive }))).ok, true);
+  let at = 2, sofEnd = 0;
+  while (at + 4 < bytes.length) {
+    const marker = bytes[at + 1]!, length = (bytes[at + 2]! << 8) + bytes[at + 3]!;
+    if ([0xc0, 0xc1, 0xc2].includes(marker)) { sofEnd = at + 2 + length; break; }
+    at += 2 + length;
+  }
+  assert.ok(sofEnd > 0);
+  for (const length of [bytes.length - 1, bytes.length - 2, bytes.length - 8, bytes.length - 16, sofEnd]) {
+    assert.deepEqual(await admitDocx(zipSync({ ...parts, [name]: bytes.slice(0, length) })), invalid);
+  }
+});
+
+
+test('rejects an embedded PNG with a damaged image-data checksum before mounting', async () => {
+  const { crc32, deflateSync } = await import('node:zlib');
+  const chunk = (kind: string, data: Uint8Array) => {
+    const bytes = new Uint8Array(data.length + 12), view = new DataView(bytes.buffer);
+    view.setUint32(0, data.length); bytes.set(new TextEncoder().encode(kind), 4); bytes.set(data, 8);
+    view.setUint32(bytes.length - 4, crc32(bytes.subarray(4, bytes.length - 4))); return bytes;
+  };
+  const ihdr = chunk('IHDR', Uint8Array.of(0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0));
+  const idat = chunk('IDAT', deflateSync(Uint8Array.of(0, 0, 0, 0, 255)));
+  const image = new Uint8Array(Buffer.concat([Uint8Array.of(137, 80, 78, 71, 13, 10, 26, 10), ihdr, idat, chunk('IEND', new Uint8Array())]));
+  assert.equal((await admitDocx(docxFixture({ 'word/media/a.png': image }))).ok, true);
+  image[41] = 0;
+  assert.deepEqual(await admitDocx(docxFixture({ 'word/media/a.png': image })), invalid);
+});
+
+
+test('refuses a PNG with a legacy invalid image-data checksum', async () => {
+  const image = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jvUYAAAAASUVORK5CYII=', 'base64'));
+  assert.deepEqual(await admitDocx(docxFixture({ 'word/media/a.png': image })), invalid);
+});
+
+
+test('refuses a PNG whose image-data checksums are corrupt', async () => {
+  const image = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/nwAAAABJRU5ErkJggg==', 'base64'));
+  assert.deepEqual(await admitDocx(docxFixture({ 'word/media/a.png': image })), invalid);
 });
