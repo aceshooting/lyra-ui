@@ -117,9 +117,14 @@ export const styles = css`
   @container (min-width: 112rem) {
     [part='toolbar'] {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) max-content;
+      grid-template-columns: minmax(0, max-content) max-content;
+      justify-content: start;
     }
     .toolbar-row, [part='editing-tools'] { flex: none; }
+    .toolbar-row {
+      padding-inline-end: var(--lr-space-xs);
+      border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    }
     [part='editing-tools'], .font-tools, [part='format-actions'] { flex-wrap: nowrap; }
     [part='editing-tools'] {
       padding-block-start: 0;

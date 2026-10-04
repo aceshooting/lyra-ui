@@ -40,6 +40,7 @@ export async function runEditorLayout(page, check, { createEditor, saveEditor })
         const second = root.querySelector('[part="editing-tools"]');
         const firstBox = first.getBoundingClientRect();
         const secondBox = second.getBoundingClientRect();
+        const lastGroupBox = first.lastElementChild.getBoundingClientRect();
         const toolBox = toolbar.getBoundingClientRect();
         const inToolbar = node => {
           const box = node.getBoundingClientRect();
@@ -49,6 +50,8 @@ export async function runEditorLayout(page, check, { createEditor, saveEditor })
           overflow: element.scrollWidth, toolOverflow: toolbar.scrollWidth, toolWidth: toolbar.clientWidth,
           firstTop: firstBox.top, secondTop: secondBox.top,
           firstCenter: firstBox.top + firstBox.height / 2, secondCenter: secondBox.top + secondBox.height / 2,
+          compactGap: getComputedStyle(element).direction === 'rtl' ? lastGroupBox.left - secondBox.right : secondBox.left - lastGroupBox.right,
+          separatorWidth: parseFloat(getComputedStyle(first).borderInlineEndWidth),
           firstVisible: first.scrollWidth <= first.clientWidth + 1,
           ordinaryToolsVisible: [root.querySelector('[part="file-actions"]'), root.querySelector('.history-tools'),
             root.querySelector('.insert-tools'), root.querySelector('.font-tools'), root.querySelector('[part="format-actions"]'),
@@ -61,6 +64,7 @@ export async function runEditorLayout(page, check, { createEditor, saveEditor })
       if (width >= 1920) {
         assert.ok(Math.abs(layout.firstCenter - layout.secondCenter) <= 1, JSON.stringify({ width, ...layout }));
         assert.ok(layout.firstVisible && layout.ordinaryToolsVisible, JSON.stringify({ width, ...layout }));
+        assert.ok(layout.compactGap >= 0 && layout.compactGap <= 32 && layout.separatorWidth >= 1, JSON.stringify({ width, ...layout }));
       } else if (width === 1440) {
         assert.ok(layout.secondTop > layout.firstTop + 1, JSON.stringify({ width, ...layout }));
       }
@@ -77,6 +81,19 @@ export async function runEditorLayout(page, check, { createEditor, saveEditor })
       await page.keyboard.press('Escape');
       await page.screenshot({ path: new URL(`../.browser-evidence/layout-${width}.png`, import.meta.url).pathname });
     }
+    await page.setViewportSize({ width: 1920, height: 900 });
+    const rtlGap = await editor.evaluate(async element => {
+      element.setAttribute('dir', 'rtl');
+      await element.updateComplete;
+      const first = element.shadowRoot.querySelector('.toolbar-row');
+      const second = element.shadowRoot.querySelector('[part="editing-tools"]');
+      const lastGroup = first.lastElementChild;
+      return { gap: lastGroup.getBoundingClientRect().left - second.getBoundingClientRect().right,
+        separatorWidth: parseFloat(getComputedStyle(first).borderInlineEndWidth),
+        firstVisible: first.scrollWidth <= first.clientWidth + 1 };
+    });
+    assert.ok(rtlGap.gap >= 0 && rtlGap.gap <= 32 && rtlGap.separatorWidth >= 1 && rtlGap.firstVisible, JSON.stringify(rtlGap));
+    await editor.evaluate(async element => { element.setAttribute('dir', 'ltr'); await element.updateComplete; });
     await page.setViewportSize({ width: 1440, height: 900 });
   });
   await check('a height-constrained editor keeps the toolbar and status outside the document scroll', async () => {
@@ -180,6 +197,8 @@ export async function runEditorLayout(page, check, { createEditor, saveEditor })
         const selectedToolbarHeight = await images.evaluate(element => element.shadowRoot.querySelector('[part="toolbar"]').getBoundingClientRect().height);
         assert.ok(Math.abs(selectedTop - stageTop) <= 1, JSON.stringify({ width, index, stageTop, selectedTop }));
         assert.ok(Math.abs(selectedToolbarHeight - toolbarHeight) <= 1, JSON.stringify({ width, index, toolbarHeight, selectedToolbarHeight }));
+        const overflow = await images.evaluate(element => element.scrollWidth - element.clientWidth);
+        assert.ok(overflow <= 1, JSON.stringify({ width, index, overflow }));
       }
     }
     await page.setViewportSize({ width: 1440, height: 900 });

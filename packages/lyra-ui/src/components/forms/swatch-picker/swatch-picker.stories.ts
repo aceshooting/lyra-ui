@@ -237,7 +237,8 @@ export const GemstoneGlyphOutsidePicker: Story = {
     <button
       class="gemstone-trigger"
       type="button"
-      aria-label="Change accent color (currently Amethyst)"
+      aria-label="Choose accent gemstone"
+      title="Choose accent gemstone"
       data-lr-gemstone-selected
     >
       ${gemstoneGlyph()}
@@ -256,6 +257,12 @@ export const GemstoneGlyphOutsidePicker: Story = {
  *  localized strings and the accent it applies (`--accent-color` here); the library parts stay
  *  controlled. */
 const gemstoneAccentPickerTag = 'app-gemstone-accent-picker';
+// English sample copy; applications provide these strings through their locale catalogs.
+const gemstoneAccentCopy = {
+  chooser: 'Choose accent gemstone',
+  caption: 'Gemstone:',
+  shine: 'Shine',
+};
 const gemstoneName = (key: GemstoneKey): string =>
   key[0]!.toUpperCase() + key.slice(1);
 
@@ -355,22 +362,26 @@ class AppGemstoneAccentPicker extends LitElement {
         class="gemstone-accent-picker"
         placement="bottom-end"
         popup-role="dialog"
-        aria-label="Accent color"
+        aria-label=${gemstoneAccentCopy.chooser}
         style=${styleMap({
           '--accent-color': GEMSTONES[this.selected].fill,
           '--lr-gemstone-selected-animation': this.shineOff ? 'none' : undefined,
         })}
       >
-        <lr-icon-button slot="trigger" label=${`Accent color: ${name}`}>
+        <lr-icon-button
+          slot="trigger"
+          label=${gemstoneAccentCopy.chooser}
+          title=${gemstoneAccentCopy.chooser}
+        >
           <span class="gem" data-lr-gemstone-selected aria-hidden="true"
             >${gemstoneGlyph(GEMSTONES[this.selected].fill)}</span
           >
         </lr-icon-button>
         <div class="palette">
-          <p class="heading">Gemstone: <span class="name">${name}</span></p>
+          <p class="heading">${gemstoneAccentCopy.caption} <span class="name">${name}</span></p>
           <lr-swatch-picker
             mode="gemstone"
-            aria-label="Accent color"
+            aria-label=${gemstoneAccentCopy.chooser}
             .items=${this.items}
             .value=${this.selected}
             @lr-change=${this.onAccentChange}
@@ -384,7 +395,7 @@ class AppGemstoneAccentPicker extends LitElement {
                 this.requestUpdate();
               }}
             />
-            Shine
+            ${gemstoneAccentCopy.shine}
           </label>
         </div>
       </lr-popover>
@@ -405,7 +416,7 @@ export const GemstoneAccentPicker: Story = {
     docs: {
       description: {
         story:
-          'The documented `gemstoneAccentPicker` pattern, composed by an application element rather than shipped as a tag: an `lr-icon-button` trigger showing the current gem with `gemstoneSelectedGlyphStyles` (0.42rem halo at 92% of the accent), an `lr-popover` dialog with one "Gemstone: name" caption, and all nine canonical gems in one `lr-swatch-picker mode="gemstone"` row -- 28px targets with 4px gaps, 24px with 2px gaps below 30rem. Shine is on by default; its independent checkbox sets `--lr-gemstone-selected-animation: none` on the common popover scope so the trigger and selected swatch retain their static halos. Application and OS reduced motion still take precedence. The picker stays controlled through `value` and `lr-change`; applying and persisting the accent and shine choice stays with the application.',
+          'The documented `gemstoneAccentPicker` pattern, composed by an application element rather than shipped as a tag: a trigger whose fixed localized action name is "Choose accent gemstone" and whose glyph shows the current gem with `gemstoneSelectedGlyphStyles` (0.42rem halo at 92% of the accent). The popover dialog and radiogroup share that chooser name, while one visible "Gemstone: name" caption retains the selected gem. All nine canonical gems appear in one `lr-swatch-picker mode="gemstone"` row -- 28px targets with 4px gaps, 24px with 2px gaps below 30rem. Each localized item label supplies the option\'s accessible name and title. Shine is on by default; its independent checkbox sets `--lr-gemstone-selected-animation: none` on the common popover scope so the trigger and selected swatch retain their static halos. Application and OS reduced motion still take precedence. The picker stays controlled through `value` and `lr-change`; applying and persisting the accent and shine choice stays with the application.',
       },
     },
   },

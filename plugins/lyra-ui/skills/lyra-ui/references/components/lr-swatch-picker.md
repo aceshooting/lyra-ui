@@ -226,8 +226,11 @@ class AccentTrigger extends LitElement {
 `lr-swatch-picker mode="gemstone"`. It is a **pattern name, not an exported component or tag**.
 Use it for application accent selection: a glowing current-gem trigger, one compact
 “Gemstone: selected name” caption, and all nine canonical gemstones, in `GEMSTONE_KEYS` order, in
-one row. Localize the caption, trigger, dialog, radiogroup, and item names. Omit introductory copy
-and a second selected-name paragraph.
+one row. Give the trigger's accessible name and hover title, dialog, and radiogroup the same fixed,
+localized chooser name: “Choose accent gemstone” in English. Do not append the current gem name to
+that action name; the visible caption and glyph already show the selection. Localize the caption, chooser name, and
+item labels through the application's catalog. Each item `label` supplies both its accessible name
+and title through `lr-swatch-picker`. Omit introductory copy and a second selected-name paragraph.
 
 The consuming Lit component imports these granular entries and lists
 `gemstoneSelectedGlyphStyles` in its `static styles` ahead of the CSS that follows.
@@ -312,10 +315,12 @@ whole trigger, so the halo follows the gem's silhouette. The focus ring belongs 
 do not add a permanent circular selection border. Leave the popover's default content padding and
 arrow intact.
 
-This Lit template assumes `selected` is a `GemstoneKey`. `accentLabel` names the dialog and the
-radiogroup. `triggerLabel(name)` (“Accent color: Ruby”), `captionLabel` (“Gemstone:”, with the
-locale's own separator), and `translateGemstone()` come from the application's catalog.
-`onAccentChange()` validates the string and updates application state:
+This Lit template assumes `selected` is a `GemstoneKey`.
+`chooseAccentGemstoneLabel` is the application's localized version of the fixed chooser action
+“Choose accent gemstone”; it names the trigger, dialog, and radiogroup. `captionLabel`
+(“Gemstone:”, with the locale's own separator) and `translateGemstone()` also come from the
+application's catalog. The selected name stays visible in the caption, including when the
+popover opens. `onAccentChange()` validates the string and updates application state:
 
 ```ts
 const items = GEMSTONE_KEYS.map((key) => ({
@@ -328,13 +333,14 @@ const items = GEMSTONE_KEYS.map((key) => ({
 const name = translateGemstone(selected);
 html`
   <lr-popover class="gemstone-accent-picker" placement="bottom-end"
-    popup-role="dialog" aria-label=${accentLabel}>
-    <lr-icon-button slot="trigger" label=${triggerLabel(name)}>
+    popup-role="dialog" aria-label=${chooseAccentGemstoneLabel}>
+    <lr-icon-button slot="trigger" label=${chooseAccentGemstoneLabel}
+      title=${chooseAccentGemstoneLabel}>
       <span class="gem" data-lr-gemstone-selected aria-hidden="true">${gemstoneGlyph(GEMSTONES[selected].fill)}</span>
     </lr-icon-button>
     <div class="palette">
       <p class="heading">${captionLabel} <span class="name">${name}</span></p>
-      <lr-swatch-picker mode="gemstone" aria-label=${accentLabel}
+      <lr-swatch-picker mode="gemstone" aria-label=${chooseAccentGemstoneLabel}
         .items=${items} .value=${selected}
         @lr-change=${(event: CustomEvent<{ value: string }>) => onAccentChange(event.detail.value)}>
       </lr-swatch-picker>
