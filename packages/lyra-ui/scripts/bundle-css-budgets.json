@@ -1,5 +1,5 @@
 {
-  "$comment": "CSS-only delivery canaries cover standalone theme assets and representative compositions through the existing esbuild minification and gzip path. Opacity-aware border qualification raises the standalone glass measurement to 1,467 bytes; its ceiling follows the shared 4% headroom policy, rounded down to whole bytes. Other canaries remain unchanged.",
+  "$comment": "CSS-only delivery canaries cover standalone theme assets and representative compositions through the existing esbuild minification and gzip path. The 60% Glass default and contrast-preserving dark fill raise the standalone glass measurement to 1,542 bytes; its 1,603-byte ceiling follows the shared 4% headroom policy, rounded down to whole bytes. Other canaries remain unchanged.",
   "$maximumHeadroomPercent": 4,
   "$reviewedGzipBytes": {
     "accents": 1130,
@@ -17,7 +17,7 @@
     "look-shadcn": 3678,
     "look-terminal": 1612,
     "native-styles": 1595,
-    "surface-glass": 1467,
+    "surface-glass": 1542,
     "theme": 9950
   },
   "$maximumAllowedGzipKb": {
@@ -36,7 +36,7 @@
     "look-shadcn": 3.7353515625,
     "look-terminal": 1.63671875,
     "native-styles": 1.619140625,
-    "surface-glass": 1.4892578125,
+    "surface-glass": 1.5654296875,
     "theme": 10.10546875
   },
   "measurements": [

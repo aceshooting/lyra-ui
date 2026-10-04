@@ -56,7 +56,7 @@ for (const direction of ['ltr', 'rtl']) for (const surface of ['glass', 'solid']
     expect(disclosureBox.bottom).to.be.at.most(collapsedBox.bottom);
     expect(map.shadowRoot!.activeElement === disclosure).to.equal(true);
     const hasGlass = surface === 'glass' && CSS.supports('backdrop-filter', 'blur(1px)');
-    expect(toRgba(getComputedStyle(legend).backgroundColor)[3]).to.equal(hasGlass ? 179 : 255);
+    expect(toRgba(getComputedStyle(legend).backgroundColor)[3]).to.equal(hasGlass ? 153 : 255);
     const layer = legend.querySelector<HTMLElement>('.glass-scroll-layer')!;
     if (hasGlass) expect(getComputedStyle(layer, '::before').backdropFilter).to.include('blur(');
     map.legendOpen = true;

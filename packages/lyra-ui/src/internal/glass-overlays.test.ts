@@ -99,7 +99,7 @@ describe('shared glass menu and modal surfaces', () => {
           }
           const alpha = toRgba(getComputedStyle(box).backgroundColor)[3];
           if (treatment === 'solid') expect(alpha, `${surface.name} material alpha`).to.equal(255);
-          else expect(alpha, `${surface.name} material alpha`).to.be.within(178, 179);
+          else expect(alpha, `${surface.name} material alpha`).to.be.within(152, 153);
           const layer = box.querySelector<HTMLElement>(':scope > .glass-scroll-layer') ?? box;
           const filter = getComputedStyle(layer, '::before').backdropFilter;
           if (treatment === 'glass') expect(filter, surface.name).to.include('blur(');
@@ -124,12 +124,12 @@ describe('shared glass menu and modal surfaces', () => {
     const dialog = wrapper.querySelector<LyraDialog>('lr-dialog')!;
     await dialog.show();
     const panel = dialog.shadowRoot!.querySelector<HTMLElement>('[part~="panel"]')!;
-    expect(toRgba(getComputedStyle(panel).backgroundColor)[3]).to.be.within(178, 179);
+    expect(toRgba(getComputedStyle(panel).backgroundColor)[3]).to.be.within(152, 153);
     const dropdown = dialog.querySelector<LyraDropdown>('lr-dropdown')!;
     await dropdown.show();
     const popup = dropdown.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
     expect(popup.matches(':popover-open')).to.equal(true);
-    expect(toRgba(getComputedStyle(popup).backgroundColor)[3]).to.be.within(178, 179);
+    expect(toRgba(getComputedStyle(popup).backgroundColor)[3]).to.be.within(152, 153);
     const menu = dropdown.querySelector<HTMLElement>('lr-menu')!;
     expect(toRgba(getComputedStyle(menu).backgroundColor)[3]).to.equal(0);
     await dropdown.hide();
@@ -147,7 +147,7 @@ describe('shared glass menu and modal surfaces', () => {
     expect(dialog.hasAttribute('data-native-modal-active')).to.equal(true);
     const panel = dialog.shadowRoot!.querySelector<HTMLElement>('[part~="panel"]')!;
     expect(panel.getBoundingClientRect().height).to.be.greaterThan(0);
-    expect(toRgba(getComputedStyle(panel).backgroundColor)[3]).to.be.within(178, 179);
+    expect(toRgba(getComputedStyle(panel).backgroundColor)[3]).to.be.within(152, 153);
     await dialog.hide();
     expect(dialog.hasAttribute('data-native-modal-active')).to.equal(false);
     native.close();

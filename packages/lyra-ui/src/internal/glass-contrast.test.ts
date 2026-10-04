@@ -61,7 +61,7 @@ describe('rendered glass foreground qualification', () => {
         for (const surfaceToken of ['--lr-color-surface', '--lr-color-surface-raised', '--lr-color-surface-overlay', '--lr-color-surface-container-high', '--lr-color-surface-container-highest']) {
           surface.style.setProperty('--test-surface', `var(${surfaceToken})`);
           const paint = getComputedStyle(surface).backgroundColor;
-          if (treatment === 'glass') expect(toRgba(paint)[3]).to.be.within(178, 179);
+          if (treatment === 'glass') expect(toRgba(paint)[3]).to.be.within(152, 153);
           else expect(toRgba(paint)[3]).to.equal(255);
           for (const backdrop of ['black', 'white']) {
             const background = composite(paint, backdrop);
