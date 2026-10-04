@@ -1,6 +1,6 @@
 ---
 name: compose-lyra-interfaces
-description: Design and implement coherent interfaces with @aceshooting/lyra-ui and lr-* custom elements. Use when selecting Lyra components for a page, dashboard, form, data view, retrieval flow, conversation or agent experience; composing responsive layouts and application states; or reviewing a Lyra interface for accessibility, localization, RTL, theming, framework binding, and granular imports.
+description: Design and implement coherent interfaces with @aceshooting/lyra-ui, its @aceshooting/lyra-docs and @aceshooting/lyra-flags companions, and lr-* custom elements. Use when selecting Lyra components for a page, dashboard, form, data view, retrieval flow, conversation or agent experience; composing responsive layouts and application states; or reviewing a Lyra interface for accessibility, localization, RTL, theming, framework binding, and granular imports.
 ---
 
 # Compose Lyra Interfaces
@@ -8,6 +8,8 @@ description: Design and implement coherent interfaces with @aceshooting/lyra-ui 
 Turn product intent into a small, coherent Lyra component hierarchy, then implement and verify it.
 Use the separate `$lyra-ui` API skill or the installed package's `llms.txt` reference for exact
 properties, events, slots, parts, custom properties, peers, and import paths before writing code.
+For the experimental DOCX editor or optional flag assets, follow that skill's companion-package
+routes to the corresponding package README before choosing imports.
 
 Shadcn, Glass, Emerald, System mode and comfortable density are the built-in appearance defaults.
 Use the [Lyra signature starter](../lyra-ui/references/shared/styles-and-tokens.md#lyra-signature-starter)

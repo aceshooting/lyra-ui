@@ -1,8 +1,9 @@
 ---
 name: lyra-ui
 description: >
-  Use when writing or reviewing code that imports @aceshooting/lyra-ui, uses any lr-* custom
-  element, or migrates a project off Web Awesome (wa-*) or Shoelace (sl-*) components. Covers
+  Use when writing or reviewing code that imports @aceshooting/lyra-ui or its
+  @aceshooting/lyra-docs and @aceshooting/lyra-flags companions, uses any lr-* custom element,
+  or migrates a project off Web Awesome (wa-*) or Shoelace (sl-*) components. Covers
   component APIs (attributes, slots, events, parts, CSS custom properties), design-token theming,
   localization, framework/TypeScript integration, and migration paths from wa-*/sl-* to lr-*.
 ---
@@ -14,6 +15,20 @@ independent alternative to Shoelace and Web Awesome, with no runtime dependency 
 custom elements use the `lr-` prefix and ship with design tokens, localization, RTL support and
 (for form controls) native form association. The current element count and complete tag list live
 in `references/index.md`; do not repeat a remembered count.
+
+## Companion packages
+
+`@aceshooting/lyra-docs` is the **experimental** DOCX editor companion, not a core component.
+For `<lr-docx-editor>` and its session API, read the installed
+`@aceshooting/lyra-docs/README.md`, or the [public package README](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-docs/README.md).
+It documents the exact `@docx-editor.dev/core` optional peer, granular editor registration and
+stylesheet imports, save receipts, and current limits. Core document viewers remain in this
+skill's `references/components/` catalog.
+
+`@aceshooting/lyra-flags` supplies optional assets for `<lr-flag>`. Read
+`references/components/lr-flag.md` for its component and peer registration contract. For direct
+asset loading or fidelity-specific imports, read the installed `@aceshooting/lyra-flags/README.md`
+or the [public package README](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-flags/README.md).
 
 ## Appearance defaults
 

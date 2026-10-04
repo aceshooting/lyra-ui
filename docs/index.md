@@ -16,8 +16,9 @@ This file is a short index. The primary documentation lives on the sites linked 
 - **[Package README](../packages/lyra-ui/README.md)** — install instructions, quick start,
   theming/i18n/RTL, framework integration (React/Vue/Angular/Svelte), SSR & Declarative Shadow DOM,
   and browser/Node support matrix.
-- **[Root README](../README.md)** — monorepo overview and links to every companion package
-  (`@aceshooting/lyra-flags`, etc.).
+- **[Root README](../README.md)** — monorepo overview and links to both companion packages:
+  [optional flag assets](../packages/lyra-flags/README.md) and the
+  [experimental DOCX editor](../packages/lyra-docs/README.md).
 - **[llms.txt](../packages/lyra-ui/llms.txt)** — the entry index for AI coding assistants, pointing
   into `packages/lyra-ui/llms/`: one reference file per component (`llms/components/<tag>.md`), plus
   the library-wide contracts, design tokens, optional peers, and `wa-*`/`sl-*` migration tables.
