@@ -12,7 +12,7 @@ const invalid = Object.freeze({ ok: false, code: 'invalid-option' } as const);
 const limited = Object.freeze({ ok: false, code: 'resource-limit' } as const);
 const unsupported = Object.freeze({ ok: false, code: 'unsupported' } as const);
 const FONT_FAMILY = /^[\p{L}\p{N}\p{M} \-.+_]{1,64}$/u;
-export const DOCX_HIGHLIGHTS = Object.freeze(['yellow', 'green', 'cyan', 'magenta', 'blue', 'red', 'darkBlue', 'darkCyan',
+const DOCX_HIGHLIGHTS = Object.freeze(['yellow', 'green', 'cyan', 'magenta', 'blue', 'red', 'darkBlue', 'darkCyan',
   'darkGreen', 'darkMagenta', 'darkRed', 'darkYellow', 'darkGray', 'lightGray', 'black', 'none'] as const);
 const success = <T>(value: T): DocxResult<T> => Object.freeze({ ok: true, value });
 
