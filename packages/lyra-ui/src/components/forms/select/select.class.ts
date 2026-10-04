@@ -1815,7 +1815,8 @@ export class LyraSelect<
    *  unknown" -- see `labelFor()`'s own loading-placeholder fallback, which this has to agree with
    *  so the trigger/tag text and the "not in catalog" badge are never shown at the same time. */
   private isUnknownValue(value: string, occurrenceIndex = 0): boolean {
-    if (!this.optionsObserved || this.loading) return false;
+    // An empty value no option claims is "nothing selected", never a stale catalog entry.
+    if (!this.optionsObserved || this.loading || value === '') return false;
     return this.resolvedLabelFor(value, occurrenceIndex) === undefined;
   }
 
@@ -2783,7 +2784,9 @@ export class LyraSelect<
     const selectedLabels = this._selected
       .map((value, index) => this.labelFor(value, index))
       .join(', ');
-    const hasValue = this._selected.length > 0;
+    // A cleared single value ('') that no option claims shows the placeholder, like a fresh select.
+    const hasValue = this._selected.length > 0 &&
+      (this.multiple || this._selected[0] !== '' || this.resolvedLabelFor('', 0) !== undefined);
     // `loading` covers the whole pending state, not just its committed-value half. With nothing
     // selected `labelFor()` is never reached, so this branch used to fall through to the
     // consumer's own `placeholder` -- forcing them to re-localize, in their own catalog, the exact

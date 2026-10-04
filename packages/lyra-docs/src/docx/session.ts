@@ -1,3 +1,4 @@
+import type { DocxChartPlacement } from './eigenpal-charts.js';
 import type { DocxEngineEvent, DocxEnginePort, DocxEngineImageInsertion, DocxMountOwnership, DocxSessionPort, DocxTableLabels } from './engine-port.js';
 import { normalizeImageInsertion, imageInsertionAborted, listenImageInsertionAbort } from './image-insertion-input.js';
 import { isDocxImageAction, isDocxTableAction, normalizeDocxAction, normalizeDocxReplacement, normalizeDocxSearch } from './commands.js';
@@ -96,6 +97,16 @@ export function refreshInternalDocxTableLabels(session: DocxSession, labels: Doc
   return session instanceof InternalDocxSession && session.refreshTableLabels(labels);
 }
 
+/** Component-only chart bridge; absent from the public package barrels. */
+export function internalDocxCharts(session: DocxSession | null): readonly DocxChartPlacement[] {
+  return session instanceof InternalDocxSession ? session.charts() : [];
+}
+
+/** Component-only zoom bridge; absent from the public package barrels. */
+export function setInternalDocxZoom(session: DocxSession | null, zoom: number | 'fit'): boolean {
+  return session instanceof InternalDocxSession && session.setZoom(zoom);
+}
+
 /** Component-only painted-image bridge for resize handles; absent from the public package barrels. */
 export function internalDocxSelectedImageElement(session: DocxSession | null): HTMLElement | null {
   return session instanceof InternalDocxSession ? session.selectedImageElement() : null;
@@ -136,6 +147,17 @@ class InternalDocxSession implements DocxSession {
   refreshTableLabels(labels: DocxTableLabels): boolean {
     if (this.gate() || !this.engine) return false;
     try { return this.engine.refreshTableLabels?.(Object.freeze({ ...labels })) ?? false; }
+    catch { return false; }
+  }
+  charts(): readonly DocxChartPlacement[] {
+    if (!this.owned() || this.status !== 'ready' || !this.engine) return [];
+    try { return this.engine.charts?.() ?? []; }
+    catch { return []; }
+  }
+  setZoom(zoom: number | 'fit'): boolean {
+    if (!this.owned() || this.status !== 'ready' || !this.engine) return false;
+    if (zoom !== 'fit' && !(Number.isFinite(zoom) && zoom >= 0.25 && zoom <= 4)) return false;
+    try { return this.engine.setZoom?.(zoom) ?? false; }
     catch { return false; }
   }
   selectedImageElement(): HTMLElement | null {
@@ -421,6 +443,8 @@ class InternalDocxSession implements DocxSession {
     if (event === 'change') {
       this.revision = Object.freeze({ documentId: this.revision!.documentId, value: this.revision!.value + 1 });
       this.dirty = true;
+      // A receipt for an older revision can never be acknowledged; release its bytes now.
+      this.receipt = null;
       const insertion = this.imageInsertion;
       if (insertion?.armed && insertion.engine === emitter && insertion.operation === this.operation && !insertion.committed) {
         insertion.committed = this.revision;

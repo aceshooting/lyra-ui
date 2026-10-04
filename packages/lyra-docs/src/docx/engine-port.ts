@@ -1,3 +1,4 @@
+import type { DocxChartPlacement } from './eigenpal-charts.js';
 import type {
   DocxAction, DocxCommandAvailability, DocxResult, DocxSelection,
   DocxSource, DocxFormatting, DocxParagraphStyles, DocxFontFamilies, DocxTableContext, DocxImageContext, DocxImageDescription, DocxImageDirection
@@ -53,6 +54,10 @@ export interface DocxEnginePort {
   inspect(): DocxEngineState;
   /** Presentation only; must not lay out, flush input or mutate the document. */
   refreshTableLabels?(labels: DocxTableLabels): boolean;
+  /** Presentation only: body charts with cached series, read once per package revision. */
+  charts?(): readonly DocxChartPlacement[];
+  /** Presentation only: page zoom as a factor (0.5–2) or the bounded page-width fit. */
+  setZoom?(zoom: number | 'fit'): boolean;
   /** Presentation only: the painted node of the selected supported image, for pointer chrome. */
   selectedImageElement?(): HTMLElement | null;
   /** A change event is one committed document change, never initial loading. */

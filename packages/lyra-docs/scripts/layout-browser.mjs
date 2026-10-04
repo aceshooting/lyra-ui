@@ -217,6 +217,40 @@ export async function runEditorLayout(page, check, { createEditor, saveEditor })
     await page.setViewportSize({ width: 1440, height: 900 });
     await images.evaluate(element => element.remove());
   });
+  await check('document charts paint from cached values over their placeholders, follow zoom and round-trip untouched', async () => {
+    const source = await createEditor(page, 'layout-charts', 'chart');
+    const host = page.locator('#layout-charts');
+    await host.scrollIntoViewIfNeeded();
+    await host.locator('[part="chart"]').waitFor({ state: 'visible' });
+    const painted = await host.evaluate(element => {
+      const charts = [...element.shadowRoot.querySelectorAll('[part="chart"]')];
+      const drawings = [...element.querySelectorAll('[data-drawing-node-id]')].map(node => node.getBoundingClientRect());
+      const chart = charts[0], lite = chart.querySelector('lr-lite-chart'), box = chart.getBoundingClientRect();
+      return { count: charts.length, drawings: drawings.length, type: chart.dataset.chartType, title: chart.querySelector('.chart-title')?.textContent,
+        labels: [...lite.labels], datasets: lite.datasets.map(entry => ({ label: entry.label, data: [...entry.data], color: entry.color })),
+        background: getComputedStyle(chart).backgroundColor, box: { x: box.x, y: box.y, width: box.width, height: box.height },
+        first: { x: drawings[0].x, y: drawings[0].y, width: drawings[0].width, height: drawings[0].height } };
+    });
+    assert.equal(painted.count, 1, 'only the supported column chart is painted; the pie keeps its placeholder');
+    assert.equal(painted.drawings, 2);
+    assert.equal(painted.type, 'bar');
+    assert.equal(painted.title, 'Quarterly column');
+    assert.deepEqual(painted.labels, ['North', 'South', 'East']);
+    assert.deepEqual(painted.datasets, [{ label: 'Sales', data: [12, 7, 9], color: '#4472C4' }, { label: 'Costs', data: [8, 5, 4], color: '#ED7D31' }]);
+    assert.equal(painted.background, 'rgb(255, 255, 255)');
+    for (const key of ['x', 'y', 'width', 'height']) assert.ok(Math.abs(painted.box[key] - painted.first[key]) <= 1.5, JSON.stringify(painted));
+    await host.evaluate(element => { element.zoom = 0.5; });
+    await page.waitForFunction(width => {
+      const chart = document.getElementById('layout-charts').shadowRoot.querySelector('[part="chart"]');
+      return chart && chart.getBoundingClientRect().width < width * 0.6;
+    }, painted.box.width);
+    const saved = await saveEditor(page, 'layout-charts');
+    const before = unzipSync(Uint8Array.from(source)), after = unzipSync(Uint8Array.from(saved));
+    // The engine re-serializes parts canonically (namespace declaration order); the chart content is unchanged.
+    const content = bytes => strFromU8(bytes).replace(/\s+xmlns:[a-z]+="[^"]*"/gu, '');
+    for (const name of ['word/charts/chart1.xml', 'word/charts/chart2.xml']) assert.equal(content(after[name]), content(before[name]), name);
+    await host.evaluate(element => element.remove());
+  });
   await check('dragging image handles resizes the picture as one edit, keeping corner proportions', async () => {
     await createEditor(page, 'layout-drag', 'image-simple');
     const host = page.locator('#layout-drag');

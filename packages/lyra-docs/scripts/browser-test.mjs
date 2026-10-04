@@ -1218,10 +1218,12 @@ async function runBrowser(name, url, { lazyEntry, engineEntry }) {
           const family = element.shadowRoot.querySelector('[part="font-family"]');
           await family.updateComplete;
           return { opened, unknownFont: Boolean(family.shadowRoot.querySelector('[part="unknown-value"]')),
-            errorVisible: Boolean(element.shadowRoot.querySelector('[part="error"]')?.getClientRects().length), expected };
+            errorVisible: Boolean(element.shadowRoot.querySelector('[part="error"]')?.getClientRects().length),
+            message: element.shadowRoot.querySelector('[part="error"]')?.textContent ?? '', expected };
         }, { kind, expected });
         assert.deepEqual(result.opened, { ok: false, code: expected });
         assert.equal(result.errorVisible, true, `${kind} did not show a visible fallback`);
+        assert.match(result.message, kind === 'external' ? /external content/u : /damaged or uses content/u, 'the fallback names the refusal');
         assert.equal(result.unknownFont, false, 'A missing formatting value must clear font selection');
       }
       const results = await page.evaluate(async () => window.axe.run(document.querySelector('#refused-malformed'), { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] } }));

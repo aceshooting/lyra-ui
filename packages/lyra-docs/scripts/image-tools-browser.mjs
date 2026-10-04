@@ -228,6 +228,8 @@ export async function runImageTools(page, check, { createEditor, saveEditor, ass
   await check('keyboard image A to B to A navigation cannot revive the original description draft', async () => {
     const id = 'image-ui-keyboard-aba'; await createEditor(page, id, 'image-simple');
     const before = await saveEditor(page, id);
+    // Start at the toolbar's tab stop: Firefox does not wrap Tab past the page's last control.
+    await editor(page, id).evaluate(element => element.shadowRoot.querySelector('[data-tool-key][tabindex="0"]').focus());
     for (let attempt = 0; attempt < 80; attempt++) {
       await page.keyboard.press('Tab');
       if (await editor(page, id).evaluate(element => element.contains(document.activeElement) && document.activeElement.matches('.docx-pages'))) break;

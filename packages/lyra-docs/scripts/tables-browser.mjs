@@ -423,7 +423,9 @@ async function runTableToolbar(page, check, { createEditor, saveEditor, assertPr
     assert.equal(await page.locator(`#${id} [data-table-action="row-below"]`).getAttribute('aria-label'), 'Ligne dessous');
     assert.equal(await page.locator(`#${id}`).evaluate(element => element.__tableMount === element.querySelector('[slot="document"]').firstElementChild), true);
     // Row hover exposes core-owned insertion furniture; changing strings refreshes its current label.
-    const rowBox = await page.locator(`#${id} .docx-pages`).getByText('A11', { exact: true }).evaluate(element => {
+    const cell = page.locator(`#${id} .docx-pages`).getByText('A11', { exact: true });
+    await cell.scrollIntoViewIfNeeded();
+    const rowBox = await cell.evaluate(element => {
       const box = element.closest('.docx-table-row').getBoundingClientRect();
       return { x: box.x, y: box.y, height: box.height };
     });

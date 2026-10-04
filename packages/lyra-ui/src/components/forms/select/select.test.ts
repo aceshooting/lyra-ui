@@ -2240,6 +2240,36 @@ describe('unknown committed value presentation', () => {
     expect(badge, 'a distinguishing badge renders next to the raw value').to.exist;
   });
 
+  it('shows the placeholder, not an unknown badge, when a matched value is cleared to an empty string', async () => {
+    const el = (await fixture(html`
+      <lr-select placeholder="Paragraph style" value="Normal">
+        <lr-option value="Normal">Normal</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    await el.updateComplete;
+    el.querySelector('lr-option')!.remove();
+    el.value = '';
+    await waitUntil(() => {
+      const display = el.shadowRoot!.querySelector('[part="display-input"]')!;
+      return !display.hasAttribute('data-unknown-value') && !display.querySelector('[part="unknown-value"]') &&
+        (display.textContent ?? '').includes('Paragraph style');
+    }, 'a cleared value renders the placeholder');
+    expect(el.value).to.equal('');
+  });
+
+  it('still labels an explicit empty-valued option', async () => {
+    const el = (await fixture(html`
+      <lr-select value="">
+        <lr-option value="">None</lr-option>
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    await el.updateComplete;
+    const display = el.shadowRoot!.querySelector('[part="display-input"]')!;
+    expect(display.textContent).to.contain('None');
+    expect(display.hasAttribute('data-unknown-value')).to.be.false;
+  });
+
   it('retints the open-listbox "not in catalog" badge from --lr-select-option-badge-bg', async () => {
     const el = (await fixture(html`
       <lr-select value="ghost" with-unknown-option style="--lr-select-option-badge-bg: rgb(1, 2, 3);">

@@ -291,6 +291,22 @@ test('composition end stays guarded until engine event processing has finished',
   opened.value.destroy();
 });
 
+test('a composition abandoned by focus leaving the document never keeps commands refused', async () => {
+  const h = harness();
+  const opened = await openEigenpalDocument({ mount: h.mount }, { kind: 'blank' },
+    { readOnly: false, signal: new AbortController().signal }, () => true, h.loader);
+  assert(opened.ok);
+  opened.value.subscribe(() => {});
+  h.child.dispatchEvent(new Event('compositionstart'));
+  h.child.dispatchEvent(Object.assign(new Event('focusout'), { relatedTarget: h.child }));
+  await Promise.resolve();
+  assert.equal(opened.value.inspect().composing, true, 'focus moving within the document keeps the composition');
+  h.child.dispatchEvent(Object.assign(new Event('focusout'), { relatedTarget: null }));
+  await Promise.resolve();
+  assert.equal(opened.value.inspect().composing, false);
+  opened.value.destroy();
+});
+
 test('mount ownership lost during lazy loading refuses before allocating an engine', async () => {
   const h = harness();
   const pending = deferred<Awaited<ReturnType<typeof h.loader>>>();

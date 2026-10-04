@@ -112,12 +112,13 @@ docxEditorLabel, docxEditorNew, docxEditorOpen, docxEditorSave,
 docxEditorBold, docxEditorItalic, docxEditorUnderline, docxEditorStrikethrough,
 docxEditorSuperscript, docxEditorSubscript, docxEditorClearFormatting,
 docxEditorIndentIncrease, docxEditorIndentDecrease, docxEditorLineSpacing,
-docxEditorPageBreak, docxEditorHighlight, docxEditorNoHighlight,
+docxEditorPageBreak, docxEditorZoom, docxEditorZoomFit, docxEditorChart, docxEditorHighlight, docxEditorNoHighlight,
 docxEditorCustomColor, docxEditorColor* (DarkRed, Red, Orange, Yellow, LightGreen,
 Green, BrightGreen, LightBlue, Turquoise, Blue, DarkBlue, Teal, Purple, Pink, Violet,
 DarkYellow, Black, Gray, DarkGray, LightGray), docxEditorUndo,
 docxEditorRedo, docxEditorUntitled, docxEditorIdle, docxEditorOpening,
 docxEditorReady, docxEditorUnsaved, docxEditorSaving, docxEditorError,
+docxEditorErrorTooLarge, docxEditorErrorExternal, docxEditorErrorInvalid,
 docxEditorDisconnected, docxEditorShortcut, docxEditorDiscardQuestion,
 docxEditorDiscard, docxEditorKeep, docxEditorFormatting,
 docxEditorParagraphStyle, docxEditorAlignment, docxEditorAlignLeft,
@@ -201,6 +202,14 @@ including read-only documents, and report when no image is available for the
 tools. Navigation changes selection without changing document content or history;
 selecting the sole already selected target is unchanged. Use **Alt+F10** and the
 toolbar's arrow keys to reach them without a pointer.
+
+Word bar, column, line and area charts are painted from the document's own cached
+values with Lyra's `<lr-lite-chart>`, in Office's default series colors, over the engine's
+chart placeholder (`[part="chart"]`, with `data-chart-type`). The painting follows scroll
+and zoom, is decorative (inert and hidden from assistive technology, like the placeholder
+it covers), and never edits the chart: chart parts are preserved on save. Pie, scatter,
+and other chart kinds keep the placeholder. At most 32 charts, 16 series and 500 points
+per chart are read; chart parts over 2 MiB are not painted.
 
 Selecting an editable image paints a frame with eight resize handles over it. Drag a
 corner to scale proportionally or an edge to change one axis; hold Shift to invert that
@@ -294,8 +303,11 @@ navigation icons mirror with the reading direction; alignment icons remain physi
 
 The document paper stays white in light and dark themes; authored text colors are preserved.
 
-Documents keep their native 100% scale. A narrower allocation scrolls horizontally
-inside the document viewport; the toolbar and dialogs still adapt to the available width.
+Documents open at 100% scale. The status bar's **Zoom** select (and the reflected
+`zoom` property: `fit` or a factor from 0.25 to 4) changes the page scale without
+changing the document; `fit` follows the available width, which suits phones. At a
+fixed zoom a narrower allocation scrolls horizontally inside the document viewport;
+the toolbar and dialogs still adapt to the available width.
 The document viewport scrolls within a maximum block size of `30rem`, using
 `--lr-size-30rem` when available. Set `--lr-docx-editor-document-max-block-size`
 to a valid CSS length on the component to change that allocation. Direct session
@@ -323,7 +335,7 @@ bringing an offscreen target into view then depends on the host's scroll layout.
 | `image-description-popover`, `image-description-trigger`, `image-description-fields`, `image-title`, `image-description`, `image-description-hint`, `image-description-actions`, `image-description-apply`, `image-description-cancel` | Bounded title and multiline description dialog |
 | `find-toggle`, `find`, `find-query`, `find-match-case`, `find-whole-word`, `find-submit`, `find-count`, `find-previous`, `find-next`, `find-replace`, `find-replace-button` | Demand-driven find and replace-one controls |
 | `document` | Scrollable document surface |
-| `error`, `edit-error`, `status`, `filename`, `state` | Load/save or edit error, file name, and editor state |
+| `error`, `edit-error`, `status`, `filename`, `state`, `zoom` | Load/save or edit error, file name, editor state, and the page zoom select |
 
 Import `@aceshooting/lyra-docs/docx/editor.css` to style engine content. It is
 not injected into the page by the element.

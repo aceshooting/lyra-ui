@@ -7,7 +7,8 @@ import { resolveLyraScopedString } from '@aceshooting/lyra-ui/localization.js';
 import { tag } from '@aceshooting/lyra-ui/utilities/prefix.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '@aceshooting/lyra-ui/utilities/announcer.js';
 import { createDocxSession } from './create-session.js';
-import { internalDocxSelectedImageElement, refreshInternalDocxTableLabels } from './session.js';
+import { internalDocxCharts, internalDocxSelectedImageElement, refreshInternalDocxTableLabels, setInternalDocxZoom } from './session.js';
+import type { DocxChartPlacement } from './eigenpal-charts.js';
 import { captureTableToolIntent, tableInsertDraft } from './table-tools.js';
 import {
   captureImageToolIntent, imageDescriptionDraft, imageDimensionDraft,
@@ -92,6 +93,10 @@ const imageHandles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'] as const;
 type ImageHandle = typeof imageHandles[number];
 interface ImageFrame { left: number; top: number; width: number; height: number }
 interface ImageClip extends ImageFrame { frame: ImageFrame }
+interface ChartLayer { clip: ImageFrame; charts: readonly { placement: DocxChartPlacement; frame: ImageFrame }[] }
+const liteChartTag = unsafeStatic(tag('lite-chart'));
+/** Office's default series colors, so document charts look as their author saw them in Word. */
+const officeSeriesColors = ['#4472C4', '#ED7D31', '#A5A5A5', '#FFC000', '#5B9BD5', '#70AD47'] as const;
 interface ImageDrag {
   pointerId: number;
   handle: ImageHandle;
@@ -117,6 +122,17 @@ const highlightColors = [
   ['lightGray', '#C0C0C0', 'LightGray'], ['black', '#000000', 'Black'],
 ] as const satisfies readonly (readonly [Exclude<DocxHighlight, 'none'>, string, string])[];
 const lineSpacings = [1, 1.15, 1.5, 2, 2.5, 3] as const;
+const zoomLevels = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
+export type DocxEditorZoom = number | 'fit';
+/** `fit` or a factor from 0.25 to 4; anything else falls back to 100%. */
+const zoomConverter = {
+  fromAttribute(value: string | null): DocxEditorZoom {
+    if (value === 'fit') return 'fit';
+    const factor = Number(value);
+    return value !== null && Number.isFinite(factor) && factor >= 0.25 && factor <= 4 ? factor : 1;
+  },
+  toAttribute(value: DocxEditorZoom): string { return String(value); },
+};
 const swatchPickerTag = unsafeStatic(tag('swatch-picker'));
 const iconTag = unsafeStatic(tag('icon'));
 const tooltipTag = unsafeStatic(tag('tooltip'));
@@ -201,7 +217,7 @@ const refused = <T>(code: DocxRefusalCode): DocxResult<T> => ({ ok: false, code 
  * @slot table-delete-row-icon - Decorative icon for the table delete row action; the editor retains its accessible name.
  * @slot table-delete-column-icon - Decorative icon for the table delete column action; the editor retains its accessible name.
  * @slot table-delete-table-icon - Decorative icon for the table delete table action; the editor retains its accessible name.
- * @cssprop --lr-docx-editor-document-max-block-size - Document scroll viewport maximum block size; defaults to 30rem. Set a valid length or none to let the document grow. Pages keep 100% scale and scroll horizontally in narrower allocations.
+ * @cssprop --lr-docx-editor-document-max-block-size - Document scroll viewport maximum block size; defaults to 30rem. Set a valid length or none to let the document grow. At a fixed zoom, pages keep their scale and scroll horizontally in narrower allocations; zoom="fit" follows the width.
  * @csspart base - The root editor surface.
  * @csspart toolbar - File and formatting controls.
  * @csspart file-actions - New, Open and Save controls.
@@ -257,6 +273,7 @@ const refused = <T>(code: DocxRefusalCode): DocxResult<T> => ({ ok: false, code 
  * @csspart image-previous - Selects the previous eligible body image, wrapping at the start.
  * @csspart image-next - Selects the next eligible body image, wrapping at the end.
  * @csspart image-navigation-status - Feedback when no eligible image is available.
+ * @csspart chart - A bar, column, line or area chart painted from its document's cached values over the engine placeholder, identified by data-chart-type. Other chart kinds keep the placeholder.
  * @csspart image-frame - Selection frame painted over the selected editable image.
  * @csspart image-handle - One pointer resize handle, identified by data-handle (nw, n, ne, e, se, s, sw, w). Corners keep the aspect ratio; Shift inverts that.
  * @csspart image-size - Live dimensions shown while a resize handle is dragged.
@@ -309,11 +326,12 @@ const refused = <T>(code: DocxRefusalCode): DocxResult<T> => ({ ok: false, code 
  * @csspart discard-button - Confirms replacement of unsaved content.
  * @csspart keep-button - Cancels replacement of unsaved content.
  * @csspart document - Scrollable engine surface.
- * @csspart error - Localized load or save failure.
+ * @csspart error - Localized load or save failure, naming size, external-content or unsupported-content refusals.
  * @csspart edit-error - Localized editing refusal.
  * @csspart status - Filename and current document state.
  * @csspart filename - The local file name or untitled fallback.
  * @csspart state - Current load, dirty or save state.
+ * @csspart zoom - Page zoom select: Fit width or a percentage.
  */
 export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   static override styles = [LyraElement.styles, styles];
@@ -328,6 +346,10 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
 
   /** Applied when the next document is opened. The session fixes this value at creation. */
   @property({ type: Boolean, attribute: 'read-only', reflect: true }) readOnly = false;
+
+  /** Page zoom: `fit` follows the available width, or a factor from 0.25 to 4. Presentation only. */
+  @property({ reflect: true, converter: zoomConverter }) zoom: DocxEditorZoom = 1;
+  private appliedZoom: { session: DocxSession; zoom: DocxEditorZoom } | null = null;
 
   @state() private currentSnapshot: Readonly<DocxSnapshot> | null = null;
   @state() private filename = '';
@@ -351,6 +373,8 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   /** Word-style split color tools remember the last applied value; the engine cannot report the current one. */
   @state() private lastTextColor = '#FF0000';
   @state() private lastHighlight: Exclude<DocxHighlight, 'none'> = 'yellow';
+  /** The trigger whose panel is open; its tooltip stays quiet until the panel closes. */
+  @state() private openPanelTrigger: string | null = null;
   @state() private tableRows = '2';
   @state() private tableColumns = '2';
   @state() private tableDialogOpen = false;
@@ -398,6 +422,9 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   private imageFrameRequest = 0;
   private imageFrameObserver: ResizeObserver | null = null;
   private observedImage: HTMLElement | null = null;
+  @state() private chartLayer: ChartLayer | null = null;
+  private surfaceObserver: ResizeObserver | null = null;
+  private observedSurface: Element | null = null;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -428,6 +455,10 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     this.imageFrameObserver = null;
     this.observedImage = null;
     this.imageClip = null;
+    this.surfaceObserver?.disconnect();
+    this.surfaceObserver = null;
+    this.observedSurface = null;
+    this.chartLayer = null;
     this.disposeSession();
     this.mount?.remove();
     this.mount = null;
@@ -450,7 +481,9 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
     this.refreshTableLabels();
-    if (!(changed as Map<PropertyKey, unknown>).has('imageClip') || changed.size > 1) this.scheduleImageFrame();
+    this.applyZoom();
+    const overlayOnly = [...(changed as Map<PropertyKey, unknown>).keys()].every(key => key === 'imageClip' || key === 'chartLayer');
+    if (!overlayOnly) this.scheduleImageFrame();
     const enabled = this.enabledToolbarButtons();
     if (enabled.length && !enabled.some(button => button.getAttribute('data-tool-key') === this.toolbarKey))
       this.toolbarKey = enabled[0]!.getAttribute('data-tool-key') ?? 'bold';
@@ -566,6 +599,13 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     }
     if (this.announcementsArmed && next.status === 'error' && previous?.status !== 'error')
       this.assertiveSink?.announce(this.localize('docxEditorError'));
+  }
+
+  /** Explain the refusals a real file commonly hits; other failures keep the general message. */
+  private errorMessageKey(): string {
+    const code = this.localError ?? this.currentSnapshot?.error?.code;
+    return code === 'resource-limit' ? 'docxEditorErrorTooLarge' : code === 'external-resource' ? 'docxEditorErrorExternal' :
+      code === 'invalid-document' ? 'docxEditorErrorInvalid' : 'docxEditorError';
   }
 
   private reportError(code: DocxRefusalCode): void {
@@ -889,6 +929,28 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     const href = this.linkHref.trim();
     const text = this.linkText;
     return text ? { type: 'link', href, text } : { type: 'link', href };
+  }
+
+  private applyZoom(): void {
+    const session = this.session;
+    if (!session || this.currentSnapshot?.status !== 'ready') return;
+    const zoom = zoomConverter.fromAttribute(String(this.zoom));
+    if (this.appliedZoom?.session === session && this.appliedZoom.zoom === zoom) return;
+    if (setInternalDocxZoom(session, zoom)) this.appliedZoom = { session, zoom };
+  }
+
+  private renderZoom(): TemplateResult {
+    const ready = this.currentSnapshot?.status === 'ready';
+    const percent = new Intl.NumberFormat(this.effectiveLocale, { style: 'percent' });
+    return html`<${selectTag} part="zoom" size="s" aria-label=${this.localize('docxEditorZoom')} ?disabled=${!ready}
+      .value=${String(this.zoom)}
+      @lr-change=${(event: CustomEvent<{ value: string | string[] }>) => {
+        event.stopPropagation();
+        if (typeof event.detail.value === 'string') this.zoom = zoomConverter.fromAttribute(event.detail.value);
+      }}>
+      <${optionTag} value="fit">${this.localize('docxEditorZoomFit')}</${optionTag}>
+      ${zoomLevels.map(level => html`<${optionTag} value=${String(level)}>${percent.format(level)}</${optionTag}>`)}
+    </${selectTag}>`;
   }
 
   private refreshTableLabels(): void {
@@ -1382,6 +1444,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     this.imageFrameRequest = view.requestAnimationFrame(() => {
       this.imageFrameRequest = 0;
       this.syncImageFrame();
+      this.syncCharts();
     });
   };
 
@@ -1422,6 +1485,69 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
         next.frame.top === previous.frame.top && next.frame.width === previous.frame.width && next.frame.height === previous.frame.height)) return;
     this.imageClip = next;
     if (!next && this.imageDrag) this.cancelImageDrag();
+  }
+
+  /** The visible document viewport in document-part coordinates, plus its viewport-space origin. */
+  private overlayClip(): (ImageFrame & { x: number; y: number }) | null {
+    const documentPart = this.renderRoot.querySelector<HTMLElement>('[part="document"]');
+    const viewport = this.mount?.querySelector<HTMLElement>('[data-lr-docx-viewport]');
+    if (!documentPart || !viewport) return null;
+    const outer = documentPart.getBoundingClientRect(), view = viewport.getBoundingClientRect();
+    const x = view.left + viewport.clientLeft, y = view.top + viewport.clientTop;
+    const round = (value: number) => Math.round(value * 100) / 100;
+    return { x, y, left: round(x - outer.left - documentPart.clientLeft + documentPart.scrollLeft),
+      top: round(y - outer.top - documentPart.clientTop + documentPart.scrollTop), width: round(viewport.clientWidth), height: round(viewport.clientHeight) };
+  }
+
+  /** Paint supported charts over the engine's chart placeholders, following scroll, zoom and reflow. */
+  private syncCharts(): void {
+    if (!this.isConnected) return;
+    const placements = this.currentSnapshot?.status === 'ready' ? internalDocxCharts(this.session) : [];
+    const surface = placements.length ? this.mount?.querySelector('[data-lr-docx-surface]') ?? null : null;
+    if (surface !== this.observedSurface) {
+      this.surfaceObserver?.disconnect();
+      this.observedSurface = surface;
+      const Observer = this.ownerDocument.defaultView?.ResizeObserver;
+      if (surface && Observer) {
+        this.surfaceObserver ??= new Observer(() => this.scheduleImageFrame());
+        this.surfaceObserver.observe(surface);
+      }
+    }
+    const clip = placements.length ? this.overlayClip() : null;
+    let next: ChartLayer | null = null;
+    if (clip && this.mount) {
+      const painted = new Map<string, Element>();
+      for (const node of this.mount.querySelectorAll('[data-drawing-node-id]')) painted.set(node.getAttribute('data-drawing-node-id')!, node);
+      const round = (value: number) => Math.round(value * 100) / 100;
+      const charts = placements.flatMap(placement => {
+        const box = painted.get(placement.drawingId)?.getBoundingClientRect();
+        return box?.width && box.height ? [{ placement, frame: { left: round(box.left - clip.x), top: round(box.top - clip.y),
+          width: round(box.width), height: round(box.height) } }] : [];
+      });
+      if (charts.length) next = { clip: { left: clip.left, top: clip.top, width: clip.width, height: clip.height }, charts };
+    }
+    const previous = this.chartLayer;
+    const same = (a: ImageFrame, b: ImageFrame) => a.left === b.left && a.top === b.top && a.width === b.width && a.height === b.height;
+    if (next === previous || (next && previous && same(next.clip, previous.clip) && next.charts.length === previous.charts.length &&
+        next.charts.every((chart, index) => chart.placement === previous.charts[index]!.placement && same(chart.frame, previous.charts[index]!.frame)))) return;
+    this.chartLayer = next;
+  }
+
+  private renderCharts(): TemplateResult | typeof nothing {
+    const layer = this.chartLayer;
+    if (!layer) return nothing;
+    const px = (value: number) => `${value}px`;
+    return html`<div class="overlay-layer" inert aria-hidden="true"
+      style=${styleMap({ left: px(layer.clip.left), top: px(layer.clip.top), width: px(layer.clip.width), height: px(layer.clip.height) })}>
+      ${layer.charts.map(({ placement: { model }, frame }) => html`<div part="chart" data-chart-type=${model.type}
+        style=${styleMap({ left: px(frame.left), top: px(frame.top), width: px(frame.width), height: px(frame.height) })}>
+        ${model.title ? html`<div class="chart-title">${model.title}</div>` : nothing}
+        <${liteChartTag} type=${model.type} ?stacked=${model.stacked} ?with-legend=${model.series.length > 1}
+          height=${px(Math.max(32, frame.height - (model.title ? 20 : 0) - (model.series.length > 1 ? 24 : 0)))}
+          label=${model.title || this.localize('docxEditorChart')} .labels=${model.labels}
+          .datasets=${model.series.map((series, index) => ({ ...series, color: officeSeriesColors[index % officeSeriesColors.length] }))}></${liteChartTag}>
+      </div>`)}
+    </div>`;
   }
 
   private startImageDrag(event: PointerEvent, handle: ImageHandle): void {
@@ -1620,9 +1746,9 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       this.pickerFocusReturn = true;
       return;
     }
-    // Tool panels close themselves and return focus to their trigger.
-    if (event.key === 'Escape' && event.composedPath().some(node => node instanceof HTMLElement &&
-      ['text-color-popover', 'highlight-popover', 'line-spacing-popover'].includes(node.getAttribute('part') ?? ''))) {
+    // An open tool panel closes itself and returns focus to its trigger, even while its trigger keeps focus.
+    if (event.key === 'Escape' && ['text-color-popover', 'highlight-popover', 'line-spacing-popover'].some(part =>
+      Boolean(this.renderRoot.querySelector<HTMLElement & { open?: boolean }>(`[part="${part}"]`)?.open))) {
       this.pickerFocusReturn = false;
       return;
     }
@@ -1648,6 +1774,21 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       this.releaseToolbarSelection();
       this.focusEditor();
     }
+  };
+
+  /** A trigger's tooltip would otherwise cover its open panel and take Escape from it. */
+  private onToolbarPanelShow = (event: Event): void => {
+    const panel = event.target as Element | null;
+    if (panel?.localName !== tag('popover') || event.defaultPrevented) return;
+    this.openPanelTrigger = panel.querySelector(':scope > [slot="trigger"]')?.id ?? null;
+    for (const tooltip of this.renderRoot.querySelectorAll<HTMLElement & { open: boolean; hide(): Promise<void> }>(tag('tooltip')))
+      if (tooltip.open) void tooltip.hide();
+  };
+
+  private onToolbarPanelHidden = (event: Event): void => {
+    const panel = event.target as Element | null;
+    if (panel?.localName === tag('popover') && panel.querySelector(':scope > [slot="trigger"]')?.id === this.openPanelTrigger)
+      this.openPanelTrigger = null;
   };
 
   private onToolbarFocusIn = (event: FocusEvent): void => {
@@ -1744,7 +1885,8 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   }
 
   private renderTooltip(name: ToolIcon, content = this.localize(toolIcons[name].label)): TemplateResult {
-    return html`<${tooltipTag} for=${`tool-${name}`} content=${content} top-layer></${tooltipTag}>`;
+    return html`<${tooltipTag} for=${`tool-${name}`} content=${content} top-layer
+      ?disabled=${this.openPanelTrigger === `tool-${name}`}></${tooltipTag}>`;
   }
 
   private renderTooltips(): TemplateResult {
@@ -2235,7 +2377,8 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     return html`
       <section part="base" aria-label=${this.editorLabel()}>
         <div part="toolbar" role="toolbar" aria-label=${this.editorLabel()}
-          @focusin=${this.onToolbarFocusIn} @pointerdown=${(event: PointerEvent) => this.handoffImageInsertion(event)}>
+          @focusin=${this.onToolbarFocusIn} @pointerdown=${(event: PointerEvent) => this.handoffImageInsertion(event)}
+          @lr-show=${this.onToolbarPanelShow} @lr-after-hide=${this.onToolbarPanelHidden}>
           <div class="toolbar-row">
           <div part="file-actions">
             <${buttonTag} part="new-button" id="tool-new" aria-label=${this.localize(toolIcons.new.label)} size="s" appearance="quiet" ?disabled=${this.openInProgress || Boolean(this.currentSnapshot?.activity)}
@@ -2270,12 +2413,13 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
           </div>
         ` : nothing}
         ${this.renderFind()}
-        <div part="document" role="region" tabindex="0" aria-label=${this.editorLabel()}><slot name="document"></slot>${this.renderImageHandles()}</div>
-        ${hasError ? html`<p part="error">${this.localize('docxEditorError')}</p>` : nothing}
+        <div part="document" role="region" tabindex="0" aria-label=${this.editorLabel()}><slot name="document"></slot>${this.renderCharts()}${this.renderImageHandles()}</div>
+        ${hasError ? html`<p part="error">${this.localize(this.errorMessageKey())}</p>` : nothing}
         ${this.editError ? html`<p part="edit-error">${this.localize('docxEditorEditUnavailable')}</p>` : nothing}
         <div part="status">
           <span part="filename">${this.filename || this.localize('docxEditorUntitled')}</span>
           <span part="state">${status}</span>
+          ${this.renderZoom()}
         </div>
       </section>
     `;

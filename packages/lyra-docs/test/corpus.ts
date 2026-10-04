@@ -148,7 +148,7 @@ export function imageFixture(kind = 'image-simple'): Uint8Array {
     .replace('<pic:cNvPicPr/>', '<pic:cNvPicPr><a:picLocks noChangeAspect="1" noChangeArrowheads="1"/></pic:cNvPicPr>')
     .replace('<a:blip r:embed="rIdImage"/>', '<a:blip r:embed="rIdImage" cstate="print"><a:extLst><a:ext uri="{28A0092B-C50C-407E-A947-70E740481C1C}"><a14:useLocalDpi xmlns:a14="http://schemas.microsoft.com/office/drawing/2010/main" val="0"/></a:ext></a:extLst></a:blip>')
     .replace('<pic:spPr>', '<pic:spPr bwMode="auto">')
-    .replace('</a:prstGeom>', '</a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln>');
+    .replace('</a:prstGeom>', '</a:prstGeom><a:noFill/><a:ln w="9525"><a:noFill/><a:miter lim="800000"/><a:headEnd/><a:tailEnd/></a:ln>');
   if (kind === 'image-hidden') first = first.replace('<wp:docPr ', '<wp:docPr hidden="1" ');
   if (kind === 'image-crop') first = first.replace('<a:stretch>', '<a:srcRect l="1000"/><a:stretch>');
   if (kind === 'image-empty-source') first = first.replace('<a:stretch>', '<a:srcRect/><a:stretch>');
@@ -176,5 +176,32 @@ export function imageFixture(kind = 'image-simple'): Uint8Array {
     entries['word/_rels/document.xml.rels'] = strToU8(strFromU8(entries['word/_rels/document.xml.rels']!).replace('pixel.png', 'pixel.gif'));
     entries['[Content_Types].xml'] = strToU8(strFromU8(entries['[Content_Types].xml']!).replace('Extension="png" ContentType="image/png"', 'Extension="gif" ContentType="image/gif"'));
   }
+  return zipSync(entries, { level: 6 });
+}
+
+/** A column chart with cached values beside a pie chart, which the editor keeps as a placeholder. */
+export function chartXml(kind: 'column' | 'pie' | 'line'): string {
+  const c = 'http://schemas.openxmlformats.org/drawingml/2006/chart', a = 'http://schemas.openxmlformats.org/drawingml/2006/main';
+  const categories = '<c:cat><c:strRef><c:f>Sheet1!$A$2:$A$4</c:f><c:strCache><c:ptCount val="3"/><c:pt idx="0"><c:v>North</c:v></c:pt><c:pt idx="1"><c:v>South</c:v></c:pt><c:pt idx="2"><c:v>East</c:v></c:pt></c:strCache></c:strRef></c:cat>';
+  const series = (index: number, name: string, values: number[]) => `<c:ser><c:idx val="${index}"/><c:order val="${index}"/><c:tx><c:strRef><c:f>Sheet1!$B$1</c:f><c:strCache><c:ptCount val="1"/><c:pt idx="0"><c:v>${name}</c:v></c:pt></c:strCache></c:strRef></c:tx>${categories}<c:val><c:numRef><c:f>Sheet1!$B$2:$B$4</c:f><c:numCache><c:formatCode>General</c:formatCode><c:ptCount val="3"/>${values.map((value, point) => `<c:pt idx="${point}"><c:v>${value}</c:v></c:pt>`).join('')}</c:numCache></c:numRef></c:val></c:ser>`;
+  const group = kind === 'pie' ? `<c:pieChart><c:varyColors val="1"/>${series(0, 'Share', [5, 3, 2])}</c:pieChart>`
+    : kind === 'line' ? `<c:lineChart><c:grouping val="standard"/>${series(0, 'Trend', [1, 4, 2])}<c:axId val="1"/><c:axId val="2"/></c:lineChart>`
+      : `<c:barChart><c:barDir val="col"/><c:grouping val="clustered"/>${series(0, 'Sales', [12, 7, 9])}${series(1, 'Costs', [8, 5, 4])}<c:axId val="1"/><c:axId val="2"/></c:barChart>`;
+  return `<c:chartSpace xmlns:c="${c}" xmlns:a="${a}"><c:chart><c:title><c:tx><c:rich><a:bodyPr/><a:p><a:r><a:t>Quarterly ${kind}</a:t></a:r></a:p></c:rich></c:tx></c:title><c:autoTitleDeleted val="0"/><c:plotArea><c:layout/>${group}</c:plotArea></c:chart></c:chartSpace>`;
+}
+
+export function chartFixture(): Uint8Array {
+  const entries = unzipSync(representativeFixture());
+  const chartType = 'application/vnd.openxmlformats-officedocument.drawingml.chart+xml';
+  entries['[Content_Types].xml'] = strToU8(strFromU8(entries['[Content_Types].xml']!).replace('</Types>',
+    `<Override PartName="/word/charts/chart1.xml" ContentType="${chartType}"/><Override PartName="/word/charts/chart2.xml" ContentType="${chartType}"/></Types>`));
+  entries['word/_rels/document.xml.rels'] = strToU8(strFromU8(entries['word/_rels/document.xml.rels']!).replace('</Relationships>',
+    `<Relationship Id="rIdChart1" Type="${officeRel}chart" Target="charts/chart1.xml"/><Relationship Id="rIdChart2" Type="${officeRel}chart" Target="charts/chart2.xml"/></Relationships>`));
+  entries['word/charts/chart1.xml'] = strToU8(chartXml('column'));
+  entries['word/charts/chart2.xml'] = strToU8(chartXml('pie'));
+  const drawing = (id: number, rid: string) => `<w:p><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="4572000" cy="2743200"/><wp:docPr id="${id}" name="Chart ${id}"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" r:id="${rid}"/></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
+  const xml = strFromU8(entries['word/document.xml']!);
+  entries['word/document.xml'] = strToU8(xml.replace(/<w:body>[\s\S]*<\/w:body>/,
+    `<w:body><w:p><w:r><w:t>Charts</w:t></w:r></w:p>${drawing(10, 'rIdChart1')}${drawing(11, 'rIdChart2')}<w:p><w:r><w:t>After charts</w:t></w:r></w:p></w:body>`));
   return zipSync(entries, { level: 6 });
 }

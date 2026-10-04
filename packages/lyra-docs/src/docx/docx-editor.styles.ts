@@ -253,6 +253,37 @@ export const styles = css`
 
   [part='document'] { position: relative; }
 
+  .overlay-layer {
+    position: absolute;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  /* Charts sit on white paper in every theme, so their chrome uses paper-legible colors. */
+  [part='chart'] {
+    position: absolute;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: white;
+    color: black;
+    color-scheme: light;
+    --lr-chart-grid-color: #d9d9d9;
+    --lr-chart-tick-color: #595959;
+    --lr-chart-legend-color: black;
+  }
+  .chart-title {
+    flex: none;
+    overflow: hidden;
+    font-size: var(--lr-font-size-sm);
+    font-weight: var(--lr-font-weight-semibold, 600);
+    line-height: 20px;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .image-layer {
     position: absolute;
     overflow: hidden;
@@ -370,6 +401,11 @@ export const styles = css`
   [part='state'] {
     margin-inline-start: auto;
     text-align: end;
+  }
+
+  [part='zoom'] {
+    flex: none;
+    inline-size: var(--lr-size-8rem);
   }
 
   @container (max-width: 35rem) {

@@ -140,7 +140,8 @@ const permitted: Record<string, readonly string[]> = {
   [`${PIC}|blipFill`]: [`${A}|blip`, `${A}|srcRect`, `${A}|stretch`], [`${A}|blip`]: [`${A}|extLst`], [`${A}|srcRect`]: [],
   [`${A}|stretch`]: [`${A}|fillRect`], [`${A}|fillRect`]: [],
   [`${PIC}|spPr`]: [`${A}|xfrm`, `${A}|prstGeom`, `${A}|noFill`, `${A}|ln`],
-  [`${A}|noFill`]: [], [`${A}|ln`]: [`${A}|noFill`],
+  [`${A}|noFill`]: [], [`${A}|ln`]: [`${A}|noFill`, `${A}|miter`, `${A}|round`, `${A}|bevel`, `${A}|headEnd`, `${A}|tailEnd`],
+  [`${A}|miter`]: [], [`${A}|round`]: [], [`${A}|bevel`]: [], [`${A}|headEnd`]: [], [`${A}|tailEnd`]: [],
   [`${A}|xfrm`]: [`${A}|off`, `${A}|ext`], [`${A}|off`]: [], [`${A}|ext`]: [],
   [`${A}|prstGeom`]: [`${A}|avLst`], [`${A}|avLst`]: [],
 };
@@ -149,7 +150,8 @@ const attributeNames: Record<string, readonly string[]> = {
   inline: ['distT', 'distB', 'distL', 'distR', 'anchorId', 'editId'], extent: ['cx', 'cy'], effectExtent: ['l', 't', 'r', 'b'],
   docPr: ['id', 'name', 'title', 'descr', 'hidden'], graphicData: ['uri'], cNvPr: ['id', 'name', 'title', 'descr', 'hidden'],
   cNvPicPr: ['preferRelativeResize'], blip: ['embed', 'cstate'], blipFill: ['dpi', 'rotWithShape'], spPr: ['bwMode'],
-  xfrm: ['rot', 'flipH', 'flipV'], ln: ['w'], noFill: [],
+  xfrm: ['rot', 'flipH', 'flipV'], ln: ['w', 'cap', 'cmpd', 'algn'], noFill: [], miter: ['lim'], round: [], bevel: [],
+  headEnd: ['type', 'w', 'len'], tailEnd: ['type', 'w', 'len'],
   off: ['x', 'y'], ext: ['cx', 'cy'], prstGeom: ['prst'], picLocks: lockNames, graphicFrameLocks: lockNames,
 };
 const namespaces: Record<string, string> = { embed: R, anchorId: WP14, editId: WP14 };
@@ -189,7 +191,10 @@ function plainDrawing(nodes: Frame[]): void {
       if (a.localName === 'dpi' && a.value !== '0') reject();
       if (a.localName === 'rotWithShape' && !['0', '1', 'false', 'true'].includes(a.value)) reject();
       if (a.localName === 'bwMode' && a.value !== 'auto') reject();
-      if (a.localName === 'w' && !/^\d{1,8}$/.test(a.value)) reject();
+      // Outline geometry of an unfilled picture border: bounded tokens only, never references.
+      if (node.localName === 'ln' && a.localName === 'w' && !/^\d{1,8}$/.test(a.value)) reject();
+      if (['cap', 'cmpd', 'algn', 'type', 'len', 'lim'].includes(a.localName) || (a.localName === 'w' && node.localName !== 'ln'))
+        if (!/^[A-Za-z0-9]{1,16}$/.test(a.value)) reject();
       if (a.localName === 'hidden' && a.value !== '0' && a.value !== 'false') reject();
       if (a.localName === 'rot' && a.value !== '0') reject();
       if (['flipH', 'flipV'].includes(a.localName) && a.value !== '0' && a.value !== 'false') reject();

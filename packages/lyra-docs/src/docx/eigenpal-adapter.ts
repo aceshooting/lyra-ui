@@ -8,6 +8,7 @@ import type { ImageCopy, ImageIntent } from './eigenpal-images.js';
 import { tableAvailability, tableContext, qualifyTableCommand } from './eigenpal-tables.js';
 import { loadDocxEngine } from './engine-loader.js';
 import { createEigenpalEditing, eigenpalCommand } from './eigenpal-editing.js';
+import { chartPlacements, type DocxChartPlacement } from './eigenpal-charts.js';
 import type { DocxEngineModule } from './engine-loader.js';
 import type { DocxEngineEvent, DocxEnginePort, DocxEngineImageInsertion } from './engine-port.js';
 import type { DocxResult, DocxSelection, DocxSessionOptions, DocxSource } from './types.js';
@@ -52,6 +53,7 @@ export async function openEigenpalDocument(
   let destroyed = false;
   let fault = false;
   let composing = false;
+  let chartCache: { surface: object; revision: number; value: readonly DocxChartPlacement[] } | null = null;
   let compositionVersion = 0;
   let saving = false;
   let executingGuarded = false;
@@ -226,14 +228,21 @@ export async function openEigenpalDocument(
     compositionVersion++;
     emit('composition');
   }, true);
-  listen('compositionend', () => {
+  const endComposition = () => {
     const version = compositionVersion;
     // The engine processes the final composition event before the facade permits save.
     queueMicrotask(() => {
-      if (destroyed || version !== compositionVersion) return;
+      if (destroyed || version !== compositionVersion || !composing) return;
       composing = false;
       emit('composition');
     });
+  };
+  listen('compositionend', endComposition, true);
+  // Browsers commit a composition when focus leaves, but some skip compositionend; never stay
+  // composing (and refuse every command) after focus has left the document.
+  listen('focusout', event => {
+    const next = (event as FocusEvent).relatedTarget;
+    if (composing && !(next && typeof next === 'object' && mount.contains(next as Node))) endComposition();
   }, true);
 
   try {
@@ -607,6 +616,21 @@ export async function openEigenpalDocument(
         const { insertRowBelow, insertColumnRight } = labels;
         current().setTableInteractionLabel(key => key === 'table.insertRowBelow' ? insertRowBelow : insertColumnRight);
         return true;
+      },
+      charts() {
+        if (destroyed || !owned()) return [];
+        const surface = current().surface;
+        if (!surface) return [];
+        const revision = surface.session.packageRevision();
+        if (chartCache?.surface === surface && chartCache.revision === revision) return chartCache.value;
+        const value = chartPlacements(surface.session.currentPackage());
+        chartCache = { surface, revision, value };
+        return value;
+      },
+      setZoom(zoom) {
+        if (destroyed || !owned()) return false;
+        const active = current();
+        return (zoom === 'fit' ? active.setZoomMode('auto') : active.setZoom(zoom)).ok;
       },
       selectedImageElement() {
         if (destroyed || saving || executingGuarded || !image?.supported || !owned()) return null;

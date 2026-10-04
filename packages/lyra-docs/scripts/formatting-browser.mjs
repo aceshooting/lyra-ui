@@ -85,6 +85,10 @@ export async function runFormattingTools(page, check, { saveEditor }) {
     assert.match(await documentXml(), /<w:color w:val="123456"\/>/u);
     assert.equal(await part('text-color-popover').evaluate(popover => popover.open), true);
     const after = await revision();
+    await part('text-color').hover();
+    await page.waitForTimeout(400);
+    assert.equal(await host.evaluate(element => element.shadowRoot.querySelector('lr-tooltip[for="tool-text-color"]').open), false,
+      'a trigger tooltip never covers its own open panel');
     await page.keyboard.press('Escape');
     await page.waitForFunction(id => !document.getElementById(id).shadowRoot.querySelector('[part="text-color-popover"]').open, id);
     assert.equal(await revision(), after);
@@ -130,6 +134,25 @@ export async function runFormattingTools(page, check, { saveEditor }) {
     assert.doesNotMatch(await documentXml(), /<w:br w:type="page"\/>/u);
   });
 
+
+  await check('zoom scales the painted pages without editing, reflects, and fit follows the width', async () => {
+    await fresh('Zoom words');
+    const width = () => host.evaluate(element => element.querySelector('.docx-page').getBoundingClientRect().width);
+    const base = await width(), before = await revision();
+    await host.evaluate(element => { element.zoom = 2; });
+    await page.waitForFunction(({ id, base }) => document.getElementById(id).querySelector('.docx-page').getBoundingClientRect().width > base * 1.8, { id, base });
+    assert.equal(await host.getAttribute('zoom'), '2');
+    await part('zoom').click();
+    await part('zoom').getByRole('option', { name: 'Fit width' }).click();
+    await page.waitForFunction(id => {
+      const element = document.getElementById(id), page = element.querySelector('.docx-page').getBoundingClientRect();
+      const viewport = element.querySelector('[data-lr-docx-viewport]').getBoundingClientRect();
+      return page.width <= viewport.width;
+    }, id);
+    assert.equal(await host.getAttribute('zoom'), 'fit');
+    assert.equal(await revision(), before, 'zoom never edits the document');
+    assert.equal(await host.evaluate(element => element.snapshot().dirty), true);
+  });
 
   await page.evaluate(id => document.getElementById(id)?.remove(), id);
 }
