@@ -29,7 +29,7 @@ const test = {
     }
     const { docxFixture, relationship } = await import('../src/docx/admission-fixtures.js');
     if (kind === 'accepted') return docxFixture();
-    if (kind === 'external') return docxFixture({ 'word/_rels/document.xml.rels': relationship('https://example.test/image.png') });
+    if (kind === 'external') return docxFixture({ 'word/_rels/document.xml.rels': relationship('https://example.test/frame.html', 'frame') });
     return docxFixture({ 'word/document.xml': '<w:document><w:body><w:p></w:document>' });
   }
 };

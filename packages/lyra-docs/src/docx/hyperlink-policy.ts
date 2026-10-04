@@ -6,6 +6,7 @@ export function isSafeDocxHyperlink(value: string): boolean {
   if (value.startsWith('#')) return true;
   try {
     const url = new URL(value);
-    return (url.protocol === 'https:' && Boolean(url.hostname) && !url.username && !url.password) || url.protocol === 'mailto:';
+    return ((url.protocol === 'https:' || url.protocol === 'http:') && Boolean(url.hostname) && !url.username && !url.password) ||
+      url.protocol === 'mailto:';
   } catch { return false; }
 }

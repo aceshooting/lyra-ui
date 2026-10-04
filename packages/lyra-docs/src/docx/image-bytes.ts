@@ -14,13 +14,51 @@ class ImageRefusal extends Error {
 }
 function reject(code: DocxRefusalCode = 'invalid-document'): never { throw new ImageRefusal(code); }
 
-/** Bound and inspect raster bytes without decoding, copying or changing them. */
-export function inspectDocxImage(bytes: Uint8Array): DocxResult<Readonly<DocxImageMetadata>> {
-  try { return { ok: true, value: inspectImage(bytes) }; }
+/** Bound and inspect raster bytes without decoding, copying or changing them. `trailing` admits
+ * bytes after the format's end marker, which some producers append and decoders ignore. */
+export function inspectDocxImage(bytes: Uint8Array, options: { trailing?: boolean } = {}): DocxResult<Readonly<DocxImageMetadata>> {
+  try { return { ok: true, value: inspectImage(bytes, options.trailing === true) }; }
   catch (error) { return { ok: false, code: error instanceof ImageRefusal ? error.code : 'invalid-document' }; }
 }
 
-function inspectImage(bytes: Uint8Array): Readonly<DocxImageMetadata> {
+/** True when the bytes claim to be PNG, GIF or JPEG; such bytes must pass full inspection. */
+export function isDocxRasterSignature(bytes: Uint8Array): boolean {
+  return (bytes[0] === 137 && bytes[1] === 80 && bytes[2] === 78 && bytes[3] === 71) ||
+    (bytes[0] === 71 && bytes[1] === 73 && bytes[2] === 70 && bytes[3] === 56) || (bytes[0] === 255 && bytes[1] === 216);
+}
+
+/** True for Windows metafiles (EMF, WMF, or their gzip-compressed EMZ/WMZ form), which browsers never decode. */
+export function isDocxMetafileSignature(bytes: Uint8Array): boolean {
+  const emf = bytes.length >= 44 && bytes[0] === 1 && bytes[1] === 0 && bytes[2] === 0 && bytes[3] === 0 &&
+    bytes[40] === 0x20 && bytes[41] === 0x45 && bytes[42] === 0x4d && bytes[43] === 0x46;
+  const placeableWmf = bytes[0] === 0xd7 && bytes[1] === 0xcd && bytes[2] === 0xc6 && bytes[3] === 0x9a;
+  const wmf = (bytes[0] === 1 || bytes[0] === 2) && bytes[1] === 0 && bytes[2] === 9 && bytes[3] === 0;
+  return emf || placeableWmf || wmf || (bytes[0] === 0x1f && bytes[1] === 0x8b);
+}
+
+/** Copy a JPEG without its APP1 (EXIF/XMP) segments, which carry camera and location metadata.
+ * Every other byte is preserved; returns null when the segment structure cannot be walked. */
+export function withoutJpegApp1(bytes: Uint8Array): Uint8Array | null {
+  if (bytes[0] !== 255 || bytes[1] !== 216) return null;
+  const kept: Uint8Array[] = [bytes.subarray(0, 2)];
+  let at = 2;
+  while (at + 4 <= bytes.length) {
+    if (bytes[at] !== 255) return null;
+    const marker = bytes[at + 1]!;
+    if (marker === 0xda || marker === 0xd9) { kept.push(bytes.subarray(at)); at = bytes.length; break; }
+    const length = (bytes[at + 2]! << 8) | bytes[at + 3]!;
+    if (length < 2 || at + 2 + length > bytes.length) return null;
+    if (marker !== 0xe1) kept.push(bytes.subarray(at, at + 2 + length));
+    at += 2 + length;
+  }
+  if (at !== bytes.length) return null;
+  const output = new Uint8Array(kept.reduce((total, part) => total + part.length, 0));
+  let offset = 0;
+  for (const part of kept) { output.set(part, offset); offset += part.length; }
+  return output;
+}
+
+function inspectImage(bytes: Uint8Array, trailing: boolean): Readonly<DocxImageMetadata> {
   if (bytes.length > LIMITS.image) reject('resource-limit');
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   let width = 0, height = 0, hasJpegApp1 = false;
@@ -64,12 +102,12 @@ function inspectImage(bytes: Uint8Array): Readonly<DocxImageMetadata> {
       }
       at += length;
     }
-    if (!ended || !scanned || at !== bytes.length) reject();
+    if (!ended || !scanned || (!trailing && at !== bytes.length)) reject();
   } else reject();
   if (!width || !height) reject();
   if (width > LIMITS.dimension || height > LIMITS.dimension || width * height > LIMITS.pixels) reject('resource-limit');
   if (format === 'png') {
-    inspectPng(bytes, view);
+    inspectPng(bytes, view, trailing);
   } else if (format === 'gif') {
     if (bytes.length < 13) reject();
     const packed = bytes[10]!;
@@ -96,7 +134,7 @@ function inspectImage(bytes: Uint8Array): Readonly<DocxImageMetadata> {
       at++; // LZW minimum code size precedes bounded data subblocks.
       subblocks();
     }
-    if (!ended || frames !== 1 || at !== bytes.length) reject();
+    if (!ended || frames !== 1 || (!trailing && at !== bytes.length)) reject();
   }
   return { pixels: width * height, pixelWidth: width, pixelHeight: height, mimeType: `image/${format}`, hasJpegApp1 };
 }
@@ -107,7 +145,7 @@ const PNG_CRC = Uint32Array.from({ length: 256 }, (_, value) => {
 });
 
 /** Check PNG framing and checksums without inflating or copying image data. */
-function inspectPng(bytes: Uint8Array, view: DataView): void {
+function inspectPng(bytes: Uint8Array, view: DataView, trailing: boolean): void {
   const depth = bytes[24]!, color = bytes[25]!;
   let at = 8, palette = false, imageData = false, dataEnded = false, ended = false;
   let dataBytes = 0, compression = -1, flags = -1;
@@ -151,6 +189,6 @@ function inspectPng(bytes: Uint8Array, view: DataView): void {
     }
     at += length + 12;
   }
-  if (!ended || at !== bytes.length || (compression & 15) !== 8 || (compression >>> 4) > 7 ||
+  if (!ended || (!trailing && at !== bytes.length) || (compression & 15) !== 8 || (compression >>> 4) > 7 ||
     (flags & 32) !== 0 || ((compression << 8) + flags) % 31 !== 0) reject();
 }

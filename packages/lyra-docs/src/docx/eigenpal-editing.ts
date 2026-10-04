@@ -17,7 +17,8 @@ function clip(value: string, limit: number, tail = false): string {
 }
 
 export function eigenpalCommand(action: Exclude<DocxAction, DocxTableAction | DocxImageAction>): EditorCommand {
-  if (typeof action === 'string') return action === 'undo' || action === 'redo' ? { type: action } : { type: 'toggleMark', mark: action };
+  if (typeof action === 'string') return action === 'undo' || action === 'redo' ? { type: action } :
+    { type: 'toggleMark', mark: action === 'strikethrough' ? 'strike' : action };
   switch (action.type) {
     case 'paragraph-style': return { type: 'setParagraphStyle', styleId: action.styleId };
     case 'alignment': return { type: 'setAlignment', align: action.value };
@@ -27,6 +28,11 @@ export function eigenpalCommand(action: Exclude<DocxAction, DocxTableAction | Do
     case 'text-color': return { type: 'setMarkAttr', mark: 'color', attr: 'val', value: action.color === 'auto' ? 'auto' : action.color.slice(1) };
     case 'link': return { type: 'insertHyperlink', href: action.href, ...(action.text === undefined ? {} : { text: action.text }) };
     case 'remove-link': return { type: 'removeHyperlink' };
+    case 'highlight': return { type: 'setMarkAttr', mark: 'highlight', attr: 'val', value: action.color };
+    case 'indent': return { type: 'adjustIndent', direction: action.direction };
+    case 'line-spacing': return { type: 'setLineSpacing', rule: 'multiple', value: action.multiple };
+    case 'clear-formatting': return { type: 'clearFormatting' };
+    case 'page-break': return { type: 'insertBreak', kind: 'page' };
   }
 }
 

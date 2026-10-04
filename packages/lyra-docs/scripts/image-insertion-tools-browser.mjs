@@ -346,8 +346,9 @@ export async function runImageInsertionTools(page, check, { createEditor, saveEd
       const jpeg = await source(page, 'jpeg');
       await choose(page, id, Buffer.concat([jpeg.subarray(0, 2), Buffer.from([255, 225, 0, 4, 0, 0]), jpeg.subarray(2)]));
       await page.waitForFunction(() => window.__insertionReads === 2);
-      await page.waitForFunction(id => document.getElementById(id).shadowRoot.querySelector('[part="image-insert-status"]')?.textContent.includes('EXIF') &&
-        !document.getElementById(id).shadowRoot.querySelector('[part="image-insert-trigger"]').disabled, id);
+      // A photo with camera metadata reaches the draft; the metadata is dropped rather than refused.
+      await part(page, id, 'width').waitFor({ state: 'visible' });
+      await part(page, id, 'cancel').click();
       await unchanged(page, id, before, initial, saveEditor);
     } finally {
       await page.evaluate(() => { if (window.__insertionArrayBufferDescriptor) Object.defineProperty(File.prototype, 'arrayBuffer', window.__insertionArrayBufferDescriptor); else delete File.prototype.arrayBuffer; delete window.__insertionArrayBufferDescriptor; delete window.__insertionArrayBuffer; delete window.__insertionReads; });

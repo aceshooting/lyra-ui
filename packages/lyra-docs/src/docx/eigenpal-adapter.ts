@@ -35,7 +35,8 @@ export async function openEigenpalDocument(
   mount.style.setProperty('--doc-page-text', 'black');
   mount.style.setProperty('--doc-caret', 'black');
   mount.style.colorScheme = 'light';
-  Object.assign(mount.style, { paddingBlock: 'var(--lr-space-l, 1.5rem)', minInlineSize: 'min-content' });
+  // Engine overlays are positioned from this element's padding edge, so page spacing lives on the viewport.
+  Object.assign(mount.style, { minInlineSize: 'min-content' });
   mount.setAttribute('data-lr-docx-surface', '');
   mount.inert = true;
   const viewport = options.mount.ownerDocument.createElement('div');
@@ -43,7 +44,7 @@ export async function openEigenpalDocument(
   viewport.setAttribute('data-lr-docx-viewport', '');
   viewport.tabIndex = 0;
   Object.assign(viewport.style, { position: 'relative', display: 'block', overflow: 'auto', minInlineSize: '0', maxInlineSize: '100%',
-    blockSize: '100%', background: 'var(--lr-color-neutral-fill-quiet, #f5f5f5)',
+    blockSize: '100%', paddingBlock: 'var(--lr-space-l, 1.5rem)', background: 'var(--lr-color-neutral-fill-quiet, #f5f5f5)',
     boxSizing: 'border-box', maxBlockSize: 'var(--lr-docx-editor-document-max-block-size, var(--lr-size-30rem, 30rem))' });
   viewport.append(mount);
   options.mount.append(viewport);

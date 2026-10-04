@@ -101,14 +101,20 @@ export async function runImageInsertion(page, check, { createEditor, saveEditor 
     if (terminal === 'replace') { assert.notEqual(observed.current.revision.documentId, observed.initial.revision.documentId); assert.equal(observed.current.revision.value, 0); }
     if (terminal !== 'destroy') await remove(page, id);
   });
-  await check('APP1 refusal preserves the package and repeated insertion keeps original paragraph text and media', async () => {
+  await check('APP1 camera metadata is stripped on insertion and repeated insertion keeps original paragraph text and media', async () => {
     const id = 'insert-repeat'; await plain(page, id, createEditor); const before = await saveEditor(page, id);
-    const refused = await host(page, id).evaluate(async element => {
+    const inserted = await host(page, id).evaluate(async element => {
       const jpeg = await window.__docxTest.imageBytes('jpeg'), bytes = new Uint8Array(jpeg.length + 6);
       bytes.set(jpeg.subarray(0, 2)); bytes.set([255, 225, 0, 4, 1, 2], 2); bytes.set(jpeg.subarray(2), 8);
       return element.insertImage({ bytes, widthPoints: 48, heightPoints: 24 });
     });
-    assert.deepEqual(refused, { ok: false, code: 'unsupported' }); assert.deepEqual(parts(await saveEditor(page, id)), parts(before));
+    assert.equal(inserted.ok, true, JSON.stringify(inserted));
+    const withPhoto = parts(await saveEditor(page, id));
+    const media = Object.entries(withPhoto).filter(([name]) => name.startsWith('word/media/') && !(name in parts(before)));
+    assert.equal(media.length, 1);
+    assert.equal(Buffer.from(media[0][1]).includes(Buffer.from([255, 225])), false, 'EXIF/XMP segment removed');
+    assert.equal((await host(page, id).evaluate(element => element.execute('undo'))).ok, true);
+    assert.deepEqual(parts(await saveEditor(page, id)), parts(before));
     for (const text of ['beta', 'alpha']) {
       await page.locator(`#${id} .docx-pages`).getByText(text, { exact: true }).click();
       await page.keyboard.press('Home'); await page.keyboard.press('ArrowRight');

@@ -1,4 +1,4 @@
-import type { DocxAction, DocxResult, DocxTableAction, DocxImageAction } from './types.js';
+import type { DocxAction, DocxCommand, DocxHighlight, DocxResult, DocxTableAction, DocxImageAction } from './types.js';
 import { isSafeDocxHyperlink } from './hyperlink-policy.js';
 import { isDocxXmlText } from './xml-text.js';
 
@@ -12,6 +12,8 @@ const invalid = Object.freeze({ ok: false, code: 'invalid-option' } as const);
 const limited = Object.freeze({ ok: false, code: 'resource-limit' } as const);
 const unsupported = Object.freeze({ ok: false, code: 'unsupported' } as const);
 const FONT_FAMILY = /^[\p{L}\p{N}\p{M} \-.+_]{1,64}$/u;
+export const DOCX_HIGHLIGHTS = Object.freeze(['yellow', 'green', 'cyan', 'magenta', 'blue', 'red', 'darkBlue', 'darkCyan',
+  'darkGreen', 'darkMagenta', 'darkRed', 'darkYellow', 'darkGray', 'lightGray', 'black', 'none'] as const);
 const success = <T>(value: T): DocxResult<T> => Object.freeze({ ok: true, value });
 
 /** Only own data properties cross the command boundary; caller getters are never invoked. */
@@ -44,8 +46,8 @@ function authoredText(value: unknown): DocxResult<string> {
 export function normalizeDocxAction(value: unknown): DocxResult<DocxAction> {
   try {
     if (typeof value === 'string') {
-      return value === 'bold' || value === 'italic' || value === 'underline' || value === 'undo' || value === 'redo'
-        ? success(value) : unsupported;
+      return ['bold', 'italic', 'underline', 'strikethrough', 'superscript', 'subscript', 'undo', 'redo'].includes(value)
+        ? success(value as DocxCommand) : unsupported;
     }
     const action = record(value);
     if (!action || typeof action.type !== 'string') return invalid;
@@ -125,7 +127,19 @@ export function normalizeDocxAction(value: unknown): DocxResult<DocxAction> {
         return label.ok ? success(Object.freeze({ type, href: href.value, text: label.value })) : label;
       }
       case 'remove-link':
+      case 'clear-formatting':
+      case 'page-break':
         return keys(action, ['type']) ? success(Object.freeze({ type })) : invalid;
+      case 'highlight':
+        if (!keys(action, ['type', 'color']) || !(DOCX_HIGHLIGHTS as readonly unknown[]).includes(action.color)) return invalid;
+        return success(Object.freeze({ type, color: action.color as DocxHighlight }));
+      case 'indent':
+        if (!keys(action, ['type', 'direction']) || (action.direction !== 'increase' && action.direction !== 'decrease')) return invalid;
+        return success(Object.freeze({ type, direction: action.direction }));
+      case 'line-spacing':
+        if (!keys(action, ['type', 'multiple']) || typeof action.multiple !== 'number' || !Number.isFinite(action.multiple) ||
+          action.multiple < 1 || action.multiple > 5 || Math.abs(action.multiple * 20 - Math.round(action.multiple * 20)) > 1e-9) return invalid;
+        return success(Object.freeze({ type, multiple: action.multiple }));
       default:
         return unsupported;
     }

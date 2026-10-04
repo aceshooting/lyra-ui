@@ -76,6 +76,14 @@ test('maps paragraph, list, font and link actions into the public command vocabu
   assert.deepEqual(eigenpalCommand({ type: 'text-color', color: '#FF0011' }), { type: 'setMarkAttr', mark: 'color', attr: 'val', value: 'FF0011' });
   assert.deepEqual(eigenpalCommand({ type: 'text-color', color: 'auto' }), { type: 'setMarkAttr', mark: 'color', attr: 'val', value: 'auto' });
   assert.deepEqual(eigenpalCommand({ type: 'toggle-list', kind: 'numbered' }), { type: 'toggleList', kind: 'ordered' });
+  assert.deepEqual(eigenpalCommand('strikethrough'), { type: 'toggleMark', mark: 'strike' });
+  assert.deepEqual(eigenpalCommand('superscript'), { type: 'toggleMark', mark: 'superscript' });
+  assert.deepEqual(eigenpalCommand('subscript'), { type: 'toggleMark', mark: 'subscript' });
+  assert.deepEqual(eigenpalCommand({ type: 'highlight', color: 'darkCyan' }), { type: 'setMarkAttr', mark: 'highlight', attr: 'val', value: 'darkCyan' });
+  assert.deepEqual(eigenpalCommand({ type: 'indent', direction: 'decrease' }), { type: 'adjustIndent', direction: 'decrease' });
+  assert.deepEqual(eigenpalCommand({ type: 'line-spacing', multiple: 1.5 }), { type: 'setLineSpacing', rule: 'multiple', value: 1.5 });
+  assert.deepEqual(eigenpalCommand({ type: 'clear-formatting' }), { type: 'clearFormatting' });
+  assert.deepEqual(eigenpalCommand({ type: 'page-break' }), { type: 'insertBreak', kind: 'page' });
   assert.deepEqual(eigenpalCommand({ type: 'link', href: '#bookmark', text: 'Exact 🙂' }), { type: 'insertHyperlink', href: '#bookmark', text: 'Exact 🙂' });
 });
 

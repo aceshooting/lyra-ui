@@ -916,7 +916,7 @@ test('adapter owns a keyboard-focusable bounded scroll host and removes it witho
   const paperStyle = { ...h.child.style };
   Object.assign(h.child.style, { width: '816px', height: '1056px' });
   assert.deepEqual(h.viewport.style, { position: 'relative', display: 'block', overflow: 'auto', minInlineSize: '0', maxInlineSize: '100%',
-    blockSize: '100%', background: 'var(--lr-color-neutral-fill-quiet, #f5f5f5)',
+    blockSize: '100%', paddingBlock: 'var(--lr-space-l, 1.5rem)', background: 'var(--lr-color-neutral-fill-quiet, #f5f5f5)',
     boxSizing: 'border-box', maxBlockSize: 'var(--lr-docx-editor-document-max-block-size, var(--lr-size-30rem, 30rem))' });
   assert.equal(h.mount.className, 'consumer-layout');
   assert.deepEqual(callerStyle, { overflow: 'visible', maxBlockSize: 'none' });

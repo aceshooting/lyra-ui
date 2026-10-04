@@ -30,7 +30,8 @@ const ROOT_RELS = '/_rels/.rels', MAIN_RELS = '/word/_rels/document.xml.rels';
 const MAIN_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml';
 const STYLES_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml';
 const RELS_MIME = 'application/vnd.openxmlformats-package.relationships+xml';
-const MAX_ZIP = 4 * 1024 * 1024;
+const MAX_ZIP = 16 * 1024 * 1024;
+const MAX_MEDIA = 4 * 1024 * 1024;
 const NAMESPACES = new Set([W, W14, R, REL, CT, XML, WP, A, PIC]);
 const XML_NAME = /^[A-Za-z_][A-Za-z0-9_.-]*$/;
 class ProfileRefusal extends Error {
@@ -309,7 +310,7 @@ function checkRelationships(pkg: OoxmlPackage, names: ReadonlySet<string>, media
 
 function qualify(pkg: OoxmlPackage, target: Readonly<{ paragraphId: string; offset: number }>, input: Readonly<ImageInsertionBudget>,
   dependencies: Readonly<ImageInsertionProfileDependencies>): number {
-  bounded(input.mediaBytes, 1, MAX_ZIP); bounded(input.pixelWidth, 1, 8192); bounded(input.pixelHeight, 1, 8192);
+  bounded(input.mediaBytes, 1, MAX_MEDIA); bounded(input.pixelWidth, 1, 8192); bounded(input.pixelHeight, 1, 8192);
   const candidatePixels = input.pixelWidth * input.pixelHeight; bounded(candidatePixels, 1, 16000000);
   bounded(input.titleLength, 0, 256); bounded(input.descriptionLength, 0, 2048);
   requireProfile(pkg.mainDocumentPart === MAIN); bounded(pkg.parts.size, 1, 128); bounded(pkg.partBytes.size, 1, 2046);

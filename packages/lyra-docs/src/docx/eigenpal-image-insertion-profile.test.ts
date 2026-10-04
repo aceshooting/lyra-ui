@@ -34,7 +34,7 @@ const children = (n: OoxmlElement) => n.children as OoxmlNode[];
 const unsupported = { ok: false, code: 'unsupported' }, limited = { ok: false, code: 'resource-limit' };
 test('normalized body qualifies with bounded ZIP output and no canonical CT or mutation', () => {
   const h = fixture(), before = structuredClone(h.pkg), result = h.check(); assert(result.ok);
-  assert(Object.isFrozen(result.value)); assert(result.value.upperZipBytes < 4194304); assert.deepEqual(h.pkg, before);
+  assert(Object.isFrozen(result.value)); assert(result.value.upperZipBytes < 16777216); assert.deepEqual(h.pkg, before);
   assert.equal(h.pkg.parts.has(TYPES), false); const saved = writeOoxmlPackage(h.pkg); assert(saved.length < result.value.upperZipBytes);
 });
 test('bad raw CT is refused before public parsing', () => {
@@ -75,10 +75,10 @@ test('census catches cycles and repeated IDs before the public CT reader', () =>
     assert.equal(result.ok, false); assert.equal(calls, 0);
   }
 });
-test('prospective bound enforces exact 4MiB boundary and three metadata reservations', () => {
-  const h = fixture(); let low = 1, high = 4194304;
+test('prospective bound enforces exact 16MiB package and 4MiB media boundaries and three metadata reservations', () => {
+  const h = fixture(); let low = 1, high = 16777216;
   while (low < high) { const mid = Math.ceil((low + high) / 2); if (h.check({ ...budget, mediaBytes: mid }).ok) low = mid; else high = mid - 1; }
-  const result = h.check({ ...budget, mediaBytes: low }); assert(result.ok); assert(result.value.upperZipBytes <= 4194304);
+  const result = h.check({ ...budget, mediaBytes: low }); assert(result.ok); assert(result.value.upperZipBytes <= 16777216);
   assert.deepEqual(h.check({ ...budget, mediaBytes: low + 1 }), limited);
   const plain = h.check(), titled = h.check({ ...budget, titleLength: 256, descriptionLength: 2048 }); assert(plain.ok && titled.ok);
   assert(titled.value.upperZipBytes >= plain.value.upperZipBytes + 3 * 6 * 2304);
@@ -206,7 +206,7 @@ test('pretty-printed content types accept XML whitespace between declarations wi
   assert(result.ok); assert.equal(calls, 1);
   // Small lexical whitespace stays below the unchanged parsed XML reservation.
   assert.equal(result.value.upperZipBytes, compact.value.upperZipBytes);
-  assert(result.value.upperZipBytes <= 4194304);
+  assert(result.value.upperZipBytes <= 16777216);
   assert.equal(h.pkg.parts.has(TYPES), false); assert.deepEqual(h.pkg, before);
 });
 

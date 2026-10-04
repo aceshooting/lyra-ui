@@ -1,11 +1,16 @@
 /** Lifecycle of one document session. Destruction is terminal. */
 export type DocxStatus = 'idle' | 'opening' | 'ready' | 'error' | 'destroyed';
-export type DocxCommand = 'bold' | 'italic' | 'underline' | 'undo' | 'redo';
+export type DocxCommand = 'bold' | 'italic' | 'underline' | 'strikethrough' | 'superscript' | 'subscript' | 'undo' | 'redo';
+/** Word's text highlight palette (`w:highlight`); `none` removes highlighting. */
+export type DocxHighlight =
+  | 'yellow' | 'green' | 'cyan' | 'magenta' | 'blue' | 'red' | 'darkBlue' | 'darkCyan' | 'darkGreen'
+  | 'darkMagenta' | 'darkRed' | 'darkYellow' | 'darkGray' | 'lightGray' | 'black' | 'none';
 export type DocxAlignment = 'left' | 'center' | 'right' | 'justify';
 /**
  * Formatting, simple table and selected inline-image actions. Style ids are at most 128 code units and must identify a document paragraph style.
  * Font families accept 1–64 Unicode letters, numbers, combining marks, spaces or - . + _.
- * Font sizes are 1–1638 points in half-point steps. Colors are #RRGGBB or auto.
+ * Font sizes are 1–1638 points in half-point steps. Colors are #RRGGBB or auto; highlights use Word's named palette.
+ * Line spacing is a multiple from 1 to 5 in 0.05 steps.
  * Links accept HTTPS without credentials, mailto or fragments, at most 2048 code units;
  * optional link text is at most 4096 code units and must be valid XML 1.0 text.
  * Other URL schemes, whitespace and controls are refused.
@@ -17,6 +22,11 @@ export type DocxEdit =
   | Readonly<{ type: 'font-family'; family: string }>
   | Readonly<{ type: 'font-size'; points: number }>
   | Readonly<{ type: 'text-color'; color: string }>
+  | Readonly<{ type: 'highlight'; color: DocxHighlight }>
+  | Readonly<{ type: 'indent'; direction: 'increase' | 'decrease' }>
+  | Readonly<{ type: 'line-spacing'; multiple: number }>
+  | Readonly<{ type: 'clear-formatting' }>
+  | Readonly<{ type: 'page-break' }>
   | Readonly<{ type: 'link'; href: string; text?: string }>
   | Readonly<{ type: 'remove-link' }>
   | DocxTableAction

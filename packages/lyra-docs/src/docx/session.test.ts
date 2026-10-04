@@ -497,7 +497,7 @@ test('invalid options and preflight calls do not spend the idle session', async 
   const signal = AbortSignal.abort();
   refusal(await session.open({ kind: 'blank' }, { signal }), 'aborted');
   refusal(await session.open({ kind: 'bad' } as unknown as DocxSource), 'invalid-option');
-  refusal(await session.open({ kind: 'docx', bytes: new Uint8Array(4 * 1024 * 1024 + 1) }), 'resource-limit');
+  refusal(await session.open({ kind: 'docx', bytes: new Uint8Array(16 * 1024 * 1024 + 1) }), 'resource-limit');
   assert.equal(session.snapshot().status, 'idle');
   assert.equal(f.opens, 0);
   value(await session.open({ kind: 'blank' }));

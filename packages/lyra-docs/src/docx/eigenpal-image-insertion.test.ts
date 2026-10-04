@@ -43,7 +43,7 @@ test('insertion profile and prospective bound refuse before candidate allocation
   const dependencies = { ...h.dependencies, TreePackageStore: Candidate, writeOoxmlPackage: (pkg: OoxmlPackage) => { writes++; return store.writeOoxmlPackage(pkg); } };
   const decodePort = { async decode() { decodes++; return { pixelWidth: 64, pixelHeight: 32, dpiX: 96, dpiY: 96 }; } };
   assert.deepEqual(await preflightImageInsertion(h.pkg, { ...h.target, offset: 999 }, source, dependencies, decodePort, valid, h.signal), { ok: false, code: 'unsupported' });
-  const huge = { ...source, bytes: new Uint8Array(4194304) };
+  const huge = { ...source, bytes: new Uint8Array(4194305) };
   assert.deepEqual(await preflightImageInsertion(h.pkg, h.target, huge, dependencies, decodePort, valid, h.signal), { ok: false, code: 'resource-limit' });
   assert.equal(constructors, 0); assert.equal(decodes, 0); assert.equal(writes, 0);
 });

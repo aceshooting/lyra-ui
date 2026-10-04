@@ -14,6 +14,7 @@ import { runImageTools } from './image-tools-browser.mjs';
 import { runImageInsertion } from './image-insertion-browser.mjs';
 import { runImageInsertionTools } from './image-insertion-tools-browser.mjs';
 import { runEditorLayout } from './layout-browser.mjs';
+import { runFormattingTools } from './formatting-browser.mjs';
 import { runTableEditing } from './tables-browser.mjs';
 import { assertExternalHyperlink, wordText } from '../test/xml.mjs';
 
@@ -189,10 +190,11 @@ async function runBasicEditing(page, check) {
     await size.locator('[part="input"]').fill('14.5');
     await size.locator('[part="input"]').press('Tab');
     await selectDocumentText(page, 'basic-type');
-    const color = page.locator('#basic-type lr-color-picker[data-edit="text-color"]');
-    await color.locator('[part="trigger"]').click();
+    await page.locator('#basic-type [part="text-color"]').click();
+    const color = page.locator('#basic-type [part="text-color-custom"]');
     await color.locator('[part="input"]').fill('#D02030');
     await color.locator('[part="input"]').press('Enter');
+    await page.keyboard.press('Escape');
     const bytes = await saveEditor(page, 'basic-type');
     const xml = zipEntry(bytes, 'word/document.xml');
     assert.match(xml, /<w:rFonts\b[^>]*Arial/u);
@@ -221,6 +223,7 @@ async function runBasicEditing(page, check) {
   });
   await check('automatic color and invalid formatting inputs have bounded behavior', async () => {
     await selectDocumentText(page, 'basic-type');
+    await page.locator('#basic-type [part="text-color"]').click();
     await page.locator('#basic-type [data-edit="text-color-auto"]').click();
     assert.match(zipEntry(await saveEditor(page, 'basic-type'), 'word/document.xml'), /<w:color\b[^>]*w:val="auto"/u);
     const result = await page.locator('#basic-type').evaluate(element => {
@@ -327,7 +330,7 @@ async function runBasicEditing(page, check) {
     });
     assertProtectedParts(bytes, source);
     const refused = await page.locator('#basic-link').evaluate(element => ({
-      http: element.execute({ type: 'link', href: 'http://example.test/unsafe' }),
+      http: element.execute({ type: 'link', href: Object.assign(new URL('http://example.test/unsafe'), { username: 'user', password: 'pw' }).href }),
       script: element.execute({ type: 'link', href: 'javascript:alert(1)' })
     }));
     assert.deepEqual(refused.http, { ok: false, code: 'invalid-option' });
@@ -957,6 +960,8 @@ async function runBrowser(name, url, { lazyEntry, engineEntry }) {
     });
     if (process.env.DOCX_LAYOUT_ONLY) {
       await runEditorLayout(page, check, { createEditor, saveEditor });
+    } else if (process.env.DOCX_FORMATTING_ONLY) {
+      await runFormattingTools(page, check, { saveEditor });
     } else if (process.env.DOCX_INSERTION_ONLY) {
       assert.ok(['core', 'ui', 'all'].includes(process.env.DOCX_INSERTION_ONLY));
       if (process.env.DOCX_INSERTION_ONLY !== 'ui') await runImageInsertion(page, check, { createEditor, saveEditor, assertProtectedParts });
@@ -1143,7 +1148,7 @@ async function runBrowser(name, url, { lazyEntry, engineEntry }) {
         const element = document.createElement('lr-docx-editor');
         element.id = 'oversize';
         document.querySelector('#fixture').append(element);
-        return element.open(new Uint8Array(4 * 1024 * 1024 + 1));
+        return element.open(new Uint8Array(16 * 1024 * 1024 + 1));
       });
       assert.deepEqual(result, { ok: false, code: 'resource-limit' });
     });
@@ -1349,6 +1354,7 @@ async function runBrowser(name, url, { lazyEntry, engineEntry }) {
     });
     await runTableEditing(page, check, { createEditor, saveEditor, assertProtectedParts });
     await runEditorLayout(page, check, { createEditor, saveEditor });
+    await runFormattingTools(page, check, { saveEditor });
     await runBasicEditing(page, check);
     await runEditorWorkflows(page, check);
     await runImageEditing(page, check, { createEditor, saveEditor, assertProtectedParts });

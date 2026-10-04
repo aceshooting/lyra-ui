@@ -9,6 +9,7 @@ import '@aceshooting/lyra-ui/components/lr-option.js';
 import '@aceshooting/lyra-ui/components/lr-combobox.js';
 import '@aceshooting/lyra-ui/components/lr-number-input.js';
 import '@aceshooting/lyra-ui/components/lr-color-picker.js';
+import '@aceshooting/lyra-ui/components/lr-swatch-picker.js';
 import '@aceshooting/lyra-ui/components/lr-popover.js';
 import '@aceshooting/lyra-ui/components/lr-input.js';
 import '@aceshooting/lyra-ui/components/lr-checkbox.js';

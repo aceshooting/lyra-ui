@@ -48,9 +48,17 @@ dependency; consumers may omit it until they use the editor.
 ## Custom element
 
 The toolbar has **New**, **Open**, and **Save**, plus **Bold**, **Italic**,
-**Underline**, **Undo**, and **Redo**. Its editing tools also support paragraph
-styles, alignment, bullet and numbered lists, font family and size, text color,
-hyperlinks, and find/replace-one. The host owns saved bytes and
+**Underline**, **Strikethrough**, **Superscript**, **Subscript**, **Clear formatting**,
+**Undo**, and **Redo**. Its editing tools also support paragraph styles, alignment,
+bullet and numbered lists, indent and outdent, line spacing, font family and size, text
+color and highlight, page breaks, hyperlinks, and find/replace-one.
+
+Text color and highlight are Word-style panels: a palette of Word's standard colors (or
+its highlight colors), **Automatic color** or **No highlight**, and for text an inline
+custom color picker. A palette click or Enter applies and closes the panel; each committed
+custom color applies and keeps it open; Escape closes without editing. Because the engine
+cannot report the current run color, each trigger's bar shows the last applied value, as
+Word's split color buttons do. The host owns saved bytes and
 durable storage. Changes do not send document bytes. A save is explicit, and the
 host must persist its receipt and acknowledge that receipt before the editor
 clears its dirty state:
@@ -101,7 +109,13 @@ The component's localizable messages use these keys through Lyra's inherited
 
 ```text
 docxEditorLabel, docxEditorNew, docxEditorOpen, docxEditorSave,
-docxEditorBold, docxEditorItalic, docxEditorUnderline, docxEditorUndo,
+docxEditorBold, docxEditorItalic, docxEditorUnderline, docxEditorStrikethrough,
+docxEditorSuperscript, docxEditorSubscript, docxEditorClearFormatting,
+docxEditorIndentIncrease, docxEditorIndentDecrease, docxEditorLineSpacing,
+docxEditorPageBreak, docxEditorHighlight, docxEditorNoHighlight,
+docxEditorCustomColor, docxEditorColor* (DarkRed, Red, Orange, Yellow, LightGreen,
+Green, BrightGreen, LightBlue, Turquoise, Blue, DarkBlue, Teal, Purple, Pink, Violet,
+DarkYellow, Black, Gray, DarkGray, LightGray), docxEditorUndo,
 docxEditorRedo, docxEditorUntitled, docxEditorIdle, docxEditorOpening,
 docxEditorReady, docxEditorUnsaved, docxEditorSaving, docxEditorError,
 docxEditorDisconnected, docxEditorShortcut, docxEditorDiscardQuestion,
@@ -110,7 +124,7 @@ docxEditorParagraphStyle, docxEditorAlignment, docxEditorAlignLeft,
 docxEditorAlignCenter, docxEditorAlignRight, docxEditorAlignJustify,
 docxEditorLists, docxEditorBullets, docxEditorNumbering,
 docxEditorFontFamily, docxEditorFontSize, docxEditorTextColor,
-docxEditorAutomaticColor, docxEditorColorUnknown, docxEditorLink,
+docxEditorAutomaticColor, docxEditorLink,
 docxEditorLinkUrl, docxEditorLinkHint, docxEditorLinkText,
 docxEditorApplyLink, docxEditorRemoveLink,
 docxEditorTable, docxEditorInsertTable, docxEditorTableRows,
@@ -162,8 +176,9 @@ Table parts include `table-tools`, `table-insert-popover`, `table-insert-trigger
 `table-context`, `table-actions`, and `table-button`.
 
 **Insert image** opens a local file picker at the original plain paragraph
-caret. Choose a PNG, JPEG without APP1 metadata (including EXIF and XMP), or
-single-frame GIF of up to 4 MiB. The file name and declared file type do not
+caret. Choose a PNG, JPEG, or single-frame GIF of up to 4 MiB. A JPEG's APP1
+camera metadata (EXIF and XMP, which can include location) is removed before
+insertion; EXIF orientation is therefore not applied. The file name and declared file type do not
 supply image metadata or establish its format. The dialog offers width and
 height in points, the original aspect ratio, and optional title and description.
 Defaults use encoded dimensions at 96 pixels per inch, scaled proportionally
@@ -261,7 +276,10 @@ Replace a toolbar glyph with a decorative SVG or icon assigned to its named slot
 ```
 
 Icon slots: `new-icon`, `open-icon`, `save-icon`, `undo-icon`, `redo-icon`,
-`bold-icon`, `italic-icon`, `underline-icon`, `alignment-left-icon`,
+`bold-icon`, `italic-icon`, `underline-icon`, `strikethrough-icon`, `superscript-icon`,
+`subscript-icon`, `clear-formatting-icon`, `text-color-icon`, `highlight-icon`,
+`indent-increase-icon`, `indent-decrease-icon`, `line-spacing-icon`, `page-break-icon`,
+`alignment-left-icon`,
 `alignment-center-icon`, `alignment-right-icon`, `alignment-justify-icon`,
 `list-bullet-icon`, `list-numbered-icon`, `link-icon`, `find-icon`,
 `image-insert-icon`, `table-insert-icon`, `image-previous-icon`, `image-next-icon`,
@@ -293,10 +311,13 @@ bringing an offscreen target into view then depends on the host's scroll layout.
 | `new-button`, `open-button`, `save-button`, `format-button`, `file-input` | File and formatting controls; `format-button` identifies its command with `data-command` |
 | `confirm`, `discard-button`, `keep-button` | Dirty-document replacement confirmation |
 | `editing-tools`, `paragraph-style`, `alignment-actions`, `list-actions`, `edit-button` | Paragraph and text formatting controls; `edit-button` identifies its action with `data-edit` |
-| `font-family`, `font-size`, `text-color`, `color-auto`, `color-state` | Font and text-color controls; `color-state` reports when the engine cannot expose the current text color |
+| `font-family`, `font-size` | Font controls |
+| `text-color`, `text-color-popover`, `text-color-swatches`, `text-color-custom`, `color-auto` | Text color trigger (its bar shows the last applied color), palette, custom picker and Automatic |
+| `highlight`, `highlight-popover`, `highlight-swatches`, `highlight-none` | Highlight trigger, Word highlight palette and No highlight |
+| `line-spacing`, `line-spacing-popover`, `line-spacing-options`, `line-spacing-option` | Line spacing trigger and multiples (`data-value`) |
 | `link-popover`, `link-trigger`, `link-fields`, `link-href`, `link-text`, `link-actions`, `link-apply`, `link-remove`, `link-cancel` | Hyperlink editor and actions |
 | `image-insert-trigger`, `image-insert-dialog`, `image-insert-file`, `image-insert-fields`, `image-insert-width`, `image-insert-height`, `image-insert-ratio`, `image-insert-title`, `image-insert-description`, `image-insert-hint`, `image-insert-actions`, `image-insert-apply`, `image-insert-cancel`, `image-insert-status` | Local image picker, original-caret draft, dimensions, metadata, actions and refusal feedback |
-| `image-tools`, `image-previous`, `image-next`, `image-navigation-status`, `image-context`, `image-delete` | Image navigation, no-image feedback, selected dimensions, and deletion |
+| `image-tools`, `image-previous`, `image-next`, `image-navigation-status`, `image-delete` | Image navigation, no-image feedback, and deletion; the resize trigger's name and tooltip carry the selected dimensions |
 | `image-frame`, `image-handle`, `image-size` | Selected-image frame, pointer resize handles (`data-handle`), and the live size while dragging |
 | `image-resize-popover`, `image-resize-trigger`, `image-resize-fields`, `image-width`, `image-height`, `image-ratio`, `image-resize-hint`, `image-resize-actions`, `image-resize-apply`, `image-resize-cancel` | Image dimensions dialog and original aspect-ratio option |
 | `image-description-popover`, `image-description-trigger`, `image-description-fields`, `image-title`, `image-description`, `image-description-hint`, `image-description-actions`, `image-description-apply`, `image-description-cancel` | Bounded title and multiline description dialog |
@@ -342,9 +363,10 @@ try {
 
 The session reports immutable state through `snapshot()` and `subscribe()`.
 `open()` accepts a blank source or DOCX bytes. `can()` reports whether a
-`DocxAction` is available; `execute()` runs one of the five string commands or
-one parameterized edit action. The original `DocxCommand` remains
-`bold | italic | underline | undo | redo`; parameterized actions are:
+`DocxAction` is available; `execute()` runs one string command or one parameterized
+edit action. `DocxCommand` is
+`bold | italic | underline | strikethrough | superscript | subscript | undo | redo`;
+parameterized actions are:
 
 ```ts
 type DocxEdit =
@@ -354,6 +376,11 @@ type DocxEdit =
   | { type: 'font-family'; family: string }
   | { type: 'font-size'; points: number }
   | { type: 'text-color'; color: string }
+  | { type: 'highlight'; color: DocxHighlight } // Word names, e.g. 'yellow', 'darkCyan', or 'none'
+  | { type: 'indent'; direction: 'increase' | 'decrease' }
+  | { type: 'line-spacing'; multiple: number } // 1–5 in 0.05 steps
+  | { type: 'clear-formatting' }
+  | { type: 'page-break' }
   | { type: 'link'; href: string; text?: string }
   | { type: 'remove-link' }
   | DocxTableAction
@@ -429,24 +456,36 @@ any of these bounds are refused:
 
 | Resource | Limit |
 | --- | ---: |
-| Input archive | 4 MiB |
+| Input archive | 16 MiB (the largest package a save produces) |
 | ZIP entries | 2,048 |
-| Expanded size per entry | 8 MiB |
-| Expanded archive total | 32 MiB |
-| XML part | 4 MiB |
-| XML nodes across the archive | 150,000 |
+| Expanded size per entry | 16 MiB |
+| Expanded archive total | 64 MiB |
+| XML part | 16 MiB |
+| XML nodes across the archive | 1,000,000 |
 | XML nesting depth | 128 |
 | Individual image | 4 MiB |
 | Image width or height | 8,192 pixels |
 | Pixels in one image | 16 million |
-| Unique images | 128 |
-| Pixels across unique images | 32 million |
+| Unique images | 256 |
+| Pixels across unique images | 64 million |
 
 XML must be valid UTF-8. Only stored or deflated, unencrypted, non-ZIP64 DOCX
-archives are accepted. The parser rejects DTDs, external resources, embedded
-fonts, `altChunk`, embedded objects, packages, and controls. It accepts static
-PNG, one-frame GIF, and JPEG images; other formats and animated images are
-refused. HTTPS, `mailto:`, and fragment-only hyperlinks are allowed.
+archives are accepted; an Info-ZIP Unicode path field must spell the entry name.
+The parser rejects DTDs, processing instructions (except Office's inert `mso-*`
+instructions in custom XML parts), `altChunk`, and ActiveX controls. Embedded
+fonts, OLE objects and chart packages are kept as opaque parts. External
+relationships are admitted only when the engine never fetches them: hyperlinks
+(HTTP(S) without credentials, `mailto:`, fragments), the Word template a document
+was created from, and linked pictures, which render as placeholders. Other
+external targets are refused.
+
+Every PNG, GIF or JPEG under `word/`, and every picture the document references,
+must be a well-formed static image within the pixel limits (trailing bytes after
+the end marker are tolerated). Referenced Windows metafiles (EMF, WMF and their
+compressed forms) are kept and painted as placeholders; referenced SVG must pass
+the XML checks without external references; other formats that browsers would
+sniff and decode (WebP, BMP, TIFF) are refused. Unreferenced package metadata,
+such as the Word thumbnail, is never decoded.
 
 The engine preservation corpus verifies that selected unknown OPC parts remain
 byte-identical through edit, save, and reopen. That result applies to the tested
@@ -639,9 +678,8 @@ live original intent, with no command dispatch or history/dirty/revision change.
 These guards cover the Lyra session/element actions and contextual controls.
 Replacement, native resize handles, paste/drop, floating layout, and broad
 native gesture policy remain outside this selected-image contract. Local byte
-insertion has the separate bounded contract below. Admission
-and export limits are unchanged; an edited export is not promised to fit the
-4 MiB input admission ceiling. The package remains experimental.
+insertion has the separate bounded contract below. The admission
+input ceiling equals the 16 MiB export ceiling, so a saved package reopens. The package remains experimental.
 
 ### Local image insertion
 
@@ -679,8 +717,8 @@ if (availability.enabled && revision) {
 ```
 
 The API copies only the visible byte range synchronously before its first await
-or notification. It validates the encoded PNG, JPEG without any APP1 segment,
-or single-frame GIF and also requires successful native decoding. Existing
+or notification. It validates the encoded PNG, JPEG (after removing APP1
+camera metadata), or single-frame GIF and also requires successful native decoding. Existing
 image admission limits apply: 4 MiB encoded bytes, 8192 pixels per axis and
 16 million pixels per image. `canInsertImage()` reads cached caret/lifecycle
 state without reading bytes or validating the whole document.
@@ -690,7 +728,7 @@ body typing, plus a narrow package grammar. Tables, auxiliary stories, style
 references, fields, controls, tracked changes and a target paragraph already
 containing an image refuse unchanged. Other plain body paragraphs may contain
 supported inline pictures. A validated insertion commits only when its immediate
-serialized package is at most 4 MiB and passes the existing admission and engine
+serialized package is at most 16 MiB and passes the existing admission and engine
 ZIP reader. This bound applies to that committed revision; later edits and the
 generic save policy are separate.
 

@@ -90,7 +90,6 @@ export const styles = css`
   [part='paragraph-style'] { --lr-select-trigger-min-height: var(--_docx-control-height); }
   [part='font-family'] { --lr-combobox-trigger-min-height: var(--_docx-control-height); }
   [part='font-size'] { --lr-input-control-min-height: var(--_docx-control-height); }
-  [part='text-color'] { --lr-color-picker-swatch-size: var(--_docx-control-height); }
 
   [part='paragraph-style'], [part='font-family'] {
     flex: 0 1 var(--lr-size-8rem);
@@ -100,8 +99,8 @@ export const styles = css`
   }
 
   [part='font-size'] {
-    flex: 0 0 var(--lr-size-10rem);
-    inline-size: var(--lr-size-10rem);
+    flex: 0 0 var(--lr-size-8rem);
+    inline-size: var(--lr-size-8rem);
     min-inline-size: 0;
     max-inline-size: 100%;
   }
@@ -150,16 +149,29 @@ export const styles = css`
     --lr-icon-size: var(--lr-font-size-lg);
   }
 
-  [part='text-color'] {
-    display: flex;
-    flex: none;
+  .tool-glyph { position: relative; display: flex; }
+  /* The last applied text or highlight color, as Word's split color buttons show it; drawn over the
+     glyph's empty lower band so the icon keeps the shared toolbar centering. */
+  .tool-glyph[style]::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: 0;
+    block-size: calc(var(--lr-size-1px) * 3);
+    border-radius: var(--lr-size-1px);
+    background: var(--_tool-swatch);
+    box-shadow: 0 0 0 var(--lr-size-1px) var(--lr-color-border);
   }
 
-  [part='color-state'] {
-    max-inline-size: var(--lr-size-8rem);
-    color: var(--lr-color-text-quiet);
-    font-size: var(--lr-font-size-sm);
+  .color-fields, [part='line-spacing-options'] {
+    display: grid;
+    gap: var(--lr-space-s);
+    padding: var(--lr-space-s);
+    max-inline-size: var(--lr-size-20rem);
   }
+  [part='line-spacing-options'] { gap: var(--lr-space-2xs); }
+  [part='line-spacing-option'] { justify-self: stretch; }
+  [part='text-color-swatches'], [part='highlight-swatches'] { --lr-swatch-picker-wrap: wrap; }
 
   [part='link-fields'], [part='table-fields'], [part='image-insert-fields'], [part='image-resize-fields'], [part='image-description-fields'] {
     display: grid;
@@ -171,7 +183,7 @@ export const styles = css`
   }
 
   [part='table-tools'], [part='image-tools'] { flex: 0 1 auto; }
-  [part='table-context'], [part='table-hint'], [part='image-context'],
+  [part='table-context'], [part='table-hint'],
   [part='image-insert-hint'], [part='image-insert-status'], [part='image-resize-hint'], [part='image-description-hint'], [part='image-navigation-status'] {
     margin: 0;
     overflow-wrap: anywhere;
@@ -362,9 +374,16 @@ export const styles = css`
 
   @container (max-width: 35rem) {
     [part='toolbar'] { gap: var(--lr-space-xs); }
-    .font-tools { flex-basis: 100%; }
-    [part='paragraph-style'], [part='font-family'] { flex: 1 1 var(--lr-size-6rem); }
+    /* Phones keep both toolbar rows one control tall; each scrolls and keyboard focus reveals offscreen tools. */
+    [part='editing-tools'] {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: thin;
+    }
+    [part='editing-tools'] > * { flex-shrink: 0; }
+    .font-tools { flex-wrap: nowrap; }
+    [part='paragraph-style'], [part='font-family'] { flex: 0 0 var(--lr-size-6rem); inline-size: var(--lr-size-6rem); }
     [part='find-query'], [part='find-replace'] { flex-basis: 100%; }
-    [part='color-state'] { max-inline-size: var(--lr-size-6rem); }
   }
 `;

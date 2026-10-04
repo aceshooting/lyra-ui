@@ -1,11 +1,16 @@
 import { Inflate } from 'fflate';
 import { SaxesParser } from 'saxes';
-import { inspectDocxImage } from './image-bytes.js';
+import { inspectDocxImage, isDocxMetafileSignature, isDocxRasterSignature } from './image-bytes.js';
 import { isSafeDocxHyperlink } from './hyperlink-policy.js';
 import type { DocxRefusalCode, DocxResult } from './types.js';
 
 const MiB = 1024 * 1024;
-const LIMITS = { input: 4 * MiB, entries: 2048, entry: 8 * MiB, expanded: 32 * MiB, xml: 4 * MiB, nodes: 150_000, depth: 128, totalPixels: 32_000_000, images: 128 };
+// The input cap matches the largest package the session exports, so a saved document always reopens.
+const LIMITS = { input: 16 * MiB, entries: 2048, entry: 16 * MiB, expanded: 64 * MiB, xml: 16 * MiB, nodes: 1_000_000, depth: 128, totalPixels: 64_000_000, images: 256 };
+/** External targets the engine records but never fetches: links, Word templates and linked pictures. */
+const INERT_EXTERNAL = new Set(['hyperlink', 'attachedTemplate', 'image']);
+/** Embedded content that can execute or import foreign markup stays refused; fonts and OLE/chart packages are opaque. */
+const ACTIVE_INTERNAL = new Set(['aFChunk', 'control']);
 const REL_NS = 'http://schemas.openxmlformats.org/package/2006/relationships';
 const TYPE_NS = 'http://schemas.openxmlformats.org/package/2006/content-types';
 const WORD_NS = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
@@ -17,9 +22,13 @@ class Refusal extends Error {
 }
 function reject(code: DocxRefusalCode = 'invalid-document'): never { throw new Refusal(code); }
 function check(signal?: AbortSignal): void { if (signal?.aborted) reject('aborted'); }
+let lastYield = 0;
+/** Yield to the event loop at most every 8 ms, so large packages neither block input nor crawl on timer clamping. */
 async function checkpoint(signal?: AbortSignal): Promise<void> {
   check(signal);
+  if (performance.now() - lastYield < 8) return;
   await new Promise<void>(resolve => setTimeout(resolve, 0));
+  lastYield = performance.now();
   check(signal);
 }
 interface Entry { name: string; size: number; packed: number; crc: number; method: number; flags: number; offset: number; start: number; end: number }
@@ -42,14 +51,15 @@ function archive(bytes: Uint8Array, signal?: AbortSignal): Entry[] {
   if (central + centralSize !== eocd) reject();
   const entries: Entry[] = [], names = new Set<string>();
   let at = central, expanded = 0;
-  function extra(start: number, size: number): void {
+  function extra(start: number, size: number, name: string): void {
     const end = start + size;
     while (start < end) {
       if (start + 4 > end) reject();
       const id = u16(start), length = u16(start + 2);
       if (id === 1 || id === 0x9901 || start + 4 + length > end) reject();
-      // Alternate Unicode names can otherwise disagree with the validated UTF-8 name.
-      if (id === 0x7075) reject();
+      // An Info-ZIP Unicode path is admitted only when it spells exactly the validated UTF-8 name.
+      if (id === 0x7075 && (length < 5 || bytes[start + 4] !== 1 ||
+        decoder.decode(bytes.subarray(start + 9, start + 4 + length)) !== name)) reject();
       start += 4 + length;
     }
   }
@@ -66,12 +76,12 @@ function archive(bytes: Uint8Array, signal?: AbortSignal): Entry[] {
     if (!validName(name) || names.has(name.toLowerCase()) || (name.endsWith('/') && size !== 0)) reject();
     names.add(name.toLowerCase());
     if (size > LIMITS.entry || (expanded += size) > LIMITS.expanded) reject('resource-limit');
-    extra(at + 46 + nameSize, extraSize);
+    extra(at + 46 + nameSize, extraSize, name);
     if (offset + 30 > central || u32(offset) !== 0x04034b50 || u16(offset + 6) !== flags || u16(offset + 8) !== method) reject();
     const localNameSize = u16(offset + 26), localExtraSize = u16(offset + 28);
     const start = offset + 30 + localNameSize + localExtraSize;
     if (start + packed > central || localNameSize !== nameSize || !nameBytes.every((byte, j) => bytes[offset + 30 + j] === byte)) reject();
-    extra(offset + 30 + localNameSize, localExtraSize);
+    extra(offset + 30 + localNameSize, localExtraSize, name);
     const descriptor = Boolean(flags & 8);
     for (const [position, expected] of [[14, crc], [18, packed], [22, size]] as const) {
       const actual = u32(offset + position);
@@ -118,9 +128,9 @@ async function expand(bytes: Uint8Array, entry: Entry, signal?: AbortSignal): Pr
   else {
     const inflater = new Inflate(receive);
     // Feeding bounded compressed slices also bounds each decoder output allocation.
-    for (let offset = 0; offset < entry.packed; offset += 256) {
-      if (offset % 16384 === 0) await checkpoint(signal);
-      inflater.push(bytes.subarray(entry.start + offset, entry.start + Math.min(entry.packed, offset + 256)), offset + 256 >= entry.packed);
+    for (let offset = 0; offset < entry.packed; offset += 4096) {
+      if (offset % 65536 === 0) await checkpoint(signal);
+      inflater.push(bytes.subarray(entry.start + offset, entry.start + Math.min(entry.packed, offset + 4096)), offset + 4096 >= entry.packed);
     }
     if (entry.packed === 0) reject();
   }
@@ -182,14 +192,15 @@ async function inspectXml(bytes: Uint8Array, name: string, info: PackageInfo, si
       const id = attr('Id'), type = attr('Type'), target = attr('Target'), mode = attr('TargetMode');
       if (!id || ids.has(id) || !type || !target || (mode && mode !== 'External' && mode !== 'Internal')) reject();
       ids.add(id);
+      const kind = type.slice(type.lastIndexOf('/') + 1);
       if (mode === 'External') {
-        if (type !== OFFICE_REL + 'hyperlink' || !isSafeDocxHyperlink(target)) reject('external-resource');
+        if (!type.startsWith(OFFICE_REL) || !INERT_EXTERNAL.has(kind) ||
+          (kind === 'hyperlink' && !isSafeDocxHyperlink(target))) reject('external-resource');
       } else if (!(type === OFFICE_REL + 'hyperlink' && target.startsWith('#'))) {
         const resolved = internalTarget(name, target);
         if (!info.names.has(resolved)) reject();
-        const kind = type.slice(type.lastIndexOf('/') + 1);
-        if (kind === 'image') info.images.add(resolved);
-        if (['font', 'aFChunk', 'oleObject', 'package', 'control'].includes(kind)) reject();
+        if (kind === 'image' && name.startsWith('word/')) info.images.add(resolved);
+        if (ACTIVE_INTERNAL.has(kind)) reject();
         if (name === '_rels/.rels' && type === OFFICE_REL + 'officeDocument') {
           if (resolved !== 'word/document.xml' || info.officeDocument) reject();
           info.officeDocument = true;
@@ -206,7 +217,10 @@ async function inspectXml(bytes: Uint8Array, name: string, info: PackageInfo, si
   parser.on('text', countNode);
   parser.on('cdata', countNode);
   parser.on('comment', countNode);
-  parser.on('processinginstruction', () => reject());
+  // Office writes inert mso-* instructions (for example SharePoint content types) into custom XML parts.
+  parser.on('processinginstruction', instruction => {
+    if (name.startsWith('word/') || name.endsWith('.rels') || name === '[Content_Types].xml' || !instruction.target.startsWith('mso-')) reject();
+  });
   for (let offset = 0; offset < text.length; offset += 16384) {
     if (offset % 262144 === 0) await checkpoint(signal);
     parser.write(text.slice(offset, offset + 16384));
@@ -229,32 +243,41 @@ export async function admitDocx(bytes: Uint8Array, signal?: AbortSignal): Promis
     await inspectXml(await expand(bytes, content, signal), content.name, info, signal);
     const checkedImages = new Set<string>();
     let totalPixels = 0;
-    const inspectUniqueImage = (name: string, payload: Uint8Array): void => {
+    const typeOf = (name: string) => info.overrides.get(name) ?? info.defaults.get(name.split('.').at(-1)!.toLowerCase()) ?? '';
+    // Pictures the document body references reach the browser's decoders. Bytes claiming PNG, GIF or
+    // JPEG must be well formed and within pixel limits; Windows metafiles, which no browser decodes, are
+    // painted as placeholders; SVG must be plain XML without external references; anything else (WebP,
+    // BMP, TIFF, unknown) is refused because browsers sniff and decode it. Unreferenced images such as
+    // package thumbnails are never decoded; every PNG, GIF or JPEG under word/ is still inspected.
+    const inspectBodyImage = async (name: string, payload: Uint8Array): Promise<void> => {
       if (checkedImages.has(name)) return;
       checkedImages.add(name);
       if (checkedImages.size > LIMITS.images) reject('resource-limit');
-      const image = inspectDocxImage(payload);
-      if (!image.ok) reject(image.code);
-      totalPixels += image.value.pixels;
-      if (totalPixels > LIMITS.totalPixels) reject('resource-limit');
+      if (isDocxRasterSignature(payload)) {
+        const image = inspectDocxImage(payload, { trailing: true });
+        if (!image.ok) reject(image.code);
+        totalPixels += image.value.pixels;
+        if (totalPixels > LIMITS.totalPixels) reject('resource-limit');
+      } else if (typeOf(name) === 'image/svg+xml' || /\.svg$/i.test(name)) await inspectXml(payload, name, info, signal);
+      else if (!isDocxMetafileSignature(payload)) reject();
     };
     for (const entry of entries) {
       check(signal);
       if (entry === content) continue;
       const expanded = await expand(bytes, entry, signal);
       if (entry.name.endsWith('/')) continue;
-      const type = info.overrides.get(entry.name) ?? info.defaults.get(entry.name.split('.').at(-1)!.toLowerCase()) ?? '';
-      if (/\.(?:xml|rels)$/i.test(entry.name) || /(?:\+xml|\/xml)$/.test(type)) await inspectXml(expanded, entry.name, info, signal);
-      if (type.startsWith('image/') || /\.(?:png|jpe?g|gif|bmp|webp|svg|tiff?|emf|wmf)$/i.test(entry.name) || entry.name.startsWith('word/media/')) inspectUniqueImage(entry.name, expanded);
+      const type = typeOf(entry.name);
+      if (/\.(?:xml|rels)$/i.test(entry.name) || /(?:\+xml|\/xml)$/.test(type) && type !== 'image/svg+xml') await inspectXml(expanded, entry.name, info, signal);
+      if (entry.name.startsWith('word/') && isDocxRasterSignature(expanded)) await inspectBodyImage(entry.name, expanded);
       await checkpoint(signal);
     }
-    // Relationships may follow their targets in ZIP order. Expand only the remaining
-    // image targets again, avoiding retention of the complete expanded package.
+    // Relationships may follow their targets in ZIP order, so referenced pictures are expanded
+    // again once every relationship is known, avoiding retention of the complete expanded package.
     for (const name of info.images) {
       if (checkedImages.has(name)) continue;
       check(signal);
       const entry = entries.find(candidate => candidate.name === name)!;
-      inspectUniqueImage(name, await expand(bytes, entry, signal));
+      await inspectBodyImage(name, await expand(bytes, entry, signal));
       await checkpoint(signal);
     }
     if (!info.officeDocument || info.overrides.get('word/document.xml') !== 'application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml') reject();

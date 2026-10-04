@@ -36,7 +36,7 @@ test('refuses absent required parts, malformed ZIP and input above ceiling', asy
   }
   assert.deepEqual(await admitDocx(new Uint8Array([1, 2, 3])), invalid);
   assert.deepEqual(await admitDocx(docxFixture().subarray(0, 100)), invalid);
-  assert.deepEqual(await admitDocx(new Uint8Array(4 * 1024 * 1024 + 1)), limited);
+  assert.deepEqual(await admitDocx(new Uint8Array(16 * 1024 * 1024 + 1)), limited);
 });
 
 test('rejects XML syntax errors, DTDs, undeclared entities and deep or excessive nodes', async () => {
@@ -44,7 +44,7 @@ test('rejects XML syntax errors, DTDs, undeclared entities and deep or excessive
     assert.deepEqual(await admitDocx(docxFixture({ 'custom/test.xml': xml })), invalid);
   }
   assert.deepEqual(await admitDocx(docxFixture({ 'custom/test.xml': '<a>'.repeat(129) + '</a>'.repeat(129) }, 6)), limited);
-  assert.deepEqual(await admitDocx(docxFixture({ 'custom/test.xml': '<a>' + '<b/>'.repeat(150_001) + '</a>' }, 6)), limited);
+  assert.deepEqual(await admitDocx(docxFixture({ 'custom/test.xml': '<a>' + '<b/>'.repeat(1_000_001) + '</a>' }, 6)), limited);
 });
 
 test('rejects traversal, duplicate ZIP names and CRC or local/central mismatches', async () => {
@@ -80,11 +80,11 @@ test('rejects encrypted, unsupported compression, ZIP64 and multipart archives',
 });
 
 test('rejects declared and actual expansion beyond bounded sizes', async () => {
-  assert.deepEqual(await admitDocx(docxFixture({ 'custom/bomb.bin': new Uint8Array(8 * 1024 * 1024 + 1) }, 6)), limited);
-  const bytes = docxFixture({ 'custom/bomb.bin': new Uint8Array(9 * 1024 * 1024) }, 6);
+  assert.deepEqual(await admitDocx(docxFixture({ 'custom/bomb.bin': new Uint8Array(16 * 1024 * 1024 + 1) }, 6)), limited);
+  const bytes = docxFixture({ 'custom/bomb.bin': new Uint8Array(17 * 1024 * 1024) }, 6);
   const view = new DataView(bytes.buffer);
   for (let i = 0; i + 46 < bytes.length; i++) {
-    if (view.getUint32(i, true) === 0x02014b50 && view.getUint32(i + 24, true) > 8 * 1024 * 1024) {
+    if (view.getUint32(i, true) === 0x02014b50 && view.getUint32(i + 24, true) > 16 * 1024 * 1024) {
       view.setUint32(i + 24, 10, true);
       view.setUint32(view.getUint32(i + 42, true) + 22, 10, true);
     }
@@ -92,13 +92,19 @@ test('rejects declared and actual expansion beyond bounded sizes', async () => {
   assert.deepEqual(await admitDocx(bytes), limited);
 });
 
-test('refuses remote resources and unsafe hyperlinks but accepts safe link protocols', async () => {
-  for (const [target, type] of [['https://example.com/a.png', 'image'], ['file:///secret', 'image'], ['https://example.com/font', 'font'], ['javascript:alert(1)', 'hyperlink'], ['http://example.com', 'hyperlink']]) {
-    assert.deepEqual(await admitDocx(docxFixture({ 'word/_rels/document.xml.rels': relationship(target!, type) })), { ok: false, code: 'external-resource' });
+test('refuses fetchable or unsafe external targets but admits inert links, templates and linked pictures', async () => {
+  for (const [target, type] of [['https://example.com/font', 'font'], ['https://example.com/sub.docx', 'subDocument'],
+    ['https://example.com/frame', 'frame'], ['javascript:alert(1)', 'hyperlink'],
+    [Object.assign(new URL('https://example.com'), { username: 'user', password: 'pw' }).href, 'hyperlink']]) {
+    assert.deepEqual(await admitDocx(docxFixture({ 'word/_rels/document.xml.rels': relationship(target!, type!) })), { ok: false, code: 'external-resource' }, target!);
   }
-  for (const target of ['https://example.com', 'mailto:person@example.com', '#bookmark']) {
-    assert.deepEqual(await admitDocx(docxFixture({ 'word/_rels/document.xml.rels': relationship(target, 'hyperlink') })), { ok: true, value: undefined });
+  for (const [target, type] of [['https://example.com', 'hyperlink'], ['http://example.com', 'hyperlink'], ['mailto:person@example.com', 'hyperlink'],
+    ['#bookmark', 'hyperlink'], ['https://example.com/logo.png', 'image'], ['cid:image001.png@01D0', 'image']]) {
+    assert.deepEqual(await admitDocx(docxFixture({ 'word/_rels/document.xml.rels': relationship(target!, type!) })), { ok: true, value: undefined }, target!);
   }
+  // Word records the template a document was created from as an inert local path.
+  assert.deepEqual(await admitDocx(docxFixture({ 'word/_rels/settings.xml.rels': relationship('file:///C:/Templates/Normal.dotm', 'attachedTemplate'),
+    'word/settings.xml': '<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>' })), { ok: true, value: undefined });
   assert.deepEqual(await admitDocx(docxFixture({ 'word/_rels/document.xml.rels': relationship('https://example.com/image', 'image', 'Internal') })), { ok: false, code: 'external-resource' });
 });
 
@@ -109,6 +115,8 @@ test('refuses oversized image dimensions before decoding', async () => {
   view.setUint32(16, 100_000);
   view.setUint32(20, 100_000);
   assert.deepEqual(await admitDocx(docxFixture({ 'word/media/a.png': image })), limited);
+  // Unreferenced package metadata such as the Word thumbnail is never decoded.
+  assert.deepEqual(await admitDocx(docxFixture({ 'docProps/thumbnail.png': image })), { ok: true, value: undefined });
 });
 
 test('returns typed abort before parsing and yields so in-flight cancellation works', async () => {
@@ -134,24 +142,26 @@ test('bounds ZIP entry count, aggregate expansion and XML byte size', async () =
   for (let i = 0; i < 2048; i++) entries[`custom/${i}.bin`] = new Uint8Array();
   assert.deepEqual(await admitDocx(docxFixture(entries)), limited);
   const large: Record<string, Uint8Array> = {};
-  for (let i = 0; i < 5; i++) large[`custom/${i}.bin`] = new Uint8Array(8 * 1024 * 1024);
+  for (let i = 0; i < 5; i++) large[`custom/${i}.bin`] = new Uint8Array(14 * 1024 * 1024);
   assert.deepEqual(await admitDocx(docxFixture(large, 6)), limited);
-  assert.deepEqual(await admitDocx(docxFixture({ 'custom/a.xml': '<a>' + 'x'.repeat(4 * 1024 * 1024) + '</a>' }, 6)), limited);
+  assert.deepEqual(await admitDocx(docxFixture({ 'custom/a.xml': '<a>' + 'x'.repeat(16 * 1024 * 1024) + '</a>' }, 6)), limited);
 });
 
 test('checks XML selected by content type and rejects malformed image headers and missing internal targets', async () => {
   const content = '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/custom/data.bin" ContentType="application/xml"/></Types>';
   assert.deepEqual(await admitDocx(docxFixture({ '[Content_Types].xml': content, 'custom/data.bin': '<a>' })), invalid);
-  assert.deepEqual(await admitDocx(docxFixture({ 'word/media/a.png': new Uint8Array([1, 2, 3]) })), invalid);
+  assert.deepEqual(await admitDocx(docxFixture({ 'word/media/a.png': new Uint8Array([1, 2, 3]),
+    'word/_rels/document.xml.rels': relationship('media/a.png', 'image', 'Internal') })), invalid);
   assert.deepEqual(await admitDocx(docxFixture({ 'word/_rels/document.xml.rels': relationship('media/missing.png', 'image', 'Internal') })), invalid);
 });
 
-test('never fetches an external resource while refusing it', async () => {
+test('never fetches an external resource while admitting or refusing it', async () => {
   const oldFetch = globalThis.fetch;
   let calls = 0;
   globalThis.fetch = async () => { calls++; throw new Error('must not fetch'); };
   try {
-    assert.deepEqual(await admitDocx(docxFixture({ 'word/_rels/document.xml.rels': relationship('https://example.com/tracker.png') })), { ok: false, code: 'external-resource' });
+    assert.deepEqual(await admitDocx(docxFixture({ 'word/_rels/document.xml.rels': relationship('https://example.com/tracker.png') })), { ok: true, value: undefined });
+    assert.deepEqual(await admitDocx(docxFixture({ 'word/_rels/document.xml.rels': relationship('https://example.com/tracker', 'frame') })), { ok: false, code: 'external-resource' });
     assert.equal(calls, 0);
   } finally { globalThis.fetch = oldFetch; }
 });
@@ -177,13 +187,39 @@ test('checks every relationship image target regardless of name, MIME or ZIP ord
   }
 });
 
-test('refuses unqualified embedded fonts and alternate-content resource relationships', async () => {
-  for (const type of ['font', 'aFChunk', 'oleObject', 'package', 'control']) {
+test('refuses active embedded content but keeps fonts, OLE objects and chart packages as opaque parts', async () => {
+  for (const [type, expected] of [['aFChunk', invalid], ['control', invalid], ['font', { ok: true, value: undefined }],
+    ['oleObject', { ok: true, value: undefined }], ['package', { ok: true, value: undefined }]] as const) {
     assert.deepEqual(await admitDocx(docxFixture({
       'custom/payload.bin': new Uint8Array([1, 2, 3]),
       'word/_rels/document.xml.rels': relationship('../custom/payload.bin', type, 'Internal')
-    })), invalid);
+    })), expected, type);
   }
+});
+
+test('referenced pictures admit trailing bytes and metafiles, and refuse formats browsers would sniff and decode', async () => {
+  const png = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=', 'base64'));
+  const withRelationship = (name: string, bytes: Uint8Array) => docxFixture({ [`word/media/${name}`]: bytes,
+    'word/_rels/document.xml.rels': relationship(`media/${name}`, 'image', 'Internal') });
+  assert.deepEqual(await admitDocx(withRelationship('a.png', new Uint8Array([...png, 0, 0, 0]))), { ok: true, value: undefined });
+  const emf = new Uint8Array(64); emf.set([1, 0, 0, 0]); emf.set([0x20, 0x45, 0x4d, 0x46], 40);
+  for (const metafile of [emf, Uint8Array.of(0xd7, 0xcd, 0xc6, 0x9a, 0, 0), Uint8Array.of(1, 0, 9, 0, 0, 3), Uint8Array.of(0x1f, 0x8b, 8, 0)]) {
+    assert.deepEqual(await admitDocx(withRelationship('a.emf', metafile)), { ok: true, value: undefined });
+  }
+  for (const sniffed of [new TextEncoder().encode('RIFF\x00\x00\x00\x00WEBPVP8 '), new TextEncoder().encode('BM\x00\x00'), Uint8Array.of(0x49, 0x49, 0x2a, 0)]) {
+    assert.deepEqual(await admitDocx(withRelationship('a.bin', sniffed)), invalid);
+  }
+  const svg = (body: string) => new TextEncoder().encode(`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">${body}</svg>`);
+  assert.deepEqual(await admitDocx(withRelationship('a.svg', svg('<rect width="1" height="1"/>'))), { ok: true, value: undefined });
+  assert.deepEqual(await admitDocx(withRelationship('a.svg', svg('<image xlink:href="https://example.com/x.png"/>'))), { ok: false, code: 'external-resource' });
+  assert.deepEqual(await admitDocx(withRelationship('a.svg', new TextEncoder().encode('<!DOCTYPE svg [<!ENTITY x "y">]><svg/>'))), invalid);
+});
+
+test('admits inert Office processing instructions only in custom parts', async () => {
+  const custom = '<?mso-contentType?><FormTemplates xmlns="http://schemas.microsoft.com/sharepoint/v3/contenttype/forms"/>';
+  assert.deepEqual(await admitDocx(docxFixture({ 'customXml/item1.xml': custom })), { ok: true, value: undefined });
+  assert.deepEqual(await admitDocx(docxFixture({ 'customXml/item1.xml': '<?xml-stylesheet href="x"?><a/>' })), invalid);
+  assert.deepEqual(await admitDocx(docxFixture({ 'word/extra.xml': '<?mso-application progid="Word.Document"?><a/>' })), invalid);
 });
 
 test('bounds aggregate decoded image pixels and count, deduplicating repeated targets', async () => {
@@ -203,8 +239,8 @@ test('bounds aggregate decoded image pixels and count, deduplicating repeated ta
     parts['word/_rels/document.xml.rels'] = relationships + '</Relationships>';
     return docxFixture(parts, 6);
   };
-  assert.deepEqual(await admitDocx(makeImages(3, 4000)), limited);
-  assert.deepEqual(await admitDocx(makeImages(129, 1)), limited);
+  assert.deepEqual(await admitDocx(makeImages(5, 4000)), limited);
+  assert.deepEqual(await admitDocx(makeImages(257, 1)), limited);
   assert.deepEqual(await admitDocx(makeImages(3, 4000, true)), { ok: true, value: undefined });
 });
 

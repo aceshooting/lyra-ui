@@ -76,7 +76,7 @@ export async function runEditorLayout(page, check, { createEditor, saveEditor })
         const box = focused.getBoundingClientRect();
         return { key: focused.getAttribute('data-tool-key'), left: box.left, right: box.right };
       });
-      assert.equal(last.key, 'text-color-auto');
+      assert.equal(last.key, 'highlight');
       assert.ok(last.left >= 0 && last.right <= width, JSON.stringify(last));
       await page.keyboard.press('Escape');
       await page.screenshot({ path: new URL(`../.browser-evidence/layout-${width}.png`, import.meta.url).pathname });
@@ -95,6 +95,14 @@ export async function runEditorLayout(page, check, { createEditor, saveEditor })
     assert.ok(rtlGap.gap >= 0 && rtlGap.gap <= 32 && rtlGap.separatorWidth >= 1 && rtlGap.firstVisible, JSON.stringify(rtlGap));
     await editor.evaluate(async element => { element.setAttribute('dir', 'ltr'); await element.updateComplete; });
     await page.setViewportSize({ width: 1440, height: 900 });
+  });
+  await check('engine overlay layers start where the painted pages start', async () => {
+    const offset = await editor.evaluate(element => {
+      const pages = element.querySelector('.docx-pages').getBoundingClientRect();
+      const overlay = element.querySelector('.docx-paginated-surface .docx-selection-overlay, .docx-selection-overlay-container');
+      return overlay ? overlay.getBoundingClientRect().top - pages.top : null;
+    });
+    assert.ok(offset !== null && Math.abs(offset) <= 1, `overlay offset ${offset}`);
   });
   await check('a height-constrained editor keeps the toolbar and status outside the document scroll', async () => {
     await editor.evaluate(element => {
@@ -155,7 +163,7 @@ export async function runEditorLayout(page, check, { createEditor, saveEditor })
   await check('all toolbar controls share a height without shrinking stepper hit targets', async () => {
     const geometry = await editor.evaluate(element => {
       const root = element.shadowRoot;
-      const controls = [['new-button', '[part~="base"]'], ['format-button', '[part~="base"]'], ['paragraph-style', '[part~="combobox"]'], ['font-family', '[part~="combobox"]'], ['font-size', '[part~="base"]'], ['text-color', '[part~="trigger"]'], ['color-auto', '[part~="base"]']].map(([part, selector]) => {
+      const controls = [['new-button', '[part~="base"]'], ['format-button', '[part~="base"]'], ['paragraph-style', '[part~="combobox"]'], ['font-family', '[part~="combobox"]'], ['font-size', '[part~="base"]'], ['text-color', '[part~="base"]'], ['highlight', '[part~="base"]'], ['line-spacing', '[part~="base"]']].map(([part, selector]) => {
         const host = root.querySelector(part === 'format-button' ? '[data-command="bold"]' : `[part="${part}"]`), control = host.shadowRoot.querySelector(selector);
         const bounds = control?.getBoundingClientRect();
         return { part, height: bounds?.height ?? -1, center: bounds ? bounds.y + bounds.height / 2 : -1 };

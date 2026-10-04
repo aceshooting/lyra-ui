@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { crc32, deflateSync } from 'node:zlib';
-import { inspectDocxImage } from './image-bytes.js';
+import { inspectDocxImage, isDocxMetafileSignature, isDocxRasterSignature, withoutJpegApp1 } from './image-bytes.js';
 
 const invalid = { ok: false, code: 'invalid-document' };
 const signature = Uint8Array.of(137, 80, 78, 71, 13, 10, 26, 10);
@@ -121,4 +121,32 @@ test('copies GIF logical screen dimensions without APP1 metadata', () => {
     44, 0, 0, 0, 0, 3, 0, 2, 0, 0, 2, 1, 0, 0, 59]);
   assert.deepEqual(inspectDocxImage(bytes), { ok: true, value: { mimeType: 'image/gif',
     pixelWidth: 3, pixelHeight: 2, pixels: 6, hasJpegApp1: false } });
+});
+
+test('strips APP1 camera metadata before the first scan and leaves every other byte in place', () => {
+  for (const placement of ['none', 'before'] as const) {
+    const bytes = markerJpeg(placement), stripped = withoutJpegApp1(bytes)!;
+    assert.deepEqual(stripped, markerJpeg('none'));
+    assert.deepEqual(inspectDocxImage(stripped), { ok: true, value: { mimeType: 'image/jpeg', pixelWidth: 3, pixelHeight: 2, pixels: 6, hasJpegApp1: false } });
+  }
+  // Metadata after a scan is not rewritten; callers re-inspect and refuse what remains.
+  const between = inspectDocxImage(withoutJpegApp1(markerJpeg('between'))!);
+  assert.equal(between.ok && between.value.hasJpegApp1, true);
+  for (const malformed of [Uint8Array.of(1, 2, 3), Uint8Array.of(255, 216, 255, 225, 0, 99), Uint8Array.of(255, 216, 0, 0, 0, 0)]) assert.equal(withoutJpegApp1(malformed), null);
+});
+
+test('trailing bytes after the end marker are admitted only on request', () => {
+  const trailing = Uint8Array.from([...markerJpeg('none'), 0, 0]);
+  assert.deepEqual(inspectDocxImage(trailing), invalid);
+  assert.equal(inspectDocxImage(trailing, { trailing: true }).ok, true);
+});
+
+test('signature checks distinguish decodable rasters from Windows metafiles', () => {
+  assert.equal(isDocxRasterSignature(markerJpeg('none')), true);
+  assert.equal(isDocxRasterSignature(Uint8Array.of(137, 80, 78, 71)), true);
+  assert.equal(isDocxRasterSignature(Uint8Array.of(71, 73, 70, 56)), true);
+  assert.equal(isDocxRasterSignature(Uint8Array.of(66, 77, 0, 0)), false);
+  const emf = new Uint8Array(44); emf.set([1, 0, 0, 0]); emf.set([0x20, 0x45, 0x4d, 0x46], 40);
+  for (const bytes of [emf, Uint8Array.of(0xd7, 0xcd, 0xc6, 0x9a), Uint8Array.of(1, 0, 9, 0), Uint8Array.of(2, 0, 9, 0), Uint8Array.of(0x1f, 0x8b)]) assert.equal(isDocxMetafileSignature(bytes), true);
+  for (const bytes of [new Uint8Array(44), Uint8Array.of(66, 77, 0, 0), new TextEncoder().encode('RIFF0000WEBP')]) assert.equal(isDocxMetafileSignature(bytes), false);
 });

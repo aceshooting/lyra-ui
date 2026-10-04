@@ -14,11 +14,12 @@ import {
   imageRatioPartner, imageResizeDraft, imageResizeUnchanged,
 } from './image-tools.js';
 import { captureImageInsertionIntent, imageInsertionDefaults, imageInsertionDraft } from './image-insertion-tools.js';
-import { inspectDocxImage } from './image-bytes.js';
+import { inspectDocxImage, withoutJpegApp1 } from './image-bytes.js';
 import type {
   DocxCommand, DocxEdit, DocxRefusalCode, DocxResult, DocxRevision, DocxSaveReceipt,
   DocxSelectionLease, DocxSession, DocxSnapshot, DocxSource, DocxSearchResults, DocxTableAction,
   DocxImageAction, DocxImageDescription, DocxImageDirection, DocxImageSource, DocxInsertImageOptions, DocxCommandAvailability,
+  DocxHighlight,
 } from './types.js';
 import { DOCX_EDITOR_STRINGS } from './strings.js';
 import { styles } from './docx-editor.styles.js';
@@ -36,6 +37,9 @@ const commandLabels = {
   bold: 'docxEditorBold',
   italic: 'docxEditorItalic',
   underline: 'docxEditorUnderline',
+  strikethrough: 'docxEditorStrikethrough',
+  superscript: 'docxEditorSuperscript',
+  subscript: 'docxEditorSubscript',
   undo: 'docxEditorUndo',
   redo: 'docxEditorRedo',
 } as const satisfies Record<DocxCommand, string>;
@@ -48,6 +52,16 @@ const toolIcons = {
   'underline': { path: 'M6 3v7a6 6 0 0 0 12 0V3 M4 21h16', label: 'docxEditorUnderline' },
   'undo': { path: 'M9 5 4 10l5 5 M4 10h10a6 6 0 0 1 6 6v3', label: 'docxEditorUndo' },
   'redo': { path: 'm15 5 5 5-5 5 M20 10H10a6 6 0 0 0-6 6v3', label: 'docxEditorRedo' },
+  'strikethrough': { path: 'M4 12h16 M16 6.5C15 5 13.5 4 11.5 4 9 4 7 5.5 7 7.5c0 1.6 1 2.7 3 3.5 M8 17c1 2 2.6 3 4.8 3 2.5 0 4.2-1.4 4.2-3.4 0-1-.4-1.9-1.2-2.6', label: 'docxEditorStrikethrough' },
+  'superscript': { path: 'M4 7l9 11 M13 7l-9 11 M16 4.5a2 2 0 1 1 3.6 1.2L16 10h4', label: 'docxEditorSuperscript' },
+  'subscript': { path: 'M4 5l9 11 M13 5l-9 11 M16 14.5a2 2 0 1 1 3.6 1.2L16 20h4', label: 'docxEditorSubscript' },
+  'clear-formatting': { path: 'M6 4h12 M12 4l-3 16 M15 13l6 6 M21 13l-6 6', label: 'docxEditorClearFormatting' },
+  'text-color': { path: 'M6 16 12 3l6 13 M8.5 11h7', label: 'docxEditorTextColor' },
+  'highlight': { path: 'M14 4l6 6-8 8H8v-4z M8 14l-4 4h5', label: 'docxEditorHighlight' },
+  'indent-increase': { path: 'M3 5h18 M11 10h10 M11 14h10 M3 19h18 M3 9l4 3-4 3', label: 'docxEditorIndentIncrease' },
+  'indent-decrease': { path: 'M3 5h18 M11 10h10 M11 14h10 M3 19h18 M7 9l-4 3 4 3', label: 'docxEditorIndentDecrease' },
+  'line-spacing': { path: 'M11 6h10 M11 12h10 M11 18h10 M5 4v16 M2.5 6.5 5 4l2.5 2.5 M2.5 17.5 5 20l2.5-2.5', label: 'docxEditorLineSpacing' },
+  'page-break': { path: 'M6 2v6h12V2 M6 22v-6h12v6 M2 12h3 M8 12h3 M13 12h3 M19 12h3', label: 'docxEditorPageBreak' },
   'alignment-left': { path: 'M4 5h16 M4 10h10 M4 15h16 M4 20h10', label: 'docxEditorAlignLeft' },
   'alignment-center': { path: 'M4 5h16 M7 10h10 M4 15h16 M7 20h10', label: 'docxEditorAlignCenter' },
   'alignment-right': { path: 'M4 5h16 M10 10h10 M4 15h16 M10 20h10', label: 'docxEditorAlignRight' },
@@ -87,7 +101,23 @@ interface ImageDrag {
   intent: NonNullable<ReturnType<typeof captureImageToolIntent>>;
 }
 type ToolIcon = keyof typeof toolIcons;
-const commands: readonly DocxCommand[] = ['bold', 'italic', 'underline'];
+const commands: readonly DocxCommand[] = ['bold', 'italic', 'underline', 'strikethrough', 'superscript', 'subscript'];
+/** Word's standard text colors; the hex values are the document's own `w:color` vocabulary. */
+const textColors = [
+  ['#C00000', 'DarkRed'], ['#FF0000', 'Red'], ['#FFC000', 'Orange'], ['#FFFF00', 'Yellow'], ['#92D050', 'LightGreen'],
+  ['#00B050', 'Green'], ['#00B0F0', 'LightBlue'], ['#0070C0', 'Blue'], ['#002060', 'DarkBlue'], ['#7030A0', 'Purple'],
+  ['#000000', 'Black'], ['#7F7F7F', 'Gray'],
+] as const;
+/** Word's highlight palette, keyed by its `w:highlight` names. */
+const highlightColors = [
+  ['yellow', '#FFFF00', 'Yellow'], ['green', '#00FF00', 'BrightGreen'], ['cyan', '#00FFFF', 'Turquoise'],
+  ['magenta', '#FF00FF', 'Pink'], ['blue', '#0000FF', 'Blue'], ['red', '#FF0000', 'Red'], ['darkBlue', '#000080', 'DarkBlue'],
+  ['darkCyan', '#008080', 'Teal'], ['darkGreen', '#008000', 'Green'], ['darkMagenta', '#800080', 'Violet'],
+  ['darkRed', '#800000', 'DarkRed'], ['darkYellow', '#808000', 'DarkYellow'], ['darkGray', '#808080', 'DarkGray'],
+  ['lightGray', '#C0C0C0', 'LightGray'], ['black', '#000000', 'Black'],
+] as const satisfies readonly (readonly [Exclude<DocxHighlight, 'none'>, string, string])[];
+const lineSpacings = [1, 1.15, 1.5, 2, 2.5, 3] as const;
+const swatchPickerTag = unsafeStatic(tag('swatch-picker'));
 const iconTag = unsafeStatic(tag('icon'));
 const tooltipTag = unsafeStatic(tag('tooltip'));
 const buttonTag = unsafeStatic(tag('button'));
@@ -111,7 +141,8 @@ const tableActions = [
   ['delete-column', { type: 'delete-table-column' }, 'docxEditorTableDeleteColumn'],
   ['delete-table', { type: 'delete-table' }, 'docxEditorTableDelete'],
 ] as const;
-const maxInputBytes = 4 * 1024 * 1024;
+const maxInputBytes = 16 * 1024 * 1024;
+const maxImageBytes = 4 * 1024 * 1024;
 type ImageInsertionPhase = 'idle' | 'reading' | 'draft' | 'dispatched';
 const refused = <T>(code: DocxRefusalCode): DocxResult<T> => ({ ok: false, code });
 
@@ -150,6 +181,16 @@ const refused = <T>(code: DocxRefusalCode): DocxResult<T> => ({ ok: false, code 
  * @slot table-insert-icon - Decorative icon for the table insert action; the editor retains its accessible name.
  * @slot image-previous-icon - Decorative icon for the image previous action; the editor retains its accessible name.
  * @slot image-next-icon - Decorative icon for the image next action; the editor retains its accessible name.
+ * @slot strikethrough-icon - Decorative icon for the strikethrough action; the editor retains its accessible name.
+ * @slot superscript-icon - Decorative icon for the superscript action; the editor retains its accessible name.
+ * @slot subscript-icon - Decorative icon for the subscript action; the editor retains its accessible name.
+ * @slot clear-formatting-icon - Decorative icon for the clear formatting action; the editor retains its accessible name.
+ * @slot text-color-icon - Decorative icon for the text color action; the editor retains its accessible name.
+ * @slot highlight-icon - Decorative icon for the highlight action; the editor retains its accessible name.
+ * @slot indent-increase-icon - Decorative icon for the indent increase action; the editor retains its accessible name.
+ * @slot indent-decrease-icon - Decorative icon for the indent decrease action; the editor retains its accessible name.
+ * @slot line-spacing-icon - Decorative icon for the line spacing action; the editor retains its accessible name.
+ * @slot page-break-icon - Decorative icon for the page break action; the editor retains its accessible name.
  * @slot image-resize-icon - Decorative icon for the image resize action; the editor retains its accessible name.
  * @slot image-description-icon - Decorative icon for the image description action; the editor retains its accessible name.
  * @slot image-delete-icon - Decorative icon for the image delete action; the editor retains its accessible name.
@@ -174,12 +215,22 @@ const refused = <T>(code: DocxRefusalCode): DocxResult<T> => ({ ok: false, code 
  * @csspart paragraph-style - Actual styles offered by the current document.
  * @csspart alignment-actions - Four paragraph alignment actions.
  * @csspart list-actions - Bullet and numbered list actions.
- * @csspart edit-button - One alignment or list action.
+ * @csspart edit-button - One alignment, list, indent, clear-formatting or page-break action, identified by data-edit.
  * @csspart font-family - Font family picker with on-demand suggestions.
  * @csspart font-size - Font size field in points.
- * @csspart text-color - Hex text color picker; a missing snapshot color is not inferred.
- * @csspart color-state - Identifies a color unavailable through the editor selection contract.
+ * @csspart text-color - Opens the text color panel; its bar shows the last applied color, never an inferred current one.
+ * @csspart text-color-popover - Text color panel.
+ * @csspart text-color-swatches - Word's standard text colors; a click or Enter applies and closes.
+ * @csspart text-color-custom - Inline custom color picker; each committed change applies.
  * @csspart color-auto - Applies automatic authored text color.
+ * @csspart highlight - Opens the highlight panel; its bar shows the last applied highlight.
+ * @csspart highlight-popover - Highlight panel.
+ * @csspart highlight-swatches - Word's highlight palette; a click or Enter applies and closes.
+ * @csspart highlight-none - Removes highlighting.
+ * @csspart line-spacing - Opens the line spacing panel.
+ * @csspart line-spacing-popover - Line spacing panel.
+ * @csspart line-spacing-options - Line spacing choices.
+ * @csspart line-spacing-option - One line spacing multiple, identified by data-value.
  * @csspart link-popover - URL and optional text editor.
  * @csspart link-trigger - Opens the link editor.
  * @csspart link-fields - Link form contents.
@@ -206,12 +257,11 @@ const refused = <T>(code: DocxRefusalCode): DocxResult<T> => ({ ok: false, code 
  * @csspart image-previous - Selects the previous eligible body image, wrapping at the start.
  * @csspart image-next - Selects the next eligible body image, wrapping at the end.
  * @csspart image-navigation-status - Feedback when no eligible image is available.
- * @csspart image-context - Selected image dimensions in points, rounded for display.
  * @csspart image-frame - Selection frame painted over the selected editable image.
  * @csspart image-handle - One pointer resize handle, identified by data-handle (nw, n, ne, e, se, s, sw, w). Corners keep the aspect ratio; Shift inverts that.
  * @csspart image-size - Live dimensions shown while a resize handle is dragged.
  * @csspart image-resize-popover - Image dimensions dialog.
- * @csspart image-resize-trigger - Opens the image resize dialog.
+ * @csspart image-resize-trigger - Opens the image resize dialog; its name and tooltip include the selected dimensions.
  * @csspart image-resize-fields - Dimension fields, ratio option and controls.
  * @csspart image-width - Requested width in points.
  * @csspart image-height - Requested height in points.
@@ -298,6 +348,9 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   @state() private linkHref = '';
   @state() private linkText = '';
   @state() private editError: DocxRefusalCode | null = null;
+  /** Word-style split color tools remember the last applied value; the engine cannot report the current one. */
+  @state() private lastTextColor = '#FF0000';
+  @state() private lastHighlight: Exclude<DocxHighlight, 'none'> = 'yellow';
   @state() private tableRows = '2';
   @state() private tableColumns = '2';
   @state() private tableDialogOpen = false;
@@ -777,12 +830,32 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     this.runEdit({ type: 'font-size', points });
   }
 
-  private onColorChange(event: Event): void {
+  private toolPanel(part: string) {
+    return this.renderRoot.querySelector<HTMLElement & { hide(options?: { focusTrigger?: boolean }): Promise<void> }>(`[part="${part}"]`);
+  }
+
+  /** Apply a color tool's edit; palette picks close their popover and return to the document. */
+  private applyPopoverEdit(edit: DocxEdit, close: string | null): void {
+    this.pickerFocusReturn = close !== null;
+    this.runEdit(edit, false);
+    if (this.editError) return;
+    if (edit.type === 'text-color' && edit.color !== 'auto') this.lastTextColor = edit.color;
+    if (edit.type === 'highlight' && edit.color !== 'none') this.lastHighlight = edit.color;
+    if (close) void this.toolPanel(close)?.hide({ focusTrigger: false });
+  }
+
+  /** Palette clicks and Enter/Space apply; arrow keys only move between swatches. */
+  private onSwatchActivation(event: Event, apply: (value: string) => void): void {
+    if (event instanceof KeyboardEvent && event.key !== 'Enter' && event.key !== ' ') return;
+    const value = (event.currentTarget as HTMLElement & { value: string | null }).value;
+    if (event instanceof KeyboardEvent) event.preventDefault();
+    if (value) apply(value);
+  }
+
+  private onCustomColorChange(event: Event): void {
     event.stopPropagation();
     const color = (event.currentTarget as HTMLElement & { value: string }).value;
-    this.pickerFocusReturn = true;
-    this.runEdit({ type: 'text-color', color }, false);
-    if (!this.editError) void (event.currentTarget as HTMLElement & { hide(): Promise<void> }).hide();
+    if (/^#[0-9a-f]{6}$/i.test(color)) this.applyPopoverEdit({ type: 'text-color', color }, null);
   }
 
   private onPickerClosed(): void {
@@ -1040,7 +1113,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       this.insertionGeneration === generation && this.insertionPhase === 'reading' && Boolean(intent?.valid(owner));
     try {
       if (!valid()) { this.refuseImageInsertion('stale-selection', owner, generation); return; }
-      if (!Number.isSafeInteger(file.size) || file.size < 1 || file.size > maxInputBytes) {
+      if (!Number.isSafeInteger(file.size) || file.size < 1 || file.size > maxImageBytes) {
         this.refuseImageInsertion('resource-limit', owner, generation); return;
       }
       await this.updateComplete;
@@ -1052,10 +1125,15 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       if (!popover.open) { this.cancelImageInsertion(false); return; }
       const buffer = await file.arrayBuffer();
       if (!valid()) { this.refuseImageInsertion('stale-selection', owner, generation); return; }
-      if (!(buffer instanceof ArrayBuffer) || buffer.byteLength < 1 || buffer.byteLength > maxInputBytes) {
+      if (!(buffer instanceof ArrayBuffer) || buffer.byteLength < 1 || buffer.byteLength > maxImageBytes) {
         this.refuseImageInsertion('resource-limit', owner, generation); return;
       }
-      const bytes = new Uint8Array(buffer), inspected = inspectDocxImage(bytes);
+      let bytes: Uint8Array = new Uint8Array(buffer), inspected = inspectDocxImage(bytes);
+      if (inspected.ok && inspected.value.hasJpegApp1) {
+        // Phone and camera photos carry EXIF/XMP (often location); insert the picture without it.
+        const stripped = withoutJpegApp1(bytes);
+        if (stripped) { bytes = stripped; inspected = inspectDocxImage(bytes); }
+      }
       if (!inspected.ok) { this.refuseImageInsertion(inspected.code, owner, generation); return; }
       if (inspected.value.hasJpegApp1) { this.refuseImageInsertion('unsupported', owner, generation); return; }
       const defaults = imageInsertionDefaults(inspected.value.pixelWidth, inspected.value.pixelHeight);
@@ -1537,9 +1615,15 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       return;
     }
     if (event.key === 'Escape' && event.composedPath().some(node => node instanceof HTMLElement &&
-      ['paragraph-style', 'font-family', 'text-color'].includes(node.getAttribute('part') ?? '') &&
+      ['paragraph-style', 'font-family'].includes(node.getAttribute('part') ?? '') &&
       Boolean((node as HTMLElement & { open?: boolean }).open))) {
       this.pickerFocusReturn = true;
+      return;
+    }
+    // Tool panels close themselves and return focus to their trigger.
+    if (event.key === 'Escape' && event.composedPath().some(node => node instanceof HTMLElement &&
+      ['text-color-popover', 'highlight-popover', 'line-spacing-popover'].includes(node.getAttribute('part') ?? ''))) {
+      this.pickerFocusReturn = false;
       return;
     }
     const toolbarTarget = event.composedPath().find(node => node instanceof HTMLElement &&
@@ -1659,8 +1743,8 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     return html`<span class="tool-icon" aria-hidden="true"><slot name=${`${name}-icon`}><${iconTag} .path=${toolIcons[name].path}></${iconTag}></slot></span>`;
   }
 
-  private renderTooltip(name: ToolIcon): TemplateResult {
-    return html`<${tooltipTag} for=${`tool-${name}`} content=${this.localize(toolIcons[name].label)} top-layer></${tooltipTag}>`;
+  private renderTooltip(name: ToolIcon, content = this.localize(toolIcons[name].label)): TemplateResult {
+    return html`<${tooltipTag} for=${`tool-${name}`} content=${content} top-layer></${tooltipTag}>`;
   }
 
   private renderTooltips(): TemplateResult {
@@ -1721,7 +1805,6 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     const editable = ready && !this.currentSnapshot?.readOnly && !this.currentSnapshot?.composing &&
       this.currentSnapshot?.activity === null;
     const formatting = this.currentSnapshot?.formatting;
-    const color = formatting?.color ?? '';
     return html`<div part="editing-tools" role="group" aria-label=${this.localize('docxEditorFormatting')}>
       <div class="font-tools">
       <${selectTag} part="paragraph-style" data-edit="paragraph-style" size="s"
@@ -1757,28 +1840,74 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
         @pointerdown=${() => this.retainToolbarSelection()}
         @lr-change=${(event: CustomEvent<{ value: string }>) => this.onFontSizeChange(event)}></${numberInputTag}>
       </div>
-      <div part="format-actions">${commands.map(command => this.renderCommand(command))}</div>
+      <div part="format-actions">${commands.map(command => this.renderCommand(command))}
+        ${this.renderEditButton({ type: 'clear-formatting' }, 'clear-formatting')}</div>
       <div part="alignment-actions" role="group" aria-label=${this.localize('docxEditorAlignment')}>
         ${alignments.map(value => this.renderAlignment(value))}
       </div>
       <div part="list-actions" role="group" aria-label=${this.localize('docxEditorLists')}>
         ${listKinds.map(kind => this.renderList(kind))}
+        ${this.renderEditButton({ type: 'indent', direction: 'decrease' }, 'indent-decrease')}
+        ${this.renderEditButton({ type: 'indent', direction: 'increase' }, 'indent-increase')}
+        ${this.renderToolPopover('line-spacing', Boolean(editable) && this.can({ type: 'line-spacing', multiple: 1 }).enabled, html`
+          <div part="line-spacing-options" role="group" aria-label=${this.localize('docxEditorLineSpacing')}>
+            ${lineSpacings.map(multiple => html`<${buttonTag} part="line-spacing-option" data-value=${multiple} size="s" appearance="quiet"
+              @click=${() => this.applyPopoverEdit({ type: 'line-spacing', multiple }, 'line-spacing-popover')}>${multiple.toLocaleString(this.effectiveLocale, { minimumFractionDigits: 1 })}</${buttonTag}>`)}
+          </div>`)}
       </div>
       <div class="color-tools">
-      <${colorPickerTag} part="text-color" data-edit="text-color" size="s" format="hex"
-        aria-label=${this.localize('docxEditorTextColor')}
-        .value=${color} data-color-known=${formatting?.color == null ? 'false' : 'true'} ?disabled=${!editable}
-        @pointerdown=${() => this.retainToolbarSelection()}
-        @lr-change=${(event: Event) => this.onColorChange(event)}
-        @lr-after-hide=${() => this.onPickerClosed()}></${colorPickerTag}>
-      ${ready && formatting?.color == null ? html`<span part="color-state">${this.localize('docxEditorColorUnknown')}</span>` : nothing}
-      <${buttonTag} part="color-auto" data-edit="text-color-auto" data-tool-key="text-color-auto"
-        size="s" appearance="quiet" tabindex=${this.toolbarKey === 'text-color-auto' ? '0' : '-1'}
-        ?disabled=${!this.can({ type: 'text-color', color: 'auto' }).enabled}
-        @pointerdown=${() => this.retainToolbarSelection()}
-        @click=${() => this.runEdit({ type: 'text-color', color: 'auto' })}>${this.localize('docxEditorAutomaticColor')}</${buttonTag}>
+        ${this.renderToolPopover('text-color', Boolean(editable), html`
+          <div part="text-color-fields" class="color-fields">
+            <${swatchPickerTag} part="text-color-swatches" size="s" aria-label=${this.localize('docxEditorTextColor')}
+              .items=${textColors.map(([color, name]) => ({ value: color, color, label: this.localize(`docxEditorColor${name}`) }))}
+              .value=${this.lastTextColor} @lr-change=${(event: Event) => event.stopPropagation()}
+              @click=${(event: Event) => this.onSwatchActivation(event, color => this.applyPopoverEdit({ type: 'text-color', color }, 'text-color-popover'))}
+              @keydown=${(event: Event) => this.onSwatchActivation(event, color => this.applyPopoverEdit({ type: 'text-color', color }, 'text-color-popover'))}></${swatchPickerTag}>
+            <${buttonTag} part="color-auto" data-edit="text-color-auto" size="s" appearance="quiet"
+              ?disabled=${!this.can({ type: 'text-color', color: 'auto' }).enabled}
+              @click=${() => this.applyPopoverEdit({ type: 'text-color', color: 'auto' }, 'text-color-popover')}>${this.localize('docxEditorAutomaticColor')}</${buttonTag}>
+            <${colorPickerTag} part="text-color-custom" inline size="s" format="hex" without-format-toggle
+              label=${this.localize('docxEditorCustomColor')} .value=${this.lastTextColor}
+              @lr-input=${(event: Event) => event.stopPropagation()}
+              @lr-change=${(event: Event) => this.onCustomColorChange(event)}></${colorPickerTag}>
+          </div>`, this.lastTextColor)}
+        ${this.renderToolPopover('highlight', Boolean(editable), html`
+          <div part="highlight-fields" class="color-fields">
+            <${swatchPickerTag} part="highlight-swatches" size="s" aria-label=${this.localize('docxEditorHighlight')}
+              .items=${highlightColors.map(([value, color, name]) => ({ value, color, label: this.localize(`docxEditorColor${name}`) }))}
+              .value=${this.lastHighlight} @lr-change=${(event: Event) => event.stopPropagation()}
+              @click=${(event: Event) => this.onSwatchActivation(event, color => this.applyPopoverEdit({ type: 'highlight', color: color as DocxHighlight }, 'highlight-popover'))}
+              @keydown=${(event: Event) => this.onSwatchActivation(event, color => this.applyPopoverEdit({ type: 'highlight', color: color as DocxHighlight }, 'highlight-popover'))}></${swatchPickerTag}>
+            <${buttonTag} part="highlight-none" size="s" appearance="quiet"
+              ?disabled=${!this.can({ type: 'highlight', color: 'none' }).enabled}
+              @click=${() => this.applyPopoverEdit({ type: 'highlight', color: 'none' }, 'highlight-popover')}>${this.localize('docxEditorNoHighlight')}</${buttonTag}>
+          </div>`, highlightColors.find(([value]) => value === this.lastHighlight)![1])}
       </div>
     </div>`;
+  }
+
+  /** One icon action that edits the current selection and returns to the document. */
+  private renderEditButton(edit: DocxEdit, icon: ToolIcon): TemplateResult {
+    return html`<${buttonTag} part="edit-button" id=${`tool-${icon}`} data-edit=${edit.type} data-tool-key=${icon}
+      size="s" appearance="quiet" aria-label=${this.localize(toolIcons[icon].label)}
+      ?disabled=${!this.can(edit).enabled} tabindex=${this.toolbarKey === icon ? '0' : '-1'}
+      @pointerdown=${() => this.retainToolbarSelection()}
+      @click=${() => this.runEdit(edit)}>${this.renderToolIcon(icon)}</${buttonTag}>`;
+  }
+
+  /** An icon trigger opening a small panel; the selection is leased before focus leaves the document. */
+  private renderToolPopover(name: 'text-color' | 'highlight' | 'line-spacing', enabled: boolean, content: TemplateResult, swatch?: string): TemplateResult {
+    return html`<${popoverTag} part=${`${name}-popover`} popup-role="dialog" placement="bottom-start" top-layer
+      aria-label=${this.localize(toolIcons[name].label)} @lr-after-hide=${() => this.onPickerClosed()}>
+      <${buttonTag} slot="trigger" part=${name} id=${`tool-${name}`} data-tool-key=${name} size="s" appearance="quiet"
+        aria-label=${this.localize(toolIcons[name].label)} ?disabled=${!enabled}
+        tabindex=${this.toolbarKey === name ? '0' : '-1'}
+        @pointerdown=${() => this.retainToolbarSelection()}
+        @keydown=${(event: KeyboardEvent) => { if (event.key === 'Enter' || event.key === ' ') this.retainToolbarSelection(); }}>
+        <span class="tool-glyph" style=${swatch ? styleMap({ '--_tool-swatch': swatch }) : nothing}>${this.renderToolIcon(name)}</span>
+      </${buttonTag}>
+      ${content}
+    </${popoverTag}>`;
   }
 
   private renderDocumentTools(): TemplateResult {
@@ -1978,13 +2107,12 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
         @click=${() => this.navigateImage('next')}>${this.renderToolIcon('image-next')}</${buttonTag}>
       ${this.imageNavigationEmpty ? html`<span part="image-navigation-status">${this.localize('docxEditorNoImage')}</span>` : nothing}
       ${!image && !this.imageDialog ? nothing : html`
-      <span part="image-context"><bdi>${context}</bdi></span>
       <${popoverTag} part="image-resize-popover" popup-role="dialog" placement="bottom-start" top-layer
         aria-label=${this.localize('docxEditorResizeImage')}
         @lr-show=${(event: Event) => this.openImageDialog(event, 'resize')}
         @lr-after-hide=${() => this.onImageDialogHidden('resize')}>
         <${buttonTag} slot="trigger" part="image-resize-trigger" id="tool-image-resize" data-tool-key="image-resize" size="s" appearance="quiet"
-          aria-label=${this.localize('docxEditorResizeImage')} tabindex=${this.toolbarKey === 'image-resize' ? '0' : '-1'}
+          aria-label=${context ? `${this.localize('docxEditorResizeImage')}, ${context}` : this.localize('docxEditorResizeImage')} tabindex=${this.toolbarKey === 'image-resize' ? '0' : '-1'}
           ?disabled=${!available || this.imageDialog === 'description'}
           @pointerdown=${() => this.prepareImageIntent()} @focusin=${() => this.prepareImageIntent()}
           @keydown=${(event: KeyboardEvent) => this.onImageActivationKey(event)}>${this.renderToolIcon('image-resize')}</${buttonTag}>
@@ -2055,7 +2183,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
         @pointerdown=${() => this.prepareImageIntent()} @focusin=${() => this.prepareImageIntent()}
         @keydown=${(event: KeyboardEvent) => this.onImageActivationKey(event)}
         @click=${() => this.runImageEdit({ type: 'delete-image' })}>${this.renderToolIcon('image-delete')}</${buttonTag}>
-      <span class="tooltips">${this.renderTooltip('image-resize')}${this.renderTooltip('image-description')}${this.renderTooltip('image-delete')}</span>`}
+      <span class="tooltips">${this.renderTooltip('image-resize', context ? `${this.localize('docxEditorResizeImage')} · ${context}` : undefined)}${this.renderTooltip('image-description')}${this.renderTooltip('image-delete')}</span>`}
     </div>`;
   }
 
@@ -2123,6 +2251,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
           <div part="format-actions" class="history-tools">${this.renderCommand('undo')}${this.renderCommand('redo')}</div>
           ${this.renderDocumentTools()}
           <div class="insert-tools">
+            ${this.renderEditButton({ type: 'page-break' }, 'page-break')}
             ${this.renderImageInsertionTools()}
             ${this.renderTableTools()}
             ${this.renderImageTools()}

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { Zip, ZipPassThrough, unzipSync, zipSync } from 'fflate';
+import { crc32 } from 'node:zlib';
 import { admitDocx } from './admission.js';
 import { docxFixture } from './admission-fixtures.js';
 
@@ -133,4 +134,17 @@ test('refuses GIF extension data without its terminating zero-length subblock', 
   const bytes = Uint8Array.from(Buffer.from('R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==', 'base64'));
   const unfinished = concatenate([bytes.subarray(0, 19), Uint8Array.from([33, 254, 1, 65])]);
   assert.deepEqual(await admitDocx(docxFixture({ 'word/media/image.gif': unfinished })), invalid);
+});
+
+test('admits an Info-ZIP Unicode path only when it spells the validated entry name', async () => {
+  const entries = unzipSync(docxFixture());
+  const unicodePath = (name: string, spelled = name) => {
+    const encoded = new TextEncoder().encode(spelled), field = new Uint8Array(5 + encoded.length);
+    field[0] = 1; new DataView(field.buffer).setUint32(1, crc32(name), true); field.set(encoded, 5);
+    return field;
+  };
+  const build = (spell: (name: string) => string) => zipSync(Object.fromEntries(Object.entries(entries)
+    .map(([name, value]) => [name, [value, { extra: { 0x7075: unicodePath(name, spell(name)) } }]])), { level: 0 });
+  assert.deepEqual(await admitDocx(build(name => name)), accepted);
+  assert.deepEqual(await admitDocx(build(name => name.replace('word', 'other'))), invalid);
 });

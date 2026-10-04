@@ -9,8 +9,9 @@ import type {
   DocxImageSource, DocxInsertImageOptions
 } from './types.js';
 
-const commands: readonly DocxCommand[] = ['bold', 'italic', 'underline', 'undo', 'redo'];
-const maxInputBytes = 4 * 1024 * 1024;
+const commands: readonly DocxCommand[] = ['bold', 'italic', 'underline', 'strikethrough', 'superscript', 'subscript', 'undo', 'redo'];
+// Equal to the export cap, so every package this session saves can be reopened.
+const maxInputBytes = 16 * 1024 * 1024;
 const maxExportBytes = 16 * 1024 * 1024;
 const emptyFormatting: Readonly<DocxFormatting> = Object.freeze({ paragraphStyleId: null, alignment: null,
   fontFamily: null, fontSizePoints: null, color: null, bulletList: false, numberedList: false });

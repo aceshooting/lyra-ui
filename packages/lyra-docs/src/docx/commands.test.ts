@@ -102,11 +102,11 @@ test('authoring hyperlink policy matches admission and never fetches destination
   const credentialed = new URL('https://example.com');
   credentialed.username = 'user';
   credentialed.password = 'pass';
-  for (const href of ['https://example.com/a?x=1#bookmark', 'mailto:person@example.com', '#bookmark']) {
+  for (const href of ['https://example.com/a?x=1#bookmark', 'http://example.com', 'mailto:person@example.com', '#bookmark']) {
     const value = { type: 'link', href };
     assert.deepEqual(normalizeDocxAction(value), { ok: true, value });
   }
-  for (const href of ['http://example.com', 'javascript:alert(1)', 'data:text/html,test', '//example.com',
+  for (const href of [Object.assign(new URL('http://example.com'), { username: 'user', password: 'pw' }).href, 'javascript:alert(1)', 'data:text/html,test', '//example.com',
     'file:///secret', credentialed.href, 'https://example.com/a b', 'https://example.com\\evil',
     'https://example.com/\u007f', '', null]) {
     assert.deepEqual(normalizeDocxAction({ type: 'link', href }), invalid);
@@ -205,4 +205,21 @@ test('image actions require complete exact bounded values without coercion or ac
   }
   assert.equal(reads, 0);
   assert.deepEqual(normalizeDocxAction({ type: 'delete-image' }), { ok: true, value: { type: 'delete-image' } });
+});
+
+test('formatting toggles and paragraph edits normalize to frozen copies with exact vocabularies', () => {
+  for (const value of ['strikethrough', 'superscript', 'subscript']) assert.deepEqual(normalizeDocxAction(value), { ok: true, value });
+  for (const action of [{ type: 'highlight', color: 'yellow' }, { type: 'highlight', color: 'darkMagenta' }, { type: 'highlight', color: 'none' },
+    { type: 'indent', direction: 'increase' }, { type: 'indent', direction: 'decrease' }, { type: 'line-spacing', multiple: 1 },
+    { type: 'line-spacing', multiple: 1.15 }, { type: 'line-spacing', multiple: 5 }, { type: 'clear-formatting' }, { type: 'page-break' }]) {
+    const result = normalizeDocxAction(action);
+    assert.deepEqual(result, { ok: true, value: action }, JSON.stringify(action));
+    assert.equal(result.ok && Object.isFrozen(result.value), true);
+  }
+  for (const action of [{ type: 'highlight', color: '#FFFF00' }, { type: 'highlight', color: 'Yellow' }, { type: 'highlight' },
+    { type: 'indent', direction: 'left' }, { type: 'line-spacing', multiple: 0.5 }, { type: 'line-spacing', multiple: 1.13 },
+    { type: 'line-spacing', multiple: 5.05 }, { type: 'line-spacing', multiple: Number.NaN }, { type: 'line-spacing', multiple: '1.5' },
+    { type: 'clear-formatting', all: true }, { type: 'page-break', kind: 'column' }]) {
+    assert.deepEqual(normalizeDocxAction(action), invalid, JSON.stringify(action));
+  }
 });
