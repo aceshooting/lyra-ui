@@ -491,6 +491,25 @@ instead of silently calling an older dependency current. Complete this upgrade b
 qualification; any later dependency change requires a new commit and fresh qualification, and
 an already-created release tag is never rewritten to include it.
 
+**First package publication.** Use the normal changeset and version-preparation flow below,
+including any dependent package bump, then verify packed exports and dependencies against the
+versions actually published to npm. Workspace source at a matching version is not evidence that a
+registry dependency works. npm requires a package to exist before its trusted publisher can be
+configured. For the first `@aceshooting/lyra-docs` publication, provide a short-lived granular npm
+token with `@aceshooting` scope read/write direct-publish access and Bypass 2FA enabled as the
+`NPM_BOOTSTRAP_TOKEN` secret in the protected
+`npm-publish` environment. Dispatch the qualified Docs release with
+`gh workflow run release.yml --ref main -f package=lyra-docs -f first_package_bootstrap=true`.
+Both workflows reject the bootstrap flag for other packages or an existing registry package; an
+ambiguous registry response fails closed. After environment approval, the protected job uses that
+token only for the verified Docs tarball and publishes with npm provenance. Configure the Docs
+trusted publisher for `.github/workflows/publish.yml` and the `npm-publish` environment afterward;
+remove the bootstrap secret when trust is working. Later releases use the default OIDC path without
+the flag. The exact-commit qualification, protected publishing approval, and provenance requirements
+apply to the first publication as well. See
+[npm trust prerequisites](https://docs.npmjs.com/cli/v11/commands/npm-trust/#prerequisites) and
+[npm access-token permissions](https://docs.npmjs.com/about-access-tokens/).
+
 1. **Prepare locally.** `pnpm release:prepare` (`scripts/release-prepare.mjs`) requires the exact
    `.nvmrc` Node patch, a clean tree, and a HEAD containing `origin/main`. It fetches `origin/main`
    and published tags before bumping, refusing to overwrite conflicting local tags. It consumes every
@@ -514,11 +533,13 @@ an already-created release tag is never rewritten to include it.
    credential-free job packs each tarball with the pinned Node and pnpm, using the same command the
    publish verification rebuilds with, and fails if packing changes tracked files. A job with no
    checkout then pushes the annotated tags atomically, creates each GitHub Release with the
-   tarball, `CHANGELOG.md`, `custom-elements.json`, `llms.txt`, and `llms-full.txt`, and dispatches
+   tarball and `CHANGELOG.md` (plus `custom-elements.json`, `llms.txt`, and `llms-full.txt` for
+   packages with a manifest generator), and dispatches
    `publish.yml` on each tag. A release created with `GITHUB_TOKEN` emits no `release: published`
    event to other workflows, so that dispatch is the only publish trigger.
-4. **Publish.** Approve the `npm-publish` environment on each Publish run, then deploy the website
-   so `release-feed-freshness.yml` can confirm the upgrade feed matches npm.
+4. **Publish.** Approve the `npm-publish` environment on each Publish run. UI releases also need a
+   website deployment so `release-feed-freshness.yml` can confirm the upgrade feed matches npm.
+   Document-companion releases do not change that feed and skip its automatic check.
 
 The read-only publish verification job rejects a lightweight tag, verifies the annotated tag's
 peeled commit is both the exact checkout and the workflow invocation ref/SHA, then waits for one

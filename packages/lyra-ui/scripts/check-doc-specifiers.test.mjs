@@ -26,6 +26,15 @@ assert.ok(
   productionFlagSpecifiers.has('@aceshooting/lyra-flags/standard'),
   'the workspace gate must actually scan lyra-flags documentation',
 );
+const productionDocsDir = join(
+  dirname(dirname(dirname(fileURLToPath(import.meta.url)))),
+  'lyra-docs',
+);
+const productionDocsSpecifiers = collectDocumentedSpecifiers(productionDocsDir);
+assert.ok(
+  productionDocsSpecifiers.has('@aceshooting/lyra-docs/docx/editor.css'),
+  'the workspace gate must actually scan lyra-docs documentation',
+);
 
 const root = mkdtempSync(join(tmpdir(), 'lyra-doc-specifiers-'));
 const write = (relativePath, contents) => {

@@ -1,15 +1,21 @@
 # @aceshooting/lyra-docs
 
-`@aceshooting/lyra-docs` is a private, experimental companion package for the
+`@aceshooting/lyra-docs` is a public, experimental companion package for the
 native Lyra DOCX editor. Its runtime uses the public `@docx-editor.dev/core@2.25.0`
 engine as an optional peer. Existing document viewers, including
 `<lr-docx-viewer>`, remain in `@aceshooting/lyra-ui`.
 
 The editor supports opening local DOCX files or caller-provided bytes, a blank
 document, paragraph and text formatting, bounded find and replace-one, and
-explicit save receipts. This
-package is private; its current editor and format support do not establish
-general Word compatibility or a shipping support commitment.
+explicit save receipts. This first release covers the bounded inputs and actions
+documented here. It does not
+establish general Word compatibility or a broader format support commitment.
+
+Install the package and its optional document engine when using the editor:
+
+```sh
+pnpm add @aceshooting/lyra-docs @docx-editor.dev/core@2.25.0
+```
 
 ## Imports
 
@@ -232,12 +238,39 @@ Do not provide content in that slot or move, remove, or reuse the mount. The
 engine needs a connected, empty element in the document's light DOM; Shadow DOM
 mounts are unsupported.
 
+Common formatting, alignment, list, insertion and history actions use icons with localized
+accessible names and keyboard/hover tooltips. The first row groups file, history and insertion tools; the second groups font and
+paragraph formatting. The first row scrolls horizontally in narrow allocations so
+contextual image or table tools never move the document under the pointer. Formatting
+groups wrap within the available width; keyboard focus reveals offscreen actions.
+Replace a toolbar glyph with a decorative SVG or icon assigned to its named slot:
+
+```html
+<lr-docx-editor>
+  <lr-icon slot="bold-icon" path="M6 4h7a4 4 0 0 1 0 8H6z M6 12h8a4 4 0 0 1 0 8H6z"></lr-icon>
+</lr-docx-editor>
+```
+
+Icon slots: `new-icon`, `open-icon`, `save-icon`, `undo-icon`, `redo-icon`,
+`bold-icon`, `italic-icon`, `underline-icon`, `alignment-left-icon`,
+`alignment-center-icon`, `alignment-right-icon`, `alignment-justify-icon`,
+`list-bullet-icon`, `list-numbered-icon`, `link-icon`, `find-icon`,
+`image-insert-icon`, `table-insert-icon`, `image-previous-icon`, and `image-next-icon`.
+The editor owns each button's localized name, tooltip, pressed state and action;
+slotted icons must not contain focusable or interactive content. History and image
+navigation icons mirror with the reading direction; alignment icons remain physical. Import
+`@aceshooting/lyra-ui/components/lr-icon.js` when using the icon element separately.
+
+The document paper stays white in light and dark themes; authored text colors are preserved.
+
 Documents keep their native 100% scale. A narrower allocation scrolls horizontally
 inside the document viewport; the toolbar and dialogs still adapt to the available width.
 The document viewport scrolls within a maximum block size of `30rem`, using
 `--lr-size-30rem` when available. Set `--lr-docx-editor-document-max-block-size`
 to a valid CSS length on the component to change that allocation. Direct session
-hosts can set the same inherited property on their mount. Set it to `none` to
+hosts can set the same inherited property on their mount. For a component in a bounded
+application layout, allocate its block size and set the maximum to `100%`; the toolbar
+and status remain outside the scrollable document. Set it to `none` to
 let the document grow with its content; image selection still works, while
 bringing an offscreen target into view then depends on the host's scroll layout.
 
@@ -427,12 +460,12 @@ stored DOCX: fresh large open 1,868.9 ms, save 111.8 ms, warm reopen 1,602.8
 ms, and input-to-two-animation-frame median/p95 of 128.1/146.3 ms across 20
 samples. Browser and OS caches may be warm; these are diagnostic values, not
 latency guarantees. Full environment and bundle details are in the
-[qualification record](../../docs/roadmap/document-editing-feasibility.md#bundle-and-performance-observations).
+[qualification record](https://github.com/aceshooting/lyra-ui/blob/main/docs/roadmap/document-editing-feasibility.md#bundle-and-performance-observations).
 
 ## Development checks
 
 Run builds, tests, and browser checks on the repository's test host with the
-pinned Node 22.23.2 and pnpm 12.8.1 toolchain. From the repository root, build
+pinned Node 22.23.2 and pnpm 12.9.1 toolchain. From the repository root, build
 Lyra UI before the companion package:
 
 ```sh
@@ -470,7 +503,7 @@ The performance report records hardware, browser, fixture size, and timing
 samples. Timings include browser startup and rendering work and are not latency
 guarantees.
 
-The package remains private and is excluded from Changesets version preparation.
+The package is public and independently versioned through Changesets.
 See [LICENSE](LICENSE), [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), and
 [`THIRD_PARTY_LICENSES/`](THIRD_PARTY_LICENSES/) for licensing details.
 
@@ -592,7 +625,7 @@ Replacement, native resize handles, paste/drop, floating layout, and broad
 native gesture policy remain outside this selected-image contract. Local byte
 insertion has the separate bounded contract below. Admission
 and export limits are unchanged; an edited export is not promised to fit the
-4 MiB input admission ceiling. The package remains private and experimental.
+4 MiB input admission ceiling. The package remains experimental.
 
 ### Local image insertion
 

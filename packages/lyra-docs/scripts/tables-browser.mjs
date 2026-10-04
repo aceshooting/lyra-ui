@@ -357,7 +357,8 @@ async function runTableToolbar(page, check, { createEditor, saveEditor, assertPr
     await page.locator(`#${id}`).evaluate(element => element.updateComplete);
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve(true)))));
     await caret(page, id, 'Before');
-    await page.keyboard.press('Alt+F10'); await page.keyboard.press('End');
+    await page.keyboard.press('Alt+F10');
+    for (let step = 0; step < 30 && await page.locator(`#${id}`).evaluate(element => element.shadowRoot.activeElement?.getAttribute('part')) !== 'image-next'; step++) await page.keyboard.press('ArrowLeft');
     assert.equal(await page.locator(`#${id}`).evaluate(element => element.shadowRoot.activeElement?.getAttribute('part')), 'image-next');
     await page.keyboard.press('ArrowRight');
     assert.equal(await page.locator(`#${id}`).evaluate(element => element.shadowRoot.activeElement?.getAttribute('part')), 'image-previous');

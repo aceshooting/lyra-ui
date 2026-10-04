@@ -95,6 +95,7 @@ export const DOCX_EDITOR_STRINGS = Object.freeze({
   docxEditorMatchCase: 'Match case',
   docxEditorWholeWord: 'Whole words',
   docxEditorFindCount: 'Matches: {count}',
+  docxEditorFindSelectMatch: 'Choose Previous match or Next match before replacing.',
   docxEditorFindTruncated: 'Results limited to the first 100 matches.',
   docxEditorPrevious: 'Previous match',
   docxEditorNext: 'Next match',

@@ -28,7 +28,14 @@ export async function openEigenpalDocument(
   if (!owned()) return { ok: false, code: 'invalid-mount' };
 
   const mount = options.mount.ownerDocument.createElement('div');
-  mount.className = 'docx-editor';
+  mount.className = 'docx-editor docx-paginated-surface';
+  // Paper is a document canvas, independent of the application's chrome theme.
+  mount.style.setProperty('--doc-page-bg', 'white');
+  mount.style.setProperty('--doc-page-bg-rendered', 'white');
+  mount.style.setProperty('--doc-page-text', 'black');
+  mount.style.setProperty('--doc-caret', 'black');
+  mount.style.colorScheme = 'light';
+  Object.assign(mount.style, { paddingBlock: 'var(--lr-space-l, 1.5rem)', minInlineSize: 'min-content' });
   mount.setAttribute('data-lr-docx-surface', '');
   mount.inert = true;
   const viewport = options.mount.ownerDocument.createElement('div');
@@ -36,6 +43,7 @@ export async function openEigenpalDocument(
   viewport.setAttribute('data-lr-docx-viewport', '');
   viewport.tabIndex = 0;
   Object.assign(viewport.style, { position: 'relative', display: 'block', overflow: 'auto', minInlineSize: '0', maxInlineSize: '100%',
+    blockSize: '100%', background: 'var(--lr-color-neutral-fill-quiet, #f5f5f5)',
     boxSizing: 'border-box', maxBlockSize: 'var(--lr-docx-editor-document-max-block-size, var(--lr-size-30rem, 30rem))' });
   viewport.append(mount);
   options.mount.append(viewport);

@@ -1,9 +1,9 @@
 # Document editing implementation and qualification
 
-Status: private experimental implementation in progress, 3 October 2026. This record describes
-specific implementation and test evidence; it is not a release commitment or a claim of general
-DOCX compatibility. The [document editing roadmap](document-editing.md) remains the delivery
-contract, and its phases remain open until their full exit conditions are met.
+Status: public experimental implementation, 4 October 2026. This record describes
+specific implementation and test evidence; it is not a claim of general DOCX compatibility.
+The [document editing roadmap](document-editing.md) tracks broader phases, which remain open
+until their full exit conditions are met.
 
 ## Current decision and boundary
 
@@ -282,6 +282,6 @@ timing.
   insertion/resize gesture policy), image rendering/editing, accessibility, and editing
   qualification before adding further capabilities to the supported contract.
 
-The package remains private while these items are open. The browser suite and the resource limits
-are evidence for the current experimental slice only; they do not complete feasibility, DOCX
-fidelity, or release qualification.
+The package is public with a bounded experimental contract while these items are open. The browser
+suite and resource limits are evidence for the current slice only; they do not complete feasibility,
+DOCX fidelity, or broader product qualification.

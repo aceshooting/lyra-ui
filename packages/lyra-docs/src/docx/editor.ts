@@ -2,6 +2,8 @@ export { LyraDocxEditor } from './docx-editor.class.js';
 import { LyraDocxEditor } from './docx-editor.class.js';
 import { defineElement } from '@aceshooting/lyra-ui/utilities/prefix.js';
 import '@aceshooting/lyra-ui/components/lr-button.js';
+import '@aceshooting/lyra-ui/components/lr-icon.js';
+import '@aceshooting/lyra-ui/components/lr-tooltip.js';
 import '@aceshooting/lyra-ui/components/lr-select.js';
 import '@aceshooting/lyra-ui/components/lr-option.js';
 import '@aceshooting/lyra-ui/components/lr-combobox.js';

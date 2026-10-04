@@ -23,7 +23,7 @@ async function openDialog(page, id, kind) {
   await part(page, id, `image-${kind}-trigger`).click();
   await part(page, id, `image-${kind}-fields`).waitFor({ state: 'visible' });
 }
-async function keyboardTool(page, id, name) {
+async function keyboardTool(page, id, name, activate = true) {
   await page.keyboard.press('Alt+F10'); await page.keyboard.press('Home');
   const forward = await editor(page, id).evaluate(element => element.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight');
   for (let attempt = 0; attempt < 80; attempt++) {
@@ -31,7 +31,7 @@ async function keyboardTool(page, id, name) {
     await page.keyboard.press(forward);
   }
   assert.equal(await editor(page, id).evaluate(element => element.shadowRoot.activeElement?.getAttribute('part')), name);
-  await page.keyboard.press('Enter');
+  if (activate) await page.keyboard.press('Enter');
 }
 async function state(page, id) {
   return editor(page, id).evaluate(element => {
@@ -147,7 +147,7 @@ export async function runImageTools(page, check, { createEditor, saveEditor, ass
     assert.equal((await state(page, id)).revision.value, 0);
     assert.equal((await state(page, id)).dirty, false);
     assert.deepEqual(parts(await saveEditor(page, id)), parts(before));
-    await page.keyboard.press('Alt+F10'); await page.keyboard.press('End');
+    await keyboardTool(page, id, 'image-next', false);
     assert.equal(await editor(page, id).evaluate(element => element.shadowRoot.activeElement?.getAttribute('part')), 'image-next');
     await page.keyboard.press('Enter');
     await page.waitForFunction(id => Boolean(document.getElementById(id).snapshot().image), id);
@@ -156,7 +156,7 @@ export async function runImageTools(page, check, { createEditor, saveEditor, ass
     const selected = await editor(page, id).evaluate(element => ({ image: element.snapshot().image, selection: element.snapshot().selection }));
     await page.waitForFunction(id => document.getElementById(id).can({ type: 'resize-image', widthPoints: 150, heightPoints: 75 }).enabled &&
       !document.getElementById(id).shadowRoot.querySelector('[part="image-resize-trigger"]').disabled, id);
-    await page.keyboard.press('Alt+F10'); await page.keyboard.press('End');
+    await keyboardTool(page, id, 'image-delete', false);
     assert.equal(await editor(page, id).evaluate(element => element.shadowRoot.activeElement?.getAttribute('part')), 'image-delete');
     assert.deepEqual(await editor(page, id).evaluate(element => ({ image: element.snapshot().image, selection: element.snapshot().selection })), selected);
     await page.keyboard.press('ArrowLeft');
@@ -169,13 +169,13 @@ export async function runImageTools(page, check, { createEditor, saveEditor, ass
     await page.keyboard.press('Enter');
     await page.waitForFunction(id => document.getElementById(id).snapshot().revision.value === 1, id);
     await page.waitForFunction(id => document.getElementById(id).can({ type: 'image-description', title: 'Keyboard title', description: '' }).enabled, id);
-    await page.keyboard.press('Alt+F10'); await page.keyboard.press('End'); await page.keyboard.press('ArrowLeft'); await page.keyboard.press('Enter');
+    await keyboardTool(page, id, 'image-description-trigger');
     await part(page, id, 'image-title').locator('input').waitFor({ state: 'visible' });
     await page.keyboard.press('ControlOrMeta+A'); await page.keyboard.type('Keyboard title'); await page.keyboard.press('Enter');
     await page.waitForFunction(id => document.getElementById(id).snapshot().revision.value === 2, id);
     assert.equal((await editor(page, id).evaluate(element => element.imageDescription())).value.title, 'Keyboard title');
     await page.waitForFunction(id => document.getElementById(id).can({ type: 'delete-image' }).enabled, id);
-    await page.keyboard.press('Alt+F10'); await page.keyboard.press('End'); await page.keyboard.press('Enter');
+    await keyboardTool(page, id, 'image-delete');
     await page.waitForFunction(id => document.getElementById(id).snapshot().revision.value === 3, id);
     assert.equal(await page.locator(`#${id} .docx-pages img`).count(), 1);
     const saved = await saveEditor(page, id); assertProtectedParts(saved, source);
@@ -254,8 +254,8 @@ export async function runImageTools(page, check, { createEditor, saveEditor, ass
   await check('image navigation wraps without edits and provides localized no-image feedback', async () => {
     const id = 'image-ui-navigation'; await createEditor(page, id, 'image-simple');
     const before = await saveEditor(page, id), original = await state(page, id);
-    assert.equal(await part(page, id, 'image-previous').textContent(), 'Previous image');
-    assert.equal(await part(page, id, 'image-next').textContent(), 'Next image');
+    assert.equal(await part(page, id, 'image-previous').getAttribute('aria-label'), 'Previous image');
+    assert.equal(await part(page, id, 'image-next').getAttribute('aria-label'), 'Next image');
     await part(page, id, 'image-previous').click();
     assert.equal((await editor(page, id).evaluate(element => element.imageDescription())).value.title, 'Title 2');
     await part(page, id, 'image-next').click();
@@ -267,7 +267,7 @@ export async function runImageTools(page, check, { createEditor, saveEditor, ass
     assert.deepEqual(parts(await saveEditor(page, id)), parts(before)); await remove(page, id);
     const empty = 'image-ui-no-target'; await createEditor(page, empty);
     await editor(page, empty).evaluate(element => { element.strings = { docxEditorNoImage: 'Aucune image disponible.', docxEditorNextImage: 'Image suivante' }; });
-    assert.equal(await part(page, empty, 'image-next').textContent(), 'Image suivante');
+    assert.equal(await part(page, empty, 'image-next').getAttribute('aria-label'), 'Image suivante');
     await part(page, empty, 'image-next').click();
     assert.equal(await part(page, empty, 'image-navigation-status').textContent(), 'Aucune image disponible.');
     assert.equal((await state(page, empty)).revision.value, 0); await remove(page, empty);
@@ -507,7 +507,7 @@ export async function runImageTools(page, check, { createEditor, saveEditor, ass
           docxEditorImageRatio: 'Conserver les proportions de cette image', docxEditorImageTitle: 'Titre de l’image',
           docxEditorImageDescription: 'Description de l’image', docxEditorImageApply: 'Appliquer' };
       }, direction);
-      await page.keyboard.press('Alt+F10'); await page.keyboard.press('End');
+      await keyboardTool(page, id, 'image-delete', false);
       assert.equal(await editor(page, id).evaluate(element => element.shadowRoot.activeElement?.getAttribute('part')), 'image-delete');
       await page.keyboard.press(direction === 'rtl' ? 'ArrowRight' : 'ArrowLeft');
       assert.equal(await editor(page, id).evaluate(element => element.shadowRoot.activeElement?.getAttribute('part')), 'image-description-trigger');

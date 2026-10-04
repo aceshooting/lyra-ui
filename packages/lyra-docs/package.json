@@ -1,10 +1,31 @@
 {
   "name": "@aceshooting/lyra-docs",
   "version": "0.1.0",
-  "private": true,
   "description": "Experimental native Lyra DOCX editor with lazy document engine loading",
+  "keywords": [
+    "docx",
+    "document-editor",
+    "web-components",
+    "lit"
+  ],
   "type": "module",
   "license": "MIT",
+  "author": {
+    "name": "Aceshooting",
+    "email": "info@aceshooting.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aceshooting/lyra-ui.git",
+    "directory": "packages/lyra-docs"
+  },
+  "homepage": "https://github.com/aceshooting/lyra-ui/tree/main/packages/lyra-docs#readme",
+  "bugs": {
+    "url": "https://github.com/aceshooting/lyra-ui/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
     "node": ">=22"
   },
@@ -37,6 +58,7 @@
   },
   "files": [
     "dist",
+    "CHANGELOG.md",
     "README.md",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md",
@@ -44,6 +66,7 @@
   ],
   "scripts": {
     "build": "node scripts/build.mjs",
+    "prepack": "pnpm --filter @aceshooting/lyra-ui build && pnpm build",
     "lint": "tsc --noEmit -p tsconfig.test.json && node scripts/check-package.mjs",
     "test": "pnpm build && tsc --noEmit -p tsconfig.exports.json && tsc -p tsconfig.test.json && node --test --test-concurrency=2 .test-output/src/docx/*.test.js scripts/package.test.mjs test/xml.test.mjs",
     "test:browser": "node scripts/browser-test.mjs",

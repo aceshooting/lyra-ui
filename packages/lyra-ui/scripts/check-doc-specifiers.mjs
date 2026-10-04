@@ -25,6 +25,7 @@ const defaultPackageDir = fileURLToPath(new URL('..', import.meta.url));
 const defaultWorkspacePackageDirs = Object.freeze([
   defaultPackageDir,
   join(dirname(defaultPackageDir), 'lyra-flags'),
+  join(dirname(defaultPackageDir), 'lyra-docs'),
 ]);
 
 /**

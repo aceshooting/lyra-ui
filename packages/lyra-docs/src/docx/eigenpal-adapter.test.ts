@@ -25,8 +25,10 @@ function harness() {
   let saved = () => Promise.resolve(new Uint8Array([1, 2, 3]).buffer);
   let creation: DocxEditorConfig | undefined;
   const document = { activeElement: null as unknown, body: {}, createElement: () => created++ === 0 ? child : viewport };
+  const childStyle: Record<string, string> = {};
+  Object.defineProperty(childStyle, 'setProperty', { value(name: string, value: string) { childStyle[name] = value; } });
   const child = Object.assign(new EventTarget(), {
-    className: '', style: {} as Record<string, string>, inert: false, ownerDocument: document,
+    className: '', style: childStyle, inert: false, ownerDocument: document,
     setAttribute() {}, contains: (node: unknown) => node === child,
     remove: () => { removed = true; },
   });
@@ -903,22 +905,25 @@ test('adapter owns a keyboard-focusable bounded scroll host and removes it witho
   const opened = await openEigenpalDocument({ mount: h.mount }, { kind: 'blank' },
     { readOnly: false, signal: new AbortController().signal }, () => true, h.loader);
   assert(opened.ok);
-  assert.equal(h.child.className, 'docx-editor');
+  assert.equal(h.child.className, 'docx-editor docx-paginated-surface');
   assert.equal(h.viewport.className, 'docx-editor docx-editor__scroll-container');
   assert.equal(h.viewport.children[0] === h.child, true);
   assert.equal(h.viewport.tabIndex, 0);
   assert.deepEqual(h.creation()?.zoomMode, { type: 'fixed' });
   assert.equal(h.viewport.attributes.has('data-lr-docx-viewport'), true);
-  assert.deepEqual(h.child.style, {});
+  assert.equal(h.child.style['--doc-page-bg-rendered'], 'white');
+  assert.equal(h.child.style['--doc-page-text'], 'black');
+  const paperStyle = { ...h.child.style };
   Object.assign(h.child.style, { width: '816px', height: '1056px' });
   assert.deepEqual(h.viewport.style, { position: 'relative', display: 'block', overflow: 'auto', minInlineSize: '0', maxInlineSize: '100%',
+    blockSize: '100%', background: 'var(--lr-color-neutral-fill-quiet, #f5f5f5)',
     boxSizing: 'border-box', maxBlockSize: 'var(--lr-docx-editor-document-max-block-size, var(--lr-size-30rem, 30rem))' });
   assert.equal(h.mount.className, 'consumer-layout');
   assert.deepEqual(callerStyle, { overflow: 'visible', maxBlockSize: 'none' });
   opened.value.destroy(); opened.value.destroy();
   assert.equal(h.destroyCount(), 1); assert.equal(h.removed(), true);
   assert.equal(h.viewportRemoves(), 1);
-  assert.deepEqual(h.child.style, { width: '816px', height: '1056px' });
+  assert.deepEqual(h.child.style, { ...paperStyle, width: '816px', height: '1056px' });
   assert.equal(h.mount.className, 'consumer-layout');
   assert.deepEqual(callerStyle, { overflow: 'visible', maxBlockSize: 'none' });
 });

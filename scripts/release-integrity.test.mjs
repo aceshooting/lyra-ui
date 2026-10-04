@@ -1869,6 +1869,12 @@ test('resolves only supported release tags', () => {
     packageName: '@aceshooting/lyra-flags',
     version: '1.4.1',
   });
+  assert.deepEqual(parseReleaseTag('lyra-docs@0.1.0'), {
+    tag: 'lyra-docs@0.1.0',
+    directory: 'packages/lyra-docs',
+    packageName: '@aceshooting/lyra-docs',
+    version: '0.1.0',
+  });
   assert.throws(
     () => parseReleaseTag('other@1.0.0'),
     /Unsupported release tag/
@@ -1876,6 +1882,52 @@ test('resolves only supported release tags', () => {
   assert.throws(() => parseReleaseTag('lyra-ui@8'), /Unsupported release tag/);
   assert.throws(() => parseReleaseTag('lyra-ui@8.1.0-beta.1'), /stable/);
   assert.throws(() => parseReleaseTag('lyra-ui@8.1.0+rebuild.1'), /stable/);
+});
+
+test('release workflows accept the document companion and reject unsupported tag forms', () => {
+  const release = readFileSync(path.join(repoRoot, '.github/workflows/release.yml'), 'utf8');
+  assert.match(release, /options:\n(?:          - [^\n]+\n)*          - lyra-docs\n/u);
+  const verification = readFileSync(path.join(repoRoot, '.github/workflows/release-verification.yml'), 'utf8');
+  const resolveStep = verification.match(/- name: Resolve release tag[\s\S]*?        run: \|\n([\s\S]*?)(?=\n      - name: Checkout)/u)?.[1];
+  assert.ok(resolveStep, 'the pre-checkout tag guard must exist');
+  const script = resolveStep.replace(/^          /gmu, '');
+  for (const [tag, accepted] of [
+    ['lyra-ui@25.6.1', true],
+    ['lyra-flags@2.3.0', true],
+    ['lyra-docs@0.1.0', true],
+    ['lyra-docs@0.1.0-beta.1', false],
+    ['lyra-docs@0.1.0+rebuild.1', false],
+    ['lyra-docs@00.1.0', false],
+    ['lyra-other@0.1.0', false],
+    ['refs/tags/lyra-docs@0.1.0', false],
+  ]) {
+    const result = spawnSync('bash', ['-c', script], {
+      env: { ...process.env, REQUESTED_TAG: tag, GITHUB_OUTPUT: '/dev/null' },
+      encoding: 'utf8',
+    });
+    assert.equal(result.status === 0, accepted, `${tag}: ${result.stdout}${result.stderr}`);
+    if (accepted) assert.equal(parseReleaseTag(tag).tag, tag);
+    else assert.throws(() => parseReleaseTag(tag), /Unsupported release tag/u);
+  }
+});
+
+test('initial document release selects its existing version without releasing another package', () => {
+  const docs = { directory: 'packages/lyra-docs', name: '@aceshooting/lyra-docs', version: '0.1.0' };
+  const packages = [
+    { directory: 'packages/lyra-ui', name: '@aceshooting/lyra-ui', version: '25.6.1' },
+    docs,
+  ];
+  const plan = planReleaseTags({ packages, existingTags: [], selection: 'lyra-docs' });
+  assert.deepEqual(plan, [parseReleaseTag('lyra-docs@0.1.0')]);
+  assert.deepEqual(validateTarballIdentity(docs, plan[0]), { name: docs.name, version: docs.version });
+  assert.throws(() => validateTarballIdentity({ ...docs, version: '0.1.1' }, plan[0]), /does not match tag version/u);
+  assert.throws(() => validateTarballIdentity({ ...docs, name: '@aceshooting/lyra-ui' }, plan[0]), /does not match tag package/u);
+  assert.throws(() => planReleaseTags({ packages, existingTags: ['lyra-docs@0.1.0'], selection: 'lyra-docs' }), /already exists/u);
+});
+
+test('document companion publishing does not schedule the UI website feed check', () => {
+  const workflow = readFileSync(path.join(repoRoot, '.github/workflows/release-feed-freshness.yml'), 'utf8');
+  assert.match(workflow, /if: \$\{\{ github\.event_name == 'workflow_dispatch' \|\| \(github\.event\.workflow_run\.conclusion == 'success' && !startsWith\(github\.event\.workflow_run\.head_branch, 'lyra-docs@'\)\) \}\}/u);
 });
 
 test('binds privileged workflow context to the requested peeled tag', () => {
@@ -3447,9 +3499,10 @@ test('CI browser provisioning preserves requested rows, native engines and real 
 test('serial browser sweep keeps shard failures fatal with a mocked actual runner', () => {
   const root = mkdtempSync(path.join(tmpdir(), 'lyra-browser-sweep-contract-'));
   try {
+    const pnpmVersion = JSON.parse(readFileSync(path.join(repoRoot, 'package.json'), 'utf8')).packageManager.replace(/^pnpm@/u, '');
     const executable = path.join(root, 'pnpm');
     const calls = path.join(root, 'calls');
-    writeFileSync(executable, `#!/usr/bin/env bash\nset -euo pipefail\nif [[ "$1" == --version ]]; then echo 12.8.1; exit; fi\nprintf '%s %s\\n' "\${WTR_SHARD_INDEX:-build}" "$*" >> "$MOCK_CALLS"\nif [[ "$*" == *test:full-engine-shard* ]]; then echo live-shard; exit 17; fi\n`);
+    writeFileSync(executable, `#!/usr/bin/env bash\nset -euo pipefail\nif [[ "$1" == --version ]]; then echo '${pnpmVersion}'; exit; fi\nprintf '%s %s\\n' "\${WTR_SHARD_INDEX:-build}" "$*" >> "$MOCK_CALLS"\nif [[ "$*" == *test:full-engine-shard* ]]; then echo live-shard; exit 17; fi\n`);
     chmodSync(executable, 0o755);
     const result = spawnSync('bash', [
       path.join(repoRoot, 'scripts/test_all_browsers.sh'),

@@ -35,7 +35,9 @@ permissions:
 jobs:
   feed-matches-npm:
     # A failed or cancelled Publish never reached `npm publish`, so there is nothing to wait for.
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    # Tag-dispatched Publish runs expose their tag as head_branch. The document companion does
+    # not update the UI upgrade feed; preserve the existing UI, flags and manual checks.
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && !startsWith(github.event.workflow_run.head_branch, 'lyra-docs@')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:

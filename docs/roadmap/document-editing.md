@@ -1,7 +1,7 @@
 # Native document editing
 
-Status: private experimental implementation and qualification in progress. No document editor is
-shipped or promised for the current release. All existing file viewers, including the lightweight,
+Status: public experimental editor package with broader qualification in progress. No document editor
+is shipped in `@aceshooting/lyra-ui`. All existing file viewers, including the lightweight,
 read-only `lr-docx-viewer`, stay in `@aceshooting/lyra-ui`. Editing belongs in the optional
 `@aceshooting/lyra-docs` companion. The current component is `<lr-docx-editor>` and the exact
 optional runtime engine peer is `@docx-editor.dev/core@2.25.0`; neither choice establishes general DOCX
@@ -25,14 +25,20 @@ the optional-package model of `@aceshooting/lyra-flags`. It is for editors; it d
 replace or add dependencies to the file viewers in `@aceshooting/lyra-ui`. Applications that only
 view files continue to install and import Lyra UI as before.
 
+A later breaking migration is planned to consolidate all document editors and viewers in
+`@aceshooting/lyra-docs`. That package will continue to depend on `@aceshooting/lyra-ui` for shared
+controls and utilities. The migration must move viewer entry points and guide consumers to the new
+imports without adding a Lyra UI dependency on Docs or a re-export cycle. No viewer moves in this
+release.
+
 DOCX is the first editing format under investigation. The package name leaves room for other
 formats through separate entry points and separately qualified engines. Spreadsheet, presentation
 and PDF editing are not implied by the initial DOCX work. Importing one format must not load engines
 for other formats, and the DOCX engine itself must load only when needed.
 
 The companion reuses Lyra's public controls, tokens, localization and accessibility utilities.
-Its first implementation remains private and experimental until the applicable release gates
-pass; creating the package does not make an editor available in the current Lyra UI release.
+Its first release exposes the bounded experimental editor described in the package README;
+broader format fidelity and interoperability qualification remain open.
 
 Use the public framework-independent core behind original Lyra controls, without importing its
 React/Vue application or complete feature set. The runtime peer is
@@ -114,7 +120,7 @@ Exit: lifecycle and public API tests pass, with no engine import or initializati
 
 ### 2. Basic rich-text editing
 
-The private implementation includes paragraph text entry and selection, the original five string
+The experimental implementation includes paragraph text entry and selection, the original five string
 commands (bold, italic, underline, undo and redo), and a parameterized `DocxAction` API for
 paragraph styles, four alignments, bullet/numbered lists, font family and size, text color, links,
 find, match navigation and replace-one. The current increment passes 51 focused checks in each

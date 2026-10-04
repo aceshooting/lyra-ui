@@ -54,6 +54,7 @@ export const REQUIRED_TEST_ALL_BROWSER_JOBS = Object.freeze([
 const RELEASE_PACKAGES = Object.freeze({
   'lyra-ui': '@aceshooting/lyra-ui',
   'lyra-flags': '@aceshooting/lyra-flags',
+  'lyra-docs': '@aceshooting/lyra-docs',
 });
 
 // Release automation intentionally accepts only stable core versions. Changesets prerelease
@@ -273,7 +274,7 @@ export function parseReleaseTag(tag) {
   const match = String(tag ?? '').match(RELEASE_TAG);
   if (!match) {
     throw new Error(
-      `Unsupported release tag '${tag}'. Expected a stable lyra-ui@<semver> or lyra-flags@<semver> tag.`,
+      `Unsupported release tag '${tag}'. Expected a stable ${Object.keys(RELEASE_PACKAGES).map((name) => `${name}@<semver>`).join(', ')} tag.`,
     );
   }
   const [, packageDirectory, version] = match;

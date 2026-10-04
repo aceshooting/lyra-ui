@@ -1,6 +1,6 @@
 # Cuts a release from the current main commit after it has fully qualified.
 #
-# Run it only once the version-bump commit from `pnpm release:prepare` is on main and push CI,
+# Run it only once the version-bump commit is on main and push CI,
 # Test All Browsers, and the Full browser-engine suite have all passed on that exact commit:
 #
 #   gh workflow run release.yml --ref main
@@ -25,6 +25,12 @@ on:
           - all
           - lyra-ui
           - lyra-flags
+          - lyra-docs
+      first_package_bootstrap:
+        description: 'Use the protected npm token for the first lyra-docs publication only'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -72,6 +78,26 @@ jobs:
           node scripts/release-integrity.mjs plan-release \
             --package "$PACKAGE" \
             --github-output "$GITHUB_OUTPUT"
+
+      - name: Require an unpublished Docs package for bootstrap
+        env:
+          BOOTSTRAP: ${{ inputs.first_package_bootstrap }}
+          PACKAGE: ${{ inputs.package }}
+          TAGS: ${{ steps.plan.outputs.tags }}
+        run: |
+          set -euo pipefail
+          if [[ "$BOOTSTRAP" != true ]]; then exit 0; fi
+          if [[ "$PACKAGE" != lyra-docs || ! "$TAGS" =~ ^lyra-docs@[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo '::error::First-package bootstrap requires a single, named stable lyra-docs release.'
+            exit 1
+          fi
+          status="$(curl --silent --show-error --proto '=https' --tlsv1.2 \
+            --connect-timeout 10 --max-time 30 --output /dev/null --write-out '%{http_code}' \
+            'https://registry.npmjs.org/%40aceshooting%2Flyra-docs')"
+          if [[ "$status" != 404 ]]; then
+            echo "::error::Expected npm registry absence (HTTP 404) before Docs bootstrap; received HTTP $status."
+            exit 1
+          fi
 
       # The same exact-commit checks publish.yml repeats before npm publish. They are expected to
       # be green already, so a short window only absorbs a run that is just finishing.
@@ -221,12 +247,18 @@ jobs:
 
       - name: Dispatch npm publish for each tag
         env:
+          BOOTSTRAP: ${{ inputs.first_package_bootstrap }}
           GH_TOKEN: ${{ github.token }}
           TAGS: ${{ needs.plan.outputs.tags }}
         run: |
           set -euo pipefail
           for tag in $TAGS; do
-            gh workflow run publish.yml --repo "$GITHUB_REPOSITORY" --ref "$tag" -f tag="$tag"
+            if [[ "$BOOTSTRAP" == true ]]; then
+              gh workflow run publish.yml --repo "$GITHUB_REPOSITORY" --ref "$tag" \
+                -f tag="$tag" -f first_package_bootstrap=true
+            else
+              gh workflow run publish.yml --repo "$GITHUB_REPOSITORY" --ref "$tag" -f tag="$tag"
+            fi
             {
               echo "- \`$tag\`: tagged, released, publish.yml dispatched."
             } >> "$GITHUB_STEP_SUMMARY"

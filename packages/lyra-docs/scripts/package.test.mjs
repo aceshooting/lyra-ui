@@ -19,7 +19,8 @@ test('root and session entries resolve without a DOM, engine, fetch or styleshee
     execFileSync(process.execPath, ['--input-type=module', '-e', source], { stdio: 'pipe' });
   }
   const { default: manifest } = await import('@aceshooting/lyra-docs/package.json', { with: { type: 'json' } });
-  assert.equal(manifest.private, true);
+  assert.equal(manifest.private, undefined);
+  assert.deepEqual(manifest.publishConfig, { access: 'public' });
   await assert.rejects(import('@aceshooting/lyra-docs/docx/session'), { code: 'ERR_PACKAGE_PATH_NOT_EXPORTED' });
   await assert.rejects(import('@aceshooting/lyra-docs/docx/engine-port'), { code: 'ERR_PACKAGE_PATH_NOT_EXPORTED' });
 });
@@ -59,9 +60,12 @@ test('the registration entry defines the editor and every rendered Lyra control'
   execFileSync(process.execPath, ['--input-type=module', '-e', source], { stdio: 'pipe' });
 });
 
-test('release tooling skips the private package and refuses accidental enrollment', () => {
-  const core = { directory: 'packages/lyra-ui', name: '@aceshooting/lyra-ui', version: '25.4.0' };
-  const docs = { directory: 'packages/lyra-docs', name: '@aceshooting/lyra-docs', version: '0.1.0', private: true };
-  assert.equal(planReleaseTags({ packages: [core, docs], existingTags: [] }).length, 1);
-  assert.throws(() => planReleaseTags({ packages: [core, { ...docs, private: false }], existingTags: [] }), /no release tag mapping/u);
+test('release tooling plans the first public Docs tag', () => {
+  const docs = { directory: 'packages/lyra-docs', name: '@aceshooting/lyra-docs', version: '0.1.0' };
+  assert.deepEqual(planReleaseTags({ packages: [docs], existingTags: [], selection: 'lyra-docs' }), [{
+    tag: 'lyra-docs@0.1.0',
+    directory: 'packages/lyra-docs',
+    packageName: '@aceshooting/lyra-docs',
+    version: '0.1.0',
+  }]);
 });

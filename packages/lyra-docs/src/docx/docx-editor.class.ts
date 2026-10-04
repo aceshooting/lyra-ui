@@ -38,7 +38,32 @@ const commandLabels = {
   undo: 'docxEditorUndo',
   redo: 'docxEditorRedo',
 } as const satisfies Record<DocxCommand, string>;
-const commands: readonly DocxCommand[] = ['bold', 'italic', 'underline', 'undo', 'redo'];
+const toolIcons = {
+  new: { path: 'M14 2H5v20h14V7z M14 2v6h5 M8 14h8 M12 10v8', label: 'docxEditorNew' },
+  open: { path: 'M3 7V4h6l3 3h9v3 M3 7v13h16l3-10H7L3 20', label: 'docxEditorOpen' },
+  save: { path: 'M3 3h15l3 3v15H3z M7 3v6h10V3 M7 21v-8h10v8', label: 'docxEditorSave' },
+  'bold': { path: 'M6 4h7a4 4 0 0 1 0 8H6z M6 12h8a4 4 0 0 1 0 8H6z', label: 'docxEditorBold' },
+  'italic': { path: 'M11 4h8 M5 20h8 M15 4 9 20', label: 'docxEditorItalic' },
+  'underline': { path: 'M6 3v7a6 6 0 0 0 12 0V3 M4 21h16', label: 'docxEditorUnderline' },
+  'undo': { path: 'M9 5 4 10l5 5 M4 10h10a6 6 0 0 1 6 6v3', label: 'docxEditorUndo' },
+  'redo': { path: 'm15 5 5 5-5 5 M20 10H10a6 6 0 0 0-6 6v3', label: 'docxEditorRedo' },
+  'alignment-left': { path: 'M4 5h16 M4 10h10 M4 15h16 M4 20h10', label: 'docxEditorAlignLeft' },
+  'alignment-center': { path: 'M4 5h16 M7 10h10 M4 15h16 M7 20h10', label: 'docxEditorAlignCenter' },
+  'alignment-right': { path: 'M4 5h16 M10 10h10 M4 15h16 M10 20h10', label: 'docxEditorAlignRight' },
+  'alignment-justify': { path: 'M4 5h16 M4 10h16 M4 15h16 M4 20h16', label: 'docxEditorAlignJustify' },
+  'list-bullet': { path: 'M9 6h12 M9 12h12 M9 18h12 M3 6h.01 M3 12h.01 M3 18h.01', label: 'docxEditorBullets' },
+  'list-numbered': { path: 'M10 6h11 M10 12h11 M10 18h11 M3 3h1v6 M2 9h4 M2 14a2 2 0 1 1 4 0c0 1-4 3-4 5h4', label: 'docxEditorNumbering' },
+  'link': { path: 'm10 13 4-4 M8 16l-2 2a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0 M14 8l2-2a4 4 0 0 1 6 6l-4 4a4 4 0 0 1-6 0', label: 'docxEditorLink' },
+  'find': { path: 'M10 3a7 7 0 1 0 0 14 7 7 0 0 0 0-14 M15 15l6 6', label: 'docxEditorFind' },
+  'image-insert': { path: 'M3 3h18v18H3z M3 16l5-5 5 5 3-3 5 5 M16 7h.01', label: 'docxEditorInsertImage' },
+  'table-insert': { path: 'M3 3h18v18H3z M3 9h18 M3 15h18 M9 3v18 M15 3v18', label: 'docxEditorInsertTable' },
+  'image-previous': { path: 'M5 5h14v14H5z M5 15l4-4 5 5 M16 9h.01 M3 12H0 M2 10l-2 2 2 2', label: 'docxEditorPreviousImage' },
+  'image-next': { path: 'M5 5h14v14H5z M5 15l4-4 5 5 M16 9h.01 M21 12h3 M22 10l2 2-2 2', label: 'docxEditorNextImage' },
+} as const;
+type ToolIcon = keyof typeof toolIcons;
+const commands: readonly DocxCommand[] = ['bold', 'italic', 'underline'];
+const iconTag = unsafeStatic(tag('icon'));
+const tooltipTag = unsafeStatic(tag('tooltip'));
 const buttonTag = unsafeStatic(tag('button'));
 const selectTag = unsafeStatic(tag('select'));
 const optionTag = unsafeStatic(tag('option'));
@@ -79,6 +104,26 @@ const refused = <T>(code: DocxRefusalCode): DocxResult<T> => ({ ok: false, code 
  * @event lr-save - Explicit save completed; detail contains the save receipt and bytes.
  * @customElement lr-docx-editor
  * @slot document - Reserved for the component-owned, stable light-DOM engine mount.
+ * @slot new-icon - Decorative icon for the new action; the editor retains its accessible name.
+ * @slot open-icon - Decorative icon for the open action; the editor retains its accessible name.
+ * @slot save-icon - Decorative icon for the save action; the editor retains its accessible name.
+ * @slot bold-icon - Decorative icon for the bold action; the editor retains its accessible name.
+ * @slot italic-icon - Decorative icon for the italic action; the editor retains its accessible name.
+ * @slot underline-icon - Decorative icon for the underline action; the editor retains its accessible name.
+ * @slot undo-icon - Decorative icon for the undo action; the editor retains its accessible name.
+ * @slot redo-icon - Decorative icon for the redo action; the editor retains its accessible name.
+ * @slot alignment-left-icon - Decorative icon for the alignment left action; the editor retains its accessible name.
+ * @slot alignment-center-icon - Decorative icon for the alignment center action; the editor retains its accessible name.
+ * @slot alignment-right-icon - Decorative icon for the alignment right action; the editor retains its accessible name.
+ * @slot alignment-justify-icon - Decorative icon for the alignment justify action; the editor retains its accessible name.
+ * @slot list-bullet-icon - Decorative icon for the list bullet action; the editor retains its accessible name.
+ * @slot list-numbered-icon - Decorative icon for the list numbered action; the editor retains its accessible name.
+ * @slot link-icon - Decorative icon for the link action; the editor retains its accessible name.
+ * @slot find-icon - Decorative icon for the find action; the editor retains its accessible name.
+ * @slot image-insert-icon - Decorative icon for the image insert action; the editor retains its accessible name.
+ * @slot table-insert-icon - Decorative icon for the table insert action; the editor retains its accessible name.
+ * @slot image-previous-icon - Decorative icon for the image previous action; the editor retains its accessible name.
+ * @slot image-next-icon - Decorative icon for the image next action; the editor retains its accessible name.
  * @cssprop --lr-docx-editor-document-max-block-size - Document scroll viewport maximum block size; defaults to 30rem. Set a valid length or none to let the document grow. Pages keep 100% scale and scroll horizontally in narrower allocations.
  * @csspart base - The root editor surface.
  * @csspart toolbar - File and formatting controls.
@@ -1238,7 +1283,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       event.stopPropagation();
       this.retainToolbarSelection();
       const targets = this.enabledToolbarButtons();
-      const first = targets[0];
+      const first = targets.find(target => target.getAttribute('data-tool-key') === 'bold') ?? targets[0];
       (first ?? this.renderRoot.querySelector<HTMLElement>('[part="new-button"]'))?.focus();
       if (first) this.toolbarKey = first.getAttribute('data-tool-key') ?? 'bold';
       return;
@@ -1394,12 +1439,23 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     return this.localize('docxEditorIdle');
   }
 
+  private renderToolIcon(name: ToolIcon): TemplateResult {
+    return html`<span class="tool-icon" aria-hidden="true"><slot name=${`${name}-icon`}><${iconTag} .path=${toolIcons[name].path}></${iconTag}></slot></span>`;
+  }
+
+  private renderTooltips(): TemplateResult {
+    return html`<div class="tooltips">${(Object.keys(toolIcons) as ToolIcon[]).map(name => html`
+      <${tooltipTag} for=${`tool-${name}`} content=${this.localize(toolIcons[name].label)} top-layer></${tooltipTag}>
+    `)}</div>`;
+  }
+
   private renderCommand(command: DocxCommand): TemplateResult {
     const availability = this.currentSnapshot?.commands[command];
     const formatting = command !== 'undo' && command !== 'redo';
     const active = availability?.active;
     return html`<${buttonTag}
       part="format-button"
+      id=${`tool-${command}`} aria-label=${this.localize(commandLabels[command])}
       data-command=${command}
       data-tool-key=${command}
       data-active=${active === true ? 'true' : 'false'}
@@ -1410,7 +1466,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       .pressed=${formatting ? active === 'mixed' ? 'mixed' : active === true : null}
       @pointerdown=${() => { if (formatting) this.retainToolbarSelection(); }}
       @click=${() => this.runToolbarCommand(command)}
-    >${this.localize(commandLabels[command])}</${buttonTag}>`;
+    >${this.renderToolIcon(command)}</${buttonTag}>`;
   }
 
   private renderAlignment(value: typeof alignments[number]): TemplateResult {
@@ -1418,12 +1474,13 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     const active = this.currentSnapshot?.formatting.alignment === value;
     const key = `docxEditorAlign${value[0]!.toUpperCase()}${value.slice(1)}`;
     return html`<${buttonTag} part="edit-button" data-edit="alignment" data-value=${value}
+      id=${`tool-alignment-${value}`} aria-label=${this.localize(key)}
       data-tool-key=${`alignment-${value}`}
       size="s" appearance=${active ? 'filled' : 'quiet'} .pressed=${active}
       ?disabled=${!this.can(edit).enabled}
       tabindex=${this.toolbarKey === `alignment-${value}` ? '0' : '-1'}
       @pointerdown=${() => this.retainToolbarSelection()}
-      @click=${() => this.runEdit(edit)}>${this.localize(key)}</${buttonTag}>`;
+      @click=${() => this.runEdit(edit)}>${this.renderToolIcon(`alignment-${value}`)}</${buttonTag}>`;
   }
 
   private renderList(kind: typeof listKinds[number]): TemplateResult {
@@ -1431,12 +1488,13 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     const active = kind === 'bullet' ? this.currentSnapshot?.formatting.bulletList :
       this.currentSnapshot?.formatting.numberedList;
     return html`<${buttonTag} part="edit-button" data-edit="toggle-list" data-kind=${kind}
+      id=${`tool-list-${kind}`} aria-label=${this.localize(toolIcons[`list-${kind}`].label)}
       data-tool-key=${`toggle-list-${kind}`}
       size="s" appearance=${active ? 'filled' : 'quiet'} .pressed=${Boolean(active)}
       ?disabled=${!this.can(edit).enabled}
       tabindex=${this.toolbarKey === `toggle-list-${kind}` ? '0' : '-1'}
       @pointerdown=${() => this.retainToolbarSelection()}
-      @click=${() => this.runEdit(edit)}>${this.localize(kind === 'bullet' ? 'docxEditorBullets' : 'docxEditorNumbering')}</${buttonTag}>`;
+      @click=${() => this.runEdit(edit)}>${this.renderToolIcon(`list-${kind}`)}</${buttonTag}>`;
   }
 
   private renderEditingTools(): TemplateResult {
@@ -1446,6 +1504,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     const formatting = this.currentSnapshot?.formatting;
     const color = formatting?.color ?? '';
     return html`<div part="editing-tools" role="group" aria-label=${this.localize('docxEditorFormatting')}>
+      <div class="font-tools">
       <${selectTag} part="paragraph-style" data-edit="paragraph-style" size="s"
         aria-label=${this.localize('docxEditorParagraphStyle')}
         placeholder=${this.localize('docxEditorParagraphStyle')}
@@ -1458,12 +1517,6 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
           html`<${optionTag} value=${formatting.paragraphStyleId}>${formatting.paragraphStyleId}</${optionTag}>` : nothing}
         ${this.paragraphStyleItems.map(item => html`<${optionTag} value=${item.id}>${item.label}</${optionTag}>`)}
       </${selectTag}>
-      <div part="alignment-actions" role="group" aria-label=${this.localize('docxEditorAlignment')}>
-        ${alignments.map(value => this.renderAlignment(value))}
-      </div>
-      <div part="list-actions" role="group" aria-label=${this.localize('docxEditorLists')}>
-        ${listKinds.map(kind => this.renderList(kind))}
-      </div>
       <${comboboxTag} part="font-family" data-edit="font-family" size="s" allow-custom-value
         aria-label=${this.localize('docxEditorFontFamily')}
         placeholder=${this.localize('docxEditorFontFamily')}
@@ -1484,6 +1537,15 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
         ?disabled=${!editable}
         @pointerdown=${() => this.retainToolbarSelection()}
         @lr-change=${(event: CustomEvent<{ value: string }>) => this.onFontSizeChange(event)}></${numberInputTag}>
+      </div>
+      <div part="format-actions">${commands.map(command => this.renderCommand(command))}</div>
+      <div part="alignment-actions" role="group" aria-label=${this.localize('docxEditorAlignment')}>
+        ${alignments.map(value => this.renderAlignment(value))}
+      </div>
+      <div part="list-actions" role="group" aria-label=${this.localize('docxEditorLists')}>
+        ${listKinds.map(kind => this.renderList(kind))}
+      </div>
+      <div class="color-tools">
       <${colorPickerTag} part="text-color" data-edit="text-color" size="s" format="hex"
         aria-label=${this.localize('docxEditorTextColor')}
         .value=${color} data-color-known=${formatting?.color == null ? 'false' : 'true'} ?disabled=${!editable}
@@ -1496,26 +1558,36 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
         ?disabled=${!this.can({ type: 'text-color', color: 'auto' }).enabled}
         @pointerdown=${() => this.retainToolbarSelection()}
         @click=${() => this.runEdit({ type: 'text-color', color: 'auto' })}>${this.localize('docxEditorAutomaticColor')}</${buttonTag}>
+      </div>
+    </div>`;
+  }
+
+  private renderDocumentTools(): TemplateResult {
+    const ready = this.currentSnapshot?.status === 'ready';
+    const editable = ready && !this.currentSnapshot?.readOnly && !this.currentSnapshot?.composing &&
+      this.currentSnapshot?.activity === null;
+    return html`      <div class="insert-tools">
       ${this.renderLinkEditor(Boolean(editable))}
-      <${buttonTag} part="find-toggle" data-tool-key="find" size="s" appearance=${this.findOpen ? 'filled' : 'quiet'}
+      <${buttonTag} part="find-toggle" id="tool-find" aria-label=${this.localize(toolIcons['find'].label)} data-tool-key="find" size="s" appearance=${this.findOpen ? 'filled' : 'quiet'}
         tabindex=${this.toolbarKey === 'find' ? '0' : '-1'}
         .pressed=${this.findOpen} ?disabled=${!ready}
         @click=${() => { this.findOpen = !this.findOpen; if (this.findOpen) void this.updateComplete.then(() =>
           this.renderRoot.querySelector<HTMLElement>('[part="find-query"]')?.focus()); }}>
-        ${this.localize('docxEditorFind')}
+        ${this.renderToolIcon('find')}
       </${buttonTag}>
-    </div>`;
+      </div>
+`;
   }
 
   private renderLinkEditor(editable: boolean): TemplateResult {
-    return html`<${popoverTag} part="link-popover" data-edit="link" popup-role="dialog"
+    return html`<${popoverTag} part="link-popover" data-edit="link" popup-role="dialog" top-layer
       aria-label=${this.localize('docxEditorLink')}
       @lr-show=${() => this.openLinkEditor()}
       @lr-after-hide=${() => this.releaseToolbarSelection()}>
-      <${buttonTag} slot="trigger" part="link-trigger" data-tool-key="link" size="s" appearance="quiet"
+      <${buttonTag} slot="trigger" part="link-trigger" id="tool-link" aria-label=${this.localize(toolIcons['link'].label)} data-tool-key="link" size="s" appearance="quiet"
         tabindex=${this.toolbarKey === 'link' ? '0' : '-1'}
         ?disabled=${!editable} @pointerdown=${() => this.retainToolbarSelection()}>
-        ${this.localize('docxEditorLink')}
+        ${this.renderToolIcon('link')}
       </${buttonTag}>
       <div part="link-fields">
         <${inputTag} part="link-href" type="text" inputmode="url" size="s" label=${this.localize('docxEditorLinkUrl')}
@@ -1554,13 +1626,13 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
         if ((!reading && !draft) || !intentValid) event.preventDefault();
       }}
       @lr-hide=${(event: Event) => this.onImageInsertionHide(event)}>
-      <${buttonTag} slot="trigger" part="image-insert-trigger" data-tool-key="image-insert" size="s" appearance="quiet" wrap
+      <${buttonTag} slot="trigger" part="image-insert-trigger" id="tool-image-insert" aria-label=${this.localize(toolIcons['image-insert'].label)} data-tool-key="image-insert" size="s" appearance="quiet" wrap
         tabindex=${this.toolbarKey === 'image-insert' ? '0' : '-1'}
         ?disabled=${!available || this.insertionPhase !== 'idle'}
         @pointerdown=${() => this.prepareImageInsertion()}
         @keydown=${(event: KeyboardEvent) => this.onImageInsertionKey(event)}
         @blur=${() => { if (this.insertionPhase === 'idle') this.cancelImageInsertion(false); }}
-        @click=${() => this.openImageInsertionPicker()}>${this.localize('docxEditorInsertImage')}</${buttonTag}>
+        @click=${() => this.openImageInsertionPicker()}>${this.renderToolIcon('image-insert')}</${buttonTag}>
       <div part="image-insert-fields" @focusin=${(event: FocusEvent) => this.onImageFieldFocus(event, true)}
         @keydown=${(event: KeyboardEvent) => {
           if (event.key === 'Enter' && !event.isComposing && event.keyCode !== 229 && event.composedPath().some(node =>
@@ -1622,14 +1694,14 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     const cell = table?.rowIndex != null && table.columnIndex != null ? this.localize('docxEditorTableCell', undefined,
       { row: number(table.rowIndex + 1), column: number(table.columnIndex + 1) }) : '';
     return html`<div part="table-tools" role="group" aria-label=${this.localize('docxEditorTable')}>
-      <${popoverTag} part="table-insert-popover" popup-role="dialog" placement="bottom-start"
+      <${popoverTag} part="table-insert-popover" popup-role="dialog" placement="bottom-start" top-layer
         aria-label=${this.localize('docxEditorInsertTable')}
         @lr-show=${(event: Event) => this.openTableDialog(event)} @lr-after-hide=${() => this.onTableDialogHidden()}>
-        <${buttonTag} slot="trigger" part="table-insert-trigger" data-tool-key="table-insert" size="s" appearance="quiet"
+        <${buttonTag} slot="trigger" part="table-insert-trigger" id="tool-table-insert" aria-label=${this.localize(toolIcons['table-insert'].label)} data-tool-key="table-insert" size="s" appearance="quiet"
           tabindex=${this.toolbarKey === 'table-insert' ? '0' : '-1'}
           ?disabled=${!this.can({ type: 'insert-table', rows: 2, columns: 2 }).enabled}
           @pointerdown=${() => this.prepareTableIntent()} @focusin=${() => this.prepareTableIntent()}
-          @keydown=${(event: KeyboardEvent) => this.onTableActivationKey(event)}>${this.localize('docxEditorInsertTable')}</${buttonTag}>
+          @keydown=${(event: KeyboardEvent) => this.onTableActivationKey(event)}>${this.renderToolIcon('table-insert')}</${buttonTag}>
         <div part="table-fields" @keydown=${(event: KeyboardEvent) => {
           if (event.key === 'Enter' && !event.isComposing && event.keyCode !== 229 && event.composedPath().some(node => node instanceof HTMLElement &&
               ['table-rows', 'table-columns'].includes(node.getAttribute('part') ?? ''))) {
@@ -1677,12 +1749,12 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     const context = image ? this.localize('docxEditorImageDimensions', undefined,
       { width: dimension(image.widthPoints), height: dimension(image.heightPoints) }) : '';
     return html`<div part="image-tools" role="group" aria-label=${this.localize('docxEditorImage')}>
-      <${buttonTag} part="image-previous" data-tool-key="image-previous" size="s" appearance="quiet" wrap
+      <${buttonTag} part="image-previous" id="tool-image-previous" aria-label=${this.localize(toolIcons['image-previous'].label)} data-tool-key="image-previous" size="s" appearance="quiet" wrap
         tabindex=${this.toolbarKey === 'image-previous' ? '0' : '-1'} ?disabled=${navigationDisabled}
-        @click=${() => this.navigateImage('previous')}>${this.localize('docxEditorPreviousImage')}</${buttonTag}>
-      <${buttonTag} part="image-next" data-tool-key="image-next" size="s" appearance="quiet" wrap
+        @click=${() => this.navigateImage('previous')}>${this.renderToolIcon('image-previous')}</${buttonTag}>
+      <${buttonTag} part="image-next" id="tool-image-next" aria-label=${this.localize(toolIcons['image-next'].label)} data-tool-key="image-next" size="s" appearance="quiet" wrap
         tabindex=${this.toolbarKey === 'image-next' ? '0' : '-1'} ?disabled=${navigationDisabled}
-        @click=${() => this.navigateImage('next')}>${this.localize('docxEditorNextImage')}</${buttonTag}>
+        @click=${() => this.navigateImage('next')}>${this.renderToolIcon('image-next')}</${buttonTag}>
       ${this.imageNavigationEmpty ? html`<span part="image-navigation-status">${this.localize('docxEditorNoImage')}</span>` : nothing}
       ${!image && !this.imageDialog ? nothing : html`
       <span part="image-context"><bdi>${context}</bdi></span>
@@ -1797,6 +1869,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       <${buttonTag} part="find-next" size="s" appearance="quiet" ?disabled=${!count || !available}
         @click=${() => this.navigateMatch(1)}>${this.localize('docxEditorNext')}</${buttonTag}>
       <${inputTag} part="find-replace" size="s" label=${this.localize('docxEditorReplacement')}
+        hint=${count && this.searchIndex < 0 ? this.localize('docxEditorFindSelectMatch') : ''}
         .value=${this.replacement} ?disabled=${this.currentSnapshot?.readOnly || !count}
         @lr-input=${(event: CustomEvent<{ value: string }>) => { this.replacement = event.detail.value; }}
         @lr-change=${(event: Event) => event.stopPropagation()}></${inputTag}>
@@ -1813,22 +1886,28 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       <section part="base" aria-label=${this.editorLabel()}>
         <div part="toolbar" role="toolbar" aria-label=${this.editorLabel()}
           @focusin=${this.onToolbarFocusIn} @pointerdown=${(event: PointerEvent) => this.handoffImageInsertion(event)}>
+          <div class="toolbar-row">
           <div part="file-actions">
-            <${buttonTag} part="new-button" size="s" appearance="quiet" ?disabled=${this.openInProgress || Boolean(this.currentSnapshot?.activity)}
-              @click=${() => this.requestToolbarAction('new')}>${this.localize('docxEditorNew')}</${buttonTag}>
-            <${buttonTag} part="open-button" size="s" appearance="quiet" ?disabled=${this.openInProgress || Boolean(this.currentSnapshot?.activity)}
-              @click=${() => this.requestToolbarAction('open')}>${this.localize('docxEditorOpen')}</${buttonTag}>
-            <${buttonTag} part="save-button" size="s" appearance="quiet"
+            <${buttonTag} part="new-button" id="tool-new" aria-label=${this.localize(toolIcons.new.label)} size="s" appearance="quiet" ?disabled=${this.openInProgress || Boolean(this.currentSnapshot?.activity)}
+              @click=${() => this.requestToolbarAction('new')}>${this.renderToolIcon('new')}</${buttonTag}>
+            <${buttonTag} part="open-button" id="tool-open" aria-label=${this.localize(toolIcons.open.label)} size="s" appearance="quiet" ?disabled=${this.openInProgress || Boolean(this.currentSnapshot?.activity)}
+              @click=${() => this.requestToolbarAction('open')}>${this.renderToolIcon('open')}</${buttonTag}>
+            <${buttonTag} part="save-button" id="tool-save" aria-label=${this.localize(toolIcons.save.label)} size="s" appearance="quiet"
               ?disabled=${this.currentSnapshot?.status !== 'ready' || this.currentSnapshot.activity !== null}
-              @click=${() => { this.releaseToolbarSelection(); void this.save(); }}>${this.localize('docxEditorSave')}</${buttonTag}>
+              @click=${() => { this.releaseToolbarSelection(); void this.save(); }}>${this.renderToolIcon('save')}</${buttonTag}>
             <input part="file-input" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
               tabindex="-1" aria-hidden="true" @change=${this.onFileSelected}>
           </div>
-          <div part="format-actions">${commands.map(command => this.renderCommand(command))}</div>
+          <div part="format-actions" class="history-tools">${this.renderCommand('undo')}${this.renderCommand('redo')}</div>
+          ${this.renderDocumentTools()}
+          <div class="insert-tools">
+            ${this.renderImageInsertionTools()}
+            ${this.renderTableTools()}
+            ${this.renderImageTools()}
+          </div>
+          </div>
           ${this.renderEditingTools()}
-          ${this.renderImageInsertionTools()}
-          ${this.renderTableTools()}
-          ${this.renderImageTools()}
+          ${this.renderTooltips()}
         </div>
         ${this.pendingAction ? html`
           <div part="confirm" role="group" aria-label=${this.localize('docxEditorDiscardQuestion')}>

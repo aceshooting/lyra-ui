@@ -13,6 +13,7 @@ import { runImageEditing } from './images-browser.mjs';
 import { runImageTools } from './image-tools-browser.mjs';
 import { runImageInsertion } from './image-insertion-browser.mjs';
 import { runImageInsertionTools } from './image-insertion-tools-browser.mjs';
+import { runEditorLayout } from './layout-browser.mjs';
 import { runTableEditing } from './tables-browser.mjs';
 import { assertExternalHyperlink, wordText } from '../test/xml.mjs';
 
@@ -502,7 +503,9 @@ async function runBasicEditing(page, check) {
     });
     assert.equal(composing, '', 'IME confirmation must not submit a find query');
     await page.locator(`#${id} [part="find-submit"]`).click();
+    assert.equal(await page.locator(`#${id} [part="find-replace"]`).getAttribute('hint'), 'Choose Previous match or Next match before replacing.');
     await page.locator(`#${id} [part="find-previous"]`).click();
+    assert.equal(await page.locator(`#${id} [part="find-replace"]`).getAttribute('hint'), '');
     await page.locator(`#${id} [part="find-replace"] [part="input"]`).fill('Last only');
     await page.locator(`#${id} [part="find-replace-button"]`).click();
     const last = zipEntry(await saveEditor(page, id), 'word/document.xml');
@@ -929,7 +932,9 @@ async function runBrowser(name, url, { lazyEntry, engineEntry }) {
       assert.ok(record.requests.some(path => path.endsWith(`/${lazyEntry}`)));
       assert.equal(record.requests.some(path => path.endsWith(`/${engineEntry}`)), false, 'Engine loaded before document open');
     });
-    if (process.env.DOCX_INSERTION_ONLY) {
+    if (process.env.DOCX_LAYOUT_ONLY) {
+      await runEditorLayout(page, check, { createEditor, saveEditor });
+    } else if (process.env.DOCX_INSERTION_ONLY) {
       assert.ok(['core', 'ui', 'all'].includes(process.env.DOCX_INSERTION_ONLY));
       if (process.env.DOCX_INSERTION_ONLY !== 'ui') await runImageInsertion(page, check, { createEditor, saveEditor, assertProtectedParts });
       if (process.env.DOCX_INSERTION_ONLY !== 'core') await runImageInsertionTools(page, check, { createEditor, saveEditor, assertProtectedParts });
@@ -958,14 +963,14 @@ async function runBrowser(name, url, { lazyEntry, engineEntry }) {
       assert.equal(await editor.evaluate(element => element.snapshot()?.dirty), true);
     });
     await check('English fallback and instance strings reach rendered controls', async () => {
-      assert.equal((await editor.locator('lr-button[data-command="bold"]').textContent()).trim(), 'Bold');
+      assert.equal(await editor.locator('lr-button[data-command="bold"]').getByRole('button', { name: 'Bold', exact: true }).count(), 1);
       const result = await editor.evaluate(async element => {
         element.strings = { docxEditorBold: 'Strong text' };
         await element.updateComplete;
-        const label = element.shadowRoot.querySelector('[data-command="bold"]')?.textContent?.trim();
+        const label = element.shadowRoot.querySelector('[data-command="bold"]')?.getAttribute('aria-label');
         element.strings = {};
         await element.updateComplete;
-        return { label, restored: element.shadowRoot.querySelector('[data-command="bold"]')?.textContent?.trim() };
+        return { label, restored: element.shadowRoot.querySelector('[data-command="bold"]')?.getAttribute('aria-label') };
       });
       assert.deepEqual(result, { label: 'Strong text', restored: 'Bold' });
     });
@@ -1320,6 +1325,7 @@ async function runBrowser(name, url, { lazyEntry, engineEntry }) {
       assert.deepEqual(results.violations.map(({ id, nodes }) => ({ id, targets: nodes.map(node => node.target) })), []);
     });
     await runTableEditing(page, check, { createEditor, saveEditor, assertProtectedParts });
+    await runEditorLayout(page, check, { createEditor, saveEditor });
     await runBasicEditing(page, check);
     await runEditorWorkflows(page, check);
     await runImageEditing(page, check, { createEditor, saveEditor, assertProtectedParts });

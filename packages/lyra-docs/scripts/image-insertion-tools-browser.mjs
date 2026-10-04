@@ -233,7 +233,8 @@ export async function runImageInsertionTools(page, check, { createEditor, saveEd
       await caret(page, id, 'gamma'); await draft(page, id, bytes);
       assert.equal(await page.locator(`#${id} [part="link-trigger"]`).evaluate(element => {
         const box = element.getBoundingClientRect();
-        return element.getRootNode().elementFromPoint(box.x + box.width / 2, box.y + box.height / 2) === element;
+        const hit = element.getRootNode().elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+        return hit === element || element.contains(hit);
       }), true);
       await page.locator(`#${id} [part="link-trigger"]`).click();
       await page.locator(`#${id} [part="link-fields"]`).waitFor({ state: 'visible' });

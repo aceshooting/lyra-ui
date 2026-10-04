@@ -13,15 +13,17 @@ const repoRoot = path.resolve(packageRoot, '../..');
 const read = (file) => readFileSync(path.join(repoRoot, file), 'utf8');
 const manifest = JSON.parse(read('packages/lyra-docs/package.json'));
 assert.equal(manifest.name, '@aceshooting/lyra-docs');
-assert.equal(manifest.version, '0.1.0');
-assert.equal(manifest.private, true, 'Experimental editors must remain private');
+assert.match(manifest.version, /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/u);
+assert.equal(manifest.private, undefined, 'The Docs package must be publishable');
 assert.equal(manifest.type, 'module');
 assert.equal(manifest.engines.node, '>=22');
 assert.equal(manifest.packageManager, JSON.parse(read('package.json')).packageManager);
 assert.deepEqual(manifest.sideEffects, [
   './dist/docx/editor.js', './src/docx/editor.ts', './dist/docx/editor.css',
 ]);
-assert.equal(manifest.publishConfig, undefined);
+assert.deepEqual(manifest.publishConfig, { access: 'public' });
+assert.equal(manifest.repository.directory, 'packages/lyra-docs');
+assert.equal(manifest.scripts.prepack, 'pnpm --filter @aceshooting/lyra-ui build && pnpm build');
 assert.deepEqual(manifest.exports, {
   '.': { types: './dist/index.d.ts', default: './dist/index.js' },
   './docx': { types: './dist/docx/index.d.ts', default: './dist/docx/index.js' },
@@ -30,7 +32,10 @@ assert.deepEqual(manifest.exports, {
   './docx/editor.css': './dist/docx/editor.css',
   './package.json': './package.json',
 });
-assert.deepEqual(manifest.files, ['dist', 'README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'THIRD_PARTY_LICENSES']);
+assert.deepEqual(manifest.files, ['dist', 'CHANGELOG.md', 'README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'THIRD_PARTY_LICENSES']);
+const changelog = read('packages/lyra-docs/CHANGELOG.md');
+assert.match(changelog, /^# @aceshooting\/lyra-docs\s/mu);
+assert(changelog.split(/\r?\n/u).includes(`## ${manifest.version}`), 'Changelog lacks current version');
 assert.deepEqual(manifest.dependencies, {
   '@aceshooting/lyra-ui': 'workspace:*', fflate: '^0.8.3', lit: '^3.3.3', saxes: '^6.0.0',
 });
@@ -42,12 +47,7 @@ assert.deepEqual(Object.keys(manifest.devDependencies).sort(), [
   '@docx-editor.dev/core', '@types/node', 'axe-core', 'istanbul-lib-coverage', 'istanbul-lib-report',
   'istanbul-reports', 'playwright', 'typescript', 'v8-to-istanbul', 'vite',
 ]);
-assert(JSON.parse(read('.changeset/config.json')).ignore.includes(manifest.name));
-for (const file of readdirSync(path.join(repoRoot, '.changeset'))) {
-  if (!file.endsWith('.md')) continue;
-  const frontmatter = read(`.changeset/${file}`).match(/^---\r?\n([\s\S]*?)\r?\n---/u)?.[1] ?? '';
-  assert(!frontmatter.includes(manifest.name), `Experimental release entry: ${file}`);
-}
+assert(!JSON.parse(read('.changeset/config.json')).ignore.includes(manifest.name));
 const forbidden = /@aceshooting\/lyra-docs|@docx-editor\.dev\/|(?:\.\.\/)+lyra-docs\//u;
 function files(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -95,8 +95,15 @@ if (existsSync(dist)) {
     assert(/\.(?:js|d\.ts|css)$/u.test(file), `Unexpected build artifact: ${file}`);
     assert(!/\.test\.|-fixtures\./u.test(file), `Test build artifact: ${file}`);
     const source = readFileSync(file, 'utf8');
+    assert(!/sourceMappingURL=/u.test(source), `Source map reference: ${file}`);
     if (/(?:index|types|create-session|docx-editor(?:\.class)?)\.d\.ts$/u.test(file)) {
       assert(!/@docx-editor\.dev\//u.test(source), `Public engine type leaked: ${file}`);
+    }
+  }
+  for (const route of Object.values(manifest.exports)) {
+    const targets = typeof route === 'string' ? [route] : Object.values(route);
+    for (const target of targets) {
+      assert(existsSync(path.join(packageRoot, target)), `Missing package export target: ${target}`);
     }
   }
   for (const key of ['.', './docx']) {
@@ -105,4 +112,4 @@ if (existsSync(dist)) {
   }
   assert(existsSync(path.join(dist, 'docx/editor.css')));
 }
-console.log('Document companion private/export/dependency checks passed');
+console.log('Document companion public/export/dependency checks passed');
