@@ -1,5 +1,13 @@
 # Changelog
 
+## 25.6.2
+
+### Patch Changes
+
+- 1e317df: Set the default Glass surface opacity to 60% while keeping explicit opacity overrides unchanged.
+- f0864be: Keep quiet button text readable during hover and press by moving its default foreground toward body text. Resting colors and explicit pointer color overrides retain their behavior.
+- a0caec2: Reduce repeated computed-style reads while tooltips inspect their content and ancestors. Visibility is refreshed on every inspection, and image-map descriptions now react when their associated image is hidden or shown.
+
 ## 25.6.1
 
 ### Patch Changes
