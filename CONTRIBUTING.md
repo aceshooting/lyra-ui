@@ -12,7 +12,7 @@ pnpm install
 
 The published package supports Node ≥ 22. Contributor, generation, and release commands use the
 exact Node `22.23.2` in [`.nvmrc`](.nvmrc): run `nvm use` before installing dependencies. For
-package-manager installs, Node ≥ 22, `pnpm@12.8.1` (pinned via `packageManager` in `package.json` —
+package-manager installs, Node ≥ 22, `pnpm@12.9.1` (pinned via `packageManager` in `package.json` —
 check that file if this drifts again).
 
 ## Running things locally

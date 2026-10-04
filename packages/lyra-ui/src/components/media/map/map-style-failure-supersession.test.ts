@@ -21,7 +21,10 @@ it('keeps the current peer style failure visible and permits a later retry', asy
   const peer = element.map as StylePeer;
   const setStyle = peer.setStyle;
   try {
-    peer.setStyle = () => { throw new Error('peer rejects the current style'); };
+    peer.setStyle = (style) => {
+      if (style === null) return setStyle.call(peer, style as never);
+      throw new Error('peer rejects the current style');
+    };
     element.mapStyle = { ...style, name: 'Rejected local style' };
     // A second failed request must remain observable even if an earlier failure was queued.
     await new Promise<void>((resolve) => queueMicrotask(() => {

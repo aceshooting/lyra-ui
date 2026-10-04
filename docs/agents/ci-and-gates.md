@@ -337,7 +337,7 @@ Seven legs use the pinned Playwright image; branded Chrome and Edge use the runn
 bounded browser setup. Every leg installs with `--frozen-lockfile` and enables strict browser
 console checking. The primary packed-consumer jobs cover the supported Node floor, declarations,
 tree shaking and framework recipes without repeating that package matrix in each browser leg.
-Node 22 uses `package.json#packageManager` (`pnpm@12.8.1`).
+Node 22 uses `package.json#packageManager` (`pnpm@12.9.1`).
 
 ## Scheduled full Firefox/WebKit suite
 
@@ -419,7 +419,7 @@ the same checksum-pinned actionlint workflow gate as `static-checks`.
   WebKit/Safari retain the smaller of four pages or half the available CPUs. The aggregate runner
   budgets shard pages from the sum of Firefox's one-page and WebKit's four-page allocations.
 - `./scripts/ci.sh --platform-matrix` (or `--all`) runs the primary aggregate and the same nine
-  Node 22 browser/shard legs as CI. Node 22 needs pnpm 12.8.1.
+  Node 22 browser/shard legs as CI. Node 22 needs pnpm 12.9.1.
   Its 9 legs are source-derived: Node 22 runs Chromium (2 shards), Chrome (1 shard), Edge (1 shard),
   Firefox (4 shards), and Safari (1 shard).
   `CI_SH_NODE22_BIN` and `CI_SH_PNPM22_BIN` accept explicit executable paths; the selected Node

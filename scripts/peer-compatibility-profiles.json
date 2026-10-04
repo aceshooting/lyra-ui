@@ -24,7 +24,7 @@
     "katex": "0.19.0",
     "mammoth": "1.13.0",
     "marked": "18.0.14",
-    "pdfjs-dist": "6.3.289"
+    "pdfjs-dist": "6.4.299"
   },
   "toolchain": {
     "playwright": "1.63.0",
@@ -33,7 +33,7 @@
   },
   "packageManagers": {
     "npm": "10.9.8",
-    "pnpm": "12.8.1"
+    "pnpm": "12.9.1"
   },
   "profiles": [
     {
