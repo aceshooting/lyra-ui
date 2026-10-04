@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createInternalDocxSession, refreshInternalDocxTableLabels } from './session.js';
+import { imageFixture } from '../../test/corpus.js';
+import { unzipSync } from 'fflate';
+import type { DocxEngineImageInsertion } from './engine-port.js';
 import type { DocxEngineEvent, DocxEnginePort, DocxSessionPort } from './engine-port.js';
 import type {
   DocxAction, DocxCommandAvailability, DocxResult, DocxSelection, DocxSource, DocxFormatting
@@ -111,6 +114,136 @@ async function opened(readOnly = false, source: DocxSource = { kind: 'docx', byt
   const revision = value(await session.open(source));
   return { ...context, session, revision };
 }
+
+async function insertionFixture() {
+  const h = await opened(); h.f.selection = 'caret'; h.f.emit('user-selection');
+  const state = { epoch: 0, captures: 0, releases: 0, calls: 0, capturedBytes: null as Uint8Array | null,
+    gate: null as ReturnType<typeof deferred<void>> | null, commit: true, throwAfterCommit: false,
+    onCapture() {}, beforeCommit() {}, afterCommit() {} };
+  h.engine.beginImageInsertion = () => {
+    const epoch = state.epoch; state.captures++; state.onCapture(); let released = false;
+    const handle: DocxEngineImageInsertion = {
+      validate: () => released || epoch !== state.epoch ? { ok: false, code: 'stale-selection' } : { ok: true, value: undefined },
+      async execute(source, operation) {
+        state.calls++; state.capturedBytes = source.bytes;
+        if (state.gate) await state.gate.promise;
+        const current = operation.validateOriginal(); if (!current.ok) return current;
+        state.beforeCommit();
+        const armed = operation.armCommit(); if (!armed.ok) return armed;
+        if (state.commit) h.f.emit('change');
+        state.afterCommit();
+        if (state.throwAfterCommit) throw new Error('late failure');
+        return { ok: true, value: undefined };
+      },
+      release() { if (!released) { released = true; state.releases++; } }
+    };
+    return { ok: true, value: handle };
+  };
+  const source = () => ({ bytes: Object.entries(unzipSync(imageFixture('image-simple'))).find(([name]) => name.endsWith('.png'))![1], widthPoints: 48, heightPoints: 24 });
+  return { ...h, state, source };
+}
+
+test('insertion captures native intent before caller reflection and rejects same-kind hidden caret changes', async () => {
+  const h = await insertionFixture(), before = h.session.snapshot();
+  let traps = 0;
+  const source = new Proxy(h.source(), { ownKeys(target) {
+    traps++; assert.equal(h.state.captures, 1); h.state.epoch++; h.f.emit('focus-selection'); return Reflect.ownKeys(target);
+  } });
+  refusal(await h.session.insertImage(source), 'stale-selection');
+  assert.equal(h.session.snapshot().selection.version, before.selection.version);
+  assert.equal(h.state.calls, 0); assert.equal(h.state.releases, 1); assert.equal(traps, 1);
+});
+
+test('insertion owns synchronous bytes before activity and rejects every competing method without inspecting payload', async () => {
+  const h = await insertionFixture(), source = h.source(), original = source.bytes.slice();
+  h.state.gate = deferred<void>();
+  let sawActivity = false;
+  h.session.subscribe(() => { if (h.session.snapshot().activity === 'inserting-image') { sawActivity = true; source.bytes.fill(0); } });
+  const pending = h.session.insertImage(source);
+  assert.equal(h.session.snapshot().activity, 'inserting-image'); assert.equal(sawActivity, true);
+  assert.deepEqual(h.state.capturedBytes, original);
+  const hostile = new Proxy(source, { getPrototypeOf() { throw new Error('must not inspect'); } });
+  refusal(await h.session.insertImage(hostile), 'busy');
+  refusal(h.session.focus(), 'busy'); refusal(h.session.retainSelection(), 'busy'); refusal(h.session.execute('bold'), 'busy');
+  refusal(await h.session.save(), 'busy'); refusal(h.session.imageDescription(), 'busy');
+  const hostileOptions = new Proxy({}, { getPrototypeOf() { throw new Error('must not inspect busy options'); } });
+  refusal(h.session.selectMatch('unused', hostileOptions), 'busy');
+  refusal(h.session.replaceMatch('unused', 'text', hostileOptions), 'busy');
+  refusal(h.session.selectImage('invalid' as never), 'busy');
+  assert.deepEqual(h.session.canInsertImage(), { enabled: false, reason: 'busy' });
+  h.state.gate.resolve(); assert.equal(value(await pending).value, 1); assert.equal(h.state.releases, 1);
+  assert.equal(h.session.snapshot().activity, null);
+});
+
+test('insertion committed revision wins over subscriber destroy, late throw and ownership loss before inspection', async () => {
+  for (const mode of ['subscriber', 'ownership', 'late-throw']) {
+    const h = await insertionFixture();
+    if (mode === 'subscriber') h.session.subscribe(() => { if (h.session.snapshot().revision?.value === 1) h.session.destroy(); });
+    if (mode === 'ownership') h.state.beforeCommit = () => { h.f.valid = false; };
+    if (mode === 'late-throw') h.state.throwAfterCommit = true;
+    const result = await h.session.insertImage(h.source());
+    assert.equal(value(result).value, 1, mode); assert(Object.isFrozen(value(result))); assert.equal(h.state.releases, 1);
+  }
+});
+
+test('insertion abort cutoff and terminal cleanup cannot rewrite an already committed result', async () => {
+  const pending = await insertionFixture(), abort = new AbortController(); pending.state.gate = deferred<void>();
+  const operation = pending.session.insertImage(pending.source(), { signal: abort.signal });
+  abort.abort(); assert.equal(pending.session.snapshot().activity, 'inserting-image'); assert.equal(pending.state.releases, 0);
+  pending.state.gate.resolve(); refusal(await operation, 'aborted'); assert.equal(pending.state.releases, 1); assert.equal(pending.session.snapshot().revision?.value, 0);
+  const committed = await insertionFixture(), lateAbort = new AbortController();
+  committed.state.afterCommit = () => lateAbort.abort();
+  assert.equal(value(await committed.session.insertImage(committed.source(), { signal: lateAbort.signal })).value, 1);
+  const destroyed = await insertionFixture(); destroyed.state.gate = deferred<void>();
+  const late = destroyed.session.insertImage(destroyed.source()); destroyed.session.destroy();
+  refusal(await late, 'destroyed'); assert.equal(destroyed.state.releases, 1);
+  destroyed.state.gate.resolve(); await Promise.resolve(); assert.equal(destroyed.session.snapshot().revision?.value, 0);
+});
+
+test('insertion original lease invalidation and unlatched success never manufacture a committed revision', async () => {
+  const h = await insertionFixture(), lease = value(h.session.retainSelection()); h.state.gate = deferred<void>();
+  const pending = h.session.insertImage(h.source(), { selection: lease }); lease.release(); h.state.gate.resolve();
+  refusal(await pending, 'stale-selection'); assert.equal(h.f.released.length, 1); assert.equal(h.state.releases, 1);
+  const noCommit = await insertionFixture(); noCommit.state.commit = false;
+  refusal(await noCommit.session.insertImage(noCommit.source()), 'engine-failed'); assert.equal(noCommit.session.snapshot().revision?.value, 0);
+});
+
+test('insertion with a foreign lease preserves the genuine original retained selection', async () => {
+  const h = await insertionFixture(), lease = value(h.session.retainSelection());
+  refusal(await h.session.insertImage(h.source(), { selection: { release() {} } }), 'stale-selection');
+  assert.equal(h.f.released.length, 0); assert.equal(h.state.calls, 0);
+  assert.equal(value(h.session.execute('bold', { selection: lease })).value, 1);
+  assert.equal(h.f.released.length, 1);
+});
+
+test('insertion releases a handle returned after reentrant destruction during capture', async () => {
+  const h = await insertionFixture(); h.state.onCapture = () => h.session.destroy();
+  refusal(await h.session.insertImage(h.source()), 'destroyed');
+  assert.equal(h.state.releases, 1); assert.equal(h.state.calls, 0);
+});
+
+test('insertion rejects activity-subscriber native ABA and prior-input change without arming a commit', async () => {
+  const h = await insertionFixture(), before = h.session.snapshot();
+  h.session.subscribe(() => { if (h.session.snapshot().activity === 'inserting-image') { h.state.epoch += 2; } });
+  refusal(await h.session.insertImage(h.source()), 'stale-selection');
+  assert.equal(h.session.snapshot().selection.version, before.selection.version); assert.equal(h.state.calls, 0); assert.equal(h.state.releases, 1);
+  const flush = await insertionFixture();
+  flush.engine.beginImageInsertion = () => ({ ok: true, value: {
+    validate: () => ({ ok: true, value: undefined }),
+    execute: async (_source, operation) => { flush.f.emit('change'); return operation.armCommit(); }, release() { flush.state.releases++; }
+  } });
+  refusal(await flush.session.insertImage(flush.source()), 'stale-revision');
+  assert.equal(flush.session.snapshot().revision?.value, 1); assert.equal(flush.state.releases, 1);
+});
+
+test('insertion busy blocks dirty acknowledgement and cached availability performs no engine reads', async () => {
+  const h = await insertionFixture(), receipt = value(await h.session.save()), canCalls = h.f.canCalls;
+  for (let i = 0; i < 10; i++) assert.deepEqual(h.session.canInsertImage(), { enabled: true });
+  assert.equal(h.f.canCalls, canCalls); assert.equal(h.state.captures, 0);
+  h.state.gate = deferred<void>(); const pending = h.session.insertImage(h.source());
+  refusal(h.session.acknowledgeSaved(receipt), 'busy');
+  h.state.gate.resolve(); assert.equal(value(await pending).value, 1);
+});
 
 test('basic editing exposes formatting, catalogs and bounded search without engine polling', async () => {
   const { session, f } = await opened();
@@ -1185,4 +1318,26 @@ test('resource readiness publishes a new image snapshot without changing selecti
   assert.equal(f.released.length, 0); assert.equal(session.snapshot().selection.version, before.selection.version);
   const after = session.snapshot(); f.emit('state'); assert.equal(session.snapshot(), after); assert.equal(published, 1);
   lease.release(); session.destroy();
+});
+
+test('insertion ordinary refusal and synchronous port exceptions clear busy without losing committed outcomes', async () => {
+  for (const mode of ['refuse', 'capture-throw', 'dispatch-throw', 'commit-throw']) {
+    const h = await insertionFixture(); let releases = 0;
+    h.engine.beginImageInsertion = () => {
+      if (mode === 'capture-throw') throw new Error('capture unavailable');
+      return { ok: true, value: { validate: () => ({ ok: true, value: undefined }), release() { releases++; },
+        execute(_source, operation) {
+          if (mode === 'refuse') return Promise.resolve({ ok: false, code: 'unsupported' });
+          if (mode === 'commit-throw') { assert(operation.armCommit().ok); h.f.emit('change'); }
+          throw new Error('dispatch unavailable');
+        }
+      } };
+    };
+    const result = await h.session.insertImage(h.source());
+    if (mode === 'commit-throw') assert.equal(value(result).value, 1);
+    else refusal(result, mode === 'refuse' ? 'unsupported' : 'engine-failed');
+    assert.equal(h.session.snapshot().activity, null); assert.equal(releases, mode === 'capture-throw' ? 0 : 1);
+    assert.equal(h.session.snapshot().revision?.value, mode === 'commit-throw' ? 1 : 0);
+    h.session.destroy();
+  }
 });

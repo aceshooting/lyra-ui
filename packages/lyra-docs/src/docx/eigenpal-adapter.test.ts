@@ -3,6 +3,9 @@ import test from 'node:test';
 import type { DocxEditorInstance, DocxEditorConfig, EditorEvents } from '@docx-editor.dev/core';
 import { openEigenpalDocument } from './eigenpal-adapter.js';
 import type { DocxEngineEvent } from './engine-port.js';
+import { deriveImageInsertionEngine } from './engine-image-insertion-loader.js';
+import { normalizeImageInsertion } from './image-insertion-input.js';
+import type { DocxResult } from './types.js';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -683,7 +686,7 @@ test('resource refresh performs no layout reads during native input or compositi
     h.child.dispatchEvent(new Event(event, { cancelable: true }));
     assert.equal(readsAfter, readsDuring);
     assert.equal(h.f.flushes, 0); assert.equal(h.f.imageReads, 0); assert.equal(h.f.packages, 0);
-    h.port.destroy(); timer.mock.restore(); context.mock.timers.reset();
+    h.port.destroy(); timer.mock.restore(); context.mock.reset();
   }
 });
 
@@ -998,5 +1001,150 @@ test('false native image selection refuses mount replacement before publishing o
     assert.deepEqual(events, [], `${phase}/${replacement}`);
     assert.equal(h.focusCalls(), 0); assert.equal(h.f.dispatches, 0);
     h.port.destroy();
+  }
+});
+
+async function insertionHarness() {
+  const store = await import('@docx-editor.dev/core/store');
+  const { blankDocumentBytes } = await import('@docx-editor.dev/core/editor');
+  const { docxFixture } = await import('./admission-fixtures.js');
+  const { imageInsertionBytes } = await import('../../test/corpus.js');
+  const parsed = store.readOoxmlPackage(docxFixture({ 'word/document.xml': '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"><w:body><w:p w14:paraId="00000001" w14:textId="00000001"><w:r><w:t>alpha</w:t></w:r></w:p></w:body></w:document>' })); assert(parsed.ok);
+  const pkg = parsed.package, part = pkg.parts.get(pkg.mainDocumentPart)!, body = part.root.children[0]!; assert(body.kind !== 'textValue');
+  const paragraph = body.children[0]!, live = new store.TreePackageStore(pkg, part);
+  const h = harness();
+  const f = { offset: 2, generation: 0, flushes: 0, decodes: 0, dispatches: 0, armed: 0, owned: true,
+    onFlush() {}, onState() {}, onDecode: async () => {}, onLive() {} };
+  const decodePort = { async decode() { f.decodes++; await f.onDecode(); return { pixelWidth: 64, pixelHeight: 32, dpiX: 96, dpiY: 96 }; } };
+  const surface = { storyScope: () => ({ kind: 'body' as const }), drawingSelectionIntent: () => ({ kind: 'none' as const }),
+    state() { f.onState(); return { selection: { anchor: { paragraphId: paragraph.id, offset: f.offset }, head: { paragraphId: paragraph.id, offset: f.offset } }, cellSelection: null }; },
+    session: { currentPackage: () => live.currentPackage(), part: () => live.currentPackage().parts.get(pkg.mainDocumentPart)!, packageRevision: () => live.packageRevision },
+    imageDecodePort: () => decodePort, flushPendingInput() { f.flushes++; f.onFlush(); },
+    async insertImage(input: Omit<Parameters<import('@docx-editor.dev/core/store').TreePackageStore['insertImage']>[1], 'decodePort' | 'actorId'>) {
+      f.dispatches++; f.onLive(); const result = await live.insertImage({ kind: 'body' }, { ...input, decodePort });
+      if (result.ok && result.change) h.emit('change', { revision: live.packageRevision });
+      return result;
+    }
+  };
+  Object.defineProperty(h.engine, 'mountGeneration', { get: () => f.generation }); Object.assign(h.engine, { surface });
+  const imageInsertion = deriveImageInsertionEngine(blankDocumentBytes, store); assert(imageInsertion);
+  const opened = await openEigenpalDocument({ mount: h.mount }, { kind: 'blank' }, { readOnly: false, signal: new AbortController().signal },
+    () => f.owned, async () => ({ ...await h.loader(), imageInsertion }), () => f.owned); assert(opened.ok);
+  const port = opened.value; port.subscribe(() => {}); port.inspect();
+  const normalized = normalizeImageInsertion({ bytes: imageInsertionBytes('png'), widthPoints: 48, heightPoints: 24 }, {}, () => ({ ok: true, value: undefined })); assert(normalized.ok);
+  const operation = () => ({ signal: new AbortController().signal, validateOriginal: (): DocxResult<void> => ({ ok: true, value: undefined }),
+    armCommit: (): DocxResult<void> => { f.armed++; return { ok: true, value: undefined }; } });
+  return { ...h, f, port, live, source: normalized.value.source, operation };
+}
+
+test('insertion adapter captures without settlement and owns the native barrier through candidate and live decode', async () => {
+  const h = await insertionHarness(), before = structuredClone(h.live.currentPackage()), captured = h.port.beginImageInsertion!(); assert(captured.ok);
+  assert.equal(h.f.flushes, 0); assert.equal(h.f.decodes, 0); assert.equal(h.child.inert, false);
+  const blocked = new Event('beforeinput', { cancelable: true }); h.child.dispatchEvent(blocked); assert.equal(blocked.defaultPrevented, true);
+  const operation = h.operation();
+  h.f.onDecode = async () => { const input = new Event('pointerdown', { cancelable: true }); h.child.dispatchEvent(input); assert(input.defaultPrevented); };
+  assert.deepEqual(await captured.value.execute(h.source, operation), { ok: true, value: undefined });
+  assert.equal(h.f.flushes, 1); assert.equal(h.f.decodes, 2); assert.equal(h.f.dispatches, 1); assert.equal(h.f.armed, 1);
+  assert.equal(h.live.packageRevision, 1); assert.notDeepEqual(h.live.currentPackage(), before);
+  captured.value.release(); captured.value.release();
+  const input = new Event('pointerdown', { cancelable: true }); h.child.dispatchEvent(input); assert.equal(input.defaultPrevented, false); h.port.destroy();
+});
+
+test('insertion adapter refuses original intent drift during capture, flush, candidate and live decode', async () => {
+  for (const phase of ['capture', 'flush', 'candidate', 'live', 'ownership']) {
+    const h = await insertionHarness();
+    const drift = () => { h.f.offset = 3; h.emit('selectionChange'); h.f.offset = 2; h.emit('selectionChange'); };
+    if (phase === 'capture') h.f.onState = () => { h.f.onState = () => {}; drift(); };
+    const captured = h.port.beginImageInsertion!();
+    if (phase === 'capture') { assert(!captured.ok); assert.equal(h.f.flushes, 0); h.port.destroy(); continue; }
+    assert(captured.ok);
+    if (phase === 'flush') h.f.onFlush = drift;
+    if (phase === 'candidate' || phase === 'live') h.f.onDecode = async () => { if (h.f.decodes === (phase === 'candidate' ? 1 : 2)) drift(); };
+    if (phase === 'ownership') h.f.owned = false;
+    assert.equal((await captured.value.execute(h.source, h.operation())).ok, false, phase);
+    assert.equal(h.live.packageRevision, 0, phase); assert.equal(h.f.dispatches, phase === 'live' ? 1 : 0, phase);
+    captured.value.release(); h.port.destroy();
+  }
+});
+
+test('insertion handle release is terminal and cannot release a newer native barrier', async () => {
+  const h = await insertionHarness(), first = h.port.beginImageInsertion!(); assert(first.ok); first.value.release();
+  const second = h.port.beginImageInsertion!(); assert(second.ok); first.value.release();
+  const event = new Event('keydown', { cancelable: true }); h.child.dispatchEvent(event); assert(event.defaultPrevented);
+  assert.equal(first.value.validate().ok, false); assert.equal((await first.value.execute(h.source, h.operation())).ok, false);
+  second.value.release(); h.port.destroy();
+});
+
+test('insertion candidate cancellation and destroy retain the barrier until terminal release', async () => {
+  for (const terminal of ['abort', 'destroy']) {
+    const h = await insertionHarness(), captured = h.port.beginImageInsertion!(); assert(captured.ok);
+    const wait = deferred<void>(), entered = deferred<void>(), controller = new AbortController();
+    h.f.onDecode = async () => { entered.resolve(); await wait.promise; };
+    const pending = captured.value.execute(h.source, { ...h.operation(), signal: controller.signal });
+    await entered.promise;
+    if (terminal === 'abort') controller.abort(); else h.port.destroy();
+    assert.equal(h.f.dispatches, 0); assert.equal(h.live.packageRevision, 0);
+    if (terminal === 'abort') {
+      const input = new Event('pointerdown', { cancelable: true }); h.child.dispatchEvent(input); assert(input.defaultPrevented);
+    } else { assert.equal(h.removed(), true); assert.equal(h.child.inert, true); assert.equal(captured.value.validate().ok, false); }
+    wait.resolve();
+    assert.deepEqual(await pending, { ok: false, code: terminal === 'abort' ? 'aborted' : 'destroyed' });
+    assert.equal(h.f.dispatches, 0); assert.equal(h.f.armed, 0);
+    captured.value.release(); h.port.destroy();
+  }
+});
+
+test('insertion ignores late caller abort after arming but refuses invalid original pins and package ownership', async () => {
+  const h = await insertionHarness(), pin = h.port.retainSelection(), captured = h.port.beginImageInsertion!(); assert(captured.ok);
+  const controller = new AbortController(); h.f.onLive = () => controller.abort();
+  assert.deepEqual(await captured.value.execute(h.source, { ...h.operation(), retainedSelection: pin, signal: controller.signal }), { ok: true, value: undefined });
+  assert.equal(h.live.packageRevision, 1); assert.equal(h.f.armed, 1); captured.value.release(); h.port.destroy();
+  for (const mutation of ['released-pin', 'foreign-pin', 'generation', 'session']) {
+    const h = await insertionHarness(), pin = h.port.retainSelection(), captured = h.port.beginImageInsertion!(); assert(captured.ok);
+    if (mutation === 'released-pin') h.port.releaseSelection(pin);
+    if (mutation === 'generation') h.f.generation++;
+    if (mutation === 'session') Object.assign(h.engine.surface!, { session: { ...h.engine.surface!.session } });
+    assert.equal((await captured.value.execute(h.source, { ...h.operation(), retainedSelection: mutation === 'foreign-pin' ? {} : pin })).ok, false, mutation);
+    assert.equal(h.f.flushes, 0); assert.equal(h.f.decodes, 0); assert.equal(h.f.dispatches, 0);
+    captured.value.release(); h.port.destroy();
+  }
+});
+
+test('insertion maps second native decode rejection to invalid document without committing', async () => {
+  const h = await insertionHarness(), captured = h.port.beginImageInsertion!(); assert(captured.ok);
+  h.f.onDecode = async () => { if (h.f.decodes === 2) throw new Error('native decode rejected'); };
+  assert.deepEqual(await captured.value.execute(h.source, h.operation()), { ok: false, code: 'invalid-document' });
+  assert.equal(h.f.decodes, 2); assert.equal(h.f.dispatches, 1); assert.equal(h.f.armed, 1); assert.equal(h.live.packageRevision, 0);
+  captured.value.release(); h.port.destroy();
+});
+
+test('insertion capture refuses non-body, range, cell and drawing contexts before settlement and releases its barrier', async () => {
+  for (const kind of ['story', 'range', 'cell', 'drawing', 'offset']) {
+    const h = await insertionHarness(), surface = h.engine.surface!, original = surface.state;
+    if (kind === 'story') surface.storyScope = () => ({ kind: 'headerFooter', rId: 'header1' });
+    if (kind === 'drawing') surface.drawingSelectionIntent = () => ({ kind: 'programmatic' });
+    if (kind === 'offset') h.f.offset = 0.5;
+    surface.state = () => {
+      const value = original();
+      if (kind === 'range') return { ...value, selection: { ...value.selection, head: { ...value.selection.head, offset: 4 } } };
+      if (kind === 'cell') return { ...value, cellSelection: {} as NonNullable<typeof value.cellSelection> };
+      return value;
+    };
+    assert.deepEqual(h.port.beginImageInsertion!(), { ok: false, code: 'unsupported' }, kind);
+    assert.equal(h.f.flushes, 0); assert.equal(h.f.decodes, 0);
+    const input = new Event('pointerdown', { cancelable: true }); h.child.dispatchEvent(input); assert.equal(input.defaultPrevented, false);
+    h.port.destroy();
+  }
+});
+
+test('insertion capture and live exceptions release authority without masking original selection changes', async () => {
+  const capture = await insertionHarness(); capture.f.onState = () => { throw new Error('state unavailable'); };
+  assert.deepEqual(capture.port.beginImageInsertion!(), { ok: false, code: 'engine-failed' });
+  const input = new Event('pointerdown', { cancelable: true }); capture.child.dispatchEvent(input); assert.equal(input.defaultPrevented, false); capture.port.destroy();
+  for (const stale of [false, true]) {
+    const h = await insertionHarness(), captured = h.port.beginImageInsertion!(); assert(captured.ok);
+    h.engine.surface!.insertImage = () => { if (stale) h.emit('selectionChange'); throw new Error('live dispatch unavailable'); };
+    assert.deepEqual(await captured.value.execute(h.source, h.operation()), { ok: false, code: stale ? 'stale-selection' : 'engine-failed' });
+    assert.equal(h.live.packageRevision, 0); captured.value.release(); h.port.destroy();
   }
 });

@@ -1,5 +1,13 @@
 import type { DocxRefusalCode, DocxResult } from './types.js';
 
+export interface DocxImageMetadata {
+  readonly mimeType: 'image/png' | 'image/jpeg' | 'image/gif';
+  readonly pixelWidth: number;
+  readonly pixelHeight: number;
+  readonly pixels: number;
+  readonly hasJpegApp1: boolean;
+}
+
 const LIMITS = { image: 4 * 1024 * 1024, dimension: 8192, pixels: 16_000_000 };
 class ImageRefusal extends Error {
   constructor(readonly code: DocxRefusalCode) { super(code); }
@@ -7,15 +15,15 @@ class ImageRefusal extends Error {
 function reject(code: DocxRefusalCode = 'invalid-document'): never { throw new ImageRefusal(code); }
 
 /** Bound and inspect raster bytes without decoding, copying or changing them. */
-export function inspectDocxImage(bytes: Uint8Array): DocxResult<{ pixels: number; mimeType: string }> {
+export function inspectDocxImage(bytes: Uint8Array): DocxResult<Readonly<DocxImageMetadata>> {
   try { return { ok: true, value: inspectImage(bytes) }; }
   catch (error) { return { ok: false, code: error instanceof ImageRefusal ? error.code : 'invalid-document' }; }
 }
 
-function inspectImage(bytes: Uint8Array): { pixels: number; mimeType: string } {
+function inspectImage(bytes: Uint8Array): Readonly<DocxImageMetadata> {
   if (bytes.length > LIMITS.image) reject('resource-limit');
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  let width = 0, height = 0;
+  let width = 0, height = 0, hasJpegApp1 = false;
   let format: 'png' | 'gif' | 'jpeg';
   if (bytes.length >= 33 && [137, 80, 78, 71, 13, 10, 26, 10].every((byte, i) => bytes[i] === byte) && view.getUint32(12) === 0x49484452) {
     format = 'png';
@@ -44,6 +52,7 @@ function inspectImage(bytes: Uint8Array): { pixels: number; mimeType: string } {
       if (at + 2 > bytes.length) reject();
       const length = view.getUint16(at);
       if (length < 2 || at + length > bytes.length) reject();
+      if (marker === 0xe1) hasJpegApp1 = true;
       if ([0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf].includes(marker)) {
         if (length < 8 || width || height) reject();
         height = view.getUint16(at + 3); width = view.getUint16(at + 5);
@@ -89,7 +98,7 @@ function inspectImage(bytes: Uint8Array): { pixels: number; mimeType: string } {
     }
     if (!ended || frames !== 1 || at !== bytes.length) reject();
   }
-  return { pixels: width * height, mimeType: `image/${format}` };
+  return { pixels: width * height, pixelWidth: width, pixelHeight: height, mimeType: `image/${format}`, hasJpegApp1 };
 }
 
 const PNG_CRC = Uint32Array.from({ length: 256 }, (_, value) => {

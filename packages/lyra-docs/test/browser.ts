@@ -13,6 +13,9 @@ const test = {
   async sessionFactory() {
     return (await import('../src/docx/create-session.js')).createDocxSession;
   },
+  async imageBytes(kind: 'png' | 'jpeg' | 'gif') {
+    return (await import('./corpus.js')).imageInsertionBytes(kind);
+  },
   async fixture(kind: `image-${string}` | `table-${string}` | 'accepted' | 'external' | 'malformed' | 'representative' | 'large' | 'basic-editing' | 'mixed-formatting' | 'search-limit') {
     if (kind.startsWith('image-')) return (await import('./corpus.js')).imageFixture(kind);
     if (kind.startsWith('table-')) return (await import('./corpus.js')).tableFixture(kind);

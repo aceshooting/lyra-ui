@@ -2,9 +2,23 @@ import type {
   DocxAction, DocxCommandAvailability, DocxResult, DocxSelection,
   DocxSource, DocxFormatting, DocxParagraphStyles, DocxFontFamilies, DocxTableContext, DocxImageContext, DocxImageDescription, DocxImageDirection
 } from './types.js';
+import type { OwnedDocxImageInput } from './image-insertion-input.js';
+
+export interface DocxEngineImageInsertion {
+  validate(retainedSelection?: object): DocxResult<void>;
+  execute(source: OwnedDocxImageInput, operation: {
+    readonly retainedSelection?: object;
+    readonly signal: AbortSignal;
+    validateOriginal(): DocxResult<void>;
+    armCommit(): DocxResult<void>;
+  }): Promise<DocxResult<void>>;
+  release(): void;
+}
 
 /** Internal ownership seam; no browser validation is implemented here. */
 export interface DocxMountOwnership {
+  /** Callback-free ownership check for a synchronous commit guard. */
+  check?(): boolean;
   /** Must detect removal/adoption, including transient remove/reinsert. */
   valid(): boolean;
   /** Release observer and exclusive mount claim, idempotently. */
@@ -34,6 +48,8 @@ export interface DocxEngineSearchOptions {
 export type DocxTableLabels = Readonly<{ insertRowBelow: string; insertColumnRight: string }>;
 /** DOCX-specific engine seam. An implementation must qualify these guarantees. */
 export interface DocxEnginePort {
+  /** Capture immutable native intent before caller reflection or notifications. */
+  beginImageInsertion?(): DocxResult<DocxEngineImageInsertion>;
   inspect(): DocxEngineState;
   /** Presentation only; must not lay out, flush input or mutate the document. */
   refreshTableLabels?(labels: DocxTableLabels): boolean;

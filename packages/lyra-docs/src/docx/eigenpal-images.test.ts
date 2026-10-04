@@ -4,7 +4,7 @@ import type { DocxEditorInstance } from '@docx-editor.dev/core';
 import type { OoxmlElement, OoxmlNode } from '@docx-editor.dev/core/store';
 const { readOoxmlPackage } = await import('@docx-editor.dev/core/store');
 import { imageFixture } from '../../test/corpus.js';
-import { captureImageIntent, copyImage, qualifyImageCommand } from './eigenpal-images.js';
+import { captureImageIntent, copyImage, qualifyImageCommand, imageCandidates, imageCandidatesInPackage } from './eigenpal-images.js';
 import type { DocxImageAction } from './types.js';
 
 function fixture(kind = 'image-simple') {
@@ -28,6 +28,18 @@ function fixture(kind = 'image-simple') {
   return { f, editor, nodes, pkg, part, drawing, selected, copy, intent, qualify };
 }
 function attributes(node: OoxmlElement) { return node.attributes as unknown as { namespaceUri: string; localName: string; value: string }[]; }
+
+test('package picture inspection preserves navigation results, limits and canonical bytes without a surface', () => {
+  for (const kind of ['image-simple', 'image-empty-source', 'image-gif', 'image-crop', 'image-table']) {
+    const h = fixture(kind), before = structuredClone(h.pkg);
+    for (const limits of [{}, { candidates: 0 }, { attempts: 0 }, { mediaBytes: 1 }, { nodes: 1 }]) {
+      assert.deepEqual(imageCandidatesInPackage(h.pkg, h.part, limits), imageCandidates(h.editor, limits), kind);
+      assert.deepEqual(h.pkg, before);
+    }
+  }
+  const h = fixture(), foreign = { ...h.part };
+  assert.deepEqual(imageCandidatesInPackage(h.pkg, foreign), { ok: false, code: 'unsupported' });
+});
 
 test('one empty source rectangle is neutral for every image operation without modifying canonical data', () => {
   const h = fixture('image-empty-source'), before = structuredClone(h.pkg);

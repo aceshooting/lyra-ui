@@ -12,10 +12,12 @@ import {
   captureImageToolIntent, imageDescriptionDraft, imageDimensionDraft,
   imageRatioPartner, imageResizeDraft, imageResizeUnchanged,
 } from './image-tools.js';
+import { captureImageInsertionIntent, imageInsertionDefaults, imageInsertionDraft } from './image-insertion-tools.js';
+import { inspectDocxImage } from './image-bytes.js';
 import type {
   DocxCommand, DocxEdit, DocxRefusalCode, DocxResult, DocxRevision, DocxSaveReceipt,
   DocxSelectionLease, DocxSession, DocxSnapshot, DocxSource, DocxSearchResults, DocxTableAction,
-  DocxImageAction, DocxImageDescription, DocxImageDirection,
+  DocxImageAction, DocxImageDescription, DocxImageDirection, DocxImageSource, DocxInsertImageOptions, DocxCommandAvailability,
 } from './types.js';
 import { DOCX_EDITOR_STRINGS } from './strings.js';
 import { styles } from './docx-editor.styles.js';
@@ -59,6 +61,7 @@ const tableActions = [
   ['delete-table', { type: 'delete-table' }, 'docxEditorTableDelete'],
 ] as const;
 const maxInputBytes = 4 * 1024 * 1024;
+type ImageInsertionPhase = 'idle' | 'reading' | 'draft' | 'dispatched';
 const refused = <T>(code: DocxRefusalCode): DocxResult<T> => ({ ok: false, code });
 
 /**
@@ -143,6 +146,20 @@ const refused = <T>(code: DocxRefusalCode): DocxResult<T> => ({ ok: false, code 
  * @csspart image-description-apply - Applies both metadata fields as one edit.
  * @csspart image-description-cancel - Cancels description editing.
  * @csspart image-delete - Deletes the originally selected image as one edit.
+ * @csspart image-insert-trigger - Opens the local image picker at the original caret.
+ * @csspart image-insert-dialog - Local image dimensions and description dialog.
+ * @csspart image-insert-file - Native local image picker.
+ * @csspart image-insert-fields - Local image draft and controls.
+ * @csspart image-insert-width - Requested insertion width in points.
+ * @csspart image-insert-height - Requested insertion height in points.
+ * @csspart image-insert-ratio - Preserve the original encoded image ratio.
+ * @csspart image-insert-title - Optional bounded title.
+ * @csspart image-insert-description - Optional bounded multiline description.
+ * @csspart image-insert-hint - Supported formats, size guidance or stale-intent feedback.
+ * @csspart image-insert-actions - Insert and Cancel controls.
+ * @csspart image-insert-apply - Inserts the original local image at the retained caret.
+ * @csspart image-insert-cancel - Cancels picking, reading or editing a local image draft.
+ * @csspart image-insert-status - Local image preparation or refusal feedback.
  * @csspart find - On-demand search and single-match replacement surface.
  * @csspart find-toggle - Opens and closes the find surface.
  * @csspart find-query - Search query field.
@@ -214,6 +231,19 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   private imageIntent: ReturnType<typeof captureImageToolIntent> = null;
   private imageDialogGeneration = 0;
   private cancelImageFocusReturn: (() => void) | null = null;
+  @state() private insertionPhase: ImageInsertionPhase = 'idle';
+  @state() private insertionWidth = '';
+  @state() private insertionHeight = '';
+  @state() private insertionKeepRatio = true;
+  @state() private insertionTitle = '';
+  @state() private insertionDescription = '';
+  @state() private insertionError: DocxRefusalCode | null = null;
+  private insertionIntent: ReturnType<typeof captureImageInsertionIntent> = null;
+  private insertionDefaults: ReturnType<typeof imageInsertionDefaults> = null;
+  private insertionBytes: Uint8Array | null = null;
+  private insertionGeneration = 0;
+  private insertionAwaitingPicker = false;
+  private cancelInsertionFocusReturn: (() => void) | null = null;
 
   private mount: HTMLDivElement | null = null;
   private session: DocxSession | null = null;
@@ -299,6 +329,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   }
 
   private clearEditingDrafts(): void {
+    this.resetImageInsertion();
     this.imageDialogGeneration++;
     this.cancelImageFocusReturn?.();
     this.releaseImageIntent();
@@ -332,16 +363,23 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   }
 
   private syncSession(): void {
-    if (!this.session) return;
+    const owner = this.session;
+    if (!owner) return;
     const previous = this.currentSnapshot;
-    const next = this.session.snapshot();
+    const next = owner.snapshot();
     if (next === previous) return;
     if (next.selection.version !== previous?.selection.version ||
         next.revision?.documentId !== previous?.revision?.documentId || next.revision?.value !== previous?.revision?.value)
       this.releaseToolbarSelection();
-    if (this.tableIntent && !this.tableIntent.valid(this.session)) this.tableIntent.release();
-    if (this.imageIntent && !this.imageIntent.valid(this.session)) this.imageIntent.release();
+    if (this.tableIntent && !this.tableIntent.valid(owner)) this.tableIntent.release();
+    if (this.imageIntent && !this.imageIntent.valid(owner)) this.imageIntent.release();
+    if (this.insertionIntent && !this.insertionIntent.valid(owner)) {
+      if (this.insertionPhase === 'reading' || this.insertionPhase === 'idle') this.cancelImageInsertion(false);
+      else this.insertionIntent.release();
+    }
+    if (!this.isConnected || this.session !== owner || this.currentSnapshot !== previous || owner.snapshot() !== next) return;
     this.currentSnapshot = next;
+    const current = () => this.isConnected && this.session === owner && this.currentSnapshot === next && owner.snapshot() === next;
     if (next.image) this.imageNavigationEmpty = false;
     if (previous?.revision?.documentId !== next.revision?.documentId ||
         previous?.revision?.value !== next.revision?.value) {
@@ -349,20 +387,29 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       this.searchIndex = -1;
     }
     this.emit('lr-change', { snapshot: next });
+    if (!current()) return;
     if (this.announcementsArmed && next.status === 'opening' && previous?.status !== 'opening')
       this.politeSink?.announce(this.localize('docxEditorOpening'));
     if (this.announcementsArmed && next.activity === 'saving' && previous?.activity !== 'saving')
       this.politeSink?.announce(this.localize('docxEditorSaving'));
-    if (next.status === 'ready' && previous?.status !== 'ready' && next.revision)
+    if (this.announcementsArmed && next.activity === 'inserting-image' && previous?.activity !== 'inserting-image')
+      this.politeSink?.announce(this.localize('docxEditorInsertingImage'));
+    if (next.status === 'ready' && previous?.status !== 'ready' && next.revision) {
       this.emit('lr-ready', { revision: next.revision });
+      if (!current()) return;
+    }
     if (this.announcementsArmed && next.status === 'ready' && previous?.status !== 'ready')
       this.politeSink?.announce(this.localize('docxEditorReady'));
     if (this.announcementsArmed && next.dirty && !previous?.dirty && next.status === 'ready')
       this.politeSink?.announce(this.localize('docxEditorUnsaved'));
-    if (next.selection.version !== previous?.selection.version || next.selection.kind !== previous?.selection.kind)
+    if (next.selection.version !== previous?.selection.version || next.selection.kind !== previous?.selection.kind) {
       this.emit('lr-selection-change', { selection: next.selection });
-    if (next.status === 'error' && next.error?.code && (previous?.status !== 'error' || previous.error?.code !== next.error.code))
+      if (!current()) return;
+    }
+    if (next.status === 'error' && next.error?.code && (previous?.status !== 'error' || previous.error?.code !== next.error.code)) {
       this.emit('lr-error', { code: next.error.code });
+      if (!current()) return;
+    }
     if (this.announcementsArmed && next.status === 'error' && previous?.status !== 'error')
       this.assertiveSink?.announce(this.localize('docxEditorError'));
   }
@@ -490,6 +537,20 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   selectImage(direction: DocxImageDirection): DocxResult<void> {
     const result = this.session?.selectImage(direction) ?? refused<void>('not-ready');
     this.syncSession();
+    return result;
+  }
+
+  /** Cached advisory caret availability; insertion verifies the package and exact original intent. */
+  canInsertImage(): DocxCommandAvailability {
+    return this.session?.canInsertImage() ?? { enabled: false, reason: 'not-ready' };
+  }
+
+  /** Insert owned raster bytes at the original plain body caret. A committed original result survives replacement. */
+  async insertImage(source: DocxImageSource, options?: DocxInsertImageOptions): Promise<DocxResult<DocxRevision>> {
+    const owner = this.session;
+    if (!owner) return refused('not-ready');
+    const result = await owner.insertImage(source, options);
+    if (this.session === owner) this.syncSession();
     return result;
   }
 
@@ -742,6 +803,222 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     this.runTableEdit(action, true);
   }
 
+  private insertionPopover() {
+    return this.renderRoot.querySelector<HTMLElement & { open: boolean; show(): Promise<void>; hide(options?: { focusTrigger?: boolean }): Promise<void> }>(
+      '[part="image-insert-dialog"]');
+  }
+
+  private resetImageInsertion(hide = true): void {
+    this.insertionGeneration++;
+    this.cancelInsertionFocusReturn?.();
+    this.insertionIntent?.release();
+    this.insertionIntent = null;
+    this.insertionBytes = null;
+    this.insertionDefaults = null;
+    this.insertionAwaitingPicker = false;
+    this.insertionPhase = 'idle';
+    this.insertionWidth = '';
+    this.insertionHeight = '';
+    this.insertionKeepRatio = true;
+    this.insertionTitle = '';
+    this.insertionDescription = '';
+    this.insertionError = null;
+    const input = this.renderRoot.querySelector<HTMLInputElement>('[part="image-insert-file"]');
+    if (input) input.value = '';
+    if (hide) void this.insertionPopover()?.hide({ focusTrigger: false });
+  }
+
+  private prepareImageInsertion(): void {
+    if (this.insertionPhase !== 'idle') return;
+    if (this.insertionIntent?.valid(this.session)) return;
+    this.resetImageInsertion(false);
+    this.releaseToolbarSelection();
+    this.insertionIntent = captureImageInsertionIntent(this.session);
+  }
+
+  private onImageInsertionKey(event: KeyboardEvent): void {
+    if ((event.key === 'Enter' || event.key === ' ') && !event.isComposing && event.keyCode !== 229)
+      this.prepareImageInsertion();
+  }
+
+  private openImageInsertionPicker(): void {
+    if (this.insertionPhase !== 'idle') return;
+    this.prepareImageInsertion();
+    if (!this.insertionIntent?.valid(this.session) || !this.canInsertImage().enabled) {
+      this.cancelImageInsertion(false); return;
+    }
+    const input = this.renderRoot.querySelector<HTMLInputElement>('[part="image-insert-file"]');
+    if (!input) { this.cancelImageInsertion(false); return; }
+    input.value = '';
+    this.insertionAwaitingPicker = true;
+    this.insertionPhase = 'reading';
+    input.click();
+  }
+
+  private cancelImageInsertion(returnFocus: boolean): void {
+    if (this.insertionPhase === 'dispatched' || (!this.insertionIntent && this.insertionPhase === 'idle')) return;
+    const owner = this.session, selectionVersion = owner?.snapshot().selection.version, popover = this.insertionPopover();
+    this.resetImageInsertion(false);
+    const generation = this.insertionGeneration;
+    if (!returnFocus || !popover) { void popover?.hide({ focusTrigger: false }); return; }
+    const document = this.ownerDocument;
+    let cancelled = false;
+    const cancel = () => {
+      cancelled = true; document.removeEventListener('focusin', cancel, true); document.removeEventListener('pointerdown', cancel, true);
+      if (this.cancelInsertionFocusReturn === cancel) this.cancelInsertionFocusReturn = null;
+    };
+    this.cancelInsertionFocusReturn = cancel;
+    document.addEventListener('focusin', cancel, true); document.addEventListener('pointerdown', cancel, true);
+    void popover.hide({ focusTrigger: false }).then(async () => {
+      await this.updateComplete;
+      if (cancelled || !this.isConnected || this.session !== owner || generation !== this.insertionGeneration || popover.open) {
+        cancel(); return;
+      }
+      const trigger = this.renderRoot.querySelector<LyraElement>('[part="image-insert-trigger"]');
+      await trigger?.updateComplete;
+      const restore = !cancelled && this.isConnected && this.session === owner && generation === this.insertionGeneration &&
+        !popover.open && trigger?.isConnected && this.renderRoot.contains(trigger) &&
+        owner?.snapshot().activity === null && owner.snapshot().selection.version === selectionVersion;
+      cancel();
+      if (restore) trigger.focus();
+    }).catch(cancel);
+  }
+
+  private onImageInsertionHide(event: Event): void {
+    if (this.insertionPhase !== 'reading' && this.insertionPhase !== 'draft') return;
+    event.preventDefault();
+    const owner = this.session, popover = this.insertionPopover();
+    this.resetImageInsertion(false);
+    const generation = this.insertionGeneration;
+    // End the current lifecycle request before closing with explicit focus ownership.
+    queueMicrotask(() => {
+      if (this.isConnected && this.session === owner && generation === this.insertionGeneration &&
+          popover === this.insertionPopover() && popover?.open) void popover.hide({ focusTrigger: false });
+    });
+  }
+
+  private handoffImageInsertion(event: Event): void {
+    if (this.insertionPhase !== 'reading' && this.insertionPhase !== 'draft') return;
+    const otherTool = event.composedPath().some(node => node instanceof HTMLElement && this.renderRoot.contains(node) &&
+      node.hasAttribute('data-tool-key') && node.getAttribute('data-tool-key') !== 'image-insert');
+    if (otherTool) this.cancelImageInsertion(false);
+  }
+
+  private insertionFeedback(code: DocxRefusalCode): string {
+    return this.localize(code === 'resource-limit' ? 'docxEditorImageInsertLimit' :
+      code === 'invalid-document' ? 'docxEditorImageInsertInvalid' : code === 'unsupported' ? 'docxEditorImageInsertUnsupported' :
+        code === 'stale-selection' || code === 'stale-revision' ? 'docxEditorImageInsertStale' : 'docxEditorImageInsertRefused');
+  }
+
+  private refuseImageInsertion(code: DocxRefusalCode, owner: DocxSession | null, generation: number): void {
+    if (!this.isConnected || this.session !== owner || this.insertionGeneration !== generation) return;
+    this.cancelImageInsertion(false);
+    if (!this.isConnected || this.session !== owner || this.insertionGeneration !== generation + 1) return;
+    this.insertionError = code;
+    if (this.announcementsArmed) this.assertiveSink?.announce(this.insertionFeedback(code));
+  }
+
+  private readImageInsertionFile = async (event: Event): Promise<void> => {
+    const input = event.currentTarget as HTMLInputElement;
+    const file = input.files?.item(0);
+    input.value = '';
+    if (!this.insertionAwaitingPicker || this.insertionPhase !== 'reading') return;
+    this.insertionAwaitingPicker = false;
+    if (!file) { this.cancelImageInsertion(true); return; }
+    const owner = this.session, intent = this.insertionIntent, generation = this.insertionGeneration;
+    const valid = () => this.isConnected && this.session === owner && this.insertionIntent === intent &&
+      this.insertionGeneration === generation && this.insertionPhase === 'reading' && Boolean(intent?.valid(owner));
+    try {
+      if (!valid()) { this.refuseImageInsertion('stale-selection', owner, generation); return; }
+      if (!Number.isSafeInteger(file.size) || file.size < 1 || file.size > maxInputBytes) {
+        this.refuseImageInsertion('resource-limit', owner, generation); return;
+      }
+      await this.updateComplete;
+      if (!valid()) { this.refuseImageInsertion('stale-selection', owner, generation); return; }
+      const popover = this.insertionPopover();
+      if (!popover) { this.refuseImageInsertion('not-ready', owner, generation); return; }
+      await popover.show();
+      if (!valid()) { this.refuseImageInsertion('stale-selection', owner, generation); return; }
+      if (!popover.open) { this.cancelImageInsertion(false); return; }
+      const buffer = await file.arrayBuffer();
+      if (!valid()) { this.refuseImageInsertion('stale-selection', owner, generation); return; }
+      if (!(buffer instanceof ArrayBuffer) || buffer.byteLength < 1 || buffer.byteLength > maxInputBytes) {
+        this.refuseImageInsertion('resource-limit', owner, generation); return;
+      }
+      const bytes = new Uint8Array(buffer), inspected = inspectDocxImage(bytes);
+      if (!inspected.ok) { this.refuseImageInsertion(inspected.code, owner, generation); return; }
+      if (inspected.value.hasJpegApp1) { this.refuseImageInsertion('unsupported', owner, generation); return; }
+      const defaults = imageInsertionDefaults(inspected.value.pixelWidth, inspected.value.pixelHeight);
+      if (!defaults) { this.refuseImageInsertion('invalid-document', owner, generation); return; }
+      if (!valid()) { this.refuseImageInsertion('stale-selection', owner, generation); return; }
+      this.insertionBytes = bytes;
+      this.insertionDefaults = defaults;
+      this.insertionWidth = defaults.width;
+      this.insertionHeight = defaults.height;
+      this.insertionKeepRatio = defaults.ratioAvailable;
+      this.insertionTitle = '';
+      this.insertionDescription = '';
+      this.insertionPhase = 'draft';
+      await this.updateComplete;
+      const active = this.shadowRoot?.activeElement;
+      if (this.isConnected && this.session === owner && generation === this.insertionGeneration && intent?.valid(owner) &&
+          this.insertionPhase === 'draft' && popover.open && active?.closest('[part="image-insert-dialog"]') === popover)
+        this.renderRoot.querySelector<HTMLElement>('[part="image-insert-width"]')?.focus();
+    } catch {
+      this.refuseImageInsertion('invalid-document', owner, generation);
+    }
+  };
+
+  private changeInsertionDimension(event: CustomEvent<{ value: string }>, axis: 'width' | 'height'): void {
+    event.stopPropagation();
+    const value = event.detail.value;
+    if (axis === 'width') this.insertionWidth = value;
+    else this.insertionHeight = value;
+    if (!this.insertionKeepRatio || !this.insertionDefaults?.ratioAvailable) return;
+    const partner = imageRatioPartner(value, axis, this.insertionDefaults.original);
+    if (axis === 'width') this.insertionHeight = partner ?? '';
+    else this.insertionWidth = partner ?? '';
+  }
+
+  private dispatchImageInsertion(): void {
+    const owner = this.session, intent = this.insertionIntent, generation = this.insertionGeneration;
+    const source = this.insertionBytes && imageInsertionDraft(this.insertionBytes, this.insertionWidth,
+      this.insertionHeight, this.insertionTitle, this.insertionDescription);
+    if (this.insertionPhase !== 'draft' || !owner || !intent?.valid(owner) || !source || !this.canInsertImage().enabled) return;
+    const popover = this.insertionPopover();
+    this.insertionPhase = 'dispatched';
+    this.insertionIntent = null;
+    this.insertionBytes = null;
+    this.insertionDefaults = null;
+    this.insertionWidth = ''; this.insertionHeight = ''; this.insertionTitle = ''; this.insertionDescription = '';
+    const document = this.ownerDocument;
+    let focusCancelled = false;
+    const cancelFocus = () => {
+      focusCancelled = true;
+      document.removeEventListener('focusin', cancelFocus, true);
+      document.removeEventListener('pointerdown', cancelFocus, true);
+      if (this.cancelInsertionFocusReturn === cancelFocus) this.cancelInsertionFocusReturn = null;
+    };
+    this.cancelInsertionFocusReturn = cancelFocus;
+    document.addEventListener('focusin', cancelFocus, true);
+    document.addEventListener('pointerdown', cancelFocus, true);
+    const pending = intent.dispatch(source);
+    void popover?.hide({ focusTrigger: false });
+    const complete = (result: DocxResult<DocxRevision>) => {
+      const restoreFocus = !focusCancelled;
+      cancelFocus();
+      if (!this.isConnected || this.session !== owner || this.insertionGeneration !== generation) return;
+      this.insertionPhase = 'idle';
+      this.insertionError = result.ok ? null : result.code;
+      if (this.announcementsArmed) {
+        if (result.ok) this.politeSink?.announce(this.localize('docxEditorImageInserted'));
+        else this.assertiveSink?.announce(this.insertionFeedback(result.code));
+      }
+      if (result.ok && restoreFocus && this.isConnected && this.session === owner && this.insertionGeneration === generation) this.focusEditor();
+    };
+    void pending.then(complete, () => complete(refused('engine-failed')));
+  }
+
   private imagePopover(kind: 'resize' | 'description') {
     return this.renderRoot.querySelector<HTMLElement & { open: boolean; hide(options?: { focusTrigger?: boolean }): Promise<void> }>(
       `[part="image-${kind}-popover"]`);
@@ -793,14 +1070,16 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     this.editError = null;
   }
 
-  private onImageFieldFocus(event: FocusEvent): void {
+  private onImageFieldFocus(event: FocusEvent, insertion = false): void {
     const fields = event.currentTarget;
-    const kind = this.imageDialog;
+    const kind = insertion ? 'insert' : this.imageDialog;
     if (!event.isTrusted || !(fields instanceof HTMLElement) || !kind) return;
-    const popover = this.imagePopover(kind);
-    const generation = this.imageDialogGeneration;
+    const popover = kind === 'insert' ? this.insertionPopover() : this.imagePopover(kind);
+    const generation = insertion ? this.insertionGeneration : this.imageDialogGeneration;
     const parts = ['image-width', 'image-height', 'image-ratio', 'image-title', 'image-description',
-      'image-resize-apply', 'image-resize-cancel', 'image-description-apply', 'image-description-cancel'];
+      'image-resize-apply', 'image-resize-cancel', 'image-description-apply', 'image-description-cancel',
+      'image-insert-width', 'image-insert-height', 'image-insert-ratio', 'image-insert-title',
+      'image-insert-description', 'image-insert-apply', 'image-insert-cancel'];
     const path = event.composedPath();
     const host = path.find(node => node instanceof HTMLElement && fields.contains(node) &&
       parts.includes(node.getAttribute('part') ?? '')) as HTMLElement | undefined;
@@ -809,7 +1088,9 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       let active = this.shadowRoot?.activeElement;
       if (active !== host) return false;
       while (active instanceof HTMLElement && active.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
-      return active === native && this.isConnected && this.imageDialog === kind && generation === this.imageDialogGeneration &&
+      const current = insertion ? (this.insertionPhase === 'reading' || this.insertionPhase === 'draft') &&
+        generation === this.insertionGeneration : this.imageDialog === kind && generation === this.imageDialogGeneration;
+      return active === native && this.isConnected && current &&
         popover?.open && fields === popover.querySelector(`[part="image-${kind}-fields"]`);
     };
     if (!host || !native || !owned()) return;
@@ -941,11 +1222,17 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
 
   private findActionAvailable(replacing = false): boolean {
     const snapshot = this.currentSnapshot;
-    return snapshot?.status === 'ready' && !snapshot.composing && snapshot.activity !== 'saving' &&
+    return snapshot?.status === 'ready' && !snapshot.composing && snapshot.activity === null &&
       (!replacing || !snapshot.readOnly);
   }
 
   private onHostKeyDown = (event: KeyboardEvent): void => {
+    if (event.key === 'Escape' && !event.isComposing && event.keyCode !== 229 && (this.insertionPhase === 'reading' || this.insertionPhase === 'draft') &&
+        event.composedPath().some(node => node instanceof HTMLElement && node.getAttribute('part') === 'image-insert-dialog')) {
+      event.preventDefault(); event.stopPropagation(); this.cancelImageInsertion(true); return;
+    }
+    if (event.key === 'Escape' && this.insertionPhase === 'idle' && this.insertionIntent) this.cancelImageInsertion(false);
+    if ((event.key === 'Enter' || event.key === ' ') && !event.isComposing && event.keyCode !== 229) this.handoffImageInsertion(event);
     if (event.altKey && event.key === 'F10') {
       event.preventDefault();
       event.stopPropagation();
@@ -957,7 +1244,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       return;
     }
     if ((event.isComposing || event.keyCode === 229) && event.composedPath().some(node => node instanceof HTMLElement &&
-      ['table-insert-popover', 'image-resize-popover', 'image-description-popover'].includes(node.getAttribute('part') ?? ''))) return;
+      ['table-insert-popover', 'image-resize-popover', 'image-description-popover', 'image-insert-dialog'].includes(node.getAttribute('part') ?? ''))) return;
     if (event.key === 'Escape' && this.imageDialog && event.composedPath().some(node => node instanceof HTMLElement &&
       node.getAttribute('part') === `image-${this.imageDialog}-popover`)) {
       event.preventDefault(); event.stopPropagation(); this.closeImageDialog(false); return;
@@ -1098,6 +1385,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   private statusText(): string {
     const snapshot = this.currentSnapshot;
     if (this.openingFile || snapshot?.status === 'opening') return this.localize('docxEditorOpening');
+    if (snapshot?.activity === 'inserting-image') return this.localize('docxEditorInsertingImage');
     if (snapshot?.activity === 'saving') return this.localize('docxEditorSaving');
     if (snapshot?.status === 'error' || this.localError) return this.localize('docxEditorError');
     if (snapshot?.dirty) return this.localize('docxEditorUnsaved');
@@ -1154,7 +1442,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   private renderEditingTools(): TemplateResult {
     const ready = this.currentSnapshot?.status === 'ready';
     const editable = ready && !this.currentSnapshot?.readOnly && !this.currentSnapshot?.composing &&
-      this.currentSnapshot?.activity !== 'saving';
+      this.currentSnapshot?.activity === null;
     const formatting = this.currentSnapshot?.formatting;
     const color = formatting?.color ?? '';
     return html`<div part="editing-tools" role="group" aria-label=${this.localize('docxEditorFormatting')}>
@@ -1250,6 +1538,78 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
         </div>
       </div>
     </${popoverTag}>`;
+  }
+
+  private renderImageInsertionTools(): TemplateResult {
+    const intentValid = this.insertionIntent?.valid(this.session) ?? false;
+    const available = this.canInsertImage().enabled;
+    const reading = this.insertionPhase === 'reading';
+    const draft = this.insertionPhase === 'draft';
+    const fieldsDisabled = !draft || !intentValid || !available;
+    const source = this.insertionBytes && imageInsertionDraft(this.insertionBytes, this.insertionWidth,
+      this.insertionHeight, this.insertionTitle, this.insertionDescription);
+    return html`<${popoverTag} part="image-insert-dialog" popup-role="dialog" trigger="manual"
+      placement="bottom-start" top-layer aria-label=${this.localize('docxEditorInsertImage')}
+      @lr-show=${(event: Event) => {
+        if ((!reading && !draft) || !intentValid) event.preventDefault();
+      }}
+      @lr-hide=${(event: Event) => this.onImageInsertionHide(event)}>
+      <${buttonTag} slot="trigger" part="image-insert-trigger" data-tool-key="image-insert" size="s" appearance="quiet" wrap
+        tabindex=${this.toolbarKey === 'image-insert' ? '0' : '-1'}
+        ?disabled=${!available || this.insertionPhase !== 'idle'}
+        @pointerdown=${() => this.prepareImageInsertion()}
+        @keydown=${(event: KeyboardEvent) => this.onImageInsertionKey(event)}
+        @blur=${() => { if (this.insertionPhase === 'idle') this.cancelImageInsertion(false); }}
+        @click=${() => this.openImageInsertionPicker()}>${this.localize('docxEditorInsertImage')}</${buttonTag}>
+      <div part="image-insert-fields" @focusin=${(event: FocusEvent) => this.onImageFieldFocus(event, true)}
+        @keydown=${(event: KeyboardEvent) => {
+          if (event.key === 'Enter' && !event.isComposing && event.keyCode !== 229 && event.composedPath().some(node =>
+            node instanceof HTMLElement && ['image-insert-width', 'image-insert-height', 'image-insert-title'].includes(node.getAttribute('part') ?? ''))) {
+            event.preventDefault(); event.stopPropagation(); this.dispatchImageInsertion();
+          }
+        }}>
+        ${reading ? html`<p part="image-insert-hint">${this.localize('docxEditorReadingImage')}</p>` : nothing}
+        ${draft ? html`
+          <${numberInputTag} part="image-insert-width" size="s" without-steppers label=${this.localize('docxEditorImageWidth')}
+            min="1" max="1440" step="any" inputmode="decimal" .value=${this.insertionWidth} ?disabled=${fieldsDisabled}
+            @lr-input=${(event: CustomEvent<{ value: string }>) => this.changeInsertionDimension(event, 'width')}
+            @lr-change=${(event: Event) => event.stopPropagation()}></${numberInputTag}>
+          <${numberInputTag} part="image-insert-height" size="s" without-steppers label=${this.localize('docxEditorImageHeight')}
+            min="1" max="1440" step="any" inputmode="decimal" .value=${this.insertionHeight} ?disabled=${fieldsDisabled}
+            @lr-input=${(event: CustomEvent<{ value: string }>) => this.changeInsertionDimension(event, 'height')}
+            @lr-change=${(event: Event) => event.stopPropagation()}></${numberInputTag}>
+          <${checkboxTag} part="image-insert-ratio" .checked=${this.insertionKeepRatio}
+            ?disabled=${fieldsDisabled || !this.insertionDefaults?.ratioAvailable}
+            @lr-change=${(event: Event) => {
+              event.stopPropagation();
+              this.insertionKeepRatio = (event.currentTarget as HTMLElement & { checked: boolean }).checked;
+              if (this.insertionKeepRatio && this.insertionDefaults?.ratioAvailable)
+                this.insertionHeight = imageRatioPartner(this.insertionWidth, 'width', this.insertionDefaults.original) ?? '';
+            }}>${this.localize('docxEditorImageRatio')}</${checkboxTag}>
+          <p part="image-insert-hint">${this.localize(!intentValid ? 'docxEditorImageInsertStale' :
+            this.insertionDefaults?.ratioAvailable ? 'docxEditorImageInsertSizeHint' : 'docxEditorImageInsertRatioUnavailable')}</p>
+          <${inputTag} part="image-insert-title" size="s" label=${this.localize('docxEditorImageTitle')}
+            maxlength="256" .value=${this.insertionTitle} ?disabled=${fieldsDisabled}
+            @lr-input=${(event: CustomEvent<{ value: string }>) => { event.stopPropagation(); this.insertionTitle = event.detail.value; }}
+            @lr-change=${(event: Event) => event.stopPropagation()}></${inputTag}>
+          <${textareaTag} part="image-insert-description" size="s" label=${this.localize('docxEditorImageDescription')}
+            rows="4" resize="vertical" maxlength="2048" .value=${this.insertionDescription} ?disabled=${fieldsDisabled}
+            @lr-input=${(event: CustomEvent<{ value: string }>) => { event.stopPropagation(); this.insertionDescription = event.detail.value; }}
+            @lr-change=${(event: Event) => event.stopPropagation()}></${textareaTag}>
+          <p part="image-insert-hint">${this.localize('docxEditorImageInsertMetadataHint')}</p>
+          <p part="image-insert-hint">${this.localize('docxEditorImageInsertScopeHint')}</p>` : nothing}
+        <div part="image-insert-actions">
+          ${draft ? html`<${buttonTag} part="image-insert-apply" size="s" wrap ?disabled=${fieldsDisabled || !source}
+            @click=${() => this.dispatchImageInsertion()}>${this.localize('docxEditorInsertImage')}</${buttonTag}>` : nothing}
+          ${reading || draft ? html`<${buttonTag} part="image-insert-cancel" size="s" appearance="quiet" ?autofocus=${reading}
+            @click=${() => this.cancelImageInsertion(true)}>${this.localize('docxEditorCancel')}</${buttonTag}>` : nothing}
+        </div>
+      </div>
+    </${popoverTag}>
+    <input part="image-insert-file" type="file" accept=".png,.jpg,.jpeg,.gif,image/png,image/jpeg,image/gif"
+      tabindex="-1" aria-hidden="true" @change=${this.readImageInsertionFile}
+      @cancel=${() => { if (this.insertionAwaitingPicker) this.cancelImageInsertion(true); }}>
+    ${this.insertionError ? html`<p part="image-insert-status">${this.insertionFeedback(this.insertionError)}</p>` : nothing}`;
   }
 
   private renderTableTools(): TemplateResult {
@@ -1452,20 +1812,21 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     return html`
       <section part="base" aria-label=${this.editorLabel()}>
         <div part="toolbar" role="toolbar" aria-label=${this.editorLabel()}
-          @focusin=${this.onToolbarFocusIn}>
+          @focusin=${this.onToolbarFocusIn} @pointerdown=${(event: PointerEvent) => this.handoffImageInsertion(event)}>
           <div part="file-actions">
-            <${buttonTag} part="new-button" size="s" appearance="quiet" ?disabled=${this.openInProgress}
+            <${buttonTag} part="new-button" size="s" appearance="quiet" ?disabled=${this.openInProgress || Boolean(this.currentSnapshot?.activity)}
               @click=${() => this.requestToolbarAction('new')}>${this.localize('docxEditorNew')}</${buttonTag}>
-            <${buttonTag} part="open-button" size="s" appearance="quiet" ?disabled=${this.openInProgress}
+            <${buttonTag} part="open-button" size="s" appearance="quiet" ?disabled=${this.openInProgress || Boolean(this.currentSnapshot?.activity)}
               @click=${() => this.requestToolbarAction('open')}>${this.localize('docxEditorOpen')}</${buttonTag}>
             <${buttonTag} part="save-button" size="s" appearance="quiet"
-              ?disabled=${this.currentSnapshot?.status !== 'ready' || this.currentSnapshot.activity === 'saving'}
+              ?disabled=${this.currentSnapshot?.status !== 'ready' || this.currentSnapshot.activity !== null}
               @click=${() => { this.releaseToolbarSelection(); void this.save(); }}>${this.localize('docxEditorSave')}</${buttonTag}>
             <input part="file-input" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
               tabindex="-1" aria-hidden="true" @change=${this.onFileSelected}>
           </div>
           <div part="format-actions">${commands.map(command => this.renderCommand(command))}</div>
           ${this.renderEditingTools()}
+          ${this.renderImageInsertionTools()}
           ${this.renderTableTools()}
           ${this.renderImageTools()}
         </div>

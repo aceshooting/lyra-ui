@@ -21,7 +21,7 @@ const end = () => chunk('IEND');
 function png(parts = [header(), chunk('IDAT', compressed), end()]): Uint8Array {
   return new Uint8Array(Buffer.concat([signature, ...parts]));
 }
-const accepted = { ok: true, value: { pixels: 1, mimeType: 'image/png' } };
+const accepted = { ok: true, value: { pixels: 1, pixelWidth: 1, pixelHeight: 1, mimeType: 'image/png', hasJpegApp1: false } };
 
 test('checksummed static PNG inspection preserves a nonzero-offset input view', () => {
   const bytes = png(), backing = new Uint8Array(bytes.length + 12); backing.set(bytes, 5);
@@ -96,4 +96,29 @@ test('checks zlib header even when split across IDAT chunks without inflating pi
   }
   assert.deepEqual(inspectDocxImage(png([header(), chunk('IDAT', compressed.subarray(0, 1)), chunk('IDAT'), chunk('IDAT', compressed.subarray(1)), end()])), accepted);
   for (const length of [1, 2, 5]) assert.deepEqual(inspectDocxImage(png([header(), chunk('IDAT', compressed.subarray(0, length)), end()])), invalid);
+});
+
+// Marker fixtures exercise structural inspection, not native JPEG decoding.
+function markerJpeg(placement: 'none' | 'before' | 'between' | 'after'): Uint8Array {
+  const sof = [255, 192, 0, 11, 8, 0, 2, 0, 3, 1, 1, 17, 0];
+  const sos = [255, 218, 0, 8, 1, 1, 0, 0, 63, 0, 42];
+  const app1 = [255, 225, 0, 8, 69, 120, 105, 102, 0, 0];
+  return Uint8Array.from([255, 216, ...(placement === 'before' ? app1 : []), ...sof, ...sos,
+    ...(placement === 'between' ? [...app1, ...sos] : placement === 'after' ? app1 : []), 255, 217]);
+}
+
+test('copies intrinsic JPEG dimensions and detects APP1 throughout the bounded marker walk', () => {
+  for (const placement of ['none', 'before', 'between', 'after'] as const) {
+    const bytes = markerJpeg(placement), before = bytes.slice();
+    assert.deepEqual(inspectDocxImage(bytes), { ok: true, value: { mimeType: 'image/jpeg',
+      pixelWidth: 3, pixelHeight: 2, pixels: 6, hasJpegApp1: placement !== 'none' } });
+    assert.deepEqual(bytes, before);
+  }
+});
+
+test('copies GIF logical screen dimensions without APP1 metadata', () => {
+  const bytes = Uint8Array.from([71, 73, 70, 56, 57, 97, 3, 0, 2, 0, 0, 0, 0,
+    44, 0, 0, 0, 0, 3, 0, 2, 0, 0, 2, 1, 0, 0, 59]);
+  assert.deepEqual(inspectDocxImage(bytes), { ok: true, value: { mimeType: 'image/gif',
+    pixelWidth: 3, pixelHeight: 2, pixels: 6, hasJpegApp1: false } });
 });

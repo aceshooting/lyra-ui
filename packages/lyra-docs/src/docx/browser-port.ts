@@ -8,37 +8,71 @@ const claimedMounts = new WeakSet<HTMLElement>();
 /** A claim ends on any removal, including removal followed by synchronous reinsertion. */
 function claimDocxMount(mount: HTMLElement, lost: () => void): DocxResult<DocxMountOwnership> {
   if (typeof document === 'undefined' || typeof HTMLElement === 'undefined' ||
-      !(mount instanceof HTMLElement) || mount.ownerDocument !== document ||
-      !mount.isConnected || mount.getRootNode() !== document || mount.childNodes.length !== 0 ||
-      claimedMounts.has(mount)) return { ok: false, code: 'invalid-mount' };
+      !(mount instanceof HTMLElement) || claimedMounts.has(mount)) return { ok: false, code: 'invalid-mount' };
+  const getter = (prototype: object, key: string) => Object.getOwnPropertyDescriptor(prototype, key)!.get!;
+  const ownerDocument = getter(Node.prototype, 'ownerDocument'), connected = getter(Node.prototype, 'isConnected');
+  const parent = getter(Node.prototype, 'parentNode'), children = getter(Node.prototype, 'childNodes');
+  const root = Node.prototype.getRootNode, takeRecords = MutationObserver.prototype.takeRecords;
+  const removedNodes = getter(MutationRecord.prototype, 'removedNodes'), length = getter(NodeList.prototype, 'length');
+  const item = NodeList.prototype.item, disconnect = MutationObserver.prototype.disconnect;
+  const apply = Reflect.apply, enqueue = queueMicrotask, owner = document;
+  if (apply(ownerDocument, mount, []) !== owner || !apply(connected, mount, []) || apply(root, mount, []) !== owner ||
+      apply(length, apply(children, mount, []), []) !== 0) return { ok: false, code: 'invalid-mount' };
   const ancestors = new Set<Node>();
-  for (let node: Node | null = mount; node; node = node.parentNode) ancestors.add(node);
+  for (let node: Node | null = mount; node; node = apply(parent, node, [])) {
+    if (ancestors.size >= 128 || ancestors.has(node)) return { ok: false, code: 'invalid-mount' };
+    ancestors.add(node);
+  }
   let released = false;
-  let invalid = false;
+  let invalid = false, delivered = false, queued = false;
+  const notify = () => {
+    if (released || !invalid || delivered) return;
+    delivered = true;
+    lost();
+  };
+  const invalidate = () => {
+    invalid = true;
+    if (released || queued || delivered) return;
+    queued = true;
+    enqueue(() => { queued = false; notify(); });
+  };
   const inspectRecords = (records: MutationRecord[]) => {
     if (released || invalid) return;
-    if (mount.ownerDocument !== document || !mount.isConnected || mount.getRootNode() !== document ||
-        records.some(record => [...record.removedNodes].some(node => ancestors.has(node) || node.contains(mount)))) {
-      invalid = true;
-      lost();
+    if (apply(ownerDocument, mount, []) !== owner || !apply(connected, mount, []) || apply(root, mount, []) !== owner || records.length > 1024) {
+      invalidate(); return;
+    }
+    let remaining = 4096;
+    for (const record of records) {
+      const nodes = apply(removedNodes, record, []), count = apply(length, nodes, []);
+      if (count > remaining) { invalidate(); return; }
+      remaining -= count;
+      for (let i = 0; i < count; i++) {
+        const node = apply(item, nodes, [i]);
+        if (node && ancestors.has(node)) { invalidate(); return; }
+      }
     }
   };
-  const observer = new MutationObserver(inspectRecords);
+  const observer = new MutationObserver(records => { inspectRecords(records); notify(); });
   // Only removals along the captured ownership chain matter. Watching the whole
   // document subtree would process every painted text node in every editor.
   for (const ancestor of ancestors) {
     if (ancestor !== mount) observer.observe(ancestor, { childList: true });
   }
   claimedMounts.add(mount);
+  const check = () => {
+    try { inspectRecords(apply(takeRecords, observer, [])); }
+    catch { invalidate(); }
+    return !released && !invalid;
+  };
   return { ok: true, value: {
+    check,
     valid() {
-      inspectRecords(observer.takeRecords());
-      return !released && !invalid;
+      const valid = check(); notify(); return valid;
     },
     release() {
       if (released) return;
       released = true;
-      observer.disconnect();
+      apply(disconnect, observer, []);
       claimedMounts.delete(mount);
     },
   } };
@@ -60,7 +94,8 @@ export function createBrowserDocxPort(options: DocxSessionOptions): DocxSessionP
       }
       if (operation.signal.aborted) return { ok: false, code: 'aborted' };
       if (!ownership?.valid()) return { ok: false, code: 'invalid-mount' };
-      return openEigenpalDocument(options, source, operation, () => ownership?.valid() ?? false);
+      return openEigenpalDocument(options, source, operation, () => ownership?.valid() ?? false, undefined,
+        () => ownership?.check?.() ?? false);
     },
   };
 }

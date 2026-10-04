@@ -118,6 +118,12 @@ docxEditorImageRatio, docxEditorImageSizeHint, docxEditorImageTitle,
 docxEditorImageDescription, docxEditorImageDescriptionHint,
 docxEditorImageStale, docxEditorImageDimensions, docxEditorImageApply,
 docxEditorPreviousImage, docxEditorNextImage, docxEditorNoImage,
+docxEditorInsertImage, docxEditorReadingImage, docxEditorInsertingImage,
+docxEditorImageInserted, docxEditorImageInsertSizeHint,
+docxEditorImageInsertRatioUnavailable, docxEditorImageInsertMetadataHint,
+docxEditorImageInsertScopeHint, docxEditorImageInsertLimit,
+docxEditorImageInsertInvalid, docxEditorImageInsertUnsupported,
+docxEditorImageInsertStale, docxEditorImageInsertRefused,
 docxEditorCancel, docxEditorFind, docxEditorFindQuery,
 docxEditorFindSubmit, docxEditorMatchCase, docxEditorWholeWord,
 docxEditorFindCount, docxEditorFindTruncated, docxEditorPrevious,
@@ -148,6 +154,24 @@ Table parts include `table-tools`, `table-insert-popover`, `table-insert-trigger
 `table-fields`, `table-rows`, `table-columns`, `table-hint`,
 `table-dialog-actions`, `table-insert-apply`, `table-insert-cancel`,
 `table-context`, `table-actions`, and `table-button`.
+
+**Insert image** opens a local file picker at the original plain paragraph
+caret. Choose a PNG, JPEG without APP1 metadata (including EXIF and XMP), or
+single-frame GIF of up to 4 MiB. The file name and declared file type do not
+supply image metadata or establish its format. The dialog offers width and
+height in points, the original aspect ratio, and optional title and description.
+Defaults use encoded dimensions at 96 pixels per inch, scaled proportionally
+to keep both dimensions between 1 and 1440 points. If that ratio cannot fit,
+enter both sizes independently. Dimensions retain full precision. Title and
+description start empty; description supports ordinary line breaks.
+
+The picker, read and draft retain one original caret. Cancel, Escape, changed
+selection, replacement and disconnect discard pending drafts; a late file read
+cannot retarget insertion. Insert closes the dialog immediately, while insertion
+activity disables editing, navigation and save. There is no post-dispatch Cancel
+button. A refusal requires a new caret/file intent. Successful insertion adds
+one undo unit. Imported documents must satisfy the bounded insertion profile;
+availability before selecting a file is advisory.
 
 **Previous image** and **Next image** select eligible body images in document
 order, wrapping at either end. From a text caret, Next selects the first and
@@ -191,7 +215,8 @@ confirmation; use the cancelable `lr-before-open` event to apply a host policy.
 
 The component exposes `snapshot()`, `open(input, options)`,
 `newDocument(options)`, `can(action)`, `execute(action, options)`,
-`paragraphStyles()`, `fontFamilies()`, `imageDescription()`, `selectImage(direction)`, `find(query, options)`,
+`paragraphStyles()`, `fontFamilies()`, `imageDescription()`, `selectImage(direction)`,
+`canInsertImage()`, `insertImage(source, options)`, `find(query, options)`,
 `selectMatch(id, options)`, `replaceMatch(id, text, options)`, `save(options)`,
 `acknowledgeSaved(receipt)`, and `focusEditor()`. The editing and search
 methods use the same action, result, revision, and bounds contract described
@@ -224,6 +249,7 @@ bringing an offscreen target into view then depends on the host's scroll layout.
 | `editing-tools`, `paragraph-style`, `alignment-actions`, `list-actions`, `edit-button` | Paragraph and text formatting controls; `edit-button` identifies its action with `data-edit` |
 | `font-family`, `font-size`, `text-color`, `color-auto`, `color-state` | Font and text-color controls; `color-state` reports when the engine cannot expose the current text color |
 | `link-popover`, `link-trigger`, `link-fields`, `link-href`, `link-text`, `link-actions`, `link-apply`, `link-remove`, `link-cancel` | Hyperlink editor and actions |
+| `image-insert-trigger`, `image-insert-dialog`, `image-insert-file`, `image-insert-fields`, `image-insert-width`, `image-insert-height`, `image-insert-ratio`, `image-insert-title`, `image-insert-description`, `image-insert-hint`, `image-insert-actions`, `image-insert-apply`, `image-insert-cancel`, `image-insert-status` | Local image picker, original-caret draft, dimensions, metadata, actions and refusal feedback |
 | `image-tools`, `image-previous`, `image-next`, `image-navigation-status`, `image-context`, `image-delete` | Image navigation, no-image feedback, selected dimensions, and deletion |
 | `image-resize-popover`, `image-resize-trigger`, `image-resize-fields`, `image-width`, `image-height`, `image-ratio`, `image-resize-hint`, `image-resize-actions`, `image-resize-apply`, `image-resize-cancel` | Image dimensions dialog and original aspect-ratio option |
 | `image-description-popover`, `image-description-trigger`, `image-description-fields`, `image-title`, `image-description`, `image-description-hint`, `image-description-actions`, `image-description-apply`, `image-description-cancel` | Bounded title and multiline description dialog |
@@ -390,15 +416,13 @@ Shadow DOM mount mode.
 Native IME and touch behavior, font fidelity beyond rejecting embedded fonts,
 advanced editing, broader DOCX compatibility, Word and LibreOffice
 interoperability, and collaboration still need qualification. The browser
-checks cover Chromium, Firefox, and WebKit. The current basic-editing increment
-passes 51 focused checks per engine (153 across Chromium, Firefox, and WebKit)
-and associated synthetic OOXML preservation checks. Those results cover the
-exercised actions and fixtures; human input and
-assistive-technology review, real-document and font coverage, external
-word-processor round trips, and retained-memory behavior remain open.
+checks cover Chromium, Firefox, and WebKit, with associated synthetic OOXML
+preservation checks. Qualification covers the exercised actions and fixtures;
+human input and assistive-technology review, real-document and font coverage,
+external word-processor round trips, and retained-memory behavior remain open.
 Performance runs record a fixed fixture and environment for comparison; they
 do not support a general speed claim.
-The final normal production browser run used a 2,000-paragraph, 218,577-byte
+An earlier basic-editing benchmark used a 2,000-paragraph, 218,577-byte
 stored DOCX: fresh large open 1,868.9 ms, save 111.8 ms, warm reopen 1,602.8
 ms, and input-to-two-animation-frame median/p95 of 128.1/146.3 ms across 20
 samples. Browser and OS caches may be warm; these are diagnostic values, not
@@ -429,12 +453,10 @@ The metadata marks coverage complete only when both the unit and browser suites
 pass; an incomplete run cannot qualify a coverage result. V8 cannot enumerate
 functions or branches in unloaded modules, and the report flags those metrics
 as incomplete. Its statement count is based on V8 line counters, so statements
-and lines share that denominator. The current complete run passes 137 Node tests
-and 51 Chromium browser checks, with every emitted runtime module included (15
-modules, including styles). It measures 2,736/2,742 lines and statements
-(99.78%), 272/274 functions (99.27%), and 1,922/2,094 branches (91.78%). CI
-enforces the 99.6% lines/statements floor; branch coverage is reported separately
-and has no floor.
+and lines share that denominator. Every emitted runtime module, including
+styles, belongs to the coverage inventory. The generated reports record the
+executed suite counts and measured coverage for that run. CI enforces the 99.6%
+lines/statements floor; branch coverage is reported separately and has no floor.
 
 The browser command runs the three engines serially and writes browser evidence
 under `packages/lyra-docs/.browser-output/`. To include the Chromium performance
@@ -566,7 +588,70 @@ committed dimensions or metadata are successful no-ops only for an eligible
 live original intent, with no command dispatch or history/dirty/revision change.
 
 These guards cover the Lyra session/element actions and contextual controls.
-Image insertion, replacement, native resize handles, paste/drop, floating
-layout, and broad native gesture policy remain outside this contract. Admission
+Replacement, native resize handles, paste/drop, floating layout, and broad
+native gesture policy remain outside this selected-image contract. Local byte
+insertion has the separate bounded contract below. Admission
 and export limits are unchanged; an edited export is not promised to fit the
 4 MiB input admission ceiling. The package remains private and experimental.
+
+### Local image insertion
+
+The session and element expose `canInsertImage()` and asynchronous
+`insertImage(source, options)`. Import `DocxImageSource` and
+`DocxInsertImageOptions` from `@aceshooting/lyra-docs/docx`. Sources contain a
+`Uint8Array` of encoded bytes, required `widthPoints` and `heightPoints`, and
+optional `title` and `description`. Each dimension must be finite and between
+1 and 1440 points; fractional values are preserved through the conversion
+`Math.round(points * 12700)`. Title permits up to 256 UTF-16 code units and
+description up to 2048. Both must be valid XML text with no carriage returns;
+use LF for line breaks. Omitted metadata means empty text. A present `undefined`
+value is invalid. No trimming or metadata inference occurs.
+
+```ts
+const availability = editor.canInsertImage();
+const revision = editor.snapshot()?.revision;
+if (availability.enabled && revision) {
+  const lease = editor.retainSelection();
+  if (lease.ok) {
+    try {
+      const result = await editor.insertImage({
+        bytes: pngBytes,
+        widthPoints: 120,
+        heightPoints: 60,
+        title: 'Overview',
+        description: 'Two related measurements',
+      }, { selection: lease.value, expectedRevision: revision });
+      if (result.ok) console.log(result.value);
+    } finally {
+      lease.value.release();
+    }
+  }
+}
+```
+
+The API copies only the visible byte range synchronously before its first await
+or notification. It validates the encoded PNG, JPEG without any APP1 segment,
+or single-frame GIF and also requires successful native decoding. Existing
+image admission limits apply: 4 MiB encoded bytes, 8192 pixels per axis and
+16 million pixels per image. `canInsertImage()` reads cached caret/lifecycle
+state without reading bytes or validating the whole document.
+
+Insertion accepts the editor's normalized default document followed by ordinary
+body typing, plus a narrow package grammar. Tables, auxiliary stories, style
+references, fields, controls, tracked changes and a target paragraph already
+containing an image refuse unchanged. Other plain body paragraphs may contain
+supported inline pictures. A validated insertion commits only when its immediate
+serialized package is at most 4 MiB and passes the existing admission and engine
+ZIP reader. This bound applies to that committed revision; later edits and the
+generic save policy are separate.
+
+Options accept `expectedRevision`, an authentic retained `selection`, and a
+native `AbortSignal`. Insertion retains the original document, revision and
+caret through preparation; stale or released leases do not fall back to a live
+caret, including A-to-B-to-A reselection. Before live dispatch cancellation can
+refuse unchanged. After commit the returned success remains truthful even if a
+subscriber replaces or destroys the editor. UI completion feedback and focus
+are guarded by the original owner. During `activity: 'inserting-image'`, methods
+that change selection, focus, package or save refuse `busy`; snapshots and pure
+availability remain readable. No URL, preview, clipboard or drop insertion is
+provided.

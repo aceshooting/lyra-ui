@@ -245,3 +245,20 @@ Exit: documented convergence/recovery guarantees and limits; collaboration remai
 Exit: each released increment satisfies the library's
 [release gates](../agents/ci-and-gates.md#release-integrity). Unfinished capabilities stay explicitly
 planned; completing one phase does not imply completion of the entire editor program.
+
+### Bounded local image insertion
+
+The experimental companion includes a separate local image picker and
+`canInsertImage()` / `insertImage()` facade. One PNG, JPEG without APP1 metadata,
+or single-frame GIF can be inserted at its original plain body caret after
+bounded package validation. The normalized default document plus ordinary
+body typing is supported; imported documents outside the finite profile refuse
+unchanged. Width and height use explicit point dimensions, with optional bounded
+title and description. The picker retains the original intent across reading and
+draft editing, discards canceled or stale reads, and closes on dispatch while
+insertion activity gates other operations. Broader imported-document insertion,
+replacement, floating images, clipboard/drop and remote sources remain open.
+
+Native keyboard, narrow RTL, zoomed dialog accessibility, cancellation and
+round-trip qualification accompany this increment; those checks do not establish
+full document, assistive-technology or native input-method compatibility.

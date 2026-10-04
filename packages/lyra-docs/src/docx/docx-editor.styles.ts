@@ -57,7 +57,7 @@ export const styles = css`
 
   [part='alignment-actions'], [part='list-actions'], [part='link-actions'],
   [part='table-tools'], [part='table-actions'], [part='table-dialog-actions'],
-  [part='image-tools'], [part='image-resize-actions'], [part='image-description-actions'] {
+  [part='image-insert-actions'], [part='image-tools'], [part='image-resize-actions'], [part='image-description-actions'] {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -86,7 +86,7 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
   }
 
-  [part='link-fields'], [part='table-fields'], [part='image-resize-fields'], [part='image-description-fields'] {
+  [part='link-fields'], [part='table-fields'], [part='image-insert-fields'], [part='image-resize-fields'], [part='image-description-fields'] {
     display: grid;
     box-sizing: border-box;
     gap: var(--lr-space-s);
@@ -97,24 +97,25 @@ export const styles = css`
 
   [part='table-tools'], [part='image-tools'] { flex: 1 1 100%; }
   [part='table-context'], [part='table-hint'], [part='image-context'],
-  [part='image-resize-hint'], [part='image-description-hint'], [part='image-navigation-status'] {
+  [part='image-insert-hint'], [part='image-insert-status'], [part='image-resize-hint'], [part='image-description-hint'], [part='image-navigation-status'] {
     margin: 0;
     overflow-wrap: anywhere;
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-sm);
   }
 
-  [part='image-width'], [part='image-height'], [part='image-title'], [part='image-description'], [part='image-ratio'] {
+  [part='image-insert-width'], [part='image-insert-height'], [part='image-insert-title'],
+  [part='image-insert-description'], [part='image-insert-ratio'], [part='image-width'], [part='image-height'], [part='image-title'], [part='image-description'], [part='image-ratio'] {
     min-inline-size: 0;
     max-inline-size: 100%;
   }
 
-  [part='image-previous'], [part='image-next'], [part='image-resize-trigger'], [part='image-description-trigger'], [part='image-delete'] {
+  [part='image-insert-trigger'], [part='image-previous'], [part='image-next'], [part='image-resize-trigger'], [part='image-description-trigger'], [part='image-delete'] {
     min-inline-size: 0;
     max-inline-size: 100%;
   }
 
-  [part='image-resize-popover'], [part='image-description-popover'] {
+  [part='image-insert-dialog'], [part='image-resize-popover'], [part='image-description-popover'] {
     --lr-overlay-max-inline-size: min(var(--lr-size-20rem), calc(100vw - var(--lr-space-s) * 2));
     min-inline-size: 0;
   }
@@ -142,7 +143,7 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
   }
 
-  [part='file-input'] {
+  [part='file-input'], [part='image-insert-file'] {
     position: absolute;
     inline-size: var(--lr-size-1px);
     block-size: var(--lr-size-1px);

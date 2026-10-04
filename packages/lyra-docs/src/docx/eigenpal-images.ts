@@ -185,9 +185,12 @@ interface ImageDocument {
   descendants: Map<OoxmlElement, Frame[]>;
 }
 function imageDocument(editor: DocxEditorInstance, overrides: Partial<typeof LIMITS>): ImageDocument {
-  const limits = { ...LIMITS, ...overrides }, surface = editor.surface;
+  const surface = editor.surface;
   if (!surface) reject();
-  const pkg = surface.session.currentPackage(), part = surface.session.part();
+  return imageDocumentInPackage(surface.session.currentPackage(), surface.session.part(), overrides);
+}
+function imageDocumentInPackage(pkg: OoxmlPackage, part: OoxmlPart, overrides: Partial<typeof LIMITS>): ImageDocument {
+  const limits = { ...LIMITS, ...overrides };
   if (pkg.parts.size > limits.parts) reject('resource-limit');
   if (pkg.parts.get(pkg.mainDocumentPart) !== part || !is(part.root, W, 'document')) reject();
   if (part.root.children.length > limits.nodes) reject('resource-limit');
@@ -252,7 +255,17 @@ function inspectDrawing(document: ImageDocument, target: Frame,
 export function imageCandidates(editor: DocxEditorInstance, overrides: Partial<typeof LIMITS> &
   { candidates?: number; attempts?: number; mediaBytes?: number } = {}): DocxResult<readonly DrawingValue[]> {
   try {
-    const document = imageDocument(editor, overrides), candidates = document.frames.filter(frame => is(frame.node, W, 'drawing'));
+    const surface = editor.surface;
+    if (!surface) reject();
+    return imageCandidatesInPackage(surface.session.currentPackage(), surface.session.part(), overrides);
+  } catch (error) { return refused(error instanceof QualificationFailure ? error.code : 'unsupported'); }
+}
+
+/** Bounded package inspection shared by navigation and isolated insertion preflight. */
+export function imageCandidatesInPackage(pkg: OoxmlPackage, part: OoxmlPart, overrides: Partial<typeof LIMITS> &
+  { candidates?: number; attempts?: number; mediaBytes?: number } = {}): DocxResult<readonly DrawingValue[]> {
+  try {
+    const document = imageDocumentInPackage(pkg, part, overrides), candidates = document.frames.filter(frame => is(frame.node, W, 'drawing'));
     if (candidates.length > (overrides.candidates ?? 256) || candidates.length > (overrides.attempts ?? 64)) reject('resource-limit');
     const mediaCache = new Map<string, { pixels: number; mimeType: string }>();
     const budget = { bytes: 0, maximum: overrides.mediaBytes ?? 16 * 1024 * 1024 }, values: DrawingValue[] = [];

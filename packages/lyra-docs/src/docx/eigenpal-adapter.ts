@@ -2,13 +2,14 @@ import type { DocxEditorInstance, SelectionPin } from '@docx-editor.dev/core';
 import { isDocxImageAction, isDocxTableAction, normalizeDocxAction } from './commands.js';
 import { captureImageIntent, copyImage, qualifyImageCommand } from './eigenpal-images.js';
 import { selectImageTarget } from './eigenpal-image-navigation.js';
+import { preflightImageInsertion } from './eigenpal-image-insertion.js';
 import { qualifyImageLayout } from './eigenpal-image-layout.js';
 import type { ImageCopy, ImageIntent } from './eigenpal-images.js';
 import { tableAvailability, tableContext, qualifyTableCommand } from './eigenpal-tables.js';
 import { loadDocxEngine } from './engine-loader.js';
 import { createEigenpalEditing, eigenpalCommand } from './eigenpal-editing.js';
 import type { DocxEngineModule } from './engine-loader.js';
-import type { DocxEngineEvent, DocxEnginePort } from './engine-port.js';
+import type { DocxEngineEvent, DocxEnginePort, DocxEngineImageInsertion } from './engine-port.js';
 import type { DocxResult, DocxSelection, DocxSessionOptions, DocxSource } from './types.js';
 
 /** The engine owns only this child, so teardown never removes later host-authored siblings. */
@@ -18,6 +19,7 @@ export async function openEigenpalDocument(
   operation: { readOnly: boolean; signal: AbortSignal },
   owned: () => boolean,
   loadEngine: () => Promise<DocxEngineModule> = loadDocxEngine,
+  checkOwned: () => boolean = owned,
 ): Promise<DocxResult<DocxEnginePort>> {
   let module;
   try { module = await loadEngine(); }
@@ -44,6 +46,8 @@ export async function openEigenpalDocument(
   let compositionVersion = 0;
   let saving = false;
   let executingGuarded = false;
+  let insertionOwner: object | null = null;
+  let releaseInsertion: (() => void) | null = null;
   let nativeSettling = false;
   const nativeInputEvents = new Set<Event>();
   let nativeDispatchOverflow = false;
@@ -159,6 +163,7 @@ export async function openEigenpalDocument(
   const destroy = () => {
     if (destroyed) return;
     destroyed = true;
+    releaseInsertion?.();
     clearNativeSettlement();
     clearResourceRefresh();
     mount.inert = true;
@@ -248,6 +253,98 @@ export async function openEigenpalDocument(
     if (!owned()) { destroy(); return { ok: false, code: 'invalid-mount' }; }
     ready = true;
 
+    const beginImageInsertion = (): DocxResult<DocxEngineImageInsertion> => {
+      if (destroyed || !checkOwned()) return { ok: false, code: 'destroyed' };
+      if (fault) return { ok: false, code: 'engine-failed' };
+      if (saving || executingGuarded || nativeDispatching()) return { ok: false, code: 'busy' };
+      if (composing) return { ok: false, code: 'composing' };
+      if (operation.readOnly) return { ok: false, code: 'read-only' };
+      const dependencies = module.imageInsertion;
+      if (!dependencies) return { ok: false, code: 'unsupported' };
+      const owner = {}, active = current(), epoch = selectionEpoch, composition = compositionVersion;
+      let terminal = false, executed = false;
+      const release = () => {
+        if (terminal) return;
+        terminal = true;
+        if (insertionOwner === owner) {
+          insertionOwner = null; releaseInsertion = null; executingGuarded = false;
+        }
+      };
+      insertionOwner = owner; releaseInsertion = release; executingGuarded = true;
+      try {
+        const generation = active.mountGeneration, surface = active.surface;
+        if (!surface) { release(); return { ok: false, code: 'unsupported' }; }
+        const session = surface.session, pkg = session.currentPackage(), revision = session.packageRevision(), part = session.part();
+        const state = surface.state(), target = { paragraphId: state.selection.anchor.paragraphId, offset: state.selection.anchor.offset };
+        const validate = (retainedSelection?: object): DocxResult<void> => {
+          const scalar = (): DocxResult<void> => {
+            if (destroyed || !checkOwned()) return { ok: false, code: 'destroyed' };
+            if (fault) return { ok: false, code: 'engine-failed' };
+            if (terminal || insertionOwner !== owner || editor !== active || active.mountGeneration !== generation ||
+                active.surface !== surface || surface.session !== session || selectionEpoch !== epoch ||
+                compositionVersion !== composition) return { ok: false, code: 'stale-selection' };
+            if (composing) return { ok: false, code: 'composing' };
+            return { ok: true, value: undefined };
+          };
+          const before = scalar(); if (!before.ok) return before;
+          const currentPackage = session.currentPackage(), currentRevision = session.packageRevision(), currentPart = session.part();
+          const currentState = surface.state(), scope = surface.storyScope(), drawing = surface.drawingSelectionIntent();
+          const after = scalar(); if (!after.ok) return after;
+          if (currentPackage !== pkg || currentRevision !== revision || currentPart !== part) return { ok: false, code: 'stale-revision' };
+          if (scope.kind !== 'body' || currentState.cellSelection || drawing.kind !== 'none' ||
+              currentState.selection.anchor.paragraphId !== target.paragraphId || currentState.selection.head.paragraphId !== target.paragraphId ||
+              currentState.selection.anchor.offset !== target.offset || currentState.selection.head.offset !== target.offset ||
+              !Number.isSafeInteger(target.offset) || target.offset < 0 || part !== pkg.parts.get(pkg.mainDocumentPart)) {
+            return { ok: false, code: 'unsupported' };
+          }
+          if (retainedSelection !== undefined && pins.get(retainedSelection)?.epoch !== epoch) return { ok: false, code: 'stale-selection' };
+          return { ok: true, value: undefined };
+        };
+        const captured = validate();
+        if (!captured.ok) { release(); return captured; }
+        return { ok: true, value: {
+          validate, release,
+          async execute(source, request) {
+            if (executed) return { ok: false, code: 'stale-selection' };
+            executed = true;
+            const valid = (): DocxResult<void> => {
+              const local = validate(request.retainedSelection);
+              return local.ok ? request.validateOriginal() : local;
+            };
+            try {
+              const original = valid(); if (!original.ok) return original;
+              if (request.signal.aborted) return { ok: false, code: 'aborted' };
+              surface.flushPendingInput();
+              clearNativeSettlement();
+              const settled = valid(); if (!settled.ok) return settled;
+              const decodePort = surface.imageDecodePort();
+              const decoding = valid(); if (!decoding.ok) return decoding;
+              const candidate = await preflightImageInsertion(pkg, target, source, dependencies, decodePort, valid, request.signal);
+              if (!candidate.ok) return candidate;
+              const prepared = valid(); if (!prepared.ok) return prepared;
+              if (request.signal.aborted) return { ok: false, code: 'aborted' };
+              const armed = request.armCommit(); if (!armed.ok) return armed;
+              const result = await surface.insertImage({ ...target, bytes: source.bytes, mime: source.metadata.mimeType,
+                widthPoints: source.widthPoints, heightPoints: source.heightPoints, title: source.title, description: source.description,
+                expectedPackageRevision: revision, commitGuard: () => valid().ok });
+              // A committed change is already latched by the facade. Its new revision
+              // and caret are expected and cannot turn success into a stale refusal.
+              if (result.ok && result.change) return { ok: true, value: undefined };
+              const refused = valid(); if (!refused.ok) return refused;
+              return { ok: false, code: !result.ok && result.reason === 'resource-limit' ? 'resource-limit' :
+                !result.ok && result.reason === 'invalidArgs' && result.detail === 'invalid-image' ? 'invalid-document' : 'engine-failed' };
+            } catch {
+              const refused = valid();
+              return refused.ok ? { ok: false, code: 'engine-failed' } : refused;
+            }
+          }
+        } };
+      } catch {
+        release();
+        return { ok: false, code: destroyed || !checkOwned() ? 'destroyed' : 'engine-failed' };
+      }
+    };
+
     const port: DocxEnginePort = {
       inspect() {
         // Layout-derived public getters flush pending text. Keep the last copied
@@ -277,6 +374,7 @@ export async function openEigenpalDocument(
           if (listeners.size === 0) mount.inert = true;
         };
       },
+      beginImageInsertion: module.imageInsertion ? beginImageInsertion : undefined,
       imageDescription() {
         if (destroyed) return { ok: false, code: 'destroyed' };
         if (nativeSettling || saving || executingGuarded) return { ok: false, code: 'busy' };

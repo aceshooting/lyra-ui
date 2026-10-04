@@ -45,6 +45,20 @@ export interface DocxImageDescription {
   readonly description: string;
 }
 export type DocxImageDirection = 'next' | 'previous';
+
+/** One local raster image, copied synchronously when insertion starts. */
+export interface DocxImageSource {
+  readonly bytes: Uint8Array;
+  readonly widthPoints: number;
+  readonly heightPoints: number;
+  readonly title?: string;
+  readonly description?: string;
+}
+export interface DocxInsertImageOptions {
+  readonly expectedRevision?: DocxRevision;
+  readonly selection?: DocxSelectionLease;
+  readonly signal?: AbortSignal;
+}
 export type DocxAction = DocxCommand | DocxEdit;
 /** Rendered selection context, advisory only; execution checks canonical topology. */
 export interface DocxTableContext {
@@ -123,7 +137,7 @@ export interface DocxSearchResults {
 }
 export interface DocxSnapshot {
   readonly status: DocxStatus;
-  readonly activity: 'saving' | null;
+  readonly activity: 'saving' | 'inserting-image' | null;
   readonly revision: DocxRevision | null;
   readonly dirty: boolean;
   readonly readOnly: boolean;
@@ -153,6 +167,10 @@ export interface DocxSession {
   open(source: DocxSource, options?: { signal?: AbortSignal }): Promise<DocxResult<DocxRevision>>;
   /** Table availability is advisory and pure; execute verifies canonical topology and bounds. */
   can(command: DocxAction): DocxCommandAvailability;
+  /** Cached caret availability; insertion separately qualifies the current package. */
+  canInsertImage(): DocxCommandAvailability;
+  /** Insert one owned raster at the original caret; success identifies its committed revision. */
+  insertImage(source: DocxImageSource, options?: DocxInsertImageOptions): Promise<DocxResult<DocxRevision>>;
   retainSelection(): DocxResult<DocxSelectionLease>;
   execute(command: DocxAction, options?: {
     expectedRevision?: DocxRevision;

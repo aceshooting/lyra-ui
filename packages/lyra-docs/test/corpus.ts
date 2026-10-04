@@ -3,6 +3,13 @@ import { CONTENT_TYPES, docxFixture } from '../src/docx/admission-fixtures.js';
 
 const word = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 const officeRel = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/';
+
+export function imageInsertionBytes(kind: 'png' | 'jpeg' | 'gif'): Uint8Array {
+  const fixture = imageFixture(kind === 'png' ? 'image-simple' : `image-${kind}`);
+  const media = Object.entries(unzipSync(fixture)).find(([name]) => name.startsWith('word/media/'));
+  if (!media) throw new Error('Image fixture unavailable');
+  return media[1];
+}
 const image = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFAAH/yA9iFgAAAABJRU5ErkJggg=='), char => char.charCodeAt(0));
 
 export const protectedParts = ['custom/payload.bin', 'customXml/item1.xml', 'word/media/pixel.png'] as const;

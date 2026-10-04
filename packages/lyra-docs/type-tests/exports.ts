@@ -1,5 +1,6 @@
 import { createDocxSession, type DocxSession, type DocxSnapshot, type DocxAction, type DocxEdit, type DocxCommand, type DocxFormatting, type DocxImageDirection, type DocxImageAction, type DocxImageContext, type DocxImageDescription, type DocxTableAction, type DocxTableContext, type DocxParagraphStyles, type DocxFontFamilies, type DocxSearchOptions, type DocxSearchResults, type DocxSearchMatch } from '@aceshooting/lyra-docs/docx';
 import type { LyraDocxEditor } from '@aceshooting/lyra-docs/docx/editor.class';
+import type { DocxImageSource, DocxInsertImageOptions, DocxRevision, DocxResult } from '@aceshooting/lyra-docs/docx';
 // @ts-expect-error DOCX-specific contracts belong to the format subpath.
 import type { DocxSession as RootSession } from '@aceshooting/lyra-docs';
 // @ts-expect-error The internal factory is not public.
@@ -21,6 +22,14 @@ export type EditingExportWitness = [DocxImageAction, DocxImageContext, DocxImage
 void normalizeDocxAction;
 
 function editingContracts(session: DocxSession): void {
+  const imageSource: DocxImageSource = { bytes: new Uint8Array(), widthPoints: 48, heightPoints: 24 };
+  const imageOptions: DocxInsertImageOptions = { signal: new AbortController().signal };
+  const insertion: Promise<DocxResult<DocxRevision>> = session.insertImage(imageSource, imageOptions);
+  void insertion; session.canInsertImage();
+  // @ts-expect-error Insertion requires both authored dimensions.
+  session.insertImage({ bytes: new Uint8Array(), widthPoints: 48 });
+  // @ts-expect-error Byte insertion is not a synchronous editing command.
+  session.execute({ type: 'insert-image', ...imageSource });
   const legacy: DocxCommand = 'bold';
   session.execute(legacy);
   const table: DocxEdit = { type: 'insert-table', rows: 2, columns: 3 };
