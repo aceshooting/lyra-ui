@@ -239,10 +239,11 @@ engine needs a connected, empty element in the document's light DOM; Shadow DOM
 mounts are unsupported.
 
 Common formatting, alignment, list, insertion and history actions use icons with localized
-accessible names and keyboard/hover tooltips. The first row groups file, history and insertion tools; the second groups font and
-paragraph formatting. The first row scrolls horizontally in narrow allocations so
-contextual image or table tools never move the document under the pointer. Formatting
-groups wrap within the available width; keyboard focus reveals offscreen actions.
+accessible names and keyboard/hover tooltips. Wide allocations place file, history,
+insertion, font and paragraph formatting tools on one row; narrower allocations use
+two rows. File and insertion tools scroll horizontally when contextual image or table
+tools need more room, keeping the toolbar height and document position stable.
+Formatting groups wrap within narrower widths; keyboard focus reveals offscreen actions.
 Replace a toolbar glyph with a decorative SVG or icon assigned to its named slot:
 
 ```html

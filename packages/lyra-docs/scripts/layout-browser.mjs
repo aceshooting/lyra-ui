@@ -30,18 +30,40 @@ export async function runEditorLayout(page, check, { createEditor, saveEditor })
       await page.screenshot({ path: new URL(`../.browser-evidence/layout-${theme}.png`, import.meta.url).pathname });
     }
   });
-  await check('toolbar stays compact and reachable at wide, intermediate and narrow allocations', async () => {
-    for (const width of [1440, 800, 320]) {
+  await check('toolbar uses one stable row when wide and two reachable rows when narrower', async () => {
+    for (const width of [2560, 1920, 1440, 800, 320]) {
       await page.setViewportSize({ width, height: 900 });
       const layout = await editor.evaluate(element => {
         const root = element.shadowRoot;
         const toolbar = root.querySelector('[part="toolbar"]');
+        const first = root.querySelector('.toolbar-row');
+        const second = root.querySelector('[part="editing-tools"]');
+        const firstBox = first.getBoundingClientRect();
+        const secondBox = second.getBoundingClientRect();
+        const toolBox = toolbar.getBoundingClientRect();
+        const inToolbar = node => {
+          const box = node.getBoundingClientRect();
+          return box.left >= toolBox.left - 1 && box.right <= toolBox.right + 1;
+        };
         return { toolbarHeight: toolbar.getBoundingClientRect().height, hostWidth: element.clientWidth,
-          overflow: element.scrollWidth, toolOverflow: toolbar.scrollWidth, toolWidth: toolbar.clientWidth };
+          overflow: element.scrollWidth, toolOverflow: toolbar.scrollWidth, toolWidth: toolbar.clientWidth,
+          firstTop: firstBox.top, secondTop: secondBox.top,
+          firstCenter: firstBox.top + firstBox.height / 2, secondCenter: secondBox.top + secondBox.height / 2,
+          firstVisible: first.scrollWidth <= first.clientWidth + 1,
+          ordinaryToolsVisible: [root.querySelector('[part="file-actions"]'), root.querySelector('.history-tools'),
+            root.querySelector('.insert-tools'), root.querySelector('.font-tools'), root.querySelector('[part="format-actions"]'),
+            root.querySelector('[part="alignment-actions"]'), root.querySelector('[part="list-actions"]'),
+            root.querySelector('.color-tools')].every(inToolbar) };
       });
       assert.ok(layout.toolbarHeight <= (width === 320 ? 300 : width === 800 ? 160 : 120), JSON.stringify({ width, ...layout }));
       assert.ok(layout.overflow <= layout.hostWidth + 1, JSON.stringify({ width, ...layout }));
       assert.ok(layout.toolOverflow <= layout.toolWidth + 1, JSON.stringify({ width, ...layout }));
+      if (width >= 1920) {
+        assert.ok(Math.abs(layout.firstCenter - layout.secondCenter) <= 1, JSON.stringify({ width, ...layout }));
+        assert.ok(layout.firstVisible && layout.ordinaryToolsVisible, JSON.stringify({ width, ...layout }));
+      } else if (width === 1440) {
+        assert.ok(layout.secondTop > layout.firstTop + 1, JSON.stringify({ width, ...layout }));
+      }
       await editor.locator('.docx-pages').click();
       await page.keyboard.press('Alt+F10');
       await page.keyboard.press('End');
@@ -143,18 +165,21 @@ export async function runEditorLayout(page, check, { createEditor, saveEditor })
     assert.equal(await editor.locator('lr-tooltip[for="tool-bold"]').getAttribute('content'), 'Strong text');
     await page.keyboard.press('Escape');
   });
-  await check('image context never moves the document while switching pictures at desktop or 320px', async () => {
+  await check('image context never moves the document while switching pictures across toolbar layouts', async () => {
     await createEditor(page, 'layout-images', 'image-simple');
     const images = page.locator('#layout-images');
-    for (const width of [1440, 320]) {
+    for (const width of [1920, 1440, 320]) {
       await page.setViewportSize({ width, height: 900 });
       await images.scrollIntoViewIfNeeded();
       const stageTop = await images.evaluate(element => element.shadowRoot.querySelector('[part="document"]').getBoundingClientRect().top - element.getBoundingClientRect().top);
+      const toolbarHeight = await images.evaluate(element => element.shadowRoot.querySelector('[part="toolbar"]').getBoundingClientRect().height);
       for (const index of [0, 1, 0]) {
         await images.locator('.docx-pages img').nth(index).click();
         await page.waitForFunction(({ index }) => document.getElementById('layout-images').imageDescription()?.value?.title === `Title ${index + 1}`, { index });
         const selectedTop = await images.evaluate(element => element.shadowRoot.querySelector('[part="document"]').getBoundingClientRect().top - element.getBoundingClientRect().top);
+        const selectedToolbarHeight = await images.evaluate(element => element.shadowRoot.querySelector('[part="toolbar"]').getBoundingClientRect().height);
         assert.ok(Math.abs(selectedTop - stageTop) <= 1, JSON.stringify({ width, index, stageTop, selectedTop }));
+        assert.ok(Math.abs(selectedToolbarHeight - toolbarHeight) <= 1, JSON.stringify({ width, index, toolbarHeight, selectedToolbarHeight }));
       }
     }
     await page.setViewportSize({ width: 1440, height: 900 });

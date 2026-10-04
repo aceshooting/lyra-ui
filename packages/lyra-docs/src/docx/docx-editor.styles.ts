@@ -114,6 +114,19 @@ export const styles = css`
     padding-block-start: var(--lr-space-xs);
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
+  @container (min-width: 112rem) {
+    [part='toolbar'] {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) max-content;
+    }
+    .toolbar-row, [part='editing-tools'] { flex: none; }
+    [part='editing-tools'], .font-tools, [part='format-actions'] { flex-wrap: nowrap; }
+    [part='editing-tools'] {
+      padding-block-start: 0;
+      border-block-start: 0;
+    }
+    .font-tools { flex: none; }
+  }
   .tool-icon {
     display: flex;
     align-items: center;
