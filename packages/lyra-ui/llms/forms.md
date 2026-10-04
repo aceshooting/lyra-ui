@@ -4200,12 +4200,12 @@ class AccentTrigger extends LitElement {
 `gemstoneAccentPicker` names the canonical composition of `lr-icon-button`, `lr-popover`, and
 `lr-swatch-picker mode="gemstone"`. It is a **pattern name, not an exported component or tag**.
 Use it for application accent selection: a glowing current-gem trigger, one compact
-“Gemstone: selected name” caption, and all nine canonical gemstones, in `GEMSTONE_KEYS` order, in
-one row. Give the trigger's accessible name and hover title, dialog, and radiogroup the same fixed,
-localized chooser name: “Choose accent gemstone” in English. Do not append the current gem name to
-that action name; the visible caption and glyph already show the selection. Localize the caption, chooser name, and
-item labels through the application's catalog. Each item `label` supplies both its accessible name
-and title through `lr-swatch-picker`. Omit introductory copy and a second selected-name paragraph.
+“Selected accent: Emerald” heading (with the selected name updated), and all nine canonical
+gemstones, in `GEMSTONE_KEYS` order, in one row. Use that same localized selected-value label for
+the trigger's accessible name and hover title, dialog, radiogroup, and single visible heading.
+Interpolate the selected name through the application's locale catalog. Each localized item `label`
+supplies its option's accessible name and title through `lr-swatch-picker`. Omit introductory copy
+and a second selected-name row.
 
 The consuming Lit component imports these granular entries and lists
 `gemstoneSelectedGlyphStyles` in its `static styles` ahead of the CSS that follows.
@@ -4225,7 +4225,7 @@ import {
 } from '@aceshooting/lyra-ui/theme/gemstones.js';
 ```
 
-`--accent-color`, `--caption-color`, and `--text-color` are application-owned theme tokens.
+`--accent-color` and `--text-color` are application-owned theme tokens.
 `--lr-overlay-max-inline-size` lifts the popup's default 20rem cap so the 20rem palette plus the
 popover's own padding fits. Both `--lr-gemstone-selected-*` values reach the trigger glyph and the
 picker's checked glyph alike: a 0.42rem halo at 92% of the accent. Leave
@@ -4262,11 +4262,10 @@ while pressed:
 }
 .heading {
   margin: .2rem .3rem .5rem;
-  color: var(--caption-color);
+  color: var(--text-color);
   font-size: .75rem;
   font-weight: 600;
 }
-.name { color: var(--text-color); }
 .palette lr-swatch-picker {
   padding: 0 .3rem .3rem;
   --lr-swatch-picker-hit-size: 1.75rem;
@@ -4290,12 +4289,11 @@ whole trigger, so the halo follows the gem's silhouette. The focus ring belongs 
 do not add a permanent circular selection border. Leave the popover's default content padding and
 arrow intact.
 
-This Lit template assumes `selected` is a `GemstoneKey`.
-`chooseAccentGemstoneLabel` is the application's localized version of the fixed chooser action
-“Choose accent gemstone”; it names the trigger, dialog, and radiogroup. `captionLabel`
-(“Gemstone:”, with the locale's own separator) and `translateGemstone()` also come from the
-application's catalog. The selected name stays visible in the caption, including when the
-popover opens. `onAccentChange()` validates the string and updates application state:
+This Lit template assumes `selected` is a `GemstoneKey`. `selectedAccentLabel(name)` is the
+application's localized, interpolated form of “Selected accent: {name}”; `translateGemstone()`
+provides the localized name. The same resulting label appears in the single heading and names the
+trigger, dialog, and radiogroup. `onAccentChange()` validates the string and updates application
+state:
 
 ```ts
 const items = GEMSTONE_KEYS.map((key) => ({
@@ -4306,16 +4304,16 @@ const items = GEMSTONE_KEYS.map((key) => ({
 }));
 
 const name = translateGemstone(selected);
+const label = selectedAccentLabel(name);
 html`
   <lr-popover class="gemstone-accent-picker" placement="bottom-end"
-    popup-role="dialog" aria-label=${chooseAccentGemstoneLabel}>
-    <lr-icon-button slot="trigger" label=${chooseAccentGemstoneLabel}
-      title=${chooseAccentGemstoneLabel}>
+    popup-role="dialog" aria-label=${label}>
+    <lr-icon-button slot="trigger" label=${label} title=${label}>
       <span class="gem" data-lr-gemstone-selected aria-hidden="true">${gemstoneGlyph(GEMSTONES[selected].fill)}</span>
     </lr-icon-button>
     <div class="palette">
-      <p class="heading">${captionLabel} <span class="name">${name}</span></p>
-      <lr-swatch-picker mode="gemstone" aria-label=${chooseAccentGemstoneLabel}
+      <p class="heading">${label}</p>
+      <lr-swatch-picker mode="gemstone" aria-label=${label}
         .items=${items} .value=${selected}
         @lr-change=${(event: CustomEvent<{ value: string }>) => onAccentChange(event.detail.value)}>
       </lr-swatch-picker>

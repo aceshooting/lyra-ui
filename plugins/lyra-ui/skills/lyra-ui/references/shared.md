@@ -948,18 +948,16 @@ accepts absolute colors used as contrast reference surfaces, not gradients or im
 semantic surface/text pairings for content and keep the decorative layer behind it.
 
 Use the existing [gemstoneAccentPicker composition](../components/lr-swatch-picker.md#gemstoneaccentpicker--the-signature-accent-selector),
-with its localized caption, nine canonical gemstones, and shared selected-glyph treatment. Give
-the trigger's accessible name and hover title, dialog, and radiogroup the same fixed chooser name:
-“Choose accent gemstone” in English, translated through the application's locale catalog. Show the
-selected gem in the trigger glyph and the visible “Gemstone: name” caption; do not turn the action
-name into a dynamic “Accent color: name” label. Pass localized names as each swatch item's `label`, which supplies its
-accessible name and title. Keep `--lr-swatch-picker-wrap: nowrap`: desktop hit size `1.75rem` and
+with its single localized “Selected accent: {name}” heading, nine canonical gemstones, and shared
+selected-glyph treatment. Update the name when selection changes. Use the same interpolated label
+for the trigger's accessible name and hover title, dialog, radiogroup, and visible heading; do not
+add a second selected-name row. Pass localized names as each swatch item's `label`, which supplies
+its accessible name and title. Keep `--lr-swatch-picker-wrap: nowrap`: desktop hit size `1.75rem` and
 gap `.25rem`; at widths up to `30rem`, hit size `1.5rem` and gap `.125rem` (28/4px and 24/2px at a
 16px root). Leave its fill size unset. Bound the palette to the viewport and provide horizontal
 overflow for unusually narrow allocations or enlarged text; keyboard focus must bring every swatch
 into view. Do not shrink below the component's 24px floor or replace its Arrow/Home/End and RTL
-behavior. For an independent
-Shine preference, set `--lr-gemstone-selected-animation: none` on the scope shared by the trigger
+behavior. For an independent Shine preference, set `--lr-gemstone-selected-animation: none` on the scope shared by the trigger
 and picker; remove that declaration for Shine ON. OFF preserves the halo and selected accent.
 Application and OS reduced motion still take precedence; persist Shine independently from motion.
 See the composition guide for the controlled picker and preference wiring.

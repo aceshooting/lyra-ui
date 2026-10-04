@@ -20,9 +20,10 @@ in `references/index.md`; do not repeat a remembered count.
 The built-in profile is Shadcn look, Glass surfaces, Emerald accent, System mode and comfortable
 density. Use the [Lyra signature starter](references/shared/styles-and-tokens.md#lyra-signature-starter)
 for optional spotlights, compact gemstones and 44px gemstone/mode/design/flag-language controls.
-For the signature gemstone chooser, use the fixed localized action “Choose accent gemstone” on
-the trigger, dialog and radiogroup; show the selected gem in the glyph and visible caption, and
-pass localized item labels to the picker. Keep `lr-swatch-picker` generic.
+For the signature gemstone selector, show one localized “Selected accent: {name}” heading that
+updates with selection. Use that same interpolated label for the trigger's accessible name and
+hover title, dialog, and radiogroup. Show the selected gem in the glyph, pass localized item labels
+to the picker, and keep `lr-swatch-picker` generic.
 Preserve saved style and locale choices and explicit project branding. Read the installed package's
 matching guide before changing startup or persistence; older releases have different defaults.
 To retain the earlier appearance, select `look: 'lyra'`, `surface: 'solid'`, `accent: null` explicitly.

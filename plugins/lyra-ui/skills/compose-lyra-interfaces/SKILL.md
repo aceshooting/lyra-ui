@@ -12,9 +12,10 @@ properties, events, slots, parts, custom properties, peers, and import paths bef
 Shadcn, Glass, Emerald, System mode and comfortable density are the built-in appearance defaults.
 Use the [Lyra signature starter](../lyra-ui/references/shared/styles-and-tokens.md#lyra-signature-starter)
 for optional spotlights, compact gemstones and separate 44px gemstone/mode/design/flag-language
-controls. Use the fixed localized “Choose accent gemstone” action for the signature gemstone
-trigger, dialog and radiogroup, with the selected gem visible in the glyph and caption. Give each
-swatch a localized item label. Language menus retain flags and readable localized names. Prefer
+controls. The signature gemstone selector uses one localized “Selected accent: {name}” heading
+that updates with selection. Use the same interpolated label for its trigger name and hover title,
+dialog, and radiogroup; show the selected gem in the glyph and give each swatch a localized item
+label. Language menus retain flags and readable localized names. Prefer
 the installed `llms/shared/styles-and-tokens.md` guide for exact startup and persistence; older
 releases have different defaults. Preserve saved preferences and branding, and keep the canonical
 recipe in that guide. Select Lyra/Solid/`accent: null` explicitly to retain the earlier appearance.
