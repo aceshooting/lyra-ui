@@ -7170,7 +7170,7 @@ describe('standard peer navigation and scale controls', () => {
         el.shadowRoot!.querySelector<HTMLElement>(`[part~="${part}"]`)!,
       );
       const geometry = surfaces.map(surface => [surface.clientWidth, surface.clientHeight]);
-      for (const surface of surfaces) expect(toRgba(getComputedStyle(surface).backgroundColor)[3]).to.be.within(178, 180);
+      for (const surface of surfaces) expect(toRgba(getComputedStyle(surface).backgroundColor)[3]).to.be.within(152, 154);
       const scale = surfaces[1]!;
       expect(getComputedStyle(scale, '::after').borderBottomStyle).to.equal('solid');
       el.setAttribute('data-lr-surface', 'solid');

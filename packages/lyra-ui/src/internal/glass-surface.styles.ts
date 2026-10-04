@@ -71,7 +71,7 @@ export function glassSurface(selector: string, fill: CSSResult, restingFill: CSS
       }
       ${surface} {
         isolation: var(--_lr-surface-isolation, isolate);
-        --_lr-glass-effective-opacity: var(--_lr-preference-glass-opacity, max(var(--_lr-glass-parent-opacity, 0), clamp(var(--_lr-surface-min-opacity, 0), var(--lr-theme-surface-opacity, 0.7), 1)));
+        --_lr-glass-effective-opacity: var(--_lr-preference-glass-opacity, max(var(--_lr-glass-parent-opacity, 0), clamp(var(--_lr-surface-min-opacity, 0), var(--lr-theme-surface-opacity, 0.6), 1)));
         --_lr-glass-border-weight: clamp(0%, calc(var(--_lr-surface-border-weight, 285%) * var(--_lr-surface-enabled, 1) * (1 - var(--_lr-glass-effective-opacity))), var(--_lr-surface-foreground-weight, 99%));
         --_lr-glass-foreground-weight: calc(var(--_lr-surface-foreground-weight, 99%) * var(--_lr-surface-enabled, 1) * (1 - var(--_lr-glass-parent-opacity, 0)) * (1 - var(--_lr-preference-glass-opacity, 0)));
         --_lr-glass-qualified-text-quiet: color-mix(in srgb, var(--_lr-glass-original-text-quiet, var(--lr-color-text)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
@@ -82,12 +82,15 @@ export function glassSurface(selector: string, fill: CSSResult, restingFill: CSS
         --lr-color-border-strong: var(--_lr-glass-qualified-border-strong, var(--_lr-glass-original-border-strong));
         --_lr-glass-brand-text: color-mix(in srgb, var(--lr-color-brand), var(--lr-color-text) var(--_lr-glass-foreground-weight));
         --_lr-glass-danger-text: color-mix(in srgb, var(--lr-color-danger), var(--lr-color-text) var(--_lr-glass-foreground-weight));
+        /* Dark material needs a deeper fill at lower alpha to keep light text readable over bright backdrops. */
+        --_lr-glass-dark-fill-weight: clamp(20%, calc(var(--_lr-glass-effective-opacity) * 800% - 460%), 100%);
+        --_lr-glass-fill: light-dark(${fill}, color-mix(in srgb, ${fill} var(--_lr-glass-dark-fill-weight), var(--_lr-glass-dark-anchor)));
         --_lr-glass-background: color-mix(
           in srgb,
           ${restingFill} calc((1 - var(--_lr-surface-enabled, 1) * (1 - var(--_lr-preference-glass-opacity, 0))) * 100%),
           color-mix(
             in srgb,
-            ${fill} calc(var(--_lr-glass-effective-opacity) * 100%),
+            var(--_lr-glass-fill) calc(var(--_lr-glass-effective-opacity) * 100%),
             transparent
           )
         );

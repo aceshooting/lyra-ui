@@ -116,13 +116,13 @@ describe('glass surface composition', () => {
     inner.className = 'surface';
     inner.setAttribute('data-lr-surface', 'glass');
     shadow.append(inner);
-    expect(backgroundPixel(host)[3]).to.be.within(178, 179);
+    expect(backgroundPixel(host)[3]).to.be.within(152, 154);
     expect(getComputedStyle(host, '::before').backdropFilter).to.include('blur(12px)');
     expect(backgroundPixel(inner)[3]).to.equal(255);
     expect(getComputedStyle(inner, '::before').backdropFilter).to.match(/^(none|blur\(0px\))/);
     host.setAttribute('data-lr-surface', 'solid');
     expect(backgroundPixel(host)[3]).to.equal(255);
-    expect(backgroundPixel(inner)[3]).to.be.within(178, 179);
+    expect(backgroundPixel(inner)[3]).to.be.within(152, 154);
     expect(getComputedStyle(inner, '::before').backdropFilter).to.include('blur(12px)');
   });
 
@@ -136,19 +136,19 @@ describe('glass surface composition', () => {
     inner.setAttribute('data-lr-surface', 'glass');
     outer.append(wrapper);
     wrapper.append(inner);
-    expect(backgroundPixel(inner)[3]).to.be.within(178, 179);
+    expect(backgroundPixel(inner)[3]).to.be.within(152, 154);
     expect(getComputedStyle(inner, '::before').backdropFilter).to.include('blur(12px)');
     wrapper.setAttribute('data-lr-surface', 'glass');
     expect(backgroundPixel(inner)[3]).to.equal(255);
     expect(getComputedStyle(inner, '::before').backdropFilter).to.include('blur(0px)');
     host.setAttribute('data-lr-surface', 'solid');
-    expect(backgroundPixel(inner)[3]).to.be.within(178, 179);
+    expect(backgroundPixel(inner)[3]).to.be.within(152, 154);
     expect(getComputedStyle(inner, '::before').backdropFilter).to.include('blur(12px)');
     wrapper.setAttribute('data-lr-contrast', 'more');
     expect(backgroundPixel(inner)[3]).to.equal(255);
     expect(getComputedStyle(inner, '::before').backdropFilter).to.equal('none');
     wrapper.removeAttribute('data-lr-contrast');
-    expect(backgroundPixel(inner)[3]).to.be.within(178, 179);
+    expect(backgroundPixel(inner)[3]).to.be.within(152, 154);
     expect(getComputedStyle(inner, '::before').backdropFilter).to.include('blur(12px)');
   });
 
@@ -163,16 +163,16 @@ describe('glass surface composition', () => {
   it('uses the built-in Glass default when no surface scope is selected', async function () {
     if (!CSS.supports('backdrop-filter', 'blur(1px)')) this.skip();
     const { outer } = await surfaces();
-    expect(backgroundPixel(outer)[3]).to.be.within(178, 179);
+    expect(backgroundPixel(outer)[3]).to.be.within(152, 154);
     expect(getComputedStyle(outer, '::before').content).to.not.equal('none');
     expect(getComputedStyle(outer, '::before').backdropFilter).to.include('blur(12px)');
   });
 
-  it('paints the sheetless default at 70% and honors author opacity from transparent to opaque', async function () {
+  it('paints the sheetless default at 60% and honors author opacity from transparent to opaque', async function () {
     if (!CSS.supports('backdrop-filter', 'blur(1px)')) this.skip();
     document.adoptedStyleSheets = previousSheets;
     const { outer } = await surfaces();
-    expect(backgroundPixel(outer)[3]).to.be.within(178, 179);
+    expect(backgroundPixel(outer)[3]).to.be.within(152, 154);
     expect(getComputedStyle(outer, '::before').backdropFilter).to.include('blur(12px)');
     for (const [opacity, minimumAlpha, maximumAlpha] of [[0, 0, 0], [0.35, 89, 90], [0.7, 178, 179], [1, 255, 255]] as const) {
       outer.style.setProperty('--lr-theme-surface-opacity', String(opacity));
@@ -180,7 +180,7 @@ describe('glass surface composition', () => {
     }
     outer.style.setProperty('--lr-theme-surface-opacity', 'initial');
     outer.style.setProperty('--_lr-surface-min-opacity', 'initial');
-    expect(backgroundPixel(outer)[3]).to.be.within(178, 179);
+    expect(backgroundPixel(outer)[3]).to.be.within(152, 154);
   });
 
   it('resolves component-local glass controls at the painted surface', async function () {
@@ -203,7 +203,7 @@ describe('glass surface composition', () => {
     outer.scrollTop = 240;
     expect(outer.scrollTop).to.equal(240);
     expect(backgroundPixel(outer)).to.deep.equal(fill);
-    expect(fill[3]).to.be.within(178, 179);
+    expect(fill[3]).to.be.within(152, 154);
     expect(getComputedStyle(outer, '::before').backgroundColor).to.equal('rgba(0, 0, 0, 0)');
   });
 

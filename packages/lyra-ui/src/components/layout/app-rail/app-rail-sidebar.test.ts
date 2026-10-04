@@ -60,7 +60,7 @@ describe('app rail sidebar frame', () => {
     expect(style.borderInlineEndWidth).to.equal(resolvedInShadow(el, 'border: var(--lr-border-width-thin) solid', 'border-top-width'));
     expect(parseFloat(style.borderInlineEndWidth)).to.be.greaterThan(0);
     const expectedFill = toRgba(resolvedInShadow(el, 'background-color: var(--lr-color-surface)', 'background-color'));
-    expectedFill[3] = toRgba('rgb(255 255 255 / 0.7)')[3];
+    expectedFill[3] = toRgba('rgb(255 255 255 / 0.6)')[3];
     expect(toRgba(style.backgroundColor)).to.deep.equal(expectedFill);
     expect(getComputedStyle(el).display).to.equal('block');
     el.setAttribute('frame', 'floating'); await el.updateComplete;
@@ -104,12 +104,12 @@ describe('app rail sidebar frame', () => {
     const nested = el.querySelector('lr-menubar')!;
     await (nested as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
     const nestedSurface = nested.shadowRoot!.querySelector('[part="base"]')!;
-    expect(toRgba(getComputedStyle(nestedSurface).backgroundColor)[3]).to.be.within(178, 180);
+    expect(toRgba(getComputedStyle(nestedSurface).backgroundColor)[3]).to.be.within(152, 154);
     expect(getComputedStyle(nestedSurface, '::before').backdropFilter).to.include('blur(12px)');
     el.style.setProperty('--lr-app-rail-bg', 'rgb(12, 34, 56)');
     expect(getComputedStyle(surface).backgroundColor).to.equal('rgb(12, 34, 56)');
     mobile(el); el.open = true; await el.updateComplete;
-    expect(toRgba(getComputedStyle(el.shadowRoot!.querySelector('[part="panel"]')!).backgroundColor)[3]).to.be.within(178, 180);
+    expect(toRgba(getComputedStyle(el.shadowRoot!.querySelector('[part="panel"]')!).backgroundColor)[3]).to.be.within(152, 154);
   });
 
   for (const direction of ['ltr', 'rtl']) it(`aligns the resizer with the card edge in ${direction}`, async () => {

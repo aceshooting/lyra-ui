@@ -2,13 +2,14 @@
 @layer lr-theme-preset.look, lr-theme-preset.density, lr-theme-preset.surface, lr-theme-preset.accent, lr-theme-preset.mode;
 @layer lr-theme-preset.surface {
   :root {
-    --lr-theme-surface-opacity: 0.7;
+    --lr-theme-surface-opacity: 0.6;
   }
   :root, :host {
     --_lr-media-clear-scrim-start: 0.78;
     --_lr-media-clear-scrim-end: 0.92;
     --_lr-media-clear-fill: rgb(255 255 255 / 0.08);
     --_lr-media-clear-text: #ffffff;
+    --_lr-glass-dark-anchor: #000000;
   }
   [data-lr-surface='glass'] {
     --_lr-surface-installed: 1;
@@ -110,7 +111,7 @@
       }
       :where(.lr-surface-chrome) {
         isolation: var(--_lr-surface-isolation, isolate);
-        --_lr-glass-effective-opacity: var(--_lr-preference-glass-opacity, max(var(--_lr-glass-parent-opacity, 0), clamp(var(--_lr-surface-min-opacity, 0), var(--lr-theme-surface-opacity, 0.7), 1)));
+        --_lr-glass-effective-opacity: var(--_lr-preference-glass-opacity, max(var(--_lr-glass-parent-opacity, 0), clamp(var(--_lr-surface-min-opacity, 0), var(--lr-theme-surface-opacity, 0.6), 1)));
         --_lr-glass-border-weight: clamp(0%, calc(var(--_lr-surface-border-weight, 285%) * var(--_lr-surface-enabled, 1) * (1 - var(--_lr-glass-effective-opacity))), var(--_lr-surface-foreground-weight, 99%));
         --_lr-glass-foreground-weight: calc(var(--_lr-surface-foreground-weight, 99%) * var(--_lr-surface-enabled, 1) * (1 - var(--_lr-glass-parent-opacity, 0)) * (1 - var(--_lr-preference-glass-opacity, 0)));
         --_lr-glass-qualified-text-quiet: color-mix(in srgb, var(--_lr-glass-original-text-quiet, var(--lr-color-text)), var(--lr-color-text) var(--_lr-glass-foreground-weight));
@@ -121,12 +122,15 @@
         --lr-color-border-strong: var(--_lr-glass-qualified-border-strong, var(--_lr-glass-original-border-strong));
         --_lr-glass-brand-text: color-mix(in srgb, var(--lr-color-brand), var(--lr-color-text) var(--_lr-glass-foreground-weight));
         --_lr-glass-danger-text: color-mix(in srgb, var(--lr-color-danger), var(--lr-color-text) var(--_lr-glass-foreground-weight));
+        /* Dark material needs a deeper fill at lower alpha to keep light text readable over bright backdrops. */
+        --_lr-glass-dark-fill-weight: clamp(20%, calc(var(--_lr-glass-effective-opacity) * 800% - 460%), 100%);
+        --_lr-glass-fill: light-dark(var(--lr-surface-background, var(--lr-theme-color-surface-container-high, var(--lr-theme-color-surface-overlay, Canvas))), color-mix(in srgb, var(--lr-surface-background, var(--lr-theme-color-surface-container-high, var(--lr-theme-color-surface-overlay, Canvas))) var(--_lr-glass-dark-fill-weight), var(--_lr-glass-dark-anchor)));
         --_lr-glass-background: color-mix(
           in srgb,
           var(--lr-surface-background, var(--lr-theme-color-surface-container-high, var(--lr-theme-color-surface-overlay, Canvas))) calc((1 - var(--_lr-surface-enabled, 1) * (1 - var(--_lr-preference-glass-opacity, 0))) * 100%),
           color-mix(
             in srgb,
-            var(--lr-surface-background, var(--lr-theme-color-surface-container-high, var(--lr-theme-color-surface-overlay, Canvas))) calc(var(--_lr-glass-effective-opacity) * 100%),
+            var(--_lr-glass-fill) calc(var(--_lr-glass-effective-opacity) * 100%),
             transparent
           )
         );

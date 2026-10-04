@@ -1130,11 +1130,13 @@ forced colors retain solid fills. Solid surfaces use `backdrop-filter: none`; fo
 `Canvas`. Offer a solid choice wherever the application offers glass, since reduced-transparency
 media-query support varies between browsers.
 
-Regular glass defaults to 70% opacity with a 12px blur clamped to 16px.
+Regular glass defaults to 60% opacity with a 12px blur clamped to 16px.
 The public `--lr-theme-surface-opacity` input accepts 0 through 1. Lower opacity exposes more
-of the backdrop; the default foreground qualification covers 70%, while a custom lower setting
+of the backdrop; the default foreground qualification covers 60%, while a custom lower setting
 cannot guarantee contrast against every backdrop. Solid and accessibility preferences retain
 opaque fills regardless of this input.
+Dark Glass deepens the selected fill at opacity below 70% so light foregrounds remain readable
+against bright backdrops; at 70% and above, the selected fill keeps its original color.
 Necessary control borders use the effective painted opacity: their glass adjustment grows as
 transparency increases and disappears at 100% opacity. Ordinary and strong borders share this
 adjustment; decorative borders and explicit component border overrides keep their own tokens.
@@ -1148,10 +1150,10 @@ controls use their solid border colors while preserving the enclosing edge again
 Filled accent interiors retain qualification. Native descendants retain inherited public color
 aliases. Custom translucent content fills require the author to choose suitable control borders.
 A design panel can offer a Glass opacity range from 0–100%, shown when the selected surface is
-Glass. Start and reset it at 70%; convert the displayed percentage to the public token's 0–1 range.
+Glass. Start and reset it at 60%; convert the displayed percentage to the public token's 0–1 range.
 Apply this CSS input independently of look overrides: `setLyraStyle()` does not accept surface
 inputs in its `overrides` allowlist. Persist the percentage in the application's own settings and
-apply it before first paint, including after restoring those settings. Reset the app setting to 70
+apply it before first paint, including after restoring those settings. Reset the app setting to 60
 and reapply it. Native `.lr-surface-chrome` wrappers and eligible component chrome consume the
 same input:
 
@@ -1162,7 +1164,7 @@ function applyGlassOpacity(percent) {
   document.documentElement.style.setProperty('--lr-theme-surface-opacity', String(opacity));
 }
 
-applyGlassOpacity(70); // Default and reset value; apply saved app settings before first paint.
+applyGlassOpacity(60); // Default and reset value; apply saved app settings before first paint.
 ```
 
 Scrolling rail, popup, modal-panel and selection-toolbar surfaces keep a stationary decorative blur layer;

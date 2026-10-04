@@ -74,13 +74,22 @@ describe('native chrome material', () => {
       for (const fill of ['--lr-theme-color-surface-overlay', '--lr-theme-color-surface-container-high', '--lr-theme-color-surface-container-highest']) {
         (surface as HTMLElement).style.setProperty('--lr-surface-background', `var(${fill}, var(--lr-theme-color-surface-overlay))`);
         const paint = getComputedStyle(surface).backgroundColor;
-        expect(toRgba(paint)[3], `${look}/${mode}/${fill}: opacity`).to.be.within(178, 180);
+        expect(toRgba(paint)[3], `${look}/${mode}/${fill}: opacity`).to.be.within(152, 154);
         for (const backdrop of ['black', 'white']) {
           const background = composite(paint, backdrop);
           for (const token of ['--lr-color-text', '--lr-color-text-quiet']) expect(contrastRatio(resolvedColorToken(surface, token), background), `${look}/${mode}/${fill}/${token}/${backdrop}`).to.be.at.least(4.5);
           const highlighted = composite('rgb(255 255 255 / 0.12)', background);
           for (const token of ['--lr-color-border', '--lr-color-border-strong', '--lr-focus-ring-color']) expect(contrastRatio(resolvedColorToken(surface, token), highlighted), `${look}/${mode}/${fill}/${token}/${backdrop}`).to.be.at.least(3);
         }
+      }
+      if (mode === 'dark') {
+        scope.style.setProperty('--lr-theme-surface-opacity', '0.7');
+        const selected = resolvedColorToken(surface, '--lr-theme-color-surface-overlay');
+        (surface as HTMLElement).style.setProperty('--lr-surface-background', selected);
+        const painted = toRgba(getComputedStyle(surface).backgroundColor);
+        const original = toRgba(selected);
+        for (let channel = 0; channel < 3; channel++) expect(painted[channel]).to.be.closeTo(original[channel]!, 1);
+        expect(painted[3]).to.be.within(178, 180);
       }
     });
   }
@@ -91,14 +100,14 @@ describe('native chrome material', () => {
     const fixed = surface.firstElementChild!;
     expect(getComputedStyle(surface).position).to.equal('fixed');
     expect(getComputedStyle(surface).color).to.equal('rgb(20, 30, 40)');
-    expect(toRgba(getComputedStyle(surface).backgroundColor)).to.deep.equal(toRgba('rgb(250 240 230 / 0.7)'));
+    expect(toRgba(getComputedStyle(surface).backgroundColor)).to.deep.equal(toRgba('rgb(250 240 230 / 0.6)'));
     expect(getComputedStyle(surface, '::before').backdropFilter).to.include('blur(2px)');
     expect(fixed.getBoundingClientRect().top).to.equal(7);
     expect(fixed.getBoundingClientRect().left).to.equal(9);
     const scrollport = surface.lastElementChild as HTMLElement;
     scrollport.scrollTop = 100;
     expect(scrollport.scrollTop).to.equal(100);
-    expect(toRgba(getComputedStyle(surface).backgroundColor)[3]).to.be.within(178, 180);
+    expect(toRgba(getComputedStyle(surface).backgroundColor)[3]).to.be.within(152, 154);
   });
 
   it('suppresses nested material and restores Solid and explicit increased contrast', async () => {
@@ -120,7 +129,7 @@ describe('native chrome material', () => {
     const solid = await fixture<HTMLDivElement>(html`<div class="lr-surface-chrome" data-lr-surface="solid"><div class="lr-surface-chrome" data-lr-surface="glass">Glass below Solid</div></div>`);
     const child = solid.firstElementChild!;
     expect(toRgba(getComputedStyle(solid).backgroundColor)[3]).to.equal(255);
-    expect(toRgba(getComputedStyle(child).backgroundColor)[3]).to.be.within(178, 180);
+    expect(toRgba(getComputedStyle(child).backgroundColor)[3]).to.be.within(152, 154);
     expect(getComputedStyle(child, '::before').backdropFilter).to.include('blur(12px)');
     solid.setAttribute('data-lr-surface', 'glass');
     expect(toRgba(getComputedStyle(child).backgroundColor)[3]).to.equal(255);
@@ -144,7 +153,7 @@ describe('native chrome material', () => {
       const probe = scope.querySelector('[data-probe]')!;
       const alpha = toRgba(getComputedStyle(probe).backgroundColor)[3];
       if (frosted) {
-        expect(alpha).to.be.within(178, 180);
+        expect(alpha).to.be.within(152, 154);
         expect(getComputedStyle(probe, '::before').backdropFilter).to.include('blur(12px)');
       } else {
         expect(alpha).to.equal(255);
@@ -169,16 +178,16 @@ describe('native chrome material', () => {
         expect(getComputedStyle(promoted, '::before').content).to.equal('none');
         expect(getComputedStyle(promoted, '::before').backdropFilter).to.equal('none');
         promoted.setAttribute('data-lr-surface', 'glass');
-        expect(toRgba(getComputedStyle(promoted).backgroundColor)[3]).to.be.within(178, 180);
+        expect(toRgba(getComputedStyle(promoted).backgroundColor)[3]).to.be.within(152, 154);
         expect(getComputedStyle(promoted, '::before').backdropFilter).to.include('blur(12px)');
         promoted.setAttribute('data-lr-contrast', 'more');
         expect(toRgba(getComputedStyle(promoted).backgroundColor)[3]).to.equal(255);
         expect(getComputedStyle(promoted, '::before').backdropFilter).to.equal('none');
         promoted.removeAttribute('data-lr-contrast');
-        expect(toRgba(getComputedStyle(promoted).backgroundColor)[3]).to.be.within(178, 180);
+        expect(toRgba(getComputedStyle(promoted).backgroundColor)[3]).to.be.within(152, 154);
         expect(getComputedStyle(promoted, '::before').backdropFilter).to.include('blur(12px)');
         outer.setAttribute('data-lr-surface', 'glass');
-        expect(toRgba(getComputedStyle(promoted).backgroundColor)[3]).to.be.within(178, 180);
+        expect(toRgba(getComputedStyle(promoted).backgroundColor)[3]).to.be.within(152, 154);
         expect(getComputedStyle(promoted, '::before').backdropFilter).to.include('blur(12px)');
         promoted.removeAttribute('data-lr-surface');
         outer.setAttribute('data-lr-surface', 'solid');

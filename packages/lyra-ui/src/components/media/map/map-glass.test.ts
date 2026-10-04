@@ -53,7 +53,7 @@ describe('map floating chrome material', () => {
       const { host, controls, surfaces } = await chromeFixture(look, mode);
       for (const surface of surfaces) {
         const paint = getComputedStyle(surface).backgroundColor;
-        expect(toRgba(paint)[3]).to.be.within(178, 180);
+        expect(toRgba(paint)[3]).to.be.within(152, 154);
         const layer = surface.querySelector<HTMLElement>(':scope > .glass-scroll-layer') ?? surface;
         expect(getComputedStyle(layer, '::before').backdropFilter).to.include('blur(');
         for (const backdrop of ['black', 'white']) {

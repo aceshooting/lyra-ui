@@ -88,7 +88,7 @@ test('authored look validation rejects shapes the runtime cannot accept', () => 
 test('default glass qualifies text, control edges and focus across all built-in looks and named accents', () => {
   const model = readStyleModel(packageDir);
   const glass = JSON.parse(readFileSync(new URL('../tokens/surfaces/glass.json', import.meta.url), 'utf8'));
-  assert.equal(glass.opacity, 0.7, 'default glass uses the authored 70% opacity');
+  assert.equal(glass.opacity, 0.6, 'default glass uses the authored 60% opacity');
   assert.equal(glass.minimumOpacity, 0, 'explicit opacity can reach zero');
   const highlightAlpha = Number(glass.highlight.match(/\/ ([\d.]+)\)/)[1]);
   const rgb = value => {
@@ -116,7 +116,9 @@ test('default glass qualifies text, control edges and focus across all built-in 
     const normal = read('text-normal');
     const qualify = color => mix(color, normal, glass.foregroundWeight);
     for (const surface of ['surface-default', 'surface-raised', 'surface-overlay', 'surface-container-high', 'surface-container-highest']) {
-      const backgrounds = [0, 255].map(backdrop => mix([backdrop, backdrop, backdrop], read(surface), glass.opacity));
+      const fillWeight = Math.max(0.2, Math.min(1, glass.opacity * 8 - 4.6));
+      const fill = mode === 'dark' ? mix(rgb(glass.darkFillAnchor), read(surface), fillWeight) : read(surface);
+      const backgrounds = [0, 255].map(backdrop => mix([backdrop, backdrop, backdrop], fill, glass.opacity));
       const roles = [['text-normal', normal, 4.5], ['text-quiet', qualify(read('text-quiet')), 4.5], ['action', qualify(read('brand-fill-loud')), 4.5], ['control', mix(read('surface-border'), normal, Math.min(glass.foregroundWeight, glass.borderWeight * (1 - glass.opacity))), 3], ['control-strong', mix(read('border-strong'), normal, Math.min(glass.foregroundWeight, glass.borderWeight * (1 - glass.opacity))), 3], ['focus', qualify(read('focus')), 3]];
       for (const [role, color, minimum] of roles) {
         const measured = backgrounds.map(background => role.startsWith('control') || role === 'focus' ? mix(background, [255, 255, 255], highlightAlpha) : background);

@@ -1,5 +1,5 @@
 {
-  "opacity": 0.7,
+  "opacity": 0.6,
   "minimumOpacity": 0,
   "blur": "12px",
   "maximumBlur": "16px",
@@ -7,6 +7,7 @@
   "highlight": "rgb(255 255 255 / 0.12)",
   "foregroundWeight": 0.99,
   "borderWeight": 2.85,
+  "darkFillAnchor": "#000000",
   "clearMedia": {
     "scrimStart": 0.78,
     "scrimEnd": 0.92,

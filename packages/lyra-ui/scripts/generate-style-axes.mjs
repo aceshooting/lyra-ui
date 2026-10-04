@@ -16,6 +16,7 @@ if (!glassPattern.test(tokenTemplate)) throw new Error('Intrinsic glass default 
 const glassDefaults = `    --_lr-surface-default-blur: ${glassData.blur};
     --_lr-surface-default-maximum-blur: ${glassData.maximumBlur};
     --_lr-surface-default-highlight: ${glassData.highlight};
+    --_lr-glass-dark-anchor: ${glassData.darkFillAnchor};
 `;
 const tokenSource = tokenTemplate.replace(glassPattern, `$1${glassDefaults}$2`);
 const darkMarker = tokenSource.indexOf('/* @media (prefers-color-scheme: dark) */');

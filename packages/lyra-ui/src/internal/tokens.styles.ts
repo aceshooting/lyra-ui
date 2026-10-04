@@ -75,6 +75,7 @@ const baseTokens = css`
     --_lr-surface-default-blur: 12px;
     --_lr-surface-default-maximum-blur: 16px;
     --_lr-surface-default-highlight: rgb(255 255 255 / 0.12);
+    --_lr-glass-dark-anchor: #000000;
     /* glass defaults: end */
     --lr-color-surface: var(--lr-theme-color-surface-default, #ffffff);
     --lr-color-surface-raised: var(--lr-theme-color-surface-raised, #fafafa);

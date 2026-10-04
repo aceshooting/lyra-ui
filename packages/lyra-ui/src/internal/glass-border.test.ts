@@ -134,8 +134,10 @@ describe('opacity-aware glass control borders', () => {
           expect(toRgba(getComputedStyle(surface).backgroundColor)[3]).to.equal(255);
           expect(border()).to.deep.equal(original());
         } else {
-          expect(toRgba(getComputedStyle(surface).backgroundColor)[3]).to.be.within(178, 179);
-          expect(Math.abs(border()[0] - toRgba(resolvedColorToken(surface, '--lr-color-text'))[0])).to.be.greaterThan(5);
+          expect(toRgba(getComputedStyle(surface).backgroundColor)[3]).to.be.within(152, 154);
+          for (const backdrop of ['black', 'white']) {
+            expect(contrastRatio(resolvedColorToken(surface, '--lr-color-border'), composite(getComputedStyle(surface).backgroundColor, backdrop))).to.be.at.least(3);
+          }
           for (const opacity of [0, 0.35, 0.7, 1]) {
             surface.style.setProperty('--lr-theme-surface-opacity', String(opacity));
             expect(toRgba(getComputedStyle(surface).backgroundColor)[3]).to.be.within(Math.floor(opacity * 255), Math.ceil(opacity * 255));
@@ -196,7 +198,7 @@ describe('opacity-aware glass control borders', () => {
       await popup.updateComplete;
       await popup.show();
       const popupSurface = popup.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
-      expect(toRgba(getComputedStyle(popupSurface).backgroundColor)[3]).to.be.within(178, 179);
+      expect(toRgba(getComputedStyle(popupSurface).backgroundColor)[3]).to.be.within(152, 154);
       expect(Math.abs(toRgba(resolvedColorToken(popupSurface, '--lr-color-border'))[0] - toRgba(resolvedColorToken(chrome, '--_lr-glass-original-border'))[0])).to.be.greaterThan(50);
       await popup.hide();
     });
