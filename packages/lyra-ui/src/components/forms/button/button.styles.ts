@@ -51,9 +51,9 @@ export const styles = css`
     --_lr-button-accent-on-fill: var(--lr-color-on-loud);
     /* What colour/border-colour THIS appearance is actually painting at rest, mirrored into a
        private var exactly the way --_lr-button-hover-base tracks the resting fill below. The
-       shared hover rule reads these as its --lr-button-hover-color/-border fallback, so exposing
-       those two hooks changes nothing when they are unset -- hovering still shows the same
-       colour/border every appearance already paints. This bare default covers "filled" (which
+       shared hover rule reads these as its text/border fallback. Quiet and chromatic plain text
+       have private contrast mixes; other tiers retain their resting foreground. This bare
+       default covers "filled" (which
        overrides neither) and a host whose appearance attribute was removed by hand. */
     --_lr-button-resolved-color: var(--lr-button-on-fill, var(--_lr-button-on-fill));
     --_lr-button-resolved-border: var(--lr-button-border, var(--_lr-button-border));
@@ -124,8 +124,9 @@ export const styles = css`
     --_lr-button-resolved-color: var(--lr-button-accent, var(--_lr-button-accent));
     --_lr-button-resolved-border: transparent;
   }
-  /* Chromatic plain text moves toward body text faster than its pointer fill, preserving
-     contrast as the fill approaches the foreground. Neutral already uses body text. */
+  /* Quiet and chromatic plain text move toward body text faster than their pointer fill,
+     preserving contrast. Neutral plain already uses body text. */
+  :host([appearance="quiet"]),
   :host([appearance="plain"][variant]:not([variant="neutral"])) {
     --_lr-button-hover-color: color-mix(in oklab, var(--_lr-button-resolved-color), var(--lr-color-text) min(100%, calc(2 * var(--lr-color-mix-hover))));
     --_lr-button-active-color: color-mix(in oklab, var(--_lr-button-resolved-color), var(--lr-color-text) min(100%, calc(2 * var(--lr-color-mix-active))));
@@ -273,7 +274,7 @@ export const styles = css`
       --lr-button-hover-bg,
       var(--_lr-button-hover-background)
     );
-    /* Plain chromatic text has a qualified pointer foreground; the remaining appearances
+    /* Quiet and chromatic plain text have a qualified pointer foreground; other appearances
        retain their resting foreground. The public hover hook also owns the pressed state.
        Link keeps its own higher-specificity colour-mix rule. */
     color: var(--lr-button-hover-color, var(--_lr-button-hover-color, var(--_lr-button-resolved-color)));

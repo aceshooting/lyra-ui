@@ -2291,7 +2291,7 @@ press reads as more than a hover. `appearance="link"` moves its text colour by t
 instead of taking a background. `--lr-button-hover-color` and `--lr-button-hover-border` are the
 text/border counterparts, letting e.g. `appearance="quiet"` (which has its own resting
 `--lr-button-quiet-color`/`-border`) theme its hover state independently. Both are **undeclared by
-default**. Chromatic `plain` text moves toward body text during hover/press to retain contrast
+default**. `quiet` and chromatic `plain` text move toward body text during hover/press to retain contrast
 against the moving fill; the other appearances keep their resting text colour. The hover colour
 override also applies while pressed, and the border fallback remains the resting border colour.
 `appearance="link"` ignores `--lr-button-hover-color` and renders without a border, so

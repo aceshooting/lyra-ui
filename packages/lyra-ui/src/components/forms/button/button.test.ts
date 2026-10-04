@@ -4,6 +4,7 @@ import type { LyraButton } from "./button.class.js";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { setReducedMotion } from "../../../../test/wtr-media.js";
 import { sendKeys } from "@web/test-runner-commands";
+import { contrastRatio, resolvedColorToken, toRgba } from '../../../../test/color-contrast.js';
 
 describe("lr-button", () => {
   it("emits a cancelable lr-invalid alias and forwards its veto to the native invalid event", async () => {
@@ -2714,7 +2715,7 @@ describe("--lr-button-hover-color / --lr-button-hover-border", () => {
   ] as const;
 
   for (const appearance of appearances) {
-    it(`keeps appearance="${appearance}"'s resting text/border colour on hover when unset (regression)`, async () => {
+    it(`preserves appearance="${appearance}"'s default hover foreground and border treatment`, async () => {
       const el = (await fixture(
         html`<lr-button
           appearance=${appearance}
@@ -2731,9 +2732,12 @@ describe("--lr-button-hover-color / --lr-button-hover-border", () => {
           base,
           `${appearance} button never received the pointer hover state`
         );
-        expect(getComputedStyle(base).color, `${appearance} hover color`).to.equal(
-          restingColor
-        );
+        if (appearance === 'quiet') {
+          await waitUntil(() => getComputedStyle(base).color !== restingColor, 'quiet hover foreground never rendered');
+          expect(getComputedStyle(base).color, 'quiet hover foreground preserves contrast').to.not.equal(restingColor);
+        } else {
+          expect(getComputedStyle(base).color, `${appearance} hover color`).to.equal(restingColor);
+        }
         expect(
           getComputedStyle(base).borderColor,
           `${appearance} hover border color`
@@ -2840,6 +2844,74 @@ describe("--lr-button-hover-color / --lr-button-hover-border", () => {
       await resetMouse();
     }
   });
+});
+
+describe('quiet button pointer contrast', () => {
+  for (const mode of ['light', 'dark'] as const) {
+    for (const variant of ['neutral', 'brand', 'success', 'warning', 'danger'] as const) {
+      it(`keeps ${mode} ${variant} quiet hover and press text at 4.5:1 while preserving rest`, async () => {
+        const el = await fixture<LyraButton>(html`<lr-button appearance="quiet" variant=${variant} data-lr-theme=${mode} style="--lr-transition-fast: 0s">Save</lr-button>`);
+        await el.updateComplete;
+        const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+        const resting = getComputedStyle(base).color;
+        const restingBorder = getComputedStyle(base).borderColor;
+        const surface = resolvedColorToken(el.shadowRoot!, '--lr-color-surface');
+        expect(toRgba(resting), 'quiet keeps its muted resting foreground').to.deep.equal(toRgba(resolvedColorToken(el.shadowRoot!, '--lr-color-text-quiet')));
+        expect(toRgba(getComputedStyle(base).backgroundColor)[3], 'quiet remains transparent at rest').to.equal(0);
+        expect(contrastRatio(resting, surface), `${mode} resting contrast`).to.be.at.least(4.5);
+        try {
+          await hoverUntilMatched(base, `${mode} ${variant} quiet button never received hover`);
+          await waitUntil(() => toRgba(getComputedStyle(base).backgroundColor)[3] === 255, 'quiet hover fill never rendered');
+          const hover = { color: getComputedStyle(base).color, background: getComputedStyle(base).backgroundColor };
+          expect(contrastRatio(hover.color, hover.background), `${mode} ${variant} hover contrast`).to.be.at.least(4.5);
+          expect(hover.color, 'hover foreground moves away from muted rest').to.not.equal(resting);
+          expect(getComputedStyle(base).borderColor, 'hover border remains unchanged').to.equal(restingBorder);
+          await sendMouse({ type: 'down' });
+          await waitUntil(() => base.matches(':active') && getComputedStyle(base).backgroundColor !== hover.background, 'quiet press fill never rendered');
+          const pressed = getComputedStyle(base);
+          expect(contrastRatio(pressed.color, pressed.backgroundColor), `${mode} ${variant} pressed contrast`).to.be.at.least(4.5);
+          expect(pressed.color, 'press foreground moves beyond hover').to.not.equal(hover.color);
+          expect(pressed.borderColor, 'press border remains unchanged').to.equal(restingBorder);
+        } finally {
+          await resetMouse();
+        }
+        await waitUntil(() => !base.matches(':hover, :active'), 'quiet pointer state did not clear');
+        expect(getComputedStyle(base).color, 'resting foreground returns unchanged').to.equal(resting);
+        expect(toRgba(getComputedStyle(base).backgroundColor)[3], 'resting fill returns transparent').to.equal(0);
+      });
+    }
+
+    it(`preserves ${mode} inherited quiet appearance and public hover overrides in both pointer states`, async () => {
+      const wrapper = await fixture<HTMLElement>(html`<div style="--lr-button-quiet-color: rgb(80, 100, 120); --lr-button-quiet-border: rgb(70, 80, 90);"><lr-button appearance="quiet" data-lr-theme=${mode} style="--lr-transition-fast: 0s">Save</lr-button></div>`);
+      const el = wrapper.querySelector<LyraButton>('lr-button')!;
+      await el.updateComplete;
+      const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+      expect(getComputedStyle(base).color, 'inherited appearance foreground reaches rest').to.equal('rgb(80, 100, 120)');
+      expect(getComputedStyle(base).borderColor).to.equal('rgb(70, 80, 90)');
+      try {
+        await hoverUntilMatched(base, 'retuned quiet button never received hover');
+        await waitUntil(() => getComputedStyle(base).color !== 'rgb(80, 100, 120)', 'retuned quiet pointer foreground never rendered');
+        const defaultPointer = getComputedStyle(base).color;
+        wrapper.style.setProperty('--lr-button-quiet-color', 'rgb(100, 120, 140)');
+        await waitUntil(() => getComputedStyle(base).color !== defaultPointer, 'quiet appearance override did not retune the pointer foreground');
+        wrapper.style.setProperty('--lr-button-hover-color', 'rgb(10, 20, 30)');
+        wrapper.style.setProperty('--lr-button-hover-border', 'rgb(40, 50, 60)');
+        await waitUntil(() => getComputedStyle(base).color === 'rgb(10, 20, 30)', 'inherited public hover foreground never rendered');
+        expect(getComputedStyle(base).borderColor).to.equal('rgb(40, 50, 60)');
+        const hoverFill = getComputedStyle(base).backgroundColor;
+        await sendMouse({ type: 'down' });
+        await waitUntil(() => base.matches(':active') && getComputedStyle(base).backgroundColor !== hoverFill, 'retuned quiet press never rendered');
+        expect(getComputedStyle(base).color, 'public hover foreground also owns press').to.equal('rgb(10, 20, 30)');
+        expect(getComputedStyle(base).borderColor).to.equal('rgb(40, 50, 60)');
+        el.style.setProperty('--lr-button-hover-color', 'rgb(1, 2, 3)');
+        await waitUntil(() => getComputedStyle(base).color === 'rgb(1, 2, 3)', 'local public pointer foreground did not win');
+      } finally {
+        await resetMouse();
+      }
+      expect(getComputedStyle(base).color, 'quiet appearance override retains resting precedence').to.equal('rgb(100, 120, 140)');
+      expect(getComputedStyle(base).borderColor).to.equal('rgb(70, 80, 90)');
+    });
+  }
 });
 
 describe("lr-button — mapped Shoelace and Web Awesome surface", () => {

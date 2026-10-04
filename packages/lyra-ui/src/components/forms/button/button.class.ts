@@ -189,8 +189,9 @@ export interface LyraButtonEventMap {
  * `--lr-color-mix-active` share, so the pressed state reads as more than the hover.
  * `appearance="link"` moves its text colour by these two shares instead of taking a background.
  * @cssprop --lr-button-hover-color - Text color of a non-disabled button while hovered or pressed.
- * **Undeclared by default**, so it falls back to whatever colour the active `appearance` already
- * paints at rest — every appearance's current hover text colour is unchanged until this is set.
+ * **Undeclared by default**. Quiet and chromatic plain text move toward body text during hover
+ * and press to retain contrast against the moving fill; other appearances keep their resting
+ * foreground. An explicit override takes precedence in both pointer states.
  * `appearance="link"` ignores it: its own hover rule sets a higher-specificity colour mix instead.
  * @cssprop --lr-button-hover-border - Border color of a non-disabled button while hovered.
  * **Undeclared by default**, so it falls back to whatever border colour the active `appearance`
