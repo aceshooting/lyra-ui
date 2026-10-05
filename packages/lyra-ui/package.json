@@ -12073,7 +12073,7 @@
     "mammoth": "^1.13.0",
     "maplibre-gl": "^6.12.0",
     "marked": "^18.0.14",
-    "oxc-parser": "^0.152.0",
+    "oxc-parser": "^0.153.0",
     "papaparse": "^5.7.0",
     "pdfjs-dist": "^6.4.299",
     "pixelmatch": "^7.2.0",
