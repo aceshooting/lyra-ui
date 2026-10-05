@@ -165,6 +165,9 @@ jobs:
         with:
           subject-path: ${{ steps.release_asset.outputs.path }}
 
+      # actions/attest writes one compact Sigstore bundle per line, so the same bytes are also valid
+      # JSON Lines. `.intoto.jsonl` is the suffix provenance scanners discover; `.sigstore.json`
+      # stays for Sigstore tooling.
       - name: Upload provenance to GitHub release
         if: ${{ github.event_name == 'release' || inputs.dry_run != true }}
         env:
@@ -174,8 +177,10 @@ jobs:
           TARBALL: ${{ steps.release_asset.outputs.path }}
         run: |
           provenance="$TARBALL.sigstore.json"
+          intoto="$TARBALL.intoto.jsonl"
           cp "$BUNDLE" "$provenance"
-          gh release upload "$TAG" "$provenance" --repo "$GITHUB_REPOSITORY" --clobber
+          cp "$BUNDLE" "$intoto"
+          gh release upload "$TAG" "$provenance" "$intoto" --repo "$GITHUB_REPOSITORY" --clobber
 
       - name: Publish to npm
         if: ${{ inputs.first_package_bootstrap != true }}

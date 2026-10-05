@@ -570,9 +570,13 @@ dependency install, package lifecycle, or repository-script execution. It downlo
 rechecks the digest and peeled remote tag, clobbers and round-trips the GitHub Release tarball to
 close the approval-window mutation gap, then attests and passes those same bytes to `npm publish`.
 A manual dry run validates and passes that same existing release asset to
-`npm publish --dry-run` without attesting or publishing it. The attached provenance file keeps the
-action's native Sigstore-bundle JSON representation and `.sigstore.json` suffix; it is not copied
-under an in-toto JSONL suffix, which is a different serialization.
+`npm publish --dry-run` without attesting or publishing it. The attached provenance keeps the
+action's native Sigstore-bundle representation and is uploaded byte-identically under two names:
+`.sigstore.json` for Sigstore tooling, and `.intoto.jsonl` because that suffix is how OpenSSF
+Scorecard and similar scanners discover release provenance. The action writes one compact bundle
+per line, so the copy is valid JSON Lines; each line is a Sigstore bundle wrapping the in-toto
+statement, not a bare in-toto envelope, and both files verify with
+`gh attestation verify <tarball> --bundle <file> --repo aceshooting/lyra-ui`.
 
 `publish.yml` and the manual `sign-release.yml` recovery path both call
 `release-verification.yml`; this is the single read-only rebuild/byte-verification implementation.

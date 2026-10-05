@@ -2220,7 +2220,11 @@ test('release workflows verify tagged-source bytes without exposing protected cr
     assert.match(workflow, /release-roundtrip/);
     assert.match(workflow, /retention-days: 14/);
     assert.match(workflow, /\.sigstore\.json/);
-    assert.doesNotMatch(workflow, /\.intoto\.jsonl/);
+    assert.match(workflow, /intoto="\$TARBALL\.intoto\.jsonl"/);
+    assert.match(
+      workflow,
+      /gh release upload "\$TAG" "\$provenance" "\$intoto"[^\n]+--clobber/
+    );
     assert.ok(
       workflow.indexOf('compare-rebuild') <
         workflow.indexOf('actions/upload-artifact@')
