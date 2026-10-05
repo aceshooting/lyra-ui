@@ -160,6 +160,17 @@ it('hides the trend pill when deltaPercent is null, shows it with direction othe
   expect(trend.getAttribute('data-direction')).to.equal('down');
 });
 
+it('prints a fractional delta with the digits it was given, not the float expansion of the division', async () => {
+  const el = (await fixture(html`<lr-stat label="x" value="1"></lr-stat>`)) as LyraStat;
+  for (const [delta, text] of [[384.9, '384.9%'], [1.1, '1.1%'], [-0.07, '0.07%'], [2.675, '2.675%']] as const) {
+    el.deltaPercent = delta;
+    await el.updateComplete;
+    const trend = el.shadowRoot!.querySelector('[part="trend"]')!.textContent!;
+    expect(trend, `delta ${delta}`).to.contain(text);
+    expect(trend, `delta ${delta}`).to.not.match(/\d\.\d{6,}/);
+  }
+});
+
 it('hides the trend pill again after the delta-percent attribute is removed', async () => {
   const el = (await fixture(html`<lr-stat label="x" value="1" delta-percent="5"></lr-stat>`)) as LyraStat;
   expect(el.shadowRoot!.querySelector('[part="trend"]')).to.exist;

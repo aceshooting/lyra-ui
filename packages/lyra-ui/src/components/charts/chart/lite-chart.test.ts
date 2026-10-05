@@ -796,6 +796,23 @@ it('uses tickFormat for y-axis labels when provided', async () => {
   expect(labels.some((t) => t?.startsWith('$'))).to.be.true;
 });
 
+it('hands a custom tick formatter values on the step grid, without float noise', async () => {
+  const seen: number[] = [];
+  await mount(html`<lr-lite-chart
+    .labels=${['a', 'b', 'c']}
+    .datasets=${[{ label: 'S', data: [0.05, 0.27, 0.3] }]}
+    .tickFormat=${(v: number) => {
+      seen.push(v);
+      return String(v);
+    }}
+  ></lr-lite-chart>`);
+  expect(seen.length).to.be.greaterThan(2);
+  expect(seen.filter((value) => String(value).length > 6).map(String)).to.deep.equal([]);
+  expect(new Set(seen.map(String)).size, 'no duplicated tick from a noisy upper bound').to.equal(
+    new Set(seen.map((value) => value.toFixed(6))).size,
+  );
+});
+
 it('falls back to the default nice-number formatter without tickFormat', async () => {
   const el = await mount(html`<lr-lite-chart
     .labels=${['a', 'b']}

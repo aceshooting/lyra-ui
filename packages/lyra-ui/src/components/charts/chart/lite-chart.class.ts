@@ -16,7 +16,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
-import { finiteAdd, finiteCount, finiteNumber, finiteRange } from '../../../internal/numbers.js';
+import { decimalPlaces, finiteAdd, finiteCount, finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { escapeCsvField } from '../../utility/export-button/csv.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import '../../utility/live-region/live-region.class.js';
@@ -307,8 +307,18 @@ function niceDomain(dataLo: number, dataHi: number, beginAtZero: boolean, count:
   if (!Number.isFinite(step) || step <= 0) {
     return { lo, hi, ticks: safeDomainTicks(lo, hi, count) };
   }
-  const roundedLo = Math.floor(lo / step) * step;
-  const roundedHi = Math.ceil(hi / step) * step;
+  // Multiplying the step back out leaves binary noise (3 * 0.1 is 0.30000000000000004). Snap the
+  // bounds and every tick to the decimal places the step itself carries, so a custom tick
+  // formatter receives grid values and a noisy upper bound cannot add a duplicate last tick.
+  const places = decimalPlaces(step);
+  const snap = (value: number): number => {
+    if (places > 15) return value;
+    const factor = 10 ** places;
+    const scaled = Math.round(value * factor);
+    return Number.isSafeInteger(scaled) ? scaled / factor : value;
+  };
+  const roundedLo = snap(Math.floor(lo / step) * step);
+  const roundedHi = snap(Math.ceil(hi / step) * step);
   if (Number.isFinite(roundedLo)) lo = roundedLo;
   if (Number.isFinite(roundedHi)) hi = roundedHi;
   const slots = Math.floor((hi - lo) / step);
@@ -317,7 +327,7 @@ function niceDomain(dataLo: number, dataHi: number, beginAtZero: boolean, count:
   }
   const ticks: number[] = [];
   for (let index = 0; index <= slots; index++) {
-    const value = lo + index * step;
+    const value = snap(lo + index * step);
     if (Number.isFinite(value)) ticks.push(value);
   }
   if (ticks.at(-1) !== hi) ticks.push(hi);
