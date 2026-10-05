@@ -1,5 +1,16 @@
 # @aceshooting/lyra-docs
 
+## 0.3.0
+
+### Minor Changes
+
+- 15d6318: Update the optional document engine to `@docx-editor.dev/core@2.26.0`. The engine stays an exact peer pin, so install `@docx-editor.dev/core@2.26.0` alongside this release.
+
+### Patch Changes
+
+- Updated dependencies [4cd250f]
+  - @aceshooting/lyra-ui@25.7.0
+
 ## 0.2.0
 
 ### Minor Changes

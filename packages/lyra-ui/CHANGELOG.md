@@ -1,5 +1,11 @@
 # Changelog
 
+## 25.7.0
+
+### Minor Changes
+
+- 4cd250f: Release provenance is now also attached to each GitHub Release as `<tarball>.intoto.jsonl`, next to the existing `<tarball>.sigstore.json`. Both files hold the same Sigstore bundle, so `gh attestation verify --bundle` accepts either one, and tools that discover provenance by file name now find it.
+
 ## 25.6.3
 
 ### Patch Changes
