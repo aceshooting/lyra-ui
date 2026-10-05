@@ -4,7 +4,7 @@ Status: public experimental editor package with broader qualification in progres
 is shipped in `@aceshooting/lyra-ui`. All existing file viewers, including the lightweight,
 read-only `lr-docx-viewer`, stay in `@aceshooting/lyra-ui`. Editing belongs in the optional
 `@aceshooting/lyra-docs` companion. The current component is `<lr-docx-editor>` and the exact
-optional runtime engine peer is `@docx-editor.dev/core@2.25.0`; neither choice establishes general DOCX
+optional runtime engine peer is `@docx-editor.dev/core@2.26.0`; neither choice establishes general DOCX
 support or completes a roadmap phase.
 
 The [implementation and qualification record](document-editing-feasibility.md) records verified
@@ -42,7 +42,7 @@ broader format fidelity and interoperability qualification remain open.
 
 Use the public framework-independent core behind original Lyra controls, without importing its
 React/Vue application or complete feature set. The runtime peer is
-`@docx-editor.dev/core@2.25.0`, dynamically loaded when a document opens. The
+`@docx-editor.dev/core@2.26.0`, dynamically loaded when a document opens. The
 [public core implementation](https://github.com/eigenpal/docx-editor/tree/42c6c267) is reference
 material; the runtime is the published 2.25.0 package. Lyra owns the
 public component, Lit interface, supported commands, lifecycle, accessibility, theming and

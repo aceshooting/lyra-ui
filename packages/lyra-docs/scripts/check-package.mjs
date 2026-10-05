@@ -40,7 +40,7 @@ assert.deepEqual(manifest.dependencies, {
   '@aceshooting/lyra-ui': 'workspace:*', fflate: '^0.8.3', lit: '^3.3.3', saxes: '^6.0.0',
 });
 assert.equal(Object.keys(manifest.optionalDependencies ?? {}).length, 0);
-assert.deepEqual(manifest.peerDependencies, { '@docx-editor.dev/core': '2.25.0' });
+assert.deepEqual(manifest.peerDependencies, { '@docx-editor.dev/core': '2.26.0' });
 assert.deepEqual(manifest.peerDependenciesMeta, { '@docx-editor.dev/core': { optional: true } });
 assert.equal(manifest.devDependencies['@docx-editor.dev/core'], manifest.peerDependencies['@docx-editor.dev/core']);
 assert.deepEqual(Object.keys(manifest.devDependencies).sort(), [

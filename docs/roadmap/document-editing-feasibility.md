@@ -8,7 +8,7 @@ until their full exit conditions are met.
 ## Current decision and boundary
 
 `@aceshooting/lyra-docs` contains the experimental `<lr-docx-editor>` component and a session API.
-The runtime engine is the exact optional peer `@docx-editor.dev/core@2.25.0`, dynamically loaded
+The runtime engine is the exact optional peer `@docx-editor.dev/core@2.26.0`, dynamically loaded
 when a document opens. Lyra owns the public Lit surface, native controls, admission checks,
 lifecycle, and host persistence contract. The engine's framework adapters and any Pro-only packages
 are not included. Existing viewers, including `<lr-docx-viewer>`, remain in `@aceshooting/lyra-ui`.

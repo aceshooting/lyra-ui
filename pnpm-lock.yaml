@@ -288,8 +288,8 @@ importers:
         version: 6.0.0
     devDependencies:
       '@docx-editor.dev/core':
-        specifier: 2.25.0
-        version: 2.25.0
+        specifier: 2.26.0
+        version: 2.26.0
       '@types/node':
         specifier: 26.6.4
         version: 26.6.4
@@ -690,8 +690,8 @@ packages:
   '@custom-elements-manifest/find-dependencies@0.0.7':
     resolution: {integrity: sha512-icHEBPHcOXSrpDOFkQhvM7vljEbqrEReW251RBxSzDctXzYWIL0Hk2yMDINn3d6mZ4KSsqLZlaFiGFp/2nn9rA==}
 
-  '@docx-editor.dev/core@2.25.0':
-    resolution: {integrity: sha512-8Gh8zz/7yZQz4pTzEKaHEiN14HXxdSWYHq/CwIqYmCbiZ9osHHKdD5NuZKbIdfnQ041X8yPye1NlpbgJ22RT0A==}
+  '@docx-editor.dev/core@2.26.0':
+    resolution: {integrity: sha512-f/wKUB4vBmgRSFsaUc/2f3DP13W2kFjk6z2y0KugFM+zetpONpB+F//b62OwuOc8TzXvWEKyL4e1VSalo71tHQ==}
     engines: {node: ^20.16.0 || >=22.3.0}
     peerDependencies:
       pdf-lib: ^1.17.1
@@ -702,8 +702,8 @@ packages:
       yjs:
         optional: true
 
-  '@docx-editor.dev/i18n@2.25.0':
-    resolution: {integrity: sha512-BdGT3+16YfWzYAaVHRza11RCCsXHUKttNm3HJCqExUYw+CKpZgzAiUYTq1dY9aznU9yuGZshlHx4gIctQSMRVw==}
+  '@docx-editor.dev/i18n@2.26.0':
+    resolution: {integrity: sha512-qzGopAOBrdlwaqA+CI4tc3wFI9y+lOzw4AzxkSQ1SoehFrpIC3jkdeFkPTtI4oGrv8W0k9mQYqvxW4/phMVkqQ==}
 
   '@emnapi/core@1.11.0':
     resolution: {integrity: sha512-l9Oo58x0HOP5znGzVhYW9U3e5wVuA4LAZU2AGezTmkhO1CgQRFDhDg4nneHsu/t3WniXg9QrG2nIXL/ZS8ln8Q==}
@@ -6013,9 +6013,9 @@ snapshots:
       oxc-resolver: 11.24.2
       rs-module-lexer: 2.8.0
 
-  '@docx-editor.dev/core@2.25.0':
+  '@docx-editor.dev/core@2.26.0':
     dependencies:
-      '@docx-editor.dev/i18n': 2.25.0
+      '@docx-editor.dev/i18n': 2.26.0
       bidi-js: 1.1.0
       emf-converter: 2.0.2
       fast-xml-parser: 5.11.2
@@ -6028,7 +6028,7 @@ snapshots:
       prosemirror-view: 1.42.6
       utif2: 4.1.0
 
-  '@docx-editor.dev/i18n@2.25.0': {}
+  '@docx-editor.dev/i18n@2.26.0': {}
 
   '@emnapi/core@1.11.0':
     dependencies:

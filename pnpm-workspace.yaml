@@ -124,8 +124,8 @@ minimumReleaseAgeExclude:
   - sharp@0.35.5
   - '@types/d3-zoom@3.0.9'
   - '@types/node@26.6.4'
-  - '@docx-editor.dev/core@2.25.0'
-  - '@docx-editor.dev/i18n@2.25.0'
+  - '@docx-editor.dev/core@2.25.0 || 2.26.0'
+  - '@docx-editor.dev/i18n@2.25.0 || 2.26.0'
   - '@pnpm/exe.android-arm64@12.9.1'
   - '@pnpm/exe.android-x64@12.9.1'
   - '@pnpm/exe.darwin-arm64@12.9.1'
