@@ -310,13 +310,8 @@ function niceDomain(dataLo: number, dataHi: number, beginAtZero: boolean, count:
   // Multiplying the step back out leaves binary noise (3 * 0.1 is 0.30000000000000004). Snap the
   // bounds and every tick to the decimal places the step itself carries, so a custom tick
   // formatter receives grid values and a noisy upper bound cannot add a duplicate last tick.
-  const places = decimalPlaces(step);
-  const snap = (value: number): number => {
-    if (places > 15) return value;
-    const factor = 10 ** places;
-    const scaled = Math.round(value * factor);
-    return Number.isSafeInteger(scaled) ? scaled / factor : value;
-  };
+  const places = Math.min(decimalPlaces(step), 100);
+  const snap = (value: number): number => Number(value.toFixed(places));
   const roundedLo = snap(Math.floor(lo / step) * step);
   const roundedHi = snap(Math.ceil(hi / step) * step);
   if (Number.isFinite(roundedLo)) lo = roundedLo;

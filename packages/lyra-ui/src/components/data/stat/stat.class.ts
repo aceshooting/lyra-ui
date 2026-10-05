@@ -3,7 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
-import { decimalPlaces, finiteNumber } from '../../../internal/numbers.js';
+import { finiteNumber } from '../../../internal/numbers.js';
 import { safeLinkHref } from '../../../internal/safe-url.js';
 import { detectPlatform } from '../../../internal/platform.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -406,11 +406,12 @@ export class LyraStat extends LyraElement {
     const hasCaption = this.hasCaptionSlot || (this.caption ?? '').length > 0;
     const hasSub = this.hasSubSlot || (this.sub ?? '').length > 0;
     // Intl's percent style takes a ratio, and dividing the delta by 100 leaves binary noise
-    // (384.9 / 100 is 3.8489999999999998). Cap the fraction digits at the ones the delta
-    // itself carries so the quotient's expansion is never printed.
+    // (384.9 / 100 is 3.8489999999999998). Cap the fraction digits at the ones the delta's own
+    // decimal text carries so the quotient's expansion is never printed. Counted inline: the
+    // shared helper would be this component's only use of it in several family bundles.
     const formattedTrend = getNumberFormat(this.effectiveLocale, {
       style: 'percent',
-      maximumFractionDigits: Math.min(decimalPlaces(effectiveDelta), 20),
+      maximumFractionDigits: Math.min(20, (String(effectiveDelta).split('.')[1] ?? '').length),
     }).format(Math.abs(effectiveDelta) / 100);
     // The visible pill only ever shows the icon rotation + color to convey
     // direction and good/bad polarity; both are invisible to screen readers,
