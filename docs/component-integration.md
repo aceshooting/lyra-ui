@@ -273,7 +273,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-subagent-panel"></a>`lr-subagent-panel` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-subagent-panel.js';` | none | `lr-badge`, `lr-empty` | none | 35.5 KiB |
 | <a id="lr-suggestion-chips"></a>`lr-suggestion-chips` | conversation | `import '@aceshooting/lyra-ui/components/lr-suggestion-chips.js';` | none | `lr-scroller` | none | 28.7 KiB |
 | <a id="lr-svg-viewer"></a>`lr-svg-viewer` | viewers | `import '@aceshooting/lyra-ui/components/lr-svg-viewer.js';` | `dompurify` | `lr-pan-zoom` | none | 38.8 KiB |
-| <a id="lr-swatch-picker"></a>`lr-swatch-picker` | forms | `import '@aceshooting/lyra-ui/components/lr-swatch-picker.js';` | none | none | none | 24.1 KiB |
+| <a id="lr-swatch-picker"></a>`lr-swatch-picker` | forms | `import '@aceshooting/lyra-ui/components/lr-swatch-picker.js';` | none | none | none | 24.2 KiB |
 | <a id="lr-switch"></a>`lr-switch` | forms | `import '@aceshooting/lyra-ui/components/lr-switch.js';` | none | none | none | 32.5 KiB |
 | <a id="lr-tab"></a>`lr-tab` | layout | `import '@aceshooting/lyra-ui/components/lr-tab.js';` | none | none | none | 20 KiB |
 | <a id="lr-tab-group"></a>`lr-tab-group` | layout | `import '@aceshooting/lyra-ui/components/lr-tab-group.js';` | none | none | none | 30 KiB |

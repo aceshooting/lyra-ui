@@ -1,5 +1,12 @@
 # @aceshooting/lyra-docs
 
+## 0.3.1
+
+### Patch Changes
+
+- Updated dependencies [d6433a3]
+  - @aceshooting/lyra-ui@25.7.1
+
 ## 0.3.0
 
 ### Minor Changes
