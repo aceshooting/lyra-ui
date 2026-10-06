@@ -1,4 +1,5 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { collectionSupport, snapshotPublicCollection } from '../../../internal/collection-snapshot.js';
+import { boundChartSeriesValues } from './chart-series-bounds.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
@@ -10,6 +11,9 @@ import { onAnnotationPluginRegistered } from '../../../internal/chart-annotation
 import { styles } from './box-plot.styles.js';
 import '../../overlays/skeleton/skeleton.class.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
+import { formatChartValue } from './chart-number-format.js';
+import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
+import { showChartActiveDatum } from './chart-active-datum.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import {
   FALLBACK_GRID_COLOR,
@@ -18,10 +22,9 @@ import {
   FALLBACK_TICK_FONT_SIZE,
   FALLBACK_TOOLTIP_BG,
   FALLBACK_TOOLTIP_TEXT,
-  resolveCanvasColor,
-  seriesPalette,
   type ChartThemeColors as ThemeColors,
 } from './chart-colors.js';
+import { ChartTokenCache } from './chart-token-cache.js';
 import {
   createForcedColorPattern,
   forcedColorEncoding,
@@ -279,11 +282,12 @@ function loadBoxPlotPlugin(): Promise<BoxPlotModule | null> {
  * @csspart description - The accessible box-plot summary.
  * @csspart data-table - The optional generated or slotted data table.
  * @csspart data-table-toggle - The disclosure button rendered by `dataTableToggle`.
- * @cssprop [--lr-box-plot-data-table-toggle-hover-bg=var(--lr-color-brand-quiet)] - Hover
- *   background of the `dataTableToggle` disclosure button.
+ * @cssprop [--lr-box-plot-data-table-toggle-hover-bg=var(--lr-chart-data-table-toggle-hover-bg, var(--lr-color-brand-quiet))] -
+ *   Hover background of the `dataTableToggle` disclosure button; falls back to the chart family's
+ *   shared token.
  * @cssprop --lr-box-plot-data-table-toggle-active-bg - Pressed background of the `dataTableToggle`
- *   disclosure button; defaults to a mix of the hover background with the shared active mix
- *   partner.
+ *   disclosure button; defaults to the chart family's shared `--lr-chart-data-table-toggle-active-bg`,
+ *   then a mix of the hover background with the shared active mix partner.
  * @cssprop [--lr-box-plot-border-width=var(--lr-border-width-thin)] - Canvas box-outline stroke
  *   width, in pixels. Same override mechanism as `<lr-chart>`'s `--border-width`.
  * @cssprop [--lr-box-plot-item-radius=0] - Radius, in pixels, of the individual raw-sample dots
@@ -384,9 +388,9 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
 
+  // `datasets` snapshots in its own setter, after trimming any series past the shared bound.
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'labels',
-    'datasets',
     'hiddenDatasets',
   ]);
 
@@ -400,20 +404,35 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   constructor() {
     super();
     new ThemeWatcher(this, () => {
+      this.canvasTokens.clear();
       if (this.chart) this.refreshTheme();
     });
   }
 
+  /** Canvas colors and lengths resolved since the last theme notification. */
+  private readonly canvasTokens = new ChartTokenCache(this);
+
   @property({ attribute: false }) labels: readonly string[] = [];
   private _datasets: readonly LyraBoxPlotSeries[] = Object.freeze([]);
-  /** Series with an array `data` payload. Malformed entries are dropped without hiding siblings. */
+  private datasetsSource: unknown = this._datasets;
+  /**
+   * Series with an array `data` payload. Malformed entries are dropped without hiding siblings.
+   * A bounded, clone-owned readonly snapshot: each series keeps at most its first
+   * 7,500 ÷ (number of series) boxes rather than being dropped.
+   */
   @property({ attribute: false })
   get datasets(): readonly LyraBoxPlotSeries[] {
     return this._datasets;
   }
   set datasets(value: readonly LyraBoxPlotSeries[]) {
+    if (Object.is(value, this.datasetsSource) || Object.is(value, this._datasets)) return;
     const previous = this._datasets;
-    this._datasets = normalizeBoxPlotSeries(value);
+    this.datasetsSource = value;
+    // Each five-number box costs six snapshot nodes.
+    this._datasets = normalizeBoxPlotSeries(snapshotPublicCollection(
+      boundChartSeriesValues(value, 6) ?? value,
+      this.ownerDocument?.defaultView,
+    ));
     this.requestUpdate('datasets', previous);
   }
   /** Complete controlled legend visibility state. `undefined` keeps the default all-visible state. */
@@ -478,9 +497,11 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   private toggleDataTable(): void {
     this.dataTableExpandedOverride = !this.dataTableVisible;
   }
-  /** Formats numeric axes, tooltips, generated table cells, summaries, and CSV export. */
+  /** Formats numeric axes, tooltips (each of the five statistics), generated table cells,
+   *  summaries, and CSV export. */
   @property({ attribute: false }) valueFormatter?: LyraChartValueFormatter;
-  /** Unified context-object formatter shared with the other chart surfaces. */
+  /** Unified context-object formatter shared with the other chart surfaces. The tooltip lists all
+   *  five statistics, each formatted with its own `statistic`. */
   @property({ attribute: false }) formatter?: LyraChartFormatter;
 
   /**
@@ -606,6 +627,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   }
 
   override adoptedCallback(): void {
+    this.canvasTokens.clear();
     super.adoptedCallback();
     this.releaseAnnouncementSinks();
     this.syncAnnouncementSinks();
@@ -725,7 +747,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
       else this.style.removeProperty('--_lr-chart-height');
     }
     if (this.loading) return;
-    const contentChanged = ['labels', 'datasets', 'hiddenDatasets', 'withLegend', 'legendPosition', 'height', 'xLabel', 'yLabel', 'withoutZeroBaseline', 'label', 'description', 'valueFormatter', 'formatter', 'locale', 'strings', 'loading'].some((name) =>
+    const contentChanged = ['labels', 'datasets', 'hiddenDatasets', 'withLegend', 'legendPosition', 'height', 'xLabel', 'yLabel', 'withoutZeroBaseline', 'valueFormatter', 'formatter', 'locale', 'strings', 'loading'].some((name) =>
       changed.has(name),
     );
     const direction = this.effectiveDirection;
@@ -750,17 +772,14 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
    * fallback instead of silently preserving an earlier canvas paint.
    */
   private themeColors(): ThemeColors {
-    const view = this.ownerWindow;
-    const cs = view ? view.getComputedStyle(this) : this.style;
+    const cs = this.canvasTokens.sync() ?? this.style;
     return {
-      grid: resolveCanvasColor(
-        this,
+      grid: this.canvasTokens.resolve(
         cs.getPropertyValue('--lr-chart-grid-color').trim() ||
           cs.getPropertyValue('--_lr-chart-grid-color').trim(),
         FALLBACK_GRID_COLOR,
       ),
-      tick: resolveCanvasColor(
-        this,
+      tick: this.canvasTokens.resolve(
         cs.getPropertyValue('--lr-chart-tick-color').trim() ||
           cs.getPropertyValue('--_lr-chart-tick-color').trim(),
         FALLBACK_TICK_COLOR,
@@ -770,20 +789,17 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
         FALLBACK_TICK_FONT_SIZE,
         '--_lr-chart-tick-font-size',
       ),
-      legend: resolveCanvasColor(
-        this,
+      legend: this.canvasTokens.resolve(
         cs.getPropertyValue('--lr-chart-legend-color').trim() ||
           cs.getPropertyValue('--_lr-chart-legend-color').trim(),
         FALLBACK_LEGEND_COLOR,
       ),
-      tooltipBg: resolveCanvasColor(
-        this,
+      tooltipBg: this.canvasTokens.resolve(
         cs.getPropertyValue('--lr-chart-tooltip-bg').trim() ||
           cs.getPropertyValue('--_lr-chart-tooltip-bg').trim(),
         FALLBACK_TOOLTIP_BG,
       ),
-      tooltipText: resolveCanvasColor(
-        this,
+      tooltipText: this.canvasTokens.resolve(
         cs.getPropertyValue('--lr-chart-tooltip-color').trim() ||
           cs.getPropertyValue('--_lr-chart-tooltip-color').trim(),
         FALLBACK_TOOLTIP_TEXT,
@@ -792,10 +808,10 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   }
 
   /** The series color for a box index, honoring an explicit per-series `color` override. */
-  private seriesColor(index: number, palette: string[] = seriesPalette(this)): string {
+  private seriesColor(index: number, palette: string[] = this.canvasTokens.palette()): string {
     const fallback = palette[index % palette.length] ?? 'transparent';
     const series = this.datasets[index];
-    return series?.color ? resolveCanvasColor(this, series.color, fallback) : fallback;
+    return series?.color ? this.canvasTokens.resolve(series.color, fallback) : fallback;
   }
 
   /**
@@ -803,7 +819,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
    * wrapping like the underlying `--lr-color-chart-N` ramp) — mirrors `<lr-chart>`'s
    * `--border-color-N`/`--fill-color-N` palette-override mechanism for the canvas box outline.
    */
-  private seriesBorderColor(index: number, palette: string[] = seriesPalette(this)): string {
+  private seriesBorderColor(index: number, palette: string[] = this.canvasTokens.palette()): string {
     const base = this.seriesColor(index, palette);
     return this.styleColor(`--lr-box-plot-border-color-${(index % 8) + 1}`, base);
   }
@@ -812,7 +828,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
    * `seriesColor()`, then layered with a `--lr-box-plot-fill-color-N` CSS override for the canvas
    * box fill and the matching legend swatch.
    */
-  private seriesFillColor(index: number, palette: string[] = seriesPalette(this)): string {
+  private seriesFillColor(index: number, palette: string[] = this.canvasTokens.palette()): string {
     const base = this.seriesColor(index, palette);
     return this.styleColor(`--lr-box-plot-fill-color-${(index % 8) + 1}`, base);
   }
@@ -840,7 +856,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     const view = this.ownerWindow;
     const cs = view ? view.getComputedStyle(this) : this.style;
     const value = cs.getPropertyValue(name).trim();
-    return value ? resolveCanvasColor(this, value, fallback) : fallback;
+    return value ? this.canvasTokens.resolve(value, fallback) : fallback;
   }
 
   /**
@@ -862,17 +878,19 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
       if (Number.isFinite(resolved) && resolved >= 0) return resolved;
     }
     if (!value || !view) return fallback;
-    const probe = this.ownerDocument.createElement('span');
-    probe.hidden = true;
-    probe.setAttribute('aria-hidden', 'true');
-    probe.style.inlineSize = value;
-    (this.shadowRoot ?? this).append(probe);
-    try {
-      const resolved = Number.parseFloat(view.getComputedStyle(probe).inlineSize);
-      return Number.isFinite(resolved) && resolved >= 0 ? resolved : fallback;
-    } finally {
-      probe.remove();
-    }
+    const resolved = this.canvasTokens.length(value, () => {
+      const probe = this.ownerDocument.createElement('span');
+      probe.hidden = true;
+      probe.setAttribute('aria-hidden', 'true');
+      probe.style.inlineSize = value;
+      (this.shadowRoot ?? this).append(probe);
+      try {
+        return Number.parseFloat(view.getComputedStyle(probe).inlineSize);
+      } finally {
+        probe.remove();
+      }
+    });
+    return Number.isFinite(resolved) && resolved >= 0 ? resolved : fallback;
   }
 
   /** Isolates each drawn tooltip line in its own first-strong direction (see chart-bidi.ts). */
@@ -883,7 +901,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
 
   private buildConfig(): BoxPlotChartConfiguration {
     const theme = this.themeColors();
-    const palette = seriesPalette(this);
+    const palette = this.canvasTokens.palette();
     const sample = this.dataTableSample();
     // Tick labels and titles are drawn in their own first-strong direction, so a number-first
     // formatted tick keeps its order on an RTL canvas; see chart-bidi.ts.
@@ -946,37 +964,36 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
                         ? (raw as LyraBoxPlotSummary)
                         : undefined;
                       if (!point) return undefined;
-                      // The peer hands the hovered datum's indexes to this callback; they used to
-                      // be dropped, leaving a tooltip formatter unable to tell which series or
-                      // category it was formatting -- the same gap the table and CSV never had.
+                      // The peer hands the hovered datum's VISUAL indexes to this callback; the
+                      // formatter receives the source ones, as the table and CSV do.
                       const datasetIndex = Number.isInteger(context.datasetIndex)
-                        ? (context.datasetIndex as number)
+                        ? sample.seriesIndexes[context.datasetIndex as number]
                         : undefined;
                       const index = Number.isInteger(context.dataIndex)
-                        ? (context.dataIndex as number)
+                        ? sample.rowIndexes[context.dataIndex as number]
                         : undefined;
-                      const value = this.formatValue(point.median, 'tooltip', {
-                        ...(datasetIndex === undefined ? {} : { datasetIndex }),
-                        ...(index === undefined
-                          ? {}
-                          : { index, label: this.labels[index] || undefined }),
-                        ...(datasetIndex === undefined
-                          ? {}
-                          : { seriesLabel: this.datasets[datasetIndex]?.label }),
-                        statistic: 'median',
-                        axis: 'y',
-                      });
+                      // A formatter formats numbers; the tooltip keeps the five-number content,
+                      // one statistic per line under the series name. Each value keeps its own
+                      // direction inside its drawn sentence, so a number-first `12 ms` stays in
+                      // order after an RTL-script statistic name.
+                      const lines = this.boxStatistics(point).map(([statistic, name, value]) =>
+                        canvasSentence(
+                          (sentenceValue) =>
+                            this.localize('chartValueLabel', undefined, { label: name, value: sentenceValue }),
+                          this.formatValue(value, 'tooltip', {
+                            ...(datasetIndex === undefined ? {} : { datasetIndex }),
+                            ...(index === undefined
+                              ? {}
+                              : { index, label: this.labels[index] || undefined }),
+                            ...(datasetIndex === undefined
+                              ? {}
+                              : { seriesLabel: this.datasets[datasetIndex]?.label }),
+                            statistic,
+                            axis: 'y',
+                          }),
+                        ));
                       const label = String(context.dataset?.label ?? '');
-                      // The value keeps its own direction inside the drawn sentence, so a
-                      // number-first `12 ms` stays in order after an RTL-script series label,
-                      // whose direction the whole-line isolation paints the line in.
-                      return label
-                        ? canvasSentence(
-                            (sentenceValue) =>
-                              this.localize('chartValueLabel', undefined, { label, value: sentenceValue }),
-                            value,
-                          )
-                        : value;
+                      return label ? [label, ...lines] : lines;
                     },
                   },
                 }
@@ -1059,6 +1076,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
 
   /** Re-reads canvas theme custom properties after an out-of-band ancestor theme change. */
   refreshTheme(): void {
+    this.canvasTokens.clear();
     this.drawIfVisible();
     if (this.withLegend) this.requestUpdate();
   }
@@ -1083,7 +1101,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
           : surface;
     return this.formatter?.({ value, surface, ...metadata }) ??
       (legacyContext ? this.valueFormatter?.(value, legacyContext) : undefined) ??
-      getNumberFormat(this.effectiveLocale).format(value);
+      formatChartValue(value, this.effectiveLocale);
   }
 
   /** Returns a spreadsheet-safe CSV snapshot or the current canvas PNG data URL. */
@@ -1221,6 +1239,17 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     return datums;
   }
 
+  /** A box's five statistics in reading order, each with its localized name. */
+  private boxStatistics(point: LyraBoxPlotSummary): Array<[LyraChartStatistic, string, number]> {
+    return [
+      ['min', this.localize('boxPlotMin'), point.min],
+      ['q1', this.localize('boxPlotQ1'), point.q1],
+      ['median', this.localize('boxPlotMedian'), point.median],
+      ['q3', this.localize('boxPlotQ3'), point.q3],
+      ['max', this.localize('boxPlotMax'), point.max],
+    ];
+  }
+
   /**
    * A box's spoken summary. The five numbers are the whole content of a box, so each is labeled
    * with its own existing localized term and joined through the shared separator — the same
@@ -1234,15 +1263,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   ): string {
     const numberFormat = getNumberFormat(this.effectiveLocale);
     const point = datum.value;
-    const parts: Array<[LyraChartStatistic, string, number]> = point
-      ? [
-          ['min', this.localize('boxPlotMin'), point.min],
-          ['q1', this.localize('boxPlotQ1'), point.q1],
-          ['median', this.localize('boxPlotMedian'), point.median],
-          ['q3', this.localize('boxPlotQ3'), point.q3],
-          ['max', this.localize('boxPlotMax'), point.max],
-        ]
-      : [];
+    const parts = point ? this.boxStatistics(point) : [];
     const summary = parts
       .filter(([, , value]) => Number.isFinite(value))
       .map(([statistic, label, value]) =>
@@ -1315,10 +1336,27 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     });
   }
 
-  private onCanvasFocus(): void {
+  /** Shows the keyboard-current box the way a hover would; `undefined` clears a cue it showed. */
+  private showKeyboardBox(datum: LyraBoxPlotPointDetail | undefined): void {
+    if (!this.chart || (!datum && !this.keyboardBoxShown)) return;
+    const sample = this.dataTableSample();
+    this.keyboardBoxShown = showChartActiveDatum(this.chart, datum && {
+      datasetIndex: sample.seriesIndexes.indexOf(datum.datasetIndex),
+      index: sample.rowIndexes.indexOf(datum.index),
+    });
+  }
+
+  private keyboardBoxShown = false;
+
+  private readonly onCanvasBlur = (): void => {
+    this.showKeyboardBox(undefined);
+  };
+
+  private onCanvasFocus(event: FocusEvent): void {
     const datums = this.boxDatums();
     if (!datums.length) return;
     this.keyboardDatumIndex = Math.min(this.keyboardDatumIndex, datums.length - 1);
+    if (isKeyboardFocusEvent(event)) this.showKeyboardBox(datums[this.keyboardDatumIndex]);
     this.keyboardDatumAnnouncement = this.boxAnnouncement(
       datums[this.keyboardDatumIndex]!,
       this.keyboardDatumIndex,
@@ -1347,6 +1385,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     else return;
     event.preventDefault();
     this.keyboardDatumIndex = next;
+    this.showKeyboardBox(datums[next]);
     this.keyboardDatumAnnouncement = this.boxAnnouncement(datums[next]!, next, datums.length);
   }
 
@@ -1416,7 +1455,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
                 };
                 return this.validPoint(point) ? html`
                 <tr>
-                  <th scope="row">${isolateHtml(this.labels[index] ?? this.localize('chartPointLabel', undefined, {
+                  <th scope="row">${isolateHtml(this.labels[index] || this.localize('chartPointLabel', undefined, {
                     n: numberFormat.format(index + 1),
                   }), direction)}</th>
                   <td>${isolateHtml(this.seriesDisplayLabel(series), direction)}</td>
@@ -1464,7 +1503,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
 
   private renderLegend(): TemplateResult | typeof nothing {
     if (!this.withLegend) return nothing;
-    const palette = seriesPalette(this);
+    const palette = this.canvasTokens.palette();
     const forced = forcedColorsActive(this.ownerWindow);
     const controlledHidden = normalizeHiddenDatasets(this.hiddenDatasets, this.datasets.length);
     const controlledHiddenSet = controlledHidden === undefined
@@ -1517,7 +1556,10 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
         </div>
       `;
     }
-    const boxLabels = this.dataTableSample().seriesIndexes.map((index) => this.datasets[index]!.label);
+    // A blank series label never reaches the name (" and Sales"); all blank uses the fallback.
+    const boxLabels = this.dataTableSample().seriesIndexes
+      .map((index) => this.datasets[index]!.label)
+      .filter(Boolean);
     const label = this.accessibleName(
       (boxLabels.length
         ? getListFormat(this.effectiveLocale, { type: 'conjunction' }).format(boxLabels)
@@ -1541,6 +1583,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
             aria-label=${label}
             aria-describedby=${this.descriptionId}
             @focus=${this.onCanvasFocus}
+            @blur=${this.onCanvasBlur}
             @keydown=${this.onCanvasKeyDown}
           ></canvas>
         </div>

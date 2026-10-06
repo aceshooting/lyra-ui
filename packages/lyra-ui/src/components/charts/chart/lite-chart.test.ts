@@ -7,6 +7,8 @@ import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { resolveLyraLocale } from '../../../localization.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
+import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
 
 // Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
 expectLocaleFallback('de-DE', ['chartData', 'liteChartBarLabel']);
@@ -3130,6 +3132,7 @@ describe('selectedIndices', () => {
   });
 
   it('does not scan beyond the 10,000-entry selectedIndices snapshot budget', async () => {
+    expectDevWarning(collectionTruncationWarningKey('lr-lite-chart', 'selectedIndices'));
     const lastSourceIndex = 1_000;
     const el = await mount(html`
       <lr-lite-chart

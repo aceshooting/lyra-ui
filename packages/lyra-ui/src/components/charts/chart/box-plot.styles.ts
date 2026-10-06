@@ -48,6 +48,7 @@ export const styles = css`
       'plot'
       'legend'
       'notice'
+      'table-toggle'
       'table';
   }
   [part='plot'] {
@@ -145,12 +146,14 @@ export const styles = css`
       'legend'
       'plot'
       'notice'
+      'table-toggle'
       'table';
   }
   [part='base']:where([data-legend-position='inline-start']) {
     grid-template-areas:
       'legend plot'
       'notice notice'
+      'table-toggle table-toggle'
       'table table';
     grid-template-columns:
       minmax(0, min(33cqi, var(--lr-chart-legend-side-max, var(--lr-size-15rem))))
@@ -160,6 +163,7 @@ export const styles = css`
     grid-template-areas:
       'plot legend'
       'notice notice'
+      'table-toggle table-toggle'
       'table table';
     grid-template-columns:
       minmax(0, 1fr)
@@ -172,6 +176,7 @@ export const styles = css`
         'plot'
         'legend'
         'notice'
+        'table-toggle'
         'table';
       grid-template-columns: minmax(0, 1fr);
     }
@@ -217,6 +222,7 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
   [part='data-table-toggle'] {
+    grid-area: table-toggle;
     align-self: flex-start;
     font: inherit;
     font-size: var(--lr-font-size-xs);
@@ -233,12 +239,18 @@ export const styles = css`
     cursor: pointer;
   }
   [part='data-table-toggle']:hover {
-    background: var(--lr-box-plot-data-table-toggle-hover-bg, var(--lr-color-brand-quiet));
+    background: var(
+      --lr-box-plot-data-table-toggle-hover-bg,
+      var(--lr-chart-data-table-toggle-hover-bg, var(--lr-color-brand-quiet))
+    );
   }
   [part='data-table-toggle']:active {
     background: var(
       --lr-box-plot-data-table-toggle-active-bg,
-      color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      var(
+        --lr-chart-data-table-toggle-active-bg,
+        color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      )
     );
   }
   [part='data-table-toggle']:focus-visible {

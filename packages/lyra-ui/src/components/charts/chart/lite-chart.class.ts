@@ -1,6 +1,7 @@
 import { ChartSyncController, type ChartSyncPresentation } from './chart-sync.js';
 import { chartSyncStyles } from './chart-sync.styles.js';
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { collectionSupport, snapshotPublicCollection } from '../../../internal/collection-snapshot.js';
+import { boundChartSeriesValues, chartSeriesValueLimit } from './chart-series-bounds.js';
 import { nativeSvgTitle } from '../../../internal/svg-title.js';
 import {
   html,
@@ -16,6 +17,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
+import { formatChartValue } from './chart-number-format.js';
 import { decimalPlaces, finiteAdd, finiteCount, finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { escapeCsvField } from '../../utility/export-button/csv.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
@@ -252,12 +254,25 @@ function domainFraction(value: number, lo: number, hi: number): number {
   return Number.isFinite(fraction) ? Math.min(1, Math.max(0, fraction)) : 0;
 }
 
+/**
+ * Multiplying a decimal step back out leaves binary noise (3 * 0.1 is 0.30000000000000004). Snaps
+ * a grid value to the decimal places the step itself carries, so a custom tick formatter receives
+ * grid values.
+ */
+function snapToStep(value: number, step: number): number {
+  return Number.isFinite(step) && step > 0
+    ? Number(value.toFixed(Math.min(decimalPlaces(step), 100)))
+    : value;
+}
+
 function safeDomainTicks(lo: number, hi: number, count: number): number[] {
   return Array.from({ length: Math.max(1, count) + 1 }, (_, index) => {
     if (index === 0) return lo;
     if (index === count) return hi;
     const ratio = index / count;
-    return lo * (1 - ratio) + hi * ratio;
+    // No clean step exists on this fallback path; 15 significant digits still drop the binary
+    // noise of the interpolation (0.3 * 0.75 is 0.22499999999999998).
+    return Number((lo * (1 - ratio) + hi * ratio).toPrecision(15));
   }).filter(Number.isFinite);
 }
 
@@ -276,7 +291,7 @@ function logarithmicTicks(lo: number, hi: number, count: number): number[] | und
   const minimumGap = decades ? step / 2 : span / (count * 2);
   const first = Math.ceil((decades ? start : lo) / step);
   for (let index = 0; index <= count + 1; index++) {
-    const value = decades ? 10 ** ((first + index) * step) : (first + index) * step;
+    const value = decades ? 10 ** ((first + index) * step) : snapToStep((first + index) * step, step);
     if (!Number.isFinite(value) || value >= hi) break;
     if (value <= ticks.at(-1)!) continue;
     const logarithm = Math.log10(value);
@@ -307,11 +322,8 @@ function niceDomain(dataLo: number, dataHi: number, beginAtZero: boolean, count:
   if (!Number.isFinite(step) || step <= 0) {
     return { lo, hi, ticks: safeDomainTicks(lo, hi, count) };
   }
-  // Multiplying the step back out leaves binary noise (3 * 0.1 is 0.30000000000000004). Snap the
-  // bounds and every tick to the decimal places the step itself carries, so a custom tick
-  // formatter receives grid values and a noisy upper bound cannot add a duplicate last tick.
-  const places = Math.min(decimalPlaces(step), 100);
-  const snap = (value: number): number => Number(value.toFixed(places));
+  // Snapping the bounds too keeps a noisy upper bound from adding a duplicate last tick.
+  const snap = (value: number): number => snapToStep(value, step);
   const roundedLo = snap(Math.floor(lo / step) * step);
   const roundedHi = snap(Math.ceil(hi / step) * step);
   if (Number.isFinite(roundedLo)) lo = roundedLo;
@@ -457,10 +469,12 @@ export interface LyraLiteChartEventMap {
  * @csspart live-region - The current mark announcement for keyboard users.
  * @csspart data-list - A visually hidden sampled list of plotted data points (single-series only).
  * @csspart data-table-toggle - The disclosure button rendered by `dataTableToggle`.
- * @cssprop [--lr-lite-chart-data-table-toggle-hover-bg=var(--lr-color-brand-quiet)] - Hover
- *   background of the `dataTableToggle` disclosure button.
+ * @cssprop [--lr-lite-chart-data-table-toggle-hover-bg=var(--lr-chart-data-table-toggle-hover-bg, var(--lr-color-brand-quiet))] -
+ *   Hover background of the `dataTableToggle` disclosure button; falls back to the chart family's
+ *   shared token.
  * @cssprop --lr-lite-chart-data-table-toggle-active-bg - Pressed background of the
- *   `dataTableToggle` disclosure button; defaults to a mix of the hover background with the shared
+ *   `dataTableToggle` disclosure button; defaults to the chart family's shared
+ *   `--lr-chart-data-table-toggle-active-bg`, then a mix of the hover background with the shared
  *   active mix partner.
  * @csspart data-table - A visually hidden sampled category×series data table, rendered instead of
  *   `data-list` when there is more than one dataset so a screen-reader user hears series grouping
@@ -520,9 +534,9 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
 
+  // `datasets` snapshots in its own setter, after trimming any series past the shared bound.
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'labels',
-    'datasets',
     'selectedIndices',
   ]);
 
@@ -532,14 +546,24 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   type: LyraLiteChartType = 'bar';
   @property({ attribute: false }) labels: readonly string[] = [];
   private _datasets: readonly LyraLiteChartSeries[] = Object.freeze([]);
-  /** Series with an array `data` payload. Malformed entries are dropped without hiding siblings. */
+  private datasetsSource: unknown = this._datasets;
+  /**
+   * Series with an array `data` payload. Malformed entries are dropped without hiding siblings.
+   * A bounded, clone-owned readonly snapshot: each series keeps its first 10,000 values (fewer
+   * when more than four series share the 45,000-value bound) rather than being dropped.
+   */
   @property({ attribute: false })
   get datasets(): readonly LyraLiteChartSeries[] {
     return this._datasets;
   }
   set datasets(value: readonly LyraLiteChartSeries[]) {
+    if (Object.is(value, this.datasetsSource) || Object.is(value, this._datasets)) return;
     const previous = this._datasets;
-    this._datasets = normalizeLiteChartSeries(value);
+    this.datasetsSource = value;
+    this._datasets = normalizeLiteChartSeries(snapshotPublicCollection(
+      boundChartSeriesValues(value) ?? value,
+      this.ownerDocument?.defaultView,
+    ));
     this.requestUpdate('datasets', previous);
   }
   /**
@@ -805,13 +829,19 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   private isMounting = true;
 
   /**
-   * Appends one streamed category to every series and optionally keeps only the newest `maxPoints`
-   * categories. This is a controlled convenience method: it replaces `labels`/`datasets` with new
-   * arrays, so a host can listen for the property update or continue treating the chart as a normal
-   * controlled component. Missing series values become `null` rather than shifting alignment.
+   * Appends one streamed category to every series and keeps a rolling window of the newest
+   * `maxPoints` categories. The window never exceeds the `datasets` bound (10,000 values per
+   * series, fewer when more than four series share 45,000 values), which is also the default.
+   * This is a controlled convenience method: it replaces `labels`/`datasets` with new arrays, so a
+   * host can listen for the property update or continue treating the chart as a normal controlled
+   * component. Missing series values become `null` rather than shifting alignment.
    */
   appendData(label: string, values: (number | null)[], maxPoints: number = 0): void {
-    const limit = Math.max(0, finiteCount(maxPoints, 0));
+    // The snapshots keep the FIRST entries of an over-long assignment, so streaming past the bound
+    // would freeze on the oldest categories; the window drops the oldest instead.
+    const bound = chartSeriesValueLimit(this.datasets.length);
+    const requested = Math.max(0, finiteCount(maxPoints, 0));
+    const limit = requested > 0 ? Math.min(requested, bound) : bound;
     let domainLength = this.labels.length;
     for (const series of this.datasets) domainLength = Math.max(domainLength, series.data.length);
     const labels = [
@@ -819,16 +849,15 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       ...Array.from({ length: Math.max(0, domainLength - this.labels.length) }, () => ''),
       label,
     ];
-    const datasets = this.datasets.map((series, index) => ({
+    this.labels = labels.slice(-limit);
+    this.datasets = this.datasets.map((series, index) => ({
       ...series,
       data: [
         ...series.data,
         ...Array.from({ length: Math.max(0, domainLength - series.data.length) }, () => null),
         values[index] ?? null,
-      ],
+      ].slice(-limit),
     }));
-    this.labels = limit > 0 ? labels.slice(-limit) : labels;
-    this.datasets = limit > 0 ? datasets.map((series) => ({ ...series, data: series.data.slice(-limit) })) : datasets;
   }
 
   /**
@@ -1435,7 +1464,8 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       seriesLabel: context.seriesLabel ?? undefined,
       axis: 'y',
       ...(context.kind === 'total' ? { statistic: 'total' as const } : {}),
-    }) ?? this.tableCellFormatter?.(value, context) ?? numberFormat.format(value);
+    }) ?? this.tableCellFormatter?.(value, context) ??
+      formatChartValue(value, this.effectiveLocale, numberFormat);
   }
 
   private tableTotalAt(index: number, seriesIndexes: readonly number[]): number | null {
@@ -1463,10 +1493,30 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
   /** Source indexes shared by SVG marks, keyboard navigation, and the built-in data alternative. */
   private recordSample() {
+    // Marks, keyboard targets and the table all read this per render and per arrow key; the
+    // inputs are immutable snapshots, so their identities decide whether it is current.
+    const memo = this.recordSampleMemo;
+    if (memo?.labels === this.labels && memo.datasets === this.datasets) return memo.value;
     const rowCount = this.recordCount();
     const seriesCount = this.datasets.length;
-    return { rowCount, seriesCount, ...sampleChartTableIndexes(rowCount, seriesCount) };
+    const value = { rowCount, seriesCount, ...sampleChartTableIndexes(rowCount, seriesCount) };
+    this.recordSampleMemo = { labels: this.labels, datasets: this.datasets, value };
+    return value;
   }
+
+  private recordSampleMemo?: {
+    labels: readonly string[];
+    datasets: readonly LyraLiteChartSeries[];
+    value: { rowCount: number; seriesCount: number } & ReturnType<typeof sampleChartTableIndexes>;
+  };
+
+  private marksMemo?: {
+    sample: object;
+    type: LyraLiteChartType;
+    skipZero: boolean;
+    value: InteractiveMark[];
+    indexes?: Map<string, number>;
+  };
 
   private generatedDataIsSampled(): boolean {
     if (this.hasCustomDataTable()) return false;
@@ -1486,8 +1536,11 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   /** The ordered set of eligible marks used by both keyboard navigation and
    * the screen-reader data alternative. */
   private interactiveMarks(): InteractiveMark[] {
-    const marks: InteractiveMark[] = [];
     const sample = this.recordSample();
+    const memo = this.marksMemo;
+    if (memo?.sample === sample && memo.type === this.effectiveType && memo.skipZero === this.skipZero)
+      return memo.value;
+    const marks: InteractiveMark[] = [];
     if (this.effectiveType === 'bar') {
       for (const index of sample.rowIndexes) {
         for (const datasetIndex of sample.seriesIndexes) {
@@ -1507,6 +1560,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         });
       });
     }
+    this.marksMemo = { sample, type: this.effectiveType, skipZero: this.skipZero, value: marks };
     return marks;
   }
 
@@ -1526,9 +1580,10 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   }
 
   private markIndexMap(): Map<string, number> {
-    return new Map(
-      this.interactiveMarks().map((mark, index) => [`${mark.datasetIndex}:${mark.index}`, index]),
-    );
+    const marks = this.interactiveMarks();
+    const memo = this.marksMemo!;
+    memo.indexes ??= new Map(marks.map((mark, index) => [`${mark.datasetIndex}:${mark.index}`, index]));
+    return memo.indexes;
   }
 
   private normalizedMarkIndex(marks = this.interactiveMarks()): number {
@@ -1569,7 +1624,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       values: {
         series,
         label: mark.label,
-        value: getNumberFormat(this.effectiveLocale).format(mark.value),
+        value: formatChartValue(mark.value, this.effectiveLocale),
         index: getNumberFormat(this.effectiveLocale).format(index + 1),
         total: getNumberFormat(this.effectiveLocale).format(marks.length),
       },
@@ -1674,16 +1729,23 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    */
   private logDomainFloor(lo: number, hi: number): number {
     if (lo > 0) return lo;
-    let smallest = Number.POSITIVE_INFINITY;
-    for (const series of this.datasets) {
-      for (const value of series.data) {
-        if (value == null || !Number.isFinite(value) || value <= 0) continue;
-        if (value < smallest) smallest = value;
+    // Every plotted coordinate asks for the floor; scan the immutable snapshot once per data set.
+    if (this.smallestPositive?.datasets !== this.datasets) {
+      let smallest = Number.POSITIVE_INFINITY;
+      for (const series of this.datasets) {
+        for (const value of series.data) {
+          if (value == null || !Number.isFinite(value) || value <= 0) continue;
+          if (value < smallest) smallest = value;
+        }
       }
+      this.smallestPositive = { datasets: this.datasets, value: smallest };
     }
+    const smallest = this.smallestPositive.value;
     if (Number.isFinite(smallest)) return smallest;
     return hi > 0 ? hi / 10 : 1;
   }
+
+  private smallestPositive?: { datasets: readonly LyraLiteChartSeries[]; value: number };
 
   /** Normalizes `minBarHeight` to a non-negative pixel floor, or `undefined` when left unset -- a
    *  non-finite/negative explicit value falls back to `0` (a no-op floor, since a bar's natural
@@ -1831,7 +1893,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       const series = this.datasets[mark.datasetIndex]?.label ?? '';
       return this.resolvePointText(mark.label, mark.value, mark.datasetIndex, mark.index) ??
         this.localize('liteChartBarLabel', undefined, {
-          series, label: mark.label, value: getNumberFormat(this.effectiveLocale).format(mark.value),
+          series, label: mark.label, value: formatChartValue(mark.value, this.effectiveLocale),
         });
     });
     return {
@@ -2114,7 +2176,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
           this.localize('liteChartBarLabel', undefined, {
             series: s.label,
             label,
-            value: numberFormat.format(v),
+            value: formatChartValue(v, this.effectiveLocale, numberFormat),
           });
         const titleText = barText;
         const w = clampSvgLength(Math.max(0, barW));
@@ -2294,7 +2356,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
           this.localize('liteChartBarLabel', undefined, {
             series: s.label,
             label,
-            value: numberFormat.format(v),
+            value: formatChartValue(v, this.effectiveLocale, numberFormat),
           });
         const titleText = barText;
         const markIndex = markIndexes.get(`${di}:${i}`)!;
@@ -2631,9 +2693,10 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       >${displayLabel}</text>`;
     });
 
-    const datasetLabels = recordSample.seriesIndexes.map(
-      (datasetIndex) => this.datasets[datasetIndex]!.label,
-    );
+    // A blank series label never reaches the name (" and Sales"); all blank uses the fallback.
+    const datasetLabels = recordSample.seriesIndexes
+      .map((datasetIndex) => this.datasets[datasetIndex]!.label)
+      .filter(Boolean);
     const chartLabel =
       this.hostAccessibleLabel ??
       (this.label ||
@@ -2653,6 +2716,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         data-legend-position=${this.withLegend
           ? chartChromeLegendPlacement(this.legendPosition)
           : nothing}
+        ?data-table-toggle=${this.dataTableToggle}
       >
         <svg
           viewBox="0 0 ${w} ${h}"
@@ -2711,7 +2775,10 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
                   <th scope="col">${this.localize('chartCategory')}</th>
                   ${recordSample.seriesIndexes.map((datasetIndex) => {
                     const series = this.datasets[datasetIndex]!;
-                    return html`<th scope="col">${isolateHtml(series.label, direction)}</th>`;
+                    return html`<th scope="col">${isolateHtml(
+                      series.label || this.localize('chartSeriesLabel'),
+                      direction,
+                    )}</th>`;
                   })}
                   ${showTableTotals ? html`<th scope="col">${this.localize('chartTotal')}</th>` : nothing}
                 </tr>
@@ -2721,7 +2788,10 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
                   (index) => {
                     const label = this.labels[index] ?? '';
                     return html`<tr>
-                    <th scope="row">${isolateHtml(label, direction)}</th>
+                    <th scope="row">${isolateHtml(
+                      label || getNumberFormat(this.effectiveLocale).format(index + 1),
+                      direction,
+                    )}</th>
                     ${recordSample.seriesIndexes.map((datasetIndex) => {
                       const series = this.datasets[datasetIndex]!;
                       const value = series.data[index];

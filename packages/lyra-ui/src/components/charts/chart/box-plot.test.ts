@@ -218,14 +218,15 @@ describe('box-plot family-contract regressions', () => {
     el.datasets = [{ label: 'Series', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
     await el.updateComplete;
     const label = (el as unknown as { buildConfig(): any }).buildConfig().options.plugins.tooltip
-      .callbacks.label as (context: { dataset?: { label?: unknown }; raw?: unknown }) => string | undefined;
+      .callbacks.label as (context: { dataset?: { label?: unknown }; raw?: unknown }) => string[] | undefined;
     expect(typeof label).to.equal('function');
+    const statistics = ['Min: tooltip:1', 'Q1: tooltip:2', 'Median: tooltip:3', 'Q3: tooltip:4', 'Max: tooltip:5'];
     expect(
       label({ dataset: { label: 'Series' }, raw: { min: 1, q1: 2, median: 3, q3: 4, max: 5 } }),
-    ).to.equal('Series: tooltip:3');
+    ).to.deep.equal(['Series', ...statistics]);
     expect(
       label({ dataset: { label: '' }, raw: { min: 1, q1: 2, median: 3, q3: 4, max: 5 } }),
-    ).to.equal('tooltip:3');
+    ).to.deep.equal(statistics);
     expect(label({ dataset: { label: 'Series' }, raw: null })).to.equal(undefined);
     expect(
       label({ dataset: { label: 'Series' }, raw: { min: 5, q1: 4, median: 3, q3: 2, max: 1 } }),
@@ -260,13 +261,16 @@ describe('box-plot family-contract regressions', () => {
       raw: { min: 6, q1: 7, median: 8, q3: 9, max: 10 },
     });
 
-    const tooltip = seen.find((context) => context['surface'] === 'tooltip');
-    expect(tooltip?.['datasetIndex'], 'the hovered dataset reaches the formatter').to.equal(1);
-    expect(tooltip?.['index'], 'so does the hovered category index').to.equal(1);
-    expect(tooltip?.['label'], 'so does the category label').to.equal('Second');
-    expect(tooltip?.['seriesLabel'], 'so does the series label').to.equal('Cost');
-    expect(tooltip?.['statistic'], 'the tooltip formats the median').to.equal('median');
-    expect(tooltip?.['axis'], 'and names the scale it is plotted on').to.equal('y');
+    const tooltip = seen.filter((context) => context['surface'] === 'tooltip');
+    expect(tooltip.map((context) => context['statistic']), 'the tooltip formats all five statistics')
+      .to.deep.equal(['min', 'q1', 'median', 'q3', 'max']);
+    for (const context of tooltip) {
+      expect(context['datasetIndex'], 'the hovered dataset reaches the formatter').to.equal(1);
+      expect(context['index'], 'so does the hovered category index').to.equal(1);
+      expect(context['label'], 'so does the category label').to.equal('Second');
+      expect(context['seriesLabel'], 'so does the series label').to.equal('Cost');
+      expect(context['axis'], 'and names the scale it is plotted on').to.equal('y');
+    }
   });
 
   it('names the value scale on every axis tick it formats', async () => {
@@ -292,8 +296,8 @@ describe('box-plot family-contract regressions', () => {
 
     expect(el.exportData('csv')).to.contain('table:3');
     const callback = (el as any).buildConfig().options.plugins.tooltip.callbacks.label;
-    expect(callback({ raw: { min: 1, q1: 2, median: 3, q3: 4, max: 5 } })).to.equal(
-      'tooltip:3'
+    expect(callback({ raw: { min: 1, q1: 2, median: 3, q3: 4, max: 5 } })).to.deep.equal(
+      ['Min: tooltip:1', 'Q1: tooltip:2', 'Median: tooltip:3', 'Q3: tooltip:4', 'Max: tooltip:5']
     );
   });
 
@@ -2480,14 +2484,22 @@ describe('bidi isolation of formatted labels', () => {
     chart.draw();
     await waitUntil(() => chart.tooltip.title[0]?.startsWith(LRE), 'the tooltip title was never isolated');
     expect(chart.tooltip.title).to.deep.equal([`${LRE}9:00 AM${PDF}`]);
-    expect(chart.tooltip.body[0]!.lines).to.deep.equal([`${LRE}Latency: 10 ms${PDF}`]);
+    expect(chart.tooltip.body[0]!.lines).to.deep.equal([
+      `${LRE}Latency${PDF}`,
+      `${LRE}Min: 8 ms${PDF}`,
+      `${LRE}Q1: 9 ms${PDF}`,
+      `${LRE}Median: 10 ms${PDF}`,
+      `${LRE}Q3: 11 ms${PDF}`,
+      `${LRE}Max: 12 ms${PDF}`,
+    ]);
   });
 
-  it('embeds a number-first tooltip value after an Arabic-script series label on an RTL canvas', async () => {
+  it('embeds a number-first tooltip value after an Arabic-script statistic name on an RTL canvas', async () => {
     const el = (await fixture(html`<lr-box-plot
       dir="rtl"
       .labels=${['أ']}
       .datasets=${[{ label: 'زمن', data: [summary(10)] }]}
+      .strings=${{ boxPlotMin: 'أدنى', boxPlotQ1: 'ر١', boxPlotMedian: 'وسيط', boxPlotQ3: 'ر٣', boxPlotMax: 'أقصى' }}
       .formatter=${({ value }: { value: number }) => `${value} ms`}
     ></lr-box-plot>`)) as LyraBoxPlot;
     await waitUntil(() => (el as any).chart != null, 'box plot never initialized', { timeout: 5000 });
@@ -2506,12 +2518,19 @@ describe('bidi isolation of formatted labels', () => {
     await waitUntil(() => chart.tooltip.body.length > 0, 'the tooltip never built its body');
     chart.draw();
     expect(chart.tooltip.title).to.deep.equal(['أ']);
-    // The line reads RTL from its label, so only the value is embedded.
-    expect(chart.tooltip.body[0]!.lines).to.deep.equal([`زمن: ${LRE}10 ms${PDF}`]);
+    // Each line reads RTL from its name, so only the value is embedded.
+    expect(chart.tooltip.body[0]!.lines).to.deep.equal([
+      'زمن',
+      `أدنى: ${LRE}8 ms${PDF}`,
+      `ر١: ${LRE}9 ms${PDF}`,
+      `وسيط: ${LRE}10 ms${PDF}`,
+      `ر٣: ${LRE}11 ms${PDF}`,
+      `أقصى: ${LRE}12 ms${PDF}`,
+    ]);
     const line = document.createElement('div');
     line.dir = 'rtl';
     line.style.cssText = 'font: 16px sans-serif; white-space: pre; inline-size: max-content;';
-    line.textContent = chart.tooltip.body[0]!.lines[0]!;
+    line.textContent = chart.tooltip.body[0]!.lines[3]!;
     document.body.append(line);
     try {
       expect(renderedBox(line, '10').left, 'number before unit').to.be.below(renderedBox(line, 'ms').left);

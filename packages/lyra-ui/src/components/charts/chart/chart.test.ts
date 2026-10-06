@@ -9,7 +9,15 @@ import {
   type LyraChartAnnotation,
   type LyraChartSeries,
 } from './chart.js';
-import { loadChartAndZoom } from './chart-feature-loader.js';
+import {
+  loadChartAndZoom,
+  loadChartJsWithDataLabelsResult,
+  loadChartJsWithZoom,
+  loadChartJsWithZoomResult,
+} from './chart-feature-loader.js';
+import { loadChartJs } from './chart-core-loader.js';
+import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import {
   bidiStyles,
   canvasSentence,
@@ -705,6 +713,8 @@ describe('bounded chart surface regressions', () => {
     el.labels = labels;
     el.datasets = [{ label: 'Safe', data }, { label: 'Point', points }];
     el.annotations = annotations as unknown as readonly LyraChartAnnotation[];
+    // The accessor-backed index cannot be copied, so the boundary reports the dropped entry.
+    expectDevWarning(collectionTruncationWarningKey('lr-chart', 'hiddenDatasets'));
     el.hiddenDatasets = hidden;
 
     Object.defineProperty(data, '0', {
@@ -3247,7 +3257,7 @@ it('builds scales for the config-overridden effective type, not the attribute ty
   const el = (await fixture(
     html`<lr-chart type="line" .datasets=${[{ label: 'a', data: [1, 2] }]} .config=${{ type: 'radar' }}></lr-chart>`,
   )) as LyraChart;
-  await aTimeout(50);
+  await waitUntil(() => (el as any).chart != null, 'chart did not initialize', { timeout: 5000 });
   const chart = (el as unknown as { chart?: { options: { scales?: Record<string, unknown> } } }).chart;
   expect(chart?.options.scales?.['r']).to.exist;
   expect(chart?.options.scales?.['x']).to.not.exist;
@@ -3257,7 +3267,7 @@ it('actually suppresses the tooltip for a noTooltip series via plugin-level filt
   const el = (await fixture(
     html`<lr-chart type="line" .datasets=${[{ label: 'a', data: [1], noTooltip: true }, { label: 'b', data: [2] }]}></lr-chart>`,
   )) as LyraChart;
-  await aTimeout(50);
+  await waitUntil(() => (el as any).chart != null, 'chart did not initialize', { timeout: 5000 });
   const chart = (el as unknown as { chart?: { options: { plugins?: { tooltip?: { filter?: (item: { datasetIndex: number }) => boolean } } } } }).chart;
   const filter = chart?.options.plugins?.tooltip?.filter;
   expect(filter?.({ datasetIndex: 0 })).to.be.false;
@@ -3269,7 +3279,9 @@ it('does not construct a Chart.js instance if disconnected before the lazy chart
   el.datasets = [{ label: 'a', data: [1] }];
   document.body.appendChild(el);
   el.remove();
-  await aTimeout(100);
+  // The guard runs in the memoized loader's own continuation; settle it, then one task.
+  await loadChartJs();
+  await aTimeout(0);
   // Boolean projection, not `.to.be.undefined` on the live instance -- see the
   // primitive-projection note above.
   expect((el as unknown as { chart?: unknown }).chart == null).to.be.true;
@@ -3290,7 +3302,8 @@ it('does not leak a Chart instance bound to a detached canvas when zoom turns on
   // test above.
   el.zoomable = true;
   el.remove();
-  await aTimeout(200);
+  await Promise.all([loadChartJsWithZoom(), loadChartJsWithZoomResult()]);
+  await aTimeout(0);
 
   // The chart that existed before disconnect must have been torn down by
   // disconnectedCallback() and never replaced by a new instance bound to the
@@ -3569,7 +3582,8 @@ it('skips drawing when the element disconnects after zoom starts loading but bef
   // synchronous tick and never reaches that `.then()` registration at all.
   await el.updateComplete;
   el.remove();
-  await aTimeout(200);
+  await Promise.all([loadChartJsWithZoom(), loadChartJsWithZoomResult()]);
+  await aTimeout(0);
 
   // Boolean projection, not `.to.be.undefined` on the live instance -- see the
   // primitive-projection note above.
@@ -5607,7 +5621,8 @@ describe('coverage: resize/animation-frame and lifecycle defensive branches', ()
     el.zoomable = true;
     await el.updateComplete; // updated() observes changed.has('zoomable') and starts the on-demand load
     el.remove(); // disconnect before loadChartJsWithZoom() resolves
-    await aTimeout(200);
+    await Promise.all([loadChartJsWithZoom(), loadChartJsWithZoomResult()]);
+    await aTimeout(0);
 
     // Boolean projection, not `.to.be.undefined` on the live instance -- see the
     // primitive-projection note above.
@@ -5624,7 +5639,8 @@ describe('coverage: resize/animation-frame and lifecycle defensive branches', ()
     (el as unknown as { dataLabels: boolean }).dataLabels = true;
     await el.updateComplete; // updated() starts loadChartJsWithDataLabels().then(...)
     el.remove();
-    await aTimeout(200);
+    await loadChartJsWithDataLabelsResult();
+    await aTimeout(0);
 
     // Boolean projection, not `.to.be.undefined` on the live instance -- see the
     // primitive-projection note above.
@@ -5641,7 +5657,8 @@ describe('coverage: resize/animation-frame and lifecycle defensive branches', ()
     el.datasets = [{ label: 'Revenue', data: [10] }];
     document.body.appendChild(el);
     el.remove();
-    await aTimeout(200);
+    await Promise.all([loadChartJs(), loadChartJsWithDataLabelsResult()]);
+    await aTimeout(0);
     // Boolean projection, not `.to.be.undefined` on the live instance -- see the
     // primitive-projection note above.
     expect((el as any).chart == null).to.be.true;

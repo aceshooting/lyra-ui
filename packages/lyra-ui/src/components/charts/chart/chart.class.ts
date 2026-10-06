@@ -9,7 +9,6 @@ import { specialistTokens } from '../../../internal/specialist-tokens.styles.js'
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
-import type { LyraMessageKey } from '../../../internal/localization.js';
 import { loadChartJs, type ChartJsModule } from './chart-core-loader.js';
 import { onAnnotationPluginRegistered } from '../../../internal/chart-annotation-registration.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
@@ -26,8 +25,12 @@ import {
 import { styles } from './chart.styles.js';
 import '../../overlays/skeleton/skeleton.class.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
+import { formatChartValue } from './chart-number-format.js';
 import { escapeCsvField } from '../../utility/export-button/csv.js';
 import { finiteAdd, finiteNumber } from '../../../internal/numbers.js';
+import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
+import { showChartActiveDatum } from './chart-active-datum.js';
+import { devWarnOnce } from '../../../internal/dev-warning.js';
 import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
@@ -45,12 +48,10 @@ import {
   FALLBACK_TICK_FONT_SIZE,
   FALLBACK_TOOLTIP_BG,
   FALLBACK_TOOLTIP_TEXT,
-  resolveCanvasColor,
   resolveCanvasColors,
-  seriesPalette,
-  translucentAreaColor,
   type ChartThemeColors as ThemeColors,
 } from './chart-colors.js';
+import { ChartTokenCache } from './chart-token-cache.js';
 import { normalizeSize, type LyraSize, type LyraVariant } from '../../../internal/variants.js';
 import {
   createForcedColorPattern,
@@ -81,7 +82,7 @@ import {
 } from './chart-bidi.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartAnnotationsUnavailable, LYRA_DEFAULT_chartAxisTotal, LYRA_DEFAULT_chartBubblePointCoordinates, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartDataLabelsUnavailable, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartLabeledPoint, LYRA_DEFAULT_chartMissingLibrary, LYRA_DEFAULT_chartPointCoordinates, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartPrimaryAxis, LYRA_DEFAULT_chartSecondaryAxis, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartStackTotalsUnavailable, LYRA_DEFAULT_chartSummary, LYRA_DEFAULT_chartSummaryEmpty, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartSummaryWithData, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_chartTypeBar, LYRA_DEFAULT_chartTypeBubble, LYRA_DEFAULT_chartTypeDoughnut, LYRA_DEFAULT_chartTypeLine, LYRA_DEFAULT_chartTypePie, LYRA_DEFAULT_chartTypePolarArea, LYRA_DEFAULT_chartTypeRadar, LYRA_DEFAULT_chartTypeScatter, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_chartValuePercentageLabel, LYRA_DEFAULT_chartZoomUnavailable, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_liteChartMarkSummary, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_resetZoom, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartAnnotationsUnavailable, LYRA_DEFAULT_chartAxisTotal, LYRA_DEFAULT_chartBubblePointCoordinates, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartDataLabelsUnavailable, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartLabeledPoint, LYRA_DEFAULT_chartMissingLibrary, LYRA_DEFAULT_chartPointCoordinates, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartPrimaryAxis, LYRA_DEFAULT_chartSecondaryAxis, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartStackTotalsUnavailable, LYRA_DEFAULT_chartSummary, LYRA_DEFAULT_chartSummaryEmpty, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartSummaryWithData, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_chartTypeBar, LYRA_DEFAULT_chartTypeBubble, LYRA_DEFAULT_chartTypeDoughnut, LYRA_DEFAULT_chartTypeLine, LYRA_DEFAULT_chartTypePie, LYRA_DEFAULT_chartTypePolarArea, LYRA_DEFAULT_chartTypeRadar, LYRA_DEFAULT_chartTypeScatter, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_chartValuePercentageLabel, LYRA_DEFAULT_chartZoomUnavailable, LYRA_DEFAULT_liteChartMarkSummary, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_resetZoom } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export { seriesPalette } from './chart-colors.js';
@@ -404,17 +405,6 @@ const CHART_TYPES = new Set<LyraChartType>([
   'bubble',
 ]);
 
-const CHART_TYPE_MESSAGE_KEYS: Record<LyraChartType, LyraMessageKey> = {
-  line: 'chartTypeLine',
-  bar: 'chartTypeBar',
-  scatter: 'chartTypeScatter',
-  pie: 'chartTypePie',
-  doughnut: 'chartTypeDoughnut',
-  radar: 'chartTypeRadar',
-  polarArea: 'chartTypePolarArea',
-  bubble: 'chartTypeBubble',
-};
-
 function normalizeChartType(value: unknown): LyraChartType {
   return typeof value === 'string' && CHART_TYPES.has(value as LyraChartType)
     ? (value as LyraChartType)
@@ -487,6 +477,9 @@ function isChartRecord(value: unknown): value is Record<string, unknown> {
 }
 
 const MAX_CHART_INPUT_ENTRIES = 10_000;
+/** Values a raw `config.data` member may copy in total; each array still keeps <= 10,000. */
+const MAX_CHART_CONFIGURATION_DATA_NODES = 100_000;
+const CHART_INPUT_CAP_WARNING_KEY = 'lr-chart-input-cap';
 const MAX_CHART_CONFIGURATION_DEPTH = 32;
 const OMIT_CHART_CONFIGURATION_VALUE = Symbol('omit-chart-configuration-value');
 
@@ -512,6 +505,11 @@ function admitChartArray(value: unknown): ChartArrayAdmission | undefined {
       descriptor.value < 0
     )
       return undefined;
+    if (descriptor.value > MAX_CHART_INPUT_ENTRIES)
+      devWarnOnce(
+        CHART_INPUT_CAP_WARNING_KEY,
+        'lr-chart: an input array exceeded 10,000 entries; only the first 10,000 are used.',
+      );
     return { source: value, length: Math.min(descriptor.value, MAX_CHART_INPUT_ENTRIES) };
   } catch {
     return undefined;
@@ -1313,10 +1311,11 @@ function projectChartDataConfiguration(value: unknown): LyraChartDataConfigurati
 
 function projectChartConfiguration(value: unknown): LyraChartConfiguration | undefined {
   if (!isSafeChartConfigurationRecord(value)) return undefined;
-  const budget: ChartConfigurationBudget = {
-    remaining: MAX_CHART_INPUT_ENTRIES,
+  // Each member is bounded on its own, so a large `data` member never displaces `options`.
+  const budget = (remaining = MAX_CHART_INPUT_ENTRIES): ChartConfigurationBudget => ({
+    remaining,
     active: new Set(),
-  };
+  });
   const output = Object.create(null) as Record<string, unknown>;
   const type = chartRecordValue(value, 'type');
   const data = chartRecordValue(value, 'data');
@@ -1337,7 +1336,10 @@ function projectChartConfiguration(value: unknown): LyraChartConfiguration | und
       descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
     )
       continue;
-    const copied = copyChartConfigurationValue(descriptor.value, budget);
+    const copied = copyChartConfigurationValue(
+      descriptor.value,
+      budget(property === 'data' ? MAX_CHART_CONFIGURATION_DATA_NODES : undefined),
+    );
     if (copied === OMIT_CHART_CONFIGURATION_VALUE) continue;
     if (property === 'data') {
       const projected = projectChartDataConfiguration(copied);
@@ -1357,7 +1359,7 @@ function projectChartConfiguration(value: unknown): LyraChartConfiguration | und
     if (pluginArray)
       output['plugins'] = projectChartPlugins(plugins.value, pluginArray);
     else {
-      const copied = copyChartConfigurationValue(plugins.value, budget);
+      const copied = copyChartConfigurationValue(plugins.value, budget());
       if (copied !== OMIT_CHART_CONFIGURATION_VALUE) output['plugins'] = copied;
     }
   }
@@ -1883,17 +1885,10 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     chartValueLabel: LYRA_DEFAULT_chartValueLabel,
     chartValuePercentageLabel: LYRA_DEFAULT_chartValuePercentageLabel,
     chartZoomUnavailable: LYRA_DEFAULT_chartZoomUnavailable,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     liteChartMarkSummary: LYRA_DEFAULT_liteChartMarkSummary,
     loading: LYRA_DEFAULT_loading,
-    map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
-    open: LYRA_DEFAULT_open,
     resetZoom: LYRA_DEFAULT_resetZoom,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
@@ -1928,9 +1923,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     // when prefers-color-scheme flips or an ancestor's theme attribute mutates. The controller
     // registers itself with the host via addController(); redraw only once a chart exists.
     new ThemeWatcher(this, () => {
+      this.canvasTokens.clear();
       if (this.chart) this.refreshTheme();
     });
   }
+
+  /** Canvas colors and lengths resolved since the last theme notification. */
+  private readonly canvasTokens = new ChartTokenCache(this);
 
   @property({ converter: { fromAttribute: (value) => normalizeChartType(value) } })
   type: LyraChartType = 'bar';
@@ -2004,10 +2003,14 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   @property({ attribute: false })
   get hiddenDatums(): readonly number[] { return this._hiddenDatums; }
   set hiddenDatums(value: readonly number[]) {
+    // A declarative parent re-commits the same array on every render; only a new one is a change.
+    if (Object.is(value, this.hiddenDatumsSource) || Object.is(value, this._hiddenDatums)) return;
     const previous = this._hiddenDatums;
     this._hiddenDatums = projectHiddenDatasetIndexes(value) ?? Object.freeze([]);
+    this.hiddenDatumsSource = value;
     this.requestUpdate('hiddenDatums', previous);
   }
+  private hiddenDatumsSource: unknown = this._hiddenDatums;
   /**
    * `datum` renders category toggles for pie/doughnut/polar-area charts. Categories use the first
    * dataset's colors and values; a toggle affects that category in every ring. Other chart types
@@ -2265,7 +2268,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     return this._config;
   }
   set config(value: LyraChartConfiguration | undefined) {
-    if (Object.is(value, this.configSource)) return;
+    if (Object.is(value, this.configSource) || (value !== undefined && Object.is(value, this._config)))
+      return;
     const previous = this._config;
     this._config = projectChartConfiguration(value);
     this.configSource = value;
@@ -2332,9 +2336,17 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * while an omitted member falls back to the simplified property surface.
    */
   private effectiveData(): EffectiveChartData {
+    // Hover, keyboard and render paths read this many times per update; its inputs are immutable
+    // snapshots, so their identities decide whether the projection is still current.
+    const labels = this.canonicalLabels();
+    const datasets = this.datasets;
+    const config = this.config ?? this.slottedConfig;
+    const memo = this.effectiveDataMemo;
+    if (memo?.labels === labels && memo.datasets === datasets && memo.config === config)
+      return memo.value;
     const generated: EffectiveChartData = {
-      labels: [...this.canonicalLabels()],
-      datasets: this.datasets.map((series) => {
+      labels: [...labels],
+      datasets: datasets.map((series) => {
         const { points: _points, ...safeSeries } = series;
         return {
           ...safeSeries,
@@ -2346,11 +2358,20 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const override = projectChartDataConfiguration(this.effectiveConfig()?.data);
     const merged = override ? deepMerge(generated, override) : generated;
     const projected = projectChartDataConfiguration(merged);
-    return {
+    const value = {
       labels: (projected?.labels ?? []) as unknown[],
       datasets: (projected?.datasets ?? []) as LyraChartDatasetConfiguration[],
     };
+    this.effectiveDataMemo = { labels, datasets, config, value };
+    return value;
   }
+
+  private effectiveDataMemo?: {
+    labels: readonly string[];
+    datasets: readonly LyraChartSeries[];
+    config: unknown;
+    value: EffectiveChartData;
+  };
 
   /** Validates peer callback indexes against the visual data sent to Chart.js. */
   private callbackDatasetIndex(
@@ -2490,7 +2511,12 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * richer host-defined append contract.
    */
   appendData(label: string, values: (number | null)[], maxPoints: number = 0): void {
-    const limit = Number.isFinite(maxPoints) ? Math.max(0, Math.floor(maxPoints)) : 0;
+    const requested = Number.isFinite(maxPoints) ? Math.max(0, Math.floor(maxPoints)) : 0;
+    // Input admission keeps the FIRST 10,000 entries of each array, so an unbounded stream would
+    // freeze on its oldest data. Appending therefore always keeps a rolling window of the newest.
+    const limit = requested > 0
+      ? Math.min(requested, MAX_CHART_INPUT_ENTRIES)
+      : MAX_CHART_INPUT_ENTRIES;
     const appendedValues = projectChartNumberData(values) ?? Object.freeze([]);
     if (this.hasExplicitConfigData()) {
       const effective = this.effectiveData();
@@ -2509,7 +2535,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       const currentData = projectChartDataConfiguration(effectiveConfig?.data) ?? {};
       const explicitLabels = admitChartArray(currentData['labels']) !== undefined;
       const explicitDatasets = admitChartArray(currentData['datasets']) !== undefined;
-      const nextLabels = limit > 0 ? labels.slice(-limit) : labels;
+      const nextLabels = labels.slice(-limit);
 
       if (!explicitLabels) this.labels = nextLabels.map(labelText);
       if (!explicitDatasets) {
@@ -2521,7 +2547,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             ...Array.from({ length: Math.max(0, domainLength - current.length) }, () => null),
             appendedValues[index] ?? null,
           ];
-          return { ...series, data: limit > 0 ? data.slice(-limit) : data };
+          return { ...series, data: data.slice(-limit) };
         });
         this.datasets = datasets;
       }
@@ -2544,8 +2570,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
               appendedValues[index] ?? null,
             ];
             const canonical = [...current, ...padding, appendedValues[index] ?? null];
-            const nextData = limit > 0 ? data.slice(-limit) : data;
-            const nextCanonical = limit > 0 ? canonical.slice(-limit) : canonical;
+            const nextData = data.slice(-limit);
+            const nextCanonical = canonical.slice(-limit);
             canonicalChartDatasetDataValues.set(nextData, Object.freeze(nextCanonical));
             return { ...dataset, data: nextData };
           });
@@ -2574,9 +2600,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         ...Array.from({ length: Math.max(0, domainLength - current.length) }, () => null),
         appendedValues[index] ?? null,
       ];
-      return { ...series, data: limit > 0 ? data.slice(-limit) : data };
+      return { ...series, data: data.slice(-limit) };
     });
-    this.labels = limit > 0 ? labels.slice(-limit) : labels;
+    this.labels = labels.slice(-limit);
     this.datasets = datasets;
   }
 
@@ -2931,6 +2957,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
   override adoptedCallback(): void {
     this.chartSync.disconnect();
+    this.canvasTokens.clear();
     super.adoptedCallback();
     this.requestUpdate();
     this.releaseAnnouncementSinks();
@@ -3324,12 +3351,10 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       'labels',
       'datasets',
       'hiddenDatasets',
-      'description',
       'grid',
       'axes',
       'size',
       'indexAxis',
-      'label',
       'legendPosition',
       'min',
       'max',
@@ -3396,7 +3421,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         ? series.color
         : sourceColors;
     const colors = typeof authoredColors === 'string'
-      ? [resolveCanvasColor(this, authoredColors, borderFallback ?? 'transparent'),]
+      ? [this.canvasTokens.resolve(authoredColors, borderFallback ?? 'transparent'),]
       : authoredColors
         ? resolveCanvasColors(this, authoredColors, borderFallback ?? 'transparent')
         : undefined;
@@ -3449,9 +3474,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       fill &&
       (colors || !chartStyle.authoredFillColors[index % chartStyle.authoredFillColors.length])
         ? backgroundColors
-          ? backgroundColors.map((color) => translucentAreaColor(this, color))
+          ? backgroundColors.map((color) => this.canvasTokens.translucent(color))
           : backgroundColorValue
-            ? translucentAreaColor(this, backgroundColorValue)
+            ? this.canvasTokens.translucent(backgroundColorValue)
             : backgroundColorValue
         : backgroundColor;
     const encoding = forcedColorEncoding(index);
@@ -3572,7 +3597,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * is called fresh from `buildConfig()` on every draw rather than cached.
    */
   private themeColors(): ThemeColors {
-    const cs = this.computedStyle();
+    const cs = this.canvasTokens.sync() ?? this.computedStyle();
     const grid =
       cs.getPropertyValue('--grid-color').trim() ||
       cs.getPropertyValue('--lr-chart-grid-color').trim() ||
@@ -3590,18 +3615,18 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       cs.getPropertyValue('--lr-chart-tooltip-color').trim() ||
       cs.getPropertyValue('--_lr-chart-tooltip-color').trim();
     return {
-      grid: resolveCanvasColor(this, grid, FALLBACK_GRID_COLOR),
-      tick: resolveCanvasColor(this, tick, FALLBACK_TICK_COLOR),
+      grid: this.canvasTokens.resolve(grid, FALLBACK_GRID_COLOR),
+      tick: this.canvasTokens.resolve(tick, FALLBACK_TICK_COLOR),
       tickFontSize: this.styleNumber('--lr-chart-tick-font-size', '--_lr-chart-tick-font-size', FALLBACK_TICK_FONT_SIZE),
-      legend: resolveCanvasColor(this, legend, FALLBACK_LEGEND_COLOR),
-      tooltipBg: resolveCanvasColor(this, tooltipBg, FALLBACK_TOOLTIP_BG),
-      tooltipText: resolveCanvasColor(this, tooltipText, FALLBACK_TOOLTIP_TEXT),
+      legend: this.canvasTokens.resolve(legend, FALLBACK_LEGEND_COLOR),
+      tooltipBg: this.canvasTokens.resolve(tooltipBg, FALLBACK_TOOLTIP_BG),
+      tooltipText: this.canvasTokens.resolve(tooltipText, FALLBACK_TOOLTIP_TEXT),
     };
   }
 
   private styleColor(name: string, fallback: string): string {
     const value = this.computedStyle().getPropertyValue(name).trim();
-    return value ? resolveCanvasColor(this, value, fallback) : fallback;
+    return value ? this.canvasTokens.resolve(value, fallback) : fallback;
   }
 
   private styleNumber(name: string, fallbackToken: string, fallback: number): number {
@@ -3615,17 +3640,19 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     }
     if (!value || !this.ownerWindow) return fallback;
 
-    const probe = this.ownerDocument.createElement('span');
-    probe.hidden = true;
-    probe.setAttribute('aria-hidden', 'true');
-    probe.style.inlineSize = value;
-    (this.shadowRoot ?? this).append(probe);
-    try {
-      const resolved = Number.parseFloat(this.computedStyle(probe).inlineSize);
-      return Number.isFinite(resolved) && resolved >= 0 ? resolved : fallback;
-    } finally {
-      probe.remove();
-    }
+    const resolved = this.canvasTokens.length(value, () => {
+      const probe = this.ownerDocument.createElement('span');
+      probe.hidden = true;
+      probe.setAttribute('aria-hidden', 'true');
+      probe.style.inlineSize = value;
+      (this.shadowRoot ?? this).append(probe);
+      try {
+        return Number.parseFloat(this.computedStyle(probe).inlineSize);
+      } finally {
+        probe.remove();
+      }
+    });
+    return Number.isFinite(resolved) && resolved >= 0 ? resolved : fallback;
   }
 
   /**
@@ -3651,13 +3678,18 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    */
   private forcedColorPattern(index: number, background: string): CanvasPattern | string {
     if (!this.ownerWindow) return background;
-    return createForcedColorPattern(
-      this.ownerDocument,
-      index,
-      background,
-      this.styleColor('--lr-color-surface', FALLBACK_TOOLTIP_BG)
-    );
+    const surface = this.styleColor('--lr-color-surface', FALLBACK_TOOLTIP_BG);
+    // Per-point colors repeat a handful of values; one tile per encoding and color per draw.
+    const key = `${forcedColorEncoding(index).name}\n${background}\n${surface}`;
+    let pattern = this.forcedColorPatterns.get(key);
+    if (!pattern) {
+      pattern = createForcedColorPattern(this.ownerDocument, index, background, surface);
+      this.forcedColorPatterns.set(key, pattern);
+    }
+    return pattern;
   }
+
+  private forcedColorPatterns = new Map<string, CanvasPattern | string>();
 
   private chartStyleOptions(palette: string[]): ChartStyleOptions {
     const computed = this.computedStyle();
@@ -3709,7 +3741,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   private annotationColor(tone: LyraVariant | undefined): string {
     const token = `--lr-color-${tone ?? 'neutral'}`;
     const raw = this.computedStyle().getPropertyValue(token).trim();
-    return resolveCanvasColor(this, raw, FALLBACK_TICK_COLOR);
+    return this.canvasTokens.resolve(raw, FALLBACK_TICK_COLOR);
   }
 
   /**
@@ -3717,7 +3749,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * A single `value` becomes a `line` on that axis's scale; a `from`/`to` pair becomes a `box`
    * bounded on that axis and unbounded on the other.
    */
-  private annotationOptions(): Record<string, unknown> {
+  private annotationOptions(tick: string): Record<string, unknown> {
     const entries: Record<string, unknown> = {};
     const direction: ChartTextDirection = this.effectiveDirection === 'rtl' ? 'rtl' : 'ltr';
     this.normalizedAnnotations().forEach((entry, index) => {
@@ -3725,7 +3757,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       const color = this.annotationColor(entry.tone);
       // Drawn on the canvas like a tick, so isolated the same way (see chart-bidi.ts).
       const label = entry.label
-        ? { content: isolateCanvasText(entry.label, direction), display: true, color: this.themeColors().tick, }
+        ? { content: isolateCanvasText(entry.label, direction), display: true, color: tick, }
         : undefined;
       if (typeof entry.value === 'number') {
         entries[`lr-annotation-${index}`] = {
@@ -3746,7 +3778,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       entries[`lr-annotation-${index}`] = {
         type: 'box',
         ...bounds,
-        backgroundColor: translucentAreaColor(this, color),
+        backgroundColor: this.canvasTokens.translucent(color),
         borderColor: color,
         borderWidth: 0,
         ...(label ? { label } : {}),
@@ -3887,7 +3919,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         this.valueFormatter?.(value, 'tooltip');
       if (formatted != null) return String(formatted);
     }
-    return value.toLocaleString(this.effectiveLocale);
+    return formatChartValue(value, this.effectiveLocale);
   }
 
   /**
@@ -3943,7 +3975,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * active theme. Returns a fresh array on every call — mutating it does not affect the chart.
    */
   seriesPalette(): string[] {
-    return seriesPalette(this);
+    return this.canvasTokens.palette();
   }
 
   /**
@@ -4205,6 +4237,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
   private chartDatums(): ChartDatum[] {
     const effective = this.effectiveData();
+    const memo = this.chartDatumsMemo;
+    if (
+      memo?.effective === effective &&
+      memo.datasets === this.visualDatasetSourceIndexes &&
+      memo.rows === this.visualRowSourceIndexes
+    )
+      return memo.value;
     const datasetIndexes = this.visualDatasetSourceIndexes ??
       effective.datasets.map((_dataset, index) => index);
     const datasets = datasetIndexes.map((index) => effective.datasets[index]);
@@ -4239,6 +4278,12 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         });
       });
     });
+    this.chartDatumsMemo = {
+      effective,
+      datasets: this.visualDatasetSourceIndexes,
+      rows: this.visualRowSourceIndexes,
+      value: datums,
+    };
     return datums;
   }
 
@@ -4342,12 +4387,32 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       chart.data.datasets.every((dataset) => dataset.type === undefined || dataset.type === 'bar' || dataset.type === 'line');
   }
 
+  private chartDatumsMemo?: {
+    effective: EffectiveChartData;
+    datasets: readonly number[] | undefined;
+    rows: readonly number[] | undefined;
+    value: ChartDatum[];
+  };
+
+  /** Source -> visual position, built once per visual sample instead of an `indexOf` per datum. */
+  private visualPosition(sources: readonly number[] | undefined, source: number): number {
+    if (!sources) return source;
+    let positions = this.visualPositions.get(sources);
+    if (!positions) {
+      positions = new Map(sources.map((value, index) => [value, index]));
+      this.visualPositions.set(sources, positions);
+    }
+    return positions.get(source) ?? -1;
+  }
+
+  private readonly visualPositions = new WeakMap<readonly number[], Map<number, number>>();
+
   private syncDatums(): ChartDatum[] {
     const chart = this.chart;
     if (!chart) return [];
     return this.chartDatums().filter((datum) => {
-      const visualDataset = this.visualDatasetSourceIndexes?.indexOf(datum.datasetIndex) ?? datum.datasetIndex;
-      const visualIndex = this.visualRowSourceIndexes?.indexOf(datum.index) ?? datum.index;
+      const visualDataset = this.visualPosition(this.visualDatasetSourceIndexes, datum.datasetIndex);
+      const visualIndex = this.visualPosition(this.visualRowSourceIndexes, datum.index);
       const meta = chart.getDatasetMeta?.(visualDataset) as { data?: { skip?: boolean; x?: number; y?: number }[] } | undefined;
       const element = meta?.data?.[visualIndex];
       return chart.isDatasetVisible(visualDataset) && !!element && !element.skip &&
@@ -4382,8 +4447,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const matches = datums.filter((datum) => datum.index === index);
     if (!matches.length) return undefined;
     const hits = matches.map((datum) => ({
-      datasetIndex: this.visualDatasetSourceIndexes?.indexOf(datum.datasetIndex) ?? datum.datasetIndex,
-      index: this.visualRowSourceIndexes?.indexOf(datum.index) ?? datum.index,
+      datasetIndex: this.visualPosition(this.visualDatasetSourceIndexes, datum.datasetIndex),
+      index: this.visualPosition(this.visualRowSourceIndexes, datum.index),
     }));
     const runtime = this.chart as RuntimeChart & {
       tooltip?: {
@@ -4413,11 +4478,28 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     };
   }
 
-  private onCanvasFocus(): void {
+  /** Shows the keyboard-current datum the way a hover would; a synchronized chart already shows
+   *  it through the shared presentation. `undefined` clears a cue this chart showed. */
+  private showKeyboardDatum(datum: ChartDatum | undefined): void {
+    if (!this.chart || this.chartSync.enabled || (!datum && !this.keyboardDatumShown)) return;
+    this.keyboardDatumShown = showChartActiveDatum(this.chart, datum && {
+      datasetIndex: this.visualPosition(this.visualDatasetSourceIndexes, datum.datasetIndex),
+      index: this.visualPosition(this.visualRowSourceIndexes, datum.index),
+    });
+  }
+
+  private keyboardDatumShown = false;
+
+  private readonly onCanvasBlur = (): void => {
+    this.showKeyboardDatum(undefined);
+  };
+
+  private onCanvasFocus(event: FocusEvent): void {
     const datums = this.chartDatums();
     if (!datums.length) return;
     this.keyboardDatumIndex = Math.min(this.keyboardDatumIndex, datums.length - 1);
     this.publishSyncDatum(datums[this.keyboardDatumIndex]!);
+    if (isKeyboardFocusEvent(event)) this.showKeyboardDatum(datums[this.keyboardDatumIndex]);
     this.keyboardDatumAnnouncement = this.datumAnnouncement(
       datums[this.keyboardDatumIndex]!,
       this.keyboardDatumIndex,
@@ -4446,6 +4528,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     event.preventDefault();
     this.keyboardDatumIndex = next;
     this.publishSyncDatum(datums[next]!);
+    this.showKeyboardDatum(datums[next]);
     this.keyboardDatumAnnouncement = this.datumAnnouncement(datums[next]!, next, datums.length);
   }
 
@@ -4470,9 +4553,20 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    *  caller-supplied data, not library copy, so it passes through untranslated rather than through
    *  `localize()`, matching every other known type's localized label. */
   private localizedChartType(): string {
+    // Literal keys rather than a lookup table: the default-string slice generator reads literal
+    // `localize()` calls, and one computed key makes it copy unrelated literals into every slice.
     const type = this.effectiveType();
-    const key = CHART_TYPE_MESSAGE_KEYS[type as LyraChartType];
-    return key ? this.localize(key) : String(type);
+    switch (type) {
+      case 'line': return this.localize('chartTypeLine');
+      case 'bar': return this.localize('chartTypeBar');
+      case 'scatter': return this.localize('chartTypeScatter');
+      case 'pie': return this.localize('chartTypePie');
+      case 'doughnut': return this.localize('chartTypeDoughnut');
+      case 'radar': return this.localize('chartTypeRadar');
+      case 'polarArea': return this.localize('chartTypePolarArea');
+      case 'bubble': return this.localize('chartTypeBubble');
+      default: return String(type);
+    }
   }
 
   /**
@@ -4851,6 +4945,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   private buildConfig(): RuntimeChartConfiguration {
+    this.forcedColorPatterns = new Map();
     const theme = this.themeColors();
     // Resolve the effective type up front: `config.type` (if set) overrides
     // the attribute `type` post-merge, so scales/interaction must be built
@@ -4947,7 +5042,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
           // Only emitted when there is something to draw AND the peer actually loaded, so a chart
           // without annotations carries no annotation options at all.
           ...(this.needsAnnotations && this.annotationPlugin
-            ? { annotation: { annotations: this.annotationOptions() } }
+            ? { annotation: { annotations: this.annotationOptions(theme.tick) } }
             : {}),
           legend: {
             // A canvas legend cannot wrap one long public label; the DOM legend rendered below
@@ -5193,6 +5288,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * handled, but a fully out-of-band restyle is not).
    */
   refreshTheme(): void {
+    this.canvasTokens.clear();
     this.drawIfVisible();
     // The wrapping DOM legend carries a concrete, computed swatch color too; refresh its
     // template without turning the resulting empty-property update into another canvas draw.
@@ -5245,7 +5341,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   private formatSummaryValue(value: number): string {
-    return getNumberFormat(this.effectiveLocale).format(value);
+    return formatChartValue(value, this.effectiveLocale);
   }
 
   private formatTableValue(
@@ -5398,6 +5494,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   private dataTableSample(effective = this.effectiveData()) {
+    if (this.dataTableSampleMemo?.effective === effective) return this.dataTableSampleMemo.value;
     // Do not spread an unbounded consumer-provided dataset list into Math.max():
     // the accessible alternative itself must remain usable for very wide input.
     let rowCount = effective.labels.length;
@@ -5405,12 +5502,19 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       rowCount = Math.max(rowCount, this.datasetValues(dataset).length);
     }
     const indexes = sampleChartTableIndexes(rowCount, effective.datasets.length);
-    return {
+    const value = {
       rowCount,
       seriesCount: effective.datasets.length,
       ...indexes,
     };
+    this.dataTableSampleMemo = { effective, value };
+    return value;
   }
+
+  private dataTableSampleMemo?: {
+    effective: EffectiveChartData;
+    value: { rowCount: number; seriesCount: number } & ReturnType<typeof sampleChartTableIndexes>;
+  };
 
   private generatedDataIsSampled(): boolean {
     if (this.hasCustomDataTable()) return false;
@@ -5611,7 +5715,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       cached = new Map();
       colorCache.set(candidate, cached);
     }
-    const resolved = cached.get(fallback) ?? resolveCanvasColor(this, candidate, fallback);
+    const resolved = cached.get(fallback) ?? this.canvasTokens.resolve(candidate, fallback);
     cached.set(fallback, resolved);
     return resolved;
   }
@@ -5830,6 +5934,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             aria-describedby=${this.descriptionId}
             @pointermove=${this.onSyncPointerMove}
             @focus=${this.onCanvasFocus}
+            @blur=${this.onCanvasBlur}
             @keydown=${this.onCanvasKeyDown}
           ></canvas>
           <div

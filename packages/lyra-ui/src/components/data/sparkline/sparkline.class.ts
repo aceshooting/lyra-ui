@@ -205,10 +205,16 @@ export class LyraSparkline extends LyraElement {
 
     const last = values.at(-1);
     if (last === undefined) return this.localize('noData');
+    // Two fraction digits, widened below one so a small value keeps two significant digits
+    // instead of reading "0".
+    const magnitude = Math.abs(last);
+    const digits = magnitude > 0 && magnitude < 1
+      ? Math.min(20, Math.max(2, 1 - Math.floor(Math.log10(magnitude))))
+      : 2;
     return this.localize('trendOf', undefined, {
       count: getNumberFormat(this.effectiveLocale).format(values.length),
       value: getNumberFormat(this.effectiveLocale, {
-        maximumFractionDigits: 2,
+        maximumFractionDigits: digits,
       }).format(last),
     });
   }

@@ -233,7 +233,51 @@ export const styles = css`
     }
   }
 
+  /* The disclosure button gets its own row just above the table only when it exists: an empty
+     row would add one more gap to every chart. Each variant follows the rule it extends. */
+  [part='base']:where([data-table-toggle]) {
+    grid-template-areas:
+      'plot'
+      'notice'
+      'legend'
+      'table-toggle'
+      'table';
+  }
+  [part='base']:where([data-table-toggle][data-legend-position='top']) {
+    grid-template-areas:
+      'legend'
+      'plot'
+      'notice'
+      'table-toggle'
+      'table';
+  }
+  [part='base']:where([data-table-toggle][data-legend-position='inline-start']) {
+    grid-template-areas:
+      'legend plot'
+      'notice notice'
+      'table-toggle table-toggle'
+      'table table';
+  }
+  [part='base']:where([data-table-toggle][data-legend-position='inline-end']) {
+    grid-template-areas:
+      'plot legend'
+      'notice notice'
+      'table-toggle table-toggle'
+      'table table';
+  }
+  @container (max-width: 479px) {
+    [part='base']:where([data-table-toggle][data-legend-position='inline-start']),
+    [part='base']:where([data-table-toggle][data-legend-position='inline-end']) {
+      grid-template-areas:
+        'plot'
+        'notice'
+        'legend'
+        'table-toggle'
+        'table';
+    }
+  }
   [part='data-table-toggle'] {
+    grid-area: table-toggle;
     align-self: flex-start;
     font: inherit;
     font-size: var(--lr-font-size-xs);
@@ -250,12 +294,18 @@ export const styles = css`
     cursor: pointer;
   }
   [part='data-table-toggle']:hover {
-    background: var(--lr-lite-chart-data-table-toggle-hover-bg, var(--lr-color-brand-quiet));
+    background: var(
+      --lr-lite-chart-data-table-toggle-hover-bg,
+      var(--lr-chart-data-table-toggle-hover-bg, var(--lr-color-brand-quiet))
+    );
   }
   [part='data-table-toggle']:active {
     background: var(
       --lr-lite-chart-data-table-toggle-active-bg,
-      color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      var(
+        --lr-chart-data-table-toggle-active-bg,
+        color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      )
     );
   }
   [part='data-table-toggle']:focus-visible {

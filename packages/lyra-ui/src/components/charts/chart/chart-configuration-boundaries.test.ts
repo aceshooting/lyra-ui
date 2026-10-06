@@ -42,3 +42,30 @@ it('rejects revoked and reflective configuration inputs while retaining usable s
   await waitUntil(() => element.shadowRoot!.querySelector('table')?.textContent?.includes('12') === true);
   expect(element.shadowRoot!.querySelector('table')?.textContent).to.include('Safe label');
 });
+
+it('keeps raw options and every data point when config.data outgrows the options bound', () => {
+  const element = document.createElement('lr-chart') as LyraChart;
+  const points = (offset: number) => Array.from({ length: 4_000 }, (_, index) => offset + index);
+  element.config = {
+    type: 'line',
+    data: {
+      labels: Array.from({ length: 4_000 }, (_, index) => `t${index}`),
+      datasets: [
+        { label: 'A', data: points(0) },
+        { label: 'B', data: points(10_000) },
+        { label: 'C', data: points(20_000) },
+      ],
+    },
+    options: { plugins: { title: { display: true, text: 'Caller title' } }, scales: { y: { min: -5 } } },
+  };
+  const options = element.config?.options as {
+    plugins?: { title?: { text?: string } };
+    scales?: { y?: { min?: number } };
+  } | undefined;
+  expect(options?.plugins?.title?.text).to.equal('Caller title');
+  expect(options?.scales?.y?.min).to.equal(-5);
+  const datasets = element.config?.data?.datasets ?? [];
+  expect(datasets.length).to.equal(3);
+  expect((datasets[2]!.data as unknown[]).at(-1)).to.equal(23_999);
+  expect((datasets[2]!.data as unknown[]).includes(undefined)).to.equal(false);
+});

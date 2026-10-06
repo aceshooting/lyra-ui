@@ -237,7 +237,16 @@ it('embeds its isolated range tick labels left-to-right on an RTL canvas, where 
   const ticks = ((el as any).chart.scales.x.ticks as { label: string }[]).map((tick) => tick.label);
   expect(ticks.length).to.equal(2);
   for (const label of ticks) {
-    // binValues() keeps its own public LRI/PDI; the canvas adds a left-to-right embedding around it.
-    expect(label.startsWith('\u202a\u2066') && label.endsWith('\u2069\u202c'), JSON.stringify(label)).to.equal(true);
+    // The plain range label has no strong character, so the RTL canvas embeds it left-to-right.
+    expect(label.startsWith('\u202a') && label.endsWith('\u202c'), JSON.stringify(label)).to.equal(true);
   }
+});
+
+it('exports and reports plain bucket labels without invisible isolate controls', () => {
+  const el = document.createElement('lr-histogram') as LyraHistogram;
+  el.bins = 2;
+  el.values = [0, 1, 2, 3, 4];
+  expect(el.labels.length).to.equal(2);
+  expect(el.labels.filter((label) => /[\u2066-\u2069]/u.test(label))).to.deep.equal([]);
+  expect(/[\u2066-\u2069]/u.test(el.exportData('csv'))).to.equal(false);
 });

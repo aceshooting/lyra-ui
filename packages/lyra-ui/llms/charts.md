@@ -361,6 +361,9 @@ structured points retain their y-value formatting.
   As a declarative alternative, place one `<script type="application/json">` in the default slot;
   an explicitly assigned `config` property wins over the slotted object. Invalid/non-object JSON is
   ignored without evaluating script or exposing prototype-pollution keys to the merge.
+  The copy is bounded per member: `config.data` keeps at most 10,000 entries per array and 100,000
+  values in total, while `options` and `plugins` have their own bounds, so a large data set never
+  displaces the caller's options.
 - `withDataTable: boolean = false` (attribute `with-data-table`) — makes the always-available
   accessible data table visible rather than screen-reader-only.
 - `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.0.0) — renders a
@@ -378,8 +381,10 @@ structured points retain their y-value formatting.
   drawn
 - `chart: LyraChartInstance | undefined` (readonly-by-convention) — peer-neutral structural view of
   the live Chart.js instance; absent before load and after disconnect
-- `appendData(label, values, maxPoints?)` — appends one aligned numeric category and optionally
-  keeps only the newest `maxPoints`. Each labels/datasets member is written back to the surface
+- `appendData(label, values, maxPoints?)` — appends one aligned numeric category and keeps a
+  rolling window of the newest `maxPoints` (at most 10,000, also the default: `labels` and each
+  series keep only the first 10,000 entries of a longer assigned array, with a development-mode
+  warning). Each labels/datasets member is written back to the surface
   that owns it: an explicitly overridden `config.data` member stays in `config`, while an omitted
   member continues through the simplified property and retains its generated Chart.js styling.
   Point-based scatter/bubble series are left unchanged because appending their x/y/r coordinates
@@ -511,7 +516,9 @@ DOM legend, generated table, keyboard-operable datum model, generated point-deta
 and automatic canvas name process at most 1,000 category×series records. When sampling is necessary,
 the selected category and series indexes are distributed
 deterministically and retain their first and last endpoints; a localized `data-truncation` notice
-is shown and announced. Supplying `slot="data-table"` suppresses the generated detailed sample and
+is shown and announced. The sample is evenly spaced, not extreme-preserving: an isolated spike
+between sampled categories is not drawn, so pre-aggregate (for example a minimum and maximum per
+bucket) when every spike must stay visible. Supplying `slot="data-table"` suppresses the generated detailed sample and
 notice, so use that escape hatch when the complete data set needs pagination, virtualization, or
 another application-owned presentation. Explicit `config.data` is the deliberate full-fidelity
 Chart.js escape hatch and is not rewritten by the simplified-surface sampler.
@@ -776,9 +783,11 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
   duplicated table or adopt `lr-chart` and pull in Chart.js for a button — the cheap component
   stuck with the expensive workaround. A supplied `slot="data-table"` follows the same disclosure
   state. Unset, nothing renders and behavior is unchanged.
-  Themeable via `--lr-lite-chart-data-table-toggle-hover-bg` (default
-  `var(--lr-color-brand-quiet)`) and `--lr-lite-chart-data-table-toggle-active-bg` (default: that
-  hover colour mixed by `--lr-color-mix-active`).
+  Themeable via `--lr-lite-chart-data-table-toggle-hover-bg` and
+  `--lr-lite-chart-data-table-toggle-active-bg`, which fall back to the family-wide
+  `--lr-chart-data-table-toggle-hover-bg`/`-active-bg` and then to `var(--lr-color-brand-quiet)` and
+  that colour mixed by `--lr-color-mix-active`. The button sits in its own row directly above the
+  table.
 - `layout: 'fit' | 'scroll' = 'fit'` (reflected) — `'fit'` (default) is the original squeeze-the-
   whole-plot-to-host-width behavior, unchanged. `'scroll'` gives bars a fixed `barWidth` instead: plot
   content width becomes `categoryCount * barWidth` (can exceed the host's measured width), and
@@ -910,13 +919,16 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
   painted inside the shadow root and exposed through that token instead.
 - `labels`, `datasets`, and `selectedIndices` are clone-owned, bounded, frozen snapshots. Mutating
   a previously assigned array or nested series data has no effect; create and reassign a new
-  collection.
+  collection. `labels` keeps its first 10,000 entries; each series keeps its first 10,000 values,
+  fewer when more than four series share the 45,000-value bound (a development-mode warning reports
+  the trim), so a long series is shortened rather than dropped.
 - `minBarHeight?: number` (attribute `min-bar-height`) — optional minimum visible bar height for
   small non-zero values; finite input is capped at 1,000,000px before derived SVG geometry is
   calculated. Authored floors can exceed the available plot height. Linear and logarithmic stacks
   push subsequent segments along their signed pixel cursor; zero values remain unfloored.
-- `appendData(label, values, maxPoints?)` — appends one aligned category and optionally trims the
-  oldest categories
+- `appendData(label, values, maxPoints?)` — appends one aligned category and keeps a rolling window
+  of the newest `maxPoints` categories, never more than the `datasets` bound above (also the
+  default)
 
 **Events:** `lr-datum-activate` — canonical family activation with `kind: 'bar'|'point'`,
 `datasetIndex`, `index`, `label`, and `value`. `lr-point-activate` is emitted for the same pointer
@@ -951,7 +963,10 @@ content signature — `datasets`/`labels` can hold callbacks (`tickFormat`, `bar
 possibly circular or BigInt-bearing application data that a fingerprint can't serialize safely, so a
 fresh, small SVG render is cheaper and more correct than a lossy cache. The shared sampling path
 keeps that render bounded to 1,000 category×series marks/keyboard records, retaining endpoints
-instead of materializing an unbounded hidden DOM or SVG tree.
+instead of materializing an unbounded hidden DOM or SVG tree. The sample is evenly spaced, not
+extreme-preserving, while the value axis still spans the complete data: a line can stop short of
+the axis maximum when the spike that set it falls between samples. Pre-aggregate (for example a
+minimum and maximum per bucket) when every spike must be drawn.
 
 **Slots:** `data-table` — optional consumer-provided complete, paginated, or virtualized accessible
 data alternative.
@@ -1180,14 +1195,18 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
   (`with-data-table`), `dataTableToggle` (`data-table-toggle`), `chartArea` (readonly).
 
 **Methods:** `resetZoom()`, `refreshTheme()`, and `renderChart()` are inherited; `appendSamples(values,
-maxSamples?)` appends finite raw samples and optionally retains only the newest samples.
+maxSamples?)` appends finite raw samples and keeps a rolling window of the newest `maxSamples`
+(at most 10,000, also the default; an assigned `values` array longer than that keeps its newest
+10,000 samples, with a development-mode warning).
 `appendData()` remains a working compatibility adapter (no longer deprecated); prefer
 `appendSamples()` for new code.
 
 **Events:** `lr-zoom`, `lr-datum-activate`, `lr-point-activate`, `lr-datum-visibility-change-request`
 (cancelable), `lr-datum-visibility-change`, `lr-legend-visibility-change-request` (cancelable), and
 `lr-legend-visibility-change` — inherited; `lr-point-activate`'s `index` is the bucket index and
-`label` the generated bucket range string (`"lo–hi"`, both bounds at one decimal place).
+`label` the generated bucket range string (`"lo–hi"`; both bounds show two significant digits of
+the bin width, with no fraction digits once the width reaches 10 and no forced trailing zero, so
+`0–5`, `0.011–0.0148` and `1,000,000–1,100,000`).
 
 The inherited datum-visibility events apply only to radial controllers; the histogram keeps its
 bar controller and dataset legend even with `legend-mode="datum"`.
@@ -1276,7 +1295,8 @@ apply when the component reconnects.
   write their complete next snapshot back to this property; programmatic writes reconcile silently.
 - `labels`, `datasets`, and `hiddenDatasets` are clone-owned, bounded, frozen snapshots. Mutating a
   previously assigned array or nested series data has no effect; create and reassign a new
-  collection.
+  collection. Each series keeps at most its first 7,500 ÷ (number of series) boxes (a
+  development-mode warning reports a trim), so a long series is shortened, never dropped.
 - `withLegend: boolean = false` (attribute `with-legend`) — renders a wrapping DOM legend whose
   buttons toggle box-series visibility without clipping long labels.
 - `legendPosition: 'top'|'bottom'|'start'|'end' = 'bottom'` (attribute `legend-position`) — logical,
@@ -1295,9 +1315,10 @@ apply when the component reconnects.
   family-wide `spoken` surface for the generated summary and `export` for CSV cells; the legacy
   positional formatter receives `table` for the spoken/export compatibility paths, its normal
   surface name for axis, tooltip, and table work, and no fallback for a `visual` context. The
-  context-object formatter takes precedence. Tick calls name `axis: 'y'`, and a tooltip value now
-  carries the hovered datum's `datasetIndex`, `index`, `label`, `seriesLabel` and
-  `statistic: 'median'` instead of discarding what the callback was handed.
+  context-object formatter takes precedence. Tick calls name `axis: 'y'`. With a formatter
+  installed the tooltip keeps all five statistics: under the series name it lists min, Q1, median,
+  Q3 and max, one per line, each formatted with its own `statistic` (`min`, `q1`, `median`, `q3`,
+  `max`) plus the hovered box's source `datasetIndex`, `index`, `label` and `seriesLabel`.
 - `withDataTable: boolean = false` (attribute `with-data-table`) — reveals the accessible data
   table.
 - `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.0.0) — renders a
@@ -1383,10 +1404,11 @@ individual raw-sample dots drawn alongside each box; `0` disables them. `--lr-ch
 hover outline; `--lr-chart-canvas-hover-outline-color` (default `var(--lr-chart-grid-color, var(--lr-color-border))`) sets
 its color. `--lr-chart-legend-item-active-bg` and `--lr-chart-legend-item-hover-bg` retune the
 pressed and hovered legend rows, and `--lr-chart-legend-side-max` caps a side legend — the same tokens and defaults as
-`lr-chart`. Its own `dataTableToggle` disclosure button carries box-plot-namespaced hooks rather
-than inheriting the chart pair, since its stylesheet is not a re-export:
-`--lr-box-plot-data-table-toggle-hover-bg` (defaults to `--lr-color-brand-quiet`) and
-`--lr-box-plot-data-table-toggle-active-bg` (defaults to its standard active color mix).
+`lr-chart`. Its own `dataTableToggle` disclosure button carries box-plot-namespaced hooks that
+fall back to the family-wide pair: `--lr-box-plot-data-table-toggle-hover-bg` (defaults to
+`--lr-chart-data-table-toggle-hover-bg`, then `--lr-color-brand-quiet`) and
+`--lr-box-plot-data-table-toggle-active-bg` (defaults to `--lr-chart-data-table-toggle-active-bg`,
+then its standard active color mix).
 
 **Forced colors:** under `forced-colors: active` the eight-color ramp is remapped onto the small
 repeating system-color cycle the platform exposes, so series 1/4/7 (and 2/5/8, 3/6) would otherwise
@@ -1465,10 +1487,11 @@ controls.
 ## Chart streaming and export
 
 `lr-lite-chart` and `lr-chart` expose imperative helpers for live dashboards:
-`appendData(label, values, maxPoints?)` appends one aligned category and optionally trims the oldest
-points; when existing series lengths differ, missing cells are padded before the new category so
-labels and values remain aligned. `lr-histogram.appendSamples(values, maxSamples?)` appends finite
-raw samples and rebins the retained window. `lr-lite-chart.exportData('csv' | 'svg')` returns a spreadsheet-safe CSV snapshot
+`appendData(label, values, maxPoints?)` appends one aligned category and keeps a rolling window of the
+newest `maxPoints` points (at most 10,000 per series, also the default, so a stream never freezes on
+its oldest data); when existing series lengths differ, missing cells are padded before the new
+category so labels and values remain aligned. `lr-histogram.appendSamples(values, maxSamples?)`
+appends finite raw samples and rebins the retained window of at most 10,000 samples. `lr-lite-chart.exportData('csv' | 'svg')` returns a spreadsheet-safe CSV snapshot
 or the current SVG markup. `lr-chart.exportData('csv' | 'png')` returns a CSV snapshot or Chart.js's
 current PNG data URL when the optional peer is loaded; point datasets expand x/y and optional
 radius/point-label columns. `lr-box-plot.exportData('csv'|'png')` exports all five summary values.

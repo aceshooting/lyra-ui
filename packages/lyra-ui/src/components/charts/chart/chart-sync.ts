@@ -28,6 +28,8 @@ export class ChartSyncController {
   private crosshair?: HTMLElement;
   private tooltip?: HTMLElement;
   private scrollTargets: EventTarget[] = [];
+  /** Whether a presentation (and so a renderer highlight that `reset` must clear) is showing. */
+  private shown = false;
   constructor(
     private readonly host: HTMLElement,
     private readonly project: (label: string, sourceIndex?: number) => ChartSyncPresentation | undefined,
@@ -72,6 +74,9 @@ export class ChartSyncController {
 
   publish(label: string, index: number): void {
     if (!label || !this.group) { this.clear(); return; }
+    // Pointer moves within one category re-publish it; every member already shows it.
+    const active = this.group.active;
+    if (this.shown && active?.owner === this && active.label === label && active.index === index) return;
     const presentation = this.project(label, index);
     if (!presentation) { this.clear(); return; }
     this.group.active = { owner: this, label, index };
@@ -125,6 +130,8 @@ export class ChartSyncController {
   }
 
   private readonly onScroll = (event: Event): void => {
+    // Nothing to move or clear while idle; scrolling must not repaint every synchronized chart.
+    if (!this.shown && !this.group?.active) return;
     const target = event.target as Node | null;
     if (target && typeof target.nodeType === 'number' &&
       (target === this.document || this.includesComposed(target, this.host) || this.includesComposed(this.host, target))) {
@@ -139,7 +146,8 @@ export class ChartSyncController {
   };
 
   private hide(reset = true): void {
-    if (reset) this.reset?.();
+    if (reset && this.shown) this.reset?.();
+    this.shown = false;
     this.crosshair?.remove();
     this.tooltip?.remove();
     this.crosshair = undefined;
@@ -155,8 +163,14 @@ export class ChartSyncController {
   }
 
   private show(presentation: ChartSyncPresentation | undefined): void {
+    const wasShown = this.shown;
     this.hide(false);
-    if (!presentation) { this.reset?.(); return; }
+    if (!presentation) {
+      if (wasShown) this.reset?.();
+      return;
+    }
+    // Projecting already highlighted the renderer, even if the overlay cannot be placed below.
+    this.shown = true;
     const { container, x, top, height } = presentation;
     if (![x, top, height].every(Number.isFinite) || height <= 0 || container.clientWidth <= 0) return;
     const doc = this.host.ownerDocument;

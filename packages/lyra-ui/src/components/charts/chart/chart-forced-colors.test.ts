@@ -77,4 +77,27 @@ describe('chart forced-colors encodings', () => {
       window.matchMedia = originalMatchMedia;
     }
   });
+
+  it('builds one fill pattern per encoding and color, not one per data point', async () => {
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = forcedColorsMatchMedia(originalMatchMedia);
+    const originalCreateElement = document.createElement;
+    try {
+      const el = await fixture<LyraChart>(html`<lr-chart type="bar"></lr-chart>`);
+      el.labels = Array.from({ length: 200 }, (_, index) => `c${index}`);
+      el.datasets = [{ label: 'S', data: el.labels.map((_, index) => index), color: el.labels.map(() => 'red') }];
+      await el.updateComplete;
+      await waitUntil(() => (el as any).chart != null, 'chart.js never initialized', { timeout: 5000 });
+      let canvases = 0;
+      document.createElement = function (this: Document, tag: string, options?: ElementCreationOptions) {
+        if (tag === 'canvas') canvases += 1;
+        return originalCreateElement.call(this, tag, options);
+      } as typeof document.createElement;
+      (el as any).buildConfig();
+      expect(canvases).to.be.at.most(8);
+    } finally {
+      document.createElement = originalCreateElement;
+      window.matchMedia = originalMatchMedia;
+    }
+  });
 });

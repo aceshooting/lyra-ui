@@ -20,9 +20,12 @@ import { bidiStyles } from './chart-bidi.js';
 import { chartSyncStyles } from './chart-sync.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_histogramFrequency, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_histogramFrequency } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+
+/** The `values` snapshot keeps at most this many samples. */
+const MAX_HISTOGRAM_SAMPLES = 10_000;
 
 /**
  * `<lr-histogram>` — bins `values` into `bins` equal-width buckets and
@@ -41,19 +44,14 @@ export class LyraHistogram extends LyraChart {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     histogramFrequency: LYRA_DEFAULT_histogramFrequency,
-    map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
-    open: LYRA_DEFAULT_open,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['values']);
+  /** Samples arrive by appending, so an over-long assignment keeps its newest samples. */
+  protected static readonly appendOrderedCollectionProperties = Object.freeze(['values']);
 
   // Explicit rather than relying on `LyraChart`'s inherited `static styles` —
   // `histogram.styles.ts` re-exports the same `chart.styles.ts` sheet, so
@@ -68,33 +66,46 @@ export class LyraHistogram extends LyraChart {
 
   @property({ converter: { fromAttribute: (value) => normalizeHistogramBinCount(value) } })
   bins = 10;
+  /** Raw samples to bin: a bounded, clone-owned readonly snapshot. An array longer than 10,000
+   *  keeps its newest 10,000 samples. */
   @property({ attribute: false }) values: readonly number[] = [];
   /** Dataset label used for the legend, tooltip, table, and summary. */
   @property({ attribute: 'series-label' }) seriesLabel = '';
 
   /**
-   * Appends raw finite samples to `values`. The inherited signature is retained so histogram
-   * remains substitutable for `LyraChart`; its category label has no meaning for rebinned samples.
+   * Appends raw finite samples to `values`, keeping a rolling window of the newest `maxSamples`
+   * samples (at most 10,000, the `values` snapshot bound, which is also the default). The inherited
+   * signature is retained so histogram remains substitutable for `LyraChart`; its category label
+   * has no meaning for rebinned samples.
    */
   appendSamples(values: readonly (number | null)[], maxSamples: number = 0): void {
     const appended = values.filter((value): value is number =>
       typeof value === 'number' && Number.isFinite(value),
     );
-    const combined = [...this.values, ...appended];
-    const limit = Number.isFinite(maxSamples) ? Math.max(0, Math.floor(maxSamples)) : 0;
-    this.values = limit > 0 ? combined.slice(-limit) : combined;
+    const requested = Number.isFinite(maxSamples) ? Math.max(0, Math.floor(maxSamples)) : 0;
+    // `values` keeps the FIRST 10,000 entries of an assigned array, so appending past it would
+    // silently discard every new sample; drop the oldest ones instead.
+    const limit = requested > 0 ? Math.min(requested, MAX_HISTOGRAM_SAMPLES) : MAX_HISTOGRAM_SAMPLES;
+    this.values = [...this.values, ...appended].slice(-limit);
   }
+
+  private normalizedConfig?: {
+    source: LyraChartConfiguration;
+    value: LyraChartConfiguration;
+  };
 
   protected override normalizeEffectiveConfig(
     config: LyraChartConfiguration | undefined,
   ): LyraChartConfiguration | undefined {
     if (!config) return undefined;
+    if (this.normalizedConfig?.source === config) return this.normalizedConfig.value;
     // Histogram owns its bar controller and derives every category/datum from `values`/`bins`.
     // Preserve advanced options/plugins while preventing raw fixed keys from turning it into a
     // different chart or silently replacing the derived distribution.
     const normalized = { ...config };
     delete normalized.type;
     delete normalized.data;
+    this.normalizedConfig = { source: config, value: normalized };
     return normalized;
   }
 
@@ -144,6 +155,32 @@ export function binnedBuckets(el: LyraHistogram): HistogramBucket[] {
   return buckets;
 }
 
+// The derived arrays keep one identity per bucketing (and series label), so `LyraChart`'s
+// identity-keyed memos hold across the many reads of one update.
+const derivedCache = new WeakMap<
+  LyraHistogram,
+  { buckets: HistogramBucket[]; label: string; labels: string[]; datasets: LyraChartSeries[] }
+>();
+
+function derivedSeries(el: LyraHistogram, label: string) {
+  const buckets = binnedBuckets(el);
+  let cached = derivedCache.get(el);
+  if (cached?.buckets !== buckets || cached.label !== label) {
+    cached = {
+      buckets,
+      label,
+      // `binValues()` keeps its public isolate controls; the chart isolates each surface itself
+      // (chart-bidi.ts), so they never reach exports, events or accessible text.
+      labels: Object.freeze(buckets.map((b) => b.label.replace(/^\u2066|\u2069$/gu, ''))) as string[],
+      datasets: Object.freeze([
+        Object.freeze({ label, data: Object.freeze(buckets.map((b) => b.count)) }),
+      ]) as LyraChartSeries[],
+    };
+    derivedCache.set(el, cached);
+  }
+  return cached;
+}
+
 // `labels`/`datasets` are computed from `values`/`bins` rather than settable
 // props. `LyraChart` declares both as plain (decorator-managed) class
 // fields, and TypeScript forbids a subclass from re-declaring a base field
@@ -155,7 +192,7 @@ Object.defineProperty(LyraHistogram.prototype, 'labels', {
   configurable: true,
   enumerable: true,
   get(this: LyraHistogram): string[] {
-    return binnedBuckets(this).map((b) => b.label);
+    return derivedSeries(this, this.seriesLabel || this.localize('histogramFrequency')).labels;
   },
   set(_v: string[]) {
     /* derived from `values`/`bins`; direct writes are ignored */
@@ -166,12 +203,7 @@ Object.defineProperty(LyraHistogram.prototype, 'datasets', {
   configurable: true,
   enumerable: true,
   get(this: LyraHistogram): LyraChartSeries[] {
-    return [
-      {
-        label: this.seriesLabel || this.localize('histogramFrequency'),
-        data: binnedBuckets(this).map((b) => b.count),
-      },
-    ];
+    return derivedSeries(this, this.seriesLabel || this.localize('histogramFrequency')).datasets;
   },
   set(_v: LyraChartSeries[]) {
     /* derived from `values`/`bins`; direct writes are ignored */

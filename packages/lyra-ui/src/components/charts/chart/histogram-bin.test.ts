@@ -25,14 +25,15 @@ it('places a value equal to the maximum in the last bucket', () => {
 
 it('labels each bucket with its numeric range', () => {
   const buckets = binValues([0, 10], 2);
-  expect(buckets[0]!.label).to.match(/0\.0.*5\.0/);
+  expect(buckets[0]!.label).to.match(/0.*5/);
+  expect(buckets[0]!.label).to.not.contain('.0');
 });
 
 it('isolates numeric range labels so RTL layout cannot reverse their endpoints', () => {
   const [bucket] = binValues([0, 10], 2);
   expect(bucket!.label.startsWith('\u2066')).to.be.true;
   expect(bucket!.label.endsWith('\u2069')).to.be.true;
-  expect(bucket!.label).to.contain('0.0–5.0');
+  expect(bucket!.label).to.contain('0–5');
 });
 
 it('returns an empty array for empty input', () => {
@@ -82,7 +83,8 @@ it('represents a constant domain as one truthful bucket', () => {
   const buckets = binValues([5, 5, 5, 5], 4);
   expect(buckets).to.have.length(1);
   expect(buckets[0]!.count).to.equal(4);
-  expect(buckets[0]!.label).to.contain('5.0');
+  expect(buckets[0]!.label).to.contain('5');
+  expect(buckets[0]!.label).to.not.contain('5.0');
 });
 
 it('does not fabricate repeated zero-width ranges for an extreme constant domain', () => {
@@ -95,7 +97,18 @@ it('does not fabricate repeated zero-width ranges for an extreme constant domain
 it('formats bucket ranges with the requested locale', () => {
   const buckets = binValues([1000, 2000], 2, 'de-DE');
   expect(buckets[0]!.label).to.contain('1.000');
-  expect(buckets[0]!.label).to.not.contain('1000.0');
+  expect(buckets[0]!.label).to.not.contain('1000');
+});
+
+it('derives bound digits from the bin width so narrow bins stay distinct', () => {
+  const narrow = binValues([0.011, 0.023, 0.049], 10, 'en');
+  expect(new Set(narrow.map((bucket) => bucket.label)).size).to.equal(10);
+  expect(narrow[0]!.label).to.contain('0.011');
+  const wide = binValues([1_000_000, 2_000_000], 10, 'en');
+  expect(wide[0]!.label).to.contain('1,000,000');
+  expect(wide.some((bucket) => bucket.label.includes('.0'))).to.equal(false);
+  const halves = binValues([0, 1, 2, 3, 4, 5], 10, 'en');
+  expect(halves[1]!.label).to.contain('0.5');
 });
 
 describe('an omitted locale resolves to the active setLyraLocale() locale, not a hardcoded English default', () => {
@@ -103,7 +116,7 @@ describe('an omitted locale resolves to the active setLyraLocale() locale, not a
     withActiveLocale(() => {
       setLyraLocale('');
       const buckets = binValues([1000, 2000], 2);
-      expect(buckets[0]!.label).to.contain('1,000.0');
+      expect(buckets[0]!.label).to.contain('1,000');
     });
   });
 
@@ -112,7 +125,7 @@ describe('an omitted locale resolves to the active setLyraLocale() locale, not a
       setLyraLocale('de-DE');
       const buckets = binValues([1000, 2000], 2);
       expect(buckets[0]!.label).to.contain('1.000');
-      expect(buckets[0]!.label).to.not.contain('1,000.0');
+      expect(buckets[0]!.label).to.not.contain('1,000');
     });
   });
 
@@ -120,7 +133,7 @@ describe('an omitted locale resolves to the active setLyraLocale() locale, not a
     withActiveLocale(() => {
       setLyraLocale('de-DE');
       const buckets = binValues([1000, 2000], 2, 'en-US');
-      expect(buckets[0]!.label).to.contain('1,000.0');
+      expect(buckets[0]!.label).to.contain('1,000');
     });
   });
 
@@ -129,7 +142,7 @@ describe('an omitted locale resolves to the active setLyraLocale() locale, not a
       setLyraLocale('de-DE');
       const buckets = binValues([1000, 2000], 2, 'auto');
       expect(buckets[0]!.label).to.contain('1.000');
-      expect(buckets[0]!.label).to.not.contain('1,000.0');
+      expect(buckets[0]!.label).to.not.contain('1,000');
     });
   });
 });

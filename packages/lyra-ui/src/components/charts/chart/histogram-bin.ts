@@ -1,6 +1,7 @@
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { resolveActiveOrExplicitLocale } from '../../../internal/localization-runtime.js';
 import { finiteInterpolate, finiteRatio } from '../../../internal/numbers.js';
+import { chartValueFractionDigits } from './chart-number-format.js';
 
 export interface HistogramBucket {
   label: string;
@@ -26,7 +27,8 @@ export function normalizeHistogramBinCount(binCount: unknown): number {
  *  the page's active `setLyraLocale()` locale the same way `utilities/format.ts`'s helpers do
  *  (see `resolveActiveOrExplicitLocale()`), falling back to `'en'` only once none has been set;
  *  an explicit tag always stays authoritative. `<lr-histogram>` itself is unaffected -- it always
- *  passes its own resolved `effectiveLocale` here. */
+ *  passes its own resolved `effectiveLocale` here. Range bounds show two significant digits of the
+ *  bin width (no fraction digits once the width reaches 10) and never a forced trailing zero. */
 export function binValues(
   values: readonly number[],
   binCount: number,
@@ -50,9 +52,14 @@ export function binValues(
   // dataset reads as "N items, one bucket populated" starting from the data's
   // own value, not its synthetic +1 upper edge.
   const constant = hi === lo;
-  const numberFormat = getNumberFormat(resolveActiveOrExplicitLocale(locale), {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
+  const resolvedLocale = resolveActiveOrExplicitLocale(locale);
+  // Two significant digits of the bin width tell adjacent edges apart (none for widths of 10 and
+  // above); a constant domain keeps three significant digits of its value. No forced trailing zero.
+  const width = hi / bins - lo / bins;
+  const numberFormat = getNumberFormat(resolvedLocale, {
+    maximumFractionDigits: constant
+      ? chartValueFractionDigits(lo)
+      : Math.min(20, Math.max(0, 1 - Math.floor(Math.log10(width)))) || 0,
   });
   if (constant) {
     // A constant domain contains one truthful bucket. In particular, `MAX_VALUE + 1` is still
