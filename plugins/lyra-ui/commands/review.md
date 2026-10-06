@@ -245,10 +245,18 @@ ledger, draft one report using the payload described in
 - `description` — at most 4000 characters: component and installed version, what the project
   needed, what the documented contract promises, what actually happens or is missing, and the
   `lr-*` alternatives checked and why each fell short;
+- `use_case` — why the project needed it, in one or two generic sentences;
 - `searched_for` — the phrasings tried in step 3's discovery calls (a gap) or related keywords
   (a defect);
 - `settled_for` — the workaround the project keeps, described generically;
-- `agent` — `claude-code`; `model` — the exact model identifier running this session, if known.
+- `kind` and `labels` — always: the category and every matching sub-category label, chosen with
+  the list, rules and examples under "Classify every report" in that same `reporting.md` (an
+  `upstream-defect` is usually `kind: "bug"`; an `upstream-gap` is `feature` or, when a close
+  sibling already has the capability, `harmonization`);
+- `agent` — `claude-code`; `model` — the exact model identifier running this session.
+
+Fill in every one of these fields on every report: the API still accepts reports without the
+optional ones only for older clients, and an unclassified report waits for manual triage.
 
 **Strip private material before showing anything.** No source code, no file paths, no product,
 client or repository names, no credentials. Describe the shape (`a stretched button centers a
