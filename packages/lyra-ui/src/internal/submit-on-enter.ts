@@ -18,15 +18,18 @@
  *   `isComposing` inconsistently on the `compositionend`-adjacent keydown.
  * - **A vetoed keydown stays vetoed.** A listener above this one (an autocomplete panel committing
  *   a selection, a consumer's own shortcut) already claimed the keystroke.
- * - **The submitter is resolved, not skipped.** The form's *default button* is the first enabled
- *   submit control in `form.elements`; a submission that ignores it loses `SubmitEvent.submitter`,
- *   and with it the button's own `name`/`value` entry and its `formaction`/`formmethod`/
+ * - **The submitter is resolved, not skipped.** The form's *default button* is the first submit
+ *   control in `form.elements`; a submission that ignores it loses `SubmitEvent.submitter`, and
+ *   with it the button's own `name`/`value` entry and its `formaction`/`formmethod`/
  *   `formnovalidate` overrides. A native submitter goes through `form.requestSubmit(submitter)`;
  *   an `<lr-button>` is a form-associated custom element rather than a native submit button, so
  *   `requestSubmit()` rejects it with a `TypeError` — it is activated through its own `click()`,
  *   which runs the same submit path a real click would.
+ * - **A disabled default button blocks implicit submission.** When the first submit control is
+ *   disabled (its own `disabled`, or a `<fieldset disabled>` around it), Enter submits nothing —
+ *   it never falls through to a later submit button, and never submits without a submitter.
  * - **A submit-button-less form submits only from a single field.** The platform refuses implicit
- *   submission when a form with no default button holds more than one field that blocks it.
+ *   submission when a form with no submit button holds more than one field that blocks it.
  *
  * `requestSubmit()` (never `submit()`) is what runs interactive constraint validation, so an
  * invalid field blocks the submission exactly as a real submit button would.
@@ -206,8 +209,8 @@ export function isImplicitSubmission(event: KeyboardEvent): boolean {
 }
 
 /**
- * The form's default button: the first enabled submit control in `form.elements` (tree order),
- * native or custom. `null` when the form has none.
+ * The first enabled submit control in `form.elements` (tree order), native or custom — not the HTML
+ * default button, which is {@link findDefaultButton}. `null` when the form has none.
  */
 export function findImplicitSubmitter(form: HTMLFormElement): HTMLElement | null {
   for (const element of Array.from(form.elements)) {
@@ -216,6 +219,47 @@ export function findImplicitSubmitter(form: HTMLFormElement): HTMLElement | null
     return element as HTMLElement;
   }
   return null;
+}
+
+/**
+ * The form's default button: the first submit control in `form.elements` (tree order), native or
+ * custom, whether or not it is disabled. `null` when the form has none.
+ */
+export function findDefaultButton(form: HTMLFormElement): HTMLElement | null {
+  for (const element of Array.from(form.elements)) {
+    if (isSubmitControl(element)) return element as HTMLElement;
+  }
+  return null;
+}
+
+/**
+ * Runs the HTML Standard's implicit-submission steps for `form`: activates its default button when
+ * that button is not disabled, and submits nothing when it is. Only a form with no submit button
+ * at all submits from the form itself, and then only while at most one field blocks implicit
+ * submission. Returns whether a submission was requested; `beforeSubmit` runs only in that case.
+ */
+export function submitFormImplicitly(
+  form: HTMLFormElement,
+  options: SubmitOnEnterOptions = {},
+): boolean {
+  const defaultButton = findDefaultButton(form);
+  if (defaultButton) {
+    if (isInert(defaultButton)) return false;
+  } else if (Array.from(form.elements).filter(blocksImplicitSubmission).length > 1) {
+    return false;
+  }
+
+  options.beforeSubmit?.();
+  if (!defaultButton) {
+    form.requestSubmit();
+  } else if (isNativeSubmitter(defaultButton)) {
+    form.requestSubmit(defaultButton);
+  } else {
+    // A form-associated custom element is never a legal `requestSubmit()` submitter (the platform
+    // throws a TypeError for one); its own `click()` runs the submit path a real click would.
+    defaultButton.click();
+  }
+  return true;
 }
 
 /**
@@ -237,22 +281,5 @@ export function submitOnEnter(
   if (!isImplicitSubmission(event)) return false;
   const form = resolveFormOwner(host);
   if (!form) return false;
-
-  const submitter = findImplicitSubmitter(form);
-  if (!submitter) {
-    const blocking = Array.from(form.elements).filter(blocksImplicitSubmission);
-    if (blocking.length > 1) return false;
-  }
-
-  options.beforeSubmit?.();
-  if (!submitter) {
-    form.requestSubmit();
-  } else if (isNativeSubmitter(submitter)) {
-    form.requestSubmit(submitter);
-  } else {
-    // A form-associated custom element is never a legal `requestSubmit()` submitter (the platform
-    // throws a TypeError for one); its own `click()` runs the submit path a real click would.
-    submitter.click();
-  }
-  return true;
+  return submitFormImplicitly(form, options);
 }

@@ -12,6 +12,7 @@ import {
   type Middleware,
   type MiddlewareData,
   type Placement,
+  type SideObject,
 } from '@floating-ui/dom';
 import {
   establishesFixedContainingBlock,
@@ -718,8 +719,16 @@ function placeImpl(
       openStyleTransactions.delete(styleTransaction);
     };
     let resolvedOffsetParent: Element | Window | undefined;
+    // Element rects and every overflow-detecting middleware (flip, shift, size, hide, arrow) ask
+    // for the same element's offset parent; one pass walks each element's ancestry once.
+    const offsetParents = new Map<Element, Promise<Element | Window>>();
     const recordingGetOffsetParent: typeof correctedGetOffsetParent = async (element, polyfill) => {
-      const result = await correctedGetOffsetParent(element, polyfill);
+      let pending = polyfill ? undefined : offsetParents.get(element);
+      if (!pending) {
+        pending = correctedGetOffsetParent(element, polyfill);
+        if (!polyfill) offsetParents.set(element, pending);
+      }
+      const result = await pending;
       if (element === popup) resolvedOffsetParent = result;
       return result;
     };
@@ -940,10 +949,24 @@ export function placeAnchoredSurface(
       {
         name: referenceHidden.name,
         options: referenceHidden.options,
-        fn: (state) =>
-          isLibraryPromotedAndShowing(popup) && referenceMeasurable()
-            ? referenceHidden.fn(state)
-            : {},
+        // A fixed surface -- promoted to the top layer or positioned against the viewport -- is not
+        // clipped by the scrollers that clip its reference, so it is hidden while that reference
+        // is scrolled out of view. An absolute surface is clipped with its reference already.
+        fn: async (state) => {
+          if (!fixed || !referenceMeasurable()) return {};
+          const result = await referenceHidden.fn(state);
+          const offsets = result.data?.['referenceHiddenOffsets'] as SideObject | undefined;
+          const { width, height } = state.rects.reference;
+          if (!offsets || (width > 0 && height > 0)) return result;
+          // A point reference (a pointer or keyboard context-menu position) resting exactly on a
+          // clipping edge reads as fully clipped; only a point strictly outside is hidden.
+          return {
+            data: {
+              ...result.data,
+              referenceHidden: offsets.top > 0 || offsets.right > 0 || offsets.bottom > 0 || offsets.left > 0,
+            },
+          };
+        },
       },
     ],
     afterResolve(offsetParent, data) {

@@ -1,5 +1,9 @@
-import { getActiveNativeModal, getNativeModalMountTarget, isInNativeModalContext } from './native-modal-context.js';
-import { tag } from './prefix.js';
+import {
+  getActiveNativeModal,
+  getNativeModalMountTarget,
+  isInNativeModalContext,
+  SHARED_LIVE_REGION_ATTRIBUTE,
+} from './native-modal-context.js';
 import { finiteDuration } from './numbers.js';
 import { isAccessibilityVisible } from './accessibility-visibility.js';
 
@@ -192,7 +196,7 @@ export interface AnnouncementSink {
  * snapshot testing, or `MutationObserver` can recognize (and ignore) library-owned nodes that
  * appear at the end of `<body>` or within an active native modal.
  */
-export const ANNOUNCEMENT_SINK_ATTRIBUTE = `data-${tag('live-region')}`;
+export const ANNOUNCEMENT_SINK_ATTRIBUTE: string = SHARED_LIVE_REGION_ATTRIBUTE;
 
 const DEFAULT_MESSAGE_TTL_MS = 5000;
 const MAX_PENDING_MESSAGES_PER_HANDLE = 32;

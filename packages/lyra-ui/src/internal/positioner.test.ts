@@ -1543,3 +1543,37 @@ it('restores an earlier open journal owner after a foreign rollback', async () =
   first.rollback();
   expect(popup.style.width).to.equal('12px');
 });
+
+it('resolves the popup offset parent once per placement pass, not once per middleware', async () => {
+  const wrap = await fixture<HTMLElement>(html`
+    <div style="padding: 40px">
+      <div><div><div>
+        <button id="offset-anchor">anchor</button>
+        <div id="offset-popup" style="position: fixed; inline-size: 60px; block-size: 30px">popup</div>
+      </div></div></div>
+    </div>
+  `);
+  const anchor = wrap.querySelector<HTMLElement>('#offset-anchor')!;
+  const popup = wrap.querySelector<HTMLElement>('#offset-popup')!;
+  const mutablePlatform = floatingPlatform as unknown as {
+    getOffsetParent: (element: Element, polyfill?: unknown) => Promise<Element | Window>;
+  };
+  const originalGetOffsetParent = mutablePlatform.getOffsetParent;
+  let popupLookups = 0;
+  let passes = 0;
+  mutablePlatform.getOffsetParent = function (element, polyfill) {
+    if (element === popup) popupLookups += 1;
+    return originalGetOffsetParent.call(this, element, polyfill);
+  };
+  let stop: (() => void) | undefined;
+  try {
+    stop = place(anchor, popup, { placement: 'bottom-start', onPlaced: () => passes++ });
+    await waitFor(() => passes, (count) => count > 0);
+  } finally {
+    stop?.();
+    mutablePlatform.getOffsetParent = originalGetOffsetParent;
+  }
+  // One more pass may already be computing when the first one lands; each pass resolves the
+  // popup's offset parent once, where every overflow-detecting middleware used to repeat it.
+  expect(popupLookups, `${passes} placement pass(es)`).to.be.at.most(passes + 1);
+});

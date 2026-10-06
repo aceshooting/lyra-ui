@@ -1,5 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { acquireAriaDescription } from './aria-controls.js';
+import { acquireNativeControlDescription } from './native-control-description.js';
 import type { LyraElement } from './lyra-element.js';
 import '../components/forms/button/button.js';
 import '../components/forms/combobox/combobox.js';
@@ -59,3 +60,30 @@ for (const [tag, selector] of entries) {
     }
   });
 }
+
+it('does not rewrite an unchanged description projection when its owner updates', async () => {
+  const root = await fixture<HTMLElement>(
+    html`<div><p id="projection-external">External</p><p id="projection-local">Local</p></div>`,
+  );
+  const host = document.createElement('div');
+  host.setAttribute('aria-describedby', 'projection-external');
+  const target = document.createElement('button');
+  root.append(host, target);
+  const lease = acquireNativeControlDescription(host, target, () => 'projection-local');
+  const recorder = new MutationObserver(() => undefined);
+  recorder.observe(target, { attributes: true });
+  try {
+    lease.update(target);
+    lease.update(target);
+    expect(recorder.takeRecords().length, 'an identical refresh writes nothing').to.equal(0);
+    const ids = () => (target.ariaDescribedByElements ?? []).map((element) => element.id);
+    expect(ids()).to.deep.equal(['projection-external', 'projection-local']);
+
+    host.setAttribute('aria-describedby', 'projection-local');
+    lease.update(target);
+    expect(ids(), 'a real change still applies').to.deep.equal(['projection-local']);
+  } finally {
+    recorder.disconnect();
+    lease.release();
+  }
+});

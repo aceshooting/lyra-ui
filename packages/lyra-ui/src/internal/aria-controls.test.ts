@@ -731,3 +731,49 @@ it('disconnects an unpublished resolved observer when its lease releases during 
     iframe.remove();
   }
 });
+
+it('treats an update with the same target and unchanged references as a no-op', () => {
+  const host = document.createElement('div');
+  const help = document.createElement('span');
+  const renamed = document.createElement('span');
+  const target = document.createElement('button');
+  help.id = 'unchanged-help';
+  renamed.id = 'unchanged-help-next';
+  host.setAttribute('aria-describedby', help.id);
+  document.body.append(host, help, renamed, target);
+  const lease = acquireResolvedAriaRelationship(host, target, 'aria-describedby');
+  const recorder = new MutationObserver(() => undefined);
+  recorder.observe(target, { attributes: true });
+  const view = window as unknown as { MutationObserver: typeof MutationObserver };
+  const NativeObserver = view.MutationObserver;
+  let constructed = 0;
+  view.MutationObserver = class CountingObserver extends NativeObserver {
+    constructor(callback: MutationCallback) {
+      super(callback);
+      constructed += 1;
+    }
+  };
+  try {
+    lease.update(target);
+    lease.update(target);
+    lease.update(target);
+  } finally {
+    view.MutationObserver = NativeObserver;
+  }
+  try {
+    expect(recorder.takeRecords().length, 'the unchanged relationship is not rewritten').to.equal(0);
+    expect(constructed, 'no observer is torn down and rebuilt').to.equal(0);
+    expect(target.getAttribute('aria-describedby')).to.equal(help.id);
+
+    host.setAttribute('aria-describedby', renamed.id);
+    lease.update(target);
+    expect(target.getAttribute('aria-describedby'), 'a real change still applies').to.equal(renamed.id);
+  } finally {
+    recorder.disconnect();
+    lease.release();
+    host.remove();
+    help.remove();
+    renamed.remove();
+    target.remove();
+  }
+});

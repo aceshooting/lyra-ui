@@ -2,7 +2,7 @@ import {
   asciiWhitespaceTokens,
   isSingleAsciiWhitespaceToken,
 } from './ascii-whitespace.js';
-import { highestReachableWindow } from './a11y.js';
+import { sharedRealmRegistry } from './a11y.js';
 import {
   registerDescriptionBaselineUpdater,
   resolveIdReferencesIn,
@@ -90,7 +90,6 @@ interface RelationshipOwnershipState {
 }
 
 type RelationshipOwnership = WeakMap<HTMLElement, RelationshipOwnershipState>;
-type RelationshipOwnershipHost = typeof globalThis & Record<PropertyKey, unknown>;
 
 // Keep the established current-source registry key so query-imported copies compose. This module
 // deliberately does not inspect or adapt any foreign registry schema.
@@ -99,33 +98,16 @@ const LABEL_OWNERSHIP = Symbol.for('@aceshooting/lyra-ui.aria-label-ownership.v1
 const fallbackDescriptionOwnership: RelationshipOwnership = new WeakMap();
 const fallbackLabelOwnership: RelationshipOwnership = new WeakMap();
 
-function sharedRelationshipOwnership(
-  key: symbol,
-  fallback: RelationshipOwnership,
-): RelationshipOwnership {
-  const host = (typeof window === 'undefined'
-    ? globalThis
-    : highestReachableWindow(window)) as RelationshipOwnershipHost;
-  const existing = host[key] as RelationshipOwnership | undefined;
-  if (existing) return existing;
-  try {
-    Object.defineProperty(host, key, {
-      configurable: false,
-      enumerable: false,
-      value: fallback,
-      writable: false,
-    });
-    return (host[key] as RelationshipOwnership | undefined) ?? fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-const descriptionOwnership = sharedRelationshipOwnership(
+const descriptionOwnership = sharedRealmRegistry<RelationshipOwnership>(
   DESCRIPTION_OWNERSHIP,
+  () => new WeakMap(),
   fallbackDescriptionOwnership,
 );
-const labelOwnership = sharedRelationshipOwnership(LABEL_OWNERSHIP, fallbackLabelOwnership);
+const labelOwnership = sharedRealmRegistry<RelationshipOwnership>(
+  LABEL_OWNERSHIP,
+  () => new WeakMap(),
+  fallbackLabelOwnership,
+);
 
 function relationshipDefinition(relationship: ResolvedAriaRelationship): RelationshipDefinition {
   return relationship === 'aria-describedby' ? DESCRIPTION_RELATIONSHIP : LABEL_RELATIONSHIP;
@@ -567,6 +549,27 @@ function observeRelationshipOwnership(
   }
 }
 
+/** Whether the target still holds exactly the relationship last written, in the same root, with
+ *  every projected and baseline reference resolving as it did then. */
+function isRelationshipCurrent(
+  state: RelationshipOwnershipState,
+  definition: RelationshipDefinition,
+): boolean {
+  try {
+    if (state.target.ownerDocument !== state.lastAppliedDocument ||
+      state.target.getRootNode() !== state.lastAppliedRoot) return false;
+    if (!sameRelationshipSnapshot(relationshipSnapshot(state.target, definition), state.lastApplied)) {
+      return false;
+    }
+    for (const [element, wasResolvable] of state.lastAppliedResolvability) {
+      if (isIdResolvableFromTarget(state.target, element) !== wasResolvable) return false;
+    }
+    return !state.lastAppliedUnresolvedBaselineIds.some((id) => isIdResolvableIdFromTarget(state.target, id));
+  } catch {
+    return false;
+  }
+}
+
 interface FixedRelationshipLease {
   readonly target: HTMLElement;
   update(elements: readonly Element[]): void;
@@ -614,7 +617,14 @@ function acquireFixedRelationship(
     update(nextElements) {
       if (!active || ownership.get(target) !== state) return;
       drainRelationshipObserver(state!, definition, ownership);
-      adoptExternalRelationshipBaseline(state!, definition);
+      const baselineChanged = adoptExternalRelationshipBaseline(state!, definition);
+      // Callers refresh from every render. An unchanged contribution to a relationship that is
+      // still exactly as last written needs no rewrite and keeps its observer.
+      if (!baselineChanged && sameElementLists(record.elements, nextElements) &&
+        isRelationshipCurrent(state!, definition)) {
+        observeRelationshipOwnership(state!, definition, ownership);
+        return;
+      }
       record.elements = [...nextElements];
       applyLatestRelationshipOwnership(state!, definition, ownership);
       observeRelationshipOwnership(state!, definition, ownership, true);

@@ -6,11 +6,21 @@ type SlottedOverlayHost = ReactiveControllerHost & HTMLElement;
 /** Lifecycle events every anchored Lyra overlay emits; all of them bubble and are composed. */
 const OVERLAY_LIFECYCLE_EVENTS = ['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide'] as const;
 
-/** The anchored overlay hosts whose public `open` getter reports their settled state. */
+/**
+ * The anchored surfaces whose public `open` reports their settled state and whose panel can open
+ * into the top layer: the menu overlays and the pickers that emit the same lifecycle. Disclosures
+ * and alerts also emit it, but their content stays inside the slot, so they are deliberately absent.
+ */
 const overlayTags = (): readonly string[] => [
   tag('dropdown'),
   tag('popover'),
   tag('context-menu'),
+  tag('select'),
+  tag('combobox'),
+  tag('color-picker'),
+  tag('date-input'),
+  tag('time-input'),
+  tag('export-button'),
 ];
 
 const overlaySelector = (): string => overlayTags().join(', ');
@@ -24,9 +34,10 @@ const isOpenOverlay = (overlay: Element): boolean =>
   overlay.isConnected && (overlay as { open?: unknown }).open === true;
 
 /**
- * Tracks whether an anchored overlay (`lr-dropdown`, `lr-popover` or `lr-context-menu`, including
- * one composed inside another component's shadow root) opened from content assigned to one of the
- * host's slots is open, and requests a host update whenever that answer changes.
+ * Tracks whether an anchored overlay (`lr-dropdown`, `lr-popover`, `lr-context-menu`, or a picker
+ * such as `lr-select` or `lr-color-picker`, including one composed inside another component's
+ * shadow root) opened from content assigned to one of the host's slots is open, and requests a host
+ * update whenever that answer changes.
  *
  * Such an overlay opens into the browser top layer, and Chromium and WebKit then stop matching
  * `:hover` and `:focus-within` on its DOM ancestors while the pointer or focus is inside the popup.

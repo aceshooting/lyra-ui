@@ -149,6 +149,47 @@ function observeAccessibleTextNode(
   });
 }
 
+/** Observers whose callbacks filter their batches through {@link accessibleTextRecordsMatter}. */
+const filteringObservers = new WeakSet<MutationObserver>();
+/** Each filtering observer's composed ancestors and their visibility state as of its last bind. */
+const ancestorVisibilityBaselines = new WeakMap<MutationObserver, Map<Element, string>>();
+
+/** The parts of an ancestor's state that can hide or reveal the text beneath it. */
+function ancestorVisibilityKey(element: Element): string {
+  const state = accessibilityElementState(element);
+  return [
+    state.subtreeExcluded ? 'excluded' : '',
+    state.visibilityHidden ? 'invisible' : '',
+    state.display ?? '',
+    element.hasAttribute('open') ? 'open' : '',
+  ].join('|');
+}
+
+/**
+ * Whether a batch delivered to an observer bound by {@link bindAccessibleTextObserver} can change
+ * the accessible text it watches. A content record always can. A record about a composed ancestor
+ * -- whose `style` or `class` a positioner rewrites on every scroll, or a scroll lock or overlay
+ * stack writes when any modal opens -- matters only when that ancestor's visibility-relevant state
+ * differs from the last bind. The first batch always matters; it opts the observer in, so its
+ * next bind records the baseline. A callback that gets `false` can skip rebinding and recomputing.
+ */
+export function accessibleTextRecordsMatter(
+  observer: MutationObserver,
+  records: readonly MutationRecord[],
+): boolean {
+  const baseline = ancestorVisibilityBaselines.get(observer);
+  if (!filteringObservers.has(observer) || !baseline) {
+    filteringObservers.add(observer);
+    return true;
+  }
+  for (const record of records) {
+    const target = record.target as Element;
+    if (record.type !== 'attributes' || !baseline.has(target)) return true;
+    if (ancestorVisibilityKey(target) !== baseline.get(target)) return true;
+  }
+  return false;
+}
+
 /**
  * Observes a host's label content, assigned nodes, and composed ancestors for accessible text.
  *
@@ -169,11 +210,14 @@ export function bindAccessibleTextObserver(
   if (!observer) return;
   observer.disconnect();
   observeAccessibleTextNode(observer, host, extraAttributes);
+  const baseline = filteringObservers.has(observer) ? new Map<Element, string>() : undefined;
   let ancestor = composedParentElement(host);
   while (ancestor) {
     observer.observe(ancestor, { attributes: true, attributeFilter: ANCESTOR_ATTRIBUTES });
+    baseline?.set(ancestor, ancestorVisibilityKey(ancestor));
     ancestor = composedParentElement(ancestor);
   }
+  if (baseline) ancestorVisibilityBaselines.set(observer, baseline);
   for (const slot of host.querySelectorAll<HTMLSlotElement>('slot')) {
     for (const assigned of slot.assignedNodes({ flatten: true })) {
       observeAccessibleTextNode(observer, assigned, extraAttributes);

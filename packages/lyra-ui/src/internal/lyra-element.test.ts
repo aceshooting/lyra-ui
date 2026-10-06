@@ -1,4 +1,5 @@
-import { collectionSupport } from './collection-snapshot.js';
+import { collectionSupport, collectionTruncationWarningKey } from './collection-snapshot.js';
+import { expectDevWarning } from '../../test/expected-dev-warnings.js';
 import { expectLocaleFallback } from '../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html } from "@open-wc/testing";
 import { LitElement, css, nothing, type PropertyValues } from "lit";
@@ -343,6 +344,7 @@ it("owns bounded immutable collection and record snapshots", async () => {
     label: String(index),
     nested: { values: [] },
   }));
+  expectDevWarning(collectionTruncationWarningKey(el.localName, 'items'));
   el.items = oversized;
   expect(el.items.length).to.equal(10_000);
 });
@@ -738,6 +740,7 @@ it('rejects an owning record when a present nested row exceeds the depth bound',
   for (let depth = 300; depth >= 0; depth -= 1)
     payload = { child: payload };
 
+  expectDevWarning(collectionTruncationWarningKey(el.localName, 'value'));
   el.value = {
     validHeader: true,
     rows: [{ payload }],
@@ -758,6 +761,7 @@ it('rejects an owning record when a nested array length is unsafe or oversized',
     },
   });
 
+  expectDevWarning(collectionTruncationWarningKey(el.localName, 'value'));
   el.value = { validHeader: true, rows: hostileLength };
   expect(el.value).to.deep.equal({});
   expect(Object.isFrozen(el.value)).to.be.true;
@@ -2422,6 +2426,7 @@ it('keeps lr-heatmap colorSteps and legendStops clone-owned, bounded and frozen'
   expect(el.annotations.length).to.equal(1);
   expect(el.annotations[0]!.label).to.equal('Peak');
 
+  expectDevWarning(collectionTruncationWarningKey(el.localName, 'colorSteps'));
   el.colorSteps = Array.from({ length: 10_005 }, () => 'red');
   expect(el.colorSteps!.length).to.equal(10_000);
 });

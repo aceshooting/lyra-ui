@@ -1237,6 +1237,42 @@ describe('external FACE label contract', () => {
     expect(resolveExternalLabelText([label])).to.equal('Remember me Yes please');
   });
 
+  it('reads each label like the platform names a control: hidden content out, text alternatives in', () => {
+    const marker = document.createElement('label');
+    marker.innerHTML = 'Name <span aria-hidden="true">*</span>';
+    const image = document.createElement('label');
+    image.innerHTML = '<img alt="Search"> Find';
+    const helper = document.createElement('label');
+    helper.innerHTML =
+      'Email<span hidden> (hidden helper)</span><span style="display: none"> (undisplayed)</span><script>ignored()</script>';
+    document.body.append(marker, image, helper);
+    try {
+      expect(resolveExternalLabelText([marker]), 'an aria-hidden required marker').to.equal('Name');
+      expect(resolveExternalLabelText([image]), 'an image alternative').to.equal('Search Find');
+      expect(resolveExternalLabelText([helper]), 'hidden helper text and script').to.equal('Email');
+    } finally {
+      marker.remove();
+      image.remove();
+      helper.remove();
+    }
+  });
+
+  it('names the semantic control without an aria-hidden marker inside its external label', async () => {
+    const testCase = FACE_CASES.find(({ name }) => name === 'input');
+    expect(testCase?.name).to.equal('input');
+    const { container, control, label } = mountFace(testCase!);
+    try {
+      label.innerHTML = 'Full name <span aria-hidden="true">*</span>';
+      await settle(control);
+      const semantic = composedElements(control).find(
+        (element) => element !== control && element.tagName === 'INPUT',
+      );
+      expect(semantic?.getAttribute('aria-label') ?? null).to.equal('Full name');
+    } finally {
+      container.remove();
+    }
+  });
+
   it('trusts a captured native internals labels list exclusively, even when it is empty', () => {
     // resolveExternalLabels() only falls back to closest('label')/querySelectorAll('label[for]')
     // when no internals were ever captured for the host. Once ANY internals record exists, its

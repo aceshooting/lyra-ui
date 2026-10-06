@@ -1556,3 +1556,58 @@ describe('isEmptyFormValue()', () => {
     expect(control.checkValidity()).to.be.true;
   });
 });
+
+describe('module side effects', () => {
+  it('installs the external-label bridge when the mixin is applied, not when the module is imported', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    try {
+      const frameWindow = frame.contentWindow!;
+      const frameDocument = frame.contentDocument!;
+      const moduleUrl = (path: string) => JSON.stringify(new URL(path, import.meta.url).href);
+      const outcome = new Promise<{ afterImport?: boolean; afterMixin?: boolean; error?: string }>((resolve) => {
+        frameWindow.addEventListener('message', (event) => resolve(event.data), { once: true });
+      });
+      const script = frameDocument.createElement('script');
+      script.type = 'module';
+      // A fresh realm evaluates its own module instances, so this probe sees exactly what importing
+      // the module does on its own, independent of everything this test page already imported.
+      script.textContent = `
+        try {
+          const [{ LyraElement }, formAssociated, { ExternalLabelController }] = await Promise.all([
+            import(${moduleUrl('./lyra-element.ts')}),
+            import(${moduleUrl('./form-associated.ts')}),
+            import(${moduleUrl('./form-control-labels.ts')}),
+          ]);
+          const bridged = (name) => {
+            class Probe extends LyraElement {
+              static formAssociated = true;
+            }
+            let installed = false;
+            const addController = Probe.prototype.addController;
+            Probe.prototype.addController = function (controller) {
+              if (controller instanceof ExternalLabelController) installed = true;
+              return addController.call(this, controller);
+            };
+            customElements.define(name, Probe);
+            document.createElement(name);
+            return installed;
+          };
+          const afterImport = bridged('lr-label-side-effect-import');
+          formAssociated.FormAssociated(LyraElement);
+          const afterMixin = bridged('lr-label-side-effect-mixin');
+          postMessage({ afterImport, afterMixin }, '*');
+        } catch (error) {
+          postMessage({ error: String(error) }, '*');
+        }
+      `;
+      frameDocument.head.append(script);
+      const { afterImport, afterMixin, error } = await outcome;
+      expect(error).to.equal(undefined);
+      expect(afterImport, 'importing the module installs nothing').to.equal(false);
+      expect(afterMixin, 'applying the mixin installs the bridge').to.equal(true);
+    } finally {
+      frame.remove();
+    }
+  });
+});

@@ -1,7 +1,12 @@
 import { composedParentElement, deepActiveElementIn } from './active-element.js';
-import { isAriaTrue } from './accessibility-visibility.js';
 import { asciiWhitespaceTokens } from './ascii-whitespace.js';
 import { imageMapImageFor, isHtmlElement, isSvgElement } from './dom-guards.js';
+import {
+  hasFocusExcludingAttributes,
+  isNativeAction,
+  rendersAsFocusTarget,
+  styleExcludesFocusSubtree,
+} from './focus-candidates.js';
 
 const DEFAULT_FOCUS_MAX_DEPTH = 256;
 const DEFAULT_FOCUS_MAX_NODES = 10_000;
@@ -119,6 +124,12 @@ export interface ComposedFocusCollectionOptions {
   maxNodes?: number;
   /** Skips composed-ancestor validation for the supplied root only. */
   skipRootAncestorValidation?: boolean;
+  /**
+   * Models the browser's own sequential navigation instead of the stricter availability used for
+   * initial focus and focus return: `aria-hidden`/`aria-disabled` subtrees and content skipped by
+   * `content-visibility: auto` remain Tab stops, because the browser still reaches them.
+   */
+  browserTabOrder?: boolean;
 }
 
 export interface ComposedFocusCollectionResult {
@@ -219,6 +230,7 @@ interface ElementTraversalResult {
 }
 
 interface FocusTraversalContext {
+  browserTabOrder: boolean;
   elementStates: Map<Element, RenderedElementState>;
   imageMapImages: Map<Element, HTMLImageElement | null>;
   maxDepth: number;
@@ -233,9 +245,10 @@ function finiteFocusLimit(value: number | undefined, fallback: number): number {
 }
 
 function createFocusTraversalContext(
-  options: Pick<ComposedFocusCollectionOptions, 'maxDepth' | 'maxNodes'>,
+  options: Pick<ComposedFocusCollectionOptions, 'browserTabOrder' | 'maxDepth' | 'maxNodes'>,
 ): FocusTraversalContext {
   return {
+    browserTabOrder: options.browserTabOrder === true,
     elementStates: new Map<Element, RenderedElementState>(),
     imageMapImages: new Map<Element, HTMLImageElement | null>(),
     maxDepth: finiteFocusLimit(options.maxDepth, DEFAULT_FOCUS_MAX_DEPTH),
@@ -248,6 +261,7 @@ function createFocusTraversalContext(
 function renderedElementState(
   element: Element,
   imageMapImage: HTMLImageElement | null,
+  browserTabOrder: boolean,
 ): RenderedElementState {
   let style: CSSStyleDeclaration | undefined;
   try {
@@ -258,11 +272,8 @@ function renderedElementState(
   return {
     display: style?.display,
     subtreeUnavailable:
-      element.hasAttribute('hidden') ||
-      element.hasAttribute('inert') ||
-      isAriaTrue(element.getAttribute('aria-hidden')) ||
-      isAriaTrue(element.getAttribute('aria-disabled')) ||
-      (!imageMapImage && (style?.display === 'none' || style?.contentVisibility === 'hidden')),
+      hasFocusExcludingAttributes(element, browserTabOrder) ||
+      (!imageMapImage && styleExcludesFocusSubtree(style)),
     visibility: style?.visibility,
   };
 }
@@ -282,7 +293,7 @@ function cachedRenderedElementState(
 ): RenderedElementState {
   let state = context.elementStates.get(element);
   if (!state) {
-    state = renderedElementState(element, cachedImageMapImage(context, element));
+    state = renderedElementState(element, cachedImageMapImage(context, element), context.browserTabOrder);
     context.elementStates.set(element, state);
   }
   return state;
@@ -346,18 +357,8 @@ function isRenderedFocusCandidate(
       !imageState.subtreeUnavailable &&
       isRenderedFocusCandidate(context, imageMapImage, imageState);
   }
-  if (!element.isConnected || state.visibility === 'hidden' || state.visibility === 'collapse') return false;
-  const candidate = element as Element & {
-    checkVisibility?: (options?: { contentVisibilityAuto?: boolean }) => boolean;
-  };
-  if (typeof candidate.checkVisibility === 'function') {
-    try {
-      return candidate.checkVisibility({ contentVisibilityAuto: true });
-    } catch {
-      return false;
-    }
-  }
-  return element.getClientRects().length > 0;
+  if (!element.isConnected) return false;
+  return rendersAsFocusTarget(element, state.visibility, !context.browserTabOrder);
 }
 
 function hasAriaWidgetRole(element: Element): boolean {
@@ -367,52 +368,6 @@ function hasAriaWidgetRole(element: Element): boolean {
     if (ARIA_NON_WIDGET_ROLES.has(role)) return false;
   }
   return false;
-}
-
-function isNativeAction(element: BrowserFocusElement): boolean {
-  if (isSvgElement(element)) {
-    return element.localName === 'a' && (
-      element.hasAttribute('href') ||
-      element.hasAttributeNS('http://www.w3.org/1999/xlink', 'href')
-    );
-  }
-  switch (element.localName) {
-    case 'a':
-      return element.hasAttribute('href');
-    case 'area': {
-      if (!element.hasAttribute('href')) return false;
-      let ancestor = element.parentElement;
-      for (let depth = 0; ancestor && depth <= DEFAULT_FOCUS_MAX_DEPTH; depth += 1) {
-        if (ancestor.localName === 'map') return true;
-        ancestor = ancestor.parentElement;
-      }
-      return false;
-    }
-    case 'audio':
-    case 'video':
-      return element.hasAttribute('controls');
-    case 'button':
-    case 'embed':
-    case 'iframe':
-    case 'select':
-    case 'textarea':
-      return true;
-    case 'object': {
-      const data = element.getAttribute('data');
-      return data !== null && data.trim() !== '';
-    }
-    case 'input':
-      return (element as HTMLInputElement).type !== 'hidden';
-    case 'summary':
-      return element.matches('details > summary:first-of-type');
-    default: {
-      // `isContentEditable` is inherited. Only an element that explicitly establishes an editing
-      // host is an independent semantic action; ordinary descendants belong to that same action.
-      return element.hasAttribute('contenteditable') &&
-        element.isContentEditable &&
-        !element.parentElement?.isContentEditable;
-    }
-  }
 }
 
 function isBrowserFocusElement(element: Element): element is BrowserFocusElement {

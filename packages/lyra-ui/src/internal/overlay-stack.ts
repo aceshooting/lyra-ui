@@ -190,9 +190,32 @@ function entryContainsFocus(entry: OverlayEntry, panel: HTMLElement, active: Ele
     [panel, ...auxiliaryRoots(entry)].some((root) => composedContains(root, active));
 }
 
-function entryFocusableElements(entry: OverlayEntry, panel: HTMLElement): HTMLElement[] {
-  if (!entry.options.auxiliaryRoots) return collectFocusableElements(panel);
-  return [...new Set([panel, ...auxiliaryRoots(entry)].flatMap((root) => collectFocusableElements(root)))];
+/**
+ * The trap's Tab order: the panel's stops, then each auxiliary root's, each listed once. Unlike
+ * initial focus, this follows the browser's own sequential navigation, so an `aria-disabled`
+ * control or content skipped by `content-visibility: auto` at a panel edge is reached instead of
+ * being wrapped past.
+ */
+function entryTabStops(entry: OverlayEntry, panel: HTMLElement): HTMLElement[] {
+  const roots = entry.options.auxiliaryRoots ? [panel, ...auxiliaryRoots(entry)] : [panel];
+  return [...new Set(roots.flatMap((root) =>
+    collectComposedFocusTargets(root, { browserTabOrder: true }).elements))];
+}
+
+/** `element` and its flattened-tree ancestors, outermost first. */
+function composedPath(element: Element): Element[] {
+  const path: Element[] = [];
+  for (let current: Element | null = element; current; current = composedParent(current)) path.unshift(current);
+  return path;
+}
+
+/** Whether the element at the end of `first` precedes the one ending `second` in composed order. */
+function precedes(first: readonly Element[], second: readonly Element[]): boolean {
+  let index = 0;
+  while (first[index] && first[index] === second[index]) index += 1;
+  if (!first[index]) return Boolean(second[index]);
+  // DOCUMENT_POSITION_FOLLOWING: the branches are siblings in one tree at the first divergence.
+  return Boolean(second[index] && first[index]!.compareDocumentPosition(second[index]!) & 4);
 }
 
 function focusEntry(entry: OverlayEntry, preserveCurrent = true): void {
@@ -218,7 +241,7 @@ function focusEntry(entry: OverlayEntry, preserveCurrent = true): void {
 function handleTab(state: OverlayDocumentState, entry: OverlayEntry, event: KeyboardEvent): void {
   const panel = entry.options.panel();
   if (!panel) return;
-  const focusable = entryFocusableElements(entry, panel);
+  const focusable = entryTabStops(entry, panel);
   if (focusable.length === 0) {
     event.preventDefault();
     panel.focus();
@@ -231,8 +254,25 @@ function handleTab(state: OverlayDocumentState, entry: OverlayEntry, event: Keyb
   const last = focusable[focusable.length - 1]!;
   const activeIndex = active ? focusable.indexOf(active as HTMLElement) : -1;
   if (activeIndex === -1) {
+    let target: HTMLElement | undefined;
+    const roots = entry.options.auxiliaryRoots ? [panel, ...auxiliaryRoots(entry)] : [panel];
+    if (active && roots.some((root) => composedContains(root, active))) {
+      // Focus inside the entry that is not itself a stop (an error summary or heading at
+      // tabindex="-1", a host whose controls sit in a closed shadow root) continues from its own
+      // position; only focus outside the entry, or past either end, wraps.
+      const activePath = composedPath(active);
+      if (event.shiftKey) {
+        for (let index = focusable.length - 1; index >= 0 && !target; index -= 1) {
+          if (precedes(composedPath(focusable[index]!), activePath)) target = focusable[index];
+        }
+      } else {
+        target = focusable.find((stop) => precedes(activePath, composedPath(stop)));
+      }
+      // Native Tab already reaches a natively tabbable neighbour (and enters a closed root first).
+      if (target && target.tabIndex >= 0 && !entry.options.auxiliaryRoots) return;
+    }
     event.preventDefault();
-    (event.shiftKey ? last : first).focus();
+    (target ?? (event.shiftKey ? last : first)).focus();
   } else if (event.shiftKey && active === first) {
     event.preventDefault();
     last.focus();
@@ -248,6 +288,14 @@ function handleTab(state: OverlayDocumentState, entry: OverlayEntry, event: Keyb
       next.focus();
     }
   }
+}
+
+function nearestTrappingEntryBelowTop(state: OverlayDocumentState): OverlayEntry | undefined {
+  for (let index = state.stack.length - 2; index >= 0; index -= 1) {
+    const entry = state.stack[index];
+    if (entry && entry.options.trapFocus !== false) return entry;
+  }
+  return undefined;
 }
 
 function snapshotFor(state: OverlayDocumentState): OverlayStackSnapshot {
@@ -301,8 +349,23 @@ function createState(doc: Document): OverlayDocumentState {
       event.preventDefault();
       entry.options.onEscape();
     } else if (event.key === 'Tab') {
-      if (entry.options.trapFocus === false) entry.options.onTab?.();
-      else handleTab(state, entry, event);
+      if (entry.options.trapFocus !== false) {
+        handleTab(state, entry, event);
+        return;
+      }
+      entry.options.onTab?.();
+      // A nontrapping popup above a focus-trapping overlay (a keyboard-opened tooltip, an open
+      // listbox) must not suspend that overlay's wrap while focus is still inside it. Focus held
+      // by the popup outside the trapping panel is left alone.
+      const trapping = nearestTrappingEntryBelowTop(state);
+      const trappingPanel = trapping?.options.panel();
+      if (
+        trapping && trappingPanel && !event.defaultPrevented &&
+        (!nativeModal || composedContains(nativeModal, trappingPanel)) &&
+        entryContainsFocus(trapping, trappingPanel, deepActiveElement(doc))
+      ) {
+        handleTab(state, trapping, event);
+      }
     }
   };
   states.set(doc, state);

@@ -2908,12 +2908,15 @@ rather than an approximation of them:
 - An Enter **during IME composition** commits the highlighted candidate; submitting there would
   throw away the word being typed, so it is skipped.
 - A keydown already `defaultPrevented` by a listener above stays vetoed.
-- The **submitter is resolved, not skipped**: the form's default button is the first enabled submit
+- The **submitter is resolved, not skipped**: the form's default button is the first submit
   control in `form.elements`, so its `name`/`value` entry and its
   `formaction`/`formmethod`/`formnovalidate` overrides all reach the submission. A native button
   goes through `form.requestSubmit(submitter)`; an `<lr-button type="submit">` is a form-associated
   custom element, which `requestSubmit()` rejects with a `TypeError`, so it is activated through its
   own `click()` — the same path a real click takes.
+- A **disabled default button blocks** implicit submission: when the first submit control is
+  disabled (directly or by a `<fieldset disabled>`), Enter submits nothing, never a later submit
+  button and never the form without a submitter, matching the platform.
 - A form with **no** submit button submits implicitly only when it holds at most one field that
   blocks implicit submission, matching the platform.
 - It runs through `requestSubmit()`, never `submit()`, so the `submit` event fires and interactive

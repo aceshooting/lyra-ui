@@ -374,6 +374,14 @@ policy; plain `LyraElement` subclasses do not load it. Import `snapshotPublicCol
 same module when an accessor needs the boundary directly. The collection-event ownership gate
 checks component enrollment.
 
+One assignment retains at most 10,000 entries per array and 50,000 values in total; a root that
+loses entries keeps a contiguous run, never fails silently: the accessor records the loss, which
+`publicCollectionTruncation(host, property)` returns for a component's own localized limit notice,
+and emits a once-per-property development warning. An over-limit root array keeps its leading
+entries unless the class also lists the property in
+`protected static readonly appendOrderedCollectionProperties` (logs, transcripts, sample
+streams), which keeps the newest, trailing entries instead.
+
 Top-layer reset CSS is adopted by `promoteToTopLayer()` into the surface's actual root, once per
 owner-document sheet. It is no longer part of `LyraElement.styles`; overlay consumers use the
 positioner/promoter rather than adding their own UA reset.

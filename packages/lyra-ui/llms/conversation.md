@@ -172,8 +172,8 @@ uses for its own `[part="body"]`.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — identifies the
   currently active entry in `highlights` for active paint and outline treatment.
 - `anchor: LyraAnchor | string | null = null` (attribute: false) — declaratively applies an anchor
-  or a highlight id through the same path as `scrollToAnchor()`; assigning the same value again
-  deliberately re-runs resolution.
+  or a highlight id through the same path as `scrollToAnchor()`; re-assigning the identical object or
+  id (as a re-rendering parent template does) does nothing, so call `scrollToAnchor()` to re-run it.
 - `anchorKinds: readonly ('fragment' | 'text-quote')[] = ['fragment', 'text-quote']` — the anchor kinds this
   component resolves for the shared anchor-target contract.
 

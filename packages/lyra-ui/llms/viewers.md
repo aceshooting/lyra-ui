@@ -1009,9 +1009,10 @@ breaks, and `url()` are ignored.
 internal `<lr-pan-zoom>`. `false` (the default) preserves the exact pre-`zoomable` DOM — an
 inline thumbnail (e.g. in a chat stream) must not unexpectedly grow a focusable zoom-chrome viewport;
 an inspection surface opts in. `anchor: LyraAnchor | string | null = null` (attribute: false) —
-declaratively jump to an anchor (a `LyraAnchor` object, or a `highlights` entry's `id`). Assigning it
-calls `scrollToAnchor()` and fires `lr-anchor-result`; re-assigning the same value re-triggers the
-scroll, it is not reference-gated. `highlights: readonly LyraHighlight[] = []` (attribute: false) —
+declaratively jump to an anchor (a `LyraAnchor` object, or a `highlights` entry's `id`). Assigning a
+new one calls `scrollToAnchor()` and fires `lr-anchor-result`; re-assigning the identical object or
+id (as a re-rendering parent template does) does nothing, so call `scrollToAnchor()` to jump to the
+same anchor again. `highlights: readonly LyraHighlight[] = []` (attribute: false) —
 display-only `region` highlights painted over the rendered SVG; unchanged behavior, now inherited
 from `DocumentAnchorTarget` rather than declared locally. A region rectangle renders/resolves only
 when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnegative.

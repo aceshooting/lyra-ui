@@ -7,7 +7,7 @@ import {
   stripStaleTopLayer,
   TOP_LAYER_ATTRIBUTE,
 } from './top-layer-escape.js';
-import { placeAnchoredSurface } from './positioner.js';
+import { placeAnchoredSurface, virtualAnchorFromRect } from './positioner.js';
 import '../components/overlays/overlay/dropdown.js';
 import '../components/layout/menu/dropdown-item.js';
 import type { LyraDropdown } from '../components/overlays/overlay/dropdown.class.js';
@@ -352,6 +352,87 @@ describe('promoteToTopLayer / releaseTopLayer', () => {
     const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
     expect(hit?.closest('lr-dropdown-item')?.getAttribute('value')).to.equal('b');
     await dropdown.hide({ focusTrigger: false });
+  });
+});
+
+describe('reference-hidden for fixed placements', () => {
+  it('hides an unpromoted fixed popup while its anchor is scrolled out of an inner scroller', async () => {
+    const scroller = await fixture<HTMLElement>(html`
+      <div style="block-size: 150px; overflow: auto">
+        <button id="anchor">anchor</button>
+        <div style="block-size: 600px"></div>
+        <div id="popup" style="position: fixed; inline-size: 40px; block-size: 20px">popup</div>
+      </div>
+    `);
+    const anchor = scroller.querySelector('#anchor') as HTMLElement;
+    const popup = scroller.querySelector('#popup') as HTMLElement;
+    const stop = placeAnchoredSurface(anchor, popup);
+    try {
+      await waitUntil(() => popup.style.left !== '');
+      expect(popup.hasAttribute(TOP_LAYER_ATTRIBUTE), 'an untrapped fixed popup is not promoted').to.equal(false);
+      expect(popup.style.visibility).to.equal('');
+      scroller.scrollTop = 400;
+      await waitUntil(() => popup.style.visibility === 'hidden', 'hidden while its anchor is clipped');
+      scroller.scrollTop = 0;
+      await waitUntil(() => popup.style.visibility === '', 'shown again once its anchor is visible');
+    } finally {
+      stop();
+    }
+  });
+
+  it('keeps a point reference on its scroller edge visible, and hides one strictly outside', async () => {
+    const scroller = await fixture<HTMLElement>(html`
+      <div style="block-size: 150px; overflow: auto">
+        <button id="context">context</button>
+        <div style="block-size: 600px"></div>
+        <div id="popup" style="position: fixed; inline-size: 40px; block-size: 20px">popup</div>
+      </div>
+    `);
+    const context = scroller.querySelector('#context') as HTMLElement;
+    const popup = scroller.querySelector('#popup') as HTMLElement;
+    const edge = scroller.getBoundingClientRect();
+    let stop = placeAnchoredSurface(
+      virtualAnchorFromRect({ x: edge.left, y: edge.top, contextElement: context }),
+      popup,
+    );
+    try {
+      await waitUntil(() => popup.style.left !== '');
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      expect(popup.style.visibility, 'a keyboard-style point on the clip edge is not hidden').to.equal('');
+    } finally {
+      stop();
+    }
+    stop = placeAnchoredSurface(
+      virtualAnchorFromRect({ x: edge.left, y: edge.top - 5, contextElement: context }),
+      popup,
+    );
+    try {
+      await waitUntil(() => popup.style.visibility === 'hidden', 'a point outside the scroller is hidden');
+    } finally {
+      stop();
+      popup.hidden = true;
+    }
+  });
+
+  it('leaves an absolute placement to its own clipping', async () => {
+    const scroller = await fixture<HTMLElement>(html`
+      <div style="position: relative; block-size: 150px; overflow: auto">
+        <button id="anchor">anchor</button>
+        <div style="block-size: 600px"></div>
+        <div id="popup" style="position: absolute; inline-size: 40px; block-size: 20px">popup</div>
+      </div>
+    `);
+    const anchor = scroller.querySelector('#anchor') as HTMLElement;
+    const popup = scroller.querySelector('#popup') as HTMLElement;
+    const stop = placeAnchoredSurface(anchor, popup, { strategy: 'absolute' });
+    try {
+      await waitUntil(() => popup.style.left !== '');
+      scroller.scrollTop = 400;
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      expect(popup.style.visibility).to.equal('');
+    } finally {
+      stop();
+    }
   });
 });
 

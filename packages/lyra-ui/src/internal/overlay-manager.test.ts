@@ -2,6 +2,7 @@ import { expect } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusAfterPointer } from '../../test/wtr-focus.js';
 import { resolveAccessibleTrigger } from './a11y.js';
+import { acquireAnnouncementSink } from './announcer.js';
 import {
   activateOverlay,
   collectAutofocusElements,
@@ -10,6 +11,7 @@ import {
   suspendLyraModalsFor,
 } from './overlay-manager.js';
 import { activateNonmodalOverlay } from './nonmodal-overlay-manager.js';
+import { tag } from './prefix.js';
 
 function createOverlay(doc: Document, label: string) {
   const host = doc.createElement('section');
@@ -694,6 +696,124 @@ it('pulls an escaped focus position back inside and wraps both Tab boundaries', 
   handle.deactivate({ restoreFocus: false });
 });
 
+it('continues Tab from an in-panel focus position the tab-stop collector excludes', async () => {
+  const overlay = createOverlay(document, 'interior');
+  const summary = document.createElement('div');
+  summary.tabIndex = -1;
+  summary.textContent = 'Fix two errors';
+  const middle = document.createElement('input');
+  middle.id = 'interior-middle';
+  const trailer = document.createElement('h2');
+  trailer.tabIndex = -1;
+  trailer.textContent = 'Trailing heading';
+  overlay.panel.insertBefore(summary, overlay.last);
+  overlay.panel.insertBefore(middle, overlay.last);
+  overlay.panel.append(trailer);
+  const handle = activateOverlay({ host: overlay.host, panel: () => overlay.panel, onEscape: () => undefined });
+  const active = () => {
+    const element = deepActiveElement(document) as HTMLElement | null;
+    return element?.id || element?.textContent || null;
+  };
+  try {
+    summary.focus();
+    await sendKeys({ press: 'Tab' });
+    expect(active(), 'Tab continues after the focused error summary').to.equal('interior-middle');
+    summary.focus();
+    await sendKeys({ press: 'Shift+Tab' });
+    expect(active(), 'Shift+Tab continues before it').to.equal('interior first');
+    trailer.focus();
+    await sendKeys({ press: 'Tab' });
+    expect(active(), 'past the last stop, Tab wraps to the first').to.equal('interior first');
+    trailer.focus();
+    await sendKeys({ press: 'Shift+Tab' });
+    expect(active(), 'Shift+Tab from the trailing heading reaches the last stop').to.equal('interior last');
+  } finally {
+    handle.deactivate({ restoreFocus: false });
+  }
+});
+
+it('keeps an aria-disabled control at the panel edge in the trapped Tab order', async () => {
+  const overlay = createOverlay(document, 'discoverable');
+  const discoverable = document.createElement('button');
+  discoverable.setAttribute('aria-disabled', 'true');
+  discoverable.textContent = 'Discoverable';
+  overlay.panel.append(discoverable);
+  const handle = activateOverlay({ host: overlay.host, panel: () => overlay.panel, onEscape: () => undefined });
+  const active = () => (deepActiveElement(document) as HTMLElement | null)?.textContent ?? null;
+  try {
+    overlay.last.focus();
+    await sendKeys({ press: 'Tab' });
+    expect(active(), 'native Tab reaches the discoverable disabled control').to.equal('Discoverable');
+    await sendKeys({ press: 'Tab' });
+    expect(active(), 'and wraps from it').to.equal('discoverable first');
+    await sendKeys({ press: 'Shift+Tab' });
+    expect(active(), 'Shift+Tab wraps back onto it').to.equal('Discoverable');
+  } finally {
+    handle.deactivate({ restoreFocus: false });
+  }
+});
+
+it('keeps content skipped by content-visibility:auto in the trapped Tab order', async function () {
+  if (!CSS.supports('content-visibility', 'auto')) this.skip();
+  const overlay = createOverlay(document, 'deferred');
+  const spacer = document.createElement('div');
+  spacer.style.blockSize = '4000px';
+  const deferred = document.createElement('div');
+  deferred.style.contentVisibility = 'auto';
+  deferred.style.containIntrinsicSize = 'auto 40px';
+  const offscreen = document.createElement('button');
+  offscreen.textContent = 'Below the fold';
+  deferred.append(offscreen);
+  overlay.panel.append(spacer, deferred);
+  const handle = activateOverlay({ host: overlay.host, panel: () => overlay.panel, onEscape: () => undefined });
+  try {
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    overlay.last.focus();
+    await sendKeys({ press: 'Tab' });
+    expect((deepActiveElement(document) as HTMLElement | null)?.textContent).to.equal('Below the fold');
+  } finally {
+    handle.deactivate({ restoreFocus: false });
+  }
+});
+
+it('keeps wrapping Tab in a trapping modal while a nontrapping popup is open above it', () => {
+  const modal = createOverlay(document, 'trap-below');
+  const popup = createOverlay(document, 'popup-above');
+  const modalHandle = activateOverlay({ host: modal.host, panel: () => modal.panel, onEscape: () => undefined });
+  let popupTabs = 0;
+  const popupHandle = activateOverlay({
+    host: popup.host,
+    panel: () => popup.panel,
+    modal: false,
+    trapFocus: false,
+    onTab: () => {
+      popupTabs += 1;
+    },
+    onEscape: () => undefined,
+  });
+  const tab = (shiftKey = false): KeyboardEvent => {
+    const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey, bubbles: true, cancelable: true });
+    document.dispatchEvent(event);
+    return event;
+  };
+  try {
+    modal.last.focus();
+    expect(tab().defaultPrevented, 'the modal still wraps forward').to.equal(true);
+    expect((deepActiveElement(document) as HTMLElement | null)?.textContent).to.equal('trap-below first');
+    expect(popupTabs, 'the popup still sees its own Tab lifecycle').to.equal(1);
+    modal.first.focus();
+    expect(tab(true).defaultPrevented, 'and backward').to.equal(true);
+    expect((deepActiveElement(document) as HTMLElement | null)?.textContent).to.equal('trap-below last');
+
+    popup.last.focus();
+    expect(tab().defaultPrevented, 'focus inside the popup, outside the modal panel, is left alone').to.equal(false);
+    expect((deepActiveElement(document) as HTMLElement | null)?.textContent).to.equal('popup-above last');
+  } finally {
+    popupHandle.deactivate({ restoreFocus: false });
+    modalHandle.deactivate({ restoreFocus: false });
+  }
+});
+
 it('captures and restores focus in stack order, including direct deactivation', () => {
   const trigger = document.createElement('button');
   trigger.dataset['overlayBackground'] = '';
@@ -1277,6 +1397,49 @@ it('keeps pulling focus into a surviving focus-trapping overlay after a detached
     topHandle.deactivate({ restoreFocus: false });
     bottomHandle.deactivate({ restoreFocus: false });
   }
+});
+
+it('keeps shared announcement sinks and toast regions exposed while a library modal inerts the page', async () => {
+  const background = document.createElement('main');
+  background.dataset['overlayBackground'] = '';
+  const backgroundSource = document.createElement('button');
+  backgroundSource.textContent = 'Background source';
+  background.append(backgroundSource);
+  const toastRegion = document.createElement(tag('toast'));
+  toastRegion.dataset['overlayBackground'] = '';
+  document.body.append(background, toastRegion);
+  const earlySink = acquireAnnouncementSink('polite', { document });
+  const overlay = createOverlay(document, 'helper-regions');
+  const handle = activateOverlay({
+    host: overlay.host,
+    panel: () => overlay.panel,
+    onEscape: () => undefined,
+  });
+  const inside = acquireAnnouncementSink('polite', { document, source: overlay.first });
+  const outside = acquireAnnouncementSink('polite', { document, source: backgroundSource });
+  const lateSink = acquireAnnouncementSink('assertive', { document });
+  try {
+    // The manager's MutationObserver recomputes inertness for the late sink in a microtask.
+    await new Promise<void>((resolve) => setTimeout(resolve));
+    expect(background.inert, 'unrelated page content is inert').to.equal(true);
+    expect(earlySink.element.inert, 'a sink mounted before the modal opened stays exposed').to.equal(false);
+    expect(lateSink.element.inert, 'a sink mounted while the modal is open stays exposed').to.equal(false);
+    expect(toastRegion.inert, 'a toast region stays exposed').to.equal(false);
+
+    inside.announce('Copied inside the modal');
+    outside.announce('Background update');
+    const texts = Array.from(earlySink.element.children, (child) => child.textContent)
+      .filter((text) => text === 'Copied inside the modal' || text === 'Background update');
+    expect(texts, 'only the modal content reaches the exposed sink').to.deep.equal(['Copied inside the modal']);
+  } finally {
+    inside.release();
+    outside.release();
+    lateSink.release();
+    handle.deactivate({ restoreFocus: false });
+    earlySink.release();
+  }
+  expect(background.inert).to.equal(false);
+  expect(toastRegion.inert).to.equal(false);
 });
 
 it('makes modal background paths inert and restores pre-existing inert state', () => {

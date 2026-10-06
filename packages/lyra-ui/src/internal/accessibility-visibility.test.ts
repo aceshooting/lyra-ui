@@ -8,6 +8,7 @@ import {
   isAccessibilityVisibilityHidden,
   isAccessibilityVisible,
   isAriaTrue,
+  accessibleTextRecordsMatter,
   bindAccessibleTextObserver,
 } from './accessibility-visibility.js';
 
@@ -160,6 +161,42 @@ describe('bindAccessibleTextObserver', () => {
       root.setAttribute('data-extra', 'y'); // ANCESTOR_ATTRIBUTES stays fixed, unaffected by extraAttributes
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
       expect(seen).to.equal(0);
+    } finally {
+      observer.disconnect();
+    }
+  });
+
+  it('tells an ancestor style write that cannot change visibility apart from one that can', async () => {
+    const root = await fixture<HTMLElement>(html`
+      <section style="position: fixed; left: 0; top: 0"><div id="filtered-host">Label</div></section>
+    `);
+    const host = root.querySelector<HTMLElement>('#filtered-host')!;
+    let delivered = 0;
+    const observer = new MutationObserver(() => {
+      delivered += 1;
+    });
+    // What an adopting callback does with each batch: skip it, or rebind and recompute.
+    const batchMatters = (): boolean => {
+      const matters = accessibleTextRecordsMatter(observer, observer.takeRecords());
+      if (matters) bindAccessibleTextObserver(observer, host);
+      return matters;
+    };
+    bindAccessibleTextObserver(observer, host);
+    try {
+      expect(batchMatters(), 'the first batch opts the observer in').to.equal(true);
+      root.style.left = '12px';
+      root.style.top = '30px';
+      root.className = 'repositioned';
+      expect(batchMatters(), 'a positioner move changes nothing').to.equal(false);
+
+      root.style.display = 'none';
+      expect(batchMatters(), 'hiding the ancestor matters').to.equal(true);
+      root.style.display = '';
+      expect(batchMatters(), 'and so does showing it again').to.equal(true);
+
+      host.textContent = 'Renamed';
+      expect(batchMatters(), 'content changes always matter').to.equal(true);
+      expect(delivered, 'every batch was taken synchronously').to.equal(0);
     } finally {
       observer.disconnect();
     }

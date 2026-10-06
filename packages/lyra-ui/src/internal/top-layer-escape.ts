@@ -309,18 +309,20 @@ export function hasTopLayerAncestor(element: Element): boolean {
 }
 
 /**
- * Hides a library-promoted popup whose reference has scrolled out of its clipping ancestors, and
- * shows it again once the reference is visible. A promoted popup has no clipping ancestors of its
- * own, so without this it would float detached over the page. Never writes while another inline
- * `visibility` value is present (for example the pending-placement `hidden !important`), and only
- * ever removes the value it wrote.
+ * Hides a fixed popup whose reference has scrolled out of its clipping ancestors, and shows it
+ * again once the reference is visible. A promoted popup, like any fixed popup positioned against
+ * the viewport, is not clipped by those ancestors, so without this it would float detached over
+ * the page. The caller decides eligibility (`referenceHidden` is only ever true for a fixed
+ * placement). Never writes while another inline `visibility` value is present (for example the
+ * pending-placement `hidden !important`), and only ever removes the value it wrote; the lease is
+ * released with the placed element's `[hidden]` settle or {@link releaseTopLayer}.
  */
 export function applyReferenceHidden(
   popup: HTMLElement,
   referenceHidden: boolean,
   owner: HTMLElement = popup,
 ): void {
-  const hide = referenceHidden && isLibraryPromotedAndShowing(popup);
+  const hide = referenceHidden;
   const lease = leaseByOwner.get(owner);
   const written = lease?.visibility.get(popup);
   if (hide) {

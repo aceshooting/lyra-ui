@@ -31,8 +31,6 @@ export {
   type FormOwnerValue,
 };
 
-installFormControlLabelSupport();
-
 type Constructor<T> = new (...args: any[]) => T;
 
 const FORM_ASSOCIATED_DEFAULT_STRINGS = Object.freeze({ fieldRequired: LYRA_DEFAULT_fieldRequired });
@@ -373,6 +371,9 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
   Base: T,
   valueAdapter?: FormValueAdapter<TValue>,
 ): T & Constructor<FormAssociatedInterface<TValue> & FormAssociatedSubclassInterface<TValue>> {
+  // Installed by the mixin, not by importing this module: components that only import a re-exported
+  // helper (`attachInternalsSafely`) are not form controls and must not ship the label bridge.
+  installFormControlLabelSupport();
   const adapter = resolveFormValueAdapter<TValue>(valueAdapter);
 
   // Installed ONLY when a caller supplied an adapter. The string case keeps Lit's own default

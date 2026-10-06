@@ -1,4 +1,4 @@
-import { getActiveNativeModal } from './native-modal-context.js';
+import { getActiveNativeModal, isPageHelperRegion } from './native-modal-context.js';
 import { activateNonmodalOverlay } from './nonmodal-overlay-manager.js';
 import { RenderedStateController } from './rendered-state.js';
 import { lockScroll } from './scroll-lock.js';
@@ -276,6 +276,9 @@ function inertElement(state: ModalDocumentState, element: Element, desired: Set<
   // A modal escapes ancestor inertness, but never its own inert attribute. Let the platform own
   // native modal isolation and restore any previous library write on the dialog itself below.
   if (element.localName === 'dialog' && element.matches(':modal')) return;
+  // Shared announcement sinks and toast stacks stay exposed, as they are inside a native modal;
+  // their background producers are silenced at the source by this same inertness.
+  if (isPageHelperRegion(element)) return;
   const htmlElement = element as HTMLElement;
   desired.add(htmlElement);
   if (!state.inerted.has(htmlElement)) state.inerted.set(htmlElement, htmlElement.inert);

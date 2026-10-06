@@ -1,5 +1,7 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
+import { isAriaTrue } from './accessibility-visibility.js';
 import { deepActiveElementIn } from './active-element.js';
+import { hasFocusExcludingAttributes, styleExcludesFocusSubtree } from './focus-candidates.js';
 import { firstFormControlFocusTarget } from './form-control-focus-target.js';
 import {
   registerFormControlLabelSupport,
@@ -685,13 +687,55 @@ export function resolveExternalLabels(host: ExternalLabelHost): HTMLLabelElement
   return labels;
 }
 
-/** A label's text with `exclude`'s subtree left out wherever it appears. */
-function labelText(node: Node, exclude?: Node): string {
-  if (node === exclude) return '';
-  if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? '';
-  let text = '';
-  for (const child of node.childNodes) text += labelText(child, exclude);
-  return text;
+const LABEL_TEXT_MAX_DEPTH = 256;
+const LABEL_TEXT_MAX_NODES = 4_096;
+const NON_CONTENT_ELEMENTS = new Set(['script', 'style', 'template']);
+
+/**
+ * A label's accessible text, read the way the platform names a control from it: content hidden
+ * from assistive technology (`hidden`, `inert`, `aria-hidden`, undisplayed) and non-content
+ * elements drop out, a descendant's own `aria-label` and an image's `alt` stand in for its
+ * content, and open shadow roots contribute what they render. `exclude`'s subtree is left out
+ * wherever it appears. Only the label's content is filtered, so a hidden label still names its
+ * control, and text runs are joined as they are, without inventing word breaks.
+ */
+function labelText(label: Element, exclude?: Node): string {
+  let remaining = LABEL_TEXT_MAX_NODES;
+  const read = (node: Node, depth: number): string => {
+    if (node === exclude || depth > LABEL_TEXT_MAX_DEPTH || --remaining < 0) return '';
+    if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? '';
+    let children: ArrayLike<Node> = node.childNodes;
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const element = node as Element;
+      if (NON_CONTENT_ELEMENTS.has(element.localName)) return '';
+      if (element !== label) {
+        // `hidden`/`inert` (the browser-order variant leaves ARIA to the explicit check below),
+        // `aria-hidden`, and an undisplayed subtree.
+        if (
+          hasFocusExcludingAttributes(element, true) ||
+          isAriaTrue(element.getAttribute('aria-hidden')) ||
+          styleExcludesFocusSubtree(element.ownerDocument.defaultView?.getComputedStyle(element))
+        ) return '';
+        const ariaLabel = element.getAttribute('aria-label')?.trim();
+        if (ariaLabel) return ariaLabel;
+        const alternative = element.localName === 'img' || element.localName === 'area'
+          ? element.getAttribute('alt')?.trim()
+          : undefined;
+        if (alternative) return alternative;
+      }
+      if (element.shadowRoot) children = element.shadowRoot.childNodes;
+      else if (element.localName === 'slot') {
+        const assigned = (element as HTMLSlotElement).assignedNodes({ flatten: true });
+        if (assigned.length > 0) children = assigned;
+      }
+    } else if (node.nodeType !== Node.DOCUMENT_FRAGMENT_NODE) {
+      return '';
+    }
+    let text = '';
+    for (let index = 0; index < children.length; index += 1) text += read(children[index]!, depth + 1);
+    return text;
+  };
+  return read(label, 0);
 }
 
 /**

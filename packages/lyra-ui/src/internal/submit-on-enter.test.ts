@@ -3,6 +3,8 @@ import {
   isImplicitSubmission,
   isNativeSubmitter,
   findImplicitSubmitter,
+  findDefaultButton,
+  submitFormImplicitly,
   submitOnEnter,
 } from './submit-on-enter.js';
 import '../components/forms/button/button.js';
@@ -139,6 +141,128 @@ it('treats a submitter as enabled when the DOM cannot evaluate :disabled', async
   });
 
   expect(findImplicitSubmitter(form)?.id).to.equal('go');
+});
+
+// -- HTML implicit submission: the default button decides ----------------
+// The HTML Standard's steps: the default button is the FIRST submit button in tree order. When it
+// exists, implicit submission clicks it only if it is not disabled; a disabled default button
+// means nothing is submitted. Only a form with no submit button at all falls back to submitting
+// from the form itself, and then only while at most one field blocks implicit submission.
+
+it('resolves the default button as the first submit control, whatever its disabled state', async () => {
+  const form = (await fixture(html`
+    <form>
+      <input name="q" />
+      <button type="button" id="plain">Plain</button>
+      <button type="submit" id="off" disabled>Off</button>
+      <button type="submit" id="go">Go</button>
+    </form>
+  `)) as HTMLFormElement;
+  expect(findDefaultButton(form)?.id).to.equal('off');
+});
+
+it('submits nothing when the default button is disabled, even with a later enabled submit button', async () => {
+  const form = (await fixture(html`
+    <form>
+      <input id="field" name="q" value="hi" />
+      <button type="submit" id="save" disabled>Save</button>
+      <button type="submit" id="delete" formaction="/delete">Delete</button>
+    </form>
+  `)) as HTMLFormElement;
+  const submits = countSubmits(form);
+  let deleteClicks = 0;
+  form.querySelector('#delete')!.addEventListener('click', () => deleteClicks++);
+
+  expect(submitOnEnter(form.querySelector('#field') as HTMLInputElement, enterEvent())).to.be.false;
+  expect(submits()).to.equal(0);
+  expect(deleteClicks, 'a later submit button is never activated in its place').to.equal(0);
+});
+
+it('submits nothing when the only submit button is disabled, even from a single field', async () => {
+  const form = (await fixture(html`
+    <form><input id="field" name="q" value="hi" /><button type="submit" disabled>Save</button></form>
+  `)) as HTMLFormElement;
+  const submits = countSubmits(form);
+
+  expect(submitOnEnter(form.querySelector('#field') as HTMLInputElement, enterEvent())).to.be.false;
+  expect(submits(), 'the form has a default button, so the no-button fallback never applies').to.equal(0);
+});
+
+it('treats a default button disabled by its fieldset as blocking implicit submission', async () => {
+  const form = (await fixture(html`
+    <form>
+      <input id="field" name="q" value="hi" />
+      <fieldset disabled><button type="submit" id="save">Save</button></fieldset>
+      <button type="submit" id="other">Other</button>
+    </form>
+  `)) as HTMLFormElement;
+  const submits = countSubmits(form);
+
+  expect(submitOnEnter(form.querySelector('#field') as HTMLInputElement, enterEvent())).to.be.false;
+  expect(submits()).to.equal(0);
+});
+
+it('treats a disabled lr-button default button as blocking implicit submission', async () => {
+  const form = (await fixture(html`
+    <form>
+      <input id="field" name="q" value="hi" />
+      <lr-button id="save" type="submit" disabled>Save</lr-button>
+      <button type="submit" id="other">Other</button>
+    </form>
+  `)) as HTMLFormElement;
+  await (form.querySelector('#save') as LyraButton).updateComplete;
+  const submits = countSubmits(form);
+
+  expect(submitOnEnter(form.querySelector('#field') as HTMLInputElement, enterEvent())).to.be.false;
+  expect(submits()).to.equal(0);
+});
+
+it('activates an enabled default button even when a later submit button is disabled', async () => {
+  const form = (await fixture(html`
+    <form>
+      <input id="field" name="q" value="hi" />
+      <button type="submit" id="first">First</button>
+      <button type="submit" id="second" disabled>Second</button>
+    </form>
+  `)) as HTMLFormElement;
+  let submitterId: string | null = null;
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    submitterId = ((event as SubmitEvent).submitter as HTMLElement | null)?.id ?? null;
+  });
+
+  expect(submitOnEnter(form.querySelector('#field') as HTMLInputElement, enterEvent())).to.be.true;
+  expect(submitterId).to.equal('first');
+});
+
+it('submitFormImplicitly runs the same default-button steps without a keystroke', async () => {
+  const blocked = (await fixture(html`
+    <form><input name="q" /><button type="submit" disabled>Save</button><button type="submit">Next</button></form>
+  `)) as HTMLFormElement;
+  const blockedSubmits = countSubmits(blocked);
+  expect(submitFormImplicitly(blocked)).to.be.false;
+  expect(blockedSubmits()).to.equal(0);
+
+  const open = (await fixture(html`
+    <form><input name="q" /><button type="submit" id="go" name="intent" value="go">Go</button></form>
+  `)) as HTMLFormElement;
+  let submitterId: string | null = null;
+  const order: string[] = [];
+  open.addEventListener('submit', (event) => {
+    event.preventDefault();
+    order.push('submit');
+    submitterId = ((event as SubmitEvent).submitter as HTMLElement | null)?.id ?? null;
+  });
+  expect(submitFormImplicitly(open, { beforeSubmit: () => order.push('before') })).to.be.true;
+  expect(order.join(',')).to.equal('before,submit');
+  expect(submitterId).to.equal('go');
+
+  const crowded = (await fixture(html`
+    <form><input name="a" /><input name="b" /></form>
+  `)) as HTMLFormElement;
+  const crowdedSubmits = countSubmits(crowded);
+  expect(submitFormImplicitly(crowded)).to.be.false;
+  expect(crowdedSubmits()).to.equal(0);
 });
 
 // -- submitOnEnter() ------------------------------------------------------

@@ -5,6 +5,7 @@ import {
   UNSAFE_OWN_DATA_DESCRIPTOR,
   getOwnDataDescriptor,
 } from './data-descriptors.js';
+import { devWarnOnce } from './dev-warning.js';
 
 /** Maximum number of array entries retained by the shared public-collection snapshot boundary. */
 const PUBLIC_COLLECTION_ENTRY_LIMIT = 10_000;
@@ -29,12 +30,50 @@ function isCollectionSnapshotFailure(
   );
 }
 
+/**
+ * Which end of an over-limit root array the boundary keeps: the leading entries (`'oldest'`, the
+ * default), or the trailing ones (`'newest'`) for append-ordered data such as logs, transcripts
+ * and sample streams, whose newest entries are the ones a reader needs.
+ */
+export type CollectionRetention = 'oldest' | 'newest';
+
+/** What the shared boundary had to drop from the root of one assignment. */
+export interface CollectionTruncation {
+  /** Which end of an ordered root was kept. */
+  readonly kept: CollectionRetention;
+  /** Root entries the retained snapshot holds. */
+  readonly retained: number;
+  /** Root entries (array positions, `Map`/`Set` entries, or record keys) in the assigned source. */
+  readonly source: number;
+}
+
+/** Options for {@link snapshotPublicCollection}. */
+export interface PublicCollectionSnapshotOptions {
+  /** Which end of an over-limit root array to keep. Defaults to `'oldest'`. */
+  readonly retain?: CollectionRetention;
+  /** Called once when the snapshot retains fewer root entries than the source holds. */
+  readonly onTruncate?: (truncation: CollectionTruncation) => void;
+}
+
 interface CollectionSnapshotBudget {
   remaining: number;
   remainingWork: number;
   readonly seen: WeakMap<object, unknown>;
   readonly additions: object[];
   readonly realm: SnapshotRealm;
+  /** Root-array retention; nested arrays never truncate (an over-limit one fails its record). */
+  readonly retention?: CollectionRetention;
+  /** What the root lost, written only by root-level code and only when it lost entries. */
+  rootLoss?: CollectionTruncation;
+}
+
+function recordRootLoss(
+  budget: CollectionSnapshotBudget,
+  kept: CollectionRetention,
+  source: number,
+  retained: number
+): void {
+  if (retained < source) budget.rootLoss = Object.freeze({ kept, retained, source });
 }
 
 function consumeSnapshotWork(budget: CollectionSnapshotBudget): boolean {
@@ -294,23 +333,27 @@ function snapshotCollectionValue(
     )
       return EXHAUSTED_COLLECTION_VALUE;
     const length = Math.min(sourceLength, PUBLIC_COLLECTION_ENTRY_LIMIT);
-    const output = new budget.realm.Array(length) as unknown[];
+    // An append-ordered root walks from its end, so either way the snapshot is the longest
+    // contiguous run from the retained end that fits both the entry limit and the value budget.
+    const newest = allowPrefixTruncation && budget.retention === 'newest';
+    const output = new budget.realm.Array() as unknown[];
     rememberSnapshot(budget, value, output);
-    for (let index = 0; index < length; index += 1) {
-      if (budget.remaining <= 0) {
+    const kept: unknown[] = [];
+    // Positions walked (the retained run), and those skipped because their value cannot cross
+    // the boundary (left as holes).
+    let walked = 0;
+    let dropped = 0;
+    for (; walked < length; walked += 1) {
+      if (budget.remaining <= 0 || !consumeSnapshotWork(budget)) {
         if (!allowPrefixTruncation) return EXHAUSTED_COLLECTION_VALUE;
-        output.length = index;
         break;
       }
-      if (!consumeSnapshotWork(budget)) {
-        if (!allowPrefixTruncation) return EXHAUSTED_COLLECTION_VALUE;
-        output.length = index;
-        break;
-      }
+      const index = newest ? sourceLength - 1 - walked : walked;
       const descriptor = getOwnDataDescriptor(value, String(index));
       if (descriptor === MISSING_OWN_DATA_DESCRIPTOR) continue;
       if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) {
         if (!allowPrefixTruncation) return OMIT_COLLECTION_VALUE;
+        dropped += 1;
         continue;
       }
       const entry = snapshotTransaction(budget, () => {
@@ -319,20 +362,27 @@ function snapshotCollectionValue(
       });
       if (entry === OMIT_COLLECTION_VALUE) {
         if (!allowPrefixTruncation) return OMIT_COLLECTION_VALUE;
+        dropped += 1;
         continue;
       }
       if (entry === EXHAUSTED_COLLECTION_VALUE) {
         if (!allowPrefixTruncation) return EXHAUSTED_COLLECTION_VALUE;
-        output.length = index;
         break;
       }
-      Object.defineProperty(output, index, {
-        value: entry,
+      kept.push(index, entry);
+    }
+    output.length = walked;
+    const offset = newest ? sourceLength - walked : 0;
+    for (let index = 0; index < kept.length; index += 2) {
+      Object.defineProperty(output, (kept[index] as number) - offset, {
+        value: kept[index + 1],
         enumerable: true,
         configurable: false,
         writable: false,
       });
     }
+    if (allowPrefixTruncation)
+      recordRootLoss(budget, newest ? 'newest' : 'oldest', sourceLength, walked - dropped);
     return Object.freeze(output);
   }
 
@@ -393,10 +443,34 @@ function snapshotCollectionValue(
   return OMIT_COLLECTION_VALUE;
 }
 
-/** @internal Applies the shared bounded collection snapshot at a component-owned accessor. */
+/** Counts a plain record's enumerable keys, up to the boundary's own work ceiling. */
+function boundedRecordSize(value: object): number | undefined {
+  let size = 0;
+  try {
+    for (const key in value) {
+      if (typeof key === 'string') size += 1;
+      if (size >= PUBLIC_COLLECTION_WORK_LIMIT) break;
+    }
+  } catch {
+    return undefined;
+  }
+  return size;
+}
+
+/**
+ * @internal Applies the shared bounded collection snapshot at a component-owned accessor.
+ *
+ * One assignment retains at most 10,000 entries per array and 50,000 values in total. A root array,
+ * `Map` or `Set` that exceeds either keeps a contiguous run of its entries, a root record keeps
+ * nothing, and a root entry holding a value that cannot cross the boundary (a class instance, a
+ * typed array) is left out. `options.onTruncate` reports any such loss, so the root is never cut
+ * silently; `options.retain` chooses whether an over-limit root array keeps its leading entries
+ * (the default) or its trailing, newest ones.
+ */
 export function snapshotPublicCollection(
   value: unknown,
-  view?: Window | null
+  view?: Window | null,
+  options: PublicCollectionSnapshotOptions = {}
 ): unknown {
   if (
     value === null ||
@@ -410,11 +484,15 @@ export function snapshotPublicCollection(
     seen: new WeakMap(),
     additions: [],
     realm,
+    retention: options.retain ?? 'oldest',
   };
   const snapshot = snapshotTransaction(budget, () =>
     snapshotCollectionValue(value, budget, 0, undefined, undefined, true)
   );
-  if (!isCollectionSnapshotFailure(snapshot)) return snapshot;
+  if (!isCollectionSnapshotFailure(snapshot)) {
+    if (budget.rootLoss) options.onTruncate?.(budget.rootLoss);
+    return snapshot;
+  }
   if (isArrayValue(value) || isNativeArrayBufferView(value as object))
     return emptyRealmArray(realm);
   if (typeof value === 'object') {
@@ -423,6 +501,8 @@ export function snapshotPublicCollection(
     if (nativeSetValues(value))
       return readonlySetFacade(new realm.Set(), realm);
     if (isRealmNeutralPlainRecord(value)) {
+      const size = boundedRecordSize(value);
+      if (size) options.onTruncate?.(Object.freeze({ kept: 'oldest', retained: 0, source: size }));
       const prototype = Object.getPrototypeOf(value);
       return Object.freeze(
         realm.Object.create(
@@ -592,6 +672,28 @@ function snapshotIdentitySet(
   return readonlySetFacade(backing, realm);
 }
 
+/** A native `Map`/`Set` size read through the platform getter, never through the object itself. */
+function nativeCollectionSize(source: object, kind: 'map' | 'set'): number | undefined {
+  try {
+    const size = Object.getOwnPropertyDescriptor(kind === 'map' ? Map.prototype : Set.prototype, 'size')
+      ?.get?.call(source) as unknown;
+    return typeof size === 'number' ? size : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Records a root `Map`/`Set` that kept fewer entries than its native size reports. */
+function recordNativeCollectionLoss(
+  budget: CollectionSnapshotBudget,
+  source: object,
+  kind: 'map' | 'set',
+  retained: number
+): void {
+  const size = nativeCollectionSize(source, kind);
+  if (size !== undefined) recordRootLoss(budget, 'oldest', size, retained);
+}
+
 function snapshotDetachedMap(
   source: object,
   entries: IterableIterator<readonly [unknown, unknown]>,
@@ -602,6 +704,10 @@ function snapshotDetachedMap(
   const backing = new budget.realm.Map<unknown, unknown>();
   const facade = readonlyMapFacade(backing, budget.realm);
   rememberSnapshot(budget, source, facade);
+  const settle = (): ReadonlyMap<unknown, unknown> => {
+    if (allowPrefixTruncation) recordNativeCollectionLoss(budget, source, 'map', backing.size);
+    return facade;
+  };
   for (let count = 0; count < PUBLIC_COLLECTION_ENTRY_LIMIT; count += 1) {
     let next: IteratorResult<readonly [unknown, unknown]>;
     try {
@@ -612,7 +718,7 @@ function snapshotDetachedMap(
     if (next.done) break;
     if (budget.remaining <= 0 || !consumeSnapshotWork(budget))
       return allowPrefixTruncation
-        ? facade
+        ? settle()
         : EXHAUSTED_COLLECTION_VALUE;
     const pair = snapshotTransaction<readonly [unknown, unknown]>(budget, () => {
       budget.remaining -= 1;
@@ -625,11 +731,11 @@ function snapshotDetachedMap(
     });
     if (pair === EXHAUSTED_COLLECTION_VALUE)
       return allowPrefixTruncation
-        ? facade
+        ? settle()
         : EXHAUSTED_COLLECTION_VALUE;
     if (pair !== OMIT_COLLECTION_VALUE) backing.set(pair[0], pair[1]);
   }
-  return facade;
+  return settle();
 }
 
 function snapshotDetachedSet(
@@ -642,6 +748,10 @@ function snapshotDetachedSet(
   const backing = new budget.realm.Set<unknown>();
   const facade = readonlySetFacade(backing, budget.realm);
   rememberSnapshot(budget, source, facade);
+  const settle = (): ReadonlySet<unknown> => {
+    if (allowPrefixTruncation) recordNativeCollectionLoss(budget, source, 'set', backing.size);
+    return facade;
+  };
   for (let count = 0; count < PUBLIC_COLLECTION_ENTRY_LIMIT; count += 1) {
     let next: IteratorResult<unknown>;
     try {
@@ -652,7 +762,7 @@ function snapshotDetachedSet(
     if (next.done) break;
     if (budget.remaining <= 0 || !consumeSnapshotWork(budget))
       return allowPrefixTruncation
-        ? facade
+        ? settle()
         : EXHAUSTED_COLLECTION_VALUE;
     const entry = snapshotTransaction(budget, () => {
       budget.remaining -= 1;
@@ -660,17 +770,22 @@ function snapshotDetachedSet(
     });
     if (entry === EXHAUSTED_COLLECTION_VALUE)
       return allowPrefixTruncation
-        ? facade
+        ? settle()
         : EXHAUSTED_COLLECTION_VALUE;
     if (entry !== OMIT_COLLECTION_VALUE) backing.add(entry);
   }
-  return facade;
+  return settle();
 }
 
+/**
+ * @param root - Only for a root assignment (never with `budget`): which end of an over-limit array
+ *   to keep, and where to report entries the 10,000-entry limit cut off.
+ */
 function snapshotIdentityCollection(
   value: unknown,
   view?: Window | SnapshotRealm | null,
-  budget?: CollectionSnapshotBudget
+  budget?: CollectionSnapshotBudget,
+  root?: PublicCollectionSnapshotOptions
 ): unknown | CollectionSnapshotFailure {
   const realm = snapshotRealm(view);
   if (
@@ -684,20 +799,23 @@ function snapshotIdentityCollection(
     if (budget && !consumeSnapshotWork(budget))
       return EXHAUSTED_COLLECTION_VALUE;
     const lengthDescriptor = getOwnDataDescriptor(value, 'length');
-    const length =
+    const sourceLength =
       lengthDescriptor !== MISSING_OWN_DATA_DESCRIPTOR &&
       lengthDescriptor !== UNSAFE_OWN_DATA_DESCRIPTOR &&
       typeof lengthDescriptor.value === 'number' &&
       Number.isSafeInteger(lengthDescriptor.value) &&
       lengthDescriptor.value >= 0
-        ? Math.min(lengthDescriptor.value, PUBLIC_COLLECTION_ENTRY_LIMIT)
+        ? lengthDescriptor.value
         : 0;
+    const length = Math.min(sourceLength, PUBLIC_COLLECTION_ENTRY_LIMIT);
+    const kept: CollectionRetention = root?.retain ?? 'oldest';
+    const offset = kept === 'newest' ? sourceLength - length : 0;
     const output = new realm.Array(length) as unknown[];
     if (budget) rememberSnapshot(budget, value, output);
     for (let index = 0; index < length; index += 1) {
       if (budget && !consumeSnapshotWork(budget))
         return EXHAUSTED_COLLECTION_VALUE;
-      const descriptor = getOwnDataDescriptor(value, String(index));
+      const descriptor = getOwnDataDescriptor(value, String(offset + index));
       if (
         descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
         descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
@@ -710,6 +828,8 @@ function snapshotIdentityCollection(
         writable: false,
       });
     }
+    if (length < sourceLength)
+      root?.onTruncate?.(Object.freeze({ kept, retained: length, source: sourceLength }));
     return Object.freeze(output);
   }
   if (value === null || typeof value !== 'object') return value;
@@ -718,6 +838,7 @@ function snapshotIdentityCollection(
     const output = snapshotIdentityMap(mapEntries, realm, budget);
     if (output === EXHAUSTED_COLLECTION_VALUE) return output;
     if (budget) rememberSnapshot(budget, value, output);
+    reportIdentityCollectionLoss(root, value, 'map', output.size);
     return output;
   }
   const setValues = nativeSetValues(value);
@@ -725,9 +846,22 @@ function snapshotIdentityCollection(
     const output = snapshotIdentitySet(setValues, realm, budget);
     if (output === EXHAUSTED_COLLECTION_VALUE) return output;
     if (budget) rememberSnapshot(budget, value, output);
+    reportIdentityCollectionLoss(root, value, 'set', output.size);
     return output;
   }
   return emptyRealmArray(realm);
+}
+
+function reportIdentityCollectionLoss(
+  root: PublicCollectionSnapshotOptions | undefined,
+  source: object,
+  kind: 'map' | 'set',
+  retained: number
+): void {
+  if (!root?.onTruncate) return;
+  const size = nativeCollectionSize(source, kind);
+  if (size !== undefined && retained < size)
+    root.onTruncate(Object.freeze({ kept: 'oldest', retained, source: size }));
 }
 
 function snapshotEventDetail(
@@ -774,6 +908,8 @@ interface CollectionPropertyPolicy {
   readonly owns: boolean;
   readonly preservesItemIdentity: boolean;
   readonly preservesObjectIdentity: boolean;
+  /** Enrolled in `appendOrderedCollectionProperties`: an over-limit root keeps its newest entries. */
+  readonly retainsNewest: boolean;
 }
 
 /**
@@ -812,6 +948,7 @@ function collectionPropertyPolicy(
   let owns = false;
   let preservesItemIdentity = false;
   let preservesObjectIdentity = false;
+  let retainsNewest = false;
   for (const constructor of lyraClassChain(ctor)) {
     // Both fields are `protected static` -- hidden from external consumers of the class, but this
     // bookkeeping helper is part of LyraElement's own internal machinery, just expressed as a
@@ -821,6 +958,7 @@ function collectionPropertyPolicy(
       ownedCollectionProperties: readonly PropertyKey[];
       identityCollectionProperties: readonly PropertyKey[];
       identityCollectionObjectProperties: readonly PropertyKey[];
+      appendOrderedCollectionProperties: readonly PropertyKey[];
     };
     if (
       Object.prototype.hasOwnProperty.call(
@@ -846,11 +984,20 @@ function collectionPropertyPolicy(
       declared.identityCollectionObjectProperties.includes(name)
     )
       preservesObjectIdentity = true;
+    if (
+      Object.prototype.hasOwnProperty.call(
+        constructor,
+        'appendOrderedCollectionProperties'
+      ) &&
+      declared.appendOrderedCollectionProperties.includes(name)
+    )
+      retainsNewest = true;
   }
   const policy = Object.freeze({
     owns,
     preservesItemIdentity,
     preservesObjectIdentity,
+    retainsNewest,
   });
   policies.set(name, policy);
   return policy;
@@ -860,13 +1007,14 @@ const COLLECTION_ENROLLMENT_FIELDS = [
   'ownedCollectionProperties',
   'identityCollectionProperties',
   'identityCollectionObjectProperties',
+  'appendOrderedCollectionProperties',
 ] as const;
 
 /**
- * Every name any of the three enrollment lists mentions, including inherited declarations. The two
- * identity lists are only *refinements* of an owned property, so a name they alone mention resolves
- * to a policy that owns nothing and installs no boundary -- the same inert outcome it has always
- * had. Collecting them anyway keeps that decision in one place (the policy) instead of splitting it
+ * Every name any enrollment list mentions, including inherited declarations. The identity and
+ * append-ordered lists are only *refinements* of an owned property, so a name they alone mention
+ * resolves to a policy that owns nothing and installs no boundary -- the same inert outcome it has
+ * always had. Collecting them anyway keeps that decision in one place (the policy) instead of splitting it
  * across the policy and the name scan.
  */
 function enrolledCollectionPropertyNames(
@@ -919,7 +1067,8 @@ function samePolicy(
   return (
     a.owns === b.owns &&
     a.preservesItemIdentity === b.preservesItemIdentity &&
-    a.preservesObjectIdentity === b.preservesObjectIdentity
+    a.preservesObjectIdentity === b.preservesObjectIdentity &&
+    a.retainsNewest === b.retainsNewest
   );
 }
 
@@ -987,6 +1136,13 @@ function installOwnedCollectionAccessors(ctor: typeof LyraElement): void {
       }
       const ownerView = (this as unknown as { ownerDocument?: Document })
         .ownerDocument?.defaultView;
+      let truncation: CollectionTruncation | undefined;
+      const options: PublicCollectionSnapshotOptions = {
+        retain: policy.retainsNewest ? 'newest' : 'oldest',
+        onTruncate: (report) => {
+          truncation = report;
+        },
+      };
       const snapshot =
         policy.preservesObjectIdentity &&
         value !== null &&
@@ -994,8 +1150,9 @@ function installOwnedCollectionAccessors(ctor: typeof LyraElement): void {
         !isArrayValue(value)
           ? value
           : policy.preservesItemIdentity
-          ? snapshotIdentityCollection(value, ownerView)
-          : snapshotPublicCollection(value, ownerView);
+          ? snapshotIdentityCollection(value, ownerView, undefined, options)
+          : snapshotPublicCollection(value, ownerView, options);
+      recordCollectionTruncation(this, name, truncation);
       originalSet.call(this, snapshot);
       lastAssignments.set(this, {
         source: value,
@@ -1008,47 +1165,127 @@ function installOwnedCollectionAccessors(ctor: typeof LyraElement): void {
 }
 
 
+const collectionTruncations = new WeakMap<object, Map<PropertyKey, CollectionTruncation>>();
+
+/** The page-wide development-warning key for one truncated property, so a test that assigns past
+ *  the limits on purpose can seed or capture exactly that diagnostic. */
+export function collectionTruncationWarningKey(tagName: string, property: PropertyKey): string {
+  return `lyra-collection-truncated:${tagName}:${String(property)}`;
+}
+
+/** Remembers (or clears) what the latest assignment of an enrolled property lost, and tells a
+ *  developer once per page per property; the message is a diagnostic, never shown to users. */
+function recordCollectionTruncation(
+  host: LyraElement,
+  name: PropertyKey,
+  truncation: CollectionTruncation | undefined
+): void {
+  let byName = collectionTruncations.get(host);
+  if (!truncation) {
+    byName?.delete(name);
+    return;
+  }
+  if (!byName) {
+    byName = new Map();
+    collectionTruncations.set(host, byName);
+  }
+  byName.set(name, truncation);
+  const tagName = host.localName;
+  const property = String(name);
+  devWarnOnce(
+    collectionTruncationWarningKey(tagName, property),
+    `<${tagName}>: '${property}' kept ${truncation.retained} of ${truncation.source} entries, the ` +
+      `${truncation.kept}; an assignment keeps at most ${PUBLIC_COLLECTION_ENTRY_LIMIT} per array ` +
+      `and ${PUBLIC_COLLECTION_NODE_LIMIT} values, and drops values it cannot copy.`
+  );
+}
+
+/**
+ * @internal What the latest assignment of an enrolled collection property on `host` lost to the
+ * shared boundary's limits, or `undefined` when it kept everything. A component reads this to
+ * disclose the loss, for example in a localized limit notice built from the source size.
+ */
+export function publicCollectionTruncation(
+  host: object,
+  property: PropertyKey
+): CollectionTruncation | undefined {
+  return collectionTruncations.get(host)?.get(property);
+}
+
+/** Snapshots an emitted detail when the emitting class enrolls the event as immutable. */
+function snapshotEnrolledEventDetail(host: LyraElement<any>, name: string, detail: unknown): unknown {
+  let snapshotsDetail = false;
+  const identityDetailKeys = new Set<PropertyKey>();
+  const identityCollectionItemKeys = new Set<PropertyKey>();
+  for (const candidate of trustedLyraConstructorChain(host)) {
+    const constructor = candidate as unknown as {
+      immutableEventDetails: readonly string[];
+      identityEventDetailProperties: Readonly<Record<string, readonly PropertyKey[]>>;
+      identityEventDetailCollectionItems: Readonly<Record<string, readonly PropertyKey[]>>;
+    };
+    if (
+      Object.prototype.hasOwnProperty.call(
+        constructor,
+        'immutableEventDetails'
+      ) &&
+      constructor.immutableEventDetails.includes(name)
+    )
+      snapshotsDetail = true;
+    if (
+      Object.prototype.hasOwnProperty.call(
+        constructor,
+        'identityEventDetailProperties'
+      )
+    )
+      for (const key of constructor.identityEventDetailProperties[name] ?? [])
+        identityDetailKeys.add(key);
+    if (
+      Object.prototype.hasOwnProperty.call(
+        constructor,
+        'identityEventDetailCollectionItems'
+      )
+    )
+      for (const key of
+        constructor.identityEventDetailCollectionItems[name] ?? [])
+        identityCollectionItemKeys.add(key);
+  }
+  return snapshotsDetail ? snapshotEventDetail(
+    detail, host.ownerDocument?.defaultView, identityDetailKeys, identityCollectionItemKeys
+  ) : detail;
+}
+
+/** Whether `ctor` or an ancestor declares a non-empty `ownedCollectionProperties` list. */
+function declaresOwnedCollections(ctor: typeof LyraElement): boolean {
+  for (const constructor of lyraClassChain(ctor)) {
+    if (!Object.prototype.hasOwnProperty.call(constructor, 'ownedCollectionProperties')) continue;
+    const owned = (constructor as unknown as { ownedCollectionProperties: readonly PropertyKey[] })
+      .ownedCollectionProperties;
+    if (owned.length > 0) return true;
+  }
+  return false;
+}
+
 /** Explicit support for components that own collections or immutable event details. */
 export const collectionSupport: LyraCollectionSupport = Object.freeze({
   installProperties: installOwnedCollectionAccessors,
-  snapshotEvent(host: LyraElement<any>, name: string, detail: unknown): unknown {
-    let snapshotsDetail = false;
-    const identityDetailKeys = new Set<PropertyKey>();
-    const identityCollectionItemKeys = new Set<PropertyKey>();
-    for (const candidate of trustedLyraConstructorChain(host)) {
-      const constructor = candidate as unknown as {
-        immutableEventDetails: readonly string[];
-        identityEventDetailProperties: Readonly<Record<string, readonly PropertyKey[]>>;
-        identityEventDetailCollectionItems: Readonly<Record<string, readonly PropertyKey[]>>;
-      };
-      if (
-        Object.prototype.hasOwnProperty.call(
-          constructor,
-          'immutableEventDetails'
-        ) &&
-        constructor.immutableEventDetails.includes(name)
-      )
-        snapshotsDetail = true;
-      if (
-        Object.prototype.hasOwnProperty.call(
-          constructor,
-          'identityEventDetailProperties'
-        )
-      )
-        for (const key of constructor.identityEventDetailProperties[name] ?? [])
-          identityDetailKeys.add(key);
-      if (
-        Object.prototype.hasOwnProperty.call(
-          constructor,
-          'identityEventDetailCollectionItems'
-        )
-      )
-        for (const key of
-          constructor.identityEventDetailCollectionItems[name] ?? [])
-          identityCollectionItemKeys.add(key);
-    }
-    return snapshotsDetail ? snapshotEventDetail(
-      detail, host.ownerDocument?.defaultView, identityDetailKeys, identityCollectionItemKeys
-    ) : detail;
+  snapshotEvent: snapshotEnrolledEventDetail,
+});
+
+/**
+ * Event-detail-only support, for a class that lists `immutableEventDetails` but owns no collection
+ * property: the same detail snapshots without the accessor installer and its policy code, which
+ * then stay out of that class's bundle. A class -- or a subclass -- that enrolls
+ * `ownedCollectionProperties` must declare {@link collectionSupport} instead; with this object its
+ * properties would not cross the boundary, which a development build reports.
+ */
+export const eventCollectionSupport: LyraCollectionSupport = /* @__PURE__ */ Object.freeze({
+  installProperties(ctor: typeof LyraElement): void {
+    if (!declaresOwnedCollections(ctor)) return;
+    devWarnOnce(
+      `lyra-event-collection-support:${ctor.name}`,
+      `${ctor.name} enrolls ownedCollectionProperties but declares eventCollectionSupport; ` +
+        'declare collectionSupport so those properties cross the immutable collection boundary.'
+    );
   },
+  snapshotEvent: snapshotEnrolledEventDetail,
 });

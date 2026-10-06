@@ -154,18 +154,25 @@ export function DocumentAnchorTarget(
     ]);
 
     private _highlights: readonly LyraHighlight[] = snapshotLyraHighlights([]);
+    private _highlightsSource?: readonly LyraHighlight[];
     @property({ attribute: false })
     get highlights(): readonly LyraHighlight[] { return this._highlights; }
     set highlights(value: readonly LyraHighlight[]) {
+      // A parent template re-commits an object binding on every render. Re-assigning the same
+      // source, or the retained snapshot itself, is not a change and must not repaint highlights.
+      if (value === this._highlightsSource || value === this._highlights) return;
       const previous = this._highlights;
+      this._highlightsSource = value;
       this._highlights = snapshotLyraHighlights(value);
       this.requestUpdate('highlights', previous);
     }
     @property({ attribute: 'active-highlight-id' }) activeHighlightId: string | null = null;
-    // `hasChanged: () => true` -- re-assigning the SAME anchor (e.g. re-clicking the same citation
-    // badge twice) must still re-run scrollToAnchor/re-flash; Lit's default reference-equality
-    // `hasChanged` would otherwise silently swallow the second, identical assignment.
-    @property({ attribute: false, hasChanged: () => true }) anchor: LyraAnchor | string | null = null;
+    /** Declarative jump target (a `LyraAnchor`, or the `id` of a `highlights` entry): assigning a new
+     *  one scrolls to it, announces the result and fires `lr-anchor-result`. Re-assigning the
+     *  identical object or id -- which a parent template does on every render -- is not a new
+     *  request; call `scrollToAnchor()` to jump to the same anchor again (the same citation
+     *  activated twice). */
+    @property({ attribute: false }) anchor: LyraAnchor | string | null = null;
 
     /** Instance capability mirror; overridden per adopting viewer (e.g. pdf-viewer sets `['page',
      *  'text-quote', 'region']`) so a standalone element is feature-detectable without the
@@ -386,21 +393,35 @@ export function DocumentAnchorTarget(
       >${this.anchorAnnouncementText}</div>`;
     }
 
-    /** Attaches selection-end listeners to `contentRoot` and emits `lr-text-select` on a
-     *  non-collapsed selection ending inside it. Reads the selection shadow-aware: composed ranges
+    /** Attaches selection-end listeners to `contentRoot` and emits `lr-text-select` once for each
+     *  non-collapsed selection that ends inside it: after the pointer that drags it is released,
+     *  or after a keyboard/touch change settles. Reads the selection shadow-aware: composed ranges
      *  where `Selection.getComposedRanges()` exists, `ShadowRoot.getSelection()` next, else
      *  `document.getSelection()`. Collapsed selections never fire. */
     protected bindTextSelection(contentRoot: Element): void {
       this.unbindTextSelection();
       const document = contentRoot.ownerDocument;
       const view = document.defaultView;
+      // A drag fires `selectionchange` continuously, and its release is followed by a pointerup and
+      // possibly a trailing `selectionchange`; a keyup such as Ctrl+C changes nothing. Ignore changes
+      // while the primary pointer is down, and report a range only when it differs from the last one.
+      let pointerSelecting = false;
+      let reported: readonly [Node, number, Node, number] | undefined;
 
       const onSelectionEnd = (): void => {
         const range = selectionRange(this);
-        if (!range) return;
-        if (!contentRoot.contains(range.commonAncestorContainer) && range.commonAncestorContainer !== contentRoot) return;
+        if (!range || (!contentRoot.contains(range.commonAncestorContainer) && range.commonAncestorContainer !== contentRoot)) {
+          reported = undefined;
+          return;
+        }
+        if (
+          reported &&
+          reported[0] === range.startContainer && reported[1] === range.startOffset &&
+          reported[2] === range.endContainer && reported[3] === range.endOffset
+        ) return;
         const text = boundedSelectionText(range);
         if (!text) return;
+        reported = [range.startContainer, range.startOffset, range.endContainer, range.endOffset];
         const anchor = this.computeSelectionAnchor(range, text);
         const rects = boundedSelectionRects(range);
         this.emit('lr-text-select', { text, anchor, rects });
@@ -408,6 +429,7 @@ export function DocumentAnchorTarget(
 
       let debounceHandle: number | undefined;
       const onSelectionChange = (): void => {
+        if (pointerSelecting) return;
         if (!view) {
           onSelectionEnd();
           return;
@@ -418,15 +440,30 @@ export function DocumentAnchorTarget(
           onSelectionEnd();
         });
       };
+      const onPointerDown = (event: PointerEvent): void => {
+        if (event.isPrimary && event.button === 0) pointerSelecting = true;
+      };
+      // Document-level, so a drag released outside the content root still ends its selection.
+      const onPointerRelease = (): void => {
+        if (!pointerSelecting) return;
+        pointerSelecting = false;
+        onSelectionEnd();
+      };
 
       contentRoot.addEventListener('pointerup', onSelectionEnd);
       contentRoot.addEventListener('keyup', onSelectionEnd);
       document.addEventListener('selectionchange', onSelectionChange);
+      document.addEventListener('pointerdown', onPointerDown, true);
+      document.addEventListener('pointerup', onPointerRelease, true);
+      document.addEventListener('pointercancel', onPointerRelease, true);
 
       this.selectionCleanup = () => {
         contentRoot.removeEventListener('pointerup', onSelectionEnd);
         contentRoot.removeEventListener('keyup', onSelectionEnd);
         document.removeEventListener('selectionchange', onSelectionChange);
+        document.removeEventListener('pointerdown', onPointerDown, true);
+        document.removeEventListener('pointerup', onPointerRelease, true);
+        document.removeEventListener('pointercancel', onPointerRelease, true);
         if (debounceHandle !== undefined) view?.cancelAnimationFrame(debounceHandle);
       };
     }

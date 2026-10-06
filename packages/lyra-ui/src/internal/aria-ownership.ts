@@ -6,7 +6,7 @@ import {
   asciiWhitespaceTokens,
   isSingleAsciiWhitespaceToken,
 } from './ascii-whitespace.js';
-import { highestReachableWindow } from './a11y.js';
+import { sharedRealmRegistry } from './a11y.js';
 
 type OwnedAriaAttributes = Readonly<Record<string, string | null | undefined>>;
 
@@ -55,32 +55,13 @@ interface FixedAttributeLease {
 }
 
 const ATTRIBUTE_TARGETS = Symbol.for('@aceshooting/lyra-ui.aria-attribute-targets.v1');
-type AttributeTargetsHost = typeof globalThis & {
-  [ATTRIBUTE_TARGETS]?: WeakMap<HTMLElement, AttributeTargetState>;
-};
 const fallbackAttributeTargets = new WeakMap<HTMLElement, AttributeTargetState>();
 
-function sharedAttributeTargets(): WeakMap<HTMLElement, AttributeTargetState> {
-  const host = (typeof window === 'undefined'
-    ? globalThis
-    : highestReachableWindow(window)) as AttributeTargetsHost;
-  const existing = host[ATTRIBUTE_TARGETS];
-  if (existing) return existing;
-  const targets = new WeakMap<HTMLElement, AttributeTargetState>();
-  try {
-    Object.defineProperty(host, ATTRIBUTE_TARGETS, {
-      configurable: false,
-      enumerable: false,
-      value: targets,
-      writable: false,
-    });
-    return host[ATTRIBUTE_TARGETS] ?? targets;
-  } catch {
-    return fallbackAttributeTargets;
-  }
-}
-
-const attributeTargets = sharedAttributeTargets();
+const attributeTargets = sharedRealmRegistry(
+  ATTRIBUTE_TARGETS,
+  () => new WeakMap<HTMLElement, AttributeTargetState>(),
+  fallbackAttributeTargets,
+);
 
 function attributeSnapshot(target: HTMLElement, name: string): AttributeBaseline {
   return { had: target.hasAttribute(name), value: target.getAttribute(name) };
@@ -253,32 +234,13 @@ interface FixedControlsLease {
 }
 
 const CONTROLS_TARGETS = Symbol.for('@aceshooting/lyra-ui.aria-controls-targets.v1');
-type ControlsTargetsHost = typeof globalThis & {
-  [CONTROLS_TARGETS]?: WeakMap<HTMLElement, ControlsTargetState>;
-};
 const fallbackControlsTargets = new WeakMap<HTMLElement, ControlsTargetState>();
 
-function sharedControlsTargets(): WeakMap<HTMLElement, ControlsTargetState> {
-  const host = (typeof window === 'undefined'
-    ? globalThis
-    : highestReachableWindow(window)) as ControlsTargetsHost;
-  const existing = host[CONTROLS_TARGETS];
-  if (existing) return existing;
-  const targets = new WeakMap<HTMLElement, ControlsTargetState>();
-  try {
-    Object.defineProperty(host, CONTROLS_TARGETS, {
-      configurable: false,
-      enumerable: false,
-      value: targets,
-      writable: false,
-    });
-    return host[CONTROLS_TARGETS] ?? targets;
-  } catch {
-    return fallbackControlsTargets;
-  }
-}
-
-const controlsTargets = sharedControlsTargets();
+const controlsTargets = sharedRealmRegistry(
+  CONTROLS_TARGETS,
+  () => new WeakMap<HTMLElement, ControlsTargetState>(),
+  fallbackControlsTargets,
+);
 
 function controlElements(target: HTMLElement): readonly Element[] | null {
   if (!('ariaControlsElements' in target)) return null;

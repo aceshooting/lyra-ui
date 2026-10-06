@@ -1,3 +1,10 @@
+import {
+  hasFocusExcludingAttributes,
+  isNativeAction,
+  rendersAsFocusTarget,
+  styleExcludesFocusSubtree,
+} from './focus-candidates.js';
+
 const MAX_FOCUS_NODES = 10_000;
 
 function composedChildren(element: Element): HTMLElement[] {
@@ -9,75 +16,20 @@ function composedChildren(element: Element): HTMLElement[] {
   return [...(shadow?.children ?? element.children)] as HTMLElement[];
 }
 
-function isNativeTabTarget(element: HTMLElement): boolean {
-  switch (element.localName) {
-    case 'a':
-    case 'area':
-      return element.hasAttribute('href');
-    case 'audio':
-    case 'video':
-      return element.hasAttribute('controls');
-    case 'button':
-    case 'embed':
-    case 'iframe':
-    case 'select':
-    case 'textarea':
-      return true;
-    case 'object':
-      return (element.getAttribute('data') ?? '').trim() !== '';
-    case 'input':
-      return (element as HTMLInputElement).type !== 'hidden';
-    case 'summary':
-      return element.matches('details > summary:first-of-type');
-    default:
-      return (
-        element.hasAttribute('contenteditable') &&
-        element.isContentEditable &&
-        !element.parentElement?.isContentEditable
-      );
-  }
-}
-
 function unavailableSubtree(element: HTMLElement): boolean {
-  if (
-    !element.isConnected ||
-    element.hidden ||
-    element.hasAttribute('inert') ||
-    element.getAttribute('aria-hidden')?.toLowerCase() === 'true' ||
-    element.getAttribute('aria-disabled')?.toLowerCase() === 'true'
-  ) {
-    return true;
-  }
-  const style = element.ownerDocument.defaultView?.getComputedStyle(element);
-  if (
-    style?.display === 'none' ||
-    style?.contentVisibility === 'hidden'
-  ) {
-    return true;
-  }
-  return false;
+  if (!element.isConnected || hasFocusExcludingAttributes(element)) return true;
+  return styleExcludesFocusSubtree(element.ownerDocument.defaultView?.getComputedStyle(element));
 }
 
 function unavailableTarget(element: HTMLElement): boolean {
   if (element.matches(':disabled')) return true;
   const style = element.ownerDocument.defaultView?.getComputedStyle(element);
-  if (style?.visibility === 'hidden' || style?.visibility === 'collapse') return true;
-  const visibilityCandidate = element as HTMLElement & {
-    checkVisibility?: (options?: { contentVisibilityAuto?: boolean }) => boolean;
-  };
-  if (typeof visibilityCandidate.checkVisibility === 'function') {
-    try {
-      return !visibilityCandidate.checkVisibility({ contentVisibilityAuto: true });
-    } catch {
-      return true;
-    }
-  }
-  return element.getClientRects().length === 0;
+  return !rendersAsFocusTarget(element, style?.visibility);
 }
 
 function isTabTarget(element: HTMLElement): boolean {
   if (element.hasAttribute('tabindex')) return element.tabIndex >= 0;
-  return isNativeTabTarget(element);
+  return isNativeAction(element);
 }
 
 /** Finds the first live sequential focus target in one form control's composed subtree. */

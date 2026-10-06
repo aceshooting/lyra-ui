@@ -1,5 +1,148 @@
-import { expect } from '@open-wc/testing';
-import { snapshotPublicCollection } from './collection-snapshot.js';
+import { expect, fixture, html } from '@open-wc/testing';
+import { property } from 'lit/decorators.js';
+import {
+  collectionSupport,
+  collectionTruncationWarningKey,
+  eventCollectionSupport,
+  publicCollectionTruncation,
+  snapshotPublicCollection,
+  type CollectionTruncation,
+} from './collection-snapshot.js';
+import { LyraElement } from './lyra-element.js';
+import { tag } from './prefix.js';
+
+class TruncationLog extends LyraElement {
+  protected static override collectionSupport = collectionSupport;
+  protected static override readonly ownedCollectionProperties = ['entries', 'rows', 'items'];
+  protected static override readonly identityCollectionProperties = ['items'];
+  protected static readonly appendOrderedCollectionProperties = ['entries', 'items'];
+
+  /** Append-ordered: the newest rows are at the end. */
+  @property({ attribute: false }) entries: readonly unknown[] = [];
+  /** Ordinary owned collection: keeps its leading rows. */
+  @property({ attribute: false }) rows: readonly unknown[] = [];
+  /** Append-ordered identity collection. */
+  @property({ attribute: false }) items: readonly object[] = [];
+}
+customElements.define(tag('truncation-log-test'), TruncationLog);
+
+/** Captures dev diagnostics for the duration of `run` (they are this suite's subject). */
+function captureWarnings(run: () => void): string[] {
+  const warnings: string[] = [];
+  const original = console.warn;
+  console.warn = (...args: unknown[]) => {
+    warnings.push(args.map(String).join(' '));
+  };
+  try {
+    run();
+  } finally {
+    console.warn = original;
+  }
+  return warnings;
+}
+
+describe('public collection truncation is reported and can keep the newest rows', () => {
+  it('keeps the trailing entries of an over-limit array when asked to retain the newest', () => {
+    const source = Array.from({ length: 12_000 }, (_, index) => index);
+    const reports: CollectionTruncation[] = [];
+    const snapshot = snapshotPublicCollection(source, undefined, {
+      retain: 'newest',
+      onTruncate: (truncation) => reports.push(truncation),
+    }) as readonly number[];
+    expect(snapshot.length).to.equal(10_000);
+    expect(snapshot[0]).to.equal(2_000);
+    expect(snapshot[snapshot.length - 1]).to.equal(11_999);
+    expect(Object.isFrozen(snapshot)).to.equal(true);
+    expect(reports).to.deep.equal([{ kept: 'newest', retained: 10_000, source: 12_000 }]);
+  });
+
+  it('keeps the newest contiguous rows that fit the retained-value budget', () => {
+    const source = Array.from({ length: 10_000 }, (_, index) => ({ index, a: 1, b: 2, c: 3, d: 4 }));
+    const reports: CollectionTruncation[] = [];
+    const snapshot = snapshotPublicCollection(source, undefined, {
+      retain: 'newest',
+      onTruncate: (truncation) => reports.push(truncation),
+    }) as readonly { index: number }[];
+    expect(snapshot.length).to.be.greaterThan(0);
+    expect(snapshot.length).to.be.lessThan(source.length);
+    expect(snapshot[snapshot.length - 1]!.index, 'the newest row survives').to.equal(9_999);
+    expect(snapshot[0]!.index, 'the retained rows are one contiguous run').to.equal(10_000 - snapshot.length);
+    expect(reports).to.have.length(1);
+    expect(reports[0]).to.deep.equal({ kept: 'newest', retained: snapshot.length, source: 10_000 });
+  });
+
+  it('reports the default leading truncation, and stays quiet when nothing is dropped', () => {
+    const reports: CollectionTruncation[] = [];
+    const onTruncate = (truncation: CollectionTruncation) => reports.push(truncation);
+    const kept = snapshotPublicCollection(Array.from({ length: 10_001 }, (_, index) => index), undefined, { onTruncate }) as
+      readonly number[];
+    expect(kept[0]).to.equal(0);
+    expect(kept.length).to.equal(10_000);
+    expect(reports).to.deep.equal([{ kept: 'oldest', retained: 10_000, source: 10_001 }]);
+
+    reports.length = 0;
+    snapshotPublicCollection(Array.from({ length: 10_000 }, (_, index) => index), undefined, { onTruncate });
+    snapshotPublicCollection([{ label: 'small' }], undefined, { onTruncate });
+    expect(reports).to.deep.equal([]);
+  });
+
+  it('counts rows the boundary cannot own as dropped', () => {
+    const reports: CollectionTruncation[] = [];
+    const snapshot = snapshotPublicCollection([{ label: 'kept' }, new URL('https://example.test/'), 'kept'], undefined, {
+      onTruncate: (truncation) => reports.push(truncation),
+    }) as readonly unknown[];
+    expect(snapshot.length).to.equal(3);
+    expect(reports).to.deep.equal([{ kept: 'oldest', retained: 2, source: 3 }]);
+  });
+
+  it('applies the append-ordered policy at an enrolled accessor and warns once per property', async () => {
+    const el = await fixture<TruncationLog>(html`<lr-truncation-log-test></lr-truncation-log-test>`);
+    const source = Array.from({ length: 10_500 }, (_, index) => ({ index }));
+    const warnings = captureWarnings(() => {
+      el.entries = source;
+      el.entries = [...source];
+    });
+    expect((el.entries[0] as { index: number }).index).to.equal(500);
+    expect((el.entries[el.entries.length - 1] as { index: number }).index).to.equal(10_499);
+    expect(publicCollectionTruncation(el, 'entries')).to.deep.equal({
+      kept: 'newest',
+      retained: 10_000,
+      source: 10_500,
+    });
+    expect(warnings).to.have.length(1);
+    expect(warnings[0]).to.contain('<lr-truncation-log-test>');
+    expect(warnings[0]).to.contain('entries');
+    expect(warnings[0]).to.contain('10000 of 10500');
+    const issued = (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings;
+    expect(issued?.has(collectionTruncationWarningKey('lr-truncation-log-test', 'entries')), 'seedable key')
+      .to.equal(true);
+
+    el.entries = source.slice(0, 3);
+    expect(publicCollectionTruncation(el, 'entries'), 'a later complete assignment clears the record').to.equal(undefined);
+  });
+
+  it('keeps the leading rows of an ordinary owned property and reports them', async () => {
+    const el = await fixture<TruncationLog>(html`<lr-truncation-log-test></lr-truncation-log-test>`);
+    const warnings = captureWarnings(() => {
+      el.rows = Array.from({ length: 10_002 }, (_, index) => index);
+    });
+    expect(el.rows[0]).to.equal(0);
+    expect(publicCollectionTruncation(el, 'rows')).to.deep.equal({ kept: 'oldest', retained: 10_000, source: 10_002 });
+    expect(warnings.filter((warning) => warning.includes('rows'))).to.have.length(1);
+  });
+
+  it('keeps the newest item identities of an append-ordered identity collection', async () => {
+    const el = await fixture<TruncationLog>(html`<lr-truncation-log-test></lr-truncation-log-test>`);
+    const source = Array.from({ length: 10_003 }, (_, index) => ({ index }));
+    captureWarnings(() => {
+      el.items = source;
+    });
+    expect(el.items.length).to.equal(10_000);
+    expect(el.items[0] === source[3], 'item identity is retained').to.equal(true);
+    expect(el.items[el.items.length - 1] === source[10_002]).to.equal(true);
+    expect(publicCollectionTruncation(el, 'items')).to.deep.equal({ kept: 'newest', retained: 10_000, source: 10_003 });
+  });
+});
 
 describe('public collection snapshots at hostile input boundaries', () => {
   it('discards a record whose property enumeration fails without discarding later rows', () => {
@@ -76,5 +219,39 @@ describe('public collection snapshots at hostile input boundaries', () => {
     expect(snapshot.length).to.be.lessThan(source.length);
     expect(Object.isFrozen(snapshot)).to.equal(true);
     expect(snapshot.filter(Boolean).every(row => row !== null && typeof row === 'object' && Object.keys(row).length === 0)).to.equal(true);
+  });
+});
+
+class EventOnlyEmitter extends LyraElement<{ 'lr-event-only': CustomEvent<{ rows: { id: number }[] }> }> {
+  protected static override collectionSupport = eventCollectionSupport;
+  protected static override readonly immutableEventDetails = ['lr-event-only'];
+
+  fire(rows: { id: number }[]): CustomEvent<{ rows: { id: number }[] }> {
+    return this.emit('lr-event-only', { rows });
+  }
+}
+customElements.define(tag('event-only-emitter-test'), EventOnlyEmitter);
+
+describe('event-only collection support', () => {
+  it('detaches and freezes enrolled event details exactly like the full support', async () => {
+    const el = await fixture<EventOnlyEmitter>(html`<lr-event-only-emitter-test></lr-event-only-emitter-test>`);
+    const rows = [{ id: 1 }];
+    const event = el.fire(rows);
+    expect(event.detail.rows === rows, 'the detail is a detached copy').to.equal(false);
+    expect(Object.isFrozen(event.detail.rows)).to.equal(true);
+    expect(event.detail.rows.map((row) => row.id)).to.deep.equal([1]);
+  });
+
+  it('reports a class that owns collection properties but declared the event-only support', () => {
+    class Misenrolled extends LyraElement {
+      protected static override collectionSupport = eventCollectionSupport;
+      protected static override readonly ownedCollectionProperties = ['rows'];
+      @property({ attribute: false }) rows: readonly unknown[] = [];
+    }
+    const warnings = captureWarnings(() => {
+      customElements.define(tag('misenrolled-collection-test'), Misenrolled);
+    });
+    expect(warnings).to.have.length(1);
+    expect(warnings[0]).to.contain('collectionSupport');
   });
 });

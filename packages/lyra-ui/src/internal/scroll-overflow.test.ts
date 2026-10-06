@@ -1,5 +1,8 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import type { ReactiveController, ReactiveControllerHost } from 'lit';
+import { html as litHtml, type ReactiveController, type ReactiveControllerHost } from 'lit';
+import { LyraElement } from './lyra-element.js';
+import { defineElement } from './prefix.js';
+import { scrollOverflowFadeStyles } from './scroll-overflow.styles.js';
 import {
   ScrollOverflowController,
   SCROLL_OVERFLOW_ATTRIBUTE,
@@ -323,5 +326,43 @@ describe('ScrollOverflowController', () => {
     child.style.inlineSize = '400px';
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     expect(track.hasAttribute(SCROLL_OVERFLOW_ATTRIBUTE)).to.be.true;
+  });
+});
+
+class ScrollFadeProbe extends LyraElement {
+  static override styles = [LyraElement.styles, scrollOverflowFadeStyles];
+
+  override render() {
+    return litHtml`<div id="track"></div>`;
+  }
+}
+defineElement('scroll-fade-probe', ScrollFadeProbe);
+
+describe('scrollOverflowFadeStyles', () => {
+  const maskOf = (element: Element): string => {
+    const style = getComputedStyle(element) as CSSStyleDeclaration & { webkitMaskImage?: string };
+    return style.maskImage || style.webkitMaskImage || 'none';
+  };
+  const fadeFor = async (dir: 'ltr' | 'rtl', attributes: readonly string[]): Promise<string> => {
+    const probe = await fixture<ScrollFadeProbe>(html`<lr-scroll-fade-probe dir=${dir}></lr-scroll-fade-probe>`);
+    const track = probe.shadowRoot!.querySelector('#track')!;
+    for (const attribute of attributes) track.setAttribute(attribute, '');
+    return maskOf(track);
+  };
+
+  it('fades only while the track overflows, and only toward the edges with more to reach', async () => {
+    expect(await fadeFor('ltr', [SCROLL_START_ATTRIBUTE, SCROLL_END_ATTRIBUTE]), 'no overflow, no fade').to.equal('none');
+    const both = await fadeFor('ltr', [SCROLL_OVERFLOW_ATTRIBUTE, SCROLL_START_ATTRIBUTE, SCROLL_END_ATTRIBUTE]);
+    const endOnly = await fadeFor('ltr', [SCROLL_OVERFLOW_ATTRIBUTE, SCROLL_END_ATTRIBUTE]);
+    const startOnly = await fadeFor('ltr', [SCROLL_OVERFLOW_ATTRIBUTE, SCROLL_START_ATTRIBUTE]);
+    for (const mask of [both, endOnly, startOnly]) expect(mask).to.contain('linear-gradient');
+    expect(new Set([both, endOnly, startOnly]).size, 'three distinct edge shapes').to.equal(3);
+  });
+
+  it('mirrors the one-sided fades under RTL', async () => {
+    const ltrEnd = await fadeFor('ltr', [SCROLL_OVERFLOW_ATTRIBUTE, SCROLL_END_ATTRIBUTE]);
+    const ltrStart = await fadeFor('ltr', [SCROLL_OVERFLOW_ATTRIBUTE, SCROLL_START_ATTRIBUTE]);
+    expect(await fadeFor('rtl', [SCROLL_OVERFLOW_ATTRIBUTE, SCROLL_END_ATTRIBUTE])).to.equal(ltrStart);
+    expect(await fadeFor('rtl', [SCROLL_OVERFLOW_ATTRIBUTE, SCROLL_START_ATTRIBUTE])).to.equal(ltrEnd);
   });
 });

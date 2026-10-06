@@ -18,10 +18,6 @@ interface NextIdState {
 
 const fallbackNextIdState: NextIdState = { counter: 0 };
 
-type NextIdStateHost = typeof globalThis & {
-  [NEXT_ID_STATE]?: NextIdState;
-};
-
 /** Finds the highest same-origin window without discarding a parent reached before a boundary. */
 export function highestReachableWindow(start: Window): Window {
   let candidate = start;
@@ -38,37 +34,45 @@ export function highestReachableWindow(start: Window): Window {
   return candidate;
 }
 
-function nextIdStateHost(): NextIdStateHost {
-  let host = globalThis as NextIdStateHost;
-  if (typeof window === 'undefined') return host;
-
-  // Same-origin frame realms can exchange/adopt nodes. Coordinate them through the highest
-  // reachable window so an iframe-loaded package copy cannot restart the parent's id sequence.
-  // A cross-origin boundary is intentionally the stopping point: script on either side cannot
-  // adopt the other's nodes without first crossing that same security boundary.
-  host = highestReachableWindow(window) as unknown as NextIdStateHost;
-  return host;
-}
-
-function sharedNextIdState(): NextIdState {
-  const host = nextIdStateHost();
-  const existing = host[NEXT_ID_STATE];
-  if (existing && Number.isSafeInteger(existing.counter) && existing.counter >= 0) return existing;
-
-  const state: NextIdState = { counter: 0 };
+/**
+ * The registry stored under `key` on the highest reachable same-origin window (`globalThis` without
+ * a window), created on first use. Same-origin frame realms can exchange and adopt nodes, so every
+ * package copy loaded into them must share one registry; a cross-origin boundary is intentionally
+ * the stopping point, since script on either side cannot adopt the other's nodes without first
+ * crossing that same boundary. An existing value `isValid` rejects is never trusted, and a frozen
+ * host (unusual, but it must not make construction throw) falls back to this copy's `fallback`.
+ */
+export function sharedRealmRegistry<T>(
+  key: symbol,
+  create: () => T,
+  fallback: T,
+  isValid: (value: unknown) => boolean = (value) => value !== undefined && value !== null,
+): T {
+  const host = (typeof window === 'undefined'
+    ? globalThis
+    : highestReachableWindow(window)) as typeof globalThis & Record<symbol, unknown>;
+  const existing = host[key];
+  if (isValid(existing)) return existing as T;
+  const created = create();
   try {
-    Object.defineProperty(host, NEXT_ID_STATE, {
+    Object.defineProperty(host, key, {
       configurable: false,
       enumerable: false,
-      value: state,
+      value: created,
       writable: false,
     });
-    return host[NEXT_ID_STATE] ?? state;
+    return (host[key] as T | undefined) ?? created;
   } catch {
-    // A frozen host is unusual but must not make component construction throw. Duplicate package
-    // copies in a normal mutable realm still take the coordinated path above.
-    return fallbackNextIdState;
+    return fallback;
   }
+}
+
+const isNextIdState = (value: unknown): boolean =>
+  typeof value === 'object' && value !== null &&
+  Number.isSafeInteger((value as NextIdState).counter) && (value as NextIdState).counter >= 0;
+
+function sharedNextIdState(): NextIdState {
+  return sharedRealmRegistry(NEXT_ID_STATE, () => ({ counter: 0 }), fallbackNextIdState, isNextIdState);
 }
 
 /** Monotonic unique id, scoped by a short label (e.g. `nextId('listbox')`). */

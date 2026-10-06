@@ -31,6 +31,15 @@ describe('composed form-control focus targets', () => {
     expect(firstFormControlFocusTarget(host)?.id).to.equal('visible-target');
   });
 
+  it('reads ARIA exclusion tokens the way overlay focus does (ASCII case-insensitive, trimmed)', async () => {
+    const host = await fixture<HTMLElement>(html`<div>
+      <div aria-hidden=" TRUE "><button>Hidden from assistive technology</button></div>
+      <div aria-disabled=" true"><button>Disabled group</button></div>
+      <button id="available-target">Available</button>
+    </div>`);
+    expect(firstFormControlFocusTarget(host)?.id).to.equal('available-target');
+  });
+
   it('uses rendered rectangles on older visibility APIs and skips targets whose visibility capability rejects', async () => {
     const host = await fixture<HTMLElement>(html`<div>
       <button id="unavailable-target">Unavailable</button><button id="legacy-target">Legacy</button>

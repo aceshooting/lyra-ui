@@ -12,6 +12,7 @@ import {
 } from './anchor-target.js';
 import type { LyraAnchor, LyraHighlight } from '../components/viewers/document-viewer/anchors.js';
 import { defineElement } from './prefix.js';
+import { resetMouse, sendMouse } from '../../test/wtr-mouse.js';
 
 class StubAnchorTargetBase extends LyraElement<LyraAnchorTargetEventMap> {
   @property({ type: Number, attribute: 'apply-succeeds-after' }) applySucceedsAfter = 0;
@@ -56,7 +57,18 @@ class LightDomStubAnchorTarget extends StubAnchorTarget {
   }
 }
 
+/** A Lit parent that re-renders around a stable anchor object, as an application template does. */
+class AnchorRebindHost extends LyraElement {
+  @property({ attribute: false }) anchor: LyraAnchor | null = null;
+  @property({ type: Number }) tick = 0;
+
+  override render() {
+    return litHtml`<lr-anchor-target-test-stub data-tick=${this.tick} .anchor=${this.anchor}></lr-anchor-target-test-stub>`;
+  }
+}
+
 defineElement('anchor-target-test-stub', StubAnchorTarget);
+defineElement('anchor-target-test-rebind-host', AnchorRebindHost);
 defineElement('anchor-target-test-declining', DecliningStubAnchorTarget);
 defineElement('anchor-target-test-throwing', ThrowingStubAnchorTarget);
 defineElement('anchor-target-test-default', DefaultStubAnchorTarget);
@@ -523,13 +535,53 @@ describe('DocumentAnchorTarget mixin', () => {
     expect((await eventPromise).detail).to.deep.equal({ found: true });
   });
 
-  it('re-assigning anchor to the identical value re-fires (hasChanged always true)', async () => {
+  it('treats re-assigning the identical anchor as no new request; scrollToAnchor() repeats the jump', async () => {
     const el = await fixture<StubAnchorTarget>(litHtml`<lr-anchor-target-test-stub></lr-anchor-target-test-stub>`);
+    el.highlights = [{ id: 'cite-1', anchor: { kind: 'page', page: 2 } }];
+    let results = 0;
+    el.addEventListener('lr-anchor-result', () => results++);
+    const anchor: LyraAnchor = { kind: 'page', page: 1 };
+    const first = oneEvent(el, 'lr-anchor-result');
+    el.anchor = anchor;
+    await first;
+
+    el.anchor = anchor;
+    el.anchor = el.anchor;
+    await el.updateComplete;
+    await aTimeout(20);
+    expect(results, 'the same object, or its retained copy, does not jump again').to.equal(1);
+    expect(el.applyCallCount).to.equal(1);
+
+    const repeated = oneEvent(el, 'lr-anchor-result');
+    expect(await el.scrollToAnchor(anchor), 'the explicit repeat still resolves').to.equal(true);
+    await repeated;
+    expect(results).to.equal(2);
+
+    const byId = oneEvent(el, 'lr-anchor-result');
     el.anchor = 'cite-1';
-    await oneEvent(el, 'lr-anchor-result');
-    const secondPromise = oneEvent(el, 'lr-anchor-result');
-    el.anchor = 'cite-1'; // identical value
-    await secondPromise; // must fire again, not be swallowed by Lit's default reference equality
+    await byId;
+    el.anchor = 'cite-1';
+    await el.updateComplete;
+    await aTimeout(20);
+    expect(results, 'an identical highlight id does not jump again either').to.equal(3);
+  });
+
+  it('does not re-scroll when a parent template re-renders with the same anchor object', async () => {
+    const host = await fixture<AnchorRebindHost>(litHtml`<lr-anchor-target-test-rebind-host></lr-anchor-target-test-rebind-host>`);
+    const viewer = host.shadowRoot!.querySelector('lr-anchor-target-test-stub') as StubAnchorTarget;
+    let results = 0;
+    viewer.addEventListener('lr-anchor-result', () => results++);
+    const first = oneEvent(viewer, 'lr-anchor-result');
+    host.anchor = { kind: 'page', page: 3 };
+    await first;
+    for (let tick = 1; tick <= 3; tick += 1) {
+      host.tick = tick;
+      await host.updateComplete;
+      await viewer.updateComplete;
+    }
+    await aTimeout(20);
+    expect(results, 'each parent render re-commits the binding without a new jump').to.equal(1);
+    expect(viewer.applyCallCount).to.equal(1);
   });
 
   it('bindTextSelection emits lr-text-select once per selection end with a text-quote anchor by default', async () => {
@@ -554,6 +606,59 @@ describe('DocumentAnchorTarget mixin', () => {
     } finally {
       restoreSelection();
     }
+  });
+
+  it('bindTextSelection emits once when a pointer drag ends, never while the button is held', async () => {
+    const el = await fixture<StubAnchorTarget>(litHtml`<lr-anchor-target-test-stub></lr-anchor-target-test-stub>`);
+    const content = el.shadowRoot!.querySelector<HTMLElement>('[part="content"]')!;
+    (el as unknown as { bindTextSelection: (root: Element) => void }).bindTextSelection(content);
+    let events = 0;
+    el.addEventListener('lr-text-select', () => events++);
+    const frames = async (count = 2): Promise<void> => {
+      for (let index = 0; index < count; index += 1) {
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      }
+    };
+    const rect = content.getBoundingClientRect();
+    const y = Math.round(rect.top + rect.height / 2);
+    const startX = Math.round(rect.left + 1);
+    const endX = Math.round(rect.right - 2);
+    try {
+      await sendMouse({ type: 'move', position: [startX, y] });
+      await sendMouse({ type: 'down' });
+      for (let step = 1; step <= 6; step += 1) {
+        await sendMouse({ type: 'move', position: [Math.min(endX, startX + step * 30), y] });
+        await frames();
+      }
+      expect(events, 'no event while the selecting button is still held').to.equal(0);
+      await sendMouse({ type: 'up' });
+      await frames(3);
+      expect(events, 'one event for the finished selection').to.equal(1);
+      content.dispatchEvent(new KeyboardEvent('keyup', { key: 'Control', bubbles: true }));
+      await frames();
+      expect(events, 'a keystroke that leaves the selection unchanged does not re-fire').to.equal(1);
+    } finally {
+      await resetMouse();
+      window.getSelection()?.removeAllRanges();
+    }
+  });
+
+  it('treats re-assigning the same highlights source, or its retained snapshot, as a no-op', async () => {
+    const el = await fixture<StubAnchorTarget>(litHtml`<lr-anchor-target-test-stub></lr-anchor-target-test-stub>`);
+    const source: LyraHighlight[] = [{ id: 'h1', anchor: { kind: 'page', page: 1 } }];
+    el.highlights = source;
+    await el.updateComplete;
+    const retained = el.highlights;
+
+    el.highlights = source;
+    expect(el.highlights === retained, 'the identical source keeps its retained snapshot').to.equal(true);
+    el.highlights = retained;
+    expect(el.highlights === retained, 'round-tripping the getter keeps it too').to.equal(true);
+    expect(el.isUpdatePending, 'neither assignment requests a render').to.equal(false);
+
+    el.highlights = [...source];
+    expect(el.highlights === retained, 'a new source is snapshotted again').to.equal(false);
+    expect(el.highlights.map((highlight) => highlight.id)).to.deep.equal(['h1']);
   });
 
   it('bindTextSelection reports a null anchor when computeSelectionAnchor declines', async () => {

@@ -163,6 +163,23 @@ describe('scrollbar-width gutter compensation', () => {
     expect(root.style.paddingInlineEnd).to.equal(beforePadding);
     release();
   });
+
+  it('adds no padding when the root reserves a stable scrollbar gutter', function () {
+    if (!CSS.supports('scrollbar-gutter', 'stable')) this.skip();
+    for (const gutter of ['stable', 'stable both-edges']) {
+      root.style.setProperty('scrollbar-gutter', gutter);
+      const beforePadding = getComputedStyle(root).paddingInlineEnd;
+      const release = lockScroll();
+      try {
+        expect(getComputedStyle(root).paddingInlineEnd, `${gutter}: the kept gutter already compensates`)
+          .to.equal(beforePadding);
+        expect(root.style.overflow).to.equal('hidden');
+      } finally {
+        release();
+        root.style.removeProperty('scrollbar-gutter');
+      }
+    }
+  });
 });
 
 it('locks scroll on a given target document instead of only the top-level document', () => {

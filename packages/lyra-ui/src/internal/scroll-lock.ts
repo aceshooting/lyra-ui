@@ -18,7 +18,8 @@ const states = new WeakMap<Document, ScrollLockState>();
  * Compensates for the removed scrollbar's width with inline-end padding on
  * the root element, so locking scroll doesn't shift page content
  * horizontally the instant the scrollbar disappears — restored to its prior
- * value once the last outstanding lock releases. Safe when a lock is
+ * value once the last outstanding lock releases. A root with a stable
+ * `scrollbar-gutter` keeps its gutter, so it gets no padding. Safe when a lock is
  * acquired and released more than once concurrently (e.g. a fast
  * open/close/open sequence).
  */
@@ -28,9 +29,13 @@ export function lockScroll(doc: Document = document): () => void {
   if (!state) {
     const view = doc.defaultView;
     const scrollbarWidth = (view?.innerWidth ?? 0) - root.clientWidth;
+    // A `scrollbar-gutter: stable` root keeps its gutter reserved under `overflow: hidden`, so
+    // there is no removed scrollbar to compensate for; padding would narrow the page instead.
+    const stableGutter = view?.getComputedStyle(root).getPropertyValue('scrollbar-gutter')
+      .trim().startsWith('stable') === true;
     const overflow = leaseInlineStyleProperty(root, 'overflow', 'hidden');
     let padding: InlineStylePropertyLease | undefined;
-    if (scrollbarWidth > 0 && view) {
+    if (scrollbarWidth > 0 && view && !stableGutter) {
       const currentPadding = parseFloat(view.getComputedStyle(root).paddingInlineEnd) || 0;
       padding = leaseInlineStyleProperty(
         root,
