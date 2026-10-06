@@ -186,89 +186,6 @@ export const styles = css`
        -- fixed once already on lr-tab-group and lr-stepper. */
     overflow-y: hidden;
   }
-  /* Edge fade gated on real overflow: ScrollOverflowController's start/end attributes describe
-     the logical edges with more content. The :where() conditions keep all three states at the
-     same specificity as the forced-colors reset below, so high contrast can remove every mask. */
-  .calendar-scroll[data-scroll-overflow]:where([data-scroll-start][data-scroll-end]) {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-    mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-  }
-  .calendar-scroll[data-scroll-overflow]:where(
-      [data-scroll-end]:not([data-scroll-start])
-    ) {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      var(--lr-mask-opaque),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-    mask-image: linear-gradient(
-      to right,
-      var(--lr-mask-opaque),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-  }
-  .calendar-scroll[data-scroll-overflow]:where(
-      [data-scroll-start]:not([data-scroll-end])
-    ) {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque)
-    );
-    mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque)
-    );
-  }
-  :host(:dir(rtl)) .calendar-scroll[data-scroll-overflow]:where(
-      [data-scroll-end]:not([data-scroll-start])
-    ) {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque)
-    );
-    mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque)
-    );
-  }
-  :host(:dir(rtl)) .calendar-scroll[data-scroll-overflow]:where(
-      [data-scroll-start]:not([data-scroll-end])
-    ) {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      var(--lr-mask-opaque),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-    mask-image: linear-gradient(
-      to right,
-      var(--lr-mask-opaque),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-  }
   [part="weekdays"] {
     display: grid;
     grid-template-columns: repeat(7, var(--lr-date-picker-cell-size, var(--_lr-cell-size)));
@@ -392,6 +309,9 @@ export const styles = css`
       color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))
     );
   }
+  :host([readonly]) [part~="day"] {
+    cursor: default;
+  }
   [part~="day"]:disabled {
     color: var(--lr-date-picker-disabled-color, var(--lr-color-text-quiet));
     opacity: var(--lr-date-picker-disabled-opacity, var(--lr-opacity-disabled));
@@ -448,6 +368,21 @@ export const styles = css`
     background: var(--lr-date-picker-view-selected-bg, var(--lr-color-brand));
     color: var(--lr-date-picker-view-selected-color, var(--lr-color-on-brand));
   }
+  /* Selected hover/press start from the selected fill under the mix tint, like the selected day. */
+  :where([part~="view-item-selected"]):hover:not(:disabled) {
+    background-color: var(--lr-date-picker-view-hover-bg, var(--lr-date-picker-view-selected-bg, var(--lr-color-brand)));
+    background-image: linear-gradient(
+      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover)),
+      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover))
+    );
+  }
+  :where([part~="view-item-selected"]):active:not(:disabled) {
+    background-color: var(--lr-date-picker-view-active-bg, var(--lr-date-picker-view-hover-bg, var(--lr-date-picker-view-selected-bg, var(--lr-color-brand))));
+    background-image: linear-gradient(
+      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active)),
+      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))
+    );
+  }
   [part~="view-item-today"] {
     outline: var(--lr-border-width-thin) solid
       var(--lr-date-picker-view-today-outline, var(--lr-color-brand));
@@ -489,14 +424,31 @@ export const styles = css`
   }
   [part~="preset-button"]:active:not(:disabled) {
     background: var(
-      --lr-date-picker-preset-active-bg,
-      color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      --lr-date-picker-preset-pressed-bg,
+      var(
+        --lr-date-picker-preset-active-bg,
+        color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      )
     );
   }
   [part~="preset-button"][data-active] {
     background: var(--lr-date-picker-preset-selected-bg, var(--lr-color-brand));
     border-color: var(--lr-date-picker-preset-selected-border, var(--lr-color-brand));
     color: var(--lr-date-picker-preset-selected-color, var(--lr-color-on-brand));
+  }
+  [part~="preset-button"]:where([data-active]):hover:not(:disabled) {
+    background-color: var(--lr-date-picker-preset-hover-bg, var(--lr-date-picker-preset-selected-bg, var(--lr-color-brand)));
+    background-image: linear-gradient(
+      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover)),
+      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover))
+    );
+  }
+  [part~="preset-button"]:where([data-active]):active:not(:disabled) {
+    background-color: var(--lr-date-picker-preset-pressed-bg, var(--lr-date-picker-preset-active-bg, var(--lr-date-picker-preset-hover-bg, var(--lr-date-picker-preset-selected-bg, var(--lr-color-brand)))));
+    background-image: linear-gradient(
+      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active)),
+      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))
+    );
   }
   [part~="preset-button"]:focus-visible {
     outline: var(--lr-focus-ring);
@@ -507,11 +459,6 @@ export const styles = css`
     opacity: var(--lr-opacity-disabled);
   }
   @media (forced-colors: active) {
-    .calendar-scroll[data-scroll-overflow],
-    :host(:dir(rtl)) .calendar-scroll[data-scroll-overflow] {
-      -webkit-mask-image: none;
-      mask-image: none;
-    }
     :where(
         [part="previous"],
         [part="next"],

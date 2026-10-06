@@ -16,6 +16,7 @@ import {
   isBarredFromValidation,
 } from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
+import { setCustomState } from '../../../internal/custom-states.js';
 import { lengthViolations } from '../../../internal/length-constraints.js';
 import { styles } from './textarea.styles.js';
 import { sizes } from '../../../internal/sizes.styles.js';
@@ -160,19 +161,18 @@ class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
  * @cssprop [--lr-textarea-radius=var(--lr-form-control-radius)] - Corner radius of the field, from
  * the active `size` tier of the shared ladder (the two tightest tiers take a smaller radius).
  * `pill` changes the private default to `--lr-radius-pill`; a public value still wins.
- * @cssprop [--lr-textarea-fill=transparent] - Background of the field. Its private default follows
+ * @cssprop [--lr-textarea-fill=var(--lr-color-surface)] - Background of the field. Its private default follows
  * `appearance`; the documented default is `appearance="outlined"`'s value.
  * @cssprop [--lr-textarea-border-color=var(--lr-color-border)] - Border color of the field. Its
  * private default follows `appearance` in the same way as `--lr-textarea-fill`.
  * @cssprop [--lr-textarea-hover-border-color=var(--lr-color-brand)] - Field border color while the
  * native textarea is hovered.
- * @cssprop [--lr-textarea-focus-border-color=var(--lr-textarea-border-color)] - Field border color
- * while the native textarea is focused. Unset, it resolves to this field's own resting border
- * color, so a textarea with no override renders exactly as before this hook existed.
+ * @cssprop [--lr-textarea-focus-border-color=var(--lr-color-brand)] - Field border color while the
+ * native textarea is focused.
  * @cssprop [--lr-form-control-focus-shadow=none] - The shared field focus halo, painted as a
  * `box-shadow` while this control is focused. One name for every field-shaped control in the
- * library, so a halo is configured once rather than per component. Additive: the focus outline and
- * border cue are the accessibility answer to focus and are never replaced by it.
+ * library, so a halo is configured once rather than per component. Additive: the brand border cue
+ * is the accessibility answer to focus and is never replaced by it.
  * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker rendered after the
  * label. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a
  * localized word) to replace it. Caller-supplied content, so it is never localized here.
@@ -368,6 +368,8 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   @property({ type: Number }) debounce?: number;
 
   @state() private touched = false;
+  /** @internal Test seam for the count-announcement delay. */
+  protected countAnnounceDelay = COUNT_ANNOUNCE_DELAY_MS;
   /** Empty until the user pauses typing, so the live region says nothing on first render. */
   @state() private announcedCountText = '';
   private readonly slotPresence = new SlotPresenceController(this);
@@ -645,7 +647,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
       const text = this.countText();
       this.announcedCountText = text;
       this.countAnnouncementSink?.announce(text);
-    }, COUNT_ANNOUNCE_DELAY_MS);
+    }, this.countAnnounceDelay);
   }
 
   /**
@@ -707,10 +709,8 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('value')) {
-      if (this.value === '') this.internals.states.add('blank');
-      else this.internals.states.delete('blank');
-    }
+    if (changed.has('value')) setCustomState(this.internals, 'blank', this.value === '');
+    this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
     this.syncExternalDescription();
     // A constraint that tightens without a value write (`el.maxlength = 3` over an existing value)
     // reaches the native textarea only on this render, so validity has to be recomputed after it.

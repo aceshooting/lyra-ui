@@ -6,6 +6,7 @@ import { styles } from "./textarea.styles.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { resolvedColorToken } from "../../../../test/color-contrast.js";
 
 it("emits one cancelable lr-invalid alias when a validity check fails", async () => {
   const el = await fixture<LyraTextarea>(
@@ -179,7 +180,7 @@ it("gives the textarea field a focus border-colour hook", () => {
   expect(css).to.match(/\[part='textarea'\]:focus\s*\{[^}]*border-color:/);
 });
 
-it("leaves the focused textarea border at its resting colour when the hook is unset", async () => {
+it("turns the focused textarea border brand when the hook is unset, like every sibling field", async () => {
   const el = await fixture<LyraTextarea>(
     html`<lr-textarea
       aria-label="Notes"
@@ -188,9 +189,9 @@ it("leaves the focused textarea border at its resting colour when the hook is un
   );
   const textarea =
     el.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="textarea"]')!;
-  const restingColor = getComputedStyle(textarea).borderTopColor;
   textarea.focus();
-  expect(getComputedStyle(textarea).borderTopColor).to.equal(restingColor);
+  expect(getComputedStyle(textarea).borderTopColor).to.equal(resolvedColorToken(el.shadowRoot!, "--lr-color-brand"));
+  expect(getComputedStyle(textarea).outlineStyle, "no extra outline ring").to.equal("none");
 });
 
 it("themes the textarea focus border through a component hook", async () => {
@@ -1294,7 +1295,7 @@ describe("lr-textarea appearance", () => {
     expect(el.appearance).to.equal("outlined");
     expect(el.getAttribute("appearance")).to.equal("outlined");
     const cs = getComputedStyle(fieldOf(el));
-    expect(cs.backgroundColor).to.equal(TRANSPARENT);
+    expect(cs.backgroundColor).to.equal(resolvedColorToken(el.shadowRoot!, "--lr-color-surface"));
     expect(cs.borderTopColor).to.not.equal(TRANSPARENT);
   });
 
@@ -1312,7 +1313,7 @@ describe("lr-textarea appearance", () => {
       html`<lr-textarea appearance="accent" aria-label="d"></lr-textarea>`
     );
     expect(getComputedStyle(fieldOf(outlined)).backgroundColor).to.equal(
-      TRANSPARENT
+      resolvedColorToken(outlined.shadowRoot!, "--lr-color-surface")
     );
     expect(getComputedStyle(fieldOf(filled)).borderTopColor).to.equal(
       TRANSPARENT
@@ -1544,6 +1545,8 @@ describe("lr-textarea with-count live announcement", () => {
     const textarea = el.shadowRoot!.querySelector(
       "textarea"
     ) as HTMLTextAreaElement;
+    // Shortened through the test seam.
+    (el as unknown as { countAnnounceDelay: number }).countAnnounceDelay = 40;
     textarea.value = "abc";
     textarea.dispatchEvent(new Event("input", { bubbles: true }));
     await el.updateComplete;
@@ -1551,7 +1554,7 @@ describe("lr-textarea with-count live announcement", () => {
     // the character just typed.
     expect(mirror.textContent!.trim()).to.equal("");
     expect(sink.childElementCount).to.equal(0);
-    await new Promise((resolve) => setTimeout(resolve, 1400));
+    await waitUntil(() => sink.childElementCount === 1, "the count was never announced");
     await el.updateComplete;
     expect(mirror.textContent!.trim()).to.equal("3 chars");
     expect(
@@ -1570,9 +1573,10 @@ describe("lr-textarea with-count live announcement", () => {
       "textarea"
     ) as HTMLTextAreaElement;
 
+    (el as unknown as { countAnnounceDelay: number }).countAnnounceDelay = 40;
     textarea.value = "abc";
     textarea.dispatchEvent(new Event("input", { bubbles: true }));
-    await new Promise((resolve) => setTimeout(resolve, 1400));
+    await new Promise((resolve) => setTimeout(resolve, 160));
 
     expect(sink.childElementCount).to.equal(0);
   });

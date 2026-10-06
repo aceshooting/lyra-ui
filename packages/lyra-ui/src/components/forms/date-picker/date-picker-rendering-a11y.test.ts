@@ -1390,3 +1390,35 @@ describe('range presets', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+describe("selection-view paging names and year ranges", () => {
+  expectLocaleFallback("fa", ["next", "previous"]);
+
+  for (const view of ["months", "years", "decades"] as const) {
+    it(`names the ${view} view's paging buttons without claiming they page by month`, async () => {
+      const el = (await fixture(html`<lr-date-picker value="2026-07-15" .view=${view}></lr-date-picker>`)) as LyraDatePicker;
+      await el.updateComplete;
+      const label = (part: string) => el.shadowRoot!.querySelector(`[part="${part}"]`)!.getAttribute("aria-label");
+      expect([label("previous"), label("next")]).to.deep.equal(["Previous", "Next"]);
+    });
+  }
+
+  for (const locale of ["en-US", "fa"]) {
+    it(`titles the years and decades pages with the ${locale} year-range format`, async () => {
+      const titles: string[] = [];
+      const expected: string[] = [];
+      const years = new Intl.DateTimeFormat(locale, { year: "numeric", calendar: "gregory" });
+      for (const view of ["years", "decades"] as const) {
+        const el = (await fixture(html`<lr-date-picker locale=${locale} value="2026-07-15" .view=${view}></lr-date-picker>`)) as LyraDatePicker;
+        await el.updateComplete;
+        const starts = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="view-item"]')].map((item) =>
+          Number(item.dataset["viewStart"]!.slice(0, 4))
+        );
+        const last = starts[starts.length - 1]! + (view === "decades" ? 9 : 0);
+        titles.push(el.shadowRoot!.querySelector('[part="month-label"]')!.textContent!.trim());
+        expected.push(years.formatRange(new Date(starts[0]!, 0, 1), new Date(last, 11, 31)));
+      }
+      expect(titles).to.deep.equal(expected);
+    });
+  }
+});

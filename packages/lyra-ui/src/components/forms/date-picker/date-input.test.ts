@@ -5,6 +5,7 @@ import "../button/button.js";
 import type { LyraDateInput } from "./date-input.js";
 import type { LyraDatePicker } from "./date-picker.js";
 import { styles } from "./date-input.styles.js";
+import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import "../../../translations/ar/forms.js";
 import "../../../translations/ar/shared.js";
 import "../../../translations/fr/forms.js";
@@ -348,7 +349,7 @@ it("propagates disable-past/disable-future/with-outside-days to the nested lr-da
       with-outside-days
     ></lr-date-input>`
   )) as LyraDateInput;
-  await el.updateComplete;
+  await el.show();
   const picker = el.shadowRoot!.querySelector(
     "lr-date-picker"
   ) as LyraDatePicker;
@@ -455,22 +456,26 @@ it("clamps the popup to the viewport width like the combobox listbox", () => {
   );
 });
 
-it("propagates disabled/readonly to the nested lr-date-picker so its days actually stop being interactive", async () => {
+it("renders no calendar while disabled or readonly, and drops an open one once its forced close settles", async () => {
   const el = (await fixture(
     html`<lr-date-input value="2026-07-15" disabled></lr-date-input>`
   )) as LyraDateInput;
-  await el.updateComplete;
-  const picker = el.shadowRoot!.querySelector(
-    "lr-date-picker"
-  ) as LyraDatePicker;
-  await picker.updateComplete;
-  expect(picker.disabled).to.be.true;
+  await el.show();
+  expect(el.shadowRoot!.querySelector("lr-date-picker") === null, "a disabled field never opens").to.equal(true);
 
   el.disabled = false;
   el.readonly = true;
+  await el.show();
+  expect(el.shadowRoot!.querySelector("lr-date-picker") === null, "a readonly field never opens").to.equal(true);
+
+  el.readonly = false;
+  await el.show();
+  expect(el.shadowRoot!.querySelector("lr-date-picker") !== null, "an open field renders it").to.equal(true);
+  const closed = new Promise((resolve) => el.addEventListener("lr-after-hide", resolve, { once: true }));
+  el.disabled = true;
+  await closed;
   await el.updateComplete;
-  await picker.updateComplete;
-  expect(picker.readonly).to.be.true;
+  expect(el.shadowRoot!.querySelector("lr-date-picker") === null, "the settled close drops it").to.equal(true);
 });
 
 it("shows a not-allowed cursor on the disabled input wrapper", async () => {
@@ -600,7 +605,7 @@ it("keeps the clear button disabled while the control is readonly", async () => 
   expect(clearBtn?.disabled).to.be.true;
 });
 
-it("re-binds positioning after a disconnect+reconnect while open", async () => {
+it("re-binds positioning when reopened after a disconnect+reconnect while open", async () => {
   const el = (await fixture(
     html`<lr-date-input open></lr-date-input>`
   )) as LyraDateInput;
@@ -609,10 +614,12 @@ it("re-binds positioning after a disconnect+reconnect while open", async () => {
   el.remove();
   parent.appendChild(el);
   await el.updateComplete;
+  await el.show();
   const popup = el.shadowRoot!.querySelector(
     '[part="popup"] [part="date-picker"]'
   )!;
-  expect(popup != null).to.equal(true); // popup content still renders; positioning re-attached, not just left stale
+  expect(popup != null).to.equal(true); // the reopened calendar renders and is positioned again
+  expect(el.shadowRoot!.querySelector('[part="popup"]')!.hasAttribute("data-positioned")).to.equal(true);
 });
 
 it("resets `open` on disconnect so a later reconnect starts from a clean, re-bindable state", async () => {
@@ -1775,4 +1782,74 @@ describe('lr-date-input adornment allocation', () => {
       }
     }
   });
+});
+
+it("accepts `clearable` as the library-wide spelling of `with-clear`", async () => {
+  const el = (await fixture(html`<lr-date-input clearable value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
+  await el.updateComplete;
+  expect(el.clearable).to.equal(true);
+  const clear = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="clear-button"]');
+  expect(clear, "the clear action renders").to.exist;
+  clear!.click();
+  await el.updateComplete;
+  expect(el.value).to.equal("");
+  el.clearable = false;
+  el.value = "2026-07-15";
+  await el.updateComplete;
+  expect(el.hasAttribute("clearable")).to.equal(false);
+  expect(el.shadowRoot!.querySelector('[part="clear-button"]') === null, "neither spelling set").to.equal(true);
+});
+
+it("closes on an outside press even when the pressed element stops pointerdown propagation", async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div>
+    <lr-date-input value="2026-07-15"></lr-date-input>
+    <button id="outside" style="margin-block-start: 400px">Outside</button>
+  </div>`);
+  const el = wrapper.querySelector("lr-date-input") as LyraDateInput;
+  const outside = wrapper.querySelector<HTMLButtonElement>("#outside")!;
+  outside.addEventListener("pointerdown", (event) => event.stopPropagation());
+  await el.show();
+  const rect = outside.getBoundingClientRect();
+  try {
+    await sendMouse({ type: "click", position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)] });
+    await el.updateComplete;
+    expect(el.open).to.equal(false);
+  } finally {
+    await resetMouse();
+  }
+});
+
+it("returns focus to the field when its clear button empties it, unlike clear()", async () => {
+  const el = (await fixture(html`<lr-date-input with-clear value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
+  await el.updateComplete;
+  const order: string[] = [];
+  for (const type of ["input", "change", "lr-clear"]) el.addEventListener(type, () => order.push(type));
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="clear-button"]')!.click();
+  await el.updateComplete;
+  expect(order).to.deep.equal(["input", "change", "lr-clear"]);
+  expect(el.shadowRoot!.activeElement === el.shadowRoot!.querySelector('[part="input"]'), "focus returns to the field").to.equal(true);
+});
+
+it("reads and writes valueAsLocalDate (local midnight, like valueAsDate) and valueAsUTCDate (UTC midnight)", async () => {
+  const el = (await fixture(html`<lr-date-input value="2026-10-06"></lr-date-input>`)) as LyraDateInput;
+  expect(el.valueAsLocalDate!.getTime()).to.equal(el.valueAsDate!.getTime());
+  expect(el.valueAsUTCDate!.toISOString()).to.equal("2026-10-06T00:00:00.000Z");
+  el.valueAsUTCDate = new Date("2026-12-31T00:00:00Z");
+  const utc = el.value;
+  el.valueAsLocalDate = new Date(2027, 0, 2, 23, 30);
+  expect([utc, el.value]).to.deep.equal(["2026-12-31", "2027-01-02"]);
+  el.mode = "range";
+  el.value = "2026-10-06/2026-10-09";
+  expect([el.valueAsLocalDate, el.valueAsUTCDate]).to.deep.equal([null, null]);
+});
+
+it("renders its calendar only while the popup is open or settling", async () => {
+  const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
+  const picker = () => el.shadowRoot!.querySelector("lr-date-picker");
+  expect(picker() === null, "a closed field carries no calendar").to.equal(true);
+  await el.show();
+  expect(picker() !== null).to.equal(true);
+  await el.hide();
+  await el.updateComplete;
+  expect(picker() === null, "the settled close drops it").to.equal(true);
 });

@@ -9,6 +9,7 @@ import {
 import { LyraInput } from './input.class.js';
 import type { LyraInputEventMap } from './input-shared.js';
 import { dispatchNativeEvent, dispatchNativeInputEvent } from '../../../internal/native-event-relay.js';
+import { setCustomState } from '../../../internal/custom-states.js';
 import { styles as inputStyles } from './input.styles.js';
 import { styles as numberInputStyles } from './number-input.styles.js';
 import type { LyraAppearance } from '../../../internal/variants.js';
@@ -123,16 +124,15 @@ export class LyraNumberInput extends LyraInput {
   }
 
   private syncMappedStates(): void {
-    if (this.value === '') this.internals.states.add('blank');
-    else this.internals.states.delete('blank');
+    setCustomState(this.internals, 'blank', this.value === '');
   }
 
   private onFocusWithin = (): void => {
-    this.internals.states.add('focused');
+    setCustomState(this.internals, 'focused', true);
   };
 
   private onBlurWithin = (): void => {
-    this.internals.states.delete('focused');
+    setCustomState(this.internals, 'focused', false);
   };
 
   private stepFromButton(direction: 'up' | 'down'): void {

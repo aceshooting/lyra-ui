@@ -1404,8 +1404,10 @@ empty selection safely while preserving `null` readback; a subsequent valid valu
 Live constraints repair roving state without moving focus from an unrelated control. If a focused
 cell becomes unavailable, focus recovers onto an enabled cell. Explicit distant bounds seed the
 bounded automatic search within the permitted domain; a genuinely empty domain has no enabled roving
-stop. Selected day and range-endpoint buttons retain their foreground/background pairing during
-hover and press; author state-token overrides remain available. Month/year/decade state buttons
+stop. Selected day and range-endpoint buttons, the selected month/year/decade item, and the
+applied preset button retain their foreground/background pairing during hover and press (unset,
+their hover and press paint starts from the selected fill); author state-token overrides remain
+available. Month/year/decade state buttons
 retain the common typography, padding, border reset, and minimum action size.
 
 The `calendar-core.ts` helper `formatISO()` returns an empty string for invalid dates or years
@@ -1416,8 +1418,13 @@ The ISO model is proleptic Gregorian in every locale and supports years `0000`�
 `0000`–`0099` without JavaScript's `Date` 1900 remap. Navigation anchors remain within that domain;
 moving past either boundary leaves a valid roving stop and does not change the selected value. Month/day names and visible day/week digits follow the effective locale while
 formatters explicitly select the Gregorian calendar. `lr-date-input` uses locale `formatRange()`
-for range presentation and normalizes locale digits plus bidi marks before parsing, so its own
-Arabic/Persian display round-trips to the same ISO value.
+for range presentation and normalizes locale digits plus bidi marks before parsing. Typed text is
+read against the locale's own numeric pattern (spaced separators such as Czech `7. 10. 2026`,
+suffixes such as Bulgarian `7.10.2026 г.`, year-first orders, and ranges whose shared fields are
+collapsed, such as German `07.–09.10.2026`), so the field's own display round-trips to the same ISO
+value in every locale. Other all-numeric text is read in the locale's day/month/year order and is
+never handed to the engine's `Date.parse()`; text that does not form a complete date is rejected as
+bad input.
 
 ### `lr-date-picker`
 
@@ -1450,9 +1457,10 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
   satisfy `minRange`/`maxRange`; invalid outcomes render disabled and do not emit value events.
   Interior dates need not all be enabled. A same-day manual completion obeys those same inclusive
   length limits. Long preset labels wrap in narrow allocations, including unbroken text and RTL.
-  The active button carries `aria-pressed="true"` and `data-active`. Deliberately the same
-  `label`/`start`/`end`/`id` shape as `<lr-time-range>`'s `TimeRangePreset`, so the library has one
-  preset vocabulary rather than two — the only difference is the unit (ISO dates, not numbers)
+  The active button carries `aria-pressed="true"` and `data-active`. The same
+  `label`/`start`/`end`/`id` shape as `<lr-time-range>`'s `TimeRangePreset`, with ISO dates instead
+  of numbers; unlike the time range, a bound may be left open. `appliedPreset` is the caller's own
+  entry object on both
 - `appliedPreset: LyraDateRangePreset | undefined` (read-only, new in 11.1.0) — the preset whose
   button produced the current `value`, or `undefined` when the range was picked by hand, cleared, or changed externally.
   `clear()` removes identity before synchronous `input`/`change` listeners run; an external value
@@ -1482,26 +1490,39 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
 - `mode: 'single'|'range' = 'single'` (reflected; unknown values normalize to `single`)
 - `months: 1|2 = 1` (reflected; finite values are truncated and clamped to `1..2`)
 - `pageBy: 'months'|'single' = 'months'` (attribute `page-by`, reflected)
-- `readonly: boolean = false` (reflected)
+- `readonly: boolean = false` (reflected) — the value cannot change (day clicks, Enter/Space and
+  presets are inert), but the calendar stays navigable: no day is disabled by it, the roving tab
+  stop stays on the selected day, month/year paging works, and the grid carries
+  `aria-readonly="true"`.
 - `size: LyraSize = 'm'` (reflected; the shared `2xs`–`xl` ladder plus
   `small`/`medium`/`large` aliases)
 - `today: string = ''` (reflected ISO override for deterministic today styling/constraints)
 - `value: string = ''` (reflected)
 - `valueAsDate: Date | null` and `valueAsRange: { from: Date|null; to: Date|null }` (JS-only
-  accessors; setters are silent and normalize reversed ranges)
+  accessors at local midnight, unlike the UTC midnight of a native `<input type="date">` and
+  `lr-input type="date"`; setters read local date fields, are silent and normalize reversed ranges)
+- `valueAsLocalDate: Date | null` / `valueAsUTCDate: Date | null` (JS-only) — the
+  single-mode value at local midnight (identical to `valueAsDate`) or at UTC midnight (the native
+  reading); setters read the given Date's local or UTC calendar fields, `null`/invalid clears, and
+  both are silent. The same two names exist on `lr-input`, `lr-time-input`, `lr-date-input` and
+  `lr-date-picker`, so code that moves values between them can pick one convention explicitly
 - `view: 'days'|'months'|'years'|'decades' = 'days'` (reflected)
 - `weekdayFormat: 'narrow'|'short'|'long' = 'short'` (attribute `weekday-format`, reflected)
 - `withOutsideDays: boolean = false` and `withWeekNumbers: boolean = false` (reflected)
 
 Lyra retains the additive `previousLabel`/`nextLabel` accessible-label overrides and the `selection`
 range getter. Their initial readback remains `'Previous month'` and `'Next month'`; omitted labels
-localize, while explicit text, the built-in English labels, and empty strings win over locale and
-`.strings` copy. Removing either label attribute restores localized omission while preserving
+localize (`previousMonth`/`nextMonth` in the days view, the generic `previous`/`next` in the
+months/years/decades views, which page by 1, 12 and 120 years), while explicit text, the built-in
+English labels, and empty strings win over locale and `.strings` copy in every view. Year-range
+titles and decade labels use the locale's own range format (`formatRange()`), as `lr-date-input`
+does for its ranges. Removing either label attribute restores localized omission while preserving
 `null` property readback.
 
 **Methods:** `clear()`, `focus(options?)`, `goToToday()`, and
 `goToDate(date: string | Date)`. Valid navigation dates are clamped to `min`/`max`; invalid values
-are ignored.
+are ignored. `clear()` is a no-op while blank, disabled, or readonly; otherwise it emits `input`,
+`change`, then `lr-clear` — the clear sequence every Lyra field uses.
 
 **Keyboard:** The day grid uses one roving Tab stop. Month, year, and decade selection views do the
 same: Arrow keys move through their four-column visual grid (with horizontal movement mirrored in
@@ -1513,7 +1534,8 @@ and pending-range limits; activating an unavailable period is a no-op.
 
 **Events:** all are non-cancelable. `input` is a bubbling/composed native `InputEvent` (including
 the first endpoint of a range); `change` is a bubbling/composed native `Event` for committed
-values. `lr-focus-day` carries `{ date: Date }`, and `lr-view-change` carries `{ view, date }`.
+values. `lr-focus-day` carries `{ date: Date }`, `lr-view-change` carries `{ view, date }`, and
+`lr-clear` (no detail) follows `clear()`'s `input`/`change`.
 
 **Slots:** `header`, `previous-icon`, `next-icon`, and `footer`. A dynamic
 `day-YYYY-MM-DD` slot is also accepted as a Lyra extension and takes precedence over `dayContent`.
@@ -1547,8 +1569,9 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
   (reflected) — the library's shared field-surface vocabulary, matching `lr-select`'s trigger and
   `lr-combobox`'s own `appearance`. `outlined` (the default) is a bordered surface; `filled` swaps
   the border for a raised fill; `filled-outlined` keeps both; `plain` drops both; `accent` paints
-  the loud brand fill with on-brand text (the placeholder, start/end adornments and clear/expand
-  buttons all ride that on-brand color rather than the quiet-text tokens). An unsupported value,
+  a quiet brand tint with a brand border, so the typed date keeps its normal contrast. Every text
+  and date field shares this table.
+  An unsupported value,
   including a raw attribute/property write outside this type, clamps to the `'outlined'` default
 - `appliedPreset: LyraDateRangePreset | undefined` (read-only, new in 12.0.0) — the `presets` entry
   whose button produced the current `value`, or `undefined` when the value was picked on the
@@ -1609,9 +1632,17 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
   validator-level fallback.
 - `value: string = ''` (JS property)
 - `valueAsDate: Date | null` and `valueAsRange: { from: Date|null; to: Date|null }` (JS-only
-  accessors; setters are silent and normalize reversed ranges)
+  accessors at local midnight, unlike the UTC midnight of a native `<input type="date">` and
+  `lr-input type="date"`; setters read local date fields, are silent and normalize reversed ranges)
+- `valueAsLocalDate: Date | null` / `valueAsUTCDate: Date | null` (JS-only) — the
+  single-mode value at local midnight (identical to `valueAsDate`) or at UTC midnight (the native
+  reading); setters read the given Date's local or UTC calendar fields, `null`/invalid clears, and
+  both are silent. The same two names exist on `lr-input`, `lr-time-input`, `lr-date-input` and
+  `lr-date-picker`, so code that moves values between them can pick one convention explicitly
 - `weekdayFormat: 'narrow'|'short'|'long' = 'short'` (reflected)
 - `withClear: boolean = false`, `withHint: boolean = false`, and `withLabel: boolean = false`
+- `clearable: boolean = false` (reflected) — the spelling `lr-input`, `lr-select` and `lr-combobox`
+  use for the clear action; equivalent to `withClear`, and either one renders it
 - `withOutsideDays: boolean = false` and `withWeekNumbers: boolean = false` (reflected)
 
 Lyra retains additive native-wrapper and form-chrome properties: `placeholder`, `locale`,
@@ -1629,8 +1660,12 @@ element-valued `form` IDL.
 `show()`. The shared form contract additionally exposes `getForm()`, `checkValidity()`, and
 `reportValidity()`; Lyra's native wrapper also exposes `click()`. `show()` and `hide()` return promises that settle after their corresponding transition;
 they do nothing when already settled, and respect cancellation of their request event. `clear()`
-is a no-op while blank, disabled, or readonly; otherwise it emits `lr-clear`, then `input`, then
-`change`. Lyra also retains native-wrapper `select()`, `setSelectionRange()`, and `setRangeText()`.
+is a no-op while blank, disabled, or readonly; otherwise it emits `input`, then `change`, then
+`lr-clear`. The clear button runs the same sequence and then
+returns focus to the text field; `clear()` itself leaves focus where it is. Lyra also retains native-wrapper `select()`, `setSelectionRange()`, and `setRangeText()`.
+The nested calendar (`::part(date-picker)`) is rendered only while the popup is open or closing,
+so a page of closed date inputs carries no hidden calendars; each opening starts from the value's
+month.
 The text input is itself the popup-opening combobox owner: it exposes `role="combobox"`,
 `aria-haspopup="dialog"`, and explicit `aria-controls`/`aria-expanded` alongside the expand button.
 Host focus/click/show/clear calls are synchronous no-ops as soon as direct or fieldset disablement
@@ -1646,9 +1681,12 @@ internal native date input.
 `FocusEvent`s preserving `relatedTarget`; each is dispatched exactly once from the host and is
 bubbling, composed, and non-cancelable. `lr-show`/`lr-hide` are cancelable requests emitted before state changes;
 `lr-after-show`/`lr-after-hide` are non-cancelable and fire after rendering and popup animations
-settle. `lr-clear` is non-cancelable. `lr-invalid` **is** cancelable: `preventDefault()` on it
-suppresses the browser's native validation bubble and `reportValidity()`'s focus/scroll of this
-control, without making the control valid — see "The validity alias is cancelable in 8.0.0" above.
+settle. A close forced by disabling `lr-date-input` (directly or through a `<fieldset>`) or making
+it `readonly` still emits `lr-hide`, but non-cancelable, so a listener cannot hold the calendar open
+over a control that can no longer be used. `lr-clear` is non-cancelable. `lr-invalid` **is**
+cancelable: `preventDefault()` on it suppresses the browser's native validation bubble and
+`reportValidity()`'s focus/scroll of this control, without making the control valid — see "The
+validity alias is cancelable in 8.0.0" above.
 
 **Slots (10):** `clear-icon`, dynamic `day-YYYY-MM-DD`, `end`, `expand-icon`, `footer`, `hint`,
 `label`, `next-icon`, `previous-icon`, and `start`. Lyra additionally retains `error`, which
@@ -1662,7 +1700,8 @@ target, so a row with an adornment that is narrower than those actions plus the 
 rather than collapsing the field.
 
 **Custom states:** `blank`, `disabled`, `open`, and `range`; the shared form-associated mixin also
-exposes its validity states.
+exposes its validity states. The host carries `data-invalid` while it is invalid after interaction,
+the attribute every Lyra field publishes next to `:state(user-invalid)`.
 
 **CSS parts (21):** `clear-button`, `date-input`, `date-picker`, `presets` and `preset-button`
 (forwarded from the nested `lr-date-picker` via `exportparts`, so the quick-range row is styleable
@@ -1803,7 +1842,10 @@ and `dateTimeFormat(locale, options)`.
   `--lr-date-picker-preset-selected-bg` (new in 11.0.0) — hover, pressed, and
   currently-selected paint for a `presets` quick-range button. Defaults are
   `var(--lr-color-brand-quiet)`, that hover colour mixed by `--lr-color-mix-active`, and
-  `var(--lr-color-brand)` respectively.
+  `var(--lr-color-brand)` respectively. `--lr-date-picker-preset-pressed-bg` names the pressed
+  paint the way `<lr-time-range>` does and wins over `--lr-date-picker-preset-active-bg`; across
+  both controls, `preset-selected-*` is the applied preset, `preset-pressed-*` the press, and
+  `preset-hover-*` the hover.
 - `--lr-date-picker-preset-selected-border` (default `var(--lr-color-brand)`) and
   `--lr-date-picker-preset-selected-color` (default `var(--lr-color-on-brand)`) independently
   theme a selected preset's border and foreground; the selected background token controls only its
@@ -1885,7 +1927,7 @@ disabled state.
 | `rows`                   | `rows`                     | `number`                                                             | `4`          | Visible text rows (mapped default).                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `resize`                 | `resize`                   | `'none' \| 'vertical' \| 'horizontal' \| 'both' \| 'auto'`           | `'vertical'` | Native CSS `resize` behavior, plus `'auto'` (`ResizeObserver`-driven grow-to-content, no manual handle). An invalid runtime value falls back to `'vertical'`; `'auto'` maps native CSS resize to `none`.                                                                                                                                                                                                                                                                                                         |
 | `size`                   | `size`                     | `LyraSize`                                                           | `'m'`        | Visual size on the shared control ladder — the same scale as `lr-input`/`lr-select`/`lr-button`, and both spellings of every tier are accepted (`2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large`). Governs the field's padding, font size and corner radius. Reflected.                                                                                                                                                                                                                                  |
-| `appearance`             | `appearance`               | `'accent' \| 'filled' \| 'outlined' \| 'filled-outlined' \| 'plain'` | `'outlined'` | Visual treatment of the field. The mapped default draws a border without a fill; the other values share `lr-input`'s vocabulary. Reflected.                                                                                                                                                                                                                                                                                                                                                                      |
+| `appearance`             | `appearance`               | `'accent' \| 'filled' \| 'outlined' \| 'filled-outlined' \| 'plain'` | `'outlined'` | Visual treatment of the field. The mapped default is the surface fill with a border; every value paints like `lr-input`'s vocabulary. Reflected.                                                                                                                                                                                                                                                                                                                                                                      |
 | `filled`                 | `filled`                   | `boolean`                                                            | `false`      | Shoelace alias for the filled treatment.                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `pill`                   | `pill`                     | `boolean`                                                            | `false`      | Fully rounded field corners, matching `lr-input`'s/`lr-select`'s own `pill` — both upstreams ship it on their textarea, so a mechanical tag rename must not drop it. It changes the private radius default to `--lr-radius-pill`, so an inherited or direct `--lr-textarea-radius` stays authoritative. Most useful on a one- or two-row field: a tall multi-line surface with fully rounded ends wastes its first and last line's inline space, which is why it is opt-in rather than tied to `size`. Reflected. |
 | `withCount`              | `with-count`               | `boolean`                                                            | `false`      | Renders a character count below the field, inside `[part="footer"]`. With `maxlength` set it counts _down_ the remaining characters instead of up from zero. Reflected.                                                                                                                                                                                                                                                                                                                                          |
@@ -1895,7 +1937,7 @@ disabled state.
 | `hint`                   | `hint`                     | `string`                                                             | `''`         | Hint text below the field.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `helpText`               | `help-text`                | `string`                                                             | `''`         | Shoelace alias for `hint`; `hint` wins when both are set.                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `withLabel` / `withHint` | `with-label` / `with-hint` | `boolean`                                                            | `false`      | SSR slot-presence hints; neither is required for hydrated client-side slot detection.                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| `errorText`              | `error-text`               | `string`                                                             | `''`         | Error text below the field (overridden by slotted `error` content).                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `errorText`              | `error-text`               | `string`                                                             | `''`         | Error text below the field, rendered before slotted `error` content. The field never renders its own `validationMessage`; style `:state(user-invalid)` or the `data-invalid` host attribute (invalid after interaction).                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `customError`            | `custom-error`             | `string \| null`                                                     | `null`       | Reflected consumer-supplied validation message. A non-empty value blocks submission until `setCustomValidity('')` clears it.                                                                                                                                                                                                                                                                                                                                                                                     |
 | `accessibleLabel`        | `aria-label`               | `string \| null`                                                     | `null`       | Accessible-name override forwarded to the internal `<textarea>`; every non-`null` value wins by presence—including an explicit empty string—over `label`, `placeholder`, and the localized default.                                                                                                                                                                                                                                                                                                              |
 | `spellcheck`             | `spellcheck`               | `boolean`                                                            | `true`       | Forwarded to the native `<textarea>`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
@@ -2044,7 +2086,7 @@ With no label text the part is hidden and no glyph is painted.
   so their private defaults follow the tier; the two tightest tiers take a smaller radius. Public
   values inherited from an ancestor or set directly on the host win in every tier. `pill` changes
   the private `--lr-textarea-radius` default to `--lr-radius-pill`.
-- `--lr-textarea-fill` (default `transparent`) and `--lr-textarea-border-color` (default
+- `--lr-textarea-fill` (default `var(--lr-color-surface)`) and `--lr-textarea-border-color` (default
   `var(--lr-color-border)`) — the field's background and border color, whose private defaults
   change per `appearance` rather than per `size`. The documented defaults are
   `appearance="outlined"`'s private values. Set either on an ancestor or directly on the host to
@@ -2053,14 +2095,12 @@ With no label text the part is hidden and no glyph is painted.
 - `--lr-textarea-hover-border-color` (default `var(--lr-color-brand)`) — the field border while the
   native textarea is hovered, independent of its resting border and every other brand-colored
   component state.
-- `--lr-textarea-focus-border-color` (default `var(--lr-textarea-border-color)`) — the field
-  border while the native textarea is focused. Unset, it resolves to this field's own resting
-  border color, so a textarea with no override renders exactly as before this hook existed; set it
-  to give focus its own border color independent of the hover color above and the halo below.
+- `--lr-textarea-focus-border-color` (default `var(--lr-color-brand)`) — the field border while
+  the native textarea is focused: the brand edge every text and date field shows on focus, with no
+  separate outline ring.
 - `--lr-form-control-focus-shadow` (default `none`) — the shared field halo, painted as a
   `box-shadow` while the field holds focus. One name for every field-shaped control in the library,
-  so a halo is configured once instead of per component; additive, so the `:focus-visible` outline
-  is untouched.
+  so a halo is configured once instead of per component; additive to the brand border.
 
 `<lr-textarea>` fills an explicitly sized host: give the host a block size (`block-size: 100%`
 inside a container with a resolved block size, a pixel size, or a flex/grid allocation) and the
@@ -2645,9 +2685,10 @@ shared hit target (42px including the row border at the default theme); `l` and 
   normalize to reflected `text` before native validity and type-dependent chrome are projected
 - `size: LyraSize = 'm'` (reflected — see "Shared form vocabulary" below)
 - `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'outlined'`
-  (reflected) — the shared field-surface vocabulary. `outlined` (the mapped default) draws a border
-  without a fill; `filled-outlined` draws both, `filled` drops the border, `plain` drops
-  both, and `accent` tints both with the brand color. Each value does nothing but swap
+  (reflected) — the shared field-surface vocabulary, painted the same on every text and date field:
+  `outlined` (the mapped default) is the surface fill with a border; `filled-outlined` is the raised
+  fill with a border, `filled` the raised fill alone, `plain` neither, and `accent` a quiet brand
+  tint with a brand border. Each value does nothing but swap
   `--lr-input-fill`/`--lr-input-border-color`, so either can be retuned without a
   `::part(input-wrapper)` rule
 - `filled: boolean = false` (reflected) — Shoelace alias for the filled treatment
@@ -2674,7 +2715,10 @@ shared hit target (42px including the row border at the default theme); `l` and 
 - `hint: string = ''`
 - `helpText: string = ''` (attribute `help-text`) — Shoelace alias for `hint`; `hint` wins when both
   are set. `withLabel`/`withHint` (`with-label`/`with-hint`) provide optional SSR slot-presence hints
-- `errorText: string = ''` (attribute `error-text`)
+- `errorText: string = ''` (attribute `error-text`) — consumer validation text; the field never
+  renders its own `validationMessage`. While invalid after interaction the host carries
+  `data-invalid`, the attribute every Lyra field publishes next to
+  `:state(user-invalid)`.
 - `accessibleLabel: string | null = null` (attribute `aria-label`)
 - `autocomplete: string = ''`
 - `title: string = ''` — forwarded to the native input
@@ -2691,11 +2735,11 @@ shared hit target (42px including the row border at the default theme); `l` and 
 - `min?: number | string` / `max?: number | string` (attributes `min`/`max`) /
   `step?: number | 'any'` (attribute `step`, accepts the native `'any'` value alongside a number)
   — forwarded verbatim to the native
-  input and validated by it. Intended for `type="number"`; `step` is equally meaningful on
-  `type="time"`. On `lr-input` itself the `min`/`max` _attributes_ are number-converted, so a
-  non-numeric bound only survives a direct property assignment; the declared type also admits a
-  string so a subclass can narrow the attribute parsing to its own native type's literal form —
-  `lr-native-time-input` does exactly that. Inert for the other types
+  input and validated by it, for `type="number"` and the `date`/`datetime-local`/`time` types;
+  `step` is equally meaningful on `type="time"`. A numeric `min`/`max` _attribute_ reads back as a
+  number; any other attribute text (`2026-01-01`, `09:00`, `2026-01-01T09:00`) reads back as that
+  string and bounds the native date/time input, exactly like a property assignment. Inert for the
+  other types
 - `minlength?: number` / `maxlength?: number` (attributes `minlength`/`maxlength`) — text-length
   bounds forwarded to the native input and reported as `validity.tooShort`/`validity.tooLong`.
   Apply to the text-bearing types (`text`, `search`, `email`, `password`); the platform ignores
@@ -2745,7 +2789,9 @@ access), `focus(options?: FocusOptions)`, `blur()`, `select()`. Also forwards th
 selection/editing surface, mirroring `lr-textarea`'s identical passthrough: `selectionStart: number
 | null` and `selectionEnd: number | null` (readable/writable; `null` both before the internal input
 has rendered and whenever `type` doesn't support selection — only `text`/`search`/`password` do,
-matching the native `<input>`'s own contract), `setSelectionRange(start, end, direction?)`
+matching the native `<input>`'s own contract), `selectionDirection: 'forward' | 'backward' | 'none'
+| null` (same `null` rule, and assigning `null` sets `'none'`),
+`setSelectionRange(start, end, direction?)`
 (no-op before render, otherwise throws the same native `InvalidStateError` a native `<input>` would
 for an unsupported `type`), and `setRangeText(replacement, start?, end?, selectMode?)` (no-op
 before render; syncs `value` afterward without emitting a user event).
@@ -2758,8 +2804,16 @@ stays invalid.
 Three more native passthroughs:
 
 - `valueAsDate: Date | null` / `valueAsNumber: number` — native getters/setters for date/time and
-  numeric input types. Assignment synchronizes `value`, form value, and validity without emitting a
-  user edit event; unsupported types retain the native `null`/`NaN` behavior.
+  numeric input types, with the native UTC convention (`type="date"` is UTC midnight, `type="time"`
+  is 1970-01-01 with UTC clock fields), unlike the local-time accessors of `lr-date-input`,
+  `lr-date-picker` and `lr-time-input`. Assignment synchronizes `value`, form value, and validity
+  without emitting a user edit event; unsupported types retain the native `null`/`NaN` behavior.
+- `valueAsLocalDate: Date | null` / `valueAsUTCDate: Date | null` — explicit
+  conventions for `date`, `time` and `datetime-local`: local reads a date at local midnight, a time
+  on today's local date and a datetime-local in local time; UTC reads a date at UTC midnight, a time
+  on 1970-01-01 UTC (both exactly `valueAsDate`) and a datetime-local in UTC. Setters write the given
+  Date's local or UTC fields silently (`null`/invalid clears); other types read `null` and ignore
+  assignment.
 
 - `showPicker(): void` — opens the browser's own picker for the current `type` (the time picker, and
   whatever chooser the platform offers for the other types), delegating to the internal native
@@ -2837,7 +2891,7 @@ lozenge. `pill` changes its private default to `--lr-radius-pill`; an inherited 
 value still wins. `lr-number-input`/`lr-native-time-input` inherit both
 unchanged. The separate segmented `lr-time-input` also consumes the documented input theme tokens.
 
-`--lr-input-fill` (default `transparent`) is the control row's background and
+`--lr-input-fill` (default `var(--lr-color-surface)`) is the control row's background and
 `--lr-input-border-color` (default `var(--lr-color-border)`) its border color. `appearance` changes
 their private fallback roles rather than the public hooks, and the documented defaults are
 `appearance="outlined"`'s values. Ancestor theme wrappers therefore still win. Setting either
@@ -2850,6 +2904,8 @@ for the focused border. Built-in clear/password
 actions and `lr-number-input` steppers share `--lr-input-action-color`,
 `--lr-input-action-hover-color`, `--lr-input-action-active-color`, and
 `--lr-input-action-active-bg`; all fall back to the previous text/surface semantic tokens.
+`--lr-input-placeholder-color` colours the placeholder text and falls back to
+`--lr-input-action-color`, so retinting the actions alone still retints the placeholder.
 For `type="time"`, the browser-native picker indicator gains disabled-gated hover and focus-visible
 affordances through `--lr-input-time-picker-hover-bg`, `--lr-input-time-picker-active-bg`,
 `--lr-input-time-picker-focus-bg`, and `--lr-input-time-picker-focus-ring` (falling back to
@@ -2871,9 +2927,11 @@ what is specific to it.
   `--lr-theme-form-control-radius` on the same ancestor to give these controls one shared corner
   radius across every tier; without it, the compact `2xs`/`xs` tiers retain their smaller default
   radius.
-- **`appearance` is the fill vocabulary and nothing else.** `accent` (the loud semantic fill),
-  `filled` (a quiet tint of the same tone), `outlined` (a border, no fill), `filled-outlined`
-  (both) and `plain` (neither). Container treatment uses `frame` (`card`/`plain`).
+- **`appearance` is the fill vocabulary and nothing else.** On the text and date fields
+  (`lr-input`, `lr-textarea`, `lr-date-input`, `lr-time-input`, `lr-phone-input`, `lr-otp-input`)
+  every value paints the same: `outlined` (surface fill and border), `filled-outlined` (raised fill
+  and border), `filled` (raised fill, no border), `plain` (neither) and `accent` (a quiet brand tint
+  with a brand border, so typed text keeps its contrast). Container treatment uses `frame` (`card`/`plain`).
   `lr-button` adds `quiet` and `link`. Text fields
   (`lr-input`, `lr-textarea`, and `lr-select`) default to `outlined`; `lr-button` defaults to `accent`.
 - **`pill` rounds the control's ends.** Available on `lr-input`, `lr-number-input`, `lr-time-input`,
@@ -3224,12 +3282,16 @@ readback. Explicit empty strings remain empty; later supplied text renders norma
 - `value: string` (also accepts a `Date` or `null` when assigned) — strict `HH:mm`, optional
   `:ss`/`.sss`; `Date` reads local clock fields without timezone conversion. Invalid strings and
   `null` normalize to `''`. `valueAsNumber` is milliseconds since midnight (`NaN` while blank),
-  and `valueAsDate` applies the clock fields to today's local date (`null` while blank). Both are
-  settable, like the native `<input type="time">` properties they mirror: assigning `valueAsNumber`
+  and `valueAsDate` applies the clock fields to today's local date (`null` while blank) — unlike
+  the native `<input type="time">.valueAsDate` used by `lr-native-time-input` and
+  `lr-input type="time"`, which is 1970-01-01 with UTC clock fields, so a Date moved between them
+  shifts by the UTC offset. Both are settable, like the native properties: assigning `valueAsNumber`
   sets `value` from the same scale, and out-of-range or non-finite figures clear the field rather
   than wrapping into a different time; assigning `valueAsDate` reads the same local clock fields
   back off the Date, so it round-trips with the getter, and `null`/an invalid Date clears. Both
-  assignments are silent, again like the native properties.
+  assignments are silent, again like the native properties. `valueAsLocalDate` (identical to
+  `valueAsDate`) and `valueAsUTCDate` (UTC clock fields on 1970-01-01, the native reading) name the
+  two conventions explicitly; their setters read local or UTC clock fields.
 - `defaultValue`, `name`, `form`, `disabled`, `required`, `customError`, `getForm()`,
   `checkValidity()`, `reportValidity()`, `setCustomValidity()`, and `resetValidity()` use the shared form-control
   contract. Reset restores the current declarative `value` default; `readonly` remains focusable
@@ -3252,7 +3314,8 @@ readback. Explicit empty strings remain empty; later supplied text renders norma
   `aria-label` wins for the internal editing surface's accessible name.
 - `open = false`, `placement = 'bottom-start'`, and `distance = 0` control the picker.
   `show()` / `hide()` return `Promise<void>` and settle after the matching `lr-after-*` event.
-- `withClear = false` (`with-clear`) adds a localized clear action. `withNow = false`
+- `withClear = false` (`with-clear`) adds a localized clear action; `clearable = false`
+  (reflected), the spelling `lr-input`/`lr-select`/`lr-combobox` use, is equivalent. `withNow = false`
   (`with-now`) adds a localized Now footer unless the `footer` slot replaces it.
 - `autocomplete = ''` is forwarded to a visually hidden, nameless native time input used only as
   the browser autofill seam; the FACE host remains the sole submitted control.
@@ -3274,8 +3337,9 @@ Pasting a canonical time replaces the full value as one edit. Alt+ArrowDown open
 Inside a picker column, one enabled option is tabbable; ArrowUp/ArrowDown rove, Home/End jump to
 the bounds, and Enter/Space activate the focused native option button. Disabled controls project
 `disabled` and `tabindex=-1` to every picker option.
-`readonly` keeps navigation and popup browsing but blocks commits; `disabled` removes the tab stop,
-popup, validation, and form submission.
+`readonly` keeps the segments focusable and navigable but blocks commits, and the picker never
+opens (setting `readonly` closes an open one; the expand button is disabled) — the same rule as
+`lr-date-input`; `disabled` removes the tab stop, popup, validation, and form submission.
 
 **Events:** native `input` on user edits and native `change` on a complete commit; compatibility
 aliases `lr-input` / `lr-change` carry `{ value }`. `focus` / `blur` cross the shadow boundary once.
@@ -3298,7 +3362,9 @@ adornments shrink and ellipsize. The exact-320px RTL story keeps that copy, the 
 fixed-size actions, and the open picker contained.
 
 `error` is ordinary visible validation text referenced by the segmented input through
-`aria-describedby`, not a shadow `role="alert"`. Native `reportValidity()`/focus feedback therefore
+`aria-describedby`, not a shadow `role="alert"`. It shows only consumer `errorText` or `error`-slot
+content, like every sibling field. Style the invalid state with `:state(user-invalid)` or
+the `data-invalid` host attribute (present while invalid after interaction). Native `reportValidity()`/focus feedback therefore
 has one description path instead of being duplicated by a second live-region announcement.
 The group and every spinbutton expose explicit stateful `aria-invalid`: visible property/slotted
 error chrome makes it `"true"` immediately, as does intrinsic/custom invalidity after interaction;
@@ -3323,9 +3389,10 @@ ancestor theme wrapper or direct-host value overrides those fallbacks. Also avai
 `--lr-time-input-border-color`, `--lr-time-input-fill`, and `--lr-time-input-color` for the
 appearance surface; `--lr-time-input-focus-border-color`;
 `--lr-time-input-segment-hover-bg`, `--lr-time-input-segment-active-bg`, and
-`--lr-time-input-segment-focus-bg`; `--lr-time-input-action-color`,
-`--lr-time-input-action-hover-color`, `--lr-time-input-action-hover-bg`, and
-`--lr-time-input-action-active-bg`; and `--lr-time-input-column-hover-bg`,
+`--lr-time-input-segment-focus-bg`; `--lr-time-input-action-color` (the resting clear/expand
+glyphs), `--lr-time-input-action-hover-color`, `--lr-time-input-action-hover-bg`, and
+`--lr-time-input-action-active-bg`; `--lr-time-input-placeholder-color` (an empty segment's `--`,
+falling back to the action color); and `--lr-time-input-column-hover-bg`,
 `--lr-time-input-column-active-bg`, `--lr-time-input-column-selected-bg`,
 `--lr-time-input-column-selected-color`, `--lr-time-input-column-selected-font-weight`,
 `--lr-time-input-column-selected-hover-bg`, and `--lr-time-input-column-selected-active-bg`.
@@ -3577,7 +3644,12 @@ null` (attribute `custom-error`) carries a consumer-supplied validation message.
   calling-code, and parser projection. An empty effective catalog resolves to `''`. Changing the
   country reparses the editable number.
 - `label: string = ''`, `hint: string = ''`, `errorText: string = ''` (attribute `error-text`) —
-  visible form-field chrome; each has a matching named slot.
+  visible form-field chrome; each has a matching named slot, and text plus slotted content both
+  render (text first), as on every sibling field. The
+  telephone input is described by the error before the hint.
+- `withLabel: boolean = false` / `withHint: boolean = false` (attributes `with-label`/`with-hint`)
+  — SSR slot-presence hints for slotted label/hint content that cannot be inspected before
+  hydration.
 - `placeholder: string = ''` — forwarded to the native telephone input.
 - `spellcheck: boolean = true`, `autocapitalize: string = ''`, `autoCorrect: string = ''`
   (attribute `autocorrect`) — forwarded to the internal telephone input's own `spellcheck`/
@@ -3592,10 +3664,11 @@ null` (attribute `custom-error`) carries a consumer-supplied validation message.
   removes it from the accessibility tree entirely.)
 - `phoneLabel: string = ''` (attribute `phone-label`) — explicit accessible-name override for the
   native telephone input.
-- `countryLabel: string = 'Select'` (attribute `country-label`) — country-selector accessible name.
-  Omitted copy uses the localized `select` message. Explicit text, including `'Select'` and `''`,
-  wins over locale strings. Removing the attribute restores the declared `'Select'` property
-  readback and resumes localization.
+- `countryLabel: string = 'Country'` (attribute `country-label`) — country-selector accessible name,
+  also shown as the trigger placeholder while no country is available. Omitted copy uses the
+  localized `countryPickerLabel` message (the name `lr-country-picker` uses). Explicit text,
+  including `'Country'` and `''`, wins over locale strings. Removing the attribute restores the
+  declared `'Country'` property readback and resumes localization.
 - `incompleteText: string = 'This phone number is incomplete.'` (attribute `incomplete-text`) —
   validation message for dial-like input that can still become valid with more digits. Omitted
   copy uses the localized `phoneInputIncomplete` message. Explicit nonempty text, including the
@@ -3626,7 +3699,9 @@ null` (attribute `custom-error`) carries a consumer-supplied validation message.
 **Events:** each text edit emits native `InputEvent` `input` then `lr-input`; telephone-input commit
 emits native `Event` `change` then `lr-change`; and a country pick emits both pairs in order:
 `input`, `lr-input`, `change`, `lr-change`. Native events carry no custom detail; the aliases carry
-`{ value, inputValue, country, valid, status }`.
+`{ value, inputValue, country, valid, status }`. During IME composition the native `input` events
+are relayed but the text is neither parsed nor reformatted (rewriting it would cancel the
+composition); the composed text is parsed once when the composition ends, with one `lr-input`.
 Internal `focus`/`blur` are relayed once as realm-correct native `FocusEvent`s preserving `relatedTarget`.
 `lr-invalid` has no detail and is the one bubbling/composed alias
 when native validity fails. Programmatic value writes remain silent.
@@ -3661,7 +3736,14 @@ receives the `start` alias slot's content), `end`, `country`
 `expand-icon`, `calling-code`, `input`, `hint`, `error`.
 
 `error` is ordinary visible validation text referenced by the native telephone input through
-`aria-describedby`, not a shadow `role="alert"`. Native invalid/focus feedback therefore has one
+`aria-describedby`, not a shadow `role="alert"`. It shows only consumer `errorText` or `error`-slot
+content, like every sibling field. Style
+the invalid state with `:state(user-invalid)`, the `data-invalid` host attribute (present while
+invalid after interaction, including after a failed submit or `reportValidity()`), or
+`--lr-phone-input-invalid-border-color`, which defaults to the resting border. Focus shows the
+brand border and the optional halo, with no extra outline ring. `appearance` (`'outlined'` default,
+`'filled-outlined'`, `'filled'`, `'plain'`, `'accent'`, reflected) paints the row
+exactly like `lr-input`. Native invalid/focus feedback therefore has one
 description path instead of being duplicated by a second live-region announcement.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
@@ -3803,22 +3885,22 @@ semantics.
   return `string | null | undefined`; a nullish result omits `aria-valuetext` for that handle.
   Leaving the property unset preserves the numeric-only contract
 - `presets: readonly TimeRangePreset[] = []` (attribute: false) — readonly `TimeRangePreset {
-label: string; start: number; end: number; id?: string }`; a bounded frozen snapshot of optional
-  discrete presets (e.g. "Last 7 days") rendered as a
+label: string; start: number; end: number; id?: string }`; a bounded frozen array of the caller's
+  own valid preset objects (e.g. "Last 7 days"), labels and bounds read once on assignment, rendered as a
   `[part="presets"]` button row above the track — purely additive, the continuous brush is
   unaffected and both interaction modes coexist; picking one sets both handles and emits the same
   native/prefixed input and change sequences a committed drag or keyboard step would. Preset
   endpoints are clamped and ordered once, and that same normalized pair drives both application
   and `aria-pressed`/`data-active` projection. The optional `id` is a caller-owned
-  correlation key copied into the snapshot verbatim and never read by the control itself; an
+  correlation key, echoed verbatim on `appliedPreset` and never read by the control itself; an
   untagged preset is unaffected
-- `appliedPreset: TimeRangePreset | undefined` (read-only, attribute: false) — the frozen
-  `presets` snapshot whose button produced the current range. Preset application updates this
+- `appliedPreset: TimeRangePreset | undefined` (read-only, attribute: false) — the caller's own
+  `presets` entry whose button produced the current range. Preset application updates this
   identity before its synchronous event sequence, so it can be read inside `input`/`change` or
   `lr-input`/`lr-change` handlers. It remains `undefined` before a preset is selected and is
   cleared by a real manual handle move, a controlled endpoint change away from that preset, a
   preset-collection replacement, or a form reset. Numeric equality never infers identity; no-op
-  endpoint writes and reassigning the same preset snapshot preserve it
+  endpoint writes and reassigning the same `presets` array preserve it
 - `customError: string | null` (attribute `custom-error`, reflected) — consumer validation message
 
 **Events:** a native-style composed `input` (no detail) then `lr-input` (`detail: { start, end }`),
@@ -3898,6 +3980,9 @@ palette: `--lr-time-range-preset-active-bg` (falls back to `--lr-color-brand`),
 `--lr-time-range-preset-active-border-color` (falls back to `--lr-color-brand`), and
 `--lr-time-range-preset-active-color` (falls back to `--lr-color-on-brand`). Unset, each resolves
 to exactly the token the rule used before they existed, so the default rendering is unchanged.
+`--lr-time-range-preset-selected-bg`, `--lr-time-range-preset-selected-border-color`, and
+`--lr-time-range-preset-selected-color` name the same three paints the way `<lr-date-picker>` does
+and win over the `preset-active-*` names, so one theme can style both controls' applied preset.
 
 Pointer states and handle chrome are independently themeable too:
 
@@ -5289,7 +5374,8 @@ form-associated surface (`name`, `value`, `defaultValue`, `customError` (`custom
 **Methods:** `focus()`, `blur()`, `click()`, `select()`,
 `setSelectionRange(start, end, direction?)`, `setRangeText(replacement, start?, end?, selectMode?)`,
 `clear()`, `resetValidity()`, and `formStateRestoreCallback(state, reason)`. `clear()` empties a
-nonempty code, emits `lr-clear`, and returns focus to the real input. `resetValidity()` clears only
+nonempty code with `input`, `change`, then `lr-clear` and leaves focus where it is; it is a no-op
+while blank, disabled, or readonly. `resetValidity()` clears only
 a consumer-supplied custom error and recomputes the intrinsic required/completeness constraints.
 The browser restoration callback sanitizes string state and restores unsupported state shapes as
 the empty value. `select()` selects the real compact-string value; typing replaces its selected
@@ -5319,7 +5405,8 @@ host facade changes all move the fixed-cell keyboard target, so printable, Delet
 edit the cell at the live compact caret rather than a stale internal index.
 
 **Events:** native `InputEvent` `input` (including editing payload), native `Event` `change`, and
-`lr-clear` (no detail) when a nonempty field is cleared by the user or `clear()`. Fixed-cell edits
+`lr-clear` (no detail) after `clear()`'s `input`/`change` — editing the field empty with
+Backspace/Delete or typing never emits it. Fixed-cell edits
 emit `input` immediately and one `change` when the field settles on blur or Enter. Intermediate IME
 composition events stay on the real input without sanitizing or committing; the final
 non-composing input commits and relays once. `lr-complete` (`detail: { value }`) fires only on an
@@ -5327,8 +5414,11 @@ incomplete-to-complete transition, so replacing a filled cell does not complete 
 bubbles, composes, and is cancelable. With `autosubmit`, the component submits its owning form
 after the event unless a listener calls `preventDefault()`. That submission is deferred one task,
 so a listener that decides asynchronously (`await`-ing a check before letting the form go) can
-still veto it; it then goes through the same resolved default button as Enter-to-submit, so
-`SubmitEvent.submitter` and the button's own `name`/`value` reach the submission. The real input's native
+still veto it; it then follows exactly the implicit-submission rules of Enter-to-submit: it
+goes through the form's default (first) submit button, so `SubmitEvent.submitter` and the button's
+own `name`/`value` reach the submission; it submits nothing while that button is disabled; and a
+form without any submit button is submitted only when it holds no other field that blocks implicit
+submission. The real input's native
 `focus` and `blur` are re-dispatched from the host as bubbling, composed events since the originals
 do not cross the shadow boundary. Replacing the live or default code, resetting/restoring the form state, or disconnecting
 the component before the deferred task runs retires that completion's submission; a task for code
@@ -5352,9 +5442,9 @@ fills accepted characters from the first cell in one input operation. The public
 `value` concatenates occupied cells; a middle hole is a visual editing state and is not encoded in
 that string.
 
-**Slots:** `label` and `hint` provide rich content when their matching attributes are empty; a
-nonempty `label`/`hint` attribute wins when both sources are supplied. The `error` slot replaces
-`errorText` when both are supplied. Sources are never concatenated.
+**Slots:** `label`, `hint`, and `error` render after the matching `label`/`hint`/`errorText` text,
+so both show when both are supplied — the rule every sibling field follows. `with-label`
+and `with-hint` are SSR presence hints for slotted label/hint content.
 
 **CSS parts:** `base` / `form-control` (aliases on the outer wrapper), `label` /
 `form-control-label` (aliases on the label), `field` / `segments` (aliases on the segment wrapper),
@@ -5384,11 +5474,12 @@ on the element, or set `--lr-theme-otp-input-segment-size` on an ancestor to res
 in the subtree at once — the retained per-cell hooks below are not re-declared anywhere in the
 shared layer and inherit normally.
 
-The retained per-cell hooks are `--lr-otp-input-segment-fill` (default `transparent`),
+The retained per-cell hooks are `--lr-otp-input-segment-fill` (default `var(--lr-color-surface)`),
 `--lr-otp-input-segment-border-color` (default `var(--lr-color-border)`), and
 `--lr-otp-input-segment-radius` (defaulting through `--segment-border-radius` to the shared
 form-control radius). `filled` uses the raised-surface fill with a transparent cell border;
-`filled-outlined` adds the shared border; `outlined` keeps the transparent fill and shared border.
+`filled-outlined` adds the shared border; `outlined` uses the surface fill and shared border, like
+every sibling field.
 `contained` makes individual cells transparent, borderless, square segments inside the single
 raised, bordered row whose radius remains controlled by `--segment-border-radius`.
 Active and invalid states are independently themeable through
@@ -5396,8 +5487,11 @@ Active and invalid states are independently themeable through
 `--lr-otp-input-invalid-border-color`, with the shared focus and danger colors retained as
 fallbacks.
 
-**CSS custom states:** `--blank`, `--filled`, `disabled`, and `readonly`, plus the shared
-form-associated validity states.
+**CSS custom states:** `blank` (the empty-value state every other Lyra text and date control
+publishes), `--blank` (the same, kept for compatibility), `--filled`, `disabled`, and `readonly`,
+plus the shared form-associated validity states. The host carries `data-invalid` while it is invalid
+after interaction, and `--lr-otp-input-invalid-border-color` defaults to the
+resting segment border, so no danger edge paints unless you set it or style `:state(user-invalid)`.
 
 **Validation:** a partially-entered code reports `tooShort` with the localized `otpInputIncomplete`
 message; `required` and empty reports `valueMissing`. Intrinsic invalid segment styling and the

@@ -67,19 +67,8 @@ export const styles = css`
     --_lr-date-input-fill: transparent;
   }
   :host([appearance="accent"]) {
-    --_lr-date-input-border-color: transparent;
-    --_lr-date-input-fill: var(--lr-color-brand);
-    --_lr-date-input-text-color: var(--lr-color-on-brand);
-  }
-  /* The quiet-text tokens below are too low-contrast on the loud brand fill, so the placeholder,
-     start/end adornments and action buttons ride the row's own on-brand text color instead -- the
-     same treatment lr-select applies to its own trigger children. */
-  :host([appearance="accent"]) [part="start"],
-  :host([appearance="accent"]) [part="end"],
-  :host([appearance="accent"]) [part="clear-button"],
-  :host([appearance="accent"]) [part="expand-button"],
-  :host([appearance="accent"]) [part="input"]::placeholder {
-    color: inherit;
+    --_lr-date-input-border-color: var(--lr-color-brand);
+    --_lr-date-input-fill: var(--lr-color-brand-quiet);
   }
   [part="form-control-label"] {
     display: block;

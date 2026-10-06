@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 installFormControlLabelSupport();
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
@@ -46,9 +47,18 @@ export type TimeRangeValueFormatter = (
   handle: TimeRangeHandle,
 ) => string | null | undefined;
 
+interface PresetRow {
+  source: TimeRangePreset;
+  label: string;
+  start: number;
+  end: number;
+}
+
 interface DragState {
   handle: TimeRangeHandle;
   changed: boolean;
+  /** Holds pointer capture; released when the drag aborts. */
+  captureTarget: HTMLElement;
   /** `[part="base"]`'s rect and the resolved direction, snapshotted once in
    *  onPointerDown rather than re-read on every pointermove of the same
    *  gesture: getBoundingClientRect()/getComputedStyle() in a window-level
@@ -67,9 +77,8 @@ interface DragState {
  *  interactions (and native `<input type=range>`). */
 const PAGE_STEP_MULTIPLIER = 10;
 
-/** A single discrete-preset option for the `presets` property. Deliberately the same shape as
- *  `<lr-date-picker>`'s `LyraDateRangePreset` (`label`/`start`/`end`/`id`) so the library has one
- *  preset vocabulary rather than two; the only difference is the unit (numbers, not ISO dates). */
+/** A single discrete-preset option for the `presets` property: `<lr-date-picker>`'s preset shape
+ *  with numbers instead of ISO dates; unlike it, both bounds are required (at most 256 entries). */
 export interface TimeRangePreset {
   readonly label: string;
   readonly start: number;
@@ -78,48 +87,9 @@ export interface TimeRangePreset {
    * Caller-owned stable identity, echoed verbatim on `appliedPreset` -- never read, compared, or
    * otherwise interpreted by this component. Exists so a consumer can persist WHICH preset is
    * active (`appliedPreset.id`) without a downcast or a side `WeakMap`. Optional: an untagged
-   * preset is unaffected. Unlike `label`/`start`/`end`, which are copied into a frozen defensive
-   * snapshot on assignment, `id` is copied through that same snapshot rather than the original
-   * object, so it round-trips by value, not by the caller's own object identity.
+   * preset is unaffected.
    */
   readonly id?: string;
-}
-
-/** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
- *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
- *  `attachInternals()` is browser-only, and calling it unconditionally in the constructor would
- *  otherwise throw before any test assertion runs, merely from constructing or importing this
- *  component. Every member here is either an inert value or a no-op -- same fix as
- *  `<lr-checkbox>`'s/`<lr-combobox>`'s identical `createInternalsSafely`/`createNoopInternals`
- *  pair. */
-function createInternalsSafely(host: HTMLElement): ElementInternals {
-  if (typeof host.attachInternals !== 'function') return createNoopInternals();
-  try {
-    return host.attachInternals();
-  } catch {
-    return createNoopInternals();
-  }
-}
-
-function createNoopInternals(): ElementInternals {
-  return {
-    form: null,
-    labels: [] as unknown as NodeList,
-    validity: {} as ValidityState,
-    validationMessage: '',
-    willValidate: false,
-    setValidity(): void {},
-    checkValidity(): boolean {
-      return true;
-    },
-    reportValidity(): boolean {
-      return true;
-    },
-    // A plain `Set<string>` implements every member `CustomStateSet` exposes, so the six validity
-    // custom states stay observable (just not CSS-matchable) in an environment with no real
-    // `ElementInternals` -- mirrors `<lr-radio>`'s/`<lr-rubric-form>`'s identical stand-ins.
-    states: new Set<string>(),
-  } as unknown as ElementInternals;
 }
 
 export interface LyraTimeRangeEventMap {
@@ -218,6 +188,12 @@ export interface LyraTimeRangeEventMap {
  *   active preset button.
  * @cssprop [--lr-time-range-preset-active-color=var(--lr-color-on-brand)] - Text color of the active
  *   preset button.
+ * @cssprop --lr-time-range-preset-selected-bg - Background of the active preset button; wins over
+ *   `--lr-time-range-preset-active-bg`.
+ * @cssprop --lr-time-range-preset-selected-border-color - Border color of the active preset button;
+ *   wins over `--lr-time-range-preset-active-border-color`.
+ * @cssprop --lr-time-range-preset-selected-color - Text color of the active preset button; wins
+ *   over `--lr-time-range-preset-active-color`.
  * @cssprop [--lr-time-range-preset-hover-border-color=var(--lr-color-brand)] - Border color of a
  *   hovered preset button.
  * @cssprop --lr-time-range-preset-pressed-border-color - Border color of a pressed preset button;
@@ -304,9 +280,9 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   /**
    * Optional discrete presets rendered as a `[part="presets"]` button row
    * above the track. Purely additive: leaving this empty (the default)
-   * renders nothing extra and leaves the continuous brush untouched. Assignments become frozen
-   * owned snapshots. Reassigning the exposed snapshot is a no-op; replacing the collection clears
-   * `appliedPreset` because the previously selected object is no longer exposed.
+   * renders nothing extra and leaves the continuous brush untouched. The exposed array is frozen and
+   * holds the caller's own valid entries; reassigning it is a no-op, replacing it clears
+   * `appliedPreset`.
    */
   private _presets: readonly TimeRangePreset[] = Object.freeze([]);
   @property({ attribute: false })
@@ -314,7 +290,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   set presets(next: readonly TimeRangePreset[]) {
     const previous = this._presets;
     if (next === previous) return;
-    const snapshots: TimeRangePreset[] = [];
+    const rows: PresetRow[] = [];
     if (Array.isArray(next)) {
       for (let index = 0; index < Math.min(next.length, 256); index += 1) {
         try {
@@ -323,42 +299,35 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
             raw === null || typeof raw !== 'object' || typeof raw.label !== 'string' ||
             typeof raw.start !== 'number' || typeof raw.end !== 'number'
           ) continue;
-          // Omit the key entirely (rather than assigning `id: undefined`) when the caller supplied
-          // none, so an untagged snapshot has the exact same own-key shape it always has -- a
-          // consumer doing `'id' in preset` or a structural equality check sees no new key it
-          // didn't ask for.
-          snapshots.push(Object.freeze(
-            typeof raw.id === 'string'
-              ? { label: raw.label, start: raw.start, end: raw.end, id: raw.id }
-              : { label: raw.label, start: raw.start, end: raw.end },
-          ));
+          rows.push({ source: raw, label: raw.label, start: raw.start, end: raw.end });
         } catch {
           // A hostile getter invalidates only its own preset; later valid rows remain reachable.
         }
       }
     }
     this._appliedPreset = undefined;
-    this._presets = Object.freeze(snapshots);
+    this.presetRows = rows;
+    this._presets = Object.freeze(rows.map((row) => row.source));
     this.requestUpdate('presets', previous);
   }
 
-  private _appliedPreset?: TimeRangePreset;
+  private presetRows: readonly PresetRow[] = [];
+  private _appliedPreset?: PresetRow;
 
   /**
    * The preset whose button produced the current `start`/`end` pair, or `undefined` before a
    * preset is selected and after a manual handle move, a controlled endpoint change away from
    * that preset, a preset-collection replacement, or a form reset. Read it inside an
    * `input`/`change` or `lr-input`/`lr-change` handler; preset application updates this identity
-   * before dispatching the synchronous event pair. No-op endpoint and preset-snapshot writes
+   * before dispatching the synchronous event pair. No-op endpoint and same-array `presets` writes
    * preserve it.
    *
    * Numeric equality deliberately does not infer identity. Two presets can resolve to the same
    * range, and a manual drag can land on exactly the same values, while only a preset click means
-   * the caller should persist that relative shortcut. The returned object is the frozen snapshot
-   * exposed through `presets`.
+   * the caller should persist that relative shortcut. The returned object is the caller's own entry.
    */
   get appliedPreset(): TimeRangePreset | undefined {
-    return this._appliedPreset;
+    return this._appliedPreset?.source;
   }
 
   private _disabled = false;
@@ -392,7 +361,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
 
   constructor() {
     super();
-    this.internals = createInternalsSafely(this);
+    this.internals = attachInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () =>
       this[VALIDITY_ANCHOR](),
     );
@@ -778,7 +747,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
    * would emit an extra lr-input whose detail still held the stale
    * pre-preset value for whichever handle hadn't been assigned yet.
    */
-  private applyPreset(preset: TimeRangePreset): void {
+  private applyPreset(preset: PresetRow): void {
     if (this.liveDisabled) return;
     const { start: nextStart, end: nextEnd } = this.normalizePreset(preset);
     const previousPreset = this._appliedPreset;
@@ -901,6 +870,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     const drag: DragState = {
       handle,
       changed: false,
+      captureTarget,
       rect: base.getBoundingClientRect(),
       rtl: isRtl(this),
     };
@@ -1012,6 +982,16 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     if (!drag) return;
     this.drags.delete(pointerId);
     if (commit && drag.changed) this.emitChange();
+    // An aborted drag gives the pointer back, as lr-slider does.
+    if (!commit) {
+      try {
+        if (drag.captureTarget.hasPointerCapture(pointerId)) {
+          drag.captureTarget.releasePointerCapture(pointerId);
+        }
+      } catch {
+        // Capture may already be gone.
+      }
+    }
     // Only the last concurrent drag to end tears down the shared window
     // listeners — another pointer (e.g. the other finger of a two-finger
     // drag) may still be down.
@@ -1103,7 +1083,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     return html`
       ${this.presets.length > 0
         ? html`<div part="presets">
-            ${this.presets.map((preset) => {
+            ${this.presetRows.map((preset) => {
               const active = preset === this._appliedPreset;
               return html`<button
                 part="preset-button"

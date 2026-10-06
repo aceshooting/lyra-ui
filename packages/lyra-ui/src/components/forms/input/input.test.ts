@@ -1,5 +1,6 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { resolvedColorToken } from '../../../../test/color-contrast.js';
 import './input.js';
 import '../button/button.js';
 import type { LyraInput } from './input.class.js';
@@ -1600,20 +1601,24 @@ describe('lr-input appearance', () => {
     expect(el.getAttribute('appearance')).to.equal('outlined');
   });
 
-  it('keeps the mapped border-only rendering at the default appearance', async () => {
+  it('paints the default outlined appearance with the shared surface fill and border', async () => {
     const el = (await fixture(html`<lr-input aria-label="Name"></lr-input>`)) as LyraInput;
     const cs = getComputedStyle(wrapper(el));
-    expect(cs.backgroundColor).to.equal(TRANSPARENT);
+    expect(cs.backgroundColor).to.equal(resolvedColorToken(el.shadowRoot!, '--lr-color-surface'));
     expect(cs.borderTopColor).to.not.equal(TRANSPARENT);
   });
 
-  it('renders "outlined" with no fill and "filled" with no border colour', async () => {
+  it('renders "outlined" on the surface, "filled-outlined" raised with a border, and "filled" raised without one', async () => {
     const outlined = (await fixture(html`<lr-input appearance="outlined" aria-label="a"></lr-input>`)) as LyraInput;
-    const filled = (await fixture(html`<lr-input appearance="filled" aria-label="b"></lr-input>`)) as LyraInput;
-    expect(getComputedStyle(wrapper(outlined)).backgroundColor).to.equal(TRANSPARENT);
+    const filledOutlined = (await fixture(html`<lr-input appearance="filled-outlined" aria-label="b"></lr-input>`)) as LyraInput;
+    const filled = (await fixture(html`<lr-input appearance="filled" aria-label="c"></lr-input>`)) as LyraInput;
+    const raised = resolvedColorToken(filled.shadowRoot!, '--lr-color-surface-raised');
+    expect(getComputedStyle(wrapper(outlined)).backgroundColor).to.equal(resolvedColorToken(outlined.shadowRoot!, '--lr-color-surface'));
     expect(getComputedStyle(wrapper(outlined)).borderTopColor).to.not.equal(TRANSPARENT);
+    expect(getComputedStyle(wrapper(filledOutlined)).backgroundColor).to.equal(raised);
+    expect(getComputedStyle(wrapper(filledOutlined)).borderTopColor).to.not.equal(TRANSPARENT);
     expect(getComputedStyle(wrapper(filled)).borderTopColor).to.equal(TRANSPARENT);
-    expect(getComputedStyle(wrapper(filled)).backgroundColor).to.not.equal(TRANSPARENT);
+    expect(getComputedStyle(wrapper(filled)).backgroundColor).to.equal(raised);
   });
 
   it('renders "plain" with neither fill nor border, and "accent" tinted away from "outlined"', async () => {
@@ -1934,21 +1939,25 @@ describe('lr-input implicit form submission', () => {
     expect(submitterName, 'the lr-button was the submitter').to.equal('action');
   });
 
-  it('names the form\'s first enabled native submit button as SubmitEvent.submitter', async () => {
+  it('names the form\'s default (first) submit button as SubmitEvent.submitter, and submits nothing while it is disabled', async () => {
     const form = (await fixture(html`
       <form>
         <lr-input name="q" value="hi" aria-label="Query"></lr-input>
-        <button type="submit" id="off" disabled>Off</button>
         <button type="submit" id="go">Go</button>
+        <button type="submit" id="other">Other</button>
       </form>
     `)) as HTMLFormElement;
-    let submitterId = '';
+    const submitters: string[] = [];
     form.addEventListener('submit', (e) => {
       e.preventDefault();
-      submitterId = ((e as SubmitEvent).submitter as HTMLElement | null)?.id ?? '';
+      submitters.push(((e as SubmitEvent).submitter as HTMLElement | null)?.id ?? '');
     });
     enterOn(form.querySelector('lr-input') as LyraInput);
-    expect(submitterId).to.equal('go');
+    expect(submitters).to.deep.equal(['go']);
+    form.querySelector<HTMLButtonElement>('#go')!.disabled = true;
+    enterOn(form.querySelector('lr-input') as LyraInput);
+    expect(submitters, 'a disabled default button blocks Enter rather than handing it to the next button').to
+      .deep.equal(['go']);
   });
 
   it('never submits on a modifier-held Enter', async () => {
@@ -2195,8 +2204,9 @@ describe('lr-input mapped Input parity surface', () => {
 });
 
 describe('lr-input debounce', () => {
-  it('debounces exactly one lr-input-settled 150ms after the last keystroke, while input/lr-input still fire per keystroke', async () => {
-    const el = (await fixture(html`<lr-input debounce="150" aria-label="Search"></lr-input>`)) as LyraInput;
+  // A 40ms debounce with waits of 2.5x it keeps the timing contract while the suite stays fast.
+  it('debounces exactly one lr-input-settled one debounce interval after the last keystroke, while input/lr-input still fire per keystroke', async () => {
+    const el = (await fixture(html`<lr-input debounce="40" aria-label="Search"></lr-input>`)) as LyraInput;
     const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
     const settled: CustomEvent[] = [];
     const rawInputs: string[] = [];
@@ -2211,14 +2221,14 @@ describe('lr-input debounce', () => {
     expect(rawInputs).to.deep.equal(['a', 'ab', 'abc']);
     expect(settled).to.have.length(0);
 
-    await new Promise((resolve) => setTimeout(resolve, 350));
+    await new Promise((resolve) => setTimeout(resolve, 120));
     expect(settled).to.have.length(1);
     expect(settled[0]!.detail).to.deep.equal({ value: 'abc' });
     expect(settled[0]!.cancelable).to.be.false;
   });
 
   it('flushes a pending debounce immediately on blur, with no dropped keystroke and no later stray settle', async () => {
-    const el = (await fixture(html`<lr-input debounce="150" aria-label="Search"></lr-input>`)) as LyraInput;
+    const el = (await fixture(html`<lr-input debounce="40" aria-label="Search"></lr-input>`)) as LyraInput;
     const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
     const settled: CustomEvent[] = [];
     el.addEventListener('lr-input-settled', (event) => settled.push(event as CustomEvent));
@@ -2234,12 +2244,12 @@ describe('lr-input debounce', () => {
     expect(settled).to.have.length(1);
     expect(settled[0]!.detail).to.deep.equal({ value: 'zz' });
 
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await new Promise((resolve) => setTimeout(resolve, 100));
     expect(settled).to.have.length(1);
   });
 
   it('flushes a pending debounce immediately on Enter and on the native change event', async () => {
-    const form = (await fixture(html`<form><lr-input debounce="150" aria-label="Search"></lr-input></form>`)) as HTMLFormElement;
+    const form = (await fixture(html`<form><lr-input debounce="40" aria-label="Search"></lr-input></form>`)) as HTMLFormElement;
     form.addEventListener('submit', (event) => event.preventDefault());
     const el = form.querySelector('lr-input') as LyraInput;
     const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
@@ -2266,7 +2276,7 @@ describe('lr-input debounce', () => {
   });
 
   it('does not cancel a pending debounce when a programmatic write re-binds the identical value (controlled-input pattern)', async () => {
-    const el = (await fixture(html`<lr-input debounce="150" aria-label="Search"></lr-input>`)) as LyraInput;
+    const el = (await fixture(html`<lr-input debounce="40" aria-label="Search"></lr-input>`)) as LyraInput;
     const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
     const settled: CustomEvent[] = [];
     el.addEventListener('lr-input-settled', (event) => settled.push(event as CustomEvent));
@@ -2283,13 +2293,13 @@ describe('lr-input debounce', () => {
     await el.updateComplete;
 
     expect(settled, 'a same-value rebind must not cancel the pending settle').to.have.length(0);
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await new Promise((resolve) => setTimeout(resolve, 100));
     expect(settled).to.have.length(1);
     expect(settled[0]!.detail).to.deep.equal({ value: 'typed' });
   });
 
   it('treats a null/undefined programmatic write as equal to an already-empty pending value (normalization)', async () => {
-    const el = (await fixture(html`<lr-input debounce="150" aria-label="Search"></lr-input>`)) as LyraInput;
+    const el = (await fixture(html`<lr-input debounce="40" aria-label="Search"></lr-input>`)) as LyraInput;
     const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
     const settled: CustomEvent[] = [];
     el.addEventListener('lr-input-settled', (event) => settled.push(event as CustomEvent));
@@ -2302,13 +2312,13 @@ describe('lr-input debounce', () => {
     await el.updateComplete;
 
     expect(settled, 'a null write matching an already-empty pending value must not cancel').to.have.length(0);
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await new Promise((resolve) => setTimeout(resolve, 100));
     expect(settled).to.have.length(1);
     expect(settled[0]!.detail).to.deep.equal({ value: '' });
   });
 
   it('cancels a pending debounce on a programmatic value write that actually changes the value, with no stray settle', async () => {
-    const el = (await fixture(html`<lr-input debounce="150" aria-label="Search"></lr-input>`)) as LyraInput;
+    const el = (await fixture(html`<lr-input debounce="40" aria-label="Search"></lr-input>`)) as LyraInput;
     const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
     const settled: CustomEvent[] = [];
     el.addEventListener('lr-input-settled', (event) => settled.push(event as CustomEvent));
@@ -2320,13 +2330,13 @@ describe('lr-input debounce', () => {
     el.value = 'x';
     await el.updateComplete;
 
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await new Promise((resolve) => setTimeout(resolve, 100));
     expect(settled).to.have.length(0);
     expect(el.value).to.equal('x');
   });
 
   it('cancels a pending debounce on the built-in clear button, and on disconnect', async () => {
-    const el = (await fixture(html`<lr-input debounce="150" clearable aria-label="Search"></lr-input>`)) as LyraInput;
+    const el = (await fixture(html`<lr-input debounce="40" clearable aria-label="Search"></lr-input>`)) as LyraInput;
     const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
     const settled: CustomEvent[] = [];
     el.addEventListener('lr-input-settled', (event) => settled.push(event as CustomEvent));
@@ -2336,17 +2346,17 @@ describe('lr-input debounce', () => {
     await el.updateComplete;
     (el.shadowRoot!.querySelector('[part="clear-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await new Promise((resolve) => setTimeout(resolve, 100));
     expect(settled).to.have.length(0);
 
-    const second = (await fixture(html`<lr-input debounce="150" aria-label="Search"></lr-input>`)) as LyraInput;
+    const second = (await fixture(html`<lr-input debounce="40" aria-label="Search"></lr-input>`)) as LyraInput;
     const secondInput = second.shadowRoot!.querySelector('input') as HTMLInputElement;
     second.addEventListener('lr-input-settled', (event) => settled.push(event as CustomEvent));
     secondInput.value = 'typed';
     secondInput.dispatchEvent(new Event('input', { bubbles: true }));
     await second.updateComplete;
     second.remove();
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await new Promise((resolve) => setTimeout(resolve, 100));
     expect(settled).to.have.length(0);
   });
 
@@ -2367,7 +2377,7 @@ describe('lr-input debounce', () => {
       await el.updateComplete;
       expect(rawInputs).to.deep.equal(['abc']);
 
-      await new Promise((resolve) => setTimeout(resolve, 250));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       expect(settled).to.have.length(0);
     }
   });

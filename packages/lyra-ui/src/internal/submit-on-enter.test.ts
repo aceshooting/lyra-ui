@@ -2,7 +2,6 @@ import { expect, fixture, html } from '@open-wc/testing';
 import {
   isImplicitSubmission,
   isNativeSubmitter,
-  findImplicitSubmitter,
   findDefaultButton,
   submitFormImplicitly,
   submitOnEnter,
@@ -47,33 +46,20 @@ it('rejects a keydown a listener above it already vetoed', () => {
   expect(isImplicitSubmission(event)).to.be.false;
 });
 
-// -- findImplicitSubmitter() ----------------------------------------------
+// -- findDefaultButton() submit-control classification ---------------------
 
-it('resolves the first enabled submit control, skipping disabled ones and non-submit buttons', async () => {
-  const form = (await fixture(html`
-    <form>
-      <input name="q" />
-      <button type="button" id="plain">Plain</button>
-      <button type="submit" id="off" disabled>Off</button>
-      <button type="submit" id="go">Go</button>
-      <button type="submit" id="later">Later</button>
-    </form>
-  `)) as HTMLFormElement;
-  expect(findImplicitSubmitter(form)?.id).to.equal('go');
-});
-
-it('resolves an lr-button[type=submit] as the submitter, even though it is not a native one', async () => {
+it('resolves an lr-button[type=submit] as the default button, even though it is not a native one', async () => {
   const form = (await fixture(html`
     <form><input name="q" /><lr-button id="go" type="submit">Go</lr-button></form>
   `)) as HTMLFormElement;
-  expect(findImplicitSubmitter(form)?.id).to.equal('go');
+  expect(findDefaultButton(form)?.id).to.equal('go');
 });
 
 it('returns null when the form has no submit control at all', async () => {
   const form = (await fixture(html`
     <form><input name="q" /><button type="button">Plain</button></form>
   `)) as HTMLFormElement;
-  expect(findImplicitSubmitter(form)).to.equal(null);
+  expect(findDefaultButton(form)).to.equal(null);
 });
 
 it('recognizes foreign-created native submit controls after adoption', () => {
@@ -94,7 +80,8 @@ it('recognizes foreign-created native submit controls after adoption', () => {
 
     const adoptedForm = document.adoptNode(foreignForm);
     document.body.append(adoptedForm);
-    expect(findImplicitSubmitter(adoptedForm)?.id).to.equal('go');
+    expect(findDefaultButton(adoptedForm)?.id, 'the foreign disabled button is still a submit control').to.equal('off');
+    expect(isNativeSubmitter(adoptedForm.querySelector('#go')!)).to.equal(true);
     adoptedForm.remove();
   } finally {
     frame.remove();
@@ -114,7 +101,7 @@ it('classifies native controls structurally when ambient element constructors ar
   try {
     runtime.HTMLButtonElement = undefined;
     runtime.HTMLInputElement = undefined;
-    expect(findImplicitSubmitter(form)?.id).to.equal('go');
+    expect(findDefaultButton(form)?.id).to.equal('go');
   } finally {
     runtime.HTMLButtonElement = NativeButton;
     runtime.HTMLInputElement = NativeInput;
@@ -128,10 +115,11 @@ it('rejects a button-shaped element outside the HTML namespace', () => {
   expect(isNativeSubmitter(foreignButton)).to.be.false;
 });
 
-it('treats a submitter as enabled when the DOM cannot evaluate :disabled', async () => {
+it('treats a default button as enabled when the DOM cannot evaluate :disabled', async () => {
   const form = (await fixture(html`
     <form><button id="go" type="submit">Go</button></form>
   `)) as HTMLFormElement;
+  const submits = countSubmits(form);
   const button = form.querySelector('button')!;
   Object.defineProperty(button, 'matches', {
     configurable: true,
@@ -140,7 +128,8 @@ it('treats a submitter as enabled when the DOM cannot evaluate :disabled', async
     },
   });
 
-  expect(findImplicitSubmitter(form)?.id).to.equal('go');
+  expect(submitFormImplicitly(form)).to.equal(true);
+  expect(submits()).to.equal(1);
 });
 
 // -- HTML implicit submission: the default button decides ----------------

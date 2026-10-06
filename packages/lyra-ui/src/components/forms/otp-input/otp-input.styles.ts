@@ -5,7 +5,7 @@ export const styles = css`
   :host {
     display: block;
     --_lr-otp-input-mask-char-default: '•';
-    --_lr-otp-input-segment-fill-default: transparent;
+    --_lr-otp-input-segment-fill-default: var(--lr-color-surface);
     --_lr-otp-input-segment-border-color-default: var(--lr-color-border);
     --_lr-otp-input-segment-radius-default: var(
       --segment-border-radius,
@@ -32,9 +32,11 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
   }
+  /* The sibling label rule; the column gap already supplies 2xs of the xs spacing. */
   [part~='label'] {
-    font-size: var(--lr-font-size-sm);
-    font-weight: var(--lr-font-weight-medium);
+    margin-block-end: calc(var(--lr-space-xs) - var(--lr-space-2xs));
+    font-size: var(--lr-font-size-md-sm);
+    font-weight: var(--lr-font-weight-semibold);
     color: var(--lr-color-text);
     overflow-wrap: anywhere;
   }
@@ -67,94 +69,6 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--segment-border-radius, var(--lr-form-control-radius, var(--lr-radius)));
     background: var(--lr-color-surface-raised);
-  }
-  /* Edge fade, gated on real overflow: ScrollOverflowController sets data-scroll-overflow from a
-     scrollWidth/clientWidth measurement; unconditional, it would fade a segment row that already
-     fits (the same damage lr-tab-group/lr-segmented/lr-stepper fixed). One-sided and RTL-aware:
-     data-scroll-start/data-scroll-end (same controller, logical, live on scroll) mark the edges
-     with more to reach, so a fully-scrolled edge is not faded. Both are :where()-wrapped to pin
-     specificity to the [data-scroll-overflow]-only baseline. */
-  [part~='segments'][data-scroll-overflow]:where([data-scroll-start][data-scroll-end]) {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-    mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-  }
-  [part~='segments'][data-scroll-overflow]:where(
-      [data-scroll-end]:not([data-scroll-start])
-    ) {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      var(--lr-mask-opaque),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-    mask-image: linear-gradient(
-      to right,
-      var(--lr-mask-opaque),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-  }
-  [part~='segments'][data-scroll-overflow]:where(
-      [data-scroll-start]:not([data-scroll-end])
-    ) {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque)
-    );
-    mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque)
-    );
-  }
-  :host(:dir(rtl))
-    [part~='segments'][data-scroll-overflow]:where(
-      [data-scroll-end]:not([data-scroll-start])
-    ) {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque)
-    );
-    mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque)
-    );
-  }
-  :host(:dir(rtl))
-    [part~='segments'][data-scroll-overflow]:where(
-      [data-scroll-start]:not([data-scroll-end])
-    ) {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      var(--lr-mask-opaque),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-    mask-image: linear-gradient(
-      to right,
-      var(--lr-mask-opaque),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
   }
   [part='control'] {
     position: absolute;
@@ -204,7 +118,10 @@ export const styles = css`
     box-shadow: 0 0 0 var(--lr-focus-ring-width) var(--lr-otp-input-active-ring-color, var(--lr-focus-ring-color));
   }
   [part~='invalid'] {
-    border-color: var(--lr-otp-input-invalid-border-color, var(--lr-color-danger));
+    border-color: var(
+      --lr-otp-input-invalid-border-color,
+      var(--lr-otp-input-segment-border-color, var(--_lr-otp-input-segment-border-color-default))
+    );
   }
   :host(:disabled) [part~='segment'] {
     opacity: var(--lr-opacity-disabled);

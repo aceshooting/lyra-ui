@@ -312,7 +312,7 @@ it("propagates locale, first-day-of-week and weekday-format to the nested lr-dat
       weekday-format="narrow"
     ></lr-date-input>`
   )) as LyraDateInput;
-  await el.updateComplete;
+  await el.show();
   const picker = el.shadowRoot!.querySelector(
     "lr-date-picker"
   ) as LyraDatePicker;
@@ -338,6 +338,7 @@ it("falls back to the default locale when a malformed locale is supplied", async
       ></lr-date-input>`
     )) as LyraDateInput;
     input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+    await el.show();
     picker = el.shadowRoot!.querySelector("lr-date-picker") as LyraDatePicker;
     await picker.updateComplete;
   } finally {
@@ -411,6 +412,7 @@ it("derives the displayed value, the day/month/year parse order, and the nested 
     new Date(2026, 6, 15).toLocaleDateString("en-GB")
   );
 
+  await el.show();
   const picker = el.shadowRoot!.querySelector(
     "lr-date-picker"
   ) as LyraDatePicker;
@@ -1239,16 +1241,16 @@ describe("reviewed date-input parity surface", () => {
     el.clear();
     expect(el.value).to.equal("");
     expect(events.map((event) => event.type)).to.deep.equal([
-      "lr-clear",
       "input",
       "change",
+      "lr-clear",
     ]);
-    expect(events[0] instanceof CustomEvent).to.be.true;
-    expect(events[1] instanceof InputEvent).to.be.true;
-    expect((events[1] as InputEvent).inputType).to.equal(
+    expect(events[2] instanceof CustomEvent).to.be.true;
+    expect(events[0] instanceof InputEvent).to.be.true;
+    expect((events[0] as InputEvent).inputType).to.equal(
       "deleteContentBackward"
     );
-    expect(events[2] instanceof CustomEvent).to.be.false;
+    expect(events[1] instanceof CustomEvent, "change is a native Event").to.be.false;
     for (const event of events) {
       expect(event.target === el, event.type).to.be.true;
       expect(event.bubbles, event.type).to.be.true;
@@ -1528,6 +1530,29 @@ describe("reviewed date-input parity surface", () => {
     expect(
       picker.shadowRoot!.querySelector('[data-date="2026-07-18"]')!.textContent
     ).to.include("Custom 18");
+  });
+
+  it("forwards day content added or removed while the calendar is open", async () => {
+    const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
+    await el.show();
+    const picker = el.shadowRoot!.querySelector("lr-date-picker") as LyraDatePicker;
+    await picker.updateComplete;
+    const shown = (): string => {
+      const daySlot = picker.shadowRoot!.querySelector<HTMLSlotElement>(
+        '[data-date="2026-07-20"] slot[name="day-2026-07-20"]'
+      );
+      const forwarding = daySlot?.assignedElements()[0] as HTMLSlotElement | undefined;
+      return forwarding?.assignedElements().map((node) => node.textContent).join("") ?? "";
+    };
+    const badge = Object.assign(document.createElement("span"), { slot: "day-2026-07-20", textContent: "Due" });
+    el.append(badge);
+    await el.updateComplete;
+    await picker.updateComplete;
+    expect(shown(), "late day content appears in the open calendar").to.equal("Due");
+    badge.remove();
+    await el.updateComplete;
+    await picker.updateComplete;
+    expect(shown()).to.equal("");
   });
 
   it("publishes reviewed states and parts and supports SSR label/hint hints", async () => {

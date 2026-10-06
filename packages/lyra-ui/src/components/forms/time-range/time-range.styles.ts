@@ -135,12 +135,18 @@ export const styles = css`
      invalid CSS, so recoloring the active preset otherwise means hijacking --lr-color-brand and
      --lr-color-on-brand. Unset, each falls back to the token the rule used before. */
   [part="preset-button"][data-active] {
-    background: var(--lr-time-range-preset-active-bg, var(--lr-color-brand));
-    border-color: var(
-      --lr-time-range-preset-active-border-color,
-      var(--lr-color-brand)
+    background: var(
+      --lr-time-range-preset-selected-bg,
+      var(--lr-time-range-preset-active-bg, var(--lr-color-brand))
     );
-    color: var(--lr-time-range-preset-active-color, var(--lr-color-on-brand));
+    border-color: var(
+      --lr-time-range-preset-selected-border-color,
+      var(--lr-time-range-preset-active-border-color, var(--lr-color-brand))
+    );
+    color: var(
+      --lr-time-range-preset-selected-color,
+      var(--lr-time-range-preset-active-color, var(--lr-color-on-brand))
+    );
   }
   /* The active preset's own held state needs its own rule: the [data-active] rule above is (0,2,0)
      and declares the same background and border-color as the generic :active arm, which sits
@@ -151,12 +157,18 @@ export const styles = css`
   [part="preset-button"][data-active]:active:where(:not(:disabled)) {
     background: color-mix(
       in oklab,
-      var(--lr-time-range-preset-active-bg, var(--lr-color-brand)),
+      var(
+        --lr-time-range-preset-selected-bg,
+        var(--lr-time-range-preset-active-bg, var(--lr-color-brand))
+      ),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
     border-color: color-mix(
       in oklab,
-      var(--lr-time-range-preset-active-border-color, var(--lr-color-brand)),
+      var(
+        --lr-time-range-preset-selected-border-color,
+        var(--lr-time-range-preset-active-border-color, var(--lr-color-brand))
+      ),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }

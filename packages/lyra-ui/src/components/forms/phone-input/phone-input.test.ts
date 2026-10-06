@@ -9,10 +9,9 @@ import '../button/button.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { styles } from './phone-input.styles.js';
 import { setFlagUrlResolver } from '../../media/flag/flag.class.js';
-// Registers the real shipped `fr` catalog's `shared` slice so the `locale="fr"` test below can
-// render without tripping the dev-mode locale-fallback warning that strict-console platform
-// lanes treat as fatal.
+// The fr slices keep the strict-console locale fallback warning out of the locale="fr" test.
 import '../../../translations/fr/shared.js';
+import '../../../translations/fr/forms.js';
 
 const TEST_FLAG_SRC = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3C/svg%3E';
 setFlagUrlResolver(async () => TEST_FLAG_SRC);
@@ -82,7 +81,7 @@ it("restores its nonempty native and validation defaults after attribute removal
   }
   await el.updateComplete;
   expect(el.size).to.equal("m");
-  expect(el.countryLabel).to.equal("Select");
+  expect(el.countryLabel).to.equal("Country");
   expect(el.incompleteText).to.equal("This phone number is incomplete.");
   expect(el.invalidText).to.equal("The value is invalid.");
   expect(el.autocomplete).to.equal("tel");
@@ -756,7 +755,7 @@ it('uses string overrides for the country-select label and both validation messa
     <lr-phone-input label="Phone number" default-country="LU" .adapter=${adapter}></lr-phone-input>
   `)) as LyraPhoneInput;
   el.strings = {
-    select: 'Choisir',
+    countryPickerLabel: 'Choisir',
     phoneInputIncomplete: 'Numéro incomplet.',
     valueInvalid: 'Numéro invalide.',
   };
@@ -1663,7 +1662,7 @@ it('shows the localized selector label as a quiet placeholder in the trigger whe
   await el.updateComplete;
   const code = el.shadowRoot!.querySelector('[part="country-code"]')!;
   expect(code.hasAttribute('data-placeholder')).to.equal(true);
-  expect(code.textContent!.trim()).to.equal('Select');
+  expect(code.textContent!.trim()).to.equal('Country');
   expect((el.shadowRoot!.querySelector('[part="country-select"]') as HTMLSelectElement).disabled).to.equal(true);
 });
 

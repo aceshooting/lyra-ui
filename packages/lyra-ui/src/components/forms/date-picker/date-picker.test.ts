@@ -539,17 +539,29 @@ it("disables every day button and dims the host when the picker itself is disabl
   expect(getComputedStyle(el).pointerEvents).to.equal("none");
 });
 
-it("disables every day button when the picker is readonly", async () => {
+it("keeps a readonly calendar reachable on the selected day while selection stays inert", async () => {
   const el = (await fixture(
     html`<lr-date-picker value="2026-07-15" readonly></lr-date-picker>`
   )) as LyraDatePicker;
   await el.updateComplete;
 
-  const days = el.shadowRoot!.querySelectorAll(
-    '[part~="day"]'
-  ) as NodeListOf<HTMLButtonElement>;
+  const days = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="day"]')];
   expect(days.length).to.be.greaterThan(0);
-  for (const day of days) expect(day.disabled).to.be.true;
+  expect(days.every((day) => !day.disabled), "readonly disables no day").to.be.true;
+  expect(
+    days.filter((day) => day.tabIndex === 0).map((day) => day.dataset["date"]),
+    "one roving stop, on the selected day"
+  ).to.deep.equal(["2026-07-15"]);
+  expect(el.shadowRoot!.querySelector('[part="grid"]')!.getAttribute("aria-readonly")).to.equal("true");
+
+  let events = 0;
+  el.addEventListener("input", () => events++);
+  el.addEventListener("change", () => events++);
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[data-date="2026-07-20"]')!.click();
+  dispatchGridKey(el, "Enter");
+  await el.updateComplete;
+  expect(el.value).to.equal("2026-07-15");
+  expect(events).to.equal(0);
 });
 
 it("moves roving focus one day left/right with ArrowLeft/ArrowRight", async () => {
@@ -1281,9 +1293,9 @@ it("disables the prev/next nav buttons when the picker itself is disabled", asyn
   expect(next.disabled).to.be.true;
 });
 
-it("disables the prev/next nav buttons when the picker is readonly", async () => {
+it("keeps month navigation available while the picker is readonly", async () => {
   const el = (await fixture(
-    html`<lr-date-picker readonly></lr-date-picker>`
+    html`<lr-date-picker readonly value="2026-07-15"></lr-date-picker>`
   )) as LyraDatePicker;
   await el.updateComplete;
   const prev = el.shadowRoot!.querySelector(
@@ -1292,8 +1304,12 @@ it("disables the prev/next nav buttons when the picker is readonly", async () =>
   const next = el.shadowRoot!.querySelector(
     '[part="next"]'
   ) as HTMLButtonElement;
-  expect(prev.disabled).to.be.true;
-  expect(next.disabled).to.be.true;
+  expect(prev.disabled).to.be.false;
+  expect(next.disabled).to.be.false;
+  next.click();
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[data-date="2026-08-15"]'), "browsing reaches August").to.exist;
+  expect(el.value, "browsing never changes the value").to.equal("2026-07-15");
 });
 
 // -- Lifecycle super calls ---------------------------------------------------

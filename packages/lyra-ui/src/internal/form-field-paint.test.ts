@@ -216,7 +216,7 @@ const FIELDS: readonly Field[] = [
     fillHook: '--lr-input-fill',
     borderHook: '--lr-input-border-color',
     hoverBorderHook: null,
-    restingFill: TRANSPARENT,
+    restingFill: '--lr-color-surface',
     render: () => html`<lr-input label="Name"></lr-input>`,
     enterFocusState: (host) => focusPart(host, '[part="input"]', 'lr-input'),
   },
@@ -227,7 +227,7 @@ const FIELDS: readonly Field[] = [
     fillHook: '--lr-time-input-fill',
     borderHook: '--lr-time-input-border-color',
     hoverBorderHook: null,
-    restingFill: TRANSPARENT,
+    restingFill: '--lr-color-surface',
     render: () => html`<lr-time-input label="Starts"></lr-time-input>`,
     // The row's own `[part='input']` is a role="group" div with no tabindex, so it refuses
     // `focus()`; the segments are the real focus targets and drive the same `:focus-within`.
@@ -240,7 +240,7 @@ const FIELDS: readonly Field[] = [
     fillHook: '--lr-textarea-fill',
     borderHook: '--lr-textarea-border-color',
     hoverBorderHook: '--lr-textarea-hover-border-color',
-    restingFill: TRANSPARENT,
+    restingFill: '--lr-color-surface',
     render: () => html`<lr-textarea label="Notes"></lr-textarea>`,
     enterFocusState: (host) => focusPart(host, '[part="textarea"]', 'lr-textarea'),
   },

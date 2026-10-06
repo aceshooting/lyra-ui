@@ -1760,22 +1760,23 @@ it("commits lr-change on keyup of Home/End/PageUp/PageDown, mirroring arrow-key 
   expect(changeDetail!.start).to.equal(0);
 });
 
-it("owns a bounded readonly snapshot of assigned preset rows", async () => {
+it("owns a frozen sequence of the caller's preset entries and renders them as assigned", async () => {
   const source = [{ label: "Initial", start: 1, end: 2 }];
   const el = (await fixture(
     html`<lr-time-range .presets=${source}></lr-time-range>`
   )) as LyraTimeRange;
   source[0]!.label = "Forged";
   source.push({ label: "Injected", start: 3, end: 4 });
-  expect(el.presets).to.deep.equal([{ label: "Initial", start: 1, end: 2 }]);
-  expect(Object.isFrozen(el.presets)).to.be.true;
-  expect(Object.isFrozen(el.presets[0])).to.be.true;
-  expect(
-    el.shadowRoot!.querySelectorAll('[part="preset-button"]')
-  ).to.have.lengthOf(1);
+  el.requestUpdate();
+  await el.updateComplete;
+  expect(el.presets.length).to.equal(1);
+  expect(el.presets[0] === source[0]).to.equal(true);
+  expect(Object.isFrozen(el.presets)).to.equal(true);
+  const buttons = el.shadowRoot!.querySelectorAll('[part="preset-button"]');
+  expect([buttons.length, buttons[0]!.textContent!.trim()]).to.deep.equal([1, "Initial"]);
 });
 
-it('copies a caller-supplied id into the frozen preset snapshot, and omits the key entirely when absent', async () => {
+it("reports the caller's own preset object, id included, as appliedPreset", async () => {
   const source: TimeRangePreset[] = [
     { label: 'Tagged', start: 1, end: 2, id: 'tagged-preset' },
     { label: 'Untagged', start: 3, end: 4 },
@@ -1783,12 +1784,9 @@ it('copies a caller-supplied id into the frozen preset snapshot, and omits the k
   const el = (await fixture(
     html`<lr-time-range .presets=${source}></lr-time-range>`
   )) as LyraTimeRange;
-
-  expect(el.presets).to.deep.equal([
-    { label: 'Tagged', start: 1, end: 2, id: 'tagged-preset' },
-    { label: 'Untagged', start: 3, end: 4 },
-  ]);
-  expect('id' in el.presets[1]!, 'no id key at all for an untagged preset').to.be.false;
+  el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="preset-button"]')[0]!.click();
+  expect(el.appliedPreset === source[0]).to.equal(true);
+  expect(el.presets[1] === source[1]).to.equal(true);
 });
 
 it('drops malformed preset rows while keeping the well-formed ones, in their original relative order', async () => {

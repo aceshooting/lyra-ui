@@ -62,6 +62,9 @@ import {
   type LyraDatePickerFirstDayOfWeek,
   type LyraDatePickerPageBy,
   type LyraDateRangePreset,
+  inclusiveDayCount,
+  parseDisabledWeekdays,
+  projectDisabledDateKeys,
 } from './date-picker.class.js';
 import './date-picker.class.js';
 import {
@@ -108,6 +111,114 @@ function localeDateOrder(locale: string): ('day' | 'month' | 'year')[] {
 }
 
 const BIDI_FORMATTING_MARKS = /[\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/g;
+
+type DateField = 'day' | 'month' | 'year';
+type DateFields = Partial<Record<DateField, string>>;
+/** Field owners: 0 = both endpoints, 1 = range start, 2 = range end. */
+type DatePattern = { regex: RegExp; fields: [0 | 1 | 2, DateField][] };
+type FormatPart = Intl.DateTimeFormatPart & { source?: string };
+
+const DASH_CLASS = '[-\\u2010-\\u2015\\u2212~\\u301c\\uff5e]';
+const DASH_LIKE = new RegExp(DASH_CLASS, 'u');
+
+/** Regex for one literal: optional whitespace around its characters, any dash for any dash. */
+function literalPattern(literal: string): string {
+  const visible = Array.from(literal.replace(/\s+/gu, ''));
+  if (!visible.length) return literal ? '\\s+' : '';
+  const chars = visible.map((char) =>
+    DASH_LIKE.test(char) ? DASH_CLASS : char.replace(/[.*+?^${}()|[\]\\/]/gu, '\\$&')
+  );
+  return `\\s*${chars.join('\\s*')}\\s*`;
+}
+
+function compileDatePattern(parts: readonly FormatPart[]): DatePattern | null {
+  const fields: DatePattern['fields'] = [];
+  const pieces: string[] = [];
+  for (const part of parts) {
+    if (part.type === 'day' || part.type === 'month' || part.type === 'year') {
+      fields.push([part.source === 'startRange' ? 1 : part.source === 'endRange' ? 2 : 0, part.type]);
+      pieces.push('(\\d{1,4})');
+    } else {
+      pieces.push(literalPattern(part.value.replace(BIDI_FORMATTING_MARKS, '')));
+    }
+  }
+  // Each endpoint needs exactly one day, month and year.
+  for (const owner of [1, 2] as const) {
+    for (const type of ['day', 'month', 'year'] as const) {
+      if (fields.filter(([o, t]) => t === type && (o === 0 || o === owner)).length !== 1) return null;
+    }
+  }
+  // A leading or trailing literal (e.g. ` \u0433.`) is optional.
+  const first = pieces.indexOf('(\\d{1,4})');
+  const last = pieces.lastIndexOf('(\\d{1,4})');
+  const optional = (source: string) => (source ? `(?:${source})?` : '');
+  const source =
+    optional(pieces.slice(0, first).join('')) +
+    pieces.slice(first, last + 1).join('') +
+    optional(pieces.slice(last + 1).join(''));
+  return { regex: new RegExp(`^\\s*${source}\\s*$`, 'iu'), fields };
+}
+
+function localeDatePatterns(locale: string) {
+  const formatter = dateTimeFormat(locale, { year: 'numeric', month: 'numeric', day: 'numeric' });
+  let letters = '';
+  const compile = (parts: readonly FormatPart[]) => {
+    for (const part of parts) {
+      if (part.type === 'literal') letters += (part.value.match(/\p{L}/gu) ?? []).join('');
+    }
+    return compileDatePattern(parts);
+  };
+  let single: DatePattern | null = null;
+  try {
+    single = compile(formatter.formatToParts(localDate(2026, 0, 2)));
+  } catch {
+    // The order-based numeric parse still applies.
+  }
+  const ranges: DatePattern[] = [];
+  // Day-only, month+day and all-field differences: every shape formatRange() collapses to.
+  for (const [from, to] of [
+    [localDate(2026, 0, 2), localDate(2026, 0, 3)],
+    [localDate(2026, 0, 2), localDate(2026, 1, 3)],
+    [localDate(2025, 0, 2), localDate(2026, 1, 3)],
+  ] as const) {
+    try {
+      const pattern = compile(formatter.formatRangeToParts(from, to));
+      if (pattern) ranges.push(pattern);
+    } catch {
+      // Typed ranges fall back to six digit groups.
+    }
+  }
+  return { single, ranges, letters: letters.toLowerCase() };
+}
+
+/** A valid local date from digit groups; a one- or two-digit year means 20xx. */
+function dateFromFields({ day, month, year }: DateFields): Date | null {
+  if (!day || !month || !year) return null;
+  const fullYear = year.length <= 2 ? 2000 + Number(year) : Number(year);
+  return parseISO(
+    `${String(fullYear).padStart(4, '0')}-${String(Number(month)).padStart(2, '0')}-${String(
+      Number(day)
+    ).padStart(2, '0')}`
+  );
+}
+
+function matchDatePattern(pattern: DatePattern | null, text: string): [Date, Date] | null {
+  const match = pattern?.regex.exec(text);
+  if (!pattern || !match) return null;
+  const start: DateFields = {};
+  const end: DateFields = {};
+  pattern.fields.forEach(([owner, type], index) => {
+    if (owner !== 2) start[type] = match[index + 1];
+    if (owner !== 1) end[type] = match[index + 1];
+  });
+  const from = dateFromFields(start);
+  const to = dateFromFields(end);
+  return from && to ? [from, to] : null;
+}
+
+function hasForeignLetters(text: string, letters: string): boolean {
+  return (text.match(/\p{L}/gu) ?? []).some((letter) => !letters.includes(letter.toLowerCase()));
+}
 
 /** Normalizes the locale digits and bidi marks the component itself can render before parsing. */
 function normalizeLocalizedDateText(raw: string, locale: string): string {
@@ -294,9 +405,10 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  *   non-cancelable native event.
  * @event lr-show - Fired before the calendar popover opens; cancelable.
  * @event lr-after-show - The calendar popover finished opening.
- * @event lr-hide - Fired before the calendar popover closes; cancelable.
+ * @event lr-hide - Fired before the calendar popover closes; cancelable unless disabling or
+ *   `readonly` forces the close.
  * @event lr-after-hide - The calendar popover finished closing.
- * @event lr-clear - The clear button was used.
+ * @event lr-clear - The clear button or `clear()` emptied the value; follows `input` and `change`.
  * @event {FocusEvent} blur - Re-dispatched from the internal `<input>`'s own `blur` as a bubbling,
  *   composed, non-cancelable event, unlike the native event.
  * @event {FocusEvent} focus - Re-dispatched from the internal `<input>`'s own `focus` as a
@@ -321,7 +433,7 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * @csspart expand-button - The calendar popup toggle.
  * @csspart expand-icon - The calendar icon.
  * @csspart popup - The positioned calendar popup.
- * @csspart date-picker - The nested date picker.
+ * @csspart date-picker - The nested date picker, rendered only while the calendar is open or closing.
  * @csspart presets - The nested picker's quick-range row, forwarded from `<lr-date-picker>`.
  * @csspart preset-button - One quick-range button, forwarded from `<lr-date-picker>`.
  * @csspart hint - The hint message.
@@ -362,8 +474,8 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * input row, `transparent` by default on the `filled` treatment.
  * @cssprop [--lr-form-control-focus-shadow=none] - The shared field focus halo, painted as a
  * `box-shadow` while this control is focused. One name for every field-shaped control in the
- * library, so a halo is configured once rather than per component. Additive: the focus outline and
- * border cue are the accessibility answer to focus and are never replaced by it.
+ * library, so a halo is configured once rather than per component. Additive: the brand border cue
+ * is the accessibility answer to focus and is never replaced by it.
  * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker rendered after the
  * label. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a
  * localized word) to replace it. Caller-supplied content, so it is never localized here.
@@ -471,6 +583,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     }
     this.requestUpdate('open', old);
   }
+  /** Shows the clear action while there is a value; same as `withClear`. */
+  @property({ type: Boolean, reflect: true }) clearable = false;
+  /** Alias of {@link clearable}. */
   @property({ type: Boolean, attribute: 'with-clear' }) withClear = false;
   @property({ type: Boolean, attribute: 'with-hint' }) withHint = false;
   @property({ type: Boolean, attribute: 'with-label' }) withLabel = false;
@@ -620,6 +735,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
    *  ignore -- the native `change` the browser fires for that very same keystroke, which would
    *  otherwise re-commit the identical text and emit a second `input`/`change` pair. */
   private enterCommittedText: string | null = null;
+  /** Set while the field's own text commits; that text is already on screen. */
+  private committingTypedText = false;
+  private forcingClose = false;
   /** Whether the internal text field already relayed the native input event for the edit that is
    *  about to commit. Synthetic test/integration changes can arrive without a preceding input;
    *  those receive one generated InputEvent so every committed transition keeps the same public
@@ -649,6 +767,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     Set<() => void>
   >();
   private interactionListeners = new Map<string, EventListener>();
+  private daySlotObserver?: MutationObserver;
+  private disabledDateKeysCache?: [unknown, ReadonlySet<string>];
+  private renderedDaySlots = '';
   private validatorAttributeObserver?: {
     observer: MutationObserver;
     owner: Window;
@@ -768,7 +889,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     const old = this._readonly;
     this._readonly = Boolean(next);
     this.toggleAttribute('readonly', this._readonly);
-    if (this._readonly) void this.hide();
+    if (this._readonly) this.forceClose();
     this.updateValidity();
     this.requestUpdate('readonly', old);
   }
@@ -779,7 +900,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
 
   override set disabled(next: boolean) {
     super.disabled = next;
-    if (next) void this.hide();
+    if (next) this.forceClose();
     this.syncCustomStates();
   }
 
@@ -844,6 +965,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
 
   override set value(next: string) {
     this.setTypedBadInput(false);
+    const old = super.value;
     const normalized = this.normalizeCommittedValue(next ?? '');
     super.value = normalized;
     // A first range endpoint is a real live UI value, but it is not yet a complete submitted
@@ -852,6 +974,15 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       this.isIncompleteRangeValue(normalized) ? '' : normalized
     );
     this.syncCustomStates();
+    if (normalized !== old) this.valueReplaced();
+  }
+
+  /** Ends the Enter commit window and shows a value that did not come from the typed text. */
+  private valueReplaced(): void {
+    this.enterCommittedText = null;
+    if (!this.committingTypedText && this.inputElement) {
+      this.inputElement.value = this.displayText;
+    }
   }
 
   get valueAsDate(): Date | null {
@@ -863,6 +994,27 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       isDateObject(next) && Number.isFinite(next.getTime())
         ? formatISO(next)
         : '';
+  }
+
+  /** Same as `valueAsDate`: the value at local midnight. */
+  get valueAsLocalDate(): Date | null {
+    return this.valueAsDate;
+  }
+
+  set valueAsLocalDate(next: Date | null) {
+    this.valueAsDate = next;
+  }
+
+  /** The value at UTC midnight, like a native date input's `valueAsDate`. */
+  get valueAsUTCDate(): Date | null {
+    const local = this.valueAsDate;
+    return local ? utcDate(local.getFullYear(), local.getMonth(), local.getDate()) : null;
+  }
+
+  set valueAsUTCDate(next: Date | null) {
+    this.valueAsDate = isDateObject(next)
+      ? localDate(next.getUTCFullYear(), next.getUTCMonth(), next.getUTCDate())
+      : null;
   }
 
   /** Date-range projection of `value`; writes normalize reversed endpoints and remain event-silent. */
@@ -950,66 +1102,12 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     return dates.some((date) => date === null) ? null : (dates as Date[]);
   }
 
-  private configuredDisabledDateKeys(): Set<string> {
-    const values = Array.isArray(this.disabledDates)
-      ? this.disabledDates
-      : String(this.disabledDates || '').split(/[\s,]+/);
-    return new Set(
-      values
-        .map((value) => (isDateObject(value) ? value : parseISO(String(value))))
-        .filter(
-          (value): value is Date =>
-            isDateObject(value) && Number.isFinite(value.getTime())
-        )
-        .map((value) => formatISO(value))
-    );
-  }
-
-  private configuredDisabledWeekdays(): Set<number> {
-    const names: Record<string, number> = {
-      sun: 0,
-      sunday: 0,
-      mon: 1,
-      monday: 1,
-      tue: 2,
-      tues: 2,
-      tuesday: 2,
-      wed: 3,
-      wednesday: 3,
-      thu: 4,
-      thur: 4,
-      thurs: 4,
-      thursday: 4,
-      fri: 5,
-      friday: 5,
-      sat: 6,
-      saturday: 6,
-    };
-    return new Set(
-      String(this.disabledDaysOfWeek || '')
-        .toLowerCase()
-        .split(/[\s,]+/)
-        .filter(Boolean)
-        .map(
-          (value) =>
-            names[value] ?? (/^[0-6]$/.test(value) ? Number(value) : -1)
-        )
-        .filter((value) => value >= 0)
-    );
-  }
-
-  private rangeLength(from: Date, to: Date): number {
-    const fromUtc = utcDate(
-      from.getFullYear(),
-      from.getMonth(),
-      from.getDate()
-    ).getTime();
-    const toUtc = utcDate(
-      to.getFullYear(),
-      to.getMonth(),
-      to.getDate()
-    ).getTime();
-    return Math.round(Math.abs(toUtc - fromUtc) / 86_400_000) + 1;
+  private get disabledDateKeys(): ReadonlySet<string> {
+    const source = this.disabledDates;
+    if (!this.disabledDateKeysCache || this.disabledDateKeysCache[0] !== source) {
+      this.disabledDateKeysCache = [source, new Set(projectDisabledDateKeys(source))];
+    }
+    return this.disabledDateKeysCache[1];
   }
 
   private validatorResult(): { flags?: ValidityStateFlags; message?: string } {
@@ -1108,7 +1206,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
         if (min !== null && dates.some((date) => date < min)) {
           flags.rangeUnderflow = true;
           underflowMessage = this.localize('dateInputMinMessage', undefined, {
-            min: this.min,
+            min: this.displayDate(min),
           });
         }
         if (this.disablePast && dates.some((date) => date < today)) {
@@ -1118,15 +1216,15 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
         if (max !== null && dates.some((date) => date > max)) {
           flags.rangeOverflow = true;
           overflowMessage = this.localize('dateInputMaxMessage', undefined, {
-            max: this.max,
+            max: this.displayDate(max),
           });
         }
         if (this.disableFuture && dates.some((date) => date > today)) {
           flags.rangeOverflow = true;
           overflowMessage ||= this.localize('dateInputFutureDisabled');
         }
-        const disabledDates = this.configuredDisabledDateKeys();
-        const disabledWeekdays = this.configuredDisabledWeekdays();
+        const disabledDates = this.disabledDateKeys;
+        const disabledWeekdays = parseDisabledWeekdays(this.disabledDaysOfWeek);
         let configuredDisabled = dates.some(
           (date) =>
             disabledDates.has(formatISO(date)) ||
@@ -1143,7 +1241,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
         }
         if (configuredDisabled) flags.customError = true;
         if (this.mode === 'range' && dates.length === 2) {
-          const length = this.rangeLength(dates[0]!, dates[1]!);
+          const length = inclusiveDayCount(dates[0]!, dates[1]!);
           const minimum = finiteCount(this.minRange, 0);
           const maximum = finiteCount(this.maxRange, 0);
           if (minimum > 0 && length < minimum) {
@@ -1223,6 +1321,14 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this.visibilityListener = undefined;
   }
 
+  private displayDate(date: Date): string {
+    return dateTimeFormat(this.effectiveLocale, {
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+    }).format(date);
+  }
+
   private get displayText(): string {
     const parts = this.value.split('/');
     // parts[0] always exists (String.split() on '/' never returns an empty array); only
@@ -1295,7 +1401,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   /** Close the calendar popover, unless the cancelable `lr-hide` request is vetoed. */
   hide(restoreFocus: boolean = false): Promise<void> {
     if (!this.open) return Promise.resolve();
-    const request = this.emit('lr-hide', null, { cancelable: true });
+    const request = this.emit('lr-hide', null, { cancelable: !this.forcingClose });
     if (request.defaultPrevented) return Promise.resolve();
     this.resolveTransitionWaiters('lr-after-show');
     const settled = this.waitForTransition('lr-after-hide');
@@ -1304,6 +1410,16 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     void this.settleTransition('lr-after-hide');
     return settled;
   }
+  /** Closes with a non-cancelable `lr-hide`: a disabled or readonly field cannot stay open. */
+  private forceClose(): void {
+    this.forcingClose = true;
+    try {
+      void this.hide();
+    } finally {
+      this.forcingClose = false;
+    }
+  }
+
   private onDocPointer = (e: PointerEvent): void => {
     if (!e.composedPath().includes(this)) void this.hide(false);
   };
@@ -1327,14 +1443,16 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     };
     this.pointerListenerDocument = ownerDocument;
     this.pointerListener = listener;
-    ownerDocument.addEventListener('pointerdown', listener);
+    // Capture phase: an outside stopPropagation() must not keep the calendar open.
+    ownerDocument.addEventListener('pointerdown', listener, true);
   }
 
   private unbindDocumentPointer(): void {
     if (this.pointerListenerDocument && this.pointerListener) {
       this.pointerListenerDocument.removeEventListener(
         'pointerdown',
-        this.pointerListener
+        this.pointerListener,
+        true
       );
     }
     this.pointerListenerDocument = undefined;
@@ -1438,6 +1556,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.observeDaySlots();
     this.syncExternalDescription();
     this.bindVisibilityListener();
     this.syncInteractionListeners();
@@ -1447,7 +1566,33 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       queueMicrotask(() => this.reconnectOpenPopup());
   }
 
-  /** Clear the value. */
+  private daySlotNames(): string[] {
+    return [
+      ...new Set(
+        Array.from(this.children ?? [])
+          .map((child) => child.getAttribute('slot') ?? '')
+          .filter((name) => /^day-\d{4}-\d{2}-\d{2}$/.test(name))
+      ),
+    ];
+  }
+
+  /** Re-renders when day content changes, so late day slots get forwarded. */
+  private observeDaySlots(): void {
+    const Observer = this.ownerDocument.defaultView?.MutationObserver;
+    if (this.daySlotObserver || !Observer) return;
+    this.daySlotObserver = new Observer(() => {
+      if (this.daySlotNames().join(' ') !== this.renderedDaySlots) this.requestUpdate();
+    });
+    this.daySlotObserver.observe(this, { childList: true, subtree: true, attributeFilter: ['slot'] });
+  }
+
+  /** Unlike `clear()`, the clear button returns focus to the field. */
+  private onClearClick = (): void => {
+    this.clear();
+    this.inputElement?.focus();
+  };
+
+  /** Clear the value (`input`, `change`, `lr-clear`); inert while blank, disabled or readonly. */
   clear(): void {
     if (!this.value || this.liveDisabled || this.readonly) return;
     // Matches how `onInputBlur` already flips this on the first blur -- an
@@ -1459,10 +1604,10 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     // below, which a consumer reads `appliedPreset` from.
     this._appliedPreset = undefined;
     this.value = '';
-    this.emit('lr-clear');
     this.inputRelayedSinceCommit = false;
     dispatchNativeInputEvent(this, { inputType: 'deleteContentBackward' });
     dispatchNativeEvent(this, 'change');
+    this.emit('lr-clear');
   }
 
   private syncInteractionListeners(): void {
@@ -1563,6 +1708,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
 
   override disconnectedCallback(): void {
     this.popupHidden = true;
+    this.daySlotObserver?.disconnect();
+    this.daySlotObserver = undefined;
     this.externalDescription?.release();
     this.externalDescription = undefined;
     this.transitionToken++;
@@ -1726,6 +1873,15 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     }
   }
 
+  private commitTypedValue(next: string): void {
+    this.committingTypedText = true;
+    try {
+      this.value = next;
+    } finally {
+      this.committingTypedText = false;
+    }
+  }
+
   /** Parses raw typed text and, if it resolves to a real date (or range),
    *  commits it as the new value; otherwise reverts the field to the last
    *  committed display text and flags bad input. Either branch keeps `value`,
@@ -1750,7 +1906,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       if (this.value !== '') this._appliedPreset = undefined;
       // The mixin's value setter recomputes validity (updateValidity()),
       // which clears any stale badInput state along the way.
-      this.value = '';
+      this.commitTypedValue('');
       return true;
     }
     const parsed =
@@ -1759,7 +1915,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
         : this.parseSingleText(trimmed);
     if (parsed) {
       if (parsed !== this.value) this._appliedPreset = undefined;
-      this.value = parsed;
+      this.commitTypedValue(parsed);
       return true;
     }
     // Unparseable text: don't silently keep the committed value while the
@@ -1811,52 +1967,29 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     relayNativeEvent(this, event);
   };
 
-  /** Parses one date, ISO-first (so a calendar-invalid ISO string like
-   *  "2026-02-30" is rejected rather than silently rolled over by Date.parse()).
-   *  A 3-part, ambiguous slash/dot/dash-separated date (e.g. "15/07/2026") is
-   *  parsed according to the locale's own day/month/year order (via a real
-   *  Intl.DateTimeFormat sample, see localeDateOrder()) rather than
-   *  Date.parse()'s implementation-defined heuristics -- this is what prevents
-   *  e.g. an en-GB "15/07/2026" from being silently misread as some other day.
-   *  A 4-digit first group (e.g. "2026-7-15") is never locale-guessed, though:
-   *  it's unambiguously a year regardless of locale/separator (ISO's own
-   *  year-first convention, just without zero-padding), so it's routed
-   *  straight through parseISO() instead -- this is what lets a non-padded
-   *  ISO-ish date keep parsing correctly (it did via Date.parse() before the
-   *  ambiguous-date regex below existed at all).
-   *  Anything else (e.g. "July 15, 2026") still falls through to Date.parse(). */
+  /** Three digit groups in the locale's day/month/year order; a 4-digit first group is the year. */
+  private numericDate(groups: readonly string[]): Date | null {
+    if (groups.length !== 3) return null;
+    const order: DateField[] =
+      groups[0]!.length === 4 ? ['year', 'month', 'day'] : localeDateOrder(this.effectiveLocale);
+    const fields: DateFields = {};
+    order.forEach((type, index) => {
+      fields[type] = groups[index];
+    });
+    return dateFromFields(fields);
+  }
+
+  /** Own display shape, strict ISO, then digit groups; only spelled-out text hits Date.parse(). */
   private parseOneDate(raw: string): Date | null {
-    raw = normalizeLocalizedDateText(raw, this.effectiveLocale);
-    const looksLikeISO = /^\d{4}-\d{2}-\d{2}$/.test(raw);
-    if (looksLikeISO) return parseISO(raw);
-
-    const ambiguous = /^(\d{1,4})[/.-](\d{1,4})[/.-](\d{1,4})$/.exec(raw);
-    if (ambiguous) {
-      // safe: g1/g2/g3 are mandatory (non-optional) capture groups, so a successful match populates all three
-      const [, g1, g2, g3] = ambiguous;
-      if (g1!.length === 4) {
-        return parseISO(
-          `${g1}-${g2!.padStart(2, '0')}-${g3!.padStart(2, '0')}`
-        );
-      }
-      const order = localeDateOrder(this.effectiveLocale);
-      const values = [Number(g1), Number(g2), Number(g3)];
-      const fields: Partial<Record<'day' | 'month' | 'year', number>> = {};
-      order.forEach((type, i) => {
-        fields[type] = values[i];
-      });
-      if (fields.day != null && fields.month != null && fields.year != null) {
-        const year = fields.year < 100 ? 2000 + fields.year : fields.year;
-        return parseISO(
-          `${String(year).padStart(4, '0')}-${String(fields.month).padStart(
-            2,
-            '0'
-          )}-${String(fields.day).padStart(2, '0')}`
-        );
-      }
-    }
-
-    const timestamp = Date.parse(raw);
+    const text = normalizeLocalizedDateText(raw, this.effectiveLocale);
+    const patterns = localeDatePatterns(this.effectiveLocale);
+    const own = matchDatePattern(patterns.single, text);
+    if (own) return own[0];
+    if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return parseISO(text);
+    const groups = text.match(/\d+/g) ?? [];
+    if (!hasForeignLetters(text, patterns.letters)) return this.numericDate(groups);
+    if (groups.length === 3) return null;
+    const timestamp = Date.parse(text);
     return Number.isNaN(timestamp) ? null : new Date(timestamp);
   }
 
@@ -1892,12 +2025,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     }
   }
 
-  /** Only round-trips the exact `displayText` shape this component itself
-   *  renders (`"<locale from> – <locale to>"`) — a raw ISO range typed
-   *  directly (`"2026-05-01/2026-05-15"`) is also accepted as a convenience.
-   *  A reversed typed range (`to` before `from`) is normalized into
-   *  from-before-to order, matching what the date-picker's own UI-driven
-   *  `commit()` already does for a UI-picked range. */
+  /** Parses every range shape the field renders, raw ISO and six digit groups, in order. */
   private parseRangeText(raw: string): string | null {
     raw = normalizeLocalizedDateText(raw, this.effectiveLocale);
     if (
@@ -1915,15 +2043,32 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       if (!from || !to) return null;
       return from <= to ? raw : `${b}/${a}`;
     }
-    const separator = this.localizedRangeSeparator();
-    const idx = raw.indexOf(separator);
-    if (idx === -1) return null;
-    const from = this.parseOneDate(raw.slice(0, idx).trim());
-    const to = this.parseOneDate(raw.slice(idx + separator.length).trim());
-    if (!from || !to) return null;
-    return from <= to
-      ? `${formatISO(from)}/${formatISO(to)}`
-      : `${formatISO(to)}/${formatISO(from)}`;
+    const patterns = localeDatePatterns(this.effectiveLocale);
+    let pair: [Date, Date] | null = null;
+    for (const pattern of [...patterns.ranges, patterns.single]) {
+      pair ??= matchDatePattern(pattern, raw);
+    }
+    if (!pair) {
+      const groups = raw.match(/\d+/g) ?? [];
+      if (!hasForeignLetters(raw, patterns.letters)) {
+        if (groups.length !== 6) return null;
+        const from = this.numericDate(groups.slice(0, 3));
+        const to = this.numericDate(groups.slice(3));
+        pair = from && to ? [from, to] : null;
+      } else {
+        const separator = this.localizedRangeSeparator();
+        const idx = raw.indexOf(separator);
+        if (idx === -1) return null;
+        const from = this.parseOneDate(raw.slice(0, idx).trim());
+        const to = this.parseOneDate(raw.slice(idx + separator.length).trim());
+        pair = from && to ? [from, to] : null;
+      }
+    }
+    if (!pair) return null;
+    const [from, to] = pair[0] <= pair[1] ? pair : [pair[1], pair[0]];
+    const start = formatISO(from);
+    const end = formatISO(to);
+    return start && end ? `${start}/${end}` : null;
   }
 
   private onInputKey = (e: KeyboardEvent): void => {
@@ -2040,6 +2185,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
 
   override formResetCallback(): void {
     super.formResetCallback();
+    // Like a native field, a reset discards uncommitted typed text.
+    this.valueReplaced();
     this.touched = false;
     // A reset restores `defaultValue`, which is author-supplied markup rather than anything the
     // user chose from the quick-range row.
@@ -2051,7 +2198,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       formDisabledCallback: (this: LyraDateInput, disabled: boolean) => void;
     };
     parent.formDisabledCallback.call(this, disabled);
-    if (disabled) void this.hide();
+    if (disabled) this.forceClose();
     this.syncCustomStates();
   }
 
@@ -2128,13 +2275,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     ]
       .filter(Boolean)
       .join(' ');
-    const dynamicDaySlots = [
-      ...new Set(
-        Array.from(this.children ?? [])
-          .map((child) => child.getAttribute('slot') ?? '')
-          .filter((name) => /^day-\d{4}-\d{2}-\d{2}$/.test(name))
-      ),
-    ];
+    const dynamicDaySlots = this.daySlotNames();
+    this.renderedDaySlots = dynamicDaySlots.join(' ');
     return html`
       <div part="date-input">
         <div part="base">
@@ -2193,13 +2335,13 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
                 </span>
                 <span part="range-separator" hidden aria-hidden="true">–</span>
               </span>
-              ${this.withClear && hasValue
+              ${(this.clearable || this.withClear) && hasValue
                 ? html`<button
                     part="clear-button"
                     type="button"
                     ?disabled=${this.effectiveDisabled || this.readonly}
                     aria-label=${this.clearLabelAuthored ? this.clearLabel : this.localize('clear')}
-                    @click=${() => this.clear()}
+                    @click=${this.onClearClick}
                   >
                     <span aria-hidden="true" inert
                       ><slot name="clear-icon">${closeIcon()}</slot></span
@@ -2236,7 +2378,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
               aria-label=${this.dialogLabelAuthored ? this.dialogLabel : this.localize('chooseDate')}
             >
               <span class="glass-scroll-layer" aria-hidden="true"></span>
-              <lr-date-picker
+              ${this.popupHidden
+                ? nothing
+                : html`<lr-date-picker
                 part="date-picker"
                 .value=${this.value}
                 .mode=${this.mode}
@@ -2276,7 +2420,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
                 ${dynamicDaySlots.map(
                   (name) => html`<slot name=${name} slot=${name}></slot>`
                 )}
-              </lr-date-picker>
+              </lr-date-picker>`}
             </div>
             <div id="date-input-error" part="error" ?hidden=${!hasError}>
               ${this.errorText}<slot

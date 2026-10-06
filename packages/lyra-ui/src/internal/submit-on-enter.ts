@@ -209,19 +209,6 @@ export function isImplicitSubmission(event: KeyboardEvent): boolean {
 }
 
 /**
- * The first enabled submit control in `form.elements` (tree order), native or custom — not the HTML
- * default button, which is {@link findDefaultButton}. `null` when the form has none.
- */
-export function findImplicitSubmitter(form: HTMLFormElement): HTMLElement | null {
-  for (const element of Array.from(form.elements)) {
-    if (!isSubmitControl(element)) continue;
-    if (isInert(element)) continue;
-    return element as HTMLElement;
-  }
-  return null;
-}
-
-/**
  * The form's default button: the first submit control in `form.elements` (tree order), native or
  * custom, whether or not it is disabled. `null` when the form has none.
  */

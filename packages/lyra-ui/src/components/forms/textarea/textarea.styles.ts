@@ -21,7 +21,7 @@ export const styles = css`
     --_lr-textarea-font-size: var(--lr-form-control-font-size);
     --_lr-textarea-radius: var(--lr-form-control-radius);
     /* Fill/border pair swapped per appearance below; the mapped default is outlined. */
-    --_lr-textarea-fill: transparent;
+    --_lr-textarea-fill: var(--lr-color-surface);
     --_lr-textarea-border-color: var(--lr-color-border);
     /* The shared field focus halo (internal/form-control.styles.ts). Only this private copy is
        declared; the PUBLIC name stays undeclared, so a value set on :root or any ancestor still
@@ -35,11 +35,11 @@ export const styles = css`
     --_lr-textarea-radius: var(--lr-radius-pill);
   }
   :host([appearance="filled-outlined"]) {
-    --_lr-textarea-fill: var(--lr-color-surface);
+    --_lr-textarea-fill: var(--lr-color-surface-raised);
     --_lr-textarea-border-color: var(--lr-color-border);
   }
   :host([appearance="outlined"]) {
-    --_lr-textarea-fill: transparent;
+    --_lr-textarea-fill: var(--lr-color-surface);
     --_lr-textarea-border-color: var(--lr-color-border);
   }
   :host([appearance="filled"]) {
@@ -125,30 +125,13 @@ export const styles = css`
       var(--_lr-textarea-max-block-size)
     );
   }
-  [part="textarea"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
-  }
-  /* The opt-in focus halo, on :focus rather than :focus-visible: the outline above is the
-     accessibility answer to KEYBOARD focus and is untouched, while a halo a consumer deliberately
-     configured should read on a pointer focus too. Unset it resolves to none. The border-color
-     alongside it is the sibling controls' focus-border hook (--lr-input-focus-border-color and
-     friends), but its own unset fallback deliberately chains back to this field's OWN resting
-     border -- var(--lr-textarea-border-color, var(--_lr-textarea-border-color)), the exact value
-     [part='textarea'] above already paints -- rather than to --lr-color-brand the way those
-     siblings do. Before this hook existed the border never repainted on focus at all, only the
-     outline and halo did; chaining to the resting value keeps that unset rendering pixel-identical
-     while still giving a consumer a named hook to change it. */
+  /* Brand edge plus the opt-in halo; :focus so a pointer focus reads too. */
   [part="textarea"]:focus {
-    border-color: var(
-      --lr-textarea-focus-border-color,
-      var(--lr-textarea-border-color, var(--_lr-textarea-border-color))
-    );
+    outline: none;
+    border-color: var(--lr-textarea-focus-border-color, var(--lr-color-brand));
     ${formControlFocusHalo}
   }
-  /* The same 'this is interactive' cue the :focus-visible ring above gives keyboard users --
-     mirrors lr-checkbox's and lr-radio's [part='base']:hover, gating on the host's own :disabled
-     rather than the inner control's, so all three read the same way. */
+  /* Pointer hover cue, gated on the host's own :disabled like lr-checkbox and lr-radio. */
   /* no-pressed-state: pressing inside a text surface places a caret, it actuates nothing. The
      mousedown matching :active is the same gesture that focuses the field, so a pressed treatment
      would flicker for one frame between the hover border and the focus ring; focus is this

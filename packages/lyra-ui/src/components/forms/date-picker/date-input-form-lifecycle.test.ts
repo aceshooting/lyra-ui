@@ -1,5 +1,7 @@
 // Focused native form lifecycle cases. Test bodies and titles were moved intact from the prior suite.
 import { fixture, expect, html } from "@open-wc/testing";
+import { sendKeys } from "@web/test-runner-commands";
+import { focusByKeyboard } from "../../../../test/wtr-focus.js";
 import "./date-input.js";
 import "../button/button.js";
 import type { LyraDateInput } from "./date-input.js";
@@ -290,6 +292,12 @@ describe("complete programmatic validity", () => {
 
   it("reports the explicit bound when it is stricter than a temporal bound", async () => {
     const year = new Date().getFullYear();
+    // The bound is quoted the way the field displays dates (default en-US locale here).
+    const shown = (iso: string) => {
+      const [y, m, d] = iso.split("-").map(Number);
+      return new Intl.DateTimeFormat("en-US", { year: "numeric", month: "numeric", day: "numeric", calendar: "gregory" })
+        .format(new Date(y!, m! - 1, d!));
+    };
     const futureValue = `${year + 1}-01-01`;
     const futureMin = `${year + 2}-01-01`;
     const underflow = (await fixture(html`
@@ -300,7 +308,7 @@ describe("complete programmatic validity", () => {
       ></lr-date-input>
     `)) as LyraDateInput;
     expect(underflow.internals.validity.rangeUnderflow).to.be.true;
-    expect(underflow.internals.validationMessage).to.contain(futureMin);
+    expect(underflow.internals.validationMessage).to.contain(shown(futureMin));
 
     const pastValue = `${year - 1}-01-01`;
     const pastMax = `${year - 2}-01-01`;
@@ -312,7 +320,7 @@ describe("complete programmatic validity", () => {
       ></lr-date-input>
     `)) as LyraDateInput;
     expect(overflow.internals.validity.rangeOverflow).to.be.true;
-    expect(overflow.internals.validationMessage).to.contain(pastMax);
+    expect(overflow.internals.validationMessage).to.contain(shown(pastMax));
   });
 
   it("sanitizes calendar-invalid declarative, IDL, and restored values to empty", async () => {
@@ -519,7 +527,7 @@ it("normalizes invalid calendar count and weekday format attributes before propa
   const el = (await fixture(
     html`<lr-date-input months="999" weekday-format="bogus"></lr-date-input>`
   )) as LyraDateInput;
-  await el.updateComplete;
+  await el.show();
   const picker = el.shadowRoot!.querySelector(
     "lr-date-picker"
   ) as LyraDatePicker;
@@ -575,6 +583,40 @@ it("tears down an open popover when disabled, fieldset-disabled, or made readonl
       .shadowRoot!.querySelector('[part="expand-button"]')!
       .getAttribute("aria-expanded")
   ).to.equal("false");
+});
+
+it("closes on disable, fieldset disable, and readonly even when an lr-hide listener vetoes", async () => {
+  const form = (await fixture(html`
+    <form>
+      <fieldset><lr-date-input value="2026-01-01"></lr-date-input></fieldset>
+    </form>
+  `)) as HTMLFormElement;
+  const fieldset = form.querySelector("fieldset") as HTMLFieldSetElement;
+  const el = form.querySelector("lr-date-input") as LyraDateInput;
+  const cancelable: boolean[] = [];
+  el.addEventListener("lr-hide", (event) => {
+    cancelable.push(event.cancelable);
+    event.preventDefault();
+  });
+  const results: string[] = [];
+  for (const [label, close, restore] of [
+    ["disabled", () => (el.disabled = true), () => (el.disabled = false)],
+    ["fieldset", () => (fieldset.disabled = true), () => (fieldset.disabled = false)],
+    ["readonly", () => (el.readonly = true), () => (el.readonly = false)],
+  ] as const) {
+    await el.show();
+    close();
+    await el.updateComplete;
+    results.push(`${label}: open=${el.open}`);
+    restore();
+    await el.updateComplete;
+  }
+  expect(results).to.deep.equal(["disabled: open=false", "fieldset: open=false", "readonly: open=false"]);
+  expect(cancelable, "a close forced by policy cannot be vetoed").to.deep.equal([false, false, false]);
+
+  await el.show();
+  await el.hide();
+  expect(el.open, "an ordinary close stays vetoable").to.equal(true);
 });
 
 it("reveals invalid state after validation and clears touched presentation on form reset", async () => {
@@ -966,6 +1008,91 @@ describe("lr-date-input implicit form submission", () => {
   });
 });
 
+describe("lr-date-input Enter commit after another write", () => {
+  const field = (el: LyraDateInput): HTMLInputElement =>
+    el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  const enterOn = (el: LyraDateInput) =>
+    field(el).dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true, composed: true, cancelable: true })
+    );
+
+  it("shows the reset value when the submit handler resets the form, then commits the same date typed again", async () => {
+    const form = (await fixture(html`
+      <form><lr-date-input name="when"></lr-date-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector("lr-date-input") as LyraDateInput;
+    await el.updateComplete;
+    let submits = 0;
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      submits += 1;
+      form.reset();
+    });
+    const input = field(el);
+    await focusByKeyboard(input);
+    await sendKeys({ type: "7/15/2026" });
+    await sendKeys({ press: "Enter" });
+    await el.updateComplete;
+    expect(submits).to.equal(1);
+    expect(el.value, "the reset wins over the committed date").to.equal("");
+    expect(input.value, "the field shows the reset value, not the stale typed text").to.equal("");
+
+    await sendKeys({ type: "7/15/2026" });
+    await sendKeys({ press: "Tab" });
+    await el.updateComplete;
+    expect(el.value, "the retyped date commits on blur").to.equal("2026-07-15");
+  });
+
+  it("commits text that matches an earlier Enter commit after a programmatic write replaced it", async () => {
+    const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
+    await el.updateComplete;
+    let changes = 0;
+    el.addEventListener("change", () => {
+      changes += 1;
+    });
+    field(el).value = "2026-07-15";
+    enterOn(el);
+    await el.updateComplete;
+    el.value = "2026-08-01";
+    await el.updateComplete;
+
+    field(el).value = "2026-07-15";
+    field(el).dispatchEvent(new Event("change", { bubbles: true }));
+    expect(el.value).to.equal("2026-07-15");
+    expect(changes).to.equal(2);
+  });
+
+  it("discards uncommitted typed text on form reset even when the value is unchanged", async () => {
+    const form = (await fixture(html`
+      <form><lr-date-input name="when" value="2026-07-15"></lr-date-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector("lr-date-input") as LyraDateInput;
+    await el.updateComplete;
+    field(el).value = "7/20";
+    form.reset();
+    expect(el.value).to.equal("2026-07-15");
+    expect(field(el).value).to.equal("7/15/2026");
+  });
+
+  it("commits text that matches an earlier Enter commit after a form reset", async () => {
+    const form = (await fixture(html`
+      <form><lr-date-input name="when"></lr-date-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector("lr-date-input") as LyraDateInput;
+    await el.updateComplete;
+    form.addEventListener("submit", (event) => event.preventDefault());
+    field(el).value = "2026-07-15";
+    enterOn(el);
+    await el.updateComplete;
+    form.reset();
+    await el.updateComplete;
+
+    field(el).value = "2026-07-15";
+    field(el).dispatchEvent(new Event("change", { bubbles: true }));
+    expect(el.value).to.equal("2026-07-15");
+  });
+});
+
 // disabled required field kept `valueMissing` raised and `:state(invalid)` published.
 describe("lr-date-input barred from constraint validation", () => {
   it("reports no violation while disabled, and restores it on re-enable", async () => {
@@ -1194,4 +1321,50 @@ describe('applied preset readback', () => {
 
     expect(el.appliedPreset).to.equal(undefined);
   });
+});
+
+it("formats the min/max bound in its range messages the way the field displays dates", async () => {
+  const format = (locale: string, iso: string) => {
+    const [year, month, day] = iso.split("-").map(Number);
+    return new Intl.DateTimeFormat(locale, { year: "numeric", month: "numeric", day: "numeric", calendar: "gregory" })
+      .format(new Date(year!, month! - 1, day!));
+  };
+  const messages: string[] = [];
+  for (const [locale, attributes] of [
+    ["fr", { min: "2026-01-15", value: "2026-01-01" }],
+    ["ar-EG", { max: "2026-01-15", value: "2026-02-01" }],
+  ] as const) {
+    const el = (await fixture(html`<lr-date-input
+      locale=${locale}
+      min=${"min" in attributes ? attributes.min : ""}
+      max=${"max" in attributes ? attributes.max : ""}
+      value=${attributes.value}
+    ></lr-date-input>`)) as LyraDateInput;
+    await el.updateComplete;
+    const bound = "min" in attributes ? attributes.min : attributes.max;
+    messages.push(`${el.validationMessage.includes(format(locale, bound))} ${el.validationMessage.includes(bound)}`);
+  }
+  expect(messages, "localized bound shown, ISO bound absent").to.deep.equal(["true false", "true false"]);
+});
+
+it("judges disabled dates with the calendar's own rules, including its 10,000-entry cap", async () => {
+  // 10,000 earlier dates fill the cap, so the 10,001st entry (the value) is not disabled.
+  const disabled: string[] = [];
+  const first = new Date(2000, 0, 1);
+  for (let index = 0; index < 10_000; index += 1) {
+    const day = new Date(first.getFullYear(), first.getMonth(), first.getDate() + index);
+    disabled.push(`${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`);
+  }
+  disabled.push("2040-06-15");
+  const el = (await fixture(html`<lr-date-input value="2040-06-15"></lr-date-input>`)) as LyraDateInput;
+  el.disabledDates = disabled;
+  await el.updateComplete;
+  expect(el.checkValidity(), "past the cap the date is selectable, as in the calendar").to.equal(true);
+  el.disabledDates = ["2040-06-15"];
+  await el.updateComplete;
+  expect(el.checkValidity(), "within the cap it is blocked").to.equal(false);
+  el.disabledDaysOfWeek = "fri";
+  el.disabledDates = [];
+  await el.updateComplete;
+  expect(el.checkValidity(), "2040-06-15 is a Friday").to.equal(false);
 });

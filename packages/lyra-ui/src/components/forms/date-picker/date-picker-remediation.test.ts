@@ -458,3 +458,103 @@ for (const theme of ['light', 'dark']) {
     }
   });
 }
+
+for (const target of ['preset', 'month'] as const) {
+  it(`retains the selected ${target} foreground/background pairing through hover and press`, async () => {
+    // Zeroed ease: every read below asserts a paint did NOT move (see the selected-day test above).
+    const el = await fixture<LyraDatePicker>(html`<lr-date-picker
+      style="--lr-transition-fast:0s"
+      .mode=${target === 'preset' ? 'range' : 'single'}
+      .value=${target === 'preset' ? '2026-07-01/2026-07-07' : '2026-07-15'}
+      .view=${target === 'preset' ? 'days' : 'months'}
+      .presets=${[{ label: 'First week', start: '2026-07-01', end: '2026-07-07' }]}
+    ></lr-date-picker>`);
+    await settle(el);
+    const selected = button(el, target === 'preset' ? '[part~="preset-button"][data-active]' : '[part~="view-item-selected"]');
+    const rest = getComputedStyle(selected).backgroundColor;
+    const foreground = getComputedStyle(selected).color;
+    try {
+      await hoverUntilMatched(selected, `selected ${target} hover`);
+      expect(getComputedStyle(selected).backgroundColor, 'hover keeps the selected fill').to.equal(rest);
+      expect(getComputedStyle(selected).color).to.equal(foreground);
+      expect(getComputedStyle(selected).backgroundImage, 'hover is still acknowledged').to.not.equal('none');
+      await sendMouse({ type: 'down' });
+      await waitUntil(() => selected.matches(':active'));
+      expect(getComputedStyle(selected).backgroundColor, 'press keeps the selected fill').to.equal(rest);
+      expect(getComputedStyle(selected).color).to.equal(foreground);
+    } finally {
+      await sendMouse({ type: 'move', position: [0, 0] });
+      await resetMouse();
+    }
+  });
+}
+
+it('paints a pressed preset from the shared preset-pressed name, which wins over preset-active', async () => {
+  const el = await fixture<LyraDatePicker>(html`<lr-date-picker
+    style="--lr-transition-fast:0s;--lr-date-picker-preset-active-bg:rgb(1, 1, 1);--lr-date-picker-preset-pressed-bg:rgb(4, 5, 6)"
+    mode="range"
+    value="2026-07-01/2026-07-07"
+    .presets=${[{ label: 'First week', start: '2026-07-01', end: '2026-07-07' }, { label: 'Second week', start: '2026-07-08', end: '2026-07-14' }]}
+  ></lr-date-picker>`);
+  await settle(el);
+  const pressed: string[] = [];
+  for (const selector of ['[part~="preset-button"]:not([data-active])', '[part~="preset-button"][data-active]']) {
+    const target = button(el, selector);
+    try {
+      await hoverUntilMatched(target, 'preset hover');
+      await sendMouse({ type: 'down' });
+      await waitUntil(() => target.matches(':active'));
+      pressed.push(getComputedStyle(target).backgroundColor);
+    } finally {
+      await sendMouse({ type: 'move', position: [0, 0] });
+      await resetMouse();
+    }
+  }
+  expect(pressed).to.deep.equal(['rgb(4, 5, 6)', 'rgb(4, 5, 6)']);
+});
+
+it('requests no render for day hover unless a range start is waiting for its end', async () => {
+  const single = await fixture<LyraDatePicker>(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`);
+  await settle(single);
+  const day = button(single, '[data-date="2026-07-20"]');
+  day.dispatchEvent(new PointerEvent('pointerenter'));
+  const afterEnter = single.isUpdatePending;
+  day.dispatchEvent(new PointerEvent('pointerleave'));
+  expect([afterEnter, single.isUpdatePending], 'single mode never previews').to.deep.equal([false, false]);
+
+  const range = await fixture<LyraDatePicker>(html`<lr-date-picker mode="range" value="2026-07-10"></lr-date-picker>`);
+  await settle(range);
+  button(range, '[data-date="2026-07-13"]').dispatchEvent(new PointerEvent('pointerenter'));
+  await settle(range);
+  const previewed = [...range.shadowRoot!.querySelectorAll<HTMLElement>('[part~="day-range-preview"]')].map((cell) => cell.dataset['date']);
+  expect(previewed).to.deep.equal(['2026-07-11', '2026-07-12', '2026-07-13']);
+});
+
+it('clear() emits input, change, then lr-clear, and nothing while blank, disabled or readonly', async () => {
+  const el = await fixture<LyraDatePicker>(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`);
+  const order: string[] = [];
+  for (const type of ['input', 'change', 'lr-clear']) el.addEventListener(type, () => order.push(type));
+  el.disabled = true;
+  el.clear();
+  el.disabled = false;
+  el.readonly = true;
+  el.clear();
+  el.readonly = false;
+  expect(el.value).to.equal('2026-07-15');
+  el.clear();
+  el.clear();
+  expect(el.value).to.equal('');
+  expect(order).to.deep.equal(['input', 'change', 'lr-clear']);
+});
+
+it('reads and writes valueAsLocalDate (local midnight, like valueAsDate) and valueAsUTCDate (UTC midnight)', async () => {
+  const el = await fixture<LyraDatePicker>(html`<lr-date-picker value="2026-10-06"></lr-date-picker>`);
+  expect(el.valueAsLocalDate!.getTime()).to.equal(el.valueAsDate!.getTime());
+  expect(el.valueAsUTCDate!.toISOString()).to.equal('2026-10-06T00:00:00.000Z');
+  el.valueAsUTCDate = new Date('2026-12-31T00:00:00Z');
+  const utc = el.value;
+  el.valueAsLocalDate = new Date(2027, 0, 2, 23, 30);
+  expect([utc, el.value]).to.deep.equal(['2026-12-31', '2027-01-02']);
+  el.valueAsUTCDate = null;
+  expect(el.value).to.equal('');
+});

@@ -729,6 +729,24 @@ describe("active-preset cssprops", () => {
     );
   });
 
+  it("accepts the shared preset-selected names, which win over the active-preset names", async () => {
+    const el = await themed(
+      overrides +
+        "--lr-time-range-preset-selected-bg: rgb(1, 2, 3);" +
+        "--lr-time-range-preset-selected-border-color: rgb(4, 5, 6);" +
+        "--lr-time-range-preset-selected-color: rgb(7, 8, 9);"
+    );
+    const active = el.shadowRoot!.querySelector(
+      '[part="preset-button"][data-active]'
+    ) as HTMLElement;
+    const rendered = getComputedStyle(active);
+    expect([rendered.backgroundColor, rendered.borderTopColor, rendered.color]).to.deep.equal([
+      "rgb(1, 2, 3)",
+      "rgb(4, 5, 6)",
+      "rgb(7, 8, 9)",
+    ]);
+  });
+
   it("is accessible with the active-preset props themed", async () => {
     const el = await themed(overrides);
     await expect(el).to.be.accessible();

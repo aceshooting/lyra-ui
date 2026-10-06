@@ -45,3 +45,66 @@ for (const entry of ['track', 'handle-start']) {
     });
   }
 }
+
+it('time-range keeps honest validity where the environment has no attachInternals', async () => {
+  const { LyraTimeRange } = await import('./time-range.class.js');
+  Object.defineProperty(LyraTimeRange.prototype, 'attachInternals', { configurable: true, value: undefined });
+  try {
+    const el = await fixture<LyraTimeRange>(html`<lr-time-range min="0" max="100" start="10" end="20"></lr-time-range>`);
+    const invalid = () =>
+      [...el.shadowRoot!.querySelectorAll('[role="slider"]')].map((handle) => handle.getAttribute('aria-invalid'));
+    expect(invalid(), 'a legal range is not announced invalid').to.deep.equal(['false', 'false']);
+    expect(el.checkValidity()).to.equal(true);
+    el.setCustomValidity('Pick a narrower range');
+    await el.updateComplete;
+    expect(el.checkValidity(), 'a custom error is kept').to.equal(false);
+    expect(el.validationMessage).to.equal('Pick a narrower range');
+    expect(invalid()).to.deep.equal(['true', 'true']);
+  } finally {
+    delete (LyraTimeRange.prototype as unknown as Record<string, unknown>)['attachInternals'];
+  }
+});
+
+it('time-range relays one host focus/blur pair for a visit, not one per handle', async () => {
+  const { sendKeys } = await import('@web/test-runner-commands');
+  const { focusByKeyboard } = await import('../../../../test/wtr-focus.js');
+  const wrapper = await fixture<HTMLDivElement>(html`<div>
+    <lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>
+    <button id="after">After</button>
+  </div>`);
+  const el = wrapper.querySelector('lr-time-range') as LyraTimeRange;
+  await el.updateComplete;
+  const events: string[] = [];
+  el.addEventListener('focus', () => events.push('focus'));
+  el.addEventListener('blur', () => events.push('blur'));
+  const [start] = el.shadowRoot!.querySelectorAll<HTMLElement>('[role="slider"]');
+  await focusByKeyboard(start!);
+  await sendKeys({ press: 'Tab' });
+  expect(el.shadowRoot!.activeElement?.getAttribute('part'), 'Tab moved to the end handle').to.contain('handle-end');
+  await sendKeys({ press: 'Tab' });
+  expect(events).to.deep.equal(['focus', 'blur']);
+});
+
+it('time-range releases pointer capture when disabling aborts a drag', async () => {
+  const el = await fixture<LyraTimeRange>(html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`);
+  await el.updateComplete;
+  const handle = el.shadowRoot!.querySelector<HTMLElement>('[part="handle-start"]')!;
+  const released: number[] = [];
+  let captured = false;
+  handle.setPointerCapture = () => {
+    captured = true;
+  };
+  handle.hasPointerCapture = () => captured;
+  handle.releasePointerCapture = (pointerId: number) => {
+    released.push(pointerId);
+    captured = false;
+  };
+  const rect = handle.getBoundingClientRect();
+  handle.dispatchEvent(new PointerEvent('pointerdown', {
+    bubbles: true, composed: true, pointerId: 7, pointerType: 'mouse', button: 0,
+    clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2,
+  }));
+  expect(captured, 'the drag captured the pointer').to.equal(true);
+  el.disabled = true;
+  expect(released, 'the aborted drag gives the pointer back').to.deep.equal([7]);
+});

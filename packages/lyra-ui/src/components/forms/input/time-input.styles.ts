@@ -13,7 +13,7 @@ export const styles = css`
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-12rem);
     --_lr-time-input-border-color-default: var(--lr-color-border);
-    --_lr-time-input-fill-default: transparent;
+    --_lr-time-input-fill-default: var(--lr-color-surface);
     --_lr-time-input-color-default: var(--lr-color-text);
     --_lr-time-input-control-min-height-default: var(--lr-form-control-height);
     /* --lr-time-input-control-height is deliberately NOT declared here: it is read only through
@@ -74,11 +74,11 @@ export const styles = css`
   }
   :host([appearance='plain']) {
     --_lr-time-input-border-color-default: transparent;
+    --_lr-time-input-fill-default: transparent;
   }
   :host([appearance='accent']) {
-    --_lr-time-input-border-color-default: transparent;
-    --_lr-time-input-fill-default: var(--lr-color-brand);
-    --_lr-time-input-color-default: var(--lr-color-on-brand);
+    --_lr-time-input-border-color-default: var(--lr-color-brand);
+    --_lr-time-input-fill-default: var(--lr-color-brand-quiet);
   }
   :host([pill]) [part~='time-input'] {
     border-radius: var(--lr-time-input-radius, var(--lr-radius-pill));
@@ -118,10 +118,6 @@ export const styles = css`
   [part='start'][hidden],
   [part='end'][hidden] {
     display: none;
-  }
-  :host([appearance='accent']) [part='start'],
-  :host([appearance='accent']) [part='end'] {
-    color: inherit;
   }
 
   [part='input'] {
@@ -167,10 +163,7 @@ export const styles = css`
     background: var(--lr-time-input-segment-focus-bg, var(--lr-time-input-segment-hover-bg, var(--lr-color-brand-quiet)));
   }
   [part='segment'][data-empty] {
-    color: var(--lr-time-input-action-color, var(--lr-color-text-quiet));
-  }
-  :host([appearance='accent']) [part='segment'][data-empty] {
-    color: inherit;
+    color: var(--lr-time-input-placeholder-color, var(--lr-time-input-action-color, var(--lr-color-text-quiet)));
   }
   :host(:disabled) [part='segment'] {
     cursor: not-allowed;
@@ -178,9 +171,6 @@ export const styles = css`
   [part='segment-literal'] {
     color: var(--lr-color-text-quiet);
     user-select: none;
-  }
-  :host([appearance='accent']) [part='segment-literal'] {
-    color: inherit;
   }
 
   [part='clear-button'],
@@ -196,7 +186,7 @@ export const styles = css`
     border: none;
     border-radius: var(--lr-form-control-radius);
     background: transparent;
-    color: var(--lr-color-text-quiet);
+    color: var(--lr-time-input-action-color, var(--lr-color-text-quiet));
     cursor: pointer;
     font: inherit;
     line-height: var(--lr-line-height-none);
@@ -227,10 +217,6 @@ export const styles = css`
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
-  :host([appearance='accent']) [part='clear-button'],
-  :host([appearance='accent']) [part='expand-button'] {
-    color: inherit;
-  }
   [part='expand-icon'] {
     display: inline-flex;
     transform: rotate(90deg);
@@ -248,7 +234,7 @@ export const styles = css`
   }
   [part='popup'] {
     position: fixed;
-    z-index: var(--lr-layer-dropdown);
+    z-index: var(--lr-overlay-stack-index, var(--lr-layer-dropdown));
     box-sizing: border-box;
     max-block-size: var(--lr-positioner-available-block-size);
     overflow: auto;

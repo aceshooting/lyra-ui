@@ -8,7 +8,7 @@ import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { contextualSizes } from '../../../internal/contextual-vocabulary.styles.js';
-import { findImplicitSubmitter, isNativeSubmitter, submitOnEnter } from '../../../internal/submit-on-enter.js';
+import { submitFormImplicitly, submitOnEnter } from '../../../internal/submit-on-enter.js';
 import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
 import type { LyraSelectionDirection } from '../../../internal/shared-unions.js';
 import { styles } from './otp-input.styles.js';
@@ -20,6 +20,7 @@ import {
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
 import { declaredDefaultConverter, literalSetConverter } from '../../../internal/converters.js';
 import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
+import { scrollOverflowFadeStyles } from '../../../internal/scroll-overflow.styles.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -72,7 +73,7 @@ export interface LyraOtpInputEventMap {
 }
 
 class LyraOtpInputBase extends LyraElement<LyraOtpInputEventMap> {
-  static override styles = [LyraElement.styles, contextualSizes, styles];
+  static override styles = [LyraElement.styles, contextualSizes, scrollOverflowFadeStyles, styles];
 }
 
 /**
@@ -112,23 +113,24 @@ class LyraOtpInputBase extends LyraElement<LyraOtpInputEventMap> {
  * and document adoption.
  *
  * @customElement lr-otp-input
- * @slot label - Rich label content used while the `label` attribute is empty.
- * @slot hint - Rich supporting text used while the `hint` attribute is empty.
- * @slot error - Rich validation text, replacing the `errorText` attribute.
+ * @slot label - Rich label content, rendered after any `label` text.
+ * @slot hint - Rich supporting text, rendered after any `hint` text.
+ * @slot error - Rich validation text, rendered after any `errorText`.
  * @event input - The real input changed; relayed as one native `InputEvent` with its editing
  *   payload intact. Intermediate IME composition waits for the final non-composing event.
  * @event change - The value changed and the field settled on blur or Enter; relayed as one native
  *   `Event`.
  * @event focus - Native focus relayed once from the real input.
  * @event blur - Native blur relayed once from the real input.
- * @event lr-clear - The value was cleared. Bubbling, composed, and non-cancelable.
+ * @event lr-clear - `clear()` emptied the value; follows its `input` and `change`.
  * @event lr-invalid - The one-time-code input failed a validity check. Cancelable:
  * `preventDefault()` forwards to the native `invalid` event, suppressing the browser's own
  * validation bubble and the focus/scroll `reportValidity()` would otherwise perform.
  * @event lr-complete - The field transitions from incomplete to every segment filled.
  * `detail: { value }`. Cancelable; preventing it suppresses `autosubmit` for that completion. The
  * autosubmission is deferred one task, so a listener may call `preventDefault()` after an `await`.
- * @cssstate --blank - Matches while no characters have been entered.
+ * @cssstate blank - Matches while no characters have been entered.
+ * @cssstate --blank - Alias of `blank`.
  * @cssstate --filled - Matches while every segment is filled.
  * @cssstate disabled - Matches while the control is disabled, including through a fieldset.
  * @cssstate readonly - Matches while `readonly` is set.
@@ -175,12 +177,13 @@ class LyraOtpInputBase extends LyraElement<LyraOtpInputEventMap> {
  *   every OTP input in the subtree at once.
  * @cssprop [--lr-otp-input-segment-border-color=var(--lr-color-border)] - Border color of each
  *   segment.
- * @cssprop [--lr-otp-input-segment-fill=transparent] - Background fill of each segment.
+ * @cssprop [--lr-otp-input-segment-fill=var(--lr-color-surface)] - Background fill of each segment.
  * @cssprop [--lr-otp-input-segment-radius=var(--lr-form-control-radius,var(--lr-radius))] -
  *   Corner radius of each segment.
  * @cssprop [--lr-otp-input-active-border-color=var(--lr-focus-ring-color)] - Active segment border.
  * @cssprop [--lr-otp-input-active-ring-color=var(--lr-focus-ring-color)] - Active segment outer ring.
- * @cssprop [--lr-otp-input-invalid-border-color=var(--lr-color-danger)] - Invalid segment border.
+ * @cssprop [--lr-otp-input-invalid-border-color=var(--lr-otp-input-segment-border-color,var(--lr-color-border))] -
+ *   Segment border while the field is user-invalid.
  * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker rendered after the
  * label. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a
  * localized word) to replace it. Caller-supplied content, so it is never localized here.
@@ -206,13 +209,16 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   static get validators(): LyraFormValidator<LyraOtpInput>[] {
     return [currentValidityValidator('required', 'disabled', 'readonly', 'value', 'length', 'pattern')];
   }
-  /** Visible label. When nonempty, it takes precedence over rich `label`-slot content. */
+  /** Visible label text, rendered before any `label`-slot content. */
   @property() label = '';
-  /** Supporting text below the field. When nonempty, it takes precedence over the `hint` slot. */
+  /** Supporting text, rendered before any `hint`-slot content. */
   @property() hint = '';
-  /** Validation text shown immediately below the field. It sets the internal input's ARIA invalid
-   *  state; rich `error`-slot content takes precedence when supplied. */
+  /** Validation text, rendered before any `error`-slot content; marks the input invalid. */
   @property({ attribute: 'error-text' }) errorText = '';
+  /** SSR slot-presence hint for label content that cannot be inspected before hydration. */
+  @property({ type: Boolean, attribute: 'with-label' }) withLabel = false;
+  /** SSR slot-presence hint for hint content that cannot be inspected before hydration. */
+  @property({ type: Boolean, attribute: 'with-hint' }) withHint = false;
   private _appearance: OtpInputAppearance = 'outlined';
   /**
    * Visual fill treatment for each segment, or a single joined `contained` field. Does not
@@ -236,7 +242,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   @property({ type: Boolean }) override autofocus = false;
   /** Submit the owning form after an un-canceled `lr-complete`, one task later so an asynchronous
    *  listener can still veto it. Replacing or restoring the code before that task runs cancels
-   *  the stale submission. The form's default button is resolved as the submitter. */
+   *  the stale submission. Follows Enter-to-submit's implicit-submission rules. */
   @property({ type: Boolean, reflect: true }) autosubmit = false;
   /** Segment size on the shared form-control ladder. An unset size inherits its containing context;
    *  standalone rendering falls back to `m`. */
@@ -447,25 +453,9 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     });
   }
 
-  /**
-   * Submits the owning form the way `internal/submit-on-enter.ts` does for a keystroke: through the
-   * form's resolved default button, so `SubmitEvent.submitter` — and with it the button's own
-   * `name`/`value` entry and its `formaction`/`formmethod`/`formnovalidate` overrides — survives an
-   * autosubmission exactly as it survives a real click. `requestSubmit()`, never `submit()`, so
-   * interactive constraint validation still runs.
-   */
   private submitOwningForm(): void {
     const form = this.getForm();
-    if (!form) return;
-    const submitter = findImplicitSubmitter(form);
-    if (!submitter) form.requestSubmit();
-    else if (isNativeSubmitter(submitter)) {
-      form.requestSubmit(submitter);
-    } else {
-      // A form-associated custom element is never a legal `requestSubmit()` submitter (the platform
-      // throws a TypeError for one); its own `click()` runs the submit path a real click would.
-      submitter.click();
-    }
+    if (form) submitFormImplicitly(form);
   }
 
   private completeIfTransition(previousFilled: number): void {
@@ -488,7 +478,6 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
 
   private commitSegmentEdit(values: string[], inputType: string, data: string | null = null): void {
     this.autosubmitToken += 1;
-    const previousValue = this.value;
     const previousFilled = this.filledSegmentCount;
     this.segmentValues = this.normalizedSegmentValues(values);
     const nextValue = this.segmentValues.join('');
@@ -497,7 +486,6 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     this.touched = true;
     dispatchNativeInputEvent(this, { data, inputType });
     this.segmentEditPendingChange = true;
-    if (previousValue && !nextValue) this.emit('lr-clear');
     this.completeIfTransition(previousFilled);
     this.requestUpdate();
   }
@@ -641,13 +629,14 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     }
     this.syncActiveSegmentFromSelection();
   }
-  /** Clears the live code, returns focus to the field, and emits `lr-clear` when a value changed. */
+  /** Clear the code (`input`, `change`, `lr-clear`); inert while blank, disabled or readonly. */
   clear(): void {
-    const hadValue = this.value.length > 0;
+    if (!this.value || this.effectiveDisabled || this.readonly) return;
     this.value = '';
     if (this.control) this.control.value = '';
-    this.focus();
-    if (hadValue) this.emit('lr-clear');
+    dispatchNativeInputEvent(this, { inputType: 'deleteContentBackward' });
+    dispatchNativeEvent(this, 'change');
+    this.emit('lr-clear');
   }
 
   override formResetCallback(): void {
@@ -712,6 +701,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
     this.syncExternalDescription();
   }
 
@@ -759,6 +749,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   }
 
   private syncOtpStates(): void {
+    setCustomState(this.internals, 'blank', this.value.length === 0);
     setCustomState(this.internals, '--blank', this.value.length === 0);
     setCustomState(this.internals, '--filled', this.filledSegmentCount === this.renderedSegmentCount);
     setCustomState(this.internals, 'disabled', this.effectiveDisabled);
@@ -798,7 +789,6 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     }
     const raw = (event.target as HTMLInputElement).value;
     const next = this.sanitize(raw);
-    const previous = this.value;
     const previousFilled = this.filledSegmentCount;
     const packed = Array.from({ length: this.renderedSegmentCount }, (_, index) => next[index] ?? '');
     const layoutChanged = packed.some((value, index) => value !== this.segmentValues[index]);
@@ -812,7 +802,6 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     this.touched = true;
     this.value = next;
     relayNativeEvent(this, event);
-    if (previous && !next) this.emit('lr-clear');
     this.completeIfTransition(previousFilled);
   };
 
@@ -942,8 +931,8 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   }
 
   override render(): TemplateResult {
-    const hasLabel = Boolean(this.label) || this.hasLabelSlot;
-    const hasHint = Boolean(this.hint) || this.hasHintSlot;
+    const hasLabel = Boolean(this.label) || this.hasLabelSlot || this.withLabel;
+    const hasHint = Boolean(this.hint) || this.hasHintSlot || this.withHint;
     const hasError = Boolean(this.errorText) || this.hasErrorSlot;
     const intrinsicInvalid = this.touched && !this.validity.valid;
     const ariaInvalid = hasError || intrinsicInvalid;
@@ -959,7 +948,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     return html`
       <div part="base form-control">
         <label part="label form-control-label" id=${this.labelId} for="control" ?hidden=${!hasLabel}>
-          ${this.label}<slot name="label" ?hidden=${Boolean(this.label)} @slotchange=${this.onLabelSlotChange}></slot>
+          ${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot>
         </label>
         <div part="field segments" @click=${() => this.focus()}>
           ${this.cells.map((cell) =>
@@ -998,14 +987,10 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
           />
         </div>
         <div part="error" id=${this.errorId} ?hidden=${!hasError}>
-          ${this.hasErrorSlot ? nothing : this.errorText}<slot
-            name="error"
-            ?hidden=${!this.hasErrorSlot}
-            @slotchange=${this.onErrorSlotChange}
-          ></slot>
+          ${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot>
         </div>
         <div part="hint" id=${this.hintId} ?hidden=${!hasHint}>
-          ${this.hint}<slot name="hint" ?hidden=${Boolean(this.hint)} @slotchange=${this.onHintSlotChange}></slot>
+          ${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot>
         </div>
       </div>
     `;

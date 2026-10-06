@@ -53,10 +53,12 @@ import {
   timeValueFromMilliseconds,
   timeStepBaseMilliseconds,
   to24Hour,
+  wrapTimeMilliseconds,
   type TimeHourFormat,
   type TimePatternPart,
 } from './time-input-shared.js';
 import { styles } from './time-input.styles.js';
+import { isDateObject } from '../../../internal/dom-guards.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -88,6 +90,14 @@ interface TimeDraft {
   minute: number | null;
   second: number | null;
   dayPeriod: DayPeriod | null;
+}
+
+interface TimeSegmentModel {
+  key: string;
+  pattern: TimePatternPart[];
+  order: SegmentName[];
+  twelveHour: boolean;
+  labels?: Record<DayPeriod, string>;
 }
 
 export interface LyraTimeInputEventMap {
@@ -270,7 +280,7 @@ function containsElement(container: Element | null, value: unknown): value is El
  *   `pill` supplies `--lr-radius-pill` only as the fallback, so a component-scoped value wins.
  * @cssprop [--lr-time-input-border-color=var(--lr-color-border)] - Outer row border color, with
  *   appearance-specific fallbacks.
- * @cssprop [--lr-time-input-fill=transparent] - Outer row background, with appearance-specific
+ * @cssprop [--lr-time-input-fill=var(--lr-color-surface)] - Outer row background, with appearance-specific
  *   fallbacks.
  * @cssprop [--lr-time-input-color=var(--lr-color-text)] - Outer row text color, including the
  *   accent appearance fallback.
@@ -280,6 +290,8 @@ function containsElement(container: Element | null, value: unknown): value is El
  * @cssprop [--lr-time-input-segment-focus-bg=var(--lr-time-input-segment-hover-bg,var(--lr-color-brand-quiet))] -
  *   Keyboard-focused segment fill.
  * @cssprop [--lr-time-input-action-color=var(--lr-color-text-quiet)] - Resting clear/expand color.
+ * @cssprop [--lr-time-input-placeholder-color=var(--lr-time-input-action-color,var(--lr-color-text-quiet))] -
+ *   Color of an empty segment's placeholder.
  * @cssprop [--lr-time-input-action-hover-color=var(--lr-color-text)] - Hovered clear/expand color.
  * @cssprop [--lr-time-input-action-hover-bg=var(--lr-color-brand-quiet)] - Clear/expand/Now hover fill.
  * @cssprop --lr-time-input-action-active-bg - Clear/expand/Now pressed fill; derived from hover when unset.
@@ -296,8 +308,8 @@ function containsElement(container: Element | null, value: unknown): value is El
  * @cssprop [--hide-duration=var(--lr-duration-fast)] - Picker closing duration.
  * @cssprop [--lr-form-control-focus-shadow=none] - The shared field focus halo, painted as a
  * `box-shadow` while this control is focused. One name for every field-shaped control in the
- * library, so a halo is configured once rather than per component. Additive: the focus outline and
- * border cue are the accessibility answer to focus and are never replaced by it.
+ * library, so a halo is configured once rather than per component. Additive: the brand border cue
+ * is the accessibility answer to focus and is never replaced by it.
  * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker rendered after the
  * label. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a
  * localized word) to replace it. Caller-supplied content, so it is never localized here.
@@ -374,6 +386,9 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   @property({ type: Boolean, reflect: true }) pill = false;
   @property({ converter: placementConverter, reflect: true }) placement: LyraTimeInputPlacement = 'bottom-start';
   @property({ reflect: true }) size: LyraSize = 'm';
+  /** Shows the clear action while there is a value; same as `withClear`. */
+  @property({ type: Boolean, reflect: true }) clearable = false;
+  /** Alias of {@link clearable}. */
   @property({ type: Boolean, attribute: 'with-clear' }) withClear = false;
   @property({ type: Boolean, attribute: 'with-hint' }) withHint = false;
   @property({ type: Boolean, attribute: 'with-label' }) withLabel = false;
@@ -423,6 +438,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   private transitionToken = 0;
   private visibilityPromise: Promise<void> = Promise.resolve();
   private segmentOrderKey = '';
+  private segmentModelCache?: TimeSegmentModel;
   private pickerGridKey = '';
   private pickerGridMilliseconds: number[] = [];
   private inputId = nextId('time-input');
@@ -473,6 +489,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     const old = this._readonly;
     this._readonly = Boolean(next);
     this.toggleAttribute('readonly', this._readonly);
+    if (this._readonly) this.forceClose(false);
     this.updateValidity();
     this.requestUpdate('readonly', old);
   }
@@ -558,6 +575,25 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     this.value = normalizeTimeValue(next);
   }
 
+  /** Same as `valueAsDate`: local clock fields on today's date. */
+  get valueAsLocalDate(): Date | null {
+    return this.valueAsDate;
+  }
+
+  set valueAsLocalDate(next: Date | null) {
+    this.valueAsDate = next;
+  }
+
+  /** UTC clock fields on 1970-01-01, like a native time input's `valueAsDate`. */
+  get valueAsUTCDate(): Date | null {
+    const parsed = parseTimeValue(this.value);
+    return parsed ? new Date(parsed.milliseconds) : null;
+  }
+
+  set valueAsUTCDate(next: Date | null) {
+    this.value = timeValueFromMilliseconds(wrapTimeMilliseconds(isDateObject(next) ? next.getTime() : NaN));
+  }
+
   private get numericStep(): number {
     return this.step === 'any' ? 60 : finiteNumber(this.step, 60);
   }
@@ -580,14 +616,31 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     return this.numericStep < 60 || this.secondsVisible;
   }
 
+  /** One-entry memo: every segment, option and grid candidate reads the locale pattern. */
+  private get segmentModel(): TimeSegmentModel {
+    const locale = this.effectiveLocale;
+    const key = `${locale}|${this.hourFormat}|${this.includeSeconds}`;
+    if (this.segmentModelCache?.key !== key) {
+      const pattern = localeTimePattern(locale, this.hourFormat, this.includeSeconds);
+      const order = pattern
+        .filter((part): part is TimePatternPart & { type: SegmentName } => part.type !== 'literal')
+        .map((part) => part.type);
+      this.segmentModelCache = { key, pattern, order, twelveHour: order.includes('dayPeriod') };
+    }
+    return this.segmentModelCache;
+  }
+
   private get pattern(): TimePatternPart[] {
-    return localeTimePattern(this.effectiveLocale, this.hourFormat, this.includeSeconds);
+    return this.segmentModel.pattern;
   }
 
   private get segmentOrder(): SegmentName[] {
-    return this.pattern
-      .filter((part): part is TimePatternPart & { type: SegmentName } => part.type !== 'literal')
-      .map((part) => part.type);
+    return this.segmentModel.order;
+  }
+
+  private get periodLabels(): Record<DayPeriod, string> {
+    const model = this.segmentModel;
+    return (model.labels ??= dayPeriodLabels(this.effectiveLocale));
   }
 
   /** Reads component state plus the UA's synchronous fieldset cascade when a browser selector
@@ -603,7 +656,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   }
 
   private get usesTwelveHour(): boolean {
-    return this.segmentOrder.includes('dayPeriod');
+    return this.segmentModel.twelveHour;
   }
 
   private get draftComplete(): boolean {
@@ -652,13 +705,18 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   }
 
   private formattedNumber(value: number, minimumIntegerDigits: number): string {
+    return this.numberFormatter(minimumIntegerDigits)(value);
+  }
+
+  private numberFormatter(minimumIntegerDigits: number): (value: number) => string {
     try {
-      return getNumberFormat(this.effectiveLocale, {
+      const formatter = getNumberFormat(this.effectiveLocale, {
         minimumIntegerDigits,
         useGrouping: false,
-      }).format(value);
+      });
+      return (value) => formatter.format(value);
     } catch {
-      return String(value).padStart(minimumIntegerDigits, '0');
+      return (value) => String(value).padStart(minimumIntegerDigits, '0');
     }
   }
 
@@ -689,7 +747,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     const parsed = parseTimeValue(value);
     if (!parsed) return value;
     const includeSeconds = parsed.precision !== 'minute';
-    const labels = dayPeriodLabels(this.effectiveLocale);
+    const labels = this.periodLabels;
     return localeTimePattern(this.effectiveLocale, this.hourFormat, includeSeconds)
       .map((part) => {
         if (part.type === 'literal') return part.value;
@@ -719,8 +777,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
       return this.formattedNumber(Number(this.digitBuffer), this.digitBuffer.length);
     }
     if (name === 'dayPeriod') {
-      const labels = dayPeriodLabels(this.effectiveLocale);
-      return this.draft.dayPeriod ? labels[this.draft.dayPeriod] : '--';
+      return this.draft.dayPeriod ? this.periodLabels[this.draft.dayPeriod] : '--';
     }
     const value = this.segmentNumericValue(name);
     if (value === null) return '--';
@@ -984,7 +1041,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
 
   private requestVisibility(next: boolean, announce: boolean, restoreFocus: boolean): Promise<void> {
     if (this._open === next) return this.visibilityPromise;
-    if (next && this.liveDisabled) {
+    if (next && (this.liveDisabled || this.readonly)) {
       this.syncOpenAttribute();
       return Promise.resolve();
     }
@@ -1089,7 +1146,12 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     this.lightDismissDocument = this.ownerDocument;
     this.lightDismissDocument.addEventListener('pointerdown', this.onDocumentPointerDown, true);
     this.updateComplete.then(() => {
-      this.renderRoot.querySelector('[part~="column-item-selected"]')?.scrollIntoView({ block: 'center' });
+      // Scroll only the column; scrollIntoView() would also move ancestor scrollers.
+      const option = this.renderRoot.querySelector<HTMLElement>('[part~="column-item-selected"]');
+      const column = option?.closest<HTMLElement>('[part="column"]');
+      if (!option || !column) return;
+      const offset = option.getBoundingClientRect().top - column.getBoundingClientRect().top;
+      column.scrollTop += offset - (column.clientHeight - option.offsetHeight) / 2;
     });
   }
 
@@ -1443,11 +1505,11 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     const everyWholeSecondIsOnGrid = stepMilliseconds <= 1000 &&
       Math.abs(1000 % stepMilliseconds) <= 0.000_001 &&
       (baseRemainder <= 0.000_001 || stepMilliseconds - baseRemainder <= 0.000_001);
+    const twelveHour = this.usesTwelveHour;
     if (this.step === 'any' || (!parseTimeValue(this.min) && !parseTimeValue(this.max) && everyWholeSecondIsOnGrid)) {
       if (name === 'dayPeriod') return ['am', 'pm'];
       if (name === 'hour') {
-        const length = this.usesTwelveHour ? 12 : 24;
-        return Array.from({ length }, (_, index) => this.usesTwelveHour ? index + 1 : index);
+        return Array.from({ length: twelveHour ? 12 : 24 }, (_, index) => twelveHour ? index + 1 : index);
       }
       return Array.from({ length: 60 }, (_, value) => value);
     }
@@ -1455,21 +1517,22 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     const candidates = this.validPickerGridMilliseconds();
     const candidateValue = (segment: SegmentName, milliseconds: number): number | DayPeriod => {
       const hour = Math.floor(milliseconds / 3_600_000);
-      if (segment === 'hour') return this.usesTwelveHour ? hour % 12 || 12 : hour;
+      if (segment === 'hour') return twelveHour ? hour % 12 || 12 : hour;
       if (segment === 'minute') return Math.floor(milliseconds / 60_000) % 60;
       if (segment === 'second') return Math.floor(milliseconds / 1000) % 60;
       return hour >= 12 ? 'pm' : 'am';
     };
-    const matching = candidates.filter((milliseconds) => {
-      for (const companion of this.segmentOrder) {
-        if (companion === name) continue;
-        const current = companion === 'dayPeriod'
-          ? this.draft.dayPeriod
-          : this.segmentNumericValue(companion);
-        if (current !== null && candidateValue(companion, milliseconds) !== current) return false;
-      }
-      return true;
-    });
+    const companions: [SegmentName, number | DayPeriod][] = [];
+    for (const companion of this.segmentOrder) {
+      if (companion === name) continue;
+      const current = companion === 'dayPeriod'
+        ? this.draft.dayPeriod
+        : this.segmentNumericValue(companion);
+      if (current !== null) companions.push([companion, current]);
+    }
+    const matching = candidates.filter((milliseconds) =>
+      companions.every(([companion, current]) => candidateValue(companion, milliseconds) === current)
+    );
     const source = matching.length > 0 ? matching : candidates;
     const values = new Set<number | DayPeriod>();
     for (const milliseconds of source) {
@@ -1545,23 +1608,16 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     options[nextIndex]!.scrollIntoView({ block: 'nearest' });
   };
 
-  private isColumnValueSelected(name: SegmentName, value: number | DayPeriod): boolean {
-    if (name === 'dayPeriod') return this.draft.dayPeriod === value;
-    return this.segmentNumericValue(name) === value;
-  }
-
-  private columnText(name: SegmentName, value: number | DayPeriod): string {
-    if (name === 'dayPeriod') return dayPeriodLabels(this.effectiveLocale)[value as DayPeriod];
-    return this.formattedNumber(value as number, name === 'hour' && this.usesTwelveHour ? 1 : 2);
-  }
-
   private renderColumn(name: SegmentName): TemplateResult {
     const values = this.columnValues(name);
-    const hasSelection = values.some((value) => this.isColumnValueSelected(name, value));
+    const selectedValue = name === 'dayPeriod' ? this.draft.dayPeriod : this.segmentNumericValue(name);
+    const hasSelection = selectedValue !== null && values.includes(selectedValue);
+    const labels = name === 'dayPeriod' ? this.periodLabels : undefined;
+    const format = this.numberFormatter(name === 'hour' && this.usesTwelveHour ? 1 : 2);
     return html`
       <div part="column" role="listbox" aria-label=${this.segmentLabel(name)}>
         ${values.map((value, index) => {
-          const selected = this.isColumnValueSelected(name, value);
+          const selected = value === selectedValue;
           return html`
             <button
               type="button"
@@ -1575,7 +1631,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
               @pointerdown=${this.onPopupPointerDown}
               @keydown=${this.onColumnKeyDown}
               @click=${() => this.onColumnSelect(name, value)}
-            >${this.columnText(name, value)}</button>
+            >${labels ? labels[value as DayPeriod] : format(value as number)}</button>
           `;
         })}
       </div>
@@ -1585,13 +1641,12 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   override render(): TemplateResult {
     const hasLabel = this.withLabel || (this.label ?? '').length > 0 || this.hasLabelSlot;
     const hasHint = this.withHint || (this.hint ?? '').length > 0 || this.hasHintSlot;
-    const shownError = this.errorText || (this.touched ? this.validationMessage : '');
-    const hasError = this.hasErrorSlot || shownError.length > 0;
+    const hasError = this.hasErrorSlot || Boolean(this.errorText);
     const describedBy = [hasError ? this.errorId : '', hasHint ? this.hintId : ''].filter(Boolean).join(' ');
     const invalid = hasError || (this.touched && !this.validity.valid);
     const hostAccessibleName = this.getAttribute('aria-label');
     const accessibleName = hostAccessibleName ?? (this.label || this.localize('timeInputLabel'));
-    const showClear = this.withClear && (this.value !== '' || this.draftHasAny);
+    const showClear = (this.clearable || this.withClear) && (this.value !== '' || this.draftHasAny);
     const nativeStep = this.step === 'any' ? 'any' : String(this.step);
 
     return html`
@@ -1635,7 +1690,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
             aria-label=${this.localize('timeInputOpen')}
             aria-controls=${this.popupId}
             aria-expanded=${String(this.open)}
-            ?disabled=${this.effectiveDisabled}
+            ?disabled=${this.effectiveDisabled || this.readonly}
             @click=${this.onExpand}
           ><span part="expand-icon" aria-hidden="true" inert><slot name="expand-icon">${chevronIcon()}</slot></span></button>
         </div>
@@ -1649,7 +1704,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
         >
           <span class="glass-scroll-layer" aria-hidden="true"></span>
           <div part="columns">
-            ${this.segmentOrder.map((name) => this.renderColumn(name))}
+            ${this.popupHidden ? nothing : this.segmentOrder.map((name) => this.renderColumn(name))}
           </div>
           ${this.hasFooterSlot
             ? html`<slot name="footer" @slotchange=${this.updateSlotState}></slot>`
@@ -1663,7 +1718,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
               : html`<slot name="footer" @slotchange=${this.updateSlotState}></slot>`}
         </div>
         <div id=${this.errorId} part="error" ?hidden=${!hasError}>
-          ${shownError}<slot name="error" @slotchange=${this.updateSlotState}></slot>
+          ${this.errorText}<slot name="error" @slotchange=${this.updateSlotState}></slot>
         </div>
         <div id=${this.hintId} part="hint" ?hidden=${!hasHint}>
           ${this.hint}<slot name="hint" @slotchange=${this.updateSlotState}></slot>

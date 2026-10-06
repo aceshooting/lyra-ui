@@ -28,7 +28,7 @@ export const styles = css`
     --_lr-input-radius-default: var(--lr-form-control-radius);
     /* Fill/border pair swapped per appearance below; the default is outlined, so an element whose
        appearance attribute has not reflected yet still paints the correct border-only box. */
-    --_lr-input-fill-default: transparent;
+    --_lr-input-fill-default: var(--lr-color-surface);
     --_lr-input-border-color-default: var(--lr-color-border);
     /* The shared field focus halo (internal/form-control.styles.ts). Only this private copy is
        declared; the PUBLIC name stays undeclared, so a value set on :root or any ancestor still
@@ -36,11 +36,11 @@ export const styles = css`
     --_lr-form-control-focus-shadow: var(--lr-form-control-focus-shadow, none);
   }
   :host([appearance='filled-outlined']) {
-    --_lr-input-fill-default: var(--lr-color-surface);
+    --_lr-input-fill-default: var(--lr-color-surface-raised);
     --_lr-input-border-color-default: var(--lr-color-border);
   }
   :host([appearance='outlined']) {
-    --_lr-input-fill-default: transparent;
+    --_lr-input-fill-default: var(--lr-color-surface);
     --_lr-input-border-color-default: var(--lr-color-border);
   }
   :host([appearance='filled']) {
@@ -123,7 +123,7 @@ export const styles = css`
     font-size: var(--lr-input-font-size, var(--_lr-input-font-size-default));
   }
   [part='input']::placeholder {
-    color: var(--lr-input-action-color, var(--lr-color-text-quiet));
+    color: var(--lr-input-placeholder-color, var(--lr-input-action-color, var(--lr-color-text-quiet)));
   }
   /* The 4-character floor holds only while an adornment is shown: shrink is shared in proportion
      to base size, so long adornments would otherwise squeeze the field out. Without one the field

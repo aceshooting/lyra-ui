@@ -6,6 +6,7 @@ import {
   isBarredFromValidation,
 } from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
+import { setCustomState } from '../../../internal/custom-states.js';
 import { lengthViolations } from '../../../internal/length-constraints.js';
 import {
   MatchConstraintController,
@@ -13,9 +14,11 @@ import {
 } from '../../../internal/match-constraint.js';
 import { closeIcon, eyeIcon, eyeOffIcon } from '../../../internal/icons.js';
 import { styles } from './input.styles.js';
+import { isDateObject } from '../../../internal/dom-guards.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { srOnly } from '../../../internal/a11y.js';
 import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
+import type { LyraSelectionDirection } from '../../../internal/shared-unions.js';
 import {
   autocorrectConverter,
   normalizeAutocorrect,
@@ -56,6 +59,24 @@ export type LyraInputType =
   | 'datetime-local'
   | 'tel'
   | 'url';
+/** Numeric bound text reads back as a number; date/time text stays a string. */
+const boundConverter = {
+  fromAttribute: (value: string | null): number | string | null =>
+    value == null
+      ? null
+      : /^\s*[-+]?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?\s*$/i.test(value)
+        ? Number(value)
+        : value,
+};
+let temporalProbe: HTMLInputElement | undefined;
+/** A detached native input of a date/time `type` that parses and formats values; else undefined. */
+function temporalProbeFor(doc: Document, type: string): HTMLInputElement | undefined {
+  if (type !== 'date' && type !== 'time' && type !== 'datetime-local') return undefined;
+  temporalProbe ??= doc.createElement('input');
+  temporalProbe.type = type;
+  return temporalProbe;
+}
+
 const INPUT_TYPES = new Set<LyraInputType>([
   'text',
   'password',
@@ -167,7 +188,7 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * @cssprop [--lr-input-radius=var(--lr-form-control-radius)] - Corner radius of the control row,
  * from the active `size` tier of the shared ladder (the two tightest tiers take a smaller radius).
  * `pill` swaps it to `--lr-radius-pill`.
- * @cssprop [--lr-input-fill=transparent] - Background of the control row. Its private default
+ * @cssprop [--lr-input-fill=var(--lr-color-surface)] - Background of the control row. Its private default
  * changes per `appearance`; the public value remains authoritative in every appearance.
  * @cssprop [--lr-input-border-color=var(--lr-color-border)] - Border color of the control row,
  * with a private default that changes per `appearance` in the same way as `--lr-input-fill`.
@@ -175,6 +196,8 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  *   focus is within the field.
  * @cssprop [--lr-input-action-color=var(--lr-color-text-quiet)] - Resting clear/password/number-
  *   stepper action color.
+ * @cssprop [--lr-input-placeholder-color=var(--lr-input-action-color,var(--lr-color-text-quiet))] -
+ *   Placeholder text color.
  * @cssprop [--lr-input-action-hover-color=var(--lr-color-text)] - Hovered action color.
  * @cssprop [--lr-input-action-active-color=var(--lr-input-action-hover-color,var(--lr-color-text))] -
  *   Pressed action color.
@@ -190,8 +213,8 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  *   color for the native time-picker indicator.
  * @cssprop [--lr-form-control-focus-shadow=none] - The shared field focus halo, painted as a
  * `box-shadow` while this control is focused. One name for every field-shaped control in the
- * library, so a halo is configured once rather than per component. Additive: the focus outline and
- * border cue are the accessibility answer to focus and are never replaced by it.
+ * library, so a halo is configured once rather than per component. Additive: the brand border cue
+ * is the accessibility answer to focus and is never replaced by it.
  * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker rendered after the
  * label. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a
  * localized word) to replace it. Caller-supplied content, so it is never localized here.
@@ -333,19 +356,15 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
   set enterkeyhint(next: string) {
     this.enterKeyHint = next ?? '';
   }
-  /** `type="number"` only — forwarded to the internal native `<input>`'s own `min`/`max`/`step`
-   *  and consulted by that same native input's constraint validation (see `updateValidity()`).
-   *  Defaults to `undefined` (no lower bound). The `min` attribute is parsed as a number here; the
-   *  declared type also admits a string so a subclass bound to a non-numeric native input type can
-   *  narrow the attribute parsing to that type's own literal form (`<lr-native-time-input>`'s `09:00`)
-   *  without redeclaring the whole property surface. */
+  /** Forwarded to the native `<input>`'s `min` for its constraint validation, for any `type`.
+   *  Defaults to `undefined`. A numeric attribute reads back as a number, other text as a string. */
   // numeric-guard-exempt: passed straight through to the native <input min> and its own
   // ValidityState.rangeUnderflow check, both of which already tolerate a non-finite value
   // without throwing; never used in arithmetic in this file.
-  @property({ type: Number }) min?: number | string;
+  @property({ converter: boundConverter }) min?: number | string;
   /** Upper counterpart of `min`, with the same parsing and the same default of `undefined`. */
   // numeric-guard-exempt: same rationale as `min` above, for the native <input max> attribute.
-  @property({ type: Number }) max?: number | string;
+  @property({ converter: boundConverter }) max?: number | string;
   /** Accepts `'any'` (the native way to disable step validation) in addition to a numeric step. */
   @property() step?: number | 'any';
   /** Minimum text length, forwarded to the internal native `<input>`'s own `minlength` and
@@ -573,6 +592,40 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
     this.value = native.value;
   }
 
+  /** A date/time value at local fields (a `time` on today's date), like `lr-date-input`. Silent. */
+  get valueAsLocalDate(): Date | null {
+    const utc = this.valueAsUTCDate;
+    if (!utc) return null;
+    const local = new Date();
+    if (this.type !== 'time') local.setFullYear(utc.getUTCFullYear(), utc.getUTCMonth(), utc.getUTCDate());
+    local.setHours(utc.getUTCHours(), utc.getUTCMinutes(), utc.getUTCSeconds(), utc.getUTCMilliseconds());
+    return local;
+  }
+
+  set valueAsLocalDate(next: Date | null) {
+    this.valueAsUTCDate = isDateObject(next)
+      ? new Date(next.getTime() - next.getTimezoneOffset() * 60_000)
+      : null;
+  }
+
+  /** A date/time value at UTC fields, the native `valueAsDate` reading. Silent. */
+  get valueAsUTCDate(): Date | null {
+    const probe = temporalProbeFor(this.ownerDocument, this.type);
+    if (!probe) return null;
+    probe.value = this.value;
+    return Number.isNaN(probe.valueAsNumber) ? null : new Date(probe.valueAsNumber);
+  }
+
+  set valueAsUTCDate(next: Date | null) {
+    const probe = temporalProbeFor(this.ownerDocument, this.type);
+    if (!probe) return;
+    const ms = isDateObject(next) ? next.getTime() : NaN;
+    probe.value = '';
+    // WebKit throws on a NaN write; a time input takes milliseconds since midnight.
+    if (!Number.isNaN(ms)) probe.valueAsNumber = this.type === 'time' ? ((ms % 86_400_000) + 86_400_000) % 86_400_000 : ms;
+    this.value = probe.value;
+  }
+
   /** Native numeric view (milliseconds for date/time inputs, numeric value for number inputs).
    * Assignment is silent, matching `HTMLInputElement.valueAsNumber`. */
   get valueAsNumber(): number {
@@ -670,6 +723,15 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
 
   set selectionEnd(value: number | null) {
     if (this.inputEl) this.inputEl.selectionEnd = value ?? 0;
+  }
+
+  /** The native `selectionDirection`; `null` before render. */
+  get selectionDirection(): LyraSelectionDirection | null {
+    return (this.inputEl?.selectionDirection as LyraSelectionDirection | null | undefined) ?? null;
+  }
+
+  set selectionDirection(value: LyraSelectionDirection | null) {
+    if (this.inputEl) this.inputEl.selectionDirection = value ?? 'none';
   }
 
   /** Passthrough to the native `<input>`'s own `setSelectionRange()`. No-op if the element hasn't
@@ -814,10 +876,8 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('value')) {
-      if (this.value === '') this.internals.states.add('blank');
-      else this.internals.states.delete('blank');
-    }
+    if (changed.has('value')) setCustomState(this.internals, 'blank', this.value === '');
+    this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
     // A constraint that tightens without a value write (`el.maxlength = 3` over an existing value)
     // reaches the native input only on this render, so validity has to be recomputed after it --
     // the same reason `min`/`max`/`step` are listed here. `match` joins them so retargeting the
