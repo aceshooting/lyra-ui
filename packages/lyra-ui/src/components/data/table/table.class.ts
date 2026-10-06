@@ -18,7 +18,8 @@ import {
 import { styles } from './table.styles.js';
 import { chevronIcon, closeIcon, sortIcon } from '../../../internal/icons.js';
 import { minMax } from '../heatmap/heatmap-scale.js';
-import '../../overlays/empty/empty.class.js';
+// Type-only: registration (and the code) of the composed `<lr-empty>` comes from `table.ts`.
+import type {} from '../../overlays/empty/empty.class.js';
 import {
   literalSetConverter,
   trueDefaultSpellcheckConverter as spellcheckConverter,
@@ -37,7 +38,7 @@ import { requestThenCommit } from '../../../internal/request-commit.js';
 import { renderDataState } from '../../../internal/data-state-renderer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_tableLoading, LYRA_DEFAULT_tableLoadingMore } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_tableLoading, LYRA_DEFAULT_tableLoadingMore } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** How `loading` renders. `'spinner'` (the default) replaces the grid with an indeterminate
@@ -123,6 +124,20 @@ function readonlyKeySet(values: Iterable<string | number>): ReadonlySet<string |
     },
   };
   return Object.freeze(facade);
+}
+
+/** One read facade per stored key set. The stored sets are replaced, never mutated, so a facade
+ *  stays a correct snapshot for as long as its set is current; reading the same facade back keeps
+ *  Lit from treating every rebind of an unchanged selection as a change. */
+const keySetFacades = new WeakMap<ReadonlySet<string | number>, ReadonlySet<string | number>>();
+
+function storedKeySetFacade(values: ReadonlySet<string | number>): ReadonlySet<string | number> {
+  let facade = keySetFacades.get(values);
+  if (!facade) {
+    facade = readonlyKeySet(values);
+    keySetFacades.set(values, facade);
+  }
+  return facade;
 }
 
 const UNSAFE_CSS_STRUCTURE = /[;{}]/;
@@ -437,9 +452,20 @@ function sanitizeCellStyleValue(value: unknown): string | undefined {
   return normalized;
 }
 
+/** `CSS.supports()` answers per declaration, and a cell style repeats the same few declarations
+ *  on every row of every render; remember each answer (bounded) instead of re-parsing it. */
+const cssSupportsCache = new Map<string, boolean>();
+const CSS_SUPPORTS_CACHE_LIMIT = 1_000;
+
 function cssSupports(property: string, value: string): boolean {
   if (typeof CSS === 'undefined' || typeof CSS.supports !== 'function') return true;
-  return CSS.supports(property, value);
+  const key = `${property}\u0000${value}`;
+  const cached = cssSupportsCache.get(key);
+  if (cached !== undefined) return cached;
+  const supported = CSS.supports(property, value);
+  if (cssSupportsCache.size >= CSS_SUPPORTS_CACHE_LIMIT) cssSupportsCache.clear();
+  cssSupportsCache.set(key, supported);
+  return supported;
 }
 
 /** Fails closed for untyped values outside the explicit editor-trigger vocabulary. */
@@ -621,28 +647,9 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  * `priorityColumnsToggleAvailable` reports whether the reveal button is currently offered at all,
  * which is the same measured state the button itself renders from.
  *
- * `expandedContent` (a table-level `(row: T) => unknown`, not a per-column
- * hook, since the resulting panel spans every column via `colspan`) makes
- * every row render a leading chevron-toggle cell before its data columns.
- * `canExpand` optionally gates which rows actually get an interactive
- * toggle — a row that fails it still gets a blank leading cell for column
- * alignment. Which rows are currently open lives in `expandedRowKeys` (a set of row keys, per
- * `rowKey`/`keyOf()`), and `expansionMode` decides who writes it — mirroring `selectionMode`
- * member for member. Under the default `'none'` the set is fully consumer-owned: the table only
- * reads it and emits `lr-row-expand-toggle` on activation, exactly as it always has. Under
- * `'single'` or `'multiple'` the table proposes each change with the cancelable
- * `lr-row-expand-request` first and, unless a listener vetoes it, writes `expandedRowKeys` itself
- * before announcing the applied change with `lr-row-expand-toggle`. `'single'` keeps at most one
- * row open; the row it closes to make room gets its own `lr-row-expand-toggle` (`expanded: false`)
- * just before the accepted one, so the per-row event stays a complete account of what opened and
- * closed. Flipping `expansionMode` to `'single'` coerces an already-larger set down to its
- * first key the same way `selectionMode` does for `selectedRowKeys`.
- *
- * Neither mode clears keys when the visible rows change: filtering, sorting and pagination leave
- * `expandedRowKeys` alone, so a row scrolled, filtered or paged out of view returns expanded, and
- * a key matching no current row simply renders nothing until one exists again. That is
- * `selectedRowKeys`' own convention — valid off-view keys stay controlled state so a
- * server-paginated table can keep them.
+ * Row expansion: `expandedContent` and `canExpand` render the leading chevron column, and
+ * `expansionMode`/`expandedRowKeys` decide who owns which rows are open, including off-view keys —
+ * see those members.
  *
  * Selection is opt-in through the `selectionMode` property. Use `single` or
  * `multiple` to self-manage row selection; the default `none` remains
@@ -676,16 +683,8 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  * default, normalized to 1..500). Client mode owns the accepted page and slices `rows`; server mode
  * leaves `page` controlled, bounds the supplied page to `pageSize`, and uses `totalItems` for the
  * navigation summary. `unknownTotal` (server mode only) forwards `<lr-pagination>`'s own
- * indeterminate mode for a caller with no total -- previous/next only, no numbered list, no
- * item-range summary -- with `hasNext` as the one extra signal that mode needs; see both
- * properties' own docs. `loading` keeps the table shell busy; `loadingAppearance`
- * chooses how — the default `'spinner'` replaces the grid with an indeterminate
- * spinner, while `'skeleton'` keeps the real `<colgroup>`/`<thead>` (and the
- * filter/pagination chrome) and fills the body with `skeletonRows` placeholder
- * rows, so column geometry survives the load instead of collapsing and
- * reflowing. Loading takes precedence over both empty branches. Because a skeleton needs a
- * column schema, a skeleton request received before `columns` arrives temporarily falls back to
- * the spinner rather than showing the no-columns empty state. Initial declarative loading stays
+ * indeterminate mode for a caller with no total -- see `unknownTotal` and `hasNext`. `loading`
+ * keeps the table shell busy; see `loadingAppearance` for how. Initial declarative loading stays
  * silent; every post-mount transition into either
  * loading appearance appends to the shared light-DOM polite sink — including repeated cycles —
  * while every placeholder opts out of `<lr-skeleton>`'s own announcement.
@@ -750,15 +749,8 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  * configuration problem (`emptyColumnsHeading`), not "this query returned nothing", and a single slot
  * covering all three would collapse that distinction.
  *
- * A separate `error` state reports a failed load without discarding grid context: while `error` is
- * set, `<tbody>`'s single row becomes a failed-load `<lr-empty>` (the same `error`-prefixed exported
- * parts as the empty state, plus a built-in `[part='retry-button']`), behind its own `error` slot —
- * but `<thead>`, the filter field, and pagination all stay mounted around it, unlike either
- * data-empty branch above, which replace them too. Precedence when more than one state could apply
- * at once: `loading` beats `error` beats every empty branch, so a `loading` table never flashes a
- * stale `error`, and an `error` table never falls through to "no rows"/"no columns" copy
- * underneath it. The retry button's `lr-retry-request` is cancelable: the built-in action clears `error`,
- * and `preventDefault()` leaves it set for a consumer that owns its own retry timing.
+ * A failed load keeps the grid's context: see `error` (and its precedence over the loading and
+ * empty states), the `error` slot, and the cancelable `lr-retry-request`.
  *
  * `layout` sets a floor on the `<table>`'s `table-layout`: `'fixed'` forces it even with no column
  * widths, while the default `'auto'` still resolves to `fixed` whenever a column declares a `width`
@@ -985,6 +977,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     navigation: LYRA_DEFAULT_navigation,
     noColumns: LYRA_DEFAULT_noColumns,
     noData: LYRA_DEFAULT_noData,
+    noMatches: LYRA_DEFAULT_noMatches,
     open: LYRA_DEFAULT_open,
     resizeColumn: LYRA_DEFAULT_resizeColumn,
     resizeValuePixels: LYRA_DEFAULT_resizeValuePixels,
@@ -1004,6 +997,19 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
 
   static override styles = [LyraElement.styles, styles, srOnly];
 
+  /** The value each snapshotting collection setter last received. */
+  private readonly assignedSources = new Map<string, unknown>();
+
+  /** Whether assigning `value` to `name` is a rebind rather than a change: the exact value that
+   *  property last received, or its current snapshot read back. Declarative hosts re-commit
+   *  object and array bindings on every render. */
+  private isRebind(name: string, value: unknown, current: unknown): boolean {
+    if (value === current) return true;
+    if (this.assignedSources.has(name) && this.assignedSources.get(name) === value) return true;
+    this.assignedSources.set(name, value);
+    return false;
+  }
+
   private _columns: readonly TableColumn<T>[] = Object.freeze([]);
   /** Clone-owned readonly column-definition sequence, bounded to the first 10,000 source
    * positions. Blank keys and later duplicate keys are omitted (first valid occurrence wins)
@@ -1014,6 +1020,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     return this._columns;
   }
   set columns(value: readonly TableColumn<T>[]) {
+    if (this.isRebind('columns', value, this._columns)) return;
     const previous = this._columns;
     const columns: TableColumn<T>[] = [];
     const seen = new Set<string>();
@@ -1065,9 +1072,17 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     return this._rows;
   }
   set rows(value: readonly T[]) {
+    if (this.isRebind('rows', value, this._rows)) return;
     const previous = this._rows;
     this._rows = frozenArray(Array.isArray(value) ? value : []);
+    this._rowsTruncated = Array.isArray(value) && value.length > this._rows.length;
     this.requestUpdate('rows', previous);
+  }
+  private _rowsTruncated = false;
+  /** Whether `rows` held more than the 10,000 rows the snapshot keeps; the rest are not shown,
+   *  counted, paged or exported. */
+  get rowsTruncated(): boolean {
+    return this._rowsTruncated;
   }
   /** Floor for the `<table>`'s `table-layout`. `'fixed'` forces the fixed algorithm even when no
    *  column declares a `width`, so every column shares the available width evenly and long cell
@@ -1149,7 +1164,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  ahead of the accepted one -- unless that row is filtered or paged out of view, which leaves
    *  it no `row` to describe. The property-driven coercion above reports through
    *  `expandedRowKeys` alone for the same reason. No mode ever clears keys because the visible
-   *  rows changed -- see the class JSDoc's note on off-view keys, which follows
+   *  rows changed -- see `expandedRowKeys` on off-view keys, which follows
    *  `selectedRowKeys`' convention. */
   @property({ reflect: true, attribute: 'expansion-mode' }) expansionMode: TableExpansionMode = 'none';
   /** Which element scrolls when the table overflows; see `TableScrollMode`. `'auto'` keeps page
@@ -1167,9 +1182,10 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     // The internal store is the `string | number` union every code path here works in; `K` only
     // narrows what a parameterized element promises its consumer, so the facade is re-typed at
     // this boundary rather than threading the parameter through the private normalizers.
-    return readonlyKeySet(this._selectedKeys) as ReadonlySet<K>;
+    return storedKeySetFacade(this._selectedKeys) as ReadonlySet<K>;
   }
   set selectedRowKeys(value: ReadonlySet<K>) {
+    if (this.isRebind('selectedRowKeys', value, storedKeySetFacade(this._selectedKeys))) return;
     const previous = this._selectedKeys;
     this._selectedKeys = keySet(value ?? []);
     this.requestUpdate('selectedRowKeys', previous);
@@ -1298,9 +1314,10 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   @property({ attribute: false })
   get expandedRowKeys(): ReadonlySet<K> {
     // Re-typed at the public boundary for the same reason as `selectedRowKeys` above.
-    return readonlyKeySet(this._expandedKeys) as ReadonlySet<K>;
+    return storedKeySetFacade(this._expandedKeys) as ReadonlySet<K>;
   }
   set expandedRowKeys(value: ReadonlySet<K>) {
+    if (this.isRebind('expandedRowKeys', value, storedKeySetFacade(this._expandedKeys))) return;
     const previous = this._expandedKeys;
     this._expandedKeys = keySet(value ?? []);
     this.requestUpdate('expandedRowKeys', previous);
@@ -1377,6 +1394,8 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  `role="status"`/`role="alert"` hand-added before this property existed once it is set --
    *  otherwise the failure is announced a third time, through the native role as well. */
   @property({ type: Boolean, reflect: true }) announce = false;
+  /** Empty-state heading override. Omitted, it localizes `noData` for a table with no rows and
+   *  `noMatches` when rows exist but the filter excludes them all. */
   @property({ attribute: 'empty-heading' }) emptyHeading?: string;
   @property({ attribute: 'empty-description' }) emptyDescription = '';
   private _emptySize?: LyraSize;
@@ -1620,9 +1639,23 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  `* 16` would pick the wrong floor on a page whose root font-size isn't the browser default.
    *  CSS math resolves in the host's theme scope. A token with no used pixel length here (a bare `%` with no
    *  base) falls back to DEFAULT_RESIZE_MIN_WIDTH_PX rather than being read as raw pixels. */
+  /** The themed resize minimum, resolved at most once per update and owner document instead of
+   *  one `getComputedStyle()` per resizable column per render; cleared in `willUpdate()`. A `rem`
+   *  token resolves against the owner document's root, so adoption into another document also
+   *  re-resolves it. */
+  private themedResizeMinWidth?: { readonly document: Document; readonly width: number };
+
   private minimumResizeWidth(column: TableColumn<T>): number {
     const explicit = this.parsePixelLength(column.minWidth);
     if (explicit !== undefined) return Math.max(0, explicit);
+    const cached = this.themedResizeMinWidth;
+    if (cached && cached.document === this.ownerDocument) return cached.width;
+    const width = this.resolveThemedResizeMinWidth();
+    this.themedResizeMinWidth = { document: this.ownerDocument, width };
+    return width;
+  }
+
+  private resolveThemedResizeMinWidth(): number {
     const ownerWindow = this.ownerDocument.defaultView;
     const hostStyle = ownerWindow?.getComputedStyle(this);
     const themed =
@@ -2534,23 +2567,30 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   };
 
   /** The header cell that currently owns `tabindex="0"`. */
-  private focusedColKey(): string | null {
-    const visible = this.visibleHeaders();
-    const visibleKeys = new Set(
-      visible
+  /** The header that owns the header row's `tabindex="0"`. Event handlers pass nothing and read
+   *  live layout (`visibleHeaders()`); `render()` passes `displayedColumnKeys()`, which derives the
+   *  same answer from this element's own priority-hide markers without forcing a layout. */
+  private focusedColKey(displayed?: readonly string[]): string | null {
+    const visibleKeys =
+      displayed ??
+      this.visibleHeaders()
         .map((el) => el.dataset['colKey'])
-        .filter((key): key is string => key !== undefined && this.columnsByKey.has(key))
-    );
+        .filter((key): key is string => key !== undefined && this.columnsByKey.has(key));
     if (this.activeColKey !== null && this.columnsByKey.has(this.activeColKey)) {
-      if (visibleKeys.size === 0 || visibleKeys.has(this.activeColKey)) return this.activeColKey;
+      if (visibleKeys.length === 0 || visibleKeys.includes(this.activeColKey)) return this.activeColKey;
     }
-    return (
-      visible.find((el) => el.dataset['colKey'] !== undefined && this.columnsByKey.has(el.dataset['colKey']))?.dataset[
-        'colKey'
-      ] ??
-      this.columns[0]?.key ??
-      null
-    );
+    return visibleKeys[0] ?? this.columns[0]?.key ?? null;
+  }
+
+  /** Column keys in header order, minus the priority tiers `[part='base']` currently hides (the
+   *  markers `recomputeHiddenPriorityColumns()` writes; `priorityColumnsVisible` overrides them). */
+  private displayedColumnKeys(): string[] {
+    const base = this.renderRoot?.querySelector?.('[part="base"]');
+    const hideLow = !this.priorityColumnsVisible && Boolean(base?.hasAttribute('data-hide-priority-low'));
+    const hideMedium = !this.priorityColumnsVisible && Boolean(base?.hasAttribute('data-hide-priority-medium'));
+    return this.columns
+      .filter((col) => !(hideLow && col.priority === 'low') && !(hideMedium && col.priority === 'medium'))
+      .map((col) => col.key);
   }
 
   /** The body row that currently owns `tabindex="0"`. */
@@ -2630,6 +2670,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    this.themedResizeMinWidth = undefined;
     this.captureRovingFocus(changed);
     if (
       this.selectionMode === 'single' &&
@@ -2767,10 +2808,33 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   /** `[lo, hi]` of every `heatValue` result across every matching row (post-sort, pre-pagination) and
    *  every `heatValue`-defining column, or `null` when heat-tint mode is off or there's no usable
    *  domain (no numeric values and no override). `heatTintScale` overrides either or both bounds. */
+  /** The heat domain of the last computed filtered rows, columns and scale, so a render that only
+   *  moved focus or hover does not call every `heatValue` again. */
+  private heatDomainCache?: {
+    readonly entries: readonly TableRowEntry<T>[];
+    readonly columns: readonly TableColumn<T>[];
+    readonly min: number | undefined;
+    readonly max: number | undefined;
+    readonly domain: [number, number] | null;
+  };
+
   private computeHeatDomain(hasHeatTint: boolean): [number, number] | null {
     if (!hasHeatTint) return null;
+    const entries = this.matchingEntries();
+    const min = this.heatTintScale?.min;
+    const max = this.heatTintScale?.max;
+    const cached = this.heatDomainCache;
+    if (cached && cached.entries === entries && cached.columns === this.columns && cached.min === min && cached.max === max) {
+      return cached.domain;
+    }
+    const domain = this.deriveHeatDomain(entries);
+    this.heatDomainCache = { entries, columns: this.columns, min, max, domain };
+    return domain;
+  }
+
+  private deriveHeatDomain(entries: readonly TableRowEntry<T>[]): [number, number] | null {
     const values: number[] = [];
-    for (const entry of this.matchingEntries()) {
+    for (const entry of entries) {
       for (const col of this.columns) {
         const v = col.heatValue?.(entry.row);
         if (v != null && Number.isFinite(v)) values.push(v);
@@ -3306,6 +3370,8 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     // preventDefault(), so a focused nested control keeps its native/own
     // Enter or Space activation instead of having it swallowed.
     if (eventInteractiveTarget(e, table)) return;
+    // Alt+Arrow (Cmd+Arrow on macOS) is browser history navigation; leave it to the platform.
+    if ((e.altKey || e.metaKey) && e.key.startsWith('Arrow')) return;
     // Same th-scoping rationale as onTableClick above.
     const th = target.closest('th[data-col-key]') as HTMLElement | null;
     if (th) return this.onHeaderKeyDown(e, th);
@@ -3724,7 +3790,10 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
       ></slot>`;
     }
 
-    const focusedCol = this.focusedColKey();
+    // Built at most once per render, shared by every footer cell and the grand total.
+    let footerRowList: T[] | undefined;
+    const footerRows = (): T[] => (footerRowList ??= matchingEntries.map((entry) => entry.row));
+    const focusedCol = this.focusedColKey(this.displayedColumnKeys());
     const focusedRow = this.focusedRowKey();
     const hasColumnWidths = this.columns.some((col) => col.width || this.resizedColumnWidths.has(col.key));
     // `layout` is a floor, never an override: a declared/resized column width still forces the
@@ -3768,7 +3837,9 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
               part="empty"
               exportparts="base:empty-base, icon:empty-icon, heading:empty-heading, description:empty-description, actions:empty-actions"
               size=${this.emptyCompactFor(true) ? 's' : nothing}
-              heading=${this.localizedOverride('noData', this.emptyHeading)}
+              heading=${this.canonicalRowEntries().length > 0
+                ? this.localizedOverride('noMatches', this.emptyHeading)
+                : this.localizedOverride('noData', this.emptyHeading)}
               description=${this.emptyDescription}
             ></lr-empty
           ></slot>`
@@ -3961,12 +4032,12 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
                     ${hasExpand ? html`<td part="footer-cell" aria-hidden="true"></td>` : nothing}
                     ${this.columns.map(
                       (col) => html`<td part="footer-cell" data-col-key=${col.key} data-priority=${col.priority ?? nothing} data-align=${col.align ?? 'start'}>
-                        ${col.footer?.(matchingEntries.map((entry) => entry.row)) ?? ''}
+                        ${col.footer?.(footerRows()) ?? ''}
                       </td>`
                     )}
                     ${hasRowTotal
                       ? html`<td part="footer-cell" data-align="end">
-                          ${this.grandTotal?.(matchingEntries.map((entry) => entry.row)) ?? ''}
+                          ${this.grandTotal?.(footerRows()) ?? ''}
                         </td>`
                       : nothing}
                   </tr>

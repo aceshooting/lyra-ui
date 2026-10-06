@@ -9,9 +9,10 @@ import type { LyraTree, LyraTreeNodeData, TreeBadge } from '../tree/tree.class.j
 // Value import (not `import type`) -- revealPath() below needs the real constructor at runtime
 // for its `instanceof` check.
 import { LyraTreeItem } from '../tree/tree-item.class.js';
+import { TREE_MAX_RENDER_NODES } from '../tree/tree-types.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_fileTreeDiffSummary, LYRA_DEFAULT_fileTreeLabel, LYRA_DEFAULT_gitStatusAdded, LYRA_DEFAULT_gitStatusConflicted, LYRA_DEFAULT_gitStatusDeleted, LYRA_DEFAULT_gitStatusIgnored, LYRA_DEFAULT_gitStatusModified, LYRA_DEFAULT_gitStatusRenamed, LYRA_DEFAULT_gitStatusUntracked, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_fileTreeDiffSummary, LYRA_DEFAULT_fileTreeLabel, LYRA_DEFAULT_gitStatusAdded, LYRA_DEFAULT_gitStatusConflicted, LYRA_DEFAULT_gitStatusDeleted, LYRA_DEFAULT_gitStatusIgnored, LYRA_DEFAULT_gitStatusModified, LYRA_DEFAULT_gitStatusRenamed, LYRA_DEFAULT_gitStatusUntracked, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -51,24 +52,34 @@ interface FileTreeDraft {
 function boundedArrayShape(value: unknown): {
   readonly isArray: boolean;
   readonly length: number;
+  readonly truncated: boolean;
 } {
   try {
-    if (!Array.isArray(value)) return { isArray: false, length: 0 };
+    if (!Array.isArray(value)) return { isArray: false, length: 0, truncated: false };
     const descriptor = Object.getOwnPropertyDescriptor(value, 'length');
     const length = descriptor && 'value' in descriptor ? descriptor.value : 0;
+    const valid = typeof length === 'number' && Number.isSafeInteger(length) && length >= 0;
     return {
       isArray: true,
-      length:
-        typeof length === 'number' && Number.isSafeInteger(length) && length >= 0
-          ? Math.min(length, MAX_FILE_TREE_NODES)
-          : 0,
+      length: valid ? Math.min(length, MAX_FILE_TREE_NODES) : 0,
+      truncated: valid && length > MAX_FILE_TREE_NODES,
     };
   } catch {
-    return { isArray: false, length: 0 };
+    return { isArray: false, length: 0, truncated: true };
   }
 }
 
 function normalizeFileTreeNodes(value: unknown): readonly FileTreeNode[] {
+  return normalizeFileTreeSnapshot(value).nodes;
+}
+
+/** Normalizes a node listing and reports whether any supplied entry was omitted (malformed,
+ *  duplicate, cyclic, over-depth, or beyond the inspected-position budget). */
+function normalizeFileTreeSnapshot(value: unknown): {
+  readonly nodes: readonly FileTreeNode[];
+  readonly truncated: boolean;
+} {
+  let truncated = false;
   const rootShape = boundedArrayShape(value);
   const roots = rootShape.isArray ? (value as readonly unknown[]) : [];
   const drafts: FileTreeDraft[] = [];
@@ -85,15 +96,16 @@ function normalizeFileTreeNodes(value: unknown): readonly FileTreeNode[] {
     { input: roots, output: rootDrafts, depth: 0, index: 0, length: rootShape.length },
   ];
   let inspected = 0;
-  while (
-    stack.length > 0 &&
-    drafts.length < MAX_FILE_TREE_NODES &&
-    inspected < MAX_FILE_TREE_NODES
-  ) {
+  if (rootShape.truncated) truncated = true;
+  while (stack.length > 0) {
     const frame = stack[stack.length - 1]!;
     if (frame.index >= frame.length) {
       stack.pop();
       continue;
+    }
+    if (drafts.length >= MAX_FILE_TREE_NODES || inspected >= MAX_FILE_TREE_NODES) {
+      truncated = true;
+      break;
     }
     const sourceIndex = frame.index++;
     inspected += 1;
@@ -101,15 +113,25 @@ function normalizeFileTreeNodes(value: unknown): readonly FileTreeNode[] {
     try {
       descriptor = Object.getOwnPropertyDescriptor(frame.input, String(sourceIndex));
     } catch {
+      truncated = true;
       continue;
     }
-    if (!descriptor || !('value' in descriptor)) continue;
+    if (!descriptor || !('value' in descriptor)) {
+      truncated = true;
+      continue;
+    }
     const candidate = descriptor.value;
-    if (typeof candidate !== 'object' || candidate === null || seenObjects.has(candidate)) continue;
+    if (typeof candidate !== 'object' || candidate === null || seenObjects.has(candidate)) {
+      truncated = true;
+      continue;
+    }
     try {
       const record = candidate as Record<string, unknown>;
       const path = record['path'];
-      if (typeof path !== 'string' || path.trim().length === 0 || seenPaths.has(path)) continue;
+      if (typeof path !== 'string' || path.trim().length === 0 || seenPaths.has(path)) {
+        truncated = true;
+        continue;
+      }
       const name = record['name'];
       const kind = record['kind'];
       const mimeType = record['mimeType'];
@@ -137,6 +159,7 @@ function normalizeFileTreeNodes(value: unknown): readonly FileTreeNode[] {
       seenPaths.add(path);
       frame.output.push(draft);
       drafts.push(draft);
+      if (childShape.truncated) truncated = true;
       if (childrenProvided && frame.depth < MAX_FILE_TREE_DEPTH) {
         stack.push({
           input: rawChildren as readonly unknown[],
@@ -145,9 +168,12 @@ function normalizeFileTreeNodes(value: unknown): readonly FileTreeNode[] {
           index: 0,
           length: childShape.length,
         });
+      } else if (childShape.length > 0) {
+        truncated = true;
       }
     } catch {
       // Retain later valid siblings when a hostile record getter fails.
+      truncated = true;
     }
   }
   for (let index = drafts.length - 1; index >= 0; index--) {
@@ -159,7 +185,7 @@ function normalizeFileTreeNodes(value: unknown): readonly FileTreeNode[] {
         : {}),
     });
   }
-  return Object.freeze(rootDrafts.map((draft) => draft.normalized!));
+  return { nodes: Object.freeze(rootDrafts.map((draft) => draft.normalized!)), truncated };
 }
 
 const GIT_STATUS_LETTER: Record<GitStatus, string> = {
@@ -254,7 +280,6 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
     gitStatusModified: LYRA_DEFAULT_gitStatusModified,
     gitStatusRenamed: LYRA_DEFAULT_gitStatusRenamed,
     gitStatusUntracked: LYRA_DEFAULT_gitStatusUntracked,
-    loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
@@ -268,16 +293,34 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   private _nodes: readonly FileTreeNode[] = [];
+  private nodesTruncated = false;
+  private lastNodesSource: unknown = undefined;
   /** Clone-owned, cycle-safe readonly node snapshot. Empty/blank paths are omitted and duplicate
    * paths use the first valid node; projection inspects at most 10,000 source positions across 64
    * descendant levels. An unreadable optional field rejects only its node, without reserving the
-   * path against a later valid occurrence. Reassign after changes. */
+   * path against a later valid occurrence. The composed `<lr-tree>` holds at most 1,000 rows, so
+   * a larger listing projects each collapsed directory as a single row whose children load from
+   * this snapshot when it expands; `dataTruncated` reports anything still omitted. Reassign after
+   * changes. */
   @property({ attribute: false })
   get nodes(): readonly FileTreeNode[] { return this._nodes; }
   set nodes(value: readonly FileTreeNode[]) {
+    // A re-render that rebinds the same listing (or this getter's own snapshot) changes nothing.
+    if (value === this.lastNodesSource || value === this._nodes) return;
     const previous = this._nodes;
-    this._nodes = normalizeFileTreeNodes(value);
+    const snapshot = normalizeFileTreeSnapshot(value);
+    this.lastNodesSource = value;
+    this._nodes = snapshot.nodes;
+    this.nodesTruncated = snapshot.truncated;
     this.requestUpdate('nodes', previous);
+  }
+
+  /** Whether any supplied node is not shown: omitted while normalizing `nodes` (malformed,
+   *  duplicate, cyclic, over-depth, or over-budget entries) or beyond the composed `<lr-tree>`'s
+   *  1,000-row budget for the directories currently expanded. */
+  get dataTruncated(): boolean {
+    const tree = this.renderRoot?.querySelector?.(tag('tree')) as LyraTree | null | undefined;
+    return this.nodesTruncated || Boolean(tree?.dataTruncated);
   }
   @property({ attribute: 'selected-path' }) selectedPath: string | null = null;
   /** Accessible-name override for the internal `<lr-tree>`; falls back to the localized default
@@ -286,6 +329,14 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
 
   private nodesByPath = new Map<string, FileTreeNode>();
   private parentPathByPath = new Map<string, string>();
+  /** Directories the inner tree reports expanded. Only consulted when the whole listing exceeds
+   *  the inner tree's row budget: then just these directories project their children. */
+  private expandedPaths = new Set<string>();
+
+  /** Whether every normalized node fits the composed tree's row budget at once. */
+  private get projectsAllNodes(): boolean {
+    return this.nodesByPath.size <= TREE_MAX_RENDER_NODES;
+  }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
@@ -323,15 +374,22 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
         })
       : undefined;
     let children: LyraTreeNodeData[] | undefined;
-    if (isLazyUnloaded(node)) {
-      children = [{ id: `${node.path} loading`, label: this.localize('loading'), disabled: true }];
-    } else if (node.children) {
-      children = node.children.map((c) => this.toTreeItem(c));
+    // An unloaded directory uses the inner tree's own lazy lifecycle (busy state, one request per
+    // expansion, stale-response rejection). Over the row budget, a collapsed loaded directory is
+    // projected the same way and its children load from the snapshot when it expands.
+    let lazy = isLazyUnloaded(node);
+    if (!lazy && node.children) {
+      if (this.projectsAllNodes || this.expandedPaths.has(node.path)) {
+        children = node.children.map((c) => this.toTreeItem(c));
+      } else {
+        lazy = node.children.length > 0;
+      }
     }
     return {
       id: node.path,
       label: node.name ?? baseName(node.path),
       selected: this.selectedPath === node.path,
+      ...(lazy ? { lazy } : {}),
       children,
       badges: badges.length > 0 ? badges : undefined,
       description,
@@ -365,11 +423,43 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
   private onNodeToggle = (e: Event): void => {
     e.stopPropagation();
     const { nodeId, expanded } = (e as CustomEvent<{ nodeId: string; expanded: boolean }>).detail;
-    if (!expanded) return;
-    const node = this.nodesByPath.get(nodeId);
-    if (node && isLazyUnloaded(node)) {
-      this.emit('lr-load-children', Object.freeze({ filePath: nodeId }));
+    if (expanded) {
+      this.expandedPaths.add(nodeId);
+      return;
     }
+    if (!this.expandedPaths.delete(nodeId)) return;
+    // Forget expanded descendants too, so a re-expanded directory starts collapsed beneath.
+    for (const path of [...this.expandedPaths]) {
+      for (let parent = this.parentPathByPath.get(path); parent !== undefined; parent = this.parentPathByPath.get(parent)) {
+        if (parent === nodeId) {
+          this.expandedPaths.delete(path);
+          break;
+        }
+      }
+    }
+    if (!this.projectsAllNodes) this.requestUpdate();
+  };
+
+  /** The inner tree's lazy request for a directory: an unloaded one asks the host for children;
+   *  a loaded one (projected lazily over the row budget) is answered from the snapshot. */
+  private onLazyLoad = (e: Event): void => {
+    e.stopPropagation();
+    const nodeId = (e as CustomEvent<{ item: LyraTreeItem }>).detail.item.nodeId;
+    const node = this.nodesByPath.get(nodeId);
+    if (!node) return;
+    if (isLazyUnloaded(node)) {
+      this.emit('lr-load-children', Object.freeze({ filePath: nodeId }));
+      return;
+    }
+    this.expandedPaths.add(nodeId);
+    this.requestUpdate();
+  };
+
+  /** Keeps the composed tree's own events, whose details reference its shadow-internal items,
+   *  inside this component; `lr-file-select`, `lr-file-open` and `lr-load-children` are the
+   *  public contract. */
+  private stopInnerEvent = (e: Event): void => {
+    e.stopPropagation();
   };
 
   /** Fulfills a lazy directory's children in place. Expansion state survives because `<lr-tree>`
@@ -410,6 +500,13 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
     if (!treeEl) return false;
     const chain = this.ancestorChain(path);
     if (chain.length === 0) return false;
+    // Over the row budget, project each ancestor's children before expanding it.
+    if (!this.projectsAllNodes && chain.slice(0, -1).some((id) => !this.expandedPaths.has(id))) {
+      for (const id of chain.slice(0, -1)) this.expandedPaths.add(id);
+      this.requestUpdate();
+      await this.updateComplete;
+      await treeEl.updateComplete;
+    }
     let container: LyraTree | LyraTreeItem = treeEl;
     let node: LyraTreeItem | null = null;
     for (const id of chain) {
@@ -431,7 +528,16 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
   }
 
   expandAll(): Promise<void> | void {
-    return (this.renderRoot.querySelector(tag('tree')) as LyraTree | null)?.expandAll();
+    const expandTree = (): Promise<void> | undefined =>
+      (this.renderRoot.querySelector(tag('tree')) as LyraTree | null)?.expandAll();
+    if (this.projectsAllNodes) return expandTree();
+    // Over the row budget, project every loaded directory first; the inner tree then shows as
+    // many rows as its budget allows and `dataTruncated` reports the rest.
+    for (const [path, node] of this.nodesByPath) {
+      if (node.children?.length) this.expandedPaths.add(path);
+    }
+    this.requestUpdate();
+    return this.updateComplete.then(() => expandTree());
   }
 
   collapseAll(): void {
@@ -447,6 +553,13 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
           label=${hostLabel ?? (this.label == null ? this.localize('fileTreeLabel') : this.label)}
           @lr-node-select=${this.onNodeSelect}
           @lr-node-toggle=${this.onNodeToggle}
+          @lr-lazy-load=${this.onLazyLoad}
+          @lr-lazy-change=${this.stopInnerEvent}
+          @lr-selection-change=${this.stopInnerEvent}
+          @lr-expand=${this.stopInnerEvent}
+          @lr-after-expand=${this.stopInnerEvent}
+          @lr-collapse=${this.stopInnerEvent}
+          @lr-after-collapse=${this.stopInnerEvent}
         ></lr-tree>
       </div>
     `;

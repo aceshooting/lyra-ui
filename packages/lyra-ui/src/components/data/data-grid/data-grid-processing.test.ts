@@ -616,3 +616,32 @@ describe("data-grid processing helpers", () => {
     expect(serialize(-5)).to.equal("-5");
   });
 });
+
+it("treats date-only range bounds and date-only cells as calendar days in the local time zone", () => {
+  interface Created {
+    id: number;
+    created: Date | string;
+  }
+  const byCreated: DataGridColumn<Created> = {
+    id: "created",
+    field: "created",
+    filterType: "date-range",
+  };
+  const created: Created[] = [
+    { id: 1, created: new Date(2026, 0, 1, 23, 30) },
+    { id: 2, created: new Date(2026, 0, 2, 0, 15) },
+    { id: 3, created: new Date(2026, 0, 2, 23, 45) },
+    { id: 4, created: "2026-01-02" },
+    { id: 5, created: new Date(2026, 0, 3, 0, 5) },
+  ];
+  expect(
+    filterRows(created, [byCreated], [{ id: "created", value: ["2026-01-02", "2026-01-02"] }], "en").map(
+      (row) => row.id
+    )
+  ).to.deep.equal([2, 3, 4]);
+  expect(
+    filterRows(created, [byCreated], [{ id: "created", value: ["2026-01-02", undefined] }], "en").map(
+      (row) => row.id
+    )
+  ).to.deep.equal([2, 3, 4, 5]);
+});

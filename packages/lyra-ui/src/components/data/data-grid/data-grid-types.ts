@@ -215,9 +215,12 @@ export interface DataGridColumnMoveDetail {
 
 export interface DataGridColumnResizeDetail {
   readonly columnId: string;
+  /** The same column id under `<lr-table>`'s `lr-column-resize` detail name. */
+  readonly columnKey: string;
   readonly width: number;
   readonly finished: boolean;
 }
+
 
 export interface DataGridColumnPinDetail {
   readonly columnId: string;
@@ -270,11 +273,17 @@ export interface LyraDataGridEventMap<Row = Record<string, unknown>> {
   'lr-column-move': CustomEvent<LyraEventDetailSnapshot<DataGridColumnMoveDetail>>;
   'lr-column-pin': CustomEvent<DataGridColumnPinDetail>;
   'lr-column-resize': CustomEvent<DataGridColumnResizeDetail>;
+  /** Cancelable proposal of a committed width (a keyboard step or a pointer drag's final width);
+   *  `columnKey` is the same id under `<lr-table>`'s detail name. */
+  'lr-column-resize-request': CustomEvent<
+    Readonly<{ columnId: string; columnKey: string; width: number }>
+  >;
   'lr-column-visibility-change': CustomEvent<DataGridColumnVisibilityDetail>;
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
   'lr-data-error': CustomEvent<LyraEventDetailSnapshot<DataGridDataErrorDetail>>;
   'lr-filter-change': CustomEvent<Readonly<{ filters: readonly DataGridFilter[] }>>;
+  'lr-search-change': CustomEvent<Readonly<{ searchTerm: string }>>;
   'lr-group-collapse': CustomEvent<Readonly<DataGridGroupDetail<Row>>>;
   'lr-group-expand': CustomEvent<Readonly<DataGridGroupDetail<Row>>>;
   'lr-page-change': CustomEvent<DataGridPageDetail>;

@@ -82,10 +82,32 @@ function sameValue(left: unknown, right: unknown, locale: string): boolean {
   ) === 0;
 }
 
+const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/** Local midnight of a `YYYY-MM-DD` calendar day. `Date.parse()` reads that form as UTC
+ *  midnight, which shifts the day for everyone outside UTC; a date-only value names the user's own
+ *  day. Anything else (timestamps, full ISO date-times, invalid days) is left to `numericDate()`. */
+function localCalendarDay(value: unknown): number | undefined {
+  if (typeof value !== 'string') return undefined;
+  const match = DATE_ONLY.exec(value.trim());
+  if (!match) return undefined;
+  const year = Number(match[1]);
+  const month = Number(match[2]) - 1;
+  const day = Number(match[3]);
+  const date = new Date(0);
+  date.setFullYear(year, month, day);
+  date.setHours(0, 0, 0, 0);
+  return date.getFullYear() === year && date.getMonth() === month && date.getDate() === day
+    ? date.getTime()
+    : undefined;
+}
+
 function matchesRange(value: unknown, filter: unknown, date: boolean): boolean {
   if (!Array.isArray(filter)) return true;
   const [rawStart, rawEnd] = filter;
-  const read = date ? numericDate : finiteValue;
+  const read = date
+    ? (candidate: unknown) => localCalendarDay(candidate) ?? numericDate(candidate)
+    : finiteValue;
   const current = read(value);
   if (current === undefined) return false;
   const start = read(rawStart);
@@ -186,30 +208,51 @@ function undefinedRank<Row>(
   return leftMissing === missingFirst ? -1 : 1;
 }
 
-function compareValues<Row>(
-  column: DataGridColumn<Row>,
-  left: unknown,
-  right: unknown,
-  leftRow: Row,
-  rightRow: Row,
-  locale: string,
-): number {
-  if (column.comparator) return column.comparator(left, right, leftRow, rightRow);
+/** One row's sort value for one sort column, with its derived comparison forms computed at most
+ *  once per sort instead of once per comparison. */
+interface SortCell {
+  readonly value: unknown;
+  text?: string;
+  time?: number | null;
+}
+
+function cellText(cell: SortCell): string {
+  return (cell.text ??= comparableText(cell.value));
+}
+
+function cellTime(cell: SortCell): number | undefined {
+  if (cell.time === undefined) cell.time = numericDate(cell.value) ?? null;
+  return cell.time ?? undefined;
+}
+
+type CellCompare<Row> = (left: SortCell, right: SortCell, leftRow: Row, rightRow: Row) => number;
+
+/** The comparison one column applies, resolved (with its collator) once per sort. */
+function cellComparator<Row>(column: DataGridColumn<Row>, locale: string): CellCompare<Row> {
+  const comparator = column.comparator;
+  if (comparator) {
+    return (left, right, leftRow, rightRow) =>
+      comparator(left.value, right.value, leftRow, rightRow);
+  }
   const algorithm = column.sortFn ?? 'alphanumeric';
-  if (algorithm === 'datetime') {
-    const leftTime = numericDate(left);
-    const rightTime = numericDate(right);
-    if (leftTime !== undefined && rightTime !== undefined) return leftTime - rightTime;
-  }
-  if (algorithm === 'basic' && typeof left === 'number' && typeof right === 'number') {
-    return left - right;
-  }
   const caseSensitive = algorithm === 'alphanumericCaseSensitive' || algorithm === 'textCaseSensitive';
   const numeric = algorithm === 'alphanumeric' || algorithm === 'alphanumericCaseSensitive';
-  return getCollator(locale, {
-    sensitivity: caseSensitive ? 'variant' : 'base',
-    numeric,
-  }).compare(comparableText(left), comparableText(right));
+  let collator: Intl.Collator | undefined;
+  return (left, right) => {
+    if (algorithm === 'datetime') {
+      const leftTime = cellTime(left);
+      const rightTime = cellTime(right);
+      if (leftTime !== undefined && rightTime !== undefined) return leftTime - rightTime;
+    }
+    if (algorithm === 'basic' && typeof left.value === 'number' && typeof right.value === 'number') {
+      return left.value - right.value;
+    }
+    collator ??= getCollator(locale, {
+      sensitivity: caseSensitive ? 'variant' : 'base',
+      numeric,
+    });
+    return collator.compare(cellText(left), cellText(right));
+  };
 }
 
 export function sortRows<Row>(
@@ -220,29 +263,35 @@ export function sortRows<Row>(
 ): Row[] {
   if (sorting.length === 0) return [...rows];
   const byId = new Map(columns.map((column, index) => [columnId(column, index), column]));
-  return rows
-    .map((row, index) => ({ row, index }))
+  const active: Array<{
+    readonly desc: boolean;
+    readonly column: DataGridColumn<Row>;
+    readonly compare: CellCompare<Row>;
+  }> = [];
+  for (const sort of sorting) {
+    const column = byId.get(sort.id);
+    if (column) active.push({ desc: sort.desc, column, compare: cellComparator(column, locale) });
+  }
+  // Decorate once: every sort value is read (and its text/time form derived) once per row.
+  const decorated = rows.map((row, index) => ({
+    row,
+    index,
+    cells: active.map(({ column }): SortCell => ({ value: columnValue(column, row) })),
+  }));
+  return decorated
     .sort((left, right) => {
-      for (const sort of sorting) {
-        const column = byId.get(sort.id);
-        if (!column) continue;
-        const leftValue = columnValue(column, left.row);
-        const rightValue = columnValue(column, right.row);
-        const missing = undefinedRank(column, leftValue, rightValue);
+      for (let position = 0; position < active.length; position += 1) {
+        const { desc, column, compare } = active[position]!;
+        const leftCell = left.cells[position]!;
+        const rightCell = right.cells[position]!;
+        const missing = undefinedRank(column, leftCell.value, rightCell.value);
         if (missing !== undefined) {
           return typeof (column.sortUndefined ?? 'last') === 'string'
             ? missing
-            : sort.desc ? -missing : missing;
+            : desc ? -missing : missing;
         }
-        const compared = compareValues(
-          column,
-          leftValue,
-          rightValue,
-          left.row,
-          right.row,
-          locale,
-        );
-        if (compared !== 0) return sort.desc ? -compared : compared;
+        const compared = compare(leftCell, rightCell, left.row, right.row);
+        if (compared !== 0) return desc ? -compared : compared;
       }
       return left.index - right.index;
     })

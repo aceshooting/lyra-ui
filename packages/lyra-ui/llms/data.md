@@ -292,7 +292,9 @@ import "@aceshooting/lyra-ui/components/lr-data-grid.js";
 
 Give the grid an accessible name with `label` or a host `aria-label`; the host attribute wins.
 Collection inputs are clone-owned readonly snapshots, so reassign `data`, `columns`, `groupBy`, and controlled
-state arrays to update them; mutating the array originally assigned has no effect.
+state arrays to update them; mutating the array originally assigned has no effect. Assigning the
+array a collection property last received (a parent re-render rebinding it) is a no-op, so pass a
+new array after changes; for caller-owned row edits in place, call `requestUpdate()`.
 Column records are also copied and frozen synchronously. Row object
 identities are preserved so formatter callbacks and `selectedRows` still refer to caller records.
 Column identity uses a nonblank `id`, then a nonblank `field`, then stable definition-object
@@ -334,6 +336,9 @@ ARIA values as page-local positions rather than as the dataset-wide total.
   The mirrored `expandedKeys` spelling remains a compatibility alias for this same state.
 - `filterDebounce: number = 250` (`filter-debounce`) — finite server search/filter delay.
 - `filteredCount: number` (read-only, JS-only) — matching client rows before paging.
+- `dataTruncated: boolean` (read-only, JS-only) — `true` when the client row projection omitted
+  rows (over 10,000 total rows or 64 nesting levels); controlled `selectedRowKeys` are then not
+  pruned, since an omitted row's key cannot be proven invalid.
 - `filterFromLeafRows: boolean = false` (`filter-from-leaf-rows`) — retains ancestors of matching
   tree descendants.
 - `filters: readonly Array<{ readonly id: string; readonly value: unknown }> = []` (JS-only).
@@ -354,7 +359,11 @@ ARIA values as page-local positions rather than as the dataset-wide total.
 - `resizable: boolean = false` (`resizable`, reflected).
 - `rowClass: ((row) => string | null | undefined) | null = null` (JS-only).
 - `rowDetail: ((row) => string | TemplateResult | Node) | null = null` (JS-only).
-- `rowKey: string | null = null` (`row-key`) — dot path for stable selection/expansion identity.
+- `rowKey: string | ((row: Row) => DataGridKey | null | undefined) | null = null` (`row-key`) — dot
+  path, or a `(row) => key` callback as `<lr-table>` takes, for stable selection/expansion identity.
+  `selectedRowKeys`/`expandedRowKeys` also accept any iterable (such as `<lr-table>`'s `Set`) and
+  store a frozen array. Paging differs from `<lr-table>`: the grid's `page` is zero-based with a
+  default `pageSize` of 20 and `total`, the table's is one-based with 100 and `totalItems`.
 - `searchFn: ((value, term, row) => boolean) | null = null` (JS-only).
 - `searchTerm: string = ''` (JS-only).
 - `selectable: '' | 'single' | 'multiple' | 'none' = 'none'` (`selectable`, reflected) — a bare
@@ -397,7 +406,9 @@ attribute entirely rather than rendering `title=""`, which would suppress an anc
 Built-in sort algorithms are `alphanumeric`, `alphanumericCaseSensitive`, `text`,
 `textCaseSensitive`, `datetime`, and `basic`; `comparator` takes precedence. Built-in filter types
 are `text`, `equals`, `number-range`, `date-range`, `set`, `includes-any`, and `includes-all`;
-`filterFn` takes precedence in client mode. Group aggregations are `sum`, `min`, `max`, `mean`,
+`filterFn` takes precedence in client mode. A `date-range` value is `[start, end]` with an inclusive
+end day; `YYYY-MM-DD` bounds and cell values are calendar days in the user's time zone (local
+midnight to local end of day), not UTC midnight. Group aggregations are `sum`, `min`, `max`, `mean`,
 `median`, `count`, `unique`, `uniqueCount`, `extent`, or a callback.
 
 **Methods:**
@@ -451,28 +462,45 @@ For event-driven loading, set `server`, listen to the mirrored `request` event, 
 mutate the component or loader request.
 
 **Keyboard:** headers and cells share one roving grid stop; the scrollable `body` is separately
-focusable so keyboard users can pan overflowing content. Arrow keys traverse cells, Home/End
+focusable so keyboard users can pan overflowing content. Arrow keys traverse cells. On a row's
+first cell, ArrowRight expands a collapsed tree row, row-detail panel or group row and ArrowLeft
+collapses an expanded one or moves a collapsed nested tree row to its parent row (the WAI-ARIA
+treegrid keys; an already-expanded or non-expandable row moves on as usual). Per-row and
+group-row selection checkboxes/radios and group expand buttons are not Tab stops: Space on any cell
+of a row (or on a group row, in `multiple` mode) toggles its selection. The header row's controls
+(select-all, filter and column-menu buttons, resize handles) deliberately remain Tab stops. Row
+selection controls are named by the localized "Select" plus the row's first visible cell, and the
+grid reports `aria-multiselectable` whenever selection is enabled. Alt+Arrow and Cmd+Arrow are
+left to the browser (history navigation) on headers and body cells alike; a column resizes from its
+focusable separator. Home/End
 traverse a row, Ctrl+Home / Ctrl+End reach grid ends, PageUp/PageDown move a page, Enter
-sorts/activates, Space selects, Shift+Arrow reorders a header, Alt+Arrow resizes from the header,
-unmodified Left/Right adjusts a focused separator, Ctrl+A selects
+sorts/activates, Space selects, Shift+Arrow reorders a header,
+unmodified Left/Right adjusts a focused separator by 10px (Shift: 50px; Home/End jump to the
+column's minimum/authored maximum), Ctrl+A selects
 the current page, Ctrl+C copies, and Shift+F10 requests a cell context menu. Inline-direction
 movement swaps under RTL. Keyboard events from an interactive formatter descendant remain owned by
 that descendant.
 
 **Events:** `request`; `lr-cell-click` and cancelable `lr-cell-contextmenu` carry canonical
 `rowKey`/`columnId` alongside the row, column, value, and display index (canceling the latter suppresses the
-native menu); `lr-column-move`; `lr-column-pin`; `lr-column-resize` (`detail.finished` distinguishes
-live and committed resize). `pointerup` commits a pointer drag. `pointercancel` or lost capture
+native menu); `lr-column-move`; `lr-column-pin`; `lr-column-resize` (`detail: { columnId, columnKey,
+width, finished }` — `columnKey` mirrors `<lr-table>`'s name for the same id; `finished` distinguishes
+live and committed resize); cancelable `lr-column-resize-request` (`detail: { columnId, columnKey,
+width }`) proposes every committed width — a keyboard step or a pointer drag's final width — and
+preventing it keeps the previous width and discards a drag's live preview, as `<lr-table>` does. `pointerup` commits a pointer drag. `pointercancel` or lost capture
 restores the exact pre-gesture width state; after a live move it emits the restored width with
 `finished: false`, and it never emits a canceled `finished: true` commit. `lr-column-visibility-change`;
 `lr-data-error`;
-`lr-filter-change`; `lr-page-change`; `lr-row-collapse`; `lr-row-expand`; `lr-group-collapse` and
+`lr-filter-change`; `lr-search-change` (frozen `{ searchTerm }`, after a user edits or clears the
+built-in `with-search` box; programmatic `searchTerm` writes do not fire it); `lr-page-change`;
+`lr-row-collapse`; `lr-row-expand`; `lr-group-collapse` and
 `lr-group-expand` (frozen `{ key, columnId, value, rows }` snapshots); `lr-row-select` with
 canonical `{ selectedRowKeys, selectedRows }` plus mirrored `selectedKeys`; row expand/collapse
 details use canonical `rowKey` plus mirrored `key`; cancelable `lr-sort-request` (frozen readonly
 `detail: { sort }`) precedes `lr-sort-change`; vetoing it leaves `sort` unchanged and suppresses
-`lr-sort-change`, mirroring `<lr-table>`'s identical `lr-sort-request`/`lr-sort` veto-then-commit
-contract;
+`lr-sort-change` — the same veto-then-commit model as `<lr-table>`'s `lr-sort-request`, though the
+commit differs (the grid's `lr-sort-change` carries `{ sort }`, the table's `lr-sort` carries
+`{ phase, sortKey, sortDir }`);
 `lr-copy` (frozen `{ ok: true, text }` after fulfillment); `lr-copy-error`
 (frozen `{ ok: false, text, reason, error }` after failure); `lr-error` (compatibility failure
 notification with no raw platform error text); `lr-data-error` does NOT itself set the built-in
@@ -771,7 +799,8 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   lasting effect; it is recomputed on the next render or resize. The toggle remains available while
   a narrow table is revealed, even though this property truthfully reports false
 - `rows: readonly T[] = []` (attribute: false; clone-owned frozen collection bounded to the first
-  10,000 rows; reassign to update). Records are retained
+  10,000 rows; reassign a new array to update — rebinding the array `rows`, `columns`,
+  `selectedRowKeys` or `expandedRowKeys` last received is a no-op). Records are retained
   here; one canonical `rowKey` projection omits blank and later-duplicate identities first-wins
   before filtering, counts, pagination, focus, actions, and events
 - `layout: 'auto'|'fixed' = 'auto'` (reflected) — a **floor** on the `<table>`'s `table-layout`, not
@@ -811,6 +840,8 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   the table's own internal state
 - `pageRows: readonly T[]` (readonly; computed, no attribute) — `viewRows` sliced to the page
   currently rendered in `<tbody>`. Same defensive-copy guarantee as `viewRows`
+- `rowsTruncated: boolean` (readonly) — `true` when the assigned `rows` held more than the 10,000
+  rows the snapshot keeps; the rest are not shown, counted, paged or exported
 - `rowKey?: (row: T) => K` (attribute: false) — derives each row's stable identity for
   DOM-reconciliation and the delegated row click/keydown lookup; falls back to the row's array index
   when omitted, which is only safe while `rows` never reorders — set it whenever `rows` can be
@@ -969,7 +1000,7 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   `announce` stays unset so the failure is spoken once, not twice. Remove any host
   `role="status"`/`role="alert"` hand-added before this property existed once it is set —
   otherwise the failure is announced a third time, through the native role as well.
-- `emptyHeading?: string` (attribute `empty-heading`) — omission renders localized `noData` (`'No data'` in the built-in English catalog); a supplied string, including `''`, renders verbatim
+- `emptyHeading?: string` (attribute `empty-heading`) — omission renders localized `noData` (`'No data'` in the built-in English catalog) for a table with no rows and localized `noMatches` (`'No matches'`) when rows exist but the filter excludes them all; a supplied string, including `''`, renders verbatim in both cases
 - `emptyDescription: string = ''` (attribute `empty-description`)
 - `emptyColumnsHeading?: string` (attribute `empty-columns-heading`) — heading of the built-in
   no-columns state; omission renders localized `noColumns` (`'No columns configured'` in the built-in English catalog); a supplied string,
@@ -2806,8 +2837,11 @@ deeply-nested node's own shadow root still reaches it).
 
 - `data: readonly LyraTreeNodeData[] = []` (attribute: false) — the object child model; ignored
   while any author-written `<lr-tree-item>` child is present. Assignment installs a detached,
-  recursively frozen snapshot: mutate caller data only before assignment, then reassign after
-  changes. Normalization accepts at most 1,000 valid nodes and 64 descendant levels, and lazily
+  recursively frozen snapshot: mutate caller data only before assignment, then reassign a new array
+  after changes (rebinding the same array is a no-op). A refresh is diffed by id: a node whose
+  fields (including an icon template from the same literal with equal values) and children are
+  unchanged keeps its previous object, so its row neither re-renders nor re-seeds element state.
+  Normalization accepts at most 1,000 valid nodes and 64 descendant levels, and lazily
   inspects at most 10,000 root/child array positions globally in depth-first order. It never
   invokes caller accessors and exposes `dataTruncated = true` when malformed or over-budget input
   was omitted or the inspected-position ceiling was reached. Collapsed branches do not instantiate descendants; disclosure projects only normalized
@@ -2844,8 +2878,13 @@ multiple mode. `dataTruncated: boolean` reports bounded/malformed normalization 
 **Keyboard:** ArrowDown/ArrowUp move the roving focus to the next/previous _visible_ node.
 ArrowRight expands a collapsed node (focus stays put; a second ArrowRight then steps into the first
 child) or moves into an already-expanded node's first child. ArrowLeft collapses an expanded node, or
-moves focus to its parent. Home/End jump to the first/last visible node. Enter/Space activate
-`select()` on the focused node. While `reorderable`, **Ctrl/Cmd**+ArrowUp/ArrowDown moves the focused
+moves focus to its parent. Home/End jump to the first/last visible node. Alt-modified keys are left
+to the browser (Alt+Arrow is back/forward on Windows and Linux). Enter/Space activate
+`select()` on the focused node. Interactive content inside an item's label (a button, a link, a
+nested control) keeps its own keys and clicks: they neither navigate nor select the row. The roving
+stop follows real focus, including focus a host moves by
+script; a programmatic `expand()`/`expandAll()` leaves it in place, and a collapse that hides it moves
+it to the collapsed row. While `reorderable`, **Ctrl/Cmd**+ArrowUp/ArrowDown moves the focused
 node within its own parent's child list instead of navigating. Ctrl/Cmd rather than Alt: Alt+Arrow is
 browser back/forward on Windows and Linux. ArrowUp/ArrowDown are not direction-sensitive, so this
 binding is deliberately **not** RTL-swapped — "down" always means later in the sibling list.
@@ -2872,7 +2911,8 @@ roving stop to the next reachable row instead of stranding it, and the state is 
 and resolved only after the affected rendered item cascade settles).
 
 **Events:** `lr-selection-change` (`detail: { selection }`, where both the detail and selection
-snapshot are frozen) and `lr-reorder` (`detail: { nodeId, parentNodeId, fromIndex, toIndex }`, only while `reorderable`).
+snapshot are frozen; fired for user selection and when a `data` refresh removes or re-seeds selected
+rows) and `lr-reorder` (`detail: { nodeId, parentNodeId, fromIndex, toIndex }`, only while `reorderable`).
 Like every other event here it is a **request**: `data` is host-owned and is never mutated by this
 component, so nothing moves until the host reassigns a reordered `data` — focus then follows the
 moved node. The live region likewise announces a completed move only after the rendered sibling
@@ -2927,7 +2967,9 @@ when assigned):
 
 - `item?: LyraTreeNodeData` (attribute: false) — the whole subtree as one object, normally assigned by
   `<lr-tree>` from its `data`. An assigned `item` **wins** for label/disabled/children and seeds
-  `selected`/`lazy`; a refreshed object identity re-seeds those values. Light-DOM children are
+  `selected`/`lazy`; a refreshed object identity re-seeds `lazy`, and re-seeds `selected` only when
+  it sets `selected` explicitly or carries a different `id` — a same-id refresh that omits
+  `selected` (the lazy-load reply, a badge update) keeps the tree-managed selection. Light-DOM children are
   ignored while `item` is assigned. Outside an owning tree, an omitted `item.selected` leaves
   `aria-selected` off the host; an owning tree always publishes explicit true/false state. Assign
   `undefined` to return safely to the declarative model and reset data-seeded selected/lazy state
@@ -4031,13 +4073,25 @@ inspected-position budgets.
 
 **Properties:** `nodes: readonly FileTreeNode[] = []` (attribute: false; clone-owned/frozen,
 cycle-safe snapshot omitting empty/blank paths and retaining the first successfully admitted occurrence of each path, bounded to
-the first 10,000 inspected source positions across 64 descendant levels; reassign after changes),
+the first 10,000 inspected source positions across 64 descendant levels; reassign after changes;
+rebinding the same array is a no-op). The composed `<lr-tree>` holds at most 1,000 rows: when the
+whole listing is larger, each collapsed directory is projected as a single lazy row whose children
+load from the snapshot when it expands, so every top-level entry stays reachable;
 `selectedPath: string | null = null` (attribute `selected-path`), and `label?: string` — an
 accessible-name override for the internal `<lr-tree>`, where omission reads back `undefined` and falls
 back to the localized default while an explicitly empty string renders as an empty label.
 `additions`/`deletions` are normalized once to finite nonnegative integers before localized visible
 and accessible diff summaries. A host `aria-label` wins by presence when naming the internal tree,
 including an explicit empty string; removing it restores `label` or the localized fallback.
+
+**Read-only getters:** `dataTruncated: boolean` — `true` when normalization omitted a malformed,
+duplicate, cyclic, over-depth or over-budget entry, or when the directories currently expanded hold
+more rows than the composed tree's 1,000-row budget.
+
+**Lazy directories:** a directory with `hasChildren: true` and no `children` uses `<lr-tree>`'s own
+lazy lifecycle: expanding it shows the row's busy spinner (`aria-busy`), emits `lr-load-children`
+once per expansion attempt, and expands when `setChildren()` (or a reassigned `nodes`) supplies its
+children; an empty result ends the busy state without expanding. No placeholder row is rendered.
 
 **Methods:** `setChildren(path, children)` supplies a lazily-loaded directory's children.
 `revealPath(path)` expands every ancestor directory and scrolls the target row into view, resolving
@@ -4046,7 +4100,8 @@ including an explicit empty string; removing it restores `label` or the localize
 **Events:** `lr-file-select` (frozen readonly `detail: { filePath, node }`, a row was activated),
 `lr-file-open` (frozen readonly `detail: { filePath, node }`, Enter/click on an already-selected file
 row), and `lr-load-children` (frozen readonly `detail: { filePath }`, a lazy unloaded directory
-expanded).
+expanded). The composed tree's own `lr-expand`, `lr-collapse`, `lr-after-*`, `lr-lazy-*` and
+`lr-selection-change` events stay inside the component.
 
 **CSS parts:** `base` — the root wrapper.
 

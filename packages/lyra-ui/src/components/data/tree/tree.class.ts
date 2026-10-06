@@ -1,4 +1,4 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import {
@@ -13,6 +13,7 @@ import { styles } from './tree.styles.js';
 import { cascadeUpdateComplete } from './update-cascade.js';
 import {
   configureTreeItemOwner,
+  fromInteractiveDescendant,
   setTreeItemSelection,
   treeItemOwnerContext,
 } from './tree-owner-controller.js';
@@ -24,7 +25,7 @@ import type { LyraTreeItem } from './tree-item.class.js';
 // tree-item.class.ts); re-exported here so `export *` from tree.js keeps the public paths.
 import type { TreeBadge, TreeIdentityContext, LyraTreeNodeData, TreeSelection } from './tree-types.js';
 import { TREE_MAX_RENDER_DEPTH, TREE_MAX_RENDER_NODES } from './tree-types.js';
-import { deepActiveElementIn } from '../../../internal/active-element.js';
+import { composedParentElement, deepActiveElementIn } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_treeNodeMoved } from '../../../internal/default-strings.generated.js';
@@ -107,7 +108,65 @@ function normalizeBadges(value: unknown): { badges?: readonly TreeBadge[]; trunc
   return { badges: Object.freeze(badges), truncated: length > TREE_BADGE_LIMIT };
 }
 
-function normalizeTreeData(input: unknown): {
+/** Shallow equality for a decorative icon: the same value, or two Lit templates from the same
+ *  literal with identical values (a host typically re-creates `html\`<icon …>\`` per refresh). */
+function sameIcon(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true;
+  const a = left as { _$litType$?: unknown; strings?: unknown; values?: readonly unknown[] } | null;
+  const b = right as { _$litType$?: unknown; strings?: unknown; values?: readonly unknown[] } | null;
+  if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+  if (a._$litType$ === undefined || a._$litType$ !== b._$litType$ || a.strings !== b.strings) return false;
+  const leftValues = a.values ?? [];
+  const rightValues = b.values ?? [];
+  return leftValues.length === rightValues.length && leftValues.every((value, index) => Object.is(value, rightValues[index]));
+}
+
+function sameBadges(left: readonly TreeBadge[] | undefined, right: readonly TreeBadge[] | undefined): boolean {
+  if (left === right) return true;
+  if (!left || !right || left.length !== right.length) return false;
+  return left.every((badge, index) => {
+    const other = right[index]!;
+    return badge.text === other.text && badge.tone === other.tone && badge.label === other.label;
+  });
+}
+
+/** Whether a freshly normalized node carries exactly what the previous normalization produced for
+ *  the same id, with its children already resolved to their reused objects. */
+function sameTreeNode(next: MutableTreeNodeData, previous: LyraTreeNodeData): boolean {
+  if (
+    next.id !== previous.id ||
+    next.label !== previous.label ||
+    next.selected !== previous.selected ||
+    next.disabled !== previous.disabled ||
+    next.lazy !== previous.lazy ||
+    next.description !== previous.description ||
+    next.accessibleLabel !== previous.accessibleLabel ||
+    !sameIcon(next.icon, previous.icon) ||
+    !sameBadges(next.badges, previous.badges)
+  ) {
+    return false;
+  }
+  const children = next.children;
+  const previousChildren = previous.children;
+  if (!children || !previousChildren) return children === undefined && previousChildren === undefined;
+  return (
+    children.length === previousChildren.length &&
+    children.every((child, index) => (child as unknown) === previousChildren[index])
+  );
+}
+
+function indexTreeNodes(nodes: readonly LyraTreeNodeData[]): Map<string, LyraTreeNodeData> {
+  const byId = new Map<string, LyraTreeNodeData>();
+  const stack = [...nodes];
+  while (stack.length > 0) {
+    const node = stack.pop()!;
+    byId.set(node.id, node);
+    if (node.children) stack.push(...node.children);
+  }
+  return byId;
+}
+
+function normalizeTreeData(input: unknown, previous: readonly LyraTreeNodeData[] = EMPTY_TREE_DATA): {
   data: readonly LyraTreeNodeData[];
   declaredChildrenAtPath: ReadonlyMap<string, number>;
   declaredRootCount: number;
@@ -220,11 +279,26 @@ function normalizeTreeData(input: unknown): {
     });
   }
 
+  // Freeze bottom-up. A node identical to the previous normalization's node for the same id (its
+  // children already resolved) is replaced by that object, so a refresh that leaves a row unchanged
+  // keeps its item identity and the row does not re-render or re-seed its element state. A node
+  // whose child list dropped malformed entries is never reused: its set size is re-derived below.
+  const previousById = previous.length > 0 ? indexTreeNodes(previous) : undefined;
+  const resolved = new Map<MutableTreeNodeData, MutableTreeNodeData>();
+  const resolve = (node: MutableTreeNodeData): MutableTreeNodeData => resolved.get(node) ?? node;
   for (let index = created.length - 1; index >= 0; index--) {
     const node = created[index]!;
-    if (node.children) Object.freeze(node.children);
+    if (node.children) {
+      for (let child = 0; child < node.children.length; child++) node.children[child] = resolve(node.children[child]!);
+      Object.freeze(node.children);
+    }
     Object.freeze(node);
+    const prior = previousById?.get(node.id);
+    if (prior && !(node.children && identityFilteredCollections.has(node.children)) && sameTreeNode(node, prior)) {
+      resolved.set(node, prior as MutableTreeNodeData);
+    }
   }
+  for (let index = 0; index < root.length; index++) root[index] = resolve(root[index]!);
   const normalizedJobs = root.map((node, index) => ({ node, path: String(index) }));
   while (normalizedJobs.length > 0) {
     const { node, path } = normalizedJobs.pop()!;
@@ -320,7 +394,7 @@ function isInertWithin(node: Element, root: Element): boolean {
  * @event lr-node-toggle - `detail: { nodeId, expanded }`, dispatched by a descendant `<lr-tree-item>` and observed here (bubbling, composed) to keep the roving-tabindex `activeId` in sync.
  * @event lr-node-select - `detail: { nodeId }`, dispatched by a descendant `<lr-tree-item>` and observed here (bubbling, composed) to keep the roving-tabindex `activeId` in sync.
  * @event lr-reorder - `detail: { nodeId, parentNodeId, fromIndex, toIndex }` — Ctrl/Cmd+ArrowUp/ArrowDown requests moving the focused node within its **own parent's** child list (`parentNodeId` is `null` for a top-level item; the indices are sibling-scoped, not flattened-visible-list positions). Only fired while `reorderable`. Never fires at a subtree boundary, so a reorder can never become a reparent. Success is announced only after the rendered sibling order confirms the request.
- * @event lr-selection-change - Selection changed. `detail: { selection }`, where `selection` is the current `selectedItems` array.
+ * @event lr-selection-change - Selection changed, by the user or by a `data` refresh that removed or re-seeded selected rows. `detail: { selection }`, where `selection` is the current `selectedItems` array.
  * @event lr-expand - Bubbles from the item whose expansion began. `detail: { item }`.
  * @event lr-after-expand - Bubbles after an item's expansion motion completes. `detail: { item }`.
  * @event lr-collapse - Bubbles from the item whose collapse began. `detail: { item }`.
@@ -351,7 +425,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     treeNodeMoved: LYRA_DEFAULT_treeNodeMoved,
   };
   // GENERATED DEFAULT-STRING SLICE: END
-  protected static override collectionSupport = collectionSupport;
+  protected static override collectionSupport = eventCollectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-selection-change',
@@ -367,12 +441,16 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    * later duplicate occurrences fail closed as disabled rows so one public id can never own
    * multiple actions. Reassign after changes. */
   private _data: readonly LyraTreeNodeData[] = EMPTY_TREE_DATA;
+  private lastDataInput: unknown = undefined;
+  private selectionBeforeRefresh?: readonly string[];
   private declaredChildrenAtPath: ReadonlyMap<string, number> = new Map();
   private declaredRootCount = 0;
   private _dataTruncated = false;
 
   /** Clone-owned/frozen object child model. Normalization retains at most 1,000 nodes over 64
    * descendant levels and inspects at most 10,000 root/child array positions in depth-first order.
+   * A reassignment is diffed by id: a node whose fields and children are unchanged keeps its
+   * previous object, so its row neither re-renders nor re-seeds element state.
    * An otherwise unnamed projected row uses its stable data ID as its semantic name, without
    * changing its visible label or the installed data.
    * @default [] */
@@ -381,8 +459,16 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     return this._data;
   }
   set data(value: readonly LyraTreeNodeData[]) {
+    // A parent re-render rebinding the same array (or this getter's snapshot) is not new data.
+    if (value === this._data || value === this.lastDataInput) return;
+    this.lastDataInput = value;
+    // Remember the self-managed selection a refresh starts from, so the sync can report a refresh
+    // that changes it (a selected row removed, or re-seeded by an explicit `selected`).
+    if (this.hasUpdated && this.selectionBeforeRefresh === undefined) {
+      this.selectionBeforeRefresh = this.selectedItems.map((item) => item.nodeId);
+    }
     const previous = this._data;
-    const normalized = normalizeTreeData(value);
+    const normalized = normalizeTreeData(value, this._data);
     this._data = normalized.data;
     this.declaredChildrenAtPath = normalized.declaredChildrenAtPath;
     this.declaredRootCount = normalized.declaredRootCount;
@@ -427,7 +513,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
   /** Whether the tree is being driven by author-written `<lr-tree-item>` children rather than by
    *  `data` (see the class doc's child-model note). Recomputed from the light DOM, never guessed. */
   @state() private hasAuthoredItems = false;
-  /** Set by `willUpdate()` when a `data` reassignment displaces the node that currently holds real DOM focus -- either by removing it (refocus the newly-designated `activeId`) or by merely re-indexing it (refocus that same node); consumed by `getUpdateComplete()` once the target is actually focusable again. */
+  /** Set by `willUpdate()` when a `data` reassignment displaces the node that currently holds real DOM focus -- either by removing it (refocus the newly-designated `activeId`) or by merely re-indexing it (refocus that same node); consumed by `restorePendingFocus()` once the target is actually focusable again. */
   private pendingFocusId: string | null = null;
   /** The `<lr-tree-item>` elements `syncNodes()` created from `data`. Everything else among this
    *  element's children was written by the author, which is what puts the tree in the declarative
@@ -551,6 +637,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
         identity: frame.identity,
         expandIcon,
         collapseIcon,
+        syncOwner: this.requestContextSync,
       });
       if (frame.depth >= TREE_MAX_RENDER_DEPTH) continue;
       const children = this.childrenOf(frame.node);
@@ -590,7 +677,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     let kept = false;
     for (const node of this.allNodeElements()) {
       const selected = !kept && node.selected && this.selectableInSingleMode(node);
-      setTreeItemSelection(node, selected, false);
+      this.setSelection(node, selected, false);
       if (selected) kept = true;
     }
   }
@@ -605,9 +692,9 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
       const children = this.childrenOf(current).filter((child) => !child.isDisabled);
       if (!leavesOnly || children.length === 0) {
         // A lazy node with no loaded children is still a branch, not a selectable leaf.
-        setTreeItemSelection(current, leavesOnly && current.hasChildren ? false : selected, false);
+        this.setSelection(current, leavesOnly && current.hasChildren ? false : selected, false);
       } else {
-        setTreeItemSelection(current, false, false);
+        this.setSelection(current, false, false);
       }
       for (let index = children.length - 1; index >= 0; index--) stack.push(children[index]!);
     }
@@ -626,30 +713,30 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
       if (entry.visited) {
         const current = entry.item;
         if (current.isDisabled) {
-          setTreeItemSelection(current, false, false);
+          this.setSelection(current, false, false);
           states.set(current, 'ignored');
           continue;
         }
         const children = this.childrenOf(current).filter((child) => !child.isDisabled);
         if (children.length === 0) {
           if (leavesOnly && current.hasChildren) {
-            setTreeItemSelection(current, false, false);
+            this.setSelection(current, false, false);
             states.set(current, 'none');
           } else {
-            setTreeItemSelection(current, current.selected, false);
+            this.setSelection(current, current.selected, false);
             states.set(current, current.selected ? 'all' : 'none');
           }
           continue;
         }
         const childStates = children.map((child) => states.get(child) ?? 'ignored').filter((state) => state !== 'ignored');
         if (childStates.length === 0) {
-          setTreeItemSelection(current, false, false);
+          this.setSelection(current, false, false);
           states.set(current, 'none');
           continue;
         }
         const all = childStates.every((state) => state === 'all');
         const none = childStates.every((state) => state === 'none');
-        setTreeItemSelection(current, all, !all && !none);
+        this.setSelection(current, all, !all && !none);
         states.set(current, all ? 'all' : none ? 'none' : 'some');
         continue;
       }
@@ -682,28 +769,45 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     else this.normalizeMultipleSelection();
   }
 
-  private selectionSignature(): string {
-    return this.allNodeElements()
-      .map((node) => `${node.nodeId}:${node.selected ? 1 : 0}:${node.indeterminate ? 1 : 0}`)
-      .join('|');
+  /** The state each node had before the user selection in progress first touched it. */
+  private selectionBefore?: Map<LyraTreeItem, readonly [boolean, boolean]>;
+
+  private setSelection(node: LyraTreeItem, selected: boolean, indeterminate: boolean): void {
+    if (this.selectionBefore && !this.selectionBefore.has(node)) {
+      this.selectionBefore.set(node, [node.selected, node.indeterminate]);
+    }
+    setTreeItemSelection(node, selected, indeterminate);
   }
 
+  /** Applies a user selection and reports whether any node's final state differs from before.
+   *  Only the nodes the operation touched are compared, instead of serializing every node's state
+   *  twice per click. */
   private updateSelectionFrom(node: LyraTreeItem): boolean {
     if (node.isDisabled) return false;
-    const before = this.selectionSignature();
-    if (this.selection === 'single' || this.selection === 'leaf') {
-      if (!this.selectableInSingleMode(node)) return false;
-      for (const candidate of this.allNodeElements()) {
-        setTreeItemSelection(candidate, candidate === node, false);
-      }
-    } else {
-      const select = node.indeterminate || !node.selected;
-      this.setBranchSelection(node, select, this.selection === 'leaf-multiple');
-      for (const root of this.nodeElements) {
-        this.deriveMultipleSelection(root, this.selection === 'leaf-multiple');
-      }
+    if ((this.selection === 'single' || this.selection === 'leaf') && !this.selectableInSingleMode(node)) {
+      return false;
     }
-    return before !== this.selectionSignature();
+    const before = new Map<LyraTreeItem, readonly [boolean, boolean]>();
+    this.selectionBefore = before;
+    try {
+      if (this.selection === 'single' || this.selection === 'leaf') {
+        for (const candidate of this.allNodeElements()) {
+          this.setSelection(candidate, candidate === node, false);
+        }
+      } else {
+        const select = node.indeterminate || !node.selected;
+        this.setBranchSelection(node, select, this.selection === 'leaf-multiple');
+        for (const root of this.nodeElements) {
+          this.deriveMultipleSelection(root, this.selection === 'leaf-multiple');
+        }
+      }
+    } finally {
+      this.selectionBefore = undefined;
+    }
+    for (const [candidate, [selected, indeterminate]] of before) {
+      if (candidate.selected !== selected || candidate.indeterminate !== indeterminate) return true;
+    }
+    return false;
   }
 
   /** Recomputed from the DOM rather than tracked incrementally: children can be added by the parser,
@@ -942,14 +1046,18 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     this.pendingFocusId = this.activeId;
   }
 
-  /** Remembers which item last held real focus -- see `resolveActiveFromDom()`'s focus repair. */
+  /** Remembers which item last held real focus -- see `resolveActiveFromDom()`'s focus repair --
+   *  and makes it the roving target, so focus moved by script (`revealPath()`, a host's own
+   *  `.focus()`) and the tab stop and arrow-key origin never disagree. */
   private onTreeFocusIn = (e: FocusEvent): void => {
     const item = e.composedPath().find(
       (target): target is LyraTreeItem =>
         (target as Partial<Node>).nodeType === 1 &&
         (target as Partial<Element>).localName === tag('tree-item'),
     );
-    if (item) this.lastFocusedNodeId = item.nodeId;
+    if (!item) return;
+    this.lastFocusedNodeId = item.nodeId;
+    if (this.isNavigable(item)) this.activeId = item.nodeId;
   };
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -1010,7 +1118,8 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     // batch touched. Any other update -- `activeId`/`data` changing, the first authored-items
     // render, or any other tracked property -- keeps the original, always-correct full walk, since
     // those can change every root's context (identity, selection, set size/position) at once.
-    if (changed.size === 0 && this.hasAuthoredItems && this.dirtyConfigureRoots.size > 0) {
+    const targeted = changed.size === 0 && this.hasAuthoredItems && this.dirtyConfigureRoots.size > 0;
+    if (targeted) {
       const nodes = this.nodeElements;
       const count = nodes.length;
       for (const node of this.dirtyConfigureRoots) {
@@ -1028,6 +1137,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
           identity: undefined,
           expandIcon: this.iconSource('expand-icon'),
           collapseIcon: this.iconSource('collapse-icon'),
+          syncOwner: this.requestContextSync,
         });
       }
     } else if (changed.has('activeId') || changed.has('data') || this.hasAuthoredItems) {
@@ -1046,10 +1156,71 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
           identity: this.hasAuthoredItems ? undefined : this.treeIdentityAt(String(i)),
           expandIcon: this.iconSource('expand-icon'),
           collapseIcon: this.iconSource('collapse-icon'),
+          syncOwner: this.requestContextSync,
         });
       });
     }
+    if (!targeted) this.contextSyncPending = true;
     this.dirtyConfigureRoots.clear();
+    this.scheduleTreeSync();
+  }
+
+  /** Whether the next tree sync must re-push hierarchy context to every rendered item. Only the
+   *  targeted attribute-batch path in `updated()` leaves it unset, since those mutations change no
+   *  item's depth, set position, roving target or selection mode. */
+  private contextSyncPending = true;
+  private bulkExpansions = 0;
+  private syncRequested = false;
+  private syncRunning = false;
+  private syncTask?: Promise<void>;
+
+  /** Handed to every configured item as `syncOwner`: an item that renders or reveals child rows
+   *  (an expansion, including a direct `expanded` write, or a refreshed `item`) asks for a sync. */
+  private requestContextSync = (): void => {
+    this.contextSyncPending = true;
+    this.scheduleTreeSync();
+  };
+
+  /** Coalesces the post-update hierarchy pass into one running task. Scheduled from the update
+   *  lifecycle itself, so nested items receive their context whether or not anything awaits this
+   *  tree's `updateComplete`. */
+  private scheduleTreeSync(): void {
+    this.syncRequested = true;
+    // `expandAll()` runs one sync when it finishes instead of one per expanded branch.
+    if (this.syncRunning || this.bulkExpansions > 0) return;
+    this.syncRunning = true;
+    this.syncTask = this.runTreeSync();
+  }
+
+  /**
+   * Nested items only render once their ancestor chain has rendered (one pending update per depth
+   * level), so this waits for the item cascade (see `cascadeUpdateComplete`), then pushes hierarchy
+   * context to every rendered item, re-derives selection, waits for those renders, and finally
+   * confirms a pending reorder and restores displaced focus. A `.focus()` call on an item whose
+   * `tabindex` has not committed yet is a silent no-op, which is why the refocus comes last.
+   */
+  private async runTreeSync(): Promise<void> {
+    try {
+      while (this.syncRequested) {
+        this.syncRequested = false;
+        await super.getUpdateComplete();
+        await cascadeUpdateComplete(this.nodeElements);
+        if (this.contextSyncPending) {
+          this.contextSyncPending = false;
+          this.applyTreeContext();
+        }
+        if (this.selectionSyncPending) {
+          this.selectionSyncPending = false;
+          this.normalizeSelection();
+        }
+        await cascadeUpdateComplete(this.nodeElements);
+        this.reportRefreshSelectionChange();
+        this.confirmPendingReorder();
+        this.restorePendingFocus();
+      }
+    } finally {
+      this.syncRunning = false;
+    }
   }
 
   /** Children changed: re-derive which child model is in play, and (via the requested update)
@@ -1095,7 +1266,16 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    *  ancestors it touched, so `updated()` can target just those instead of every root-level
    *  sibling; a mixed batch clears that set and falls back to the full walk, since a structural
    *  change can shift every root's `setSize`/`posInSet`. */
-  private onChildMutations = (records: MutationRecord[]): void => {
+  private onChildMutations = (allRecords: MutationRecord[]): void => {
+    // Every observed attribute is boolean. A write that leaves its presence unchanged -- an item
+    // re-reflecting the `selected` value this tree's own normalization just settled -- changes
+    // nothing, and reacting to it would re-run that normalization indefinitely.
+    const records = allRecords.filter(
+      (record) =>
+        record.type !== 'attributes' ||
+        (record.oldValue !== null) !== (record.target as Element).hasAttribute(record.attributeName ?? ''),
+    );
+    if (records.length === 0) return;
     if (records.some((record) => record.attributeName === 'inert')) this.inertMutationPending = true;
     if (records.every((record) => record.type === 'attributes')) {
       const itemTag = tag('tree-item');
@@ -1142,6 +1322,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
       childList: true,
       subtree: true,
       attributes: true,
+      attributeOldValue: true,
       attributeFilter: ['selected', 'disabled', 'inert', 'lazy'],
     });
   }
@@ -1194,6 +1375,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
         identity: this.treeIdentityAt(String(index)),
         expandIcon: this.iconSource('expand-icon'),
         collapseIcon: this.iconSource('collapse-icon'),
+        syncOwner: this.requestContextSync,
       });
       const targetPosition: Element | null = previousSibling
         ? previousSibling.nextElementSibling
@@ -1228,73 +1410,109 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    * same-value, no-op assignment for them.
    */
   private onNodeActivate = (e: Event): void => {
-    const id = (e as CustomEvent<{ nodeId: string }>).detail.nodeId;
-    const node = this.allNodeElements().find((candidate) => candidate.nodeId === id);
-    if (node && !node.isDisabled) {
-      this.activeId = id;
-      if (e.type === 'lr-node-toggle') {
-        this.selectionSyncPending = true;
-        this.requestUpdate();
-      }
+    const node = this.eventNode(e);
+    if (!node || node.isDisabled) return;
+    this.selectionSyncPending = true;
+    this.requestUpdate();
+    // A toggle the user made on a row (pointer or keyboard) keeps focus on that row, so it becomes
+    // the roving target. A programmatic `expand()`/`collapse()` (`expandAll()`, `revealPath()`)
+    // moves it only when collapsing just hid the current roving target.
+    const expanded = (e as CustomEvent<{ expanded?: boolean }>).detail?.expanded === true;
+    if (
+      this.focusIsWithin(node) ||
+      (!expanded && this.activeId !== node.nodeId && this.subtreeHasId(node, this.activeId))
+    ) {
+      this.activeId = node.nodeId;
     }
   };
 
+  /** Whether an item below `root` carries `id` -- the walk is bounded by that subtree, so
+   *  collapsing every branch (`collapseAll()`) stays linear overall. */
+  private subtreeHasId(root: LyraTreeItem, id: string | null): boolean {
+    if (id == null) return false;
+    const stack = [...this.childrenOf(root)];
+    for (let visited = 0; stack.length > 0 && visited < TREE_MAX_RENDER_NODES; visited++) {
+      const item = stack.pop()!;
+      if (item.nodeId === id) return true;
+      stack.push(...this.childrenOf(item));
+    }
+    return false;
+  }
+
+  /** Whether real focus is on `node` or inside it (a focusable element in its label). */
+  private focusIsWithin(node: LyraTreeItem): boolean {
+    for (let current = deepActiveElementIn(this.ownerDocument); current; current = composedParentElement(current)) {
+      if (current === node) return true;
+      if (current === this) return false;
+    }
+    return false;
+  }
+
+  /** The item that emitted a node event. Its composed path starts at that item, so no walk over
+   *  the whole hierarchy is needed; an item of a tree nested inside one of this tree's rows is
+   *  never mistaken for this tree's own. A synthetic event dispatched elsewhere falls back to the
+   *  detail's `nodeId`. */
+  private eventNode(e: Event): LyraTreeItem | undefined {
+    const path = e.composedPath();
+    const origin = path[0] as Partial<Element> | undefined;
+    if (origin?.nodeType === 1 && origin.localName === tag('tree-item')) {
+      const treeTag = tag('tree');
+      for (const target of path) {
+        if (target === this) return origin as LyraTreeItem;
+        if ((target as Partial<Element>).localName === treeTag) return undefined;
+      }
+      return undefined;
+    }
+    const id = (e as CustomEvent<{ nodeId?: string }>).detail?.nodeId;
+    return this.allNodeElements().find((candidate) => candidate.nodeId === id);
+  }
+
   private onNodeSelect = (event: Event): void => {
-    const id = (event as CustomEvent<{ nodeId: string }>).detail.nodeId;
-    const node = this.allNodeElements().find((candidate) => candidate.nodeId === id);
+    const node = this.eventNode(event);
     if (!node || node.isDisabled) return;
-    this.activeId = id;
+    this.activeId = node.nodeId;
     if (!this.updateSelectionFrom(node)) return;
     this.emit('lr-selection-change', Object.freeze({ selection: this.selectedItems }));
   };
 
   /**
-   * `updated()` only pushes the new `activeId` to *top-level* nodes; nested
-   * nodes only receive it once their ancestor chain's own renders cascade it
-   * down (one more pending update per depth level). Cascade `updateComplete`
-   * to match (see `cascadeUpdateComplete`), so `focusNode()`'s `.focus()`
-   * call never runs while a nested target is still mid-cascade -- `.focus()`
-   * on an element with no `tabindex` attribute committed yet is a silent
-   * no-op.
-   *
-   * The `pendingFocusId` refocus (set by `willUpdate()` when a `data`
-   * reassignment removes the node that currently holds real DOM focus) is
-   * also resolved *here*, after the cascade above, rather than from
-   * `updated()` firing a detached `void this.updateComplete.then(...)` of
-   * its own: `updateComplete`'s getter (see the base class) calls this
-   * method fresh on *every* access rather than caching one promise, so a
-   * second, independent invocation started from inside `updated()` isn't
-   * the same promise chain a caller's own `await el.updateComplete` is
-   * following -- both ultimately settle once the same underlying update
-   * resolves, but as separate chains their `.then()` continuations aren't
-   * ordered against each other, so a caller's `await` can win the race and
-   * observe focus *not yet* restored. Doing the refocus inline, before this
-   * method's own `await` chain resolves, makes it unconditionally part of
-   * whatever `updateComplete` promise every caller (this class's own
-   * `focusNode()` included) is already waiting on.
+   * Waits for this tree's own update, any hierarchy sync it scheduled (see `runTreeSync()`), and
+   * the item cascade, so `await tree.updateComplete` still means every reachable item has its
+   * context, selection state, and restored focus. It performs no work itself.
    */
   protected override async getUpdateComplete(): Promise<boolean> {
-    const result = await super.getUpdateComplete();
-    await cascadeUpdateComplete(this.nodeElements);
-    this.applyTreeContext();
-    if (this.selectionSyncPending) {
-      this.selectionSyncPending = false;
-      this.normalizeSelection();
+    let result = await super.getUpdateComplete();
+    while (this.syncRunning || this.isUpdatePending) {
+      if (this.syncRunning) await this.syncTask;
+      result = await super.getUpdateComplete();
     }
     await cascadeUpdateComplete(this.nodeElements);
-    this.confirmPendingReorder();
-    if (this.pendingFocusId != null) {
-      const id = this.pendingFocusId;
-      this.pendingFocusId = null;
-      // Searched across the *visible* walk, not just `nodeElements`, so a
-      // nested node that was only re-indexed gets focus back where it was
-      // rather than having it pulled up to its top-level ancestor. A node
-      // whose ancestor collapsed in the same update is no longer visible (and
-      // has no committed `tabindex`), so fall back to the roving target.
-      const visible = this.visibleNodeElements();
-      (visible.find((n) => n.nodeId === id) ?? visible.find((n) => n.nodeId === this.activeId))?.focus();
-    }
     return result;
+  }
+
+  /** Emits `lr-selection-change` when a `data` refresh changed the self-managed selection. */
+  private reportRefreshSelectionChange(): void {
+    const before = this.selectionBeforeRefresh;
+    if (before === undefined || this.isUpdatePending) return;
+    this.selectionBeforeRefresh = undefined;
+    const selection = this.selectedItems;
+    if (selection.length === before.length && selection.every((item, index) => item.nodeId === before[index])) {
+      return;
+    }
+    this.emit('lr-selection-change', Object.freeze({ selection }));
+  }
+
+  /** Refocuses the node a `data` reassignment, inert mutation or `collapseAll()` displaced.
+   *  Searched across the *visible* walk, not just `nodeElements`, so a nested node that was only
+   *  re-indexed gets focus back where it was rather than having it pulled up to its top-level
+   *  ancestor. A node whose ancestor collapsed in the same update is no longer visible (and has
+   *  no committed `tabindex`), so fall back to the roving target. */
+  private restorePendingFocus(): void {
+    if (this.pendingFocusId == null) return;
+    const id = this.pendingFocusId;
+    this.pendingFocusId = null;
+    const visible = this.visibleNodeElements();
+    (visible.find((n) => n.nodeId === id) ?? visible.find((n) => n.nodeId === this.activeId))?.focus();
   }
 
   /**
@@ -1370,6 +1588,9 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
   }
 
   private onTreeKeyDown = (e: KeyboardEvent): void => {
+    // A control inside an item's label owns its own keys; the item host itself is the boundary.
+    const itemTag = tag('tree-item');
+    if (fromInteractiveDescendant(e, (target) => (target as Partial<Element>).localName === itemTag)) return;
     const visible = this.visibleNodeElements();
     if (visible.length === 0) return;
     // `nodeId` resolves in both child models -- see `focusNode()`.
@@ -1385,6 +1606,9 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
       this.requestReorder(current, e.key === 'ArrowDown' ? 1 : -1);
       return;
     }
+    // Alt+Arrow is browser back/forward (and Alt+Home the home page) on Windows and Linux: leave
+    // every Alt-modified key to the platform. Ctrl/Cmd keep navigating, as documented.
+    if (e.altKey) return;
     // Expand/step-in and collapse/step-out are physical-direction actions --
     // swap which arrow key does which in RTL, matching split.ts/time-range.ts.
     const rtl = isRtl(this);
@@ -1477,17 +1701,24 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
   async expandAll(): Promise<void> {
     const queue = this.nodeElements.map((node) => ({ node, depth: 0 }));
     const seen = new Set<LyraTreeItem>();
-    for (let index = 0; index < queue.length && seen.size < TREE_MAX_RENDER_NODES; index++) {
-      const { node, depth } = queue[index]!;
-      if (seen.has(node)) continue;
-      seen.add(node);
-      if (node.isDisabled) node.expanded = false;
-      else if (node.hasChildren) node.expand();
-      await node.updateComplete;
-      if (depth < TREE_MAX_RENDER_DEPTH) {
-        queue.push(...this.childrenOf(node).map((child) => ({ node: child, depth: depth + 1 })));
+    this.bulkExpansions += 1;
+    try {
+      for (let index = 0; index < queue.length && seen.size < TREE_MAX_RENDER_NODES; index++) {
+        const { node, depth } = queue[index]!;
+        if (seen.has(node)) continue;
+        seen.add(node);
+        if (node.isDisabled) node.expanded = false;
+        else if (node.hasChildren) node.expand();
+        await node.updateComplete;
+        if (depth < TREE_MAX_RENDER_DEPTH) {
+          queue.push(...this.childrenOf(node).map((child) => ({ node: child, depth: depth + 1 })));
+        }
       }
+    } finally {
+      this.bulkExpansions -= 1;
     }
+    if (this.bulkExpansions === 0 && this.syncRequested) this.scheduleTreeSync();
+    await this.updateComplete;
   }
 
   /**

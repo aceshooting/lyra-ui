@@ -1,4 +1,4 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -17,11 +17,12 @@ import { composedAccessibilityText } from '../../../internal/accessibility-visib
 import { chevronIcon } from '../../../internal/icons.js';
 import { finiteDuration } from '../../../internal/numbers.js';
 import { setCustomState } from '../../../internal/custom-states.js';
-import { attachInternalsSafely } from '../../../internal/form-associated.js';
+import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { cascadeUpdateComplete } from './update-cascade.js';
 import { styles } from './tree-item.styles.js';
 import {
+  fromInteractiveDescendant,
   treeItemOwnerContext,
   type TreeItemOwnerContext,
 } from './tree-owner-controller.js';
@@ -215,7 +216,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
     fieldRequired: LYRA_DEFAULT_fieldRequired,
   };
   // GENERATED DEFAULT-STRING SLICE: END
-  protected static override collectionSupport = collectionSupport;
+  protected static override collectionSupport = eventCollectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-expand',
@@ -253,8 +254,11 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
 
   /**
    * The data model: the whole subtree as one object, assigned by `<lr-tree>` from its `data`. When
-   * set it wins over the declarative model for label, disabled state, and children. Its selected
-   * and lazy values seed the corresponding element state when a refreshed identity is assigned.
+   * set it wins over the declarative model for label, disabled state, and children. Its lazy value
+   * seeds the element state whenever a refreshed identity is assigned. Its selected value seeds the
+   * selected state on the first assignment, when the refresh carries a different `id`, or when it
+   * sets `selected` explicitly; a same-id refresh that omits `selected` keeps the current
+   * (tree-managed) selection.
    */
   @property({ attribute: false })
   get item(): LyraTreeNodeData | undefined {
@@ -264,7 +268,9 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
     const old = this._item;
     if (old === value) return;
     this._item = value;
-    this.selected = Boolean(value?.selected);
+    if (value?.selected !== undefined || old?.id !== value?.id) {
+      this.selected = Boolean(value?.selected);
+    }
     this.lazy = Boolean(value?.lazy);
     const hasResolvedChildren = Boolean(value?.children?.length);
     if (this._loading && (hasResolvedChildren || !this.lazy)) {
@@ -714,6 +720,13 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
     setCustomState(this.itemInternals, 'selected', this.selected);
   }
 
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    // Expanding (by any route, including a direct `expanded` write) or a refreshed `item` renders
+    // new child rows that start without hierarchy context. The owning tree supplies it.
+    if (changed.has('expanded') || changed.has('item')) this.ownerContext.syncOwner?.();
+  }
+
   /** Expand this node (no-op if already expanded, disabled, loading, or a leaf). */
   expand(): void {
     if (this.isDisabled || this._loading || this.expanded) return;
@@ -913,6 +926,14 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
     if (toggle.hasPointerCapture(event.pointerId)) toggle.releasePointerCapture(event.pointerId);
   };
 
+  /** A click on a control inside the label (a button, a link) is that control's, not a row
+   *  selection. */
+  private onRowClick = (event: MouseEvent): void => {
+    const row = event.currentTarget;
+    if (fromInteractiveDescendant(event, (target) => target === row)) return;
+    this.select();
+  };
+
   private get multipleSelection(): boolean {
     const selection = this.ownerContext.selection;
     return selection === 'multiple' || selection === 'leaf-multiple';
@@ -983,7 +1004,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
    *  come from the data model; the declarative one passes `nothing` for all three. */
   private renderRow(content: { icon: unknown; label: unknown; description: unknown; badges: unknown }): TemplateResult {
     return html`
-      <div part="row" style=${`--lr-tree-depth:${this.ownerContext.depth}`} @click=${() => this.select()}>
+      <div part="row" style=${`--lr-tree-depth:${this.ownerContext.depth}`} @click=${this.onRowClick}>
         <span part="indentation" aria-hidden="true"></span>
         <span part="expand-button">
           <button
@@ -1000,6 +1021,9 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
             @mousedown=${this.onToggleMouseDown}
             @click=${(e: Event) => {
               e.stopPropagation();
+              // A toggle activated without a preceding mousedown (a scripted or assistive click)
+              // still acts on this row, so focus it as the mousedown path does.
+              if (!this.isDisabled) this.focus();
               this.expanded ? this.collapse() : this.expand();
             }}
           >

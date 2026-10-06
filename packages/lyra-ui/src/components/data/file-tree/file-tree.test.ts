@@ -1,7 +1,10 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { render } from 'lit';
 import './file-tree.js';
 import type { LyraFileTree, FileTreeNode } from './file-tree.js';
+import type { LyraTree } from '../tree/tree.js';
+import type { LyraTreeItem } from '../tree/tree-item.js';
 
 const nodes: FileTreeNode[] = [
   {
@@ -170,17 +173,15 @@ describe('lr-file-tree', () => {
     expect(required(tree.data[1], 'second file-tree row').selected).to.be.true;
   });
 
-  it('represents a lazy loading placeholder as disabled status content, not a selectable stop', async () => {
+  it('projects an unloaded directory through the tree lazy lifecycle instead of a placeholder row', async () => {
     const el = (await fixture(html`<lr-file-tree></lr-file-tree>`)) as LyraFileTree;
     el.nodes = [{ path: 'lazy-dir', kind: 'directory', hasChildren: true }];
     await el.updateComplete;
     const tree = el.shadowRoot!.querySelector('lr-tree')!;
-    const placeholder = required(
-      required(tree.data[0], 'lazy directory row').children?.[0],
-      'lazy loading placeholder',
-    );
+    const row = required(tree.data[0], 'lazy directory row');
 
-    expect(placeholder.disabled).to.be.true;
+    expect(row.lazy).to.equal(true);
+    expect(row.children).to.equal(undefined);
   });
 
   it('emits lr-file-select when a file row is activated', async () => {
@@ -254,13 +255,113 @@ describe('lr-file-tree', () => {
     const el = (await fixture(html`<lr-file-tree></lr-file-tree>`)) as LyraFileTree;
     el.nodes = [{ path: 'lazy-dir', kind: 'directory', hasChildren: true }];
     await el.updateComplete;
-    const listener = oneEvent(el, 'lr-load-children');
-    el.shadowRoot!.querySelector('lr-tree')!.dispatchEvent(
-      new CustomEvent('lr-node-toggle', { detail: { nodeId: 'lazy-dir', expanded: true }, bubbles: true, composed: true }),
-    );
-    const event = (await listener) as CustomEvent<{ filePath: string }>;
-    expect(event.detail.filePath).to.equal('lazy-dir');
+    const tree = el.shadowRoot!.querySelector<LyraTree>('lr-tree')!;
+    const row = tree.querySelector<LyraTreeItem>('lr-tree-item')!;
+    const requests: string[] = [];
+    el.addEventListener('lr-load-children', (event) => requests.push(event.detail.filePath));
+
+    row.expand();
+    row.expand();
+    await row.updateComplete;
+    expect(requests).to.deep.equal(['lazy-dir']);
+    expect(row.loading).to.equal(true);
+    expect(row.getAttribute('aria-busy')).to.equal('true');
+
+    el.setChildren('lazy-dir', [{ path: 'lazy-dir/file.ts' }]);
+    await el.updateComplete;
+    await tree.updateComplete;
+    expect(row.loading).to.equal(false);
+    expect(row.expanded).to.equal(true);
+    expect(row.childItems().map((child) => child.nodeId)).to.deep.equal(['lazy-dir/file.ts']);
+    expect(requests).to.deep.equal(['lazy-dir']);
   });
+
+  it('keeps every top-level entry of an eagerly loaded listing larger than the tree row budget', async () => {
+    const listing: FileTreeNode[] = [
+      {
+        path: 'node_modules',
+        kind: 'directory',
+        children: Array.from({ length: 1_500 }, (_, index) => ({ path: `node_modules/p${index}` })),
+      },
+      { path: 'src', kind: 'directory', children: [{ path: 'src/app.ts' }] },
+      { path: 'README.md' },
+    ];
+    const el = await fixture<LyraFileTree>(html`<lr-file-tree .nodes=${listing}></lr-file-tree>`);
+    const tree = el.shadowRoot!.querySelector<LyraTree>('lr-tree')!;
+    await tree.updateComplete;
+
+    expect(tree.data.map((item) => item.id)).to.deep.equal(['node_modules', 'src', 'README.md']);
+    expect(el.dataTruncated).to.equal(false);
+
+    const [modules, src] = [...tree.querySelectorAll<LyraTreeItem>(':scope > lr-tree-item')];
+    src!.expand();
+    await el.updateComplete;
+    await tree.updateComplete;
+    expect(src!.expanded).to.equal(true);
+    expect(src!.childItems().map((child) => child.nodeId)).to.deep.equal(['src/app.ts']);
+    expect(el.dataTruncated).to.equal(false);
+
+    modules!.expand();
+    await el.updateComplete;
+    await tree.updateComplete;
+    expect(modules!.expanded).to.equal(true);
+    expect(modules!.childItems().length).to.be.greaterThan(900);
+    expect(el.dataTruncated, 'the expanded content exceeds the tree row budget').to.equal(true);
+
+    modules!.collapse();
+    await el.updateComplete;
+    await tree.updateComplete;
+    expect(tree.data.map((item) => item.id)).to.deep.equal(['node_modules', 'src', 'README.md']);
+    expect(el.dataTruncated).to.equal(false);
+  });
+
+  it('reports omitted source entries through dataTruncated', async () => {
+    const el = await fixture<LyraFileTree>(html`<lr-file-tree .nodes=${nodes}></lr-file-tree>`);
+    expect(el.dataTruncated).to.equal(false);
+    el.nodes = [{ path: 'a' }, { path: 'a' }];
+    await el.updateComplete;
+    expect(el.dataTruncated).to.equal(true);
+  });
+
+  it('keeps the inner tree events inside the component', async () => {
+    const wrapper = await fixture(html`<div><lr-file-tree .nodes=${nodes}></lr-file-tree></div>`);
+    const el = wrapper.querySelector('lr-file-tree') as LyraFileTree;
+    await el.updateComplete;
+    const leaked: string[] = [];
+    for (const name of [
+      'lr-expand',
+      'lr-after-expand',
+      'lr-collapse',
+      'lr-after-collapse',
+      'lr-selection-change',
+      'lr-lazy-load',
+      'lr-lazy-change',
+    ]) {
+      wrapper.addEventListener(name, () => leaked.push(name));
+    }
+    const tree = el.shadowRoot!.querySelector<LyraTree>('lr-tree')!;
+    const src = tree.querySelector<LyraTreeItem>('lr-tree-item')!;
+    const afterExpand = oneEvent(src, 'lr-after-expand');
+    src.expand();
+    await afterExpand;
+    src.select();
+    const afterCollapse = oneEvent(src, 'lr-after-collapse');
+    src.collapse();
+    await afterCollapse;
+    expect(leaked).to.deep.equal([]);
+  });
+
+  it('moves the roving tab stop to the row revealPath() focuses', async () => {
+    const el = await fixture<LyraFileTree>(html`<lr-file-tree .nodes=${nodes}></lr-file-tree>`);
+    expect(await el.revealPath('src/app.ts')).to.equal(true);
+    const tree = el.shadowRoot!.querySelector<LyraTree>('lr-tree')!;
+    await tree.updateComplete;
+    const src = tree.querySelector<LyraTreeItem>('lr-tree-item')!;
+    const [app] = src.childItems();
+    expect(app!.tabIndex).to.equal(0);
+    expect(src.tabIndex).to.equal(-1);
+  });
+
 
   it('setChildren() fulfills a lazy directory in place without a nodes reassignment from the host', async () => {
     const el = (await fixture(html`<lr-file-tree></lr-file-tree>`)) as LyraFileTree;
@@ -348,4 +449,35 @@ it('fails hostile array descriptors and record getters closed while retaining la
   expect(el.nodes.map((node) => node.path)).to.deep.equal(['retained.ts']);
   expect(el.shadowRoot!.querySelector('lr-tree')!.data.map((node: { id: string }) => node.id))
     .to.deep.equal(['retained.ts']);
+});
+
+it('ignores a parent re-render that rebinds the same nodes array', async () => {
+  const container = document.createElement('div');
+  document.body.append(container);
+  const template = () => html`<lr-file-tree .nodes=${nodes}></lr-file-tree>`;
+  render(template(), container);
+  const el = container.querySelector('lr-file-tree') as LyraFileTree;
+  await el.updateComplete;
+  render(template(), container);
+  expect(el.isUpdatePending).to.equal(false);
+  container.remove();
+});
+
+it('keeps unchanged rows on their existing item objects when the selection moves', async () => {
+  const listing: FileTreeNode[] = [
+    { path: 'src', kind: 'directory', children: Array.from({ length: 20 }, (_, index) => ({ path: `src/f${index}.ts`, additions: index })) },
+    { path: 'README.md' },
+  ];
+  const el = await fixture<LyraFileTree>(html`<lr-file-tree .nodes=${listing}></lr-file-tree>`);
+  const tree = el.shadowRoot!.querySelector<LyraTree>('lr-tree')!;
+  const src = tree.querySelector<LyraTreeItem>('lr-tree-item')!;
+  src.expand();
+  await el.updateComplete;
+  await tree.updateComplete;
+  const before = new Map(src.childItems().map((item) => [item.nodeId, item.item]));
+  el.selectedPath = 'src/f3.ts';
+  await el.updateComplete;
+  await tree.updateComplete;
+  const changed = src.childItems().filter((item) => before.get(item.nodeId) !== item.item).map((item) => item.nodeId);
+  expect(changed).to.deep.equal(['src/f3.ts']);
 });

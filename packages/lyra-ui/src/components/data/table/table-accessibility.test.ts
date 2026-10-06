@@ -673,7 +673,7 @@ describe('localization', () => {
     expect(spinner.textContent).to.contain('Chargement des lignes');
   });
 
-  it('localizes the no-data empty-state heading (both the whole-table and filtered-to-empty variants)', async () => {
+  it('localizes the empty-state heading: noData for an empty table, noMatches when filtered to empty', async () => {
     const whole = (await fixture(
       html`<lr-table .strings=${{ noData: 'Aucune donnée' }}></lr-table>`
     )) as LyraTable<Row>;
@@ -682,7 +682,7 @@ describe('localization', () => {
     expect(whole.shadowRoot!.querySelector('lr-empty')!.getAttribute('heading')).to.equal('Aucune donnée');
 
     const filtered = (await fixture(
-      html`<lr-table filterable .strings=${{ noData: 'Aucune correspondance' }}></lr-table>`
+      html`<lr-table filterable .strings=${{ noMatches: 'Aucune correspondance' }}></lr-table>`
     )) as LyraTable<Row>;
     filtered.columns = columns;
     filtered.rows = rows;

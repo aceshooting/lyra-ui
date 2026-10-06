@@ -530,10 +530,9 @@ it("commits keyboard resize, rolls back pointer cancellation, and reorders with 
   element.addEventListener("lr-column-resize", (event) =>
     resizeEvents.push(event.detail)
   );
-  header(element, "name").dispatchEvent(
+  header(element, "name").querySelector<HTMLElement>('[part="resize-handle"]')!.dispatchEvent(
     new KeyboardEvent("keydown", {
       key: "ArrowRight",
-      altKey: true,
       bubbles: true,
       composed: true,
     })
@@ -640,11 +639,10 @@ it("moves and resizes a column from the header keyboard contract", async () => {
   const resized = oneEvent(element, "lr-column-resize");
   const resize = new KeyboardEvent("keydown", {
     key: "ArrowRight",
-    altKey: true,
     bubbles: true,
     cancelable: true,
   });
-  header(element, "name").dispatchEvent(resize);
+  header(element, "name").querySelector<HTMLElement>('[part="resize-handle"]')!.dispatchEvent(resize);
   const resizeDetail = (await resized).detail;
   expect(resizeDetail.columnId).to.equal("name");
   expect(resizeDetail.finished).to.equal(true);
@@ -774,10 +772,9 @@ it("resizes a column in the RTL-appropriate direction by pointer and by keyboard
   `);
   const before = element.getState().widths?.["name"];
   const keyResized = oneEvent(element, "lr-column-resize");
-  header(element, "name").dispatchEvent(
+  header(element, "name").querySelector<HTMLElement>('[part="resize-handle"]')!.dispatchEvent(
     new KeyboardEvent("keydown", {
       key: "ArrowRight",
-      altKey: true,
       bubbles: true,
       composed: true,
     })
@@ -881,7 +878,7 @@ it("moves plain Home and End focus within the current row rather than to the hea
   expect(active.dataset['columnPosition']).to.equal("2");
 });
 
-it("resizes a column left by keyboard without Alt+ArrowRight", async () => {
+it("resizes a column left by keyboard from its separator", async () => {
   const element = await dataGrid(html`
     <lr-data-grid
       label="People"
@@ -892,16 +889,15 @@ it("resizes a column left by keyboard without Alt+ArrowRight", async () => {
   `);
   const before = element.getState().widths?.["name"];
   const resized = oneEvent(element, "lr-column-resize");
-  header(element, "name").dispatchEvent(
+  header(element, "name").querySelector<HTMLElement>('[part="resize-handle"]')!.dispatchEvent(
     new KeyboardEvent("keydown", {
       key: "ArrowLeft",
-      altKey: true,
       bubbles: true,
       composed: true,
     })
   );
   const { detail } = await resized;
-  expect(detail.width, "Alt+ArrowLeft narrows the column").to.be.lessThan(
+  expect(detail.width, "ArrowLeft on the separator narrows the column").to.be.lessThan(
     before ?? detail.width + 1
   );
 });
@@ -1179,6 +1175,7 @@ it("exposes a complete keyboard-adjustable separator and normalizes inverted wid
   const event = await resized;
   expect(event.detail).to.deep.equal({
     columnId: "name",
+    columnKey: "name",
     width: 200,
     finished: true,
   });
@@ -1314,3 +1311,25 @@ describe("explicitly empty host aria-label", () => {
     ).to.equal("People");
   });
 });
+
+it("leaves Alt+Arrow on a resizable header to the browser instead of resizing", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" resizable .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  let resizes = 0;
+  element.addEventListener("lr-column-resize", () => {
+    resizes += 1;
+  });
+  const event = new KeyboardEvent("keydown", {
+    key: "ArrowRight",
+    altKey: true,
+    bubbles: true,
+    composed: true,
+    cancelable: true,
+  });
+  header(element, "name").dispatchEvent(event);
+  await element.updateComplete;
+  expect(resizes).to.equal(0);
+  expect(event.defaultPrevented).to.equal(false);
+});
+

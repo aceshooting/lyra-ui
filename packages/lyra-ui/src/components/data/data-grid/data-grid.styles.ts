@@ -32,6 +32,23 @@ export const styles = css`
       transparent
     );
     --_lr-data-grid-selected-background: var(--lr-color-brand-quiet);
+    /* Shared hover/press fills of the toolbar, filter, pager and resize controls. */
+    --_lr-data-grid-control-hover-fill: var(
+      --lr-data-grid-control-hover-bg,
+      color-mix(
+        in srgb,
+        var(--accent-color, var(--_lr-data-grid-accent-color)) var(--lr-color-mix-hover),
+        transparent
+      )
+    );
+    --_lr-data-grid-control-active-fill: var(
+      --lr-data-grid-control-active-bg,
+      color-mix(
+        in srgb,
+        var(--accent-color, var(--_lr-data-grid-accent-color)) var(--lr-color-mix-active),
+        transparent
+      )
+    );
     --_lr-data-grid-stripe-background: var(--lr-color-surface-raised);
     --_lr-data-grid-text-color: var(--lr-color-text);
     --_lr-data-grid-transition-duration: var(--_lr-motion-duration, var(--lr-duration-fast));
@@ -162,30 +179,14 @@ export const styles = css`
   }
   [part="search-clear"]:hover,
   [part="filter-panel-clear"]:hover {
-    background: var(
-      --lr-data-grid-control-hover-bg,
-      color-mix(
-          in srgb,
-          var(--accent-color, var(--_lr-data-grid-accent-color))
-            var(--lr-color-mix-hover),
-          transparent
-        )
-    );
+    background: var(--_lr-data-grid-control-hover-fill);
   }
   /* Pressed-fill counterpart to the :hover rule above, reusing the same
      --lr-data-grid-control-active-bg/accent-color-mix pattern [part="search"]:active and
      the generic button:active rule below already establish in this file. */
   [part="search-clear"]:active,
   [part="filter-panel-clear"]:active {
-    background: var(
-      --lr-data-grid-control-active-bg,
-      color-mix(
-          in srgb,
-          var(--accent-color, var(--_lr-data-grid-accent-color))
-            var(--lr-color-mix-active),
-          transparent
-        )
-    );
+    background: var(--_lr-data-grid-control-active-fill);
   }
   [part="search-clear"]:focus-visible,
   [part="filter-panel-clear"]:focus-visible {
@@ -195,28 +196,12 @@ export const styles = css`
 
   [part="search"]:hover {
     border-color: var(--accent-color, var(--_lr-data-grid-accent-color));
-    background: var(
-      --lr-data-grid-control-hover-bg,
-      color-mix(
-          in srgb,
-          var(--accent-color, var(--_lr-data-grid-accent-color))
-            var(--lr-color-mix-hover),
-          transparent
-        )
-    );
+    background: var(--_lr-data-grid-control-hover-fill);
   }
 
   [part="search"]:active {
     border-color: var(--accent-color, var(--_lr-data-grid-accent-color));
-    background: var(
-      --lr-data-grid-control-active-bg,
-      color-mix(
-          in srgb,
-          var(--accent-color, var(--_lr-data-grid-accent-color))
-            var(--lr-color-mix-active),
-          transparent
-        )
-    );
+    background: var(--_lr-data-grid-control-active-fill);
   }
 
   [part="search"]:focus-visible,
@@ -250,28 +235,12 @@ export const styles = css`
 
   button:hover:not(:disabled) {
     border-color: var(--accent-color, var(--_lr-data-grid-accent-color));
-    background: var(
-      --lr-data-grid-control-hover-bg,
-      color-mix(
-          in srgb,
-          var(--accent-color, var(--_lr-data-grid-accent-color))
-            var(--lr-color-mix-hover),
-          transparent
-        )
-    );
+    background: var(--_lr-data-grid-control-hover-fill);
   }
 
   button:active:not(:disabled) {
     border-color: var(--accent-color, var(--_lr-data-grid-accent-color));
-    background: var(
-      --lr-data-grid-control-active-bg,
-      color-mix(
-          in srgb,
-          var(--accent-color, var(--_lr-data-grid-accent-color))
-            var(--lr-color-mix-active),
-          transparent
-        )
-    );
+    background: var(--_lr-data-grid-control-active-fill);
   }
 
   button:disabled {
@@ -396,35 +365,41 @@ export const styles = css`
       var(--lr-easing-standard);
   }
 
+  /* Each body-row state writes its fill to a private variable as well as painting it, so pinned
+     (sticky) cells can layer the same fill over an opaque base instead of inheriting a translucent
+     one that lets horizontally scrolled cells show through. */
   :host([striped]) [part~="row"]:nth-of-type(even) {
-    background: var(
+    --_lr-data-grid-row-fill: var(
       --stripe-background,
       var(--_lr-data-grid-stripe-background)
     );
+    background: var(--_lr-data-grid-row-fill);
   }
 
   [part~="row"][aria-selected="true"] {
-    background: var(
+    --_lr-data-grid-row-fill: var(
       --selected-background,
       var(--_lr-data-grid-selected-background)
     );
+    background: var(--_lr-data-grid-row-fill);
   }
 
   /* MUST stay after the selected-row rule above: both are (0,2,0), so source order alone decides.
      The selected row is the one a user is most likely to hover next, so placing this first would
      leave the commonest hover in a selectable grid with no feedback. */
   [part~="row"]:hover {
-    background: var(
+    --_lr-data-grid-row-fill: var(
       --row-hover-background,
       var(--_lr-data-grid-row-hover-background)
     );
+    background: var(--_lr-data-grid-row-fill);
   }
 
   /* MUST stay after the selected-row rule above: both are (0,2,0), so source order alone decides.
      The selected row is the one a user presses to DEselect, so placing this first would leave the
      commonest press in a selectable grid with no feedback. */
   [part~="row"]:active {
-    background: var(
+    --_lr-data-grid-row-fill: var(
       --lr-data-grid-row-active-bg,
       color-mix(
           in srgb,
@@ -433,11 +408,17 @@ export const styles = css`
           transparent
         )
     );
+    background: var(--_lr-data-grid-row-fill);
   }
 
   [part~="cell"] {
     min-block-size: max(var(--lr-size-24px), var(--_lr-density-target-min, 0px), var(--row-height, var(--_lr-data-grid-row-height)));
     color: var(--lr-data-grid-cell-color, inherit);
+  }
+
+  /* Names the row's selection control; generates no box of its own. */
+  .row-label {
+    display: contents;
   }
 
   /* Formatter and row-detail content renders inside this shadow root, where page styles and
@@ -489,6 +470,13 @@ export const styles = css`
     background: inherit;
   }
 
+  /* Body-row pins: the row's own fill over the opaque grid background (see the row-state rules). */
+  [part~="row"] > [data-pin] {
+    background:
+      linear-gradient(var(--_lr-data-grid-row-fill, transparent), var(--_lr-data-grid-row-fill, transparent)),
+      var(--background-color, var(--_lr-data-grid-background-color));
+  }
+
   /* The body is the only scrollport. A vertical scrollbar reduces its logical inline-end edge,
      while header/footer pins otherwise resolve against the clipped outer grid. Mirror that gutter
      only for those outer end pins so start pins and body pins retain their native sticky edge. */
@@ -534,28 +522,12 @@ export const styles = css`
   }
 
   [part="resize-handle"]:hover:not(:where([data-resizing])) {
-    background: var(
-      --lr-data-grid-control-hover-bg,
-      color-mix(
-          in srgb,
-          var(--accent-color, var(--_lr-data-grid-accent-color))
-            var(--lr-color-mix-hover),
-          transparent
-        )
-    );
+    background: var(--_lr-data-grid-control-hover-fill);
   }
 
   [part="resize-handle"]:active,
   [part="resize-handle"]:where([data-resizing]) {
-    background: var(
-      --lr-data-grid-control-active-bg,
-      color-mix(
-          in srgb,
-          var(--accent-color, var(--_lr-data-grid-accent-color))
-            var(--lr-color-mix-active),
-          transparent
-        )
-    );
+    background: var(--_lr-data-grid-control-active-fill);
   }
 
   [part="sort-indicator"],
@@ -700,15 +672,7 @@ export const styles = css`
 
   [part="page-size"]:hover {
     border-color: var(--accent-color, var(--_lr-data-grid-accent-color));
-    background: var(
-      --lr-data-grid-control-hover-bg,
-      color-mix(
-          in srgb,
-          var(--accent-color, var(--_lr-data-grid-accent-color))
-            var(--lr-color-mix-hover),
-          transparent
-        )
-    );
+    background: var(--_lr-data-grid-control-hover-fill);
   }
 
   [part="page-size"]:active {

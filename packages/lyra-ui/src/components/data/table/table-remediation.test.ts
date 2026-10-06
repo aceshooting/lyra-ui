@@ -1,6 +1,7 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
+import { render } from 'lit';
 import './table.js';
 import type { LyraTable, TableColumn } from './table.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
@@ -940,3 +941,94 @@ describe('inert priority-column configuration dev warning and public toggle avai
     expect(element.priorityColumnsToggleAvailable).to.equal(true);
   });
 });
+
+describe('table collection rebinding', () => {
+  it('ignores a parent re-render that rebinds the same rows, columns and key sets', async () => {
+    const container = document.createElement('div');
+    document.body.append(container);
+    const selected = new Set(['z']);
+    const expanded = new Set<string>();
+    const template = () => html`<lr-table caption="Names" selection-mode="multiple" .rows=${rows}
+      .columns=${columns} .rowKey=${rowKey} .selectedRowKeys=${selected} .expandedRowKeys=${expanded}></lr-table>`;
+    render(template(), container);
+    const element = container.querySelector('lr-table') as LyraTable<Row>;
+    // Let measurement-driven follow-up renders settle first.
+    for (let frame = 0; frame < 3; frame += 1) {
+      await element.updateComplete;
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    }
+    expect(element.isUpdatePending, 'settled before the rebind').to.equal(false);
+    render(template(), container);
+    expect(element.isUpdatePending).to.equal(false);
+    container.remove();
+  });
+});
+
+describe('table row budget', () => {
+  it('reports rows beyond the 10,000-row snapshot through rowsTruncated', async () => {
+    const many: Row[] = Array.from({ length: 10_002 }, (_, index) => ({ id: `r${index}`, name: `Row ${index}` }));
+    const element = await fixture<LyraTable<Row>>(html`<lr-table caption="Many" .rows=${many} .columns=${columns} .rowKey=${rowKey}></lr-table>`);
+    expect(element.rows.length).to.equal(10_000);
+    expect(element.rowsTruncated).to.equal(true);
+    element.rows = many.slice(0, 5);
+    expect(element.rowsTruncated).to.equal(false);
+  });
+});
+
+describe('table modified arrows', () => {
+  it('leaves Alt+Arrow on a row to the browser', async () => {
+    const element = await fixture<LyraTable<Row>>(html`<lr-table caption="Names" .rows=${rows} .columns=${columns} .rowKey=${rowKey}></lr-table>`);
+    const row = element.shadowRoot!.querySelector<HTMLElement>('tbody tr[data-row-key]')!;
+    row.focus();
+    const event = new KeyboardEvent('keydown', { key: 'ArrowDown', altKey: true, bubbles: true, composed: true, cancelable: true });
+    row.dispatchEvent(event);
+    expect(event.defaultPrevented).to.equal(false);
+  });
+});
+
+describe('table filtered to zero rows', () => {
+  it('says "No matches" when rows exist but the filter excludes them all, and "No data" when empty', async () => {
+    const element = await fixture<LyraTable<Row>>(html`<lr-table caption="Names" filterable filter-text="nothing-matches"
+      .rows=${rows} .columns=${columns} .rowKey=${rowKey}></lr-table>`);
+    const heading = () => element.shadowRoot!.querySelector('lr-empty')?.getAttribute('heading');
+    expect(heading()).to.equal('No matches');
+    element.rows = [];
+    await element.updateComplete;
+    expect(heading()).to.equal('No data');
+  });
+});
+
+describe('table render-time derived work', () => {
+  it('does not recompute the heat domain or re-validate unchanged cell styles on a focus-move render', async () => {
+    type Scored = { id: string; name: string; score: number };
+    const scored: Scored[] = Array.from({ length: 200 }, (_, index) => ({ id: `s${index}`, name: `Row ${index}`, score: index }));
+    let heatReads = 0;
+    const heatColumns: TableColumn<Scored>[] = [
+      { key: 'name', label: 'Name', cell: (row) => row.name, cellStyle: () => ({ fontWeight: '600' }) },
+      { key: 'score', label: 'Score', cell: (row) => row.score, heatValue: (row) => { heatReads += 1; return row.score; } },
+    ];
+    const originalSupports = CSS.supports;
+    let supportsCalls = 0;
+    CSS.supports = ((...args: [string, string?]) => {
+      supportsCalls += 1;
+      return (originalSupports as (...values: [string, string?]) => boolean).apply(CSS, args);
+    }) as typeof CSS.supports;
+    try {
+      const element = await fixture<LyraTable<Scored>>(html`<lr-table caption="Scores" page-size="50" .rows=${scored}
+        .columns=${heatColumns} .rowKey=${(row: Scored) => row.id}></lr-table>`);
+      const firstRow = element.shadowRoot!.querySelector<HTMLElement>('tbody tr[data-row-key]')!;
+      firstRow.focus();
+      await element.updateComplete;
+      heatReads = 0;
+      supportsCalls = 0;
+      firstRow.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true, cancelable: true }));
+      await element.updateComplete;
+      // Only the rendered page's own tint reads remain: 50 rows, not 200 domain reads on top.
+      expect(heatReads).to.be.at.most(50);
+      expect(supportsCalls).to.equal(0);
+    } finally {
+      CSS.supports = originalSupports;
+    }
+  });
+});
+
