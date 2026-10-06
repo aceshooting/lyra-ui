@@ -598,12 +598,10 @@ if [[ "$RUN_PLATFORM_MATRIX" == "1" ]]; then
       exit 1
     fi
 
-    for shard in 1 2; do
-      if ! run_platform_matrix_leg "$node_version" "$node_bin" "$pnpm_bin" chromium "$shard" 2 chromium; then
-        platform_failures=$((platform_failures + 1))
-        printf '\033[31mFAILED: Node %s / %s / shard %s/2\033[0m\n' "$node_version" "chromium" "$shard" >&2
-      fi
-    done
+    if ! run_platform_matrix_leg "$node_version" "$node_bin" "$pnpm_bin" chromium 1 1 chromium; then
+      platform_failures=$((platform_failures + 1))
+      printf '\033[31mFAILED: Node %s / %s / shard 1/1\033[0m\n' "$node_version" "chromium" >&2
+    fi
     if ! run_platform_matrix_leg "$node_version" "$node_bin" "$pnpm_bin" chrome 1 1 chrome; then
       platform_failures=$((platform_failures + 1))
       printf '\033[31mFAILED: Node %s / %s / shard 1/1\033[0m\n' "$node_version" "chrome" >&2
@@ -612,10 +610,10 @@ if [[ "$RUN_PLATFORM_MATRIX" == "1" ]]; then
       platform_failures=$((platform_failures + 1))
       printf '\033[31mFAILED: Node %s / %s / shard 1/1\033[0m\n' "$node_version" "edge" >&2
     fi
-    for shard in 1 2 3 4; do
-      if ! run_platform_matrix_leg "$node_version" "$node_bin" "$pnpm_bin" firefox "$shard" 4 firefox; then
+    for shard in 1 2; do
+      if ! run_platform_matrix_leg "$node_version" "$node_bin" "$pnpm_bin" firefox "$shard" 2 firefox; then
         platform_failures=$((platform_failures + 1))
-        printf '\033[31mFAILED: Node %s / %s / shard %s/4\033[0m\n' "$node_version" "firefox" "$shard" >&2
+        printf '\033[31mFAILED: Node %s / %s / shard %s/2\033[0m\n' "$node_version" "firefox" "$shard" >&2
       fi
     done
     if ! run_platform_matrix_leg "$node_version" "$node_bin" "$pnpm_bin" safari 1 1 webkit; then

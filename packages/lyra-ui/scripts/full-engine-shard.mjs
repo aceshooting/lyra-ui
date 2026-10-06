@@ -4,6 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { readFile, readdir } from 'node:fs/promises';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readCosts } from './ci-costs.mjs';
 
 const packageDirectory = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const NATIVE_SCROLLBAR_TEST_SUFFIX = '.native-scrollbar.test.ts';
@@ -11,12 +12,9 @@ export const NATIVE_SCROLLBAR_TEST_FILE =
   'src/components/data/data-grid/data-grid.native-scrollbar.test.ts';
 const NATIVE_SCROLLBAR_OWNER_FILE = 'src/components/data/data-grid/data-grid.test.ts';
 
-// The package-entrypoint contract imports the complete unbundled package graph in a fresh iframe
-// realm. On CI it costs roughly as much wall time as 50 ordinary test files, so plain file-count
-// round-robin assignment leaves its shard on the critical path long after the others finish.
-// Explicit, source-controlled costs keep the split deterministic; unknown and new files retain a
-// unit cost and therefore preserve the former lexical round-robin behavior.
-const TEST_FILE_COSTS = new Map([['src/package-entrypoints.test.ts', 50]]);
+// Measured per-file seconds (scripts/fixtures/test-file-costs.json) balance shards by time.
+const { costs: TEST_FILE_COSTS, fallback: UNMEASURED_TEST_FILE_COST } = readCosts('tests');
+const testFileCost = (file) => TEST_FILE_COSTS.get(file) ?? UNMEASURED_TEST_FILE_COST;
 
 function comparePaths(left, right) {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -119,7 +117,7 @@ export function readShardConfiguration(environment = process.env) {
   return { shardIndex, shardTotal };
 }
 
-/** Assigns test paths deterministically, balancing known expensive contracts by estimated cost. */
+/** Assigns test paths deterministically: longest measured file first, onto the least-loaded shard. */
 export function shardTestFiles(testFiles, shardIndex, shardTotal) {
   const index = positiveInteger(shardIndex, 'shardIndex');
   const total = positiveInteger(shardTotal, 'shardTotal');
@@ -130,7 +128,7 @@ export function shardTestFiles(testFiles, shardIndex, shardTotal) {
   const shards = Array.from({ length: total }, () => []);
   const costs = Array.from({ length: total }, () => 0);
   const ordered = [...testFiles].sort((left, right) => {
-    const costDifference = (TEST_FILE_COSTS.get(right) ?? 1) - (TEST_FILE_COSTS.get(left) ?? 1);
+    const costDifference = testFileCost(right) - testFileCost(left);
     return costDifference || comparePaths(left, right);
   });
 
@@ -140,7 +138,7 @@ export function shardTestFiles(testFiles, shardIndex, shardTotal) {
       if (costs[candidate] < costs[target]) target = candidate;
     }
     shards[target].push(file);
-    costs[target] += TEST_FILE_COSTS.get(file) ?? 1;
+    costs[target] += testFileCost(file);
   }
 
   return shards[index - 1].sort(comparePaths);

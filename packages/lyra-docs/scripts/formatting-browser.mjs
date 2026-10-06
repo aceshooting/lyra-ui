@@ -51,7 +51,7 @@ export async function runFormattingTools(page, check, { saveEditor }) {
     await fresh('Colored words');
     const before = await revision();
     await part('text-color').click();
-    await part('text-color-popover').locator('[part~="popup"]').waitFor({ state: 'visible' }).catch(() => {});
+    await part('text-color-popover').locator('[part~="popup"]').waitFor({ state: 'visible', timeout: 5000 });
     await part('text-color-swatches').getByRole('radio', { name: 'Blue', exact: true }).click();
     await settled(before);
     assert.match(await documentXml(), /<w:color w:val="0070C0"\/>/u);

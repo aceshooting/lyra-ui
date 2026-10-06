@@ -1,5 +1,6 @@
 import { chmod, cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { spawn } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
+import { promisify } from 'node:util';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { compactBuildCss } from './compact-build-css.mjs';
@@ -7,10 +8,7 @@ import { consolidateBuildDeclarations } from './consolidate-build-declarations.m
 import { compactBuildDeclarations } from './compact-build-declarations.mjs';
 import { compactBuildJavaScript, pruneEmptyBuildJavaScript } from './compact-build-js.mjs';
 import { checkLocalizationSlices, checkTranslationSlices } from './check-localization-slices.mjs';
-import { createMigrationRuntimeInventory, readRenameLedger } from './migrate-wa.mjs';
 import { copyMigrationRuntimeModules } from './copy-migration-runtime.mjs';
-import { readCurrentCompatibilityContext } from './check-published-compatibility.mjs';
-import { assembleComponentMetadata, readComponentMetadataSources } from './component-metadata-source.mjs';
 import {
   assertNormalizedMixinCount,
   normalizeMixinDeclarations,
@@ -25,6 +23,12 @@ const tsc = join(
   '.bin',
   process.platform === 'win32' ? 'tsc.cmd' : 'tsc',
 );
+
+// Reads only committed sources, so it runs in its own process alongside tsc and compaction.
+const migrationContract = promisify(execFile)(process.execPath,
+  [join(packageDir, 'scripts', 'migration-contract-projection.mjs')],
+  { cwd: packageDir, maxBuffer: 64 * 1024 * 1024 }).then(({ stdout }) => stdout);
+migrationContract.catch(() => {}); // reported where it is awaited
 
 await rm(join(packageDir, 'dist'), { recursive: true, force: true });
 
@@ -110,16 +114,7 @@ console.log(
 // rename profiles.
 const migrationCliDir = join(packageDir, 'dist', 'cli');
 copyMigrationRuntimeModules(join(packageDir, 'scripts'), migrationCliDir);
-const componentInventory = JSON.parse(
-  await readFile(join(packageDir, 'scripts', 'fixtures', 'component-inventory.json'), 'utf8'),
-);
-const compatibilityContext = await readCurrentCompatibilityContext(packageDir, componentInventory);
-const { exportDeprecations } = assembleComponentMetadata(readComponentMetadataSources(packageDir));
-await writeFile(
-  join(migrationCliDir, 'migration-contract.json'),
-  `${JSON.stringify(createMigrationRuntimeInventory(componentInventory, { renameLedger: readRenameLedger(), exportDeprecations, compatibilityContext }))}\n`,
-  'utf8',
-);
+await writeFile(join(migrationCliDir, 'migration-contract.json'), await migrationContract, 'utf8');
 await chmod(join(migrationCliDir, 'migrate-wa.mjs'), 0o755);
 
 const compactedMigrationCli = await compactBuildJavaScript(migrationCliDir);

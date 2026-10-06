@@ -6,6 +6,7 @@ import { parseArgs } from 'node:util';
 import { decodeEvidence, encodeEvidence, gitObjectId, jsonBytes, parseGitTree, readPublishedCaptureSync, sha256 } from './published-compatibility-io.mjs';
 import { buildFieldEvidenceIndex, derivePublishedFieldFacts, expectedFieldInputPaths, REQUIRED_FIELD_RELEASES, validateFieldEvidenceIndex, validatePublishedFieldAttachment, verifyPublishedFieldContinuity } from './published-field-compatibility.mjs';
 import { isMainModule } from './is-main-module.mjs';
+import { memoizedHistoryVerification } from './published-history-memo.mjs';
 
 const maxTarListBytes = 8 * 1024 * 1024;
 const maxOutputBytes = 16 * 1024 * 1024;
@@ -195,6 +196,11 @@ function readFieldEvidenceIndex(fieldEvidenceDirectory, attachments) {
 /** Read the exact published field history set and bind it to the ordinary release captures. */
 export function checkPublishedFieldHistorySync(ordinaryDirectory, { captures } = {}) {
   ensure(Array.isArray(captures), 'Published field history requires ordinary captures');
+  return memoizedHistoryVerification('published-field-history', ordinaryDirectory,
+    () => verifyPublishedFieldHistory(ordinaryDirectory, captures), captures);
+}
+
+function verifyPublishedFieldHistory(ordinaryDirectory, captures) {
   const fieldEvidenceDirectory = join(ordinaryDirectory, 'field-evidence');
   const attachments = REQUIRED_FIELD_RELEASES.map(sourceRelease => {
     const version = sourceRelease.slice('lyra-ui@'.length);

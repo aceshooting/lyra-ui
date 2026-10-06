@@ -7,7 +7,7 @@ import libCoverage from 'istanbul-lib-coverage';
 import libReport from 'istanbul-lib-report';
 import reports from 'istanbul-reports';
 
-const DOCX_LINE_COVERAGE_FLOOR = 99.6;
+export const DOCX_LINE_COVERAGE_FLOOR = 99.6;
 
 /** The verified whole-source target gates lines and their native V8 statement counters. */
 export function assertCoverageTarget(metadata) {
@@ -41,8 +41,7 @@ export async function sourceInventory(root) {
     if (!source.endsWith('.ts')) continue;
     const name = relative(root, source).replaceAll(sep, '/');
     const reason = source.endsWith('.d.ts') ? 'type declaration'
-      : source.endsWith('.test.ts') ? 'test'
-        : source.endsWith('-fixtures.ts') ? 'test fixture' : null;
+      : source.endsWith('.test.ts') ? 'test' : null;
     if (reason) { excluded.push({ source: name, reason }); continue; }
     const generated = resolve(root, '.coverage-output', name.replace(/\.ts$/u, '.js'));
     const javascript = await readFile(generated, 'utf8');

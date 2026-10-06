@@ -23,6 +23,7 @@ import {
 import { emptyRenameLedger } from './lyra-rename-ledger.mjs';
 import { readCurrentCompatibilityContextSync } from './check-published-compatibility.mjs';
 import { copyMigrationRuntimeModules } from './copy-migration-runtime.mjs';
+import { migrationContractText } from './migration-contract-projection.mjs';
 import {
   analyzeMigrationCoverage,
   formatMigrationCoverageSummary,
@@ -37,6 +38,26 @@ const checkedInventory = JSON.parse(
   fs.readFileSync(path.join(scriptDir, 'fixtures', 'component-inventory.json'), 'utf8'),
 );
 const checkedCompatibilityContext = readCurrentCompatibilityContextSync(path.dirname(scriptDir), checkedInventory);
+const checkedMigrationContract = migrationContractText(path.dirname(scriptDir), {
+  componentInventory: checkedInventory,
+  compatibilityContext: checkedCompatibilityContext,
+});
+
+// CLI-contract cases spawn the packaged runtime the build ships; only one case spawns the contributor CLI.
+let packagedCliDirectory;
+function packagedCli(directory) {
+  if (directory) {
+    copyMigrationRuntimeModules(scriptDir, directory);
+    fs.writeFileSync(path.join(directory, 'migration-contract.json'), checkedMigrationContract);
+    return path.join(directory, 'migrate-wa.mjs');
+  }
+  if (!packagedCliDirectory) {
+    packagedCliDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-migrate-packaged-cli-'));
+    process.once('exit', () => fs.rmSync(packagedCliDirectory, { recursive: true, force: true }));
+    packagedCli(packagedCliDirectory);
+  }
+  return path.join(packagedCliDirectory, 'migrate-wa.mjs');
+}
 const checkedUpstreamTags = JSON.parse(
   fs.readFileSync(path.join(scriptDir, 'fixtures', 'upstream-tags.json'), 'utf8'),
 );
@@ -343,11 +364,7 @@ test('the packaged runtime executes from its adjacent projected contract', () =>
     const sourceDir = path.join(scratch, 'consumer');
     fs.mkdirSync(cliDir);
     fs.mkdirSync(sourceDir);
-    copyMigrationRuntimeModules(scriptDir, cliDir);
-    fs.writeFileSync(
-      path.join(cliDir, 'migration-contract.json'),
-      `${JSON.stringify(createMigrationRuntimeInventory(checkedInventory, { renameLedger: readRenameLedger(), exportDeprecations: readExportDeprecations(), compatibilityContext: checkedCompatibilityContext }))}\n`,
-    );
+    packagedCli(cliDir);
 
     const source = path.join(sourceDir, 'component.ts');
     fs.writeFileSync(
@@ -2385,7 +2402,7 @@ test('CLI --check is non-mutating and exits nonzero until the migration is clean
     ].join('\n');
     fs.writeFileSync(source, input);
     const invoke = (...args) =>
-      spawnSync(process.execPath, [migratePath, ...args], { cwd: scratch, encoding: 'utf8' });
+      spawnSync(process.execPath, [packagedCli(), ...args], { cwd: scratch, encoding: 'utf8' });
 
     const pending = invoke('--check', source);
     assert.equal(pending.status, 1, pending.stderr);
@@ -2495,7 +2512,7 @@ test('the public CLI dry-runs, reports, applies, and remains idempotent', () => 
     fs.writeFileSync(source, input);
 
     const invoke = (...args) =>
-      spawnSync(process.execPath, [migratePath, ...args], {
+      spawnSync(process.execPath, [packagedCli(), ...args], {
         cwd: scratch,
         encoding: 'utf8',
       });
@@ -2526,7 +2543,7 @@ test('the public CLI rejects the retired local-default profile without editing s
     const source = path.join(scratch, 'local.html');
     const input = '<lr-tooltip></lr-tooltip>\n';
     fs.writeFileSync(source, input);
-    const result = spawnSync(process.execPath, [migratePath, '--origin=lyra-v7', source], { cwd: scratch, encoding: 'utf8' });
+    const result = spawnSync(process.execPath, [packagedCli(), '--origin=lyra-v7', source], { cwd: scratch, encoding: 'utf8' });
     assert.equal(result.status, 1);
     assert.match(result.stderr, /Unknown migration origin: lyra-v7/);
     assert.equal(fs.readFileSync(source, 'utf8'), input);
@@ -2544,17 +2561,13 @@ test('the public CLI rejects the retired local-default profile without editing s
 test('runs when invoked through a symlinked path, as a pnpm bin shim does', () => {
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-migrate-symlink-'));
   try {
-    const store = path.join(scratch, 'store', 'lyra-ui', 'scripts');
+    const store = path.join(scratch, 'store', 'lyra-ui', 'dist', 'cli');
     fs.mkdirSync(store, { recursive: true });
-    for (const file of fs.readdirSync(scriptDir)) {
-      if (file.endsWith('.mjs') || file === 'fixtures') {
-        fs.cpSync(path.join(scriptDir, file), path.join(store, file), { recursive: true });
-      }
-    }
+    packagedCli(store);
 
     const linkDir = path.join(scratch, 'linked');
     fs.symlinkSync(path.join(scratch, 'store', 'lyra-ui'), linkDir, 'dir');
-    const throughLink = path.join(linkDir, 'scripts', 'migrate-wa.mjs');
+    const throughLink = path.join(linkDir, 'dist', 'cli', 'migrate-wa.mjs');
     assert.notEqual(
       fs.realpathSync(throughLink),
       throughLink,

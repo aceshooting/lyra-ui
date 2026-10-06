@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import test from 'node:test';
-import { assertCoverageTarget, reportCoverage, sourceInventory } from './report-coverage.mjs';
+import { DOCX_LINE_COVERAGE_FLOOR, assertCoverageTarget, reportCoverage, sourceInventory } from './report-coverage.mjs';
 
 async function write(file, content) {
   await mkdir(dirname(file), { recursive: true });
@@ -15,7 +15,7 @@ async function fixture(context) {
   const root = await mkdtemp(resolve(tmpdir(), 'lyra-docs-coverage-'));
   context.after(() => rm(root, { recursive: true, force: true }));
   const code = 'export const value = 1;\n';
-  for (const name of ['node', 'editor', 'untouched', 'types', 'view.styles', 'view.test', 'admission-fixtures']) {
+  for (const name of ['node', 'editor', 'untouched', 'types', 'view.styles', 'view.test']) {
     const source = resolve(root, `src/${name}.ts`);
     const generated = resolve(root, `.coverage-output/src/${name}.js`);
     const emitted = name === 'types' ? 'export {};\n' : code;
@@ -49,7 +49,7 @@ test('source census includes every runtime file and explains standard exclusions
   assert.deepEqual(inventory.included.map(entry => relative(root, entry.source)),
     ['src/editor.ts', 'src/node.ts', 'src/untouched.ts', 'src/view.styles.ts']);
   assert.deepEqual(inventory.excluded.map(entry => entry.reason).sort(),
-    ['no emitted runtime code', 'test', 'test fixture']);
+    ['no emitted runtime code', 'test']);
 });
 
 test('merged report measures browser editor and retains untouched source at zero', async context => {
@@ -195,10 +195,11 @@ test('test failures mark diagnostic coverage as incomplete', async context => {
   assert.equal(metadata.browserStatus, 1);
 });
 
+const floorCount = Math.round(DOCX_LINE_COVERAGE_FLOOR * 1000);
 function targetMeasurement() {
   return {
     complete: true, fullMetricEnumeration: { lines: true, statements: true },
-    total: { lines: { covered: 99600, total: 100000 }, statements: { covered: 99600, total: 100000 },
+    total: { lines: { covered: floorCount, total: 100000 }, statements: { covered: floorCount, total: 100000 },
       branches: { covered: 0, total: 100 }, functions: { covered: 0, total: 100 } },
   };
 }
@@ -210,9 +211,9 @@ test('coverage target accepts the verified line floor without imposing a branch 
 test('coverage target checks exact counts rather than rounded or supplied percentages', () => {
   for (const metric of ['lines', 'statements']) {
     const metadata = targetMeasurement();
-    metadata.total[metric].covered = 99599;
+    metadata.total[metric].covered = floorCount - 1;
     metadata.total[metric].pct = 100;
-    assert.throws(() => assertCoverageTarget(metadata), /is below 99\.6%/u);
+    assert.throws(() => assertCoverageTarget(metadata), new RegExp(`is below ${DOCX_LINE_COVERAGE_FLOOR}%`, 'u'));
   }
 });
 

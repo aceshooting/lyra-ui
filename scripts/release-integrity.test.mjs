@@ -898,7 +898,7 @@ test('budgets the platform matrix for degraded fresh-runner OS dependency setup'
   );
 });
 
-test('requires exhaustive fail-closed lint shards behind the stable lint gate', () => {
+test('runs the complete lint inventory as concurrent lanes in the stable lint gate', () => {
   const workflow = readFileSync(
     path.join(repoRoot, '.github/workflows/ci.yml'),
     'utf8'
@@ -906,63 +906,22 @@ test('requires exhaustive fail-closed lint shards behind the stable lint gate', 
   const lyraPackage = JSON.parse(
     readFileSync(path.join(repoRoot, 'packages/lyra-ui/package.json'), 'utf8')
   );
-  const shardStart = workflow.indexOf('\n  lint_shard:');
-  const aggregateStart = workflow.indexOf('\n  lint:');
+  const lintStart = workflow.indexOf('\n  lint:');
   const staticStart = workflow.indexOf('\n  static-checks:');
-  assert.ok(
-    shardStart > 0 &&
-      aggregateStart > shardStart &&
-      staticStart > aggregateStart,
-    'CI must retain separate lint shard and stable aggregate jobs'
-  );
-
-  const shardJob = workflow.slice(shardStart, aggregateStart);
-  const aggregateJob = workflow.slice(aggregateStart, staticStart);
-  assert.match(
-    shardJob,
-    /name: lint \/ shard \$\{\{ matrix\.shard \}\}\/3/u
-  );
-  assert.match(shardJob, /fail-fast: false/u);
-  assert.match(shardJob, /max-parallel: 3/u);
-  assert.match(shardJob, /shard: \[1, 2, 3\]/u);
-  assert.match(shardJob, /fetch-depth: 0/u);
-  assert.match(shardJob, /node-version-file: \.nvmrc/u);
-  assert.match(shardJob, /pnpm install --frozen-lockfile/u);
-  assert.match(
-    shardJob,
-    /node packages\/lyra-ui\/scripts\/lint-ci-shard\.mjs --shard "\$\{\{ matrix\.shard \}\}\/3"/u
-  );
-  assert.equal(
-    [...shardJob.matchAll(/lint-ci-shard\.mjs/gu)].length,
-    1,
-    'each lint matrix worker must invoke exactly one selected shard'
-  );
-  assert.doesNotMatch(shardJob, /- run: pnpm lint(?:\s|$)/u);
-
-  assert.match(
-    workflow.slice(
-      workflow.lastIndexOf('\n  # release-qualification:', aggregateStart),
-      staticStart
-    ),
-    /# release-qualification: required\n  lint:\n/u
-  );
-  assert.match(aggregateJob, /name: lint/u);
-  assert.match(aggregateJob, /if: \$\{\{ always\(\) \}\}/u);
-  assert.match(aggregateJob, /- lint_shard\b/u);
-  assert.match(
-    aggregateJob,
-    /LINT_SHARD_RESULT: \$\{\{ needs\.lint_shard\.result \}\}/u
-  );
-  assert.match(
-    aggregateJob,
-    /if \[\[ "\$LINT_SHARD_RESULT" != "success" \]\]/u
-  );
-  assert.match(aggregateJob, /exit 1/u);
-
+  assert.ok(lintStart > 0 && staticStart > lintStart, 'CI must keep one lint job before static-checks');
+  const lintJob = workflow.slice(lintStart, staticStart);
+  assert.match(workflow.slice(workflow.lastIndexOf('\n  # release-qualification:', lintStart), lintStart + 10), /# release-qualification: required\n  lint:/u);
+  assert.match(lintJob, /name: lint\n/u);
+  assert.match(lintJob, /fetch-depth: 0/u);
+  assert.match(lintJob, /node-version-file: \.nvmrc/u);
+  assert.match(lintJob, /- run: pnpm --filter @aceshooting\/lyra-ui run lint:parallel/u);
+  assert.match(lintJob, /CI_JOBS: "3"/u);
+  assert.doesNotMatch(workflow, /lint_shard|continue-on-error/u);
   assert.equal(
     lyraPackage.scripts.lint,
     'pnpm run contract-policy && tsc --noEmit -p tsconfig.json && pnpm run test:types && pnpm run check:test-types'
   );
+  assert.equal(lyraPackage.scripts['lint:parallel'], 'node scripts/lint-parallel.mjs');
   assert.equal(
     lyraPackage.scripts['lint:ci-shard'],
     'node scripts/lint-ci-shard.mjs'
@@ -978,13 +937,14 @@ test('requires the exhaustive packed ATTW matrix in the stable release gate', ()
     readFileSync(path.join(repoRoot, 'package.json'), 'utf8')
   );
   const tarballStart = workflow.indexOf('\n  packed_consumer_tarball:');
+  const companionsStart = workflow.indexOf('\n  packed_consumer_companions:');
   const contractStart = workflow.indexOf('\n  packed_consumer_contract:');
   const attwStart = workflow.indexOf('\n  packed_consumer_attw:');
   const publicApiStart = workflow.indexOf('\n  packed_consumer_public_api:');
   const aggregateStart = workflow.indexOf('\n  packed-consumer:');
   const docsStart = workflow.indexOf('\n  docs_build:');
   assert.ok(
-    tarballStart > 0 && contractStart > tarballStart &&
+    tarballStart > 0 && companionsStart > tarballStart && contractStart > companionsStart &&
       attwStart > contractStart &&
       publicApiStart > attwStart &&
       aggregateStart > publicApiStart &&
@@ -992,27 +952,44 @@ test('requires the exhaustive packed ATTW matrix in the stable release gate', ()
     'CI must retain separate packed contract, ATTW, public-API, and aggregate jobs'
   );
 
-  const tarballJob = workflow.slice(tarballStart, contractStart);
+  const tarballJob = workflow.slice(tarballStart, companionsStart);
+  const companionsJob = workflow.slice(companionsStart, contractStart);
   const contractJob = workflow.slice(contractStart, attwStart);
   const attwJob = workflow.slice(attwStart, publicApiStart);
   const publicApiJob = workflow.slice(publicApiStart, aggregateStart);
   const aggregateJob = workflow.slice(aggregateStart, docsStart);
   assert.match(contractJob, /pnpm check:packed-consumer:contracts/u);
   assert.doesNotMatch(contractJob, /pnpm check:packed-consumer(?:\s|$)/u);
-  assert.match(attwJob, /name: packed-consumer \/ attw \/ shard \$\{\{ matrix\.shard_index \}\}\/16/u);
+  assert.match(contractJob, /- packed_consumer_tarball\b[\s\S]*- packed_consumer_companions\b/u);
+  assert.match(contractJob, /name: packed-attw-tarball/u);
+  assert.match(contractJob, /name: packed-companion-tarballs/u);
+  assert.equal([...contractJob.matchAll(/sha256sum --check SHA256SUMS/gu)].length, 2);
+  for (const variable of ['LYRA_PACKED_UI_TARBALL', 'LYRA_PACKED_FLAGS_TARBALL', 'LYRA_PACKED_DOCS_TARBALL']) {
+    assert.match(contractJob, new RegExp(`echo "${variable}=`, 'u'));
+  }
+  assert.doesNotMatch(contractJob, /pnpm build|pnpm pack|check:package-size/u);
+  assert.match(companionsJob, /needs: \[build_and_coverage_build, changes\]/u);
+  assert.match(companionsJob, /name: lyra-ui-dist/u);
+  assert.match(companionsJob, /cd packages\/lyra-flags && pnpm pack --pack-destination/u);
+  assert.match(companionsJob, /cd packages\/lyra-docs && pnpm pack --ignore-scripts --pack-destination/u);
+  assert.match(companionsJob, /git diff --exit-code/u);
+  assert.match(companionsJob, /sha256sum "\$\{tarballs\[@\]\}" > SHA256SUMS/u);
+  assert.match(companionsJob, /name: packed-companion-tarballs/u);
+  assert.match(companionsJob, /pnpm --filter @aceshooting\/lyra-ui check:package-size/u);
+  assert.match(attwJob, /name: packed-consumer \/ attw \/ shard \$\{\{ matrix\.shard_index \}\}\/4/u);
   assert.match(publicApiJob, /--filter @aceshooting\/lyra-ui check:public-api/u);
   assert.match(publicApiJob, /--filter @aceshooting\/lyra-flags check:public-api/u);
-  assert.match(attwJob, /shard_index: \[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16\]/u);
+  assert.match(attwJob, /shard_index: \[1, 2, 3, 4\]/u);
   assert.match(
     attwJob,
-    /pnpm check:packed-attw --shard-index \$\{\{ matrix\.shard_index \}\} --shard-total 16 --tarball artifacts\/packed-attw\/\*\.tgz/u
+    /node scripts\/check-packed-attw\.mjs --shard-index \$\{\{ matrix\.shard_index \}\} --shard-total 4 --workers 4 --tarball artifacts\/packed-attw\/aceshooting-lyra-ui-\*\.tgz/u
   );
   assert.match(tarballJob, /pnpm pack --pack-destination/u);
   assert.match(tarballJob, /git diff --exit-code/u);
   assert.match(tarballJob, /sha256sum.*> SHA256SUMS/u);
   assert.match(tarballJob, /name: packed-attw-tarball/u);
   assert.match(tarballJob, /if-no-files-found: error/u);
-  assert.match(attwJob, /needs: packed_consumer_tarball/u);
+  assert.match(attwJob, /needs: \[packed_consumer_tarball, changes\]/u);
   assert.match(attwJob, /name: packed-attw-tarball/u);
   assert.match(attwJob, /sha256sum --check SHA256SUMS/u);
   assert.match(attwJob, /timeout-minutes: 12/u);
@@ -1290,6 +1267,14 @@ test('regen fails closed on the exact toolchain before the canonical complete ge
   );
 });
 
+test('lane groups skip only on an explicit change-scope false, and aggregates only accept that skip', () => {
+  const ci = readFileSync(path.join(repoRoot, '.github/workflows/ci.yml'), 'utf8');
+  assert.doesNotMatch(ci, /outputs\.(?:runtime|packages|docs_site) == 'true'/u, 'an unknown scope must run the lane');
+  const accepted = [...ci.matchAll(/scoped\(\) \{[^\n]*\}|"\$VISUAL_REGRESSION_RESULT" == "skipped"[^\n]*/gu)].map(([line]) => line);
+  assert.equal(accepted.length, 4);
+  for (const line of accepted) assert.match(line, /(?:needs\.changes\.result \}\}|\$CHANGES_RESULT)" == "success"/u);
+});
+
 test('requires complete fail-closed coverage shards before the stable build gate passes', () => {
   const workflow = readFileSync(
     path.join(repoRoot, '.github/workflows/ci.yml'),
@@ -1318,7 +1303,7 @@ test('requires complete fail-closed coverage shards before the stable build gate
     shardJob,
     /name: build-and-coverage \/ coverage \/ shard \$\{\{ matrix\.shard \}\}\/4/u
   );
-  assert.match(shardJob, /needs: build_and_coverage_build/u);
+  assert.match(shardJob, /needs: \[build_and_coverage_build, changes\]/u);
   assert.match(shardJob, /fail-fast: false/u);
   assert.match(shardJob, /shard: \[1, 2, 3, 4\]/u);
   assert.match(
@@ -1348,7 +1333,7 @@ test('requires complete fail-closed coverage shards before the stable build gate
     'coverage artifacts must not depend on upload-artifact hidden-file behavior'
   );
 
-  assert.match(mergeJob, /if: \$\{\{ always\(\) \}\}/u);
+  assert.match(mergeJob, /if: \$\{\{ always\(\) && needs\.changes\.outputs\.runtime != 'false' \}\}/u);
   assert.match(mergeJob, /- build_and_coverage_coverage_shard\b/u);
   for (const shard of [1, 2, 3, 4]) {
     assert.match(
@@ -1448,7 +1433,7 @@ test('keeps workflow-dispatch browser input out of shell source after allowlist 
   assert.match(testJob, /# release-qualification: matrix[\s\S]*\n  qualification:/u);
 });
 
-test('deploys docs from the committed manifest with scoped Pages credentials', () => {
+test('deploys the docs CI built and checked, only after that CI run succeeded, with scoped Pages credentials', () => {
   const workflow = readFileSync(
     path.join(repoRoot, '.github/workflows/deploy-docs.yml'),
     'utf8'
@@ -1470,12 +1455,18 @@ test('deploys docs from the committed manifest with scoped Pages credentials', (
   assert.doesNotMatch(workflowPermissions, /pages: write|id-token: write/u);
   assert.doesNotMatch(buildJob, /pages: write|id-token: write/u);
   assert.match(deployJob, /permissions:\n\s+pages: write\n\s+id-token: write/u);
-  assert.match(buildJob, /- run: pnpm docs:build/u);
-  assert.doesNotMatch(
-    buildJob,
-    /pnpm --filter @aceshooting\/lyra-ui run manifest(?:\s|$)/u
-  );
+  assert.doesNotMatch(buildJob, /pnpm docs:build|pnpm install|actions\/checkout/u);
+  assert.match(workflow, /on:\n  workflow_run:\n    workflows: \[CI\]\n    types: \[completed\]\n    branches: \[main\]/u);
+  assert.match(buildJob, /github\.event\.workflow_run\.conclusion == 'success' && github\.event\.workflow_run\.event == 'push'/u);
+  assert.match(buildJob, /name: storybook-static[\s\S]*run-id: \$\{\{ github\.event\.workflow_run\.id \}\}/u);
+  assert.match(buildJob, /permissions:\n\s+actions: read\n\s+contents: read/u);
+  assert.match(buildJob, /commits\/main" --jq \.sha/u);
+  assert.match(deployJob, /if: \$\{\{ needs\.build\.outputs\.current == 'true' \}\}/u);
   assert.match(rootPackage.scripts['docs:build'], /^pnpm manifest:check &&/u);
+  const ci = readFileSync(path.join(repoRoot, '.github/workflows/ci.yml'), 'utf8');
+  const docsBuild = ci.slice(ci.indexOf('\n  docs_build:'), ci.indexOf('\n  docs_storybook_contract:'));
+  assert.match(docsBuild, /- run: pnpm docs:build[\s\S]*LYRA_DOCS_BASE_URL: https:\/\/www\.lyra-ui\.com\/docs\//u);
+  assert.match(docsBuild, /name: storybook-static/u);
 });
 
 test('root scripts keep canonical docs and policy entrypoints only', () => {
@@ -1687,14 +1678,8 @@ test('requires one successful full-engine run for the exact release commit and e
   );
 });
 
-test('requires the exact main-branch Test All Browsers run and all five browser jobs', () => {
-  assert.deepEqual(REQUIRED_TEST_ALL_BROWSER_JOBS, [
-    'chrome',
-    'chromium',
-    'edge',
-    'firefox',
-    'safari',
-  ]);
+test('requires the exact main-branch Test All Browsers run and every Chromium-family browser job', () => {
+  assert.deepEqual(REQUIRED_TEST_ALL_BROWSER_JOBS, ['chrome', 'chromium', 'edge']);
   const run = {
     id: 126,
     name: 'Test All Browsers',
@@ -1723,7 +1708,7 @@ test('requires the exact main-branch Test All Browsers run and all five browser 
     evaluateTestAllBrowsersRun({ run, jobs: missingBrowser, sha }),
     {
       state: 'failed',
-      message: "Test All Browsers run 126 is missing required job 'safari'.",
+      message: "Test All Browsers run 126 is missing required job 'edge'.",
     }
   );
   const skippedBrowser = successfulTestAllBrowserJobs();
@@ -2346,11 +2331,11 @@ test('release workflow qualifies the exact main commit before tagging, releasing
     path.join(repoRoot, '.github/workflows/ci.yml'),
     'utf8'
   );
-  const lintShardJob = ciWorkflow.slice(
-    ciWorkflow.indexOf('  lint_shard:'),
-    ciWorkflow.indexOf('\n  lint:')
+  const lintJob = ciWorkflow.slice(
+    ciWorkflow.indexOf('\n  lint:'),
+    ciWorkflow.indexOf('\n  static-checks:')
   );
-  assert.match(lintShardJob, /fetch-depth: 0/);
+  assert.match(lintJob, /fetch-depth: 0/);
 });
 
 test('release planning tags only unreleased stable package versions', () => {
@@ -2828,7 +2813,7 @@ test('upgrade selects only an installed Node whose reported patch matches .nvmrc
 test('primary CI and release qualification use the exact Node file while compatibility matrix remains explicit', () => {
   const workflow = readFileSync(path.join(repoRoot, '.github/workflows/ci.yml'), 'utf8');
   const qualityStart = workflow.indexOf('\n  build_and_coverage_quality:');
-  const ssrStart = workflow.indexOf('\n  build_and_coverage_ssr:', qualityStart + 1);
+  const ssrStart = workflow.indexOf('\n  build_and_coverage_ssr_hydration:', qualityStart + 1);
   const contractStart = workflow.indexOf('\n  packed_consumer_contract:');
   const attwStart = workflow.indexOf('\n  packed_consumer_attw:', contractStart + 1);
   const platformStart = workflow.indexOf('\n  platform-contracts:');
@@ -3531,6 +3516,14 @@ test('serial browser sweep keeps shard failures fatal with a mocked actual runne
     assert.equal(commands.length, 2, commands.join('\n'));
     assert.match(commands[0], /^build build$/u);
     assert.match(commands[1], /^1 .*test:full-engine-shard$/u);
+    const kept = result.stderr.match(/^lane logs kept for inspection: (.+)$/mu)?.[1];
+    assert.ok(kept, result.stderr);
+    try {
+      assert.match(result.stdout, new RegExp(`log: ${kept.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}/safari\\.log`, 'u'));
+      assert.match(readFileSync(path.join(kept, 'safari.log'), 'utf8'), /live-shard/u);
+    } finally {
+      rmSync(kept, { recursive: true, force: true });
+    }
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

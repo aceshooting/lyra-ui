@@ -7,10 +7,15 @@ import { dirname, join, resolve, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readPublishedCaptureSync, sha256, decodeEvidence, verifyPolicyWitnesses } from './published-compatibility-io.mjs';
 import { isMainModule } from './is-main-module.mjs';
+import { memoizedHistoryVerification } from './published-history-memo.mjs';
 import { readSourceSnapshot } from './source-fixture-io.mjs';
 
 export function checkPublishedCompatibilitySync(directory = join(dirname(fileURLToPath(import.meta.url)), 'fixtures/compatibility-history')) {
   directory = resolve(directory);
+  return memoizedHistoryVerification('published-compatibility', directory, () => verifyPublishedCompatibility(directory));
+}
+
+function verifyPublishedCompatibility(directory) {
   const snapshots = new Map();
   const readBytes = file => {
     if (!snapshots.has(file)) snapshots.set(file, readSourceSnapshot(directory, relative(directory, file), { binary: true }));

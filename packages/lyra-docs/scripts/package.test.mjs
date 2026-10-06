@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import { planReleaseTags } from '../../../scripts/release-integrity.mjs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 test('root and session entries resolve without a DOM, engine, fetch or stylesheet side effects', async () => {
   for (const specifier of ['@aceshooting/lyra-docs', '@aceshooting/lyra-docs/docx']) {
@@ -23,6 +24,47 @@ test('root and session entries resolve without a DOM, engine, fetch or styleshee
   assert.deepEqual(manifest.publishConfig, { access: 'public' });
   await assert.rejects(import('@aceshooting/lyra-docs/docx/session'), { code: 'ERR_PACKAGE_PATH_NOT_EXPORTED' });
   await assert.rejects(import('@aceshooting/lyra-docs/docx/engine-port'), { code: 'ERR_PACKAGE_PATH_NOT_EXPORTED' });
+});
+
+test('the root, session and editor-class entries never resolve the document engine', () => {
+  // The engine is installed here, so only a resolution record can show an eager import.
+  const directory = mkdtempSync(join(tmpdir(), 'lyra-docs-resolutions-'));
+  try {
+    const record = join(directory, 'resolutions.jsonl');
+    writeFileSync(record, '');
+    const hooks = `data:text/javascript,${encodeURIComponent(`
+      import { appendFileSync } from 'node:fs';
+      export async function resolve(specifier, context, nextResolve) {
+        const result = await nextResolve(specifier, context);
+        appendFileSync(process.env.LYRA_DOCS_RESOLUTIONS, JSON.stringify({ specifier, url: result.url }) + '\\n');
+        return result;
+      }`)}`;
+    const source = `import { register } from 'node:module';
+      register(${JSON.stringify(hooks)});
+      globalThis.customElements = {
+        get: () => undefined,
+        define: () => { throw new Error('Unexpected component registration'); }
+      };
+      globalThis.fetch = () => { throw new Error('Unexpected fetch'); };
+      await import('@aceshooting/lyra-docs');
+      await import('@aceshooting/lyra-docs/docx');
+      await import('@aceshooting/lyra-docs/docx/editor.class');`;
+    execFileSync(process.execPath, ['--input-type=module', '-e', source], {
+      env: { ...process.env, LYRA_DOCS_RESOLUTIONS: record },
+      stdio: 'pipe',
+    });
+    const resolutions = readFileSync(record, 'utf8').trim().split('\n').filter(Boolean).map((line) => JSON.parse(line));
+    assert.ok(resolutions.some(({ specifier }) => specifier === '@aceshooting/lyra-docs/docx'), 'the recorder saw the session entry');
+    assert.deepEqual(
+      resolutions.filter(({ specifier, url }) => specifier.startsWith('@docx-editor.dev/') || url.includes('/@docx-editor.dev/')),
+      [],
+      'no entry may resolve the document engine before a document is opened',
+    );
+    assert.deepEqual(resolutions.filter(({ specifier }) => specifier === 'saxes' || specifier === 'fflate'), [],
+      'package admission and parsing load with the first open');
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test('the class entry does not register the editor or its controls', () => {

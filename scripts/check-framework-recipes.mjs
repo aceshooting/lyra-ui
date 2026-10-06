@@ -15,6 +15,7 @@ import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { isMainModule } from '../packages/lyra-ui/scripts/is-main-module.mjs';
+import { PACKED_TARBALL_ENVIRONMENT, suppliedPackedTarball } from './packed-tarball-input.mjs';
 
 export const FRAMEWORKS = Object.freeze(['react', 'vue', 'svelte']);
 export const FRAMEWORK_PNPM_CONFIG = 'auto-install-peers=false\n';
@@ -212,6 +213,13 @@ function run(command, args, cwd, label, { capture = false } = {}) {
 }
 
 async function packPackage(destination) {
+  await mkdir(destination, { recursive: true });
+  const supplied = await suppliedPackedTarball(PACKED_TARBALL_ENVIRONMENT.ui, {
+    packageDir: packageRoot,
+    destination,
+    compareExports: true,
+  });
+  if (supplied) return supplied;
   await access(join(packageRoot, 'dist', 'lyra.js')).catch(() => {
     throw new Error(
       'packages/lyra-ui/dist/lyra.js is missing; run `pnpm build` before the executable recipe check',

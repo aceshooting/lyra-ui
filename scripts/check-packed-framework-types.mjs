@@ -11,6 +11,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PACKED_TARBALL_ENVIRONMENT, suppliedPackedTarball } from './packed-tarball-input.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const uiPackage = join(root, 'packages', 'lyra-ui');
@@ -52,6 +53,12 @@ function run(command, args, cwd, label, { capture = false } = {}) {
 }
 
 async function pack(destination) {
+  const supplied = await suppliedPackedTarball(PACKED_TARBALL_ENVIRONMENT.ui, {
+    packageDir: uiPackage,
+    destination,
+    compareExports: true,
+  });
+  if (supplied) return supplied;
   const before = new Set((await readdir(destination)).filter((entry) => entry.endsWith('.tgz')));
   await run(
     pnpm,

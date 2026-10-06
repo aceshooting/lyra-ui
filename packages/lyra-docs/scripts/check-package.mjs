@@ -3,10 +3,13 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  collectSourcePolicyFindings,
   findDoubleQuotedStringLiterals,
   findNulByteLines,
   findBareGlobalIsNaNCalls,
 } from '../../lyra-ui/scripts/check-source-policy.mjs';
+import { staticModuleSpecifiers } from '../../lyra-ui/scripts/module-specifiers.mjs';
+import { findBuildArtifactFindings } from '../../lyra-ui/scripts/check-build-artifacts.mjs';
 
 const packageRoot = fileURLToPath(new URL('../', import.meta.url));
 const repoRoot = path.resolve(packageRoot, '../..');
@@ -62,6 +65,43 @@ for (const field of ['dependencies', 'optionalDependencies', 'peerDependencies',
 for (const file of files(path.join(repoRoot, 'packages/lyra-ui/src'))) {
   assert(!forbidden.test(readFileSync(file, 'utf8')), `Core editor dependency: ${file}`);
 }
+// lyra-ui's per-file source policies; findings beyond these reviewed counts fail.
+const SOURCE_POLICY_BASELINE = new Map([
+  ['src/docx/docx-editor.styles.ts [physical-css]', 9], // geometry-positioned image handles
+]);
+const docxStringsSource = read('packages/lyra-docs/src/docx/strings.ts');
+const docxStringsBody = docxStringsSource.slice(docxStringsSource.indexOf('DOCX_EDITOR_STRINGS'));
+const docxStringKeys = new Set(
+  [...docxStringsBody.slice(0, docxStringsBody.indexOf('});')).matchAll(/^\s+([A-Za-z_$][\w$]*)\s*:/gmu)]
+    .map((match) => match[1]),
+);
+assert(docxStringKeys.size > 10, 'DOCX_EDITOR_STRINGS keys could not be read for the source policies');
+const sourcePolicyCounts = new Map();
+const sourcePolicyFindings = [];
+for (const file of files(path.join(packageRoot, 'src'))) {
+  if (!/\.ts$/u.test(file) || /\.test\.ts$/u.test(file)) continue;
+  for (const finding of collectSourcePolicyFindings({
+    file,
+    source: readFileSync(file, 'utf8'),
+    knownKeys: docxStringKeys,
+  })) {
+    const rule = finding.match(/ \[([a-z0-9-]+)\]/u)?.[1] ?? 'unknown';
+    const key = `${path.relative(packageRoot, file).split(path.sep).join('/')} [${rule}]`;
+    sourcePolicyCounts.set(key, (sourcePolicyCounts.get(key) ?? 0) + 1);
+    sourcePolicyFindings.push(finding);
+  }
+}
+const beyondBaseline = [...sourcePolicyCounts]
+  .filter(([key, count]) => count > (SOURCE_POLICY_BASELINE.get(key) ?? 0));
+assert.deepEqual(
+  beyondBaseline,
+  [],
+  `Shared source policy findings beyond the reviewed baseline:\n${sourcePolicyFindings.join('\n')}`,
+);
+for (const [key, allowed] of SOURCE_POLICY_BASELINE) {
+  const actual = sourcePolicyCounts.get(key) ?? 0;
+  if (actual < allowed) console.warn(`Source policy baseline can be lowered: ${key} ${allowed} -> ${actual}`);
+}
 // The companion shares source policies while retaining an independent component inventory.
 for (const file of files(path.join(packageRoot, 'src'))) {
   const source = readFileSync(file, 'utf8');
@@ -90,7 +130,19 @@ assert.deepEqual(registrationTags.sort(), controlTags.sort(),
   'Editor entry must register exactly its rendered Lyra controls through granular tag imports');
 // Only documented subpaths are public; implementations remain behind the export map.
 const dist = path.join(packageRoot, 'dist');
+if (!existsSync(dist)) {
+  assert(!process.env.CI, 'dist/ is missing: build @aceshooting/lyra-docs before its package checks');
+  console.warn('WARNING: dist/ is missing; the emitted-package checks did not run.');
+}
 if (existsSync(dist)) {
+  // The engine stays a lazy import(): no emitted module may load it statically.
+  for (const file of files(dist).filter((candidate) => candidate.endsWith('.js'))) {
+    const eager = staticModuleSpecifiers(file, readFileSync(file, 'utf8'))
+      .filter((specifier) => specifier.startsWith('@docx-editor.dev/'));
+    assert.deepEqual(eager, [], `Eager document engine import in emitted ${path.relative(packageRoot, file)}`);
+  }
+  assert.deepEqual(findBuildArtifactFindings(files(dist), file => readFileSync(file, 'utf8'),
+    { packageDirectory: packageRoot, exports: manifest.exports }), []);
   for (const file of files(dist)) {
     assert(/\.(?:js|d\.ts|css)$/u.test(file), `Unexpected build artifact: ${file}`);
     assert(!/\.test\.|-fixtures\./u.test(file), `Test build artifact: ${file}`);

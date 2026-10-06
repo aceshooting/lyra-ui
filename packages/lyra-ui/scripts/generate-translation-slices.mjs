@@ -300,17 +300,21 @@ export function translationSliceFailures(result, { write = false } = {}) {
   return failures;
 }
 
-if (isMainModule(import.meta.url)) {
-  const write = process.argv.includes('--write');
+/** The CLI's whole run, returning its exit status (also run in-process by check-localization-catalogs.mjs). */
+export async function runTranslationSlicesCli({ write = false } = {}) {
   const result = await generateTranslationSlices({ write });
   const failures = translationSliceFailures(result, { write });
   if (failures.length > 0) {
     for (const failure of failures) console.error(failure);
-    process.exitCode = 1;
-  } else {
-    console.log(
-      `Translation slices ${write ? 'generated' : 'verified'}: ` +
-        result.results.map((r) => `${r.tag} (${r.sliceCount} slices, ${r.keyCount} keys)`).join(', '),
-    );
+    return 1;
   }
+  console.log(
+    `Translation slices ${write ? 'generated' : 'verified'}: ` +
+      result.results.map((r) => `${r.tag} (${r.sliceCount} slices, ${r.keyCount} keys)`).join(', '),
+  );
+  return 0;
+}
+
+if (isMainModule(import.meta.url)) {
+  process.exitCode = await runTranslationSlicesCli({ write: process.argv.includes('--write') });
 }

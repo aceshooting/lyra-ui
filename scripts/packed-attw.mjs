@@ -1,4 +1,6 @@
-export const ATTW_CI_SHARD_TOTAL = 16;
+// CI: ATTW_CI_SHARD_TOTAL jobs, each running ATTW_CI_WORKERS single-threaded attw processes (one per vCPU).
+export const ATTW_CI_SHARD_TOTAL = 4;
+export const ATTW_CI_WORKERS = 4;
 
 function positiveInteger(value, label) {
   if (!/^\d+$/u.test(value ?? '')) {
@@ -28,6 +30,7 @@ export function parseAttwArguments(arguments_) {
   let shardIndex;
   let shardTotal;
   let tarball;
+  let workers;
   for (let index = 0; index < arguments_.length; index += 1) {
     const argument = arguments_[index];
     const value = arguments_[index + 1];
@@ -40,6 +43,12 @@ export function parseAttwArguments(arguments_) {
     if (argument === '--shard-total') {
       if (shardTotal !== undefined) throw new TypeError('--shard-total may only be specified once.');
       shardTotal = positiveInteger(value, '--shard-total');
+      index += 1;
+      continue;
+    }
+    if (argument === '--workers') {
+      if (workers !== undefined) throw new TypeError('--workers may only be specified once.');
+      workers = positiveInteger(value, '--workers');
       index += 1;
       continue;
     }
@@ -63,7 +72,7 @@ export function parseAttwArguments(arguments_) {
   if (shardIndex > shardTotal) {
     throw new RangeError(`--shard-index ${shardIndex} exceeds --shard-total ${shardTotal}.`);
   }
-  return { shardIndex, shardTotal, tarball };
+  return { shardIndex, shardTotal, tarball, workers: workers ?? 1 };
 }
 
 /**

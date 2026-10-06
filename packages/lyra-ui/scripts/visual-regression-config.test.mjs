@@ -291,7 +291,7 @@ assert.match(
 );
 assert.match(
   ciWorkflow,
-  /visual-regression-gate:[\s\S]*?needs: visual-regression/,
+  /visual-regression-gate:[\s\S]*?needs: \[visual-regression, changes\]/,
   'the stable release-blocking visual-regression check must aggregate all matrix legs',
 );
 

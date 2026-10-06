@@ -5,6 +5,7 @@ import { sendKeysPlugin } from '@web/test-runner-commands/plugins';
 import { playwrightLauncher } from '@web/test-runner-playwright';
 import { junitReporter } from '@web/test-runner-junit-reporter';
 import { esbuildPlugin } from '@web/dev-server-esbuild';
+import { timingReporter } from './scripts/wtr-timing-reporter.mjs';
 
 // Read rather than `import ... with { type: 'json' }`: import attributes are
 // still gated behind a Node version this repo does not pin (engines: >=20).
@@ -246,17 +247,17 @@ function parseTestServerPort(value) {
   return port;
 }
 
-function parseTestConcurrency(value) {
+function parseTestConcurrency(value, name = 'WTR_CONCURRENCY') {
   if (value === undefined) return undefined;
   if (!/^[1-9]\d*$/.test(value)) {
     throw new Error(
-      `WTR_CONCURRENCY must be a positive safe integer; received ${JSON.stringify(value)}.`,
+      `${name} must be a positive safe integer; received ${JSON.stringify(value)}.`,
     );
   }
   const concurrency = Number(value);
   if (!Number.isSafeInteger(concurrency)) {
     throw new Error(
-      `WTR_CONCURRENCY must be a positive safe integer; received ${JSON.stringify(value)}.`,
+      `${name} must be a positive safe integer; received ${JSON.stringify(value)}.`,
     );
   }
   return concurrency;
@@ -264,6 +265,13 @@ function parseTestConcurrency(value) {
 
 const testServerPort = parseTestServerPort(process.env.WTR_PORT);
 const testConcurrency = parseTestConcurrency(process.env.WTR_CONCURRENCY);
+// Pages per runner process under coverage (default 1).
+const coverageConcurrency =
+  process.env.WTR_COVERAGE_CONCURRENCY === undefined
+    ? 1
+    : parseTestConcurrency(process.env.WTR_COVERAGE_CONCURRENCY, 'WTR_COVERAGE_CONCURRENCY');
+// Per-file timing lines for scripts/fixtures/test-file-costs.json.
+const timingReportPath = process.env.WTR_TIMING_REPORT || undefined;
 const browserProduct = (process.env.WTR_BROWSER ?? 'chromium').toLowerCase();
 const isPointerTimingSensitiveBrowser =
   browserProduct === 'firefox' || browserProduct === 'webkit' || browserProduct === 'safari';
@@ -470,10 +478,9 @@ export default {
   // WebKit retains a bounded default; Firefox uses one page per process because
   // native pointer capture crosses browser contexts. Chromium retains WTR's automatic default.
   // Aggregate overrides preserve the Firefox isolation ceiling; shards provide parallelism.
-  // Coverage always stays at one: instrumentation makes each page import most of the source graph,
-  // and one runner process is required for a deterministic combined report.
+  // Coverage: one runner process for a deterministic combined report, WTR_COVERAGE_CONCURRENCY pages.
   ...(collectCoverage
-    ? { concurrency: 1 }
+    ? { concurrency: coverageConcurrency }
     : effectiveTestConcurrency === undefined
       ? {}
       : { concurrency: effectiveTestConcurrency }),
@@ -525,8 +532,14 @@ export default {
   // built-in default reporter behavior exactly as today. outputPath follows
   // the same per-shard reportDir as coverageConfig below, so parallel/sequential
   // shard sub-runs never clobber each other's JUnit output.
-  reporters: collectCoverage
-    ? [defaultReporter(), junitReporter({ outputPath: `${coverageReportDir ?? 'coverage'}/junit.xml` })]
+  reporters: collectCoverage || timingReportPath
+    ? [
+        defaultReporter(),
+        ...(collectCoverage
+          ? [junitReporter({ outputPath: `${coverageReportDir ?? 'coverage'}/junit.xml` })]
+          : []),
+        ...(timingReportPath ? [timingReporter(timingReportPath)] : []),
+      ]
     : undefined,
   // Chromium reports ResizeObserver loop notifications as ErrorEvents whose
   // `error` payload is null. The runner's uncaught-error bridge logs that

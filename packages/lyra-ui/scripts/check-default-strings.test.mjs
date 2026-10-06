@@ -219,3 +219,20 @@ assert.equal(
 );
 
 console.log('Default-string checker self-tests passed.');
+
+// Helpers that receive the component's localize function call it bare; those keys are checked too.
+const bareHelper = `
+  export function announce({ localize }: { localize: (key: string) => string }) {
+    return [localize('present'), localize('misspelled-key')];
+  }
+`;
+assert.deepEqual(
+  localizeCalls(bareHelper).map(({ keys }) => keys),
+  [['present'], ['misspelled-key']],
+  'a bare localize() call is resolved like a member call',
+);
+assert.deepEqual(
+  findMissingDefaultStrings([{ file: 'helper.ts', source: bareHelper }], localization).map(({ key }) => key),
+  ['misspelled-key'],
+  'a misspelled key in a bare localize() call fails the gate',
+);

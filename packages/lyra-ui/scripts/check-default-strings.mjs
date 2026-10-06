@@ -22,7 +22,7 @@ import { parseSync } from 'oxc-parser';
 // through the shared `internal/viewer-search.ts#announceSearchResult()` helper exactly like
 // `<lr-ebook-viewer>`'s existing occurrence -- that helper takes a `localize` callback parameter,
 // so its call site's key argument is a forwarded parameter, not a literal, by construction.
-const UNRESOLVED_CEILING = 29;
+const UNRESOLVED_CEILING = 30;
 
 const componentsRoot = fileURLToPath(new URL('../src/components/', import.meta.url));
 const internalRoot = fileURLToPath(new URL('../src/internal/', import.meta.url));
@@ -271,13 +271,15 @@ export function localizeCalls(source, file = 'component.ts', sharedConstants = n
   const constants = new Map([...sharedConstants, ...stringConstants(program)]);
   const calls = [];
   visitAst(program, (node) => {
-    if (
-      node.type !== 'CallExpression' ||
-      node.callee?.type !== 'MemberExpression' ||
-      node.callee.computed ||
-      node.callee.property?.type !== 'Identifier' ||
-      node.callee.property.name !== 'localize'
-    ) {
+    if (node.type !== 'CallExpression') return;
+    // Helpers that receive `localize` as a parameter call it bare.
+    const memberCall =
+      node.callee?.type === 'MemberExpression' &&
+      !node.callee.computed &&
+      node.callee.property?.type === 'Identifier' &&
+      node.callee.property.name === 'localize';
+    const bareCall = node.callee?.type === 'Identifier' && node.callee.name === 'localize';
+    if (!memberCall && !bareCall) {
       return;
     }
     const argument = node.arguments?.[0];

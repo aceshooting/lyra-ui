@@ -5,6 +5,9 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { compactBuildCss } from '../packages/lyra-ui/scripts/compact-build-css.mjs';
+import { execFileSync } from 'node:child_process';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { suppliedPackedTarball } from './packed-tarball-input.mjs';
 
 const checkerSource = await readFile(
   new URL('check-packed-consumer.mjs', import.meta.url),
@@ -283,6 +286,46 @@ test('packed migration inventory requires the complete split runtime and rejects
 
 test('declares Lit directly for consumer-authored migration templates', () => {
   assert.match(checkerSource, /lit:\s*uiPackageJson\.dependencies\.lit/u);
-  assert.match(checkerSource, /const uiTarball = await pack\(uiPackage, tarballDir\);\s*if \(migrationArtifactsDir\) await preservePackedTarball/u);
-  assert.match(checkerSource, /const flagsTarball = await pack\(flagsPackage, tarballDir\);\s*if \(migrationArtifactsDir\) await preservePackedTarball/u);
+  assert.match(checkerSource, /const uiTarball = \(await suppliedPackedTarball\(PACKED_TARBALL_ENVIRONMENT\.ui, \{[^}]*\}\)\) \?\? await pack\(uiPackage, tarballDir\);\s*if \(migrationArtifactsDir\) await preservePackedTarball/u);
+  assert.match(checkerSource, /const flagsTarball = \(await suppliedPackedTarball\(PACKED_TARBALL_ENVIRONMENT\.flags, \{[^}]*\}\)\) \?\? await pack\(flagsPackage, tarballDir\);\s*if \(migrationArtifactsDir\) await preservePackedTarball/u);
+});
+
+test('a supplied tarball must be this checkout\'s package before any check uses it', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'lyra-supplied-tarball-'));
+  try {
+    const packageDir = join(directory, 'workspace');
+    const destination = join(directory, 'destination');
+    await mkdir(join(directory, 'stage', 'package'), { recursive: true });
+    await mkdir(packageDir, { recursive: true });
+    await mkdir(destination, { recursive: true });
+    const workspace = { name: '@example/ui', version: '1.2.3', exports: { '.': './index.js' } };
+    await writeFile(join(packageDir, 'package.json'), JSON.stringify(workspace));
+    const pack = async (manifest, name) => {
+      await writeFile(join(directory, 'stage', 'package', 'package.json'), JSON.stringify(manifest));
+      const tarball = join(directory, name);
+      execFileSync('tar', ['-czf', tarball, '-C', join(directory, 'stage'), 'package']);
+      return tarball;
+    };
+    const environment = (tarball) => ({ LYRA_PACKED_UI_TARBALL: tarball });
+    const options = { packageDir, destination, compareExports: true };
+
+    assert.equal(await suppliedPackedTarball('LYRA_PACKED_UI_TARBALL', { ...options, environment: {} }), undefined);
+    const good = await pack(workspace, 'good.tgz');
+    const used = await suppliedPackedTarball('LYRA_PACKED_UI_TARBALL', { ...options, environment: environment(good) });
+    assert.equal(used, join(destination, 'good.tgz'));
+    assert.deepEqual(await readFile(used), await readFile(good));
+    for (const [manifest, pattern] of [
+      [{ ...workspace, version: '1.2.4' }, /version/u],
+      [{ ...workspace, name: '@example/other' }, /name/u],
+      [{ ...workspace, exports: { '.': './other.js' } }, /exports/u],
+    ]) {
+      const foreign = await pack(manifest, 'foreign.tgz');
+      await assert.rejects(
+        suppliedPackedTarball('LYRA_PACKED_UI_TARBALL', { ...options, environment: environment(foreign) }),
+        pattern,
+      );
+    }
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
 });

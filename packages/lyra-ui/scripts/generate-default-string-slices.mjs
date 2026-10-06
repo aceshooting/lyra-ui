@@ -839,6 +839,61 @@ async function assertSourceSnapshotUnchanged(packageDir, file, snapshot) {
   );
 }
 
+// One reachability walk per process, reused only while every source it read is unchanged on disk.
+const reachabilityMemo = new Map();
+
+async function sourcesUnchanged(sourceCache) {
+  const current = await Promise.all([...sourceCache.keys()].map((file) => readOptionalFile(file)));
+  return [...sourceCache.values()].every((source, index) => current[index] === source);
+}
+
+async function classKeyReachability({ packageDir, exclusions }) {
+  const catalogFile = path.join(packageDir, 'src', 'internal', 'localization.ts');
+  const catalogSource = await readFile(catalogFile, 'utf8');
+  const componentsDir = path.join(packageDir, 'src', 'components');
+  const files = (await sourceFiles(componentsDir)).sort();
+  const memoKey = path.resolve(packageDir);
+  const cached = reachabilityMemo.get(memoKey);
+  if (
+    cached &&
+    cached.exclusions === exclusions &&
+    cached.result.catalogSource === catalogSource &&
+    cached.result.files.join('\0') === files.join('\0') &&
+    await sourcesUnchanged(cached.result.sourceCache)
+  ) {
+    return cached.result;
+  }
+  const entries = catalogEntries(catalogSource, catalogFile);
+  const catalogKeys = new Set(entries.keys());
+  validateConfiguredExclusions(
+    exclusions,
+    catalogKeys,
+    new Set(files.map((file) => packageRelativePath(packageDir, file))),
+  );
+  const sourceRoot = path.join(packageDir, 'src');
+  const sourceCache = new Map();
+  const keysByFile = new Map();
+  for (const file of files) {
+    let source = sourceCache.get(file);
+    if (source === undefined) {
+      source = await readFile(file, 'utf8');
+      sourceCache.set(file, source);
+    }
+    const discoveredKeys = await reachableCatalogKeys(file, catalogKeys, sourceRoot, sourceCache);
+    keysByFile.set(file, applyConfiguredExclusions({
+      packageDir,
+      file,
+      source,
+      keys: discoveredKeys,
+      catalogKeys,
+      exclusions,
+    }));
+  }
+  const result = { catalogFile, catalogSource, entries, catalogKeys, componentsDir, files, sourceCache, keysByFile };
+  reachabilityMemo.set(memoKey, { exclusions, result });
+  return result;
+}
+
 /**
  * Aggregates the SAME per-class-file key-reachability walk `generateDefaultStringSlices()` uses
  * (`sourceFiles()` + `reachableCatalogKeys()` + `applyConfiguredExclusions()`, over the same
@@ -856,36 +911,11 @@ export async function computeFamilyKeyIndex({
   packageDir = defaultPackageDir,
   exclusions = DEFAULT_STRING_SLICE_EXCLUSIONS,
 } = {}) {
-  const catalogFile = path.join(packageDir, 'src', 'internal', 'localization.ts');
-  const catalogSource = await readFile(catalogFile, 'utf8');
-  const entries = catalogEntries(catalogSource, catalogFile);
-  const catalogKeys = new Set(entries.keys());
-  const componentsDir = path.join(packageDir, 'src', 'components');
-  const files = (await sourceFiles(componentsDir)).sort();
-  validateConfiguredExclusions(
-    exclusions,
-    catalogKeys,
-    new Set(files.map((file) => packageRelativePath(packageDir, file))),
-  );
-  const sourceRoot = path.join(packageDir, 'src');
-  const sourceCache = new Map();
+  const { catalogKeys, files, keysByFile } = await classKeyReachability({ packageDir, exclusions });
   const familyToKeys = new Map();
   const keyToFamilies = new Map();
   for (const file of files) {
-    let source = sourceCache.get(file);
-    if (source === undefined) {
-      source = await readFile(file, 'utf8');
-      sourceCache.set(file, source);
-    }
-    const discoveredKeys = await reachableCatalogKeys(file, catalogKeys, sourceRoot, sourceCache);
-    const keys = applyConfiguredExclusions({
-      packageDir,
-      file,
-      source,
-      keys: discoveredKeys,
-      catalogKeys,
-      exclusions,
-    });
+    const keys = keysByFile.get(file);
     const relative = packageRelativePath(packageDir, file);
     const family = relative.split('/')[2];
     if (!family) throw new Error(`${relative}: could not determine component family`);
@@ -907,37 +937,21 @@ export async function generateDefaultStringSlices({
   exclusions = DEFAULT_STRING_SLICE_EXCLUSIONS,
   beforeWrite,
 } = {}) {
-  const catalogFile = path.join(packageDir, 'src', 'internal', 'localization.ts');
   const generatedFile = path.join(packageDir, 'src', 'internal', 'default-strings.generated.ts');
-  const catalogSource = await readFile(catalogFile, 'utf8');
-  const entries = catalogEntries(catalogSource, catalogFile);
-  const catalogKeys = new Set(entries.keys());
-  const componentsDir = path.join(packageDir, 'src', 'components');
-  const files = (await sourceFiles(componentsDir)).sort();
-  validateConfiguredExclusions(
-    exclusions,
-    catalogKeys,
-    new Set(files.map((file) => packageRelativePath(packageDir, file))),
-  );
-  const sourceRoot = path.join(packageDir, 'src');
-  const sourceCache = new Map();
+  const {
+    catalogFile,
+    catalogSource,
+    entries,
+    componentsDir,
+    files,
+    sourceCache,
+    keysByFile,
+  } = await classKeyReachability({ packageDir, exclusions });
   const rewrites = [];
   const allUsedKeys = new Set();
   for (const file of files) {
-    let source = sourceCache.get(file);
-    if (source === undefined) {
-      source = await readFile(file, 'utf8');
-      sourceCache.set(file, source);
-    }
-    const discoveredKeys = await reachableCatalogKeys(file, catalogKeys, sourceRoot, sourceCache);
-    const keys = applyConfiguredExclusions({
-      packageDir,
-      file,
-      source,
-      keys: discoveredKeys,
-      catalogKeys,
-      exclusions,
-    });
+    const source = sourceCache.get(file);
+    const keys = keysByFile.get(file);
     for (const key of keys) {
       if (!entries.has(key)) throw new Error(`${file}: localize key ${key} has no DEFAULT_STRINGS entry`);
       allUsedKeys.add(key);
@@ -1017,17 +1031,21 @@ export function generationFailures(result, { write = false } = {}) {
   return failures;
 }
 
-if (isMainModule(import.meta.url)) {
-  const write = process.argv.includes('--write');
+/** The CLI's whole run, returning its exit status (also run in-process by check-localization-catalogs.mjs). */
+export async function runDefaultStringSlicesCli({ write = false } = {}) {
   const result = await generateDefaultStringSlices({ write });
   const failures = generationFailures(result, { write });
   if (failures.length > 0) {
     for (const failure of failures) console.error(failure);
-    process.exitCode = 1;
-  } else {
-    console.log(
-      `Default-string slices ${write ? 'generated' : 'verified'}: ${result.usedKeyCount} keys across ` +
-        `${result.classFileCount} class files (${result.fingerprint.slice(0, 12)}).`,
-    );
+    return 1;
   }
+  console.log(
+    `Default-string slices ${write ? 'generated' : 'verified'}: ${result.usedKeyCount} keys across ` +
+      `${result.classFileCount} class files (${result.fingerprint.slice(0, 12)}).`,
+  );
+  return 0;
+}
+
+if (isMainModule(import.meta.url)) {
+  process.exitCode = await runDefaultStringSlicesCli({ write: process.argv.includes('--write') });
 }

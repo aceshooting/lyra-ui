@@ -621,7 +621,8 @@ function validateCatalogEntries({ file, entries, expectedOrderedKeys, english, c
   }
 }
 
-async function main() {
+/** The whole check, returning its exit status (also run in-process by check-localization-catalogs.mjs). */
+export async function runTranslationCatalogCheck() {
   const errors = [];
   const notes = [];
   const pluralCategoryPin = JSON.parse(await readFile(pluralCategoryPinPath, 'utf8'));
@@ -666,11 +667,11 @@ async function main() {
       .sort();
   } catch {
     console.log('No src/translations/ directory yet; nothing to check.');
-    return;
+    return 0;
   }
   if (files.length === 0) {
     console.log('No translation catalogs in src/translations/; nothing to check.');
-    return;
+    return 0;
   }
 
   const pkg = JSON.parse(await readFile(packageJsonPath, 'utf8'));
@@ -892,8 +893,7 @@ async function main() {
   if (errors.length > 0) {
     console.error(`\nTranslation catalog check failed with ${errors.length} problem(s):\n`);
     console.error(errors.map((error) => `- ${error}`).join('\n'));
-    process.exitCode = 1;
-    return;
+    return 1;
   }
 
   console.log(
@@ -901,8 +901,9 @@ async function main() {
       `(${englishOrder.filter((key) => typeof english.get(key) !== 'string').length} pluralized).`,
   );
   for (const summary of summaries) console.log(`- ${summary}`);
+  return 0;
 }
 
 if (isMainModule(import.meta.url)) {
-  await main();
+  process.exitCode = await runTranslationCatalogCheck();
 }

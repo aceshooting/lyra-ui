@@ -62,6 +62,13 @@ import {
 } from './manifest-compact.mjs';
 import { sourceEventTypeContracts } from './check-event-contracts.mjs';
 
+// One analyzer run per file; each caller gets a deep copy because the expanders mutate it.
+let liveManifestPromise;
+async function liveGeneratedManifest() {
+  liveManifestPromise ??= generateManifest({ write: false }).then(({ manifest }) => manifest);
+  return structuredClone(await liveManifestPromise);
+}
+
 const packageDir = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '..'
@@ -935,7 +942,7 @@ test('the live manifest resolves to the exact 37 runtime FACE tags', () => {
 
 test('the generated lean code-block CEM preserves the full code-block CSS custom-property surface', async () => {
   const manifest = expandManifestInheritance(
-    (await generateManifest({ write: false })).manifest
+    (await liveGeneratedManifest())
   );
   const cssPropertiesByTag = new Map(
     normalizeManifest(manifest, { ecosystem: 'lyra' })
@@ -1239,7 +1246,7 @@ test('the CEM suppresses reviewed private transport attributes from the public s
     'a private transport becoming public requires an explicit contract decision'
   );
 
-  const liveManifest = (await generateManifest({ write: false })).manifest;
+  const liveManifest = await liveGeneratedManifest();
   const liveSplit = liveManifest.modules
     .flatMap((module) => module.declarations ?? [])
     .find(({ tagName }) => tagName === 'lr-multi-split');
@@ -1414,7 +1421,7 @@ test('the CEM default-value projection keeps the attribute public without publis
   );
 
   const liveManifest = expandManifestInheritance(
-    (await generateManifest({ write: false })).manifest
+    (await liveGeneratedManifest())
   );
   for (const tagName of [
     'lr-input',
@@ -1603,7 +1610,7 @@ test('the CEM chart projection preserves writable chart vocabularies and narrows
   plugin.packageLinkPhase({ customElementsManifest: synthetic });
   assert.deepEqual(synthetic, once, 'running the projection twice is a no-op');
 
-  const liveManifest = (await generateManifest({ write: false })).manifest;
+  const liveManifest = await liveGeneratedManifest();
   for (const [tagName, type] of defaultTypes) {
     const projected = liveManifest.modules
       .flatMap((module) => module.declarations ?? [])
@@ -2052,7 +2059,7 @@ test('the live CEM records the pinned Shoelace caret reflection contract', () =>
 });
 
 test('the raw CEM exposes lr-archive-viewer inherited localization inputs', async () => {
-  const declaration = (await generateManifest({ write: false })).manifest.modules
+  const declaration = (await liveGeneratedManifest()).modules
     .flatMap((module) => module.declarations ?? [])
     .find(({ tagName }) => tagName === 'lr-archive-viewer');
 
@@ -2492,7 +2499,7 @@ test('the CEM event projection preserves every concrete source EventMap schema',
   );
 
   const liveManifest = expandManifestInheritance(
-    (await generateManifest({ write: false })).manifest
+    (await liveGeneratedManifest())
   );
   const sourceContracts = sourceEventTypeContracts(liveManifest, packageDir);
   const declarations = new Map(
@@ -2748,7 +2755,7 @@ test('the manual wa-video-playlist review is complete and comparison-driven', as
   );
 
   const liveManifest = expandLyraInventoryManifest(
-    (await generateManifest({ write: false })).manifest
+    (await liveGeneratedManifest())
   );
   const target = normalizeManifest(liveManifest, { ecosystem: 'lyra' }).find(
     (component) => component.tag === 'lr-video-playlist'
@@ -2837,7 +2844,7 @@ test('the reviewed QR base-part replacement closes the live generic-prose ambigu
   ]);
 
   const liveManifest = expandLyraInventoryManifest(
-    (await generateManifest({ write: false })).manifest
+    (await liveGeneratedManifest())
   );
   const target = normalizeManifest(liveManifest, { ecosystem: 'lyra' }).find(
     ({ tag }) => tag === mapping.targetTag
@@ -5835,7 +5842,7 @@ test('raw-token preserving aliases keep the six affected mappings release-safe',
   const liveTargets = new Map(
     normalizeManifest(
       expandLyraInventoryManifest(
-        (await generateManifest({ write: false })).manifest
+        (await liveGeneratedManifest())
       ),
       { ecosystem: 'lyra' }
     ).map((component) => [component.tag, component.surface])
@@ -6470,7 +6477,7 @@ test('editor closed-set resolution covers nested aliases, utilities, indexed acc
 test('every known live editor closed-set gap emits VS Code and WebStorm values', async () => {
   const registry = readTypeAliases(path.join(packageDir, 'src'));
   const liveManifest = expandManifestInheritance(
-    (await generateManifest({ write: false })).manifest
+    (await liveGeneratedManifest())
   );
   const declarations = new Map(
     liveManifest.modules
@@ -6549,7 +6556,7 @@ test('every known live editor closed-set gap emits VS Code and WebStorm values',
 });
 
 test('effective CEM attributes use resolved field defaults and winning subclass contracts', async () => {
-  const liveManifest = (await generateManifest({ write: false })).manifest;
+  const liveManifest = await liveGeneratedManifest();
   const declarations = liveManifest.modules.flatMap(
     (module) => module.declarations ?? []
   );
@@ -6621,7 +6628,7 @@ test('effective CEM attributes use resolved field defaults and winning subclass 
 });
 
 test('the raw CEM projects complete effective wrapper and source-only mixin surfaces', async () => {
-  const liveManifest = (await generateManifest({ write: false })).manifest;
+  const liveManifest = await liveGeneratedManifest();
   const declarations = new Map(
     liveManifest.modules
       .flatMap((module) => module.declarations ?? [])
@@ -6964,7 +6971,7 @@ test('the raw CEM projects complete effective wrapper and source-only mixin surf
 });
 
 test('the raw CEM and normalization govern lr-terminal.anchorKinds exactly', async () => {
-  const manifest = (await generateManifest({ write: false })).manifest;
+  const manifest = await liveGeneratedManifest();
   const declaration = manifest.modules
     .flatMap((module) => module.declarations ?? [])
     .find(({ tagName }) => tagName === 'lr-terminal');

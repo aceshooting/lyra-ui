@@ -77,7 +77,19 @@ function startsRegexLiteral(source, index) {
  * literals. Test-call discovery must operate on code, not prose such as `reflects it (mirrors…)`
  * or an example string containing `test(...)`; indices still point back into the original source.
  */
+const codeMasks = new Map();
+
 function codeMask(source) {
+  // Pure, and requested for the same file once per test case: compute each source once.
+  let masked = codeMasks.get(source);
+  if (masked === undefined) {
+    masked = computeCodeMask(source);
+    codeMasks.set(source, masked);
+  }
+  return masked;
+}
+
+function computeCodeMask(source) {
   // String indices in the rest of this scanner are UTF-16 code-unit offsets. `split('')` preserves
   // those offsets; spreading would collapse a non-BMP glyph to one array entry and shift every
   // later test boundary by one code unit.
@@ -91,7 +103,7 @@ function codeMask(source) {
     for (let index = start + 1; index < source.length; index += 1) {
       if (source[index] === '\\') index += 1;
       else if (source[index] === '`') return index;
-      else if (source.slice(index, index + 2) === '${') {
+      else if (source[index] === '$' && source[index + 1] === '{') {
         const end = matchingDelimiter(source, index + 1, '{', '}');
         if (end === -1) return source.length - 1;
         index = end;
@@ -101,10 +113,10 @@ function codeMask(source) {
   };
   for (let cursor = 0; cursor < source.length; cursor += 1) {
     const char = source[cursor];
-    const pair = source.slice(cursor, cursor + 2);
+    const next = source[cursor + 1];
     let end = cursor;
-    if (pair === '//') end = skipLineComment(source, cursor);
-    else if (pair === '/*') end = skipBlockComment(source, cursor);
+    if (char === '/' && next === '/') end = skipLineComment(source, cursor);
+    else if (char === '/' && next === '*') end = skipBlockComment(source, cursor);
     else if (char === '/' && startsRegexLiteral(source, cursor)) end = skipRegexLiteral(source, cursor);
     else if (char === "'" || char === '"') end = skipQuoted(source, cursor, char);
     else if (char === '`') end = templateEnd(cursor);
@@ -119,7 +131,18 @@ function codeMask(source) {
  * A same-length view for evidence literals: preserve strings/templates that may contain mounted
  * markup, but blank comments and regular-expression examples that cannot create an element.
  */
+const evidenceMasks = new Map();
+
 function evidenceMask(source) {
+  let masked = evidenceMasks.get(source);
+  if (masked === undefined) {
+    masked = computeEvidenceMask(source);
+    evidenceMasks.set(source, masked);
+  }
+  return masked;
+}
+
+function computeEvidenceMask(source) {
   const masked = source.split('');
   const blank = (start, end) => {
     for (let index = start; index <= end; index += 1) {
@@ -128,14 +151,14 @@ function evidenceMask(source) {
   };
   for (let cursor = 0; cursor < source.length; cursor += 1) {
     const char = source[cursor];
-    const pair = source.slice(cursor, cursor + 2);
+    const next = source[cursor + 1];
     if (char === "'" || char === '"' || char === '`') {
       cursor = skipQuoted(source, cursor, char);
       continue;
     }
     let end = cursor;
-    if (pair === '//') end = skipLineComment(source, cursor);
-    else if (pair === '/*') end = skipBlockComment(source, cursor);
+    if (char === '/' && next === '/') end = skipLineComment(source, cursor);
+    else if (char === '/' && next === '*') end = skipBlockComment(source, cursor);
     else if (char === '/' && startsRegexLiteral(source, cursor)) end = skipRegexLiteral(source, cursor);
     else continue;
     blank(cursor, end);
@@ -207,6 +230,12 @@ function literalTitle(raw) {
 export function extractTestCases(source, file = '<source>') {
   const cases = [];
   const executable = codeMask(source);
+  let lineCursor = 0;
+  let line = 1;
+  const lineAt = (index) => {
+    for (; lineCursor < index; lineCursor += 1) if (source.charCodeAt(lineCursor) === 10) line += 1;
+    return line;
+  };
   for (const match of executable.matchAll(TEST_CALL)) {
     const open = match.index + match[0].lastIndexOf('(');
     const close = matchingDelimiter(source, open, '(', ')');
@@ -219,7 +248,7 @@ export function extractTestCases(source, file = '<source>') {
       file,
       index: match.index,
       end: close + 1,
-      line: source.slice(0, match.index).split('\n').length,
+      line: lineAt(match.index),
       title: literalTitle(argumentsText.slice(0, comma)),
       raw,
     });

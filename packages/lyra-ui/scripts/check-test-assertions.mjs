@@ -5,6 +5,7 @@ import { isMainModule } from './is-main-module.mjs';
 // Resolve real TypeScript types when possible and conservatively recognize DOM-producing syntax
 // when TypeScript 7 reports a selector expression as `any`/`unknown`/error. Tests must compare a
 // boolean or stable primitive projection instead of handing Chai a live node.
+import { readdirSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -486,6 +487,7 @@ export function collectUnsafeAssertions(project, { includeFile = defaultTestFile
     fallbackCount: 0,
     errorCount: 0,
     scannedFileCount: 0,
+    scannedFiles: [],
   };
   const checker = project.checker;
   let targetType;
@@ -496,6 +498,7 @@ export function collectUnsafeAssertions(project, { includeFile = defaultTestFile
     const sourceFile = project.program.getSourceFile(fileName);
     if (!sourceFile) continue;
     counters.scannedFileCount += 1;
+    counters.scannedFiles.push(fileName);
     if (!targetTypeResolved) {
       targetTypeResolved = true;
       try {
@@ -580,22 +583,51 @@ export function defaultTestFileFilter(fileName) {
   return fileName.includes('/src/components/') && fileName.endsWith('.test.ts');
 }
 
-export function policyAccountingFailures(result, expectedTestFileCount) {
+/** Every component test file on disk, found independently of the TypeScript program. */
+export function discoverComponentTestFiles(cwd = packageDir) {
+  const files = [];
+  const walk = (directory) => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const file = path.join(directory, entry.name);
+      if (entry.isDirectory()) walk(file);
+      else if (entry.isFile()) {
+        const fileName = file.split(path.sep).join('/');
+        if (defaultTestFileFilter(fileName)) files.push(fileName);
+      }
+    }
+  };
+  walk(path.join(cwd, 'src', 'components'));
+  return files.sort();
+}
+
+/** `expected`: the discovered file names (the scanned set must equal them) or, for fixtures, a count. */
+export function policyAccountingFailures(result, expected) {
   const failures = [];
   if (result.errorCount > 0) failures.push(`TypeScript classification produced ${result.errorCount} error payload(s)`);
   if (result.scannedFileCount > 0 && result.candidateCount === 0)
     failures.push(`zero Chai assertion candidates across ${result.scannedFileCount} component test file(s)`);
   else if (result.classifiedCount + result.fallbackCount === 0)
     failures.push(`zero DOM classifications for ${result.candidateCount} Chai assertion candidate(s)`);
-  if (Number.isInteger(expectedTestFileCount) && result.scannedFileCount !== expectedTestFileCount)
-    failures.push(`scanned ${result.scannedFileCount} component test file(s), expected ${expectedTestFileCount}`);
+  if (Number.isInteger(expected) && result.scannedFileCount !== expected)
+    failures.push(`scanned ${result.scannedFileCount} component test file(s), expected ${expected}`);
+  if (expected !== undefined && typeof expected === 'object') {
+    const onDisk = new Set(expected);
+    const scanned = new Set(result.scannedFiles ?? []);
+    if (onDisk.size === 0) failures.push('no component test files were discovered on disk');
+    const notScanned = [...onDisk].filter((file) => !scanned.has(file)).sort();
+    const notOnDisk = [...scanned].filter((file) => !onDisk.has(file)).sort();
+    if (notScanned.length > 0)
+      failures.push(`${notScanned.length} component test file(s) on disk were not scanned: ${notScanned.join(', ')}`);
+    if (notOnDisk.length > 0)
+      failures.push(`${notOnDisk.length} scanned component test file(s) were not discovered on disk: ${notOnDisk.join(', ')}`);
+  }
   return failures;
 }
 
 export function runTestAssertionPolicy({
   cwd = packageDir,
   projectFile = configFile,
-  expectedTestFileCount = 756,
+  expectedTestFiles = discoverComponentTestFiles(cwd),
   includeFile = defaultTestFileFilter,
 } = {}) {
   const api = new API({ cwd });
@@ -605,7 +637,7 @@ export function runTestAssertionPolicy({
     if (!project) throw new Error(`could not load ${projectFile}`);
     const result = collectUnsafeAssertions(project, { includeFile });
     const structuralFindings = collectStructuralAssertionProxies(project, { includeFile });
-    const accountingFailures = policyAccountingFailures(result, expectedTestFileCount);
+    const accountingFailures = policyAccountingFailures(result, expectedTestFiles);
     const accounting =
       `${result.candidateCount} candidate(s), ${result.classifiedCount} typed classification(s), ` +
       `${result.fallbackCount} syntax fallback(s), ${result.errorCount} error(s), ` +

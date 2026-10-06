@@ -217,13 +217,28 @@ assert.equal(
 
 // generateRegistrationGraph()/checkRegistrationGraph() round-trip against a real filesystem: no
 // artifact yet -> stale; write it -> fresh; re-run generation -> byte-identical (idempotent).
+// The round trip uses lr-badge plus the bridge-registered tags, so each derivation takes seconds.
+const roundTripTags = new Set(['lr-badge', ...integrations.flatMap((integration) => integration.registers)]);
+const roundTripInventory = {
+  ...inventory,
+  components: inventory.components.filter((component) => roundTripTags.has(component.tag)),
+};
+assert.ok(roundTripInventory.components.length >= 2, 'the round-trip inventory keeps lr-badge and the bridge tags');
+const roundTrip = await deriveRegistrationGraph(roundTripInventory, { packageDir });
+assert.deepEqual(roundTrip.findings, []);
+assert.deepEqual(
+  roundTrip.entries,
+  entries.filter((entry) => roundTripTags.has(entry.tag)),
+  'a reduced inventory derives exactly the complete graph rows for its tags',
+);
+const roundTripRendered = renderRegistrationGraph(roundTrip.entries, roundTrip.integrations);
 const fixtureRoot = mkdtempSync(join(tmpdir(), 'lyra-registration-graph-'));
 try {
   const src = join(fixtureRoot, 'src');
   const scriptsFixtures = join(fixtureRoot, 'scripts', 'fixtures');
   mkdirSync(scriptsFixtures, { recursive: true });
   cpSync(join(packageDir, 'src'), src, { recursive: true });
-  writeFileSync(join(scriptsFixtures, 'component-inventory.json'), JSON.stringify(inventory));
+  writeFileSync(join(scriptsFixtures, 'component-inventory.json'), JSON.stringify(roundTripInventory));
   writeFileSync(join(fixtureRoot, 'package.json'), readFileSync(join(packageDir, 'package.json'), 'utf8'));
 
   const before = await checkRegistrationGraph(fixtureRoot);
@@ -231,21 +246,21 @@ try {
   assert.equal(existsSync(before.path), false);
 
   const generated = await generateRegistrationGraph(fixtureRoot);
-  assert.deepEqual(generated.entries, entries);
-  assert.deepEqual(generated.integrations, integrations);
+  assert.deepEqual(generated.entries, roundTrip.entries);
+  assert.deepEqual(generated.integrations, roundTrip.integrations);
 
   const after = await checkRegistrationGraph(fixtureRoot);
   assert.equal(after.stale, false, 'freshly generated artifact must report fresh');
-  assert.equal(readFileSync(before.path, 'utf8'), rendered);
+  assert.equal(readFileSync(before.path, 'utf8'), roundTripRendered);
 
   await generateRegistrationGraph(fixtureRoot);
-  assert.equal(readFileSync(before.path, 'utf8'), rendered, 'regeneration must be idempotent');
+  assert.equal(readFileSync(before.path, 'utf8'), roundTripRendered, 'regeneration must be idempotent');
 
   const missingCanonicalPackage = structuredClone(packageJson);
   delete missingCanonicalPackage.exports[badge.entry];
   writeFileSync(join(fixtureRoot, 'package.json'), JSON.stringify(missingCanonicalPackage));
   await assert.rejects(
-    deriveRegistrationGraph(inventory, { packageDir: fixtureRoot }),
+    deriveRegistrationGraph(roundTripInventory, { packageDir: fixtureRoot }),
     /lr-badge\.js: not a published package\.json#exports entry/,
     'a missing canonical registration must still fail closed',
   );

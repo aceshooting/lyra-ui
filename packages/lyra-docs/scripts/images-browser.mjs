@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { unzipSync } from 'fflate';
 import { SaxesParser } from 'saxes';
+import { unzipSync } from 'fflate';
 import { zipEntry } from '../test/zip.mjs';
+import { paints, zipParts as parts } from './lib/harness.mjs';
 
-const parts = bytes => Object.fromEntries(Object.entries(unzipSync(Uint8Array.from(bytes))).sort(([a], [b]) => a.localeCompare(b)).map(([name, value]) => [name, [...value]]));
 const remove = (page, id) => page.locator(`#${id}`).evaluate(element => element.remove());
 const select = async (page, id, index = 0) => {
   await page.locator(`#${id} .docx-pages img`).nth(index).click();
@@ -219,7 +219,7 @@ export async function runImageEditing(page, check, { createEditor, saveEditor })
       const rect = await page.locator(`#${id} .docx-pages img`).first().boundingBox();
       const revealedViewport = await page.locator(`#${id} [data-lr-docx-viewport]`).boundingBox();
       assert.ok(rect && rect.y < Math.min(page.viewportSize().height, revealedViewport.y + revealedViewport.height) && rect.y + rect.height > Math.max(0, revealedViewport.y), 'selected offscreen picture is revealed to the keyboard user');
-      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      await paints(page);
       await saveEditor(page, id);
       const stable = await page.locator(`#${id} .docx-pages img`).first().boundingBox();
       const stableViewport = await page.locator(`#${id} [data-lr-docx-viewport]`).boundingBox();

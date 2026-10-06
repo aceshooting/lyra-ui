@@ -186,6 +186,14 @@ function canonicalComputedPublicKey(node, isInternal) {
   return { type: 'ComputedPublicKey', kind };
 }
 
+// Same comparator and stable sort as before, but each member is serialized once.
+function sortBySerialization(items) {
+  return items
+    .map((item) => [JSON.stringify(item), item])
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([, item]) => item);
+}
+
 function canonicalNode(node, isInternal = () => false) {
   if (node === null || node === undefined) return null;
   if (typeof node !== 'object') return node;
@@ -240,9 +248,7 @@ function canonicalNode(node, isInternal = () => false) {
       Array.isArray(canonical) &&
       ((node.type === 'TSUnionType' && key === 'types') ||
         membersAreOrderIndependent)
-        ? canonical.slice().sort((left, right) =>
-            JSON.stringify(left).localeCompare(JSON.stringify(right)),
-          )
+        ? sortBySerialization(canonical)
         : canonical;
   }
   return result;

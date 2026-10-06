@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import {
   ATTW_CI_SHARD_TOTAL,
+  ATTW_CI_WORKERS,
   attwCommandArguments,
   attwEntrypoints,
   validatePackedAttwManifest,
@@ -55,6 +56,16 @@ test('checks every live typed export while preserving blocked retired routes', (
   );
   assert.equal(new Set(shards.flat()).size, entrypoints.length, 'shards are disjoint');
   assert.deepEqual(shards.flat().sort(), entrypoints, 'shards cover every typed export');
+
+  // Each CI job splits its shard once more across its concurrent workers.
+  const workerPartitions = shards.flatMap((shard) =>
+    Array.from({ length: ATTW_CI_WORKERS }, (_, index) =>
+      partitionAttwEntrypoints(shard, index + 1, ATTW_CI_WORKERS),
+    ),
+  );
+  assert.ok(workerPartitions.every((partition) => partition.length > 0), 'no worker is idle');
+  assert.equal(new Set(workerPartitions.flat()).size, entrypoints.length, 'worker partitions are disjoint');
+  assert.deepEqual(workerPartitions.flat().sort(), entrypoints, 'worker partitions cover every typed export');
 });
 
 test('partitioning is deterministic and rejects ambiguous coordinates or inventories', () => {
@@ -73,6 +84,7 @@ test('ATTW arguments are explicit and fail closed', () => {
     shardIndex: 1,
     shardTotal: 1,
     tarball: undefined,
+    workers: 1,
   });
   assert.deepEqual(
     parseAttwArguments([
@@ -83,8 +95,15 @@ test('ATTW arguments are explicit and fail closed', () => {
       '--tarball',
       '/tmp/package.tgz',
     ]),
-    { shardIndex: 3, shardTotal: 4, tarball: '/tmp/package.tgz' },
+    { shardIndex: 3, shardTotal: 4, tarball: '/tmp/package.tgz', workers: 1 },
   );
+  assert.deepEqual(
+    parseAttwArguments(['--shard-index', '2', '--shard-total', '4', '--workers', '4']),
+    { shardIndex: 2, shardTotal: 4, tarball: undefined, workers: 4 },
+  );
+  assert.throws(() => parseAttwArguments(['--workers', '0']), /positive integer/u);
+  assert.throws(() => parseAttwArguments(['--workers']), /positive integer/u);
+  assert.throws(() => parseAttwArguments(['--workers', '2', '--workers', '2']), /once/u);
   assert.throws(() => parseAttwArguments(['--shard-index', '1']), /specified together/u);
   assert.throws(() => parseAttwArguments(['--shard-total', '4']), /specified together/u);
   assert.throws(

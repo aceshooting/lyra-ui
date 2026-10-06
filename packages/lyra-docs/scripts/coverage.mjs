@@ -22,7 +22,7 @@ await mkdir(resolve(coverage, 'node-v8'), { recursive: true });
 for (const arguments_ of [
   ['run', 'build'],
   ['exec', 'tsc', '--noEmit', '-p', 'tsconfig.exports.json'],
-  ['exec', 'tsc', '-p', 'tsconfig.coverage.json'],
+  ['exec', 'tsc', '-p', 'tsconfig.test.json', '--outDir', '.coverage-output', '--sourceMap', '--inlineSources'],
 ]) {
   const status = run('pnpm', arguments_);
   if (status !== 0) process.exit(status);
@@ -34,8 +34,10 @@ if (!tests.length) throw new Error('Coverage cannot run without unit test files'
 const unitStatus = run(process.execPath, [
   '--test', '--test-concurrency=2', ...tests, 'scripts/package.test.mjs', 'scripts/coverage.test.mjs', 'test/xml.test.mjs',
 ], { NODE_V8_COVERAGE: resolve(coverage, 'node-v8') });
+// Always the complete suite: clear any narrowing selector left in the shell.
 const browserStatus = run(process.execPath, ['scripts/browser-test.mjs'], {
   DOCX_COVERAGE: '1', DOCX_BROWSERS: 'chromium', DOCX_PERFORMANCE: '0',
+  DOCX_LAYOUT_ONLY: '', DOCX_FORMATTING_ONLY: '', DOCX_INSERTION_ONLY: '', DOCX_IMAGES_ONLY: '',
 });
 const metadata = await reportCoverage({ root, unitStatus, browserStatus });
 process.exitCode = unitStatus || browserStatus;

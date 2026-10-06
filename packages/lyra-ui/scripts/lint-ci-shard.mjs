@@ -1,9 +1,10 @@
 import { isMainModule } from './is-main-module.mjs';
 
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { appendFileSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readCosts } from './ci-costs.mjs';
 
 const packageDirectory = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -16,30 +17,8 @@ const LINT_SUFFIX = [
   'pnpm run check:test-types',
 ];
 
-// Durations are rounded observations from a representative hosted CI run. Keeping only the
-// material costs makes the schedule understandable while a unit-cost fallback ensures a new,
-// valid policy command is assigned rather than silently omitted.
-const COMMAND_WEIGHTS = new Map([
-  ['pnpm run test:tooling', 455],
-  ['pnpm run test:component-inventory', 265],
-  ['pnpm run test:registration-graph', 165],
-  ['pnpm run check:qualification', 120],
-  ['pnpm run test:published-compatibility', 115],
-  ['pnpm run check:component-quality', 44],
-  ['pnpm run check:test-assertions', 33],
-  ['pnpm run check:default-string-slices', 20],
-  ['pnpm run manifest:check', 16],
-  ['pnpm run test:component-metadata', 15],
-  ['pnpm run check:collection-event-ownership', 10],
-  ['pnpm run test:architecture', 9],
-  ['pnpm run check:event-barrel', 7],
-  ['pnpm run check:default-strings', 7],
-  ['pnpm run llms-freshness', 6],
-  ['pnpm run check:component-metadata', 5],
-  ['tsc --noEmit -p tsconfig.json', 5],
-  ['pnpm run test:types', 5],
-  ['pnpm run check:test-types', 5],
-]);
+// Measured seconds per command (scripts/fixtures/lint-command-costs.json); unlisted commands cost the median.
+const { costs: COMMAND_WEIGHTS, fallback: UNMEASURED_COMMAND_WEIGHT } = readCosts('lint');
 
 const PNPM_RUN_COMMAND = /^pnpm run ([A-Za-z0-9:_-]+)$/u;
 const NODE_SCRIPT_COMMAND = /^node (scripts\/[A-Za-z0-9._/-]+\.mjs)$/u;
@@ -172,7 +151,7 @@ export function partitionLintInventory(inventory, shardTotal = LINT_SHARD_TOTAL)
   const weighted = inventory
     .map((item) => ({
       ...item,
-      weight: COMMAND_WEIGHTS.get(item.command) ?? 1,
+      weight: COMMAND_WEIGHTS.get(item.command) ?? UNMEASURED_COMMAND_WEIGHT,
     }))
     .sort((left, right) => right.weight - left.weight || left.ordinal - right.ordinal);
 
@@ -244,6 +223,7 @@ export function runLintShard(
     environment = process.env,
     platform = process.platform,
     spawn = spawnSync,
+    now = () => performance.now(),
   } = {},
 ) {
   const index = positiveInteger(shardIndex, 'lint shard index');
@@ -259,17 +239,27 @@ export function runLintShard(
   const lane = partitionLintInventory(inventory, total)[index - 1];
   console.log(
     `Lint shard ${index}/${total}: ${lane.commands.length} of ${inventory.length} commands ` +
-      `(estimated weight ${lane.totalWeight}).`,
+      `(estimated ${Math.round(lane.totalWeight)} s).`,
   );
+  const timingReport = environment.LINT_TIMING_REPORT || undefined;
 
   for (const item of lane.commands) {
     console.log(`  [${item.ordinal}/${inventory.length}] ${item.command}`);
     const { executable, args } = commandInvocation(item.command, platform);
+    const started = now();
     const result = spawn(executable, args, {
       cwd,
       env: environment,
       stdio: 'inherit',
     });
+    const seconds = Math.round((now() - started) / 100) / 10;
+    console.log(`  [${item.ordinal}/${inventory.length}] ${seconds} s`);
+    if (timingReport) {
+      appendFileSync(
+        resolve(cwd, timingReport),
+        `${JSON.stringify({ command: item.command, seconds, status: result.status ?? null })}\n`,
+      );
+    }
     if (result.error) throw result.error;
     if (result.signal) {
       throw new Error(

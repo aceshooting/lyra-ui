@@ -19,7 +19,6 @@ import {
   readComponentTestFiles,
   readComponentTests,
 } from './qualification-core.mjs';
-import { buildQualityArtifacts, qualityArtifactFindings } from './generate-component-quality.mjs';
 
 const scriptsDir = path.dirname(fileURLToPath(import.meta.url));
 const packageDir = path.dirname(scriptsDir);
@@ -121,12 +120,7 @@ async function main() {
     `qualification: ${inventory.components.length} public component(s), ` +
     `${result.exemptionCount} reviewed exemption(s), ${DIMENSIONS.length} tracked dimension(s)`;
 
-  if (result.failures.length === 0 && result.stale.length === 0) {
-    const artifacts = await buildQualityArtifacts();
-    for (const finding of qualityArtifactFindings(artifacts)) {
-      result.failures.push(`generated quality artifact ${finding}`);
-    }
-  }
+  // Quality-artifact freshness is check:component-quality's job in the same chain.
 
   if (result.failures.length > 0 || result.stale.length > 0) {
     for (const failure of result.failures) console.error(`  ${failure}`);

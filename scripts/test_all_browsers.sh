@@ -11,6 +11,7 @@
 #   ./scripts/test_all_browsers.sh --browsers chromium,firefox,edge,safari
 #   ./scripts/test_all_browsers.sh --browser firefox --shards 1,2
 #   TEST_ALL_BROWSERS_SKIP_INSTALL=1 ./scripts/test_all_browsers.sh
+#   TEST_ALL_BROWSERS_SKIP_BUILD=1 ./scripts/test_all_browsers.sh   # reuse an existing lyra-ui dist/
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -230,19 +231,31 @@ if [[ "${TEST_ALL_BROWSERS_SKIP_INSTALL:-0}" != "1" ]]; then
   pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps "${install_browsers[@]}"
 fi
 
-step "pnpm build"
-pnpm build
+if [[ "${TEST_ALL_BROWSERS_SKIP_BUILD:-0}" == "1" ]]; then
+  # The browser suite reads only lyra-ui's dist/; never test without one.
+  if [[ ! -f packages/lyra-ui/dist/lyra.js ]]; then
+    echo "TEST_ALL_BROWSERS_SKIP_BUILD=1 requires an existing packages/lyra-ui/dist (lyra.js missing)" >&2
+    exit 1
+  fi
+  step "reusing the existing lyra-ui dist/"
+else
+  step "pnpm build"
+  pnpm build
+fi
 
 LOG_DIR="$(mktemp -d)"
 
+# A failing sweep keeps the lane logs its summary points to.
 cleanup_logs() {
   local exit_status=$?
   trap - EXIT
+  if [[ "$exit_status" != "0" ]]; then
+    echo "lane logs kept for inspection: $LOG_DIR" >&2
+    exit "$exit_status"
+  fi
   if ! rm -rf -- "$LOG_DIR"; then
     echo "failed to remove temporary lane logs: $LOG_DIR" >&2
-    if [[ "$exit_status" == "0" ]]; then
-      exit_status=1
-    fi
+    exit_status=1
   fi
   exit "$exit_status"
 }

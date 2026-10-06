@@ -17,19 +17,27 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const uiPackage = join(root, 'packages', 'lyra-ui');
 const pnpm = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 
-function run(command, arguments_, cwd, label) {
+function run(command, arguments_, cwd, label, { buffered = false } = {}) {
   return new Promise((resolveRun, rejectRun) => {
     const child = spawn(command, arguments_, {
       cwd,
       env: { ...process.env, CI: 'true' },
-      stdio: 'inherit',
+      stdio: buffered ? ['ignore', 'pipe', 'pipe'] : 'inherit',
     });
+    const output = [];
+    if (buffered) {
+      child.stdout.on('data', (chunk) => output.push(chunk));
+      child.stderr.on('data', (chunk) => output.push(chunk));
+    }
     child.once('error', rejectRun);
-    child.once('exit', (code, signal) => {
+    child.once('close', (code, signal) => {
+      const text = Buffer.concat(output).toString('utf8');
       if (code === 0) {
-        resolveRun();
+        resolveRun(text);
       } else {
-        rejectRun(new Error(`${label} failed${signal ? ` (${signal})` : ` with exit code ${code}`}`));
+        const error = new Error(`${label} failed${signal ? ` (${signal})` : ` with exit code ${code}`}`);
+        error.output = text;
+        rejectRun(error);
       }
     });
   });
@@ -48,7 +56,7 @@ async function pack(packageDir, destination) {
 }
 
 async function main() {
-  const { shardIndex, shardTotal, tarball: suppliedTarball } = parseAttwArguments(
+  const { shardIndex, shardTotal, tarball: suppliedTarball, workers } = parseAttwArguments(
     process.argv.slice(2),
   );
   const workspace = suppliedTarball ? undefined : await mkdtemp(join(tmpdir(), 'lr-packed-attw-'));
@@ -71,14 +79,42 @@ async function main() {
     const entrypoints = partitionAttwEntrypoints(allEntrypoints, shardIndex, shardTotal);
 
     console.log(
-      `ATTW shard ${shardIndex}/${shardTotal}: checking ${entrypoints.length}/${allEntrypoints.length} typed package exports.`,
+      `ATTW shard ${shardIndex}/${shardTotal}: checking ${entrypoints.length}/${allEntrypoints.length} typed package exports` +
+        (workers > 1 ? ` with ${workers} concurrent workers.` : '.'),
     );
-    await run(
-      pnpm,
-      attwCommandArguments(entrypoints, tarball),
-      root,
-      `Are The Types Wrong package check (shard ${shardIndex}/${shardTotal})`,
+    if (workers === 1) {
+      await run(
+        pnpm,
+        attwCommandArguments(entrypoints, tarball),
+        root,
+        `Are The Types Wrong package check (shard ${shardIndex}/${shardTotal})`,
+      );
+      return;
+    }
+    // The same disjoint round-robin partition, once more inside this shard.
+    const results = await Promise.allSettled(
+      Array.from({ length: workers }, (_, index) => {
+        const worker = index + 1;
+        const label = `Are The Types Wrong package check (shard ${shardIndex}/${shardTotal}, worker ${worker}/${workers})`;
+        return run(
+          pnpm,
+          attwCommandArguments(partitionAttwEntrypoints(entrypoints, worker, workers), tarball),
+          root,
+          label,
+          { buffered: true },
+        ).then((output) => ({ label, output }));
+      }),
     );
+    const failures = [];
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        console.log(`--- ${result.value.label}\n${result.value.output}`);
+      } else {
+        console.error(`--- ${result.reason.message}\n${result.reason.output ?? ''}`);
+        failures.push(result.reason.message);
+      }
+    }
+    if (failures.length > 0) throw new Error(failures.join('\n'));
   } finally {
     if (workspace) await rm(workspace, { recursive: true, force: true });
   }

@@ -99,6 +99,30 @@ function git(repoRoot, args, { allowFailure = false, trim = true } = {}) {
   }
 }
 
+/** `git cat-file --batch` over `specs` in bounded batches: spec -> { oid, type, content } or null if missing. */
+function catFile(repoRoot, specs) {
+  const objects = new Map();
+  for (let start = 0; start < specs.length; start += 64) {
+    const batch = specs.slice(start, start + 64);
+    const output = execFileSync('git', ['cat-file', '--batch'], {
+      cwd: repoRoot, input: `${batch.join('\n')}\n`, maxBuffer: 1024 * 1024 * 1024,
+    });
+    let offset = 0;
+    for (const spec of batch) {
+      const headerEnd = output.indexOf(10, offset);
+      const [oid, type, size] = output.toString('utf8', offset, headerEnd).split(' ');
+      offset = headerEnd + 1;
+      if (size === undefined) {
+        objects.set(spec, null);
+        continue;
+      }
+      objects.set(spec, { oid, type, content: output.toString('utf8', offset, offset + Number(size)) });
+      offset += Number(size) + 1;
+    }
+  }
+  return objects;
+}
+
 function hasCompleteGitHistory(repoRoot) {
   return git(repoRoot, ['rev-parse', '--is-shallow-repository'], { allowFailure: true }) === 'false';
 }
@@ -125,13 +149,13 @@ export function buildReleaseHistory(repoRoot, manifestPath = 'packages/lyra-ui/c
     .map((tag) => ({ tag, version: releaseTagVersion(tag) }))
     .filter((entry) => parseVersion(entry.version))
     .sort((left, right) => compareVersions(left.version, right.version));
+  // One `cat-file` stream per 64 tags instead of three git processes per tag.
+  const objects = catFile(repoRoot, releaseTags.flatMap(({ tag }) => [`${tag}^{commit}`, `${tag}:${manifestPath}`]));
 
   return releaseTags.map(({ tag, version }) => {
-    const sourceCommit = git(repoRoot, ['rev-list', '-n', '1', tag]);
-    const rawManifest = git(repoRoot, ['show', `${tag}:${manifestPath}`], {
-      allowFailure: true,
-      trim: false,
-    });
+    const sourceCommit = objects.get(`${tag}^{commit}`)?.oid ?? git(repoRoot, ['rev-list', '-n', '1', tag]);
+    const blob = objects.get(`${tag}:${manifestPath}`);
+    const rawManifest = blob?.type === 'blob' ? blob.content : null;
     if (rawManifest === null) {
       return {
         tag,
@@ -149,7 +173,7 @@ export function buildReleaseHistory(repoRoot, manifestPath = 'packages/lyra-ui/c
       version,
       sourceCommit,
       manifestPresent: true,
-      manifestBlob: git(repoRoot, ['rev-parse', `${tag}:${manifestPath}`]),
+      manifestBlob: blob.oid,
       manifestSha256: sha256(rawManifest),
       tags: manifestComponentTags(manifest),
     };

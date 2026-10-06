@@ -6,7 +6,7 @@
 # regression, and the other workspace package(s)' own tests.
 #
 # scripts/ci.sh already reproduces the six primary lint/build/docs CI jobs on
-# Chromium, plus (with --platform/--platform-matrix) the curated 26-file
+# Chromium, plus (with --platform/--platform-matrix) the curated ~40-file
 # test:platform subset on Firefox/WebKit. This script is narrower in scope
 # (tests only, no lint/docs-freshness/packed-consumer gates) but wider in
 # coverage: every engine runs the COMPLETE suite, the same one full-engine.yml

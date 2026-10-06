@@ -11,6 +11,7 @@ import {
   collectStructuralAssertionProxies,
   collectUnsafeAssertions,
   isDomTypeDescription,
+  discoverComponentTestFiles,
   policyAccountingFailures,
 } from './check-test-assertions.mjs';
 
@@ -152,6 +153,29 @@ test('accounting fails closed on classifier errors, vacuous classification, and 
     ),
     ['zero Chai assertion candidates across 1 component test file(s)']
   );
+});
+
+test('accounting compares the scanned set with the files on disk, never a hand-pinned count', () => {
+  const clean = { candidateCount: 1, classifiedCount: 1, fallbackCount: 0, errorCount: 0 };
+  const files = ['/p/src/components/a/a.test.ts', '/p/src/components/b/b.test.ts'];
+  assert.deepEqual(
+    policyAccountingFailures({ ...clean, scannedFileCount: 2, scannedFiles: [...files].reverse() }, files),
+    [],
+  );
+  assert.deepEqual(
+    policyAccountingFailures({ ...clean, scannedFileCount: 1, scannedFiles: [files[0]] }, files),
+    ['1 component test file(s) on disk were not scanned: /p/src/components/b/b.test.ts'],
+  );
+  assert.deepEqual(
+    policyAccountingFailures({ ...clean, scannedFileCount: 1, scannedFiles: ['/p/src/components/c/c.test.ts'] }, []),
+    [
+      'no component test files were discovered on disk',
+      '1 scanned component test file(s) were not discovered on disk: /p/src/components/c/c.test.ts',
+    ],
+  );
+  const discovered = discoverComponentTestFiles();
+  assert.ok(discovered.length > 0, 'the live tree has component test files');
+  assert.ok(discovered.every((file) => file.includes('/src/components/') && file.endsWith('.test.ts')));
 });
 
 test('a syntax fallback cannot mask an operational checker failure', () => {

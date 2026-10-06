@@ -9,14 +9,11 @@
       "requiredJobs": [
         "build-and-coverage",
         "chrome / Node 22 / shard 1/1",
-        "chromium / Node 22 / shard 1/2",
-        "chromium / Node 22 / shard 2/2",
+        "chromium / Node 22 / shard 1/1",
         "docs-and-storybook",
         "edge / Node 22 / shard 1/1",
-        "firefox / Node 22 / shard 1/4",
-        "firefox / Node 22 / shard 2/4",
-        "firefox / Node 22 / shard 3/4",
-        "firefox / Node 22 / shard 4/4",
+        "firefox / Node 22 / shard 1/2",
+        "firefox / Node 22 / shard 2/2",
         "lint",
         "packed-consumer",
         "safari / Node 22 / shard 1/1",
@@ -56,9 +53,7 @@
       "requiredJobs": [
         "chrome",
         "chromium",
-        "edge",
-        "firefox",
-        "safari"
+        "edge"
       ]
     }
   }

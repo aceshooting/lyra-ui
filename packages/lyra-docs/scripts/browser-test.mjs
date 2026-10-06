@@ -24,6 +24,21 @@ const output = resolve(root, '.browser-output');
 const screenshots = resolve(root, '.browser-evidence');
 const browsers = (process.env.DOCX_BROWSERS ?? 'chromium,firefox,webkit').split(',').map(name => name.trim()).filter(Boolean);
 for (const name of browsers) assert.ok(['chromium', 'firefox', 'webkit'].includes(name), `Unknown browser ${name}`);
+assert.ok(browsers.length > 0, 'DOCX_BROWSERS names no browser');
+// Narrowing selectors take exact values, and a narrowed run is recorded as partial.
+const SELECTORS = {
+  DOCX_LAYOUT_ONLY: ['1'],
+  DOCX_FORMATTING_ONLY: ['1'],
+  DOCX_INSERTION_ONLY: ['core', 'ui', 'all'],
+  DOCX_IMAGES_ONLY: ['core', 'ui', 'all'],
+};
+const selection = Object.fromEntries(Object.entries(SELECTORS)
+  .filter(([variable]) => (process.env[variable] ?? '') !== '')
+  .map(([variable, values]) => {
+    assert.ok(values.includes(process.env[variable]), `${variable} must be one of ${values.join(', ')}`);
+    return [variable, process.env[variable]];
+  }));
+assert.ok(Object.keys(selection).length <= 1, `Choose one narrowing selector, not ${Object.keys(selection).join(' and ')}`);
 const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.wasm': 'application/wasm', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.png': 'image/png', '.json': 'application/json' };
 const require = createRequire(import.meta.url);
 const axePath = require.resolve('axe-core/axe.min.js');
@@ -958,6 +973,10 @@ async function runBrowser(name, url, { lazyEntry, engineEntry }) {
       assert.ok(record.requests.some(path => path.endsWith(`/${lazyEntry}`)));
       assert.equal(record.requests.some(path => path.endsWith(`/${engineEntry}`)), false, 'Engine loaded before document open');
     });
+    await check('session entry leaves the engine lazy', async () => {
+      await page.evaluate(() => window.__docxTest.sessionFactory());
+      assert.equal(record.requests.some(path => path.endsWith(`/${engineEntry}`)), false, 'Engine loaded by the session entry');
+    });
     if (process.env.DOCX_LAYOUT_ONLY) {
       await runEditorLayout(page, check, { createEditor, saveEditor });
     } else if (process.env.DOCX_FORMATTING_ONLY) {
@@ -1402,7 +1421,8 @@ try {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const url = `http://127.0.0.1:${server.address().port}/test/browser.html`;
   for (const name of browsers) await runBrowser(name, url, lazyEntries);
-  evidence.result = 'pass';
+  evidence.result = Object.keys(selection).length > 0 ? 'partial' : 'pass';
+  if (evidence.result === 'partial') evidence.selection = selection;
 } catch (error) {
   evidence.result = 'fail';
   evidence.failure = error?.stack ?? String(error);

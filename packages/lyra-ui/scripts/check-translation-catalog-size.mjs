@@ -202,17 +202,24 @@ export async function checkTranslationCatalogSizes({
   return { errors, notes, measured };
 }
 
-if (isMainModule(import.meta.url)) {
+/** The CLI's whole run, returning its exit status (also run in-process by check-localization-catalogs.mjs). */
+export async function runTranslationCatalogSizeCheck() {
   const { errors, notes, measured } = await checkTranslationCatalogSizes();
   for (const note of notes) console.log(note);
   if (errors.length > 0) {
     console.error(`\nTranslation catalog size check failed with ${errors.length} problem(s):\n`);
     console.error(errors.map((error) => `- ${error}`).join('\n'));
-    process.exitCode = 1;
-  } else if (measured > 0) {
+    return 1;
+  }
+  if (measured > 0) {
     console.log(
       `Translation catalog sizes verified: ${measured} locale/family slice(s) within ` +
         `${MAX_GZIP_MULTIPLE}x of their English baseline.`,
     );
   }
+  return 0;
+}
+
+if (isMainModule(import.meta.url)) {
+  process.exitCode = await runTranslationCatalogSizeCheck();
 }

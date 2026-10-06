@@ -6,6 +6,7 @@ import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
 import { runInNewContext } from 'node:vm';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { timingReporter } from './wtr-timing-reporter.mjs';
 
 const packageDirectory = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const configUrl = pathToFileURL(resolve(packageDirectory, 'web-test-runner.config.js')).href;
@@ -17,8 +18,14 @@ function runConfigInspection({
   concurrency,
   browser,
   nativeScrollbar = false,
+  coverageConcurrency,
+  timingReport,
 } = {}) {
   const environment = { ...process.env };
+  if (coverageConcurrency === undefined) delete environment.WTR_COVERAGE_CONCURRENCY;
+  else environment.WTR_COVERAGE_CONCURRENCY = coverageConcurrency;
+  if (timingReport === undefined) delete environment.WTR_TIMING_REPORT;
+  else environment.WTR_TIMING_REPORT = timingReport;
   if (coverage) environment.WTR_COVERAGE = '1';
   else delete environment.WTR_COVERAGE;
   if (coverageReportDir === undefined) delete environment.WTR_COVERAGE_REPORT_DIR;
@@ -52,6 +59,7 @@ function runConfigInspection({
         firefoxUserPrefs: launch.firefoxUserPrefs ?? null,
         webkitSoftwareGl: launch.env?.LIBGL_ALWAYS_SOFTWARE ?? null,
       },
+      ${timingReport === undefined ? '' : `reporterCount: config.reporters?.length ?? null,`}
       ${coverageReportDir === undefined ? '' : `coverageDetails: {
         threshold: config.coverageConfig.threshold ?? null,
         reportDir: config.coverageConfig.reportDir,
@@ -269,6 +277,44 @@ test('uses a validated explicit test-server port when a parallel lane assigns on
     const result = runConfigInspection({ port });
     assert.notEqual(result.status, 0, `WTR_PORT=${port} must be rejected`);
     assert.match(result.stderr, /WTR_PORT must be an integer from 1024 through 65535/u);
+  }
+});
+
+test('coverage keeps one page unless WTR_COVERAGE_CONCURRENCY asks for more', () => {
+  assert.equal(inspectConfig({ coverage: true }).concurrency, 1);
+  assert.equal(inspectConfig({ coverage: true, coverageConcurrency: '2' }).concurrency, 2);
+  assert.equal(inspectConfig({ coverage: true, concurrency: '8', coverageConcurrency: '2' }).concurrency, 2);
+  assert.equal(inspectConfig({ coverageConcurrency: '2' }).concurrency, null, 'ordinary runs ignore it');
+  for (const coverageConcurrency of ['0', '1.5', 'two']) {
+    const result = runConfigInspection({ coverage: true, coverageConcurrency });
+    assert.notEqual(result.status, 0, `WTR_COVERAGE_CONCURRENCY=${coverageConcurrency} must be rejected`);
+    assert.match(result.stderr, /WTR_COVERAGE_CONCURRENCY must be a positive safe integer/u);
+  }
+});
+
+test('WTR_TIMING_REPORT adds the per-file timing reporter beside the existing reporters', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lyra-wtr-timing-'));
+  try {
+    const timingReport = join(directory, 'timing.jsonl');
+    assert.equal(inspectConfig({ timingReport }).reporterCount, 2, 'default + timing');
+    assert.equal(inspectConfig({ coverage: true, timingReport }).reporterCount, 3, 'default + junit + timing');
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('the timing reporter records each completed file and its wall time', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lyra-wtr-timing-lines-'));
+  try {
+    const output = join(directory, 'nested', 'timing.jsonl');
+    const reporter = timingReporter(output, { cwd: directory });
+    reporter.onTestRunStarted();
+    reporter.reportTestFileResults({ testFile: join(directory, 'src', 'a.test.ts') });
+    const line = JSON.parse(readFileSync(output, 'utf8'));
+    assert.equal(line.file, 'src/a.test.ts');
+    assert.ok(Number.isInteger(line.deltaMs) && line.deltaMs >= 0);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
   }
 });
 

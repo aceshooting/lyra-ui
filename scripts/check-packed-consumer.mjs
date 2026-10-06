@@ -6,7 +6,8 @@ import { join, relative, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { parsePackedConsumerArguments } from './packed-attw.mjs';
+import { attwCommandArguments, parsePackedConsumerArguments } from './packed-attw.mjs';
+import { PACKED_TARBALL_ENVIRONMENT, packedManifest, suppliedPackedTarball } from './packed-tarball-input.mjs';
 import { checkPublishedCompatibilitySync, readCurrentCompatibilityContext } from '../packages/lyra-ui/scripts/check-published-compatibility.mjs';
 import { checkPublishedFieldHistorySync } from '../packages/lyra-ui/scripts/published-field-compatibility-io.mjs';
 import { preservePackedTarball, verifyPackedMigrationConsumers, writeResolvedMigrationEntry, verifyResolvedMigrationBrowser } from './packed-migration-consumer.mjs';
@@ -19,6 +20,7 @@ import {
 const root = fileURLToPath(new URL('..', import.meta.url));
 const uiPackage = join(root, 'packages', 'lyra-ui');
 const flagsPackage = join(root, 'packages', 'lyra-flags');
+const docsPackage = join(root, 'packages', 'lyra-docs');
 const pnpm = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const binName = (name) => (process.platform === 'win32' ? `${name}.cmd` : name);
@@ -326,6 +328,39 @@ async function pack(packageDir, destination) {
     throw new Error(`Expected one new package tarball from ${packageDir}, found ${packed.join(', ') || 'none'}`);
   }
   return join(destination, packed[0]);
+}
+
+/** lyra-docs as consumers install it: publint, ATTW, no workspace: leak, the packed lyra-ui accepted, entries load without the engine. */
+async function verifyPackedDocsPackage({ workspace, uiTarball, docsTarball }) {
+  const manifest = packedManifest(docsTarball);
+  const ranges = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies']
+    .flatMap((section) => Object.values(manifest[section] ?? {}));
+  assert.deepEqual(ranges.filter((range) => String(range).startsWith('workspace:')), [], 'lyra-docs leaks workspace: ranges');
+  const uiVersion = packedManifest(uiTarball).version;
+  const uiRange = manifest.dependencies?.['@aceshooting/lyra-ui'] ?? manifest.peerDependencies?.['@aceshooting/lyra-ui'];
+  assert.ok([uiVersion, `^${uiVersion}`].includes(uiRange), `lyra-docs requires @aceshooting/lyra-ui ${uiRange}, packed beside ${uiVersion}`);
+  await run(pnpm, ['exec', 'publint', 'run', '--strict', '--pack=false', docsTarball], root, 'lyra-docs publint package check');
+  const typed = Object.keys(manifest.exports).filter((entry) => !entry.endsWith('.css') && entry !== './package.json');
+  await run(pnpm, attwCommandArguments(typed, docsTarball), root, 'lyra-docs Are The Types Wrong check');
+
+  // The optional engine is not installed here, so any eager engine import fails these loads.
+  const fixtureDir = join(workspace, 'docs-consumer');
+  await mkdir(fixtureDir, { recursive: true });
+  const uiSpecifier = `file:${relative(fixtureDir, uiTarball)}`;
+  await writeFile(join(fixtureDir, 'package.json'), JSON.stringify({
+    name: 'lr-packed-docs-consumer', private: true, type: 'module',
+    dependencies: { '@aceshooting/lyra-docs': `file:${relative(fixtureDir, docsTarball)}`, '@aceshooting/lyra-ui': uiSpecifier },
+    pnpm: { overrides: { '@aceshooting/lyra-ui': uiSpecifier } },
+  }));
+  await writeFile(join(fixtureDir, 'load.mjs'), `globalThis.customElements = { get: () => undefined, define: () => { throw new Error('Unexpected registration'); } };
+const { createDocxSession } = await import('@aceshooting/lyra-docs/docx');
+const { LyraDocxEditor } = await import('@aceshooting/lyra-docs/docx/editor.class');
+if (typeof createDocxSession !== 'function' || typeof LyraDocxEditor !== 'function') throw new Error('Missing lyra-docs export');
+await import('@aceshooting/lyra-docs');
+import.meta.resolve('@aceshooting/lyra-docs/docx/editor');
+`);
+  await run(pnpm, ['install', '--ignore-scripts', '--config.auto-install-peers=false'], fixtureDir, 'lyra-docs fixture install');
+  await run(process.execPath, ['load.mjs'], fixtureDir, 'lyra-docs entry load check');
 }
 
 // pnpm substitutes every workspace: specifier for a real semver range when `pnpm pack` runs, so
@@ -1461,13 +1496,25 @@ async function main() {
       mkdir(join(maplibreV5Fixture, 'src'), { recursive: true }),
     ]);
 
-    const uiTarball = await pack(uiPackage, tarballDir);
+    const uiTarball = (await suppliedPackedTarball(PACKED_TARBALL_ENVIRONMENT.ui, {
+      packageDir: uiPackage,
+      destination: tarballDir,
+      compareExports: true,
+    })) ?? await pack(uiPackage, tarballDir);
     if (migrationArtifactsDir) await preservePackedTarball({ tarballPath: uiTarball, artifactsDir: join(migrationArtifactsDir, 'packages') });
     const candidateTarballSha256 = performanceOptions
       ? createHash('sha256').update(await readFile(uiTarball)).digest('hex')
       : undefined;
-    const flagsTarball = await pack(flagsPackage, tarballDir);
+    const flagsTarball = (await suppliedPackedTarball(PACKED_TARBALL_ENVIRONMENT.flags, {
+      packageDir: flagsPackage,
+      destination: tarballDir,
+    })) ?? await pack(flagsPackage, tarballDir);
     if (migrationArtifactsDir) await preservePackedTarball({ tarballPath: flagsTarball, artifactsDir: join(migrationArtifactsDir, 'packages') });
+    const docsTarball = (await suppliedPackedTarball(PACKED_TARBALL_ENVIRONMENT.docs, {
+      packageDir: docsPackage,
+      destination: tarballDir,
+      compareExports: true,
+    })) ?? await pack(docsPackage, tarballDir);
 
     await run(
       pnpm,
@@ -1485,6 +1532,7 @@ async function main() {
     } else {
       console.log('Skipping only ATTW; packed install, runtime, declaration, and bundle contracts remain enabled.');
     }
+    await verifyPackedDocsPackage({ workspace, uiTarball, docsTarball });
 
     await writeFixture(
       coreFixture,

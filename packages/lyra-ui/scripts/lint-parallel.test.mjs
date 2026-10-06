@@ -54,6 +54,37 @@ test('parallel lint fails closed on process launch errors and signals', async ()
   }
 });
 
+test('CI output keeps every concurrent lane attributable line by line', async () => {
+  const written = [];
+  const result = await runParallelLint({
+    jobs: 3,
+    prefixOutput: true,
+    write: (text) => written.push(text),
+    spawn(_command, args, options) {
+      assert.deepEqual(options.stdio, ['ignore', 'pipe', 'pipe']);
+      const child = new EventEmitter();
+      child.stdout = new EventEmitter();
+      child.stderr = new EventEmitter();
+      const coordinate = args.at(-1);
+      setImmediate(() => {
+        child.stdout.emit('data', `first ${coordinate}\nsecond`);
+        child.stdout.emit('data', ` ${coordinate}\n`);
+        child.stderr.emit('data', `tail ${coordinate}`);
+        child.stdout.emit('end');
+        child.stderr.emit('end');
+        child.emit('exit', 0, null);
+      });
+      return child;
+    },
+  });
+  assert.equal(result, 0);
+  for (const shard of ['1/3', '2/3', '3/3']) {
+    for (const line of [`first ${shard}`, `second ${shard}`, `tail ${shard}`]) {
+      assert.ok(written.includes(`[lint ${shard}] ${line}\n`), `${line} is prefixed`);
+    }
+  }
+});
+
 test('parallel lint rejects invalid worker budgets', async () => {
   for (const jobs of [0, -1, NaN, Infinity, 1.5, '2oops']) {
     await assert.rejects(runParallelLint({ jobs }), /positive integer/);

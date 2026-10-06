@@ -1,8 +1,10 @@
 import { unzipSync, zipSync, strToU8, strFromU8 } from 'fflate';
 import assert from 'node:assert/strict';
+import { fileURLToPath } from 'node:url';
 import { zipEntry } from '../test/zip.mjs';
 
 export async function runEditorLayout(page, check, { createEditor, saveEditor }) {
+  const evidence = name => fileURLToPath(new URL(`../.browser-evidence/${page.context().browser().browserType().name()}-${name}.png`, import.meta.url));
   await page.evaluate(() => document.querySelector('#fixture').replaceChildren());
   await createEditor(page, 'layout');
   const editor = page.locator('#layout');
@@ -27,7 +29,7 @@ export async function runEditorLayout(page, check, { createEditor, saveEditor })
       assert.equal(colors.text, 'rgb(0, 0, 0)', `${theme} authored text`);
       assert.ok(colors.width > 700 && colors.width < 900, 'Native paper width remains intact');
       assert.equal(zipEntry(await saveEditor(page, 'layout'), 'word/document.xml'), before);
-      await page.screenshot({ path: new URL(`../.browser-evidence/layout-${theme}.png`, import.meta.url).pathname });
+      await page.screenshot({ path: evidence(`layout-${theme}`) });
     }
   });
   await check('toolbar uses one stable row when wide and two reachable rows when narrower', async () => {
@@ -79,7 +81,7 @@ export async function runEditorLayout(page, check, { createEditor, saveEditor })
       assert.equal(last.key, 'highlight');
       assert.ok(last.left >= 0 && last.right <= width, JSON.stringify(last));
       await page.keyboard.press('Escape');
-      await page.screenshot({ path: new URL(`../.browser-evidence/layout-${width}.png`, import.meta.url).pathname });
+      await page.screenshot({ path: evidence(`layout-${width}`) });
     }
     await page.setViewportSize({ width: 1920, height: 900 });
     const rtlGap = await editor.evaluate(async element => {
@@ -273,13 +275,18 @@ export async function runEditorLayout(page, check, { createEditor, saveEditor })
     assert.ok(after.widthPoints > before.widthPoints, JSON.stringify({ before, after }));
     assert.ok(Math.abs(after.widthPoints / after.heightPoints - before.widthPoints / before.heightPoints) < 0.02, JSON.stringify({ before, after }));
     assert.equal(await host.evaluate(element => element.snapshot().dirty), true);
+    const dragged = await host.evaluate(element => element.snapshot().revision.value);
     await page.keyboard.press(process.platform === 'darwin' ? 'Meta+z' : 'Control+z');
-    await page.waitForFunction(width => document.getElementById('layout-drag').snapshot()?.image?.widthPoints === width, before.widthPoints)
-      .catch(() => {});
+    await page.waitForFunction(({ revision, width }) => {
+      const element = document.getElementById('layout-drag');
+      const picture = element.querySelector('.docx-pages img');
+      return element.snapshot()?.revision?.value !== revision && Math.abs(picture?.getBoundingClientRect().width - width) < 1;
+    }, { revision: dragged, width: image.width }, { timeout: 5000 });
     await host.locator('.docx-pages img').first().click();
     await host.locator('[part="image-handle"][data-handle="e"]').waitFor({ state: 'visible' });
     const edge = await host.locator('[part="image-handle"][data-handle="e"]').boundingBox();
     const start = await host.evaluate(element => element.snapshot().image);
+    assert.equal(start.widthPoints, before.widthPoints, 'one undo restores the dragged width');
     await page.mouse.move(edge.x + edge.width / 2, edge.y + edge.height / 2);
     await page.mouse.down();
     await page.mouse.move(edge.x + edge.width / 2 + 30, edge.y + edge.height / 2, { steps: 3 });

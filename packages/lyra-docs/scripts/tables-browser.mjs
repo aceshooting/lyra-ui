@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { SaxesParser } from 'saxes';
-import { unzipSync } from 'fflate';
 import { zipEntry } from '../test/zip.mjs';
+import { assertNoAxeViolations, paints, toolbarTo, zipParts as parts } from './lib/harness.mjs';
 
 function shape(bytes) {
   const parser = new SaxesParser({ xmlns: true }), tables = [], stack = [];
@@ -18,7 +18,6 @@ function shape(bytes) {
   parser.write(zipEntry(bytes, 'word/document.xml')).close();
   return tables;
 }
-function parts(bytes) { return Object.fromEntries(Object.entries(unzipSync(Uint8Array.from(bytes))).sort(([a], [b]) => a.localeCompare(b)).map(([key, value]) => [key, [...value]])); }
 async function caret(page, id, text) {
   await page.locator(`#${id} .docx-pages`).getByText(text, { exact: true }).click();
   await page.keyboard.press('ArrowLeft');
@@ -355,11 +354,9 @@ async function runTableToolbar(page, check, { createEditor, saveEditor, assertPr
           docxEditorTableColumns: 'Colonnes', docxEditorTableRowBelow: 'Ligne dessous', docxEditorTableColumnRight: 'Colonne à droite' };
     });
     await page.locator(`#${id}`).evaluate(element => element.updateComplete);
-    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve(true)))));
+    await paints(page);
     await caret(page, id, 'Before');
-    await page.keyboard.press('Alt+F10');
-    for (let step = 0; step < 30 && await page.locator(`#${id}`).evaluate(element => element.shadowRoot.activeElement?.getAttribute('part')) !== 'image-next'; step++) await page.keyboard.press('ArrowLeft');
-    assert.equal(await page.locator(`#${id}`).evaluate(element => element.shadowRoot.activeElement?.getAttribute('part')), 'image-next');
+    await toolbarTo(page, id, 'image-next');
     await page.keyboard.press('ArrowRight');
     assert.equal(await page.locator(`#${id}`).evaluate(element => element.shadowRoot.activeElement?.getAttribute('part')), 'image-previous');
     await page.keyboard.press('ArrowRight');
@@ -368,9 +365,7 @@ async function runTableToolbar(page, check, { createEditor, saveEditor, assertPr
     await page.locator(`#${id} [part="table-rows"] input`).waitFor({ state: 'visible' });
     assert.equal(await page.locator(`#${id} [part="table-rows"]`).getAttribute('label'), 'Lignes');
     assert.equal(await page.locator(`#${id} [part="table-columns"]`).getAttribute('label'), 'Colonnes');
-    const result = await page.evaluate(id => window.axe.run(document.getElementById(id),
-      { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] } }), id);
-    assert.deepEqual(result.violations.map(entry => entry.id), []);
+    await assertNoAxeViolations(page, id);
     const bounds = await page.locator(`#${id} [part="table-fields"]`).boundingBox();
     assert.ok(bounds.width <= 320, JSON.stringify(bounds));
     await page.locator(`#${id} [part="table-rows"] input`).press('Escape');

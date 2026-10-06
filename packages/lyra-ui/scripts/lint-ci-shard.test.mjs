@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
 
 import {
@@ -72,8 +75,8 @@ test('partitions every current lint command occurrence exactly once', () => {
   const weights = lanes.map((lane) => lane.totalWeight);
   assert.equal(weights.length, LINT_SHARD_TOTAL);
   assert.ok(
-    Math.max(...weights) - Math.min(...weights) <= 2,
-    `lint shards are unbalanced: ${weights.join(', ')}`,
+    Math.max(...weights) / Math.min(...weights) < 1.1,
+    `lint shards are unbalanced by measured seconds: ${weights.map(Math.round).join(', ')}`,
   );
   for (const lane of lanes) {
     assert.deepEqual(
@@ -218,11 +221,37 @@ test('executes original lane order and propagates the first non-zero child statu
   assert.equal(calls[0].options.stdio, 'inherit');
 });
 
+test('records per-command seconds when LINT_TIMING_REPORT is set', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lyra-lint-timing-'));
+  try {
+    let clock = 0;
+    const status = runLintShard(
+      currentScripts,
+      { shardIndex: 3, shardTotal: 3 },
+      {
+        cwd: directory,
+        environment: { LINT_TIMING_REPORT: 'timing.jsonl' },
+        platform: 'linux',
+        now: () => (clock += 1500),
+        spawn: () => ({ status: 0 }),
+      },
+    );
+    assert.equal(status, 0);
+    const lane = partitionLintInventory(buildLintInventory(currentScripts))[2];
+    const records = readFileSync(join(directory, 'timing.jsonl'), 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+    assert.deepEqual(records.map(({ command }) => command), lane.commands.map(({ command }) => command));
+    assert.ok(records.every(({ seconds, status: commandStatus }) => seconds === 1.5 && commandStatus === 0));
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test('propagates child spawn errors and signal termination', () => {
   const configuration = { shardIndex: 2, shardTotal: 3 };
   assert.throws(
     () =>
       runLintShard(currentScripts, configuration, {
+        environment: {},
         spawn: () => ({ error: new Error('spawn exploded') }),
       }),
     /spawn exploded/iu,
@@ -230,12 +259,14 @@ test('propagates child spawn errors and signal termination', () => {
   assert.throws(
     () =>
       runLintShard(currentScripts, configuration, {
+        environment: {},
         spawn: () => ({ status: null, signal: 'SIGTERM' }),
       }),
     /terminated by signal SIGTERM/iu,
   );
   assert.equal(
     runLintShard(currentScripts, configuration, {
+      environment: {},
       spawn: () => ({ status: null, signal: null }),
     }),
     1,

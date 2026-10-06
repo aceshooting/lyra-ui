@@ -1,8 +1,7 @@
 import assert from 'node:assert/strict';
-import { unzipSync } from 'fflate';
 import { zipEntry } from '../test/zip.mjs';
+import { zipParts as parts } from './lib/harness.mjs';
 
-const parts = bytes => Object.fromEntries(Object.entries(unzipSync(Uint8Array.from(bytes))).sort(([a], [b]) => a.localeCompare(b)).map(([name, value]) => [name, [...value]]));
 const host = (page, id) => page.locator(`#${id}`);
 const remove = (page, id) => host(page, id).evaluate(element => element.remove());
 async function insertionReady(page, id = null) {

@@ -1,13 +1,8 @@
 import assert from 'node:assert/strict';
-import { unzipSync } from 'fflate';
-import { mkdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { assertNoAxeViolations, paints, screenshot, toolbarTo, zipParts as parts } from './lib/harness.mjs';
 
 const host = (page, id) => page.locator(`#${id}`);
 const part = (page, id, name) => page.locator(`#${id} [part="image-insert-${name}"]`);
-const parts = bytes => Object.fromEntries(Object.entries(unzipSync(Uint8Array.from(bytes)))
-  .sort(([a], [b]) => a.localeCompare(b)).map(([key, value]) => [key, [...value]]));
-const paints = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve(true)))));
 const dispose = (page, id) => host(page, id).evaluate(element => element.remove());
 async function snapshot(page, id) {
   return host(page, id).evaluate(element => element.snapshot());
@@ -44,13 +39,7 @@ async function caret(page, id, text, uncovered = false) {
 async function choose(page, id, bytes, keyboard = false, name = 'local-image.bin', mimeType = 'application/octet-stream') {
   const chooser = page.waitForEvent('filechooser'); void chooser.catch(() => {});
   if (keyboard) {
-    await page.keyboard.press('Alt+F10'); await page.keyboard.press('Home');
-    const forward = await host(page, id).evaluate(element => element.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight');
-    for (let count = 0; count < 80; count++) {
-      if (await host(page, id).evaluate(element => element.shadowRoot.activeElement?.getAttribute('part')) === 'image-insert-trigger') break;
-      await page.keyboard.press(forward);
-    }
-    assert.equal(await host(page, id).evaluate(element => element.shadowRoot.activeElement?.getAttribute('part')), 'image-insert-trigger');
+    await toolbarTo(page, id, 'image-insert-trigger');
     await page.keyboard.press('Enter');
   } else await part(page, id, 'trigger').click();
   await (await chooser).setFiles({ name, mimeType, buffer: bytes });
@@ -66,12 +55,6 @@ async function draft(page, id, bytes, keyboard = false) {
 }
 async function cancel(page, id) {
   await part(page, id, 'cancel').click(); await part(page, id, 'fields').waitFor({ state: 'hidden' });
-}
-async function screenshot(page, name) {
-  const directory = process.env.DOCX_IMAGE_INSERTION_UI_SCREENSHOTS;
-  if (!directory) return;
-  await mkdir(directory, { recursive: true });
-  await page.screenshot({ path: join(directory, `${page.context().browser().browserType().name()}-${name}.png`) });
 }
 async function unchanged(page, id, before, initial, saveEditor) {
   const after = await snapshot(page, id);
@@ -381,9 +364,7 @@ export async function runImageInsertionTools(page, check, { createEditor, saveEd
         await draft(page, id, await source(page));
         assert.equal(await part(page, id, 'title').getAttribute('label'), 'Titre de cette image');
         assert.equal(await part(page, id, 'description').getAttribute('label'), 'Description de cette image');
-        const axe = await page.evaluate(id => window.axe.run(document.getElementById(id),
-          { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] } }), id);
-        assert.deepEqual(axe.violations.map(entry => entry.id), []);
+        await assertNoAxeViolations(page, id);
         await page.emulateMedia({ forcedColors: 'active' });
         assert.equal(await page.evaluate(() => matchMedia('(forced-colors: active)').matches), true);
         assert.equal(await part(page, id, 'width').locator('input').isVisible(), true);
@@ -491,9 +472,7 @@ export async function runImageInsertionTools(page, check, { createEditor, saveEd
         await page.keyboard.press('ControlOrMeta+A'); await page.keyboard.type('48'); await paints(page);
         assert.equal(await part(page, id, 'height').locator('input').inputValue(), '24');
         await screenshot(page, zoom ? 'insert-image-320-rtl-zoom' : 'insert-image-320-rtl');
-        const axe = await page.evaluate(id => window.axe.run(document.getElementById(id),
-          { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] } }), id);
-        assert.deepEqual(axe.violations.map(entry => entry.id), []);
+        await assertNoAxeViolations(page, id);
         const targets = ['width', 'height', 'ratio', 'title', 'description', 'apply', 'cancel'];
         const baseline = await host(page, id).evaluate(element => ({ window: [scrollX, scrollY], viewport: element.querySelector('[data-lr-docx-viewport]').scrollTop }));
         for (const name of targets) {

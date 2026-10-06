@@ -7,12 +7,29 @@ import { LINT_SHARD_TOTAL } from './lint-ci-shard.mjs';
 const packageDirectory = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const runner = fileURLToPath(new URL('./lint-ci-shard.mjs', import.meta.url));
 
+/** Streams a lane's output line by line with a `[lint N/3]` prefix. */
+function prefixLines(stream, prefix, write) {
+  let pending = '';
+  stream.setEncoding?.('utf8');
+  stream.on('data', (chunk) => {
+    const lines = (pending + chunk).split('\n');
+    pending = lines.pop();
+    for (const line of lines) write(`${prefix} ${line}\n`);
+  });
+  stream.on('end', () => {
+    if (pending) write(`${prefix} ${pending}\n`);
+    pending = '';
+  });
+}
+
 /** Reuses the complete CI partition; no separate local inventory can omit a check. */
 export async function runParallelLint({
   jobs = process.env.CI_JOBS ?? LINT_SHARD_TOTAL,
   spawn = spawnChild,
   cwd = packageDirectory,
   environment = process.env,
+  prefixOutput = Boolean(environment.CI),
+  write = (text) => process.stdout.write(text),
 } = {}) {
   const requested = Number(jobs);
   if (!Number.isSafeInteger(requested) || requested < 1)
@@ -26,8 +43,13 @@ export async function runParallelLint({
       const shard = next++;
       statuses[shard - 1] = await new Promise((resolveStatus) => {
         const child = spawn(process.execPath, [runner, '--shard', `${shard}/${LINT_SHARD_TOTAL}`], {
-          cwd, env: environment, stdio: 'inherit',
+          cwd, env: environment, stdio: prefixOutput ? ['ignore', 'pipe', 'pipe'] : 'inherit',
         });
+        if (prefixOutput) {
+          for (const stream of [child.stdout, child.stderr]) {
+            if (stream) prefixLines(stream, `[lint ${shard}/${LINT_SHARD_TOTAL}]`, write);
+          }
+        }
         child.once('error', (error) => {
           console.error(`Lint shard ${shard}/${LINT_SHARD_TOTAL}: ${error.message}`);
           resolveStatus(1);
@@ -37,6 +59,9 @@ export async function runParallelLint({
     }
   }
   await Promise.all(Array.from({ length: concurrency }, worker));
+  for (const [index, status] of statuses.entries()) {
+    console.log(`Lint shard ${index + 1}/${LINT_SHARD_TOTAL}: ${status === 0 ? 'passed' : `failed (${status})`}.`);
+  }
   return statuses.find((status) => status !== 0) ?? 0;
 }
 

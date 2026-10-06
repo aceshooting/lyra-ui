@@ -14,6 +14,7 @@ import {
   shardTestFiles,
   shouldRunNativeScrollbarVerification,
 } from './full-engine-shard.mjs';
+import { costsFromTimingReports, readCosts } from './ci-costs.mjs';
 
 test('discovers only src/**/*.test.ts files in lexical order', async () => {
   const fixture = await mkdtemp(join(tmpdir(), 'lyra-full-engine-shard-'));
@@ -199,6 +200,40 @@ test('keeps the expensive package-entrypoint contract from dominating one full-s
   );
   assert.deepEqual([...shards.flat()].sort(), [...files].sort());
   assert.equal(new Set(shards.flat()).size, files.length);
+});
+
+test('balances the live test inventory by measured time across the CI shard counts', async () => {
+  const { costs, fallback } = readCosts('tests');
+  const files = await discoverTestFiles();
+  for (const total of [4, 8]) {
+    const shards = Array.from({ length: total }, (_value, index) => shardTestFiles(files, index + 1, total));
+    assert.deepEqual(shards.flat().sort(), [...files].sort());
+    const loads = shards.map((shard) => shard.reduce((sum, file) => sum + (costs.get(file) ?? fallback), 0));
+    assert.ok(Math.max(...loads) / Math.min(...loads) < 1.05, loads.map(Math.round).join('/'));
+  }
+});
+
+test('derives cost tables from timing lines and reads them fail-closed', async () => {
+  assert.deepEqual(
+    costsFromTimingReports('tests', [
+      `${JSON.stringify({ file: 'src/b.test.ts', deltaMs: 1234 })}\n${JSON.stringify({ file: 'src/a.test.ts', deltaMs: 40 })}`,
+      JSON.stringify({ file: 'src/b.test.ts', deltaMs: 2049 }),
+    ]),
+    { 'src/a.test.ts': 0.1, 'src/b.test.ts': 2 },
+  );
+  assert.deepEqual(costsFromTimingReports('lint', [JSON.stringify({ command: 'pnpm run a', seconds: 12.34 })]), { 'pnpm run a': 12.3 });
+  assert.throws(() => costsFromTimingReports('tests', ['']), /No tests timing records/u);
+  assert.throws(() => costsFromTimingReports('lint', [JSON.stringify({ seconds: 1 })]), /Invalid lint/u);
+  const fixture = await mkdtemp(join(tmpdir(), 'lyra-costs-'));
+  try {
+    const file = join(fixture, 'costs.json');
+    await writeFile(file, JSON.stringify({ a: 1, b: 3, c: 10 }));
+    assert.equal(readCosts('tests', file).fallback, 3);
+    await writeFile(file, JSON.stringify({ a: 0 }));
+    assert.throws(() => readCosts('tests', file), /positive seconds/u);
+  } finally {
+    await rm(fixture, { recursive: true, force: true });
+  }
 });
 
 test('validates environment shard coordinates', () => {

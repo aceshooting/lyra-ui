@@ -1,19 +1,10 @@
 import assert from 'node:assert/strict';
 import { unzipSync } from 'fflate';
-import { mkdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { assertNoAxeViolations, screenshot, toolbarTo, zipParts as parts } from './lib/harness.mjs';
 
-const parts = bytes => Object.fromEntries(Object.entries(unzipSync(Uint8Array.from(bytes)))
-  .sort(([a], [b]) => a.localeCompare(b)).map(([key, value]) => [key, [...value]]));
 const editor = (page, id) => page.locator(`#${id}`);
 const part = (page, id, name) => page.locator(`#${id} [part="${name}"]`);
 const remove = (page, id) => editor(page, id).evaluate(element => element.remove());
-async function screenshot(page, name) {
-  const directory = process.env.DOCX_IMAGE_UI_SCREENSHOTS;
-  if (!directory) return;
-  await mkdir(directory, { recursive: true });
-  await page.screenshot({ path: join(directory, `${page.context().browser().browserType().name()}-${name}.png`) });
-}
 
 async function selectImage(page, id, index = 0) {
   await page.locator(`#${id} .docx-pages img`).nth(index).click();
@@ -24,13 +15,7 @@ async function openDialog(page, id, kind) {
   await part(page, id, `image-${kind}-fields`).waitFor({ state: 'visible' });
 }
 async function keyboardTool(page, id, name, activate = true) {
-  await page.keyboard.press('Alt+F10'); await page.keyboard.press('Home');
-  const forward = await editor(page, id).evaluate(element => element.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight');
-  for (let attempt = 0; attempt < 80; attempt++) {
-    if (await editor(page, id).evaluate(element => element.shadowRoot.activeElement?.getAttribute('part')) === name) break;
-    await page.keyboard.press(forward);
-  }
-  assert.equal(await editor(page, id).evaluate(element => element.shadowRoot.activeElement?.getAttribute('part')), name);
+  await toolbarTo(page, id, name);
   if (activate) await page.keyboard.press('Enter');
 }
 async function state(page, id) {
@@ -517,9 +502,7 @@ export async function runImageTools(page, check, { createEditor, saveEditor, ass
       await part(page, id, 'image-title').locator('input').waitFor({ state: 'visible' });
       assert.equal(await part(page, id, 'image-title').getAttribute('label'), 'Titre de l’image');
       assert.equal(await part(page, id, 'image-description').getAttribute('label'), 'Description de l’image');
-      const axe = await page.evaluate(id => window.axe.run(document.getElementById(id),
-        { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] } }), id);
-      assert.deepEqual(axe.violations.map(entry => entry.id), []);
+      await assertNoAxeViolations(page, id);
       const bounds = await part(page, id, 'image-description-fields').boundingBox();
       assert.ok(bounds.width <= 320, JSON.stringify(bounds));
       if (direction === 'rtl') await screenshot(page, 'image-description-320-rtl');
@@ -537,9 +520,7 @@ export async function runImageTools(page, check, { createEditor, saveEditor, ass
       assert.ok(resizeBounds.width <= 320, JSON.stringify(resizeBounds));
       if (direction === 'rtl') await screenshot(page, 'image-resize-320-rtl');
       assert.equal(await part(page, id, 'image-width').getAttribute('label'), 'Largeur de cette image en points');
-      const resizeAxe = await page.evaluate(id => window.axe.run(document.getElementById(id),
-        { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] } }), id);
-      assert.deepEqual(resizeAxe.violations.map(entry => entry.id), []);
+      await assertNoAxeViolations(page, id);
       await part(page, id, 'image-resize-cancel').click();
       assert.ok((await state(page, id)).image);
     }
@@ -577,9 +558,7 @@ export async function runImageTools(page, check, { createEditor, saveEditor, ass
         assert.ok(allocation.width <= 320 && allocation.left >= 0 && allocation.right <= allocation.viewport, JSON.stringify(allocation));
         assert.ok(allocation.fields.every(field => field.left >= allocation.left - 1 && field.right <= allocation.right + 1), JSON.stringify(allocation));
         await screenshot(page, `image-${kind}-320-rtl-text-zoom`);
-        const axe = await page.evaluate(id => window.axe.run(document.getElementById(id),
-          { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] } }), id);
-        assert.deepEqual(axe.violations.map(entry => entry.id), []);
+        await assertNoAxeViolations(page, id);
         const first = kind === 'resize' ? 'image-width' : 'image-title';
         await page.waitForFunction(({ id, first }) => document.getElementById(id).shadowRoot.activeElement?.getAttribute('part') === first, { id, first });
         await page.keyboard.press('ControlOrMeta+A'); await page.keyboard.type(kind === 'resize' ? '150' : 'Zoom draft');

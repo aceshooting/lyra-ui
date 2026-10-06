@@ -318,7 +318,9 @@ assert.match(
 const currentMetadata = JSON.parse(
   readFileSync(new URL('./fixtures/component-metadata.json', import.meta.url), 'utf8'),
 );
-const generatedIndex = [...build({ write: false })].find(([file]) => file.endsWith('/llms/index.md'))?.[1];
+// One generation serves every artifact assertion below.
+const artifacts = build({ write: false });
+const generatedIndex = [...artifacts].find(([file]) => file.endsWith('/llms/index.md'))?.[1];
 assert.ok(generatedIndex, 'build({ write: false }) must produce llms/index.md');
 assert.equal(
   generatedIndex.includes('\n## Deprecated package exports\n'),
@@ -785,7 +787,6 @@ assert.deepEqual(TYPE_ONLY_DECLARATION_PEERS, {
   vue: '@aceshooting/lyra-ui/vue',
 });
 
-const artifacts = build({ write: false });
 const full = [...artifacts].find(([file]) => file.endsWith('/llms-full.txt'))?.[1];
 const tokens = [...artifacts].find(([file]) => file.endsWith('/llms/tokens.md'))?.[1];
 const peers = [...artifacts].find(([file]) => file.endsWith('/llms/peers.md'))?.[1];
