@@ -2947,6 +2947,18 @@ describe('multi-series screen-reader data table', () => {
     );
   });
 
+  it('names the sampled plot, not a generated list, when a custom data table is slotted', async () => {
+    const labels = Array.from({ length: 1001 }, (_, index) => `C${index}`);
+    const el = await mount(html`<lr-lite-chart
+      type="bar"
+      .strings=${{ chartPlotSampled: 'Sampled plot; the table lists all data.' }}
+      .labels=${labels}
+      .datasets=${[{ label: 'Revenue', data: labels.map((_, index) => index + 1) }]}
+    ><table slot="data-table"><tbody><tr><td>Custom table</td></tr></tbody></table></lr-lite-chart>`);
+
+    expect(el.shadowRoot!.querySelector('[part="data-truncation"]')?.textContent).to.contain('Sampled plot');
+  });
+
   it('keeps an initially sampled chart silent, then announces a later sampling transition', async () => {
     const sampledLabels = Array.from({ length: 1001 }, (_, index) => `C${index}`);
     const sampledDatasets = [{ label: 'Revenue', data: sampledLabels.map((_, index) => index) }];

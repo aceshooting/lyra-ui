@@ -5517,7 +5517,6 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   };
 
   private generatedDataIsSampled(): boolean {
-    if (this.hasCustomDataTable()) return false;
     const sample = this.dataTableSample();
     if (sample.rowCount === 0 || sample.seriesCount === 0) return false;
     return ( sample.rowIndexes.length < sample.rowCount || sample.seriesIndexes.length < sample.seriesCount
@@ -5525,7 +5524,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   private dataTruncationMessage(): string {
-    return this.generatedDataIsSampled() ? this.localize('chartDataSampled') : '';
+    if (!this.generatedDataIsSampled()) return '';
+    return this.hasCustomDataTable() ? this.localize('chartPlotSampled') : this.localize('chartDataSampled');
   }
 
   private renderDataTable(): TemplateResult {

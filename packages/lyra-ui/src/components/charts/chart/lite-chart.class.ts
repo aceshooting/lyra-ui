@@ -1519,14 +1519,14 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   };
 
   private generatedDataIsSampled(): boolean {
-    if (this.hasCustomDataTable()) return false;
     const sample = this.recordSample();
     if (sample.rowCount === 0 || sample.seriesCount === 0) return false;
     return sample.rowIndexes.length < sample.rowCount || sample.seriesIndexes.length < sample.seriesCount;
   }
 
   private dataTruncationMessage(): string {
-    return this.generatedDataIsSampled() ? this.localize('chartDataSampled') : '';
+    if (!this.generatedDataIsSampled()) return '';
+    return this.hasCustomDataTable() ? this.localize('chartPlotSampled') : this.localize('chartDataSampled');
   }
 
   private hasCustomDataTable(): boolean {

@@ -4232,6 +4232,19 @@ it('caps the generated table at 1,000 endpoint-preserving records and announces 
   );
 });
 
+it('names the sampled plot, not a generated table, when a custom data table is slotted', async () => {
+  const labels = Array.from({ length: 1001 }, (_, index) => `C${index}`);
+  const el = (await fixture(html`<lr-chart
+    .strings=${{ chartPlotSampled: 'Sampled plot; the table lists all data.' }}
+  ><table slot="data-table"><tbody><tr><td>Custom table</td></tr></tbody></table></lr-chart>`)) as LyraChart;
+  el.labels = labels;
+  el.datasets = [{ label: 'Revenue', data: labels.map((_, index) => index) }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  expect(el.shadowRoot!.querySelector('[part="data-truncation"]')?.textContent).to.contain('Sampled plot');
+});
+
 it('keeps initial sampling silent and announces only a later transition into sampling', async () => {
   // The preceding integration test proves real high-cardinality data reaches the sampling notice.
   // A controllable predicate isolates its mount-versus-transition announcement lifecycle here.

@@ -519,7 +519,7 @@ deterministically and retain their first and last endpoints; a localized `data-t
 is shown and announced. The sample is evenly spaced, not extreme-preserving: an isolated spike
 between sampled categories is not drawn, so pre-aggregate (for example a minimum and maximum per
 bucket) when every spike must stay visible. Supplying `slot="data-table"` suppresses the generated detailed sample and
-notice, so use that escape hatch when the complete data set needs pagination, virtualization, or
+changes the notice to say only the plot is sampled, so use that escape hatch when the complete data set needs pagination, virtualization, or
 another application-owned presentation. Explicit `config.data` is the deliberate full-fidelity
 Chart.js escape hatch and is not rewritten by the simplified-surface sampler.
 
@@ -997,7 +997,7 @@ blank instead of reporting a misleading zero. Built-in SVG marks, keyboard targe
 alternative share one endpoint-preserving sample of at most 1,000 category×series records. When
 sampling occurs, a localized `data-truncation` notice is shown and announced; provide
 `slot="data-table"` for a complete paginated, virtualized, or application-owned alternative, which
-suppresses the generated sample and notice.
+suppresses the generated sample; the notice then says only the plot is sampled.
 
 **Themeable custom properties:** `--lr-chart-height` (same public host-level property and precedence
 as `lr-chart`; it always wins over the `height` property's private fallback);
@@ -1365,7 +1365,7 @@ accessible table alternative.
 description use at most 1,000 category×series records. When sampling is needed, its category and
 series indexes are deterministic and retain the first and last endpoint; a localized
 `data-truncation` notice is shown and announced. A slotted `data-table` replaces the generated
-detailed sample and notice, making it the escape hatch for complete data.
+detailed sample, and the notice then says only the plot is sampled, making it the escape hatch for complete data.
 
 **CSS parts:** `base`, `plot` (the fixed-height canvas region), `canvas`, `legend`,
 `legend-item`, `legend-item-hidden` (added to a legend item while its box series is hidden),

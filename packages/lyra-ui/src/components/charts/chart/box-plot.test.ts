@@ -947,6 +947,20 @@ it('caps the generated box-plot alternative at 1,000 endpoint-preserving records
   );
 });
 
+it('names the sampled plot, not a generated table, when a custom data table is slotted', async () => {
+  const labels = Array.from({ length: 1001 }, (_, index) => `C${index}`);
+  const points = labels.map((_, index) => ({ min: index, q1: index + 1, median: index + 2, q3: index + 3, max: index + 4 }));
+  const el = (await fixture(html`<lr-box-plot
+    .strings=${{ chartPlotSampled: 'Sampled plot; the table lists all data.' }}
+  ><table slot="data-table"><tbody><tr><td>Custom distributions</td></tr></tbody></table></lr-box-plot>`)) as LyraBoxPlot;
+  el.labels = labels;
+  el.datasets = [{ label: 'Range', data: points }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  expect(el.shadowRoot!.querySelector('[part="data-truncation"]')?.textContent).to.contain('Sampled plot');
+});
+
 it('keeps an initially sampled box plot silent, then announces a later sampling transition', async () => {
   // The preceding integration test proves real high-cardinality data reaches the sampling notice.
   // A controllable predicate isolates its mount-versus-transition announcement lifecycle here.
