@@ -2,7 +2,8 @@
  * Dependency-free ANSI/SGR (`CSI … m`) parser for rendering streamed console/terminal output as
  * styled text segments — shared by any component that needs to turn raw ANSI-colored text into
  * styled segments, rather than re-implementing this per consumer. Handles only SGR color/style
- * codes; every other CSI final byte and every OSC sequence is stripped and never interpreted.
+ * codes; every other escape sequence -- other CSI finals, OSC/DCS/SOS/PM/APC strings, and two- or
+ * three-byte escapes such as `ESC ( B` or `ESC 7` -- is stripped and never interpreted.
  * Cursor/line-buffer control characters (`\r`/`\b`/`\t`/`\n`) are deliberately out of scope here —
  * they are a terminal-emulation concern owned by the consuming component, not this parser.
  */
@@ -114,7 +115,22 @@ function ansi256ToColor(n: number, role: 'fg' | 'bg' = 'fg'): string {
   return named(0);
 }
 
-const CSI_FINAL_BYTE = /[\x40-\x7e]/;
+const CAN = 0x18;
+const SUB = 0x1a;
+
+/** A control sequence's parameter (0x30-0x3F) and intermediate (0x20-0x2F) bytes. */
+function isCsiBody(code: number): boolean {
+  return code >= 0x20 && code <= 0x3f;
+}
+
+function isCsiFinal(code: number): boolean {
+  return code >= 0x40 && code <= 0x7e;
+}
+
+/** ESC P (DCS), ESC X (SOS), ESC ] (OSC), ESC ^ (PM) and ESC _ (APC) open a string ended by ST or BEL. */
+function opensStringSequence(code: number): boolean {
+  return code === 0x50 || code === 0x58 || code === 0x5d || code === 0x5e || code === 0x5f;
+}
 /** ANSI control sequences are small; this generous ceiling prevents a truncated OSC/CSI from
  * retaining and repeatedly rescanning an unbounded streamed suffix, and prevents a terminated
  * sequence from allocating or interpreting an unbounded payload. */
@@ -166,7 +182,7 @@ export function createAnsiParser(): AnsiParser {
   /** Once an incomplete sequence crosses the carry ceiling, retain only its grammar state and
    *  discard through its terminator. A fresh ESC resynchronizes parsing so a later independent
    *  sequence is not swallowed when the hostile sequence never terminates. */
-  let discarding: 'csi' | 'osc' | null = null;
+  let discarding: 'csi' | 'string' | null = null;
 
   function applySgr(params: number[]): void {
     const list = params.length === 0 ? [0] : params;
@@ -223,18 +239,20 @@ export function createAnsiParser(): AnsiParser {
     if (discarding !== null) {
       while (i < input.length) {
         const code = input.charCodeAt(i);
-        if (discarding === 'csi' && code >= 0x40 && code <= 0x7e) {
+        if (discarding === 'csi' && !isCsiBody(code)) {
+          // The final byte (or a CAN/SUB cancel) ends the discarded sequence; any other byte outside
+          // its grammar -- a fresh ESC, a control, text -- abandons it and is parsed afresh.
           discarding = null;
-          i++;
+          if (isCsiFinal(code) || code === CAN || code === SUB) i++;
           break;
         }
-        if (discarding === 'osc' && code === 0x07) {
+        if (discarding === 'string' && code === 0x07) {
           discarding = null;
           i++;
           break;
         }
         if (code === 0x1b) {
-          if (discarding === 'osc' && input[i + 1] === '\\') {
+          if (discarding === 'string' && input[i + 1] === '\\') {
             discarding = null;
             i += 2;
             break;
@@ -257,19 +275,18 @@ export function createAnsiParser(): AnsiParser {
       }
       if (i > textStart) segments.push({ text: input.slice(textStart, i), styles });
 
-      const next = input[i + 1];
-      if (next === undefined) {
-        // ESC is the last byte of this chunk -- whether a '[' or ']' follows isn't knowable
+      if (i + 1 >= input.length) {
+        // ESC is the last byte of this chunk -- which sequence (if any) it starts isn't knowable
         // until the next push(), so buffer it rather than dropping it as an unrecognized
-        // sequence (matches the incomplete-CSI/OSC buffering below).
+        // sequence (matches the incomplete-sequence buffering below).
         carry = input.slice(i);
         return segments;
       }
-      if (next === '[') {
+      const next = input.charCodeAt(i + 1);
+      if (next === 0x5b) {
         let j = i + 2;
         let overlong = false;
-        // safe: input[j] is read only while j < input.length (same && condition)
-        while (j < input.length && !CSI_FINAL_BYTE.test(input[j]!)) {
+        while (j < input.length && isCsiBody(input.charCodeAt(j))) {
           j++;
           if (j - i + 1 > MAX_ANSI_SEQUENCE_LENGTH) overlong = true;
         }
@@ -278,8 +295,17 @@ export function createAnsiParser(): AnsiParser {
           else carry = input.slice(i);
           return segments;
         }
+        const final = input.charCodeAt(j);
+        if (!isCsiFinal(final)) {
+          // A byte outside the control-sequence grammar abandons it (ECMA-48): the partial
+          // sequence is dropped -- with a CAN/SUB cancel -- and a new ESC, a control or text after
+          // it is parsed normally instead of being swallowed up to some later letter.
+          i = final === CAN || final === SUB ? j + 1 : j;
+          textStart = i;
+          continue;
+        }
         overlong ||= j - i + 1 > MAX_ANSI_SEQUENCE_LENGTH;
-        if (!overlong && input[j] === 'm') {
+        if (!overlong && final === 0x6d) {
           const params = parseSgrParameters(input, i + 2, j);
           if (params !== null) applySgr(params);
         }
@@ -290,7 +316,9 @@ export function createAnsiParser(): AnsiParser {
         continue;
       }
 
-      if (next === ']') {
+      if (opensStringSequence(next)) {
+        // OSC, DCS, SOS, PM and APC payloads (titles, sixel or kitty graphics, multiplexer
+        // passthrough) run to BEL or ST (ESC \) and are never interpreted.
         let j = i + 2;
         let terminated = false;
         let overlong = false;
@@ -309,7 +337,7 @@ export function createAnsiParser(): AnsiParser {
           if (j - i > MAX_ANSI_SEQUENCE_LENGTH) overlong = true;
         }
         if (!terminated) {
-          if (overlong || input.length - i > MAX_ANSI_SEQUENCE_LENGTH) discarding = 'osc';
+          if (overlong || input.length - i > MAX_ANSI_SEQUENCE_LENGTH) discarding = 'string';
           else carry = input.slice(i);
           return segments;
         }
@@ -318,8 +346,25 @@ export function createAnsiParser(): AnsiParser {
         continue;
       }
 
-      // An ESC not followed by '[' or ']' isn't a sequence this parser recognizes -- drop just the
-      // ESC byte and resume scanning plain text right after it.
+      if (next >= 0x20 && next <= 0x7e) {
+        // Intermediate bytes (0x20-0x2F) then one final byte (0x30-0x7E): nF escapes such as the
+        // charset selection `ESC ( B` in `tput sgr0`, and two-byte escapes such as `ESC 7`,
+        // `ESC =`, `ESC M`, `ESC c` and a lone ST `ESC \`. All are stripped whole.
+        let j = i + 1;
+        while (j < input.length && input.charCodeAt(j) >= 0x20 && input.charCodeAt(j) <= 0x2f) j++;
+        if (j >= input.length && input.length - i <= MAX_ANSI_SEQUENCE_LENGTH) {
+          carry = input.slice(i);
+          return segments;
+        }
+        const final = j < input.length ? input.charCodeAt(j) : 0;
+        // Without a final byte the intermediates are dropped and the breaking byte parsed afresh.
+        i = final >= 0x30 && final <= 0x7e ? j + 1 : j;
+        textStart = i;
+        continue;
+      }
+
+      // An ESC followed by a control, DEL or non-ASCII character starts no sequence -- drop just
+      // the ESC byte and resume scanning plain text right after it.
       i += 1;
       textStart = i;
     }

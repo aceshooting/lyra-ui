@@ -28,6 +28,19 @@ export function setCustomState(internals: ElementInternals | undefined, name: st
 }
 
 /**
+ * Reads one CSS custom state through the same guards as {@link setCustomState}: an environment
+ * without `ElementInternals`/`CustomStateSet`, or an engine that rejects the name, reads as absent
+ * instead of throwing out of the caller's `render()`/`updated()`.
+ */
+export function hasCustomState(internals: ElementInternals | undefined, name: string): boolean {
+  try {
+    return internals?.states?.has(name) === true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Publishes the six validity custom states — `required`/`optional`, `valid`/`invalid`,
  * `user-valid`/`user-invalid` — so a consumer can style a control's validation state with
  * `lr-thing:state(user-invalid) { … }` without reaching into its shadow root.

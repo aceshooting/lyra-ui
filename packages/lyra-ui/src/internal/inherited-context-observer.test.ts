@@ -298,3 +298,67 @@ it('uses the live inherited baseline after a render is aborted', async () => {
     wrapper.remove();
   }
 });
+
+async function flushObserverDelivery(): Promise<void> {
+  for (let turn = 0; turn < 4; turn++) await Promise.resolve();
+}
+
+it('ignores shadow-root child-list changes that cannot move a slot', async () => {
+  const shell = document.body.appendChild(document.createElement('div'));
+  const root = shell.attachShadow({ mode: 'open' });
+  const container = root.appendChild(document.createElement('div'));
+  const hosts = Array.from({ length: 20 }, () => {
+    const host = document.createElement('div') as unknown as TestHost;
+    host.requestUpdate = () => {};
+    container.append(host);
+    return host;
+  });
+  const stops = hosts.map((host) => observeInheritedContext(host));
+  for (const host of hosts) recordInheritedDirectionRead(host, 'ltr');
+  await flushObserverDelivery();
+  const originalGetComputedStyle = window.getComputedStyle;
+  let directionReads = 0;
+  window.getComputedStyle = ((element: Element, pseudo?: string | null) => {
+    if (hosts.includes(element as unknown as TestHost)) directionReads += 1;
+    return originalGetComputedStyle.call(window, element, pseudo);
+  }) as typeof window.getComputedStyle;
+  try {
+    // A re-rendered list: rows inserted, moved and removed around the hosts, never a slot.
+    for (let row = 0; row < 10; row++) container.append(document.createElement('span'));
+    container.prepend(container.lastElementChild!);
+    container.querySelector('span')!.remove();
+    await flushObserverDelivery();
+  } finally {
+    window.getComputedStyle = originalGetComputedStyle;
+    for (const stop of stops) stop();
+    shell.remove();
+  }
+  expect(directionReads).to.equal(0);
+});
+
+it('re-resolves direction when a removed slot drops its host back to the shadow host', async () => {
+  const shell = document.body.appendChild(document.createElement('div'));
+  shell.style.direction = 'ltr';
+  const root = shell.attachShadow({ mode: 'open' });
+  const wrapper = root.appendChild(document.createElement('div'));
+  wrapper.style.direction = 'rtl';
+  wrapper.append(document.createElement('slot'));
+  const host = document.createElement('div') as unknown as TestHost;
+  let updates = 0;
+  host.requestUpdate = () => {
+    updates += 1;
+  };
+  shell.append(host);
+  const stop = observeInheritedContext(host);
+  try {
+    expect(getComputedStyle(host).direction).to.equal('rtl');
+    recordInheritedDirectionRead(host, 'rtl');
+    await flushObserverDelivery();
+    wrapper.remove();
+    await flushObserverDelivery();
+    expect(updates, 'the unassigned host no longer inherits the slot wrapper direction').to.equal(1);
+  } finally {
+    stop();
+    shell.remove();
+  }
+});

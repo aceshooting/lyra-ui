@@ -45,8 +45,16 @@ export const TEXT_QUOTE_LIMITS: Readonly<TextQuoteLimits> = Object.freeze({
   maxQueryCodeUnits: 4_096,
   maxMatches: 10_000,
   maxSearchWorkCodeUnits: 4_000_000,
-  maxCacheEntries: 64,
+  // At least an exact and a folded entry for every quote of a full paint pass
+  // (TEXT_QUOTE_PAINT_LIMIT), plus room for search queries, so repainting never re-scans.
+  maxCacheEntries: 256,
 });
+
+/** Host-supplied text-quote highlights a viewer resolves and paints in one pass. */
+export const TEXT_QUOTE_PAINT_LIMIT = 100;
+
+/** Occurrence offsets one index may retain across all cached queries (a few full match lists). */
+const MAX_CACHED_MATCHES = 4 * TEXT_QUOTE_LIMITS.maxMatches;
 
 export const TEXT_QUOTE_TRAVERSAL_ALLOWANCE_MAX = 4096;
 
@@ -418,12 +426,51 @@ function normalizeSegment(
   };
 
   if (nfc === inspected) {
-    for (let rawIndex = 0; rawIndex < inspected.length; rawIndex++) {
-      if (!appendUnit(inspected[rawIndex]!, rawIndex)) {
+    // Same rule as appendUnit(), applied per run: text between special runs (lone U+0020 word
+    // spaces included) keeps the identity mapping and is copied natively, so ordinary prose costs
+    // no per-code-unit callback. Only soft hyphens and real whitespace runs are visited.
+    const appendStretch = (start: number, end: number): boolean => {
+      // A lone word space directly after a collapsed space (only possible at a segment start).
+      if (lastWasSpace && start < end && inspected.charCodeAt(start) === 0x20) start++;
+      const take = Math.min(end - start, Math.max(0, maxOutputCodeUnits - normalizedLength));
+      if (take > 0) {
+        const delta = start - normalizedLength;
+        if (delta !== currentDelta) {
+          rawOffsetRuns.push(normalizedLength, start);
+          currentDelta = delta;
+        }
+        chunks.push(inspected.slice(start, start + take));
+        normalizedLength += take;
+        lastWasSpace = inspected.charCodeAt(start + take - 1) === 0x20;
+      }
+      return take === end - start;
+    };
+    const specialRuns = /[\s\u00AD]{2,}|[^\S ]|\u00AD/g;
+    let rawIndex = 0;
+    for (let run = specialRuns.exec(inspected); run; run = specialRuns.exec(inspected)) {
+      if (!appendStretch(rawIndex, run.index)) {
         outputTruncated = true;
         break;
       }
+      rawIndex = specialRuns.lastIndex;
+      let firstSpace = run.index;
+      while (firstSpace < rawIndex && inspected.charCodeAt(firstSpace) === 0xad) firstSpace++;
+      // Soft hyphens alone vanish; whitespace collapses into one space unless one was just emitted.
+      if (firstSpace === rawIndex || lastWasSpace) continue;
+      if (normalizedLength >= maxOutputCodeUnits) {
+        outputTruncated = true;
+        break;
+      }
+      const delta = firstSpace - normalizedLength;
+      if (delta !== currentDelta) {
+        rawOffsetRuns.push(normalizedLength, firstSpace);
+        currentDelta = delta;
+      }
+      chunks.push(' ');
+      normalizedLength++;
+      lastWasSpace = true;
     }
+    if (!outputTruncated && !appendStretch(rawIndex, inspected.length)) outputTruncated = true;
   } else {
     for (const cluster of normalizationClusters(inspected)) {
       const normalizedCluster = cluster.text.normalize('NFC');
@@ -942,7 +989,9 @@ function scanOccurrences(
   maxMatches: number,
   scopeTruncated: boolean,
 ): TextQuoteMatches {
-  const packed = new Uint32Array(maxMatches * 2);
+  // Grown geometrically: most quotes occur a handful of times, and a zero-filled ceiling-sized
+  // buffer per uncached scan cost 80 KB each.
+  let packed = new Uint32Array(Math.min(maxMatches, 32) * 2);
   let count = 0;
   let scanComplete = true;
   let from = 0;
@@ -952,6 +1001,11 @@ function scanOccurrences(
     if (count >= maxMatches) {
       scanComplete = false;
       break;
+    }
+    if (count * 2 === packed.length) {
+      const grown = new Uint32Array(Math.min(maxMatches, count * 2) * 2);
+      grown.set(packed);
+      packed = grown;
     }
     if (foldedHaystack) {
       packed[count * 2] = rawStartForFoldedOffset(foldedHaystack, index);
@@ -1268,6 +1322,7 @@ export interface TextQuoteWorkBudget {
 export class TextQuoteIndex {
   private readonly limits: TextQuoteLimits;
   private readonly occurrenceCache = new Map<string, TextQuoteMatches>();
+  private cachedMatchCount = 0;
   private foldedScope?: FoldedText;
   private _scanCount = 0;
   private _scope: TextQuoteScope;
@@ -1310,9 +1365,11 @@ export class TextQuoteIndex {
     return true;
   }
 
-  private boundedQuery(value: string | undefined): string | null | undefined {
-    if (value === undefined) return undefined;
-    if (value.length > this.limits.maxQueryCodeUnits) return null;
+  /** `undefined` for absent optional text (JSON carries it as `null` as often as omitted), `null`
+   * for an unusable value: not a string, or beyond the query ceiling. */
+  private boundedQuery(value: unknown): string | null | undefined {
+    if (value === undefined || value === null) return undefined;
+    if (typeof value !== 'string' || value.length > this.limits.maxQueryCodeUnits) return null;
     const normalized = normalizeQuoteText(value);
     return normalized.length <= this.limits.maxQueryCodeUnits ? normalized : null;
   }
@@ -1324,13 +1381,21 @@ export class TextQuoteIndex {
     return this.foldedScope;
   }
 
+  /** Least-recently-used: `occurrences()` re-inserts every hit, so iteration order is recency. */
   private cache(key: string, matches: TextQuoteMatches): void {
     if (this.limits.maxCacheEntries === 0) return;
-    if (this.occurrenceCache.size >= this.limits.maxCacheEntries) {
-      const oldest = this.occurrenceCache.keys().next().value as string | undefined;
-      if (oldest !== undefined) this.occurrenceCache.delete(oldest);
+    for (const [oldestKey, oldest] of this.occurrenceCache) {
+      if (
+        this.occurrenceCache.size < this.limits.maxCacheEntries &&
+        this.cachedMatchCount + matches.length <= MAX_CACHED_MATCHES
+      ) {
+        break;
+      }
+      this.occurrenceCache.delete(oldestKey);
+      this.cachedMatchCount -= oldest.length;
     }
     this.occurrenceCache.set(key, matches);
+    this.cachedMatchCount += matches.length;
   }
 
   private occurrences(
@@ -1347,7 +1412,11 @@ export class TextQuoteIndex {
     const haystack = folded?.text ?? this.scope.text;
     const key = `${caseInsensitive ? 'i' : 's'}:${searchableNeedle}`;
     const cached = this.occurrenceCache.get(key);
-    if (cached) return cached;
+    if (cached) {
+      this.occurrenceCache.delete(key);
+      this.occurrenceCache.set(key, cached);
+      return cached;
+    }
     if (searchableNeedle.length === 0) return emptyMatches(!this.scope.truncated, true);
     if (searchableNeedle.length > haystack.length) {
       const result = emptyMatches(!this.scope.truncated, true);
@@ -1378,9 +1447,17 @@ export class TextQuoteIndex {
     anchor: { quote: string; prefix?: string; suffix?: string },
     budget = this.createWorkBudget(),
   ): TextQuoteMatch | null {
-    const quote = this.boundedQuery(anchor.quote);
-    const prefix = this.boundedQuery(anchor.prefix);
-    const suffix = this.boundedQuery(anchor.suffix);
+    // Anchors are caller data (often deserialized JSON, sometimes accessor-backed): one malformed
+    // anchor resolves to nothing rather than throwing out of a whole highlight paint pass.
+    let fields: unknown[];
+    try {
+      fields = [anchor.quote, anchor.prefix, anchor.suffix];
+    } catch {
+      return null;
+    }
+    const quote = this.boundedQuery(fields[0]);
+    const prefix = this.boundedQuery(fields[1]);
+    const suffix = this.boundedQuery(fields[2]);
     if (!quote || prefix === null || suffix === null) return null;
 
     let candidates = this.occurrences(quote, false, budget);

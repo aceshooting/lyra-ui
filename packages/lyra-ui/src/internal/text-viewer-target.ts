@@ -14,6 +14,7 @@ import {
   rangesFromTextQuoteMatches,
   scopeFromElement,
   TEXT_QUOTE_LIMITS,
+  TEXT_QUOTE_PAINT_LIMIT,
   type TextQuoteIndex,
   type TextQuoteMatch,
   type TextQuoteMatches,
@@ -73,7 +74,7 @@ export interface LyraTextViewerTarget extends LyraAnchorTarget {
  *  `matchCountExact=false` makes a capped `matchCount` an explicit lower bound. */
 const SEARCH_PAINT_WINDOW = 200;
 /** Host-supplied text quotes painted at once. The active quote is always retained inside the cap. */
-const HIGHLIGHT_PAINT_LIMIT = 100;
+const HIGHLIGHT_PAINT_LIMIT = TEXT_QUOTE_PAINT_LIMIT;
 
 function boundedFragmentTarget(root: Element, id: string): Element | null {
   if (root.id === id) return root;
@@ -234,7 +235,13 @@ export function TextViewerTarget(
      * search offsets and does not pretend the searchable content changed. */
     private refreshTextScopeAfterMutation(root: Element): boolean {
       const previous = this.textScope;
-      if (!previous) {
+      // Rebuilding preserves search offsets and the occurrence cache across markup-only edits; with
+      // no query and no text-quote highlight nothing uses them, so drop the corpus and let the next
+      // search or paint rebuild it on demand instead of re-normalizing on every content edit.
+      if (
+        !previous ||
+        (!this.searchQuery && !this.highlights.some((highlight) => highlight.anchor.kind === 'text-quote'))
+      ) {
         this.invalidateTextContent();
         return true;
       }

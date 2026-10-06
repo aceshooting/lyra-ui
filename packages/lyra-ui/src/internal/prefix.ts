@@ -96,12 +96,10 @@ function shouldWarn(
 }
 
 /**
- * Idempotently registers a Lyra element. A conflicting constructor remains ignored, but the
- * diagnostic identifies both package versions and passes both constructor references to the
- * console so multi-bundle/version collisions can be inspected without parsing function text.
- */
-/**
- * Binds a registration to an explicit package-build version. Component entries and the supported
+ * Idempotently registers a Lyra element, binding the registration to an explicit package-build
+ * version. A conflicting constructor remains ignored, but the diagnostic identifies both package
+ * versions and passes both constructor references to the console so multi-bundle/version
+ * collisions can be inspected without parsing function text. Component entries and the supported
  * `defineElement()` API never accept caller-authored provenance; they always use the generated
  * package version below.
  *
@@ -121,19 +119,17 @@ export function defineElementForPackageVersion(
     // the registry was populated outside this shared helper; a later conflict must report that
     // existing version as unknown rather than attributing it to whichever copy observed it next.
     if (existing === ctor) return;
-    if (existing !== ctor) {
-      const known = diagnostics.registrations.get(t);
-      const existingPackage = known?.ctor === existing ? known.packageName : LYRA_PACKAGE_NAME;
-      const existingVersion = known?.ctor === existing ? known.version : 'unknown';
-      if (shouldWarn(diagnostics, t, existing, ctor)) {
-        console.warn(
-          `[lr] duplicate registration for "${t}": existing ${existingPackage}@${existingVersion} ` +
-            `${constructorName(existing)}; ignored incoming ${LYRA_PACKAGE_NAME}@${packageVersion} ` +
-            `${constructorName(ctor)}. Existing and incoming constructors follow.`,
-          existing,
-          ctor,
-        );
-      }
+    const known = diagnostics.registrations.get(t);
+    const existingPackage = known?.ctor === existing ? known.packageName : LYRA_PACKAGE_NAME;
+    const existingVersion = known?.ctor === existing ? known.version : 'unknown';
+    if (shouldWarn(diagnostics, t, existing, ctor)) {
+      console.warn(
+        `[lr] duplicate registration for "${t}": existing ${existingPackage}@${existingVersion} ` +
+          `${constructorName(existing)}; ignored incoming ${LYRA_PACKAGE_NAME}@${packageVersion} ` +
+          `${constructorName(ctor)}. Existing and incoming constructors follow.`,
+        existing,
+        ctor,
+      );
     }
     return;
   }

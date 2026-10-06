@@ -420,7 +420,9 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   chartSummarySeparator: '. ',
   chartData: 'Chart data',
   chartDataSampled:
-    'The generated data table shows a sample of up to 1,000 records. Provide a custom data table to access all chart data.',
+    'The chart and its generated data table show a sample of up to 1,000 records. Provide a custom data table to access all chart data.',
+  chartPlotSampled:
+    'The chart shows a sample of up to 1,000 records; the data table lists all data.',
   chartZoomUnavailable:
     'Zoom is unavailable, but the core chart remains available.',
   chartDataLabelsUnavailable:

@@ -430,6 +430,7 @@ export type LyraMessageKey =
   | 'chartSummarySeparator'
   | 'chartData'
   | 'chartDataSampled'
+  | 'chartPlotSampled'
   | 'chartZoomUnavailable'
   | 'chartDataLabelsUnavailable'
   | 'chartStackTotalsUnavailable'

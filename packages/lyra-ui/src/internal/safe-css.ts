@@ -9,6 +9,14 @@ import {
 // below.
 const UNSAFE_CSS_STRUCTURE = /[;{}[\]\\]|\/\*|\*\//;
 const URL_FUNCTION = /url\s*\(/i;
+// Functions that produce an image -- and so a fetch or a paint -- without spelling url(), for
+// example `image-set("https://…" 1x)` inside a var() fallback, which CSS.supports() accepts for any
+// property because var() is only resolved at computed-value time. A caller value never needs them.
+const IMAGE_FUNCTION =
+  /(?:^|[^\w-])(?:-webkit-|-moz-)?(?:image-set|cross-fade|image|element|src|paint|attr)\s*\(/i;
+// A color has no string syntax; a quoted string is only ever an image or attr() argument here.
+const CSS_STRING = /["']/;
+const CSS_PROPERTY_NAME = /^-?[_a-zA-Z][\w-]*$|^--[\w-]+$/;
 const SAFE_SWATCH_COLOR_FALLBACK =
   /^(?:#[0-9a-fA-F]{3,8}|[a-zA-Z]+|(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color|color-mix)\([^;{}]*\)|var\(--[\w-]+(?:\s*,[^;{}]+)?\))$/;
 const SAFE_LENGTH_FALLBACK =
@@ -72,8 +80,26 @@ function propertyAccepts(property: string, value: string, fallback: RegExp): boo
  * first render.
  */
 export function sanitizeCssColor(color: unknown): string | undefined {
-  if (!structurallySafe(color)) return undefined;
+  if (!structurallySafe(color) || CSS_STRING.test(color) || IMAGE_FUNCTION.test(color)) return undefined;
   return propertyAccepts('color', color, SAFE_SWATCH_COLOR_FALLBACK) ? color : undefined;
+}
+
+/**
+ * Returns `value` only when it is safe to apply to the CSS `property` (a kebab-case or custom
+ * property name) from untrusted data: the structural guard of {@link sanitizeCssColor} (no
+ * declaration breakout, brackets, escapes or comments; balanced parentheses and quotes), no `url()`
+ * and no image-producing function -- so the value cannot fetch even through a `var()` fallback --
+ * and, for a standard property, a value the browser parses for it. A custom property accepts any
+ * value that passes the guard. Quoted strings stay allowed (`font-family`, `content`).
+ */
+export function sanitizeCssDeclarationValue(property: string, value: unknown): string | undefined {
+  if (!CSS_PROPERTY_NAME.test(property) || !structurallySafe(value) || IMAGE_FUNCTION.test(value)) {
+    return undefined;
+  }
+  if (property.startsWith('--') || typeof CSS === 'undefined' || typeof CSS.supports !== 'function') {
+    return value;
+  }
+  return CSS.supports(property, value.trim()) ? value : undefined;
 }
 
 /** Returns a CSS length only when it is valid for the named sizing property. */

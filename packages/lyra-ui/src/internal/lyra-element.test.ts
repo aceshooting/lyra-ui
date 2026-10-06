@@ -9,6 +9,7 @@ import {
 } from "./inherited-context-observer.js";
 import { registerLyraLocale } from './localization-runtime.js';
 import { LyraElement } from "./lyra-element.js";
+import type { LyraLocaleStrings } from './localization.js';
 import { tag } from "./prefix.js";
 import '../components/data/heatmap/heatmap.js';
 import '../components/agent-tools/task-list/task-list.js';
@@ -2114,6 +2115,12 @@ class DemoAfterUpdate extends LyraElement {
     this.scheduleAfterUpdate(() => this.ran.push("first"));
     this.scheduleAfterUpdate(() => this.ran.push("second"));
   }
+  scheduleThrowingThenSearch(): void {
+    this.scheduleAfterUpdate(() => {
+      throw new Error("load failed synchronously");
+    });
+    this.scheduleAfterUpdate(() => this.ran.push("search"), "search");
+  }
   override render() {
     return html`<span>after-update</span>`;
   }
@@ -2688,4 +2695,216 @@ it('cannot bypass event snapshots by shadowing the public constructor property',
   source.rows[0]!.value = 'changed';
   expect(event.detail.rows[0].value).to.equal('original');
   expect(Object.isFrozen(event.detail.rows)).to.equal(true);
+});
+
+describe('LyraElement per-instance and per-call work', () => {
+  class CountingLocale extends DemoLocale {
+    renders = 0;
+    override render() {
+      this.renders += 1;
+      return super.render();
+    }
+  }
+  customElements.define(tag('demo-counting-locale'), CountingLocale);
+
+  class StringsParent extends LitElement {
+    static readonly overrides = Object.freeze({ cancel: 'Bound text' });
+    @property({ type: Number }) tick = 0;
+    override render() {
+      return html`<span>${this.tick}</span
+        ><lr-demo-counting-locale .strings=${StringsParent.overrides}></lr-demo-counting-locale>`;
+    }
+  }
+  customElements.define(tag('demo-strings-parent'), StringsParent);
+
+  class DemoDefaults extends LyraElement {
+    protected static override readonly defaultStrings = Object.freeze({
+      'lyra-demo-default': 'Default text',
+      'lyra-demo-plural': Object.freeze({ one: '{count} item', other: '{count} items' }),
+    }) as unknown as Readonly<LyraLocaleStrings>;
+    exposeLocalize(key: string, values?: Record<string, string | number>): string {
+      return this.localize(key, undefined, values);
+    }
+    override render() {
+      return html`<span>${this.localize('lyra-demo-default')}</span>`;
+    }
+  }
+  customElements.define(tag('demo-defaults'), DemoDefaults);
+
+  class DemoSeed extends LyraElement {
+    seedNow(seed: () => void): void {
+      this.seedFirstRenderState(seed);
+    }
+  }
+  customElements.define(tag('demo-seed'), DemoSeed);
+
+  class CountingObserved extends LyraElement {
+    static observedReads = 0;
+    static override get observedAttributes(): string[] {
+      CountingObserved.observedReads += 1;
+      return super.observedAttributes;
+    }
+  }
+  customElements.define(tag('demo-counting-observed'), CountingObserved);
+
+  it('ignores a same-reference strings assignment instead of re-snapshotting and re-rendering', async () => {
+    const el = await fixture<DemoLocale>(`<lr-demo-locale></lr-demo-locale>`);
+    const overrides = { cancel: 'Never mind' };
+    el.strings = overrides;
+    await el.updateComplete;
+    const snapshot = el.strings;
+
+    el.strings = overrides;
+    expect(el.strings === snapshot, 'the source object is unchanged').to.equal(true);
+    expect(el.isUpdatePending).to.equal(false);
+    el.strings = snapshot;
+    expect(el.isUpdatePending).to.equal(false);
+
+    el.strings = { cancel: 'Changed' };
+    expect(el.isUpdatePending).to.equal(true);
+    await el.updateComplete;
+    expect(el.shadowRoot?.textContent?.trim()).to.equal('Changed');
+  });
+
+  it('does not re-render a child whose bound strings object a parent re-commits on every render', async () => {
+    const parent = await fixture<StringsParent>(html`<lr-demo-strings-parent></lr-demo-strings-parent>`);
+    const child = parent.shadowRoot!.querySelector(tag('demo-counting-locale')) as CountingLocale;
+    await child.updateComplete;
+    expect(child.shadowRoot?.textContent?.trim()).to.equal('Bound text');
+    const renders = child.renders;
+    for (let tick = 1; tick <= 3; tick++) {
+      parent.tick = tick;
+      await parent.updateComplete;
+      await child.updateComplete;
+    }
+    expect(child.renders - renders).to.equal(0);
+  });
+
+  it('shares one immutable empty strings snapshot across elements that never set strings', async () => {
+    const first = await fixture<DemoLocale>(`<lr-demo-locale></lr-demo-locale>`);
+    const second = await fixture<DemoLocale>(`<lr-demo-locale></lr-demo-locale>`);
+    expect(first.strings === second.strings).to.equal(true);
+    expect(Object.isFrozen(first.strings)).to.equal(true);
+    expect(Object.keys(first.strings)).to.deep.equal([]);
+  });
+
+  it('resolves class default strings without re-reading or re-snapshotting them on every call', async () => {
+    const el = await fixture<DemoDefaults>(html`<lr-demo-defaults></lr-demo-defaults>`);
+    el.exposeLocalize('lyra-demo-default');
+    el.exposeLocalize('lyra-demo-plural', { count: 2 });
+    const getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
+    const freeze = Object.freeze;
+    const results: string[] = [];
+    let descriptorReads = 0;
+    let freezes = 0;
+    Object.getOwnPropertyDescriptor = ((target: object, key: PropertyKey) => {
+      descriptorReads += 1;
+      return getOwnPropertyDescriptor(target, key);
+    }) as typeof Object.getOwnPropertyDescriptor;
+    Object.freeze = (<T>(value: T): Readonly<T> => {
+      freezes += 1;
+      return freeze(value);
+    }) as typeof Object.freeze;
+    try {
+      for (let call = 0; call < 50; call++) {
+        results.push(el.exposeLocalize('lyra-demo-default'), el.exposeLocalize('lyra-demo-plural', { count: 2 }));
+      }
+    } finally {
+      Object.getOwnPropertyDescriptor = getOwnPropertyDescriptor;
+      Object.freeze = freeze;
+    }
+    expect(new Set(results)).to.deep.equal(new Set(['Default text', '2 items']));
+    expect({ descriptorReads, freezes }).to.deep.equal({ descriptorReads: 0, freezes: 0 });
+  });
+
+  it('forwards the new value a standard-decorator accessor passes to requestUpdate()', async () => {
+    const el = await fixture<DemoLocale>(`<lr-demo-locale></lr-demo-locale>`);
+    await el.updateComplete;
+    const request = el.requestUpdate as (
+      name?: PropertyKey,
+      oldValue?: unknown,
+      options?: object,
+      useNewValue?: boolean,
+      newValue?: unknown,
+    ) => void;
+    // A TC39 `@state() accessor #items` stores its value privately, so `this[name]` stays
+    // undefined and only the forwarded new value can tell Lit a change happened.
+    request.call(el, 'privateAccessorBacked', undefined, undefined, true, ['value']);
+    expect(el.isUpdatePending).to.equal(true);
+    await el.updateComplete;
+  });
+
+  it('runs every keyed after-update callback even when an earlier one throws, then reports the error', async () => {
+    const el = (await fixture(html`<lr-demo-after-update></lr-demo-after-update>`)) as DemoAfterUpdate;
+    await el.updateComplete;
+    el.ran = [];
+    const originalQueueMicrotask = globalThis.queueMicrotask;
+    let drain: (() => void) | undefined;
+    globalThis.queueMicrotask = (callback: VoidFunction) => {
+      drain = callback;
+    };
+    try {
+      el.scheduleThrowingThenSearch();
+    } finally {
+      globalThis.queueMicrotask = originalQueueMicrotask;
+    }
+    expect(drain).to.be.a('function');
+    expect(() => drain!()).to.throw('load failed synchronously');
+    expect(el.ran).to.deep.equal(['search']);
+  });
+
+  it('resolves the event-detail snapshot policy once per class instead of on every emit()', async () => {
+    const el = await fixture<Demo>('<lr-demo-base></lr-demo-base>');
+    const emit = (el as unknown as { emit(name: string, detail: unknown): CustomEvent }).emit.bind(el);
+    emit('lr-snapshot', { rows: [] });
+    const getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
+    let constructorReads = 0;
+    Object.getOwnPropertyDescriptor = ((target: object, key: PropertyKey) => {
+      if (key === 'constructor') constructorReads += 1;
+      return getOwnPropertyDescriptor(target, key);
+    }) as typeof Object.getOwnPropertyDescriptor;
+    try {
+      for (let index = 0; index < 20; index++) emit('lr-plain', undefined);
+    } finally {
+      Object.getOwnPropertyDescriptor = getOwnPropertyDescriptor;
+    }
+    expect(constructorReads).to.equal(0);
+  });
+
+  it('does not recompute observed attribute names on every dev-mode connect', async () => {
+    const lit = globalThis as { litIssuedWarnings?: Set<string> };
+    const previous = lit.litIssuedWarnings;
+    lit.litIssuedWarnings = new Set();
+    const el = document.createElement(tag('demo-counting-observed')) as CountingObserved;
+    el.setAttribute('data-probe', '');
+    try {
+      document.body.append(el);
+      await el.updateComplete;
+      const reads = CountingObserved.observedReads;
+      for (let cycle = 0; cycle < 5; cycle++) {
+        el.remove();
+        document.body.append(el);
+      }
+      expect(CountingObserved.observedReads - reads).to.equal(0);
+    } finally {
+      el.remove();
+      if (previous) lit.litIssuedWarnings = previous;
+      else delete lit.litIssuedWarnings;
+    }
+  });
+
+  it('never runs a first-render seed during server rendering', () => {
+    const el = document.createElement(tag('demo-seed')) as DemoSeed;
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'Node')!;
+    let seeded = false;
+    Reflect.deleteProperty(globalThis, 'Node');
+    try {
+      el.seedNow(() => {
+        seeded = true;
+      });
+    } finally {
+      Object.defineProperty(globalThis, 'Node', descriptor);
+    }
+    expect(seeded).to.equal(false);
+  });
 });

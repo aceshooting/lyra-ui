@@ -54,3 +54,22 @@ it('stays silent when Lit development diagnostics are unavailable', async () => 
     else runtime.litIssuedWarnings = originalIssuedWarnings;
   }
 });
+
+it('warns once when the resolved module has no parse capability', async () => {
+  const originalWarn = console.warn;
+  const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+  const originalIssuedWarnings = runtime.litIssuedWarnings;
+  const calls: unknown[][] = [];
+  console.warn = (...args: unknown[]) => calls.push(args);
+  runtime.litIssuedWarnings = new Set();
+  try {
+    expect(await loadPapaParse(() => Promise.resolve({ default: { unparse: () => '' } }))).to.equal(null);
+    expect(calls.flat().map(String)).to.deep.equal([
+      'A lyra-ui component could not load its optional papaparse peer.',
+    ]);
+  } finally {
+    console.warn = originalWarn;
+    if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+    else runtime.litIssuedWarnings = originalIssuedWarnings;
+  }
+});

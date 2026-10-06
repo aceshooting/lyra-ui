@@ -106,3 +106,36 @@ it('evicts the least recently used entry once a kind exceeds its bound', () => {
   const kept = getNumberFormat('ja-JP', { minimumIntegerDigits: 16 });
   expect(kept === getNumberFormat('ja-JP', { minimumIntegerDigits: 16 })).to.be.true;
 });
+
+it('serves a repeated lookup with equal options without re-serializing the options bag', () => {
+  getNumberFormat('en', { maximumFractionDigits: 2, minimumFractionDigits: 1 });
+  const stringify = JSON.stringify;
+  let serializations = 0;
+  JSON.stringify = ((...args: Parameters<typeof JSON.stringify>) => {
+    serializations += 1;
+    return stringify(...args);
+  }) as typeof JSON.stringify;
+  const formatters = new Set<Intl.NumberFormat>();
+  try {
+    // A per-row template loop: a fresh, equal options literal on every call.
+    for (let row = 0; row < 200; row++) {
+      formatters.add(getNumberFormat('en', { maximumFractionDigits: 2, minimumFractionDigits: 1 }));
+    }
+  } finally {
+    JSON.stringify = stringify;
+  }
+  expect(formatters.size).to.equal(1);
+  expect(serializations).to.equal(0);
+});
+
+it('never serves a stale formatter for a reused options object mutated between lookups', () => {
+  const options: Intl.NumberFormatOptions = { maximumFractionDigits: 0 };
+  expect(getNumberFormat('en', options).format(1.25)).to.equal('1');
+  options.maximumFractionDigits = 2;
+  expect(getNumberFormat('en', options).format(1.25)).to.equal('1.25');
+  options.minimumFractionDigits = 3;
+  options.maximumFractionDigits = 3;
+  expect(getNumberFormat('en', options).format(1.25)).to.equal('1.250');
+  expect(getNumberFormat('de', options).format(1.25)).to.equal('1,250');
+  expect(getNumberFormat('de').format(1.25)).to.equal('1,25');
+});

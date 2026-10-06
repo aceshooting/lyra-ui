@@ -302,9 +302,65 @@ describe('createAnsiParser', () => {
     expect(segments.map((segment) => segment.text).join('')).to.equal('visible');
   });
 
-  it('drops only an unrecognized ESC byte and preserves the following plain text', () => {
-    const segments = createAnsiParser().push('before\x1bXafter');
+  it('drops only an ESC that does not start a sequence and preserves the following text', () => {
+    const text = (input: string) =>
+      createAnsiParser().push(input).map((segment) => segment.text).join('');
 
-    expect(segments.map((segment) => segment.text).join('')).to.equal('beforeXafter');
+    expect(text('before\x1b\u00e9after')).to.equal('before\u00e9after');
+    expect(text('a\x1b\nb')).to.equal('a\nb');
+    expect(text('a\x1b\x1b[31mb')).to.equal('ab');
+  });
+
+  it('strips the tput sgr0 charset reset (ESC ( B) and other three-byte nF escapes', () => {
+    const segments = createAnsiParser().push('\x1b[31merror\x1b(B\x1b[m done\x1b)0\x1b%G!');
+
+    expect(segments.map((segment) => segment.text).join('')).to.equal('error done!');
+    expect(segments[0]!.styles.fg).to.equal('var(--lr-terminal-color-red)');
+    expect(segments[1]!.styles.fg).to.equal(undefined);
+  });
+
+  it('strips two-byte Fp, Fe and Fs escapes such as save/restore cursor and keypad modes', () => {
+    const segments = createAnsiParser().push('a\x1b7b\x1b8c\x1b=d\x1b>e\x1bcf\x1bMg\x1b\\h');
+
+    expect(segments.map((segment) => segment.text).join('')).to.equal('abcdefgh');
+  });
+
+  it('strips DCS, SOS, PM and APC string payloads through ST or BEL', () => {
+    const segments = createAnsiParser().push(
+      'a\x1bPq#0;2;0;0;0#0~~\x1b\\b\x1bXsos text\x1b\\c\x1b^privacy\x07d\x1b_Ga=T,f=100;AAAA\x1b\\e',
+    );
+
+    expect(segments.map((segment) => segment.text).join('')).to.equal('abcde');
+  });
+
+  it('buffers a string payload split across push() calls and discards an overlong one', () => {
+    const parser = createAnsiParser();
+    expect(parser.push('a\x1b_Gpart').map((segment) => segment.text).join('')).to.equal('a');
+    expect(parser.push('ial\x1b\\b').map((segment) => segment.text).join('')).to.equal('b');
+
+    expect(parser.push(`\x1bP${'x'.repeat(5_000)}`)).to.deep.equal([]);
+    expect(parser.push('still payload\x1b\\visible').map((segment) => segment.text).join('')).to.equal('visible');
+  });
+
+  it('buffers an nF escape whose final byte arrives in the next chunk', () => {
+    const parser = createAnsiParser();
+    expect(parser.push('x\x1b(').map((segment) => segment.text).join('')).to.equal('x');
+    expect(parser.push('By').map((segment) => segment.text).join('')).to.equal('y');
+  });
+
+  it('abandons a CSI interrupted by a new escape instead of swallowing it', () => {
+    const segments = createAnsiParser().push('\x1b[31\x1b[32mgreen');
+
+    expect(segments.map((segment) => segment.text).join('')).to.equal('green');
+    expect(segments[0]!.styles.fg).to.equal('var(--lr-terminal-color-green)');
+  });
+
+  it('abandons a malformed CSI at a control or non-ASCII byte without swallowing the following text', () => {
+    const text = (input: string) =>
+      createAnsiParser().push(input).map((segment) => segment.text).join('');
+
+    expect(text('\x1b[31\nnext')).to.equal('\nnext');
+    expect(text('\x1b[1\u00e9clair')).to.equal('\u00e9clair');
+    expect(text('a\x1b[1\x18b')).to.equal('ab');
   });
 });

@@ -438,6 +438,23 @@ describe('resolveLyraString dev-mode locale-fallback warning', () => {
     expect(messages).to.have.length(0);
   });
 
+  it('ships the fallback diagnostic only in the development entry; production carries a no-op', async () => {
+    const production = (await import('./dev-warning.production.js')) as Record<string, unknown>;
+    const development = (await import('./dev-warning.development.js')) as Record<string, unknown>;
+    const productionWarn = production['warnLocaleFallback'] as ((locale: string, key: string) => void) | undefined;
+    const developmentWarn = development['warnLocaleFallback'] as ((locale: string, key: string) => void) | undefined;
+    expect(typeof productionWarn).to.equal('function');
+    expect(typeof developmentWarn).to.equal('function');
+    expect(warningsWhile(true, () => productionWarn!('fr', 'x-split-key'))).to.have.length(0);
+    const messages = warningsWhile(true, () => {
+      developmentWarn!('fr', 'x-split-key');
+      developmentWarn!('fr', 'x-split-key');
+      developmentWarn!('en-GB', 'x-split-key');
+    });
+    expect(messages).to.have.length(1);
+    expect(messages[0]).to.contain('x-split-key');
+  });
+
   it('never warns once an override, fallback, or registered message already resolved the key', () => {
     const registeredHost = localeHost('x-locale-fallback-warn-registered');
     registerLyraLocale('x-locale-fallback-warn-registered', { cancel: 'Annuler' });

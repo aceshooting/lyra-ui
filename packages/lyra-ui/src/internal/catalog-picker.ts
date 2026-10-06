@@ -1,4 +1,6 @@
 import { maxCssTime } from './css-motion-time.js';
+import { getOwnDataDescriptor } from './data-descriptors.js';
+import { CATALOG_ROW_LIMIT } from './selection-catalog.js';
 import { AnchoredPopoverController } from './anchored-popover-controller.js';
 import { deferredPlace } from './anchored-overlay-runtime.js';
 import { resolveIntlLocale } from './intl-cache.js';
@@ -34,13 +36,49 @@ export type LyraCatalog<T extends LyraCatalogEntry = LyraCatalogEntry> =
 
 export type DisplayCatalogEntry<T extends LyraCatalogEntry> = T & { synthetic: boolean };
 
+const TYPE_AHEAD_RESET_MS = 500;
+const normalizedCatalogs = new WeakMap<object, readonly LyraCatalogEntry[]>();
+
+function ownDataValue(target: object, key: PropertyKey): unknown {
+  const descriptor = getOwnDataDescriptor(target, key);
+  return typeof descriptor === 'symbol' ? undefined : descriptor.value;
+}
+
+/**
+ * The same boundary the international selectors use (`snapshotSelectionCatalog()`): at most
+ * {@link CATALOG_ROW_LIMIT} source rows, read only through own data properties so a caller
+ * accessor is never evaluated. Rows keep their caller (owned, frozen) record. A frozen catalog —
+ * every owned-collection snapshot — is normalized once and its rows are shared.
+ */
 export function normalizeCatalog<T extends LyraCatalogEntry>(catalog: LyraCatalog<T> | undefined): T[] {
+  let frozen: boolean;
+  try {
+    if (!Array.isArray(catalog)) return [];
+    frozen = Object.isFrozen(catalog);
+  } catch {
+    return [];
+  }
+  const known = frozen ? normalizedCatalogs.get(catalog) : undefined;
+  if (known) return known as T[];
   const normalized: T[] = [];
   const seen = new Set<string>();
-  for (const entry of catalog ?? []) {
-    const record = typeof entry === 'string' ? ({ id: entry, label: entry } as T) : entry;
-    const id = record?.id;
-    const label = record?.label;
+  const length = ownDataValue(catalog, 'length');
+  const count = typeof length === 'number' ? Math.min(length, CATALOG_ROW_LIMIT) : 0;
+  for (let index = 0; index < count; index += 1) {
+    const entry = ownDataValue(catalog, String(index));
+    let record: T;
+    let id: unknown;
+    let label: unknown;
+    if (typeof entry === 'string') {
+      record = { id: entry, label: entry } as T;
+      id = label = entry;
+    } else if (entry !== null && typeof entry === 'object') {
+      record = entry as T;
+      id = ownDataValue(entry, 'id');
+      label = ownDataValue(entry, 'label');
+    } else {
+      continue;
+    }
     if (
       typeof id !== 'string' ||
       id.trim() === '' ||
@@ -51,6 +89,7 @@ export function normalizeCatalog<T extends LyraCatalogEntry>(catalog: LyraCatalo
     seen.add(id);
     normalized.push(record);
   }
+  if (frozen) normalizedCatalogs.set(catalog, Object.freeze(normalized));
   return normalized;
 }
 
@@ -188,6 +227,10 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
   private listboxHideWatcher?: () => void;
 
   suppressControlEvents = false;
+  // Closed-mode type-ahead, matching <lr-select>: printable keystrokes accumulate and the buffer
+  // resets after a quiet window.
+  private typeAheadBuffer = '';
+  private typeAheadReset?: { readonly view: Window; readonly handle: number };
 
   constructor(
     private readonly host: CatalogPickerHost,
@@ -200,8 +243,34 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
     );
   }
 
+  // Hosts snapshot `catalog` on assignment, so its identity changes exactly when its rows can.
+  // Rows, display rows, lowercased search keys and filter results are therefore derived once per
+  // (catalog, value, locale, query) instead of on every getter read during a render or keystroke.
+  private normalizedMemo?: { readonly source: LyraCatalog<T> | undefined; readonly rows: T[] };
+  private effectiveMemo?: {
+    readonly rows: T[];
+    readonly value: string;
+    readonly entries: DisplayCatalogEntry<T>[];
+  };
+  private searchKeysMemo?: {
+    readonly entries: DisplayCatalogEntry<T>[];
+    readonly locale: string;
+    readonly keys: readonly (readonly string[])[];
+  };
+  private filteredMemo?: {
+    readonly entries: DisplayCatalogEntry<T>[];
+    readonly query: string;
+    readonly locale: string;
+    readonly result: DisplayCatalogEntry<T>[];
+  };
+
   get normalizedCatalog(): T[] {
-    return normalizeCatalog<T>(this.options.catalog());
+    const source = this.options.catalog();
+    const memo = this.normalizedMemo;
+    if (memo && memo.source === source) return memo.rows;
+    const rows = normalizeCatalog<T>(source);
+    this.normalizedMemo = { source, rows };
+    return rows;
   }
 
   get closedMode(): boolean {
@@ -213,16 +282,45 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
   }
 
   get effectiveEntries(): DisplayCatalogEntry<T>[] {
-    return withSyntheticCatalogValue(this.normalizedCatalog, this._value);
+    const rows = this.normalizedCatalog;
+    const memo = this.effectiveMemo;
+    if (memo && memo.rows === rows && memo.value === this._value) return memo.entries;
+    const entries = withSyntheticCatalogValue(rows, this._value);
+    this.effectiveMemo = { rows, value: this._value, entries };
+    return entries;
   }
 
   get filteredEntries(): DisplayCatalogEntry<T>[] {
-    return filterCatalogEntries(
-      this.effectiveEntries,
-      this._query,
-      this.options.locale(),
-      this.options.searchableFields,
-    );
+    const entries = this.effectiveEntries;
+    const query = this._query;
+    const locale = this.options.locale();
+    const memo = this.filteredMemo;
+    if (memo && memo.entries === entries && memo.query === query && memo.locale === locale) {
+      return memo.result;
+    }
+    // Same rule as filterCatalogEntries(), over search keys lowercased once per row and locale.
+    const intlLocale = resolveIntlLocale(locale);
+    const needle = query.trim().toLocaleLowerCase(intlLocale);
+    let result: DisplayCatalogEntry<T>[];
+    if (!needle) {
+      result = [...entries];
+    } else {
+      let keys = this.searchKeysMemo;
+      if (!keys || keys.entries !== entries || keys.locale !== intlLocale) {
+        keys = {
+          entries,
+          locale: intlLocale,
+          keys: entries.map((entry) =>
+            this.options.searchableFields(entry).map((value) => value.toLocaleLowerCase(intlLocale)),
+          ),
+        };
+        this.searchKeysMemo = keys;
+      }
+      const rowKeys = keys.keys;
+      result = entries.filter((_, index) => rowKeys[index]!.some((value) => value.includes(needle)));
+    }
+    this.filteredMemo = { entries, query, locale, result };
+    return result;
   }
 
   get visibleEntries(): DisplayCatalogEntry<T>[] {
@@ -468,7 +566,48 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
     if (rebaseQuery) this.setQuery(this.labelFor(this._value));
   }
 
+  /**
+   * Type-ahead on the closed-catalog trigger, like `<lr-select>` and a native `<select>`: the next
+   * enabled row (after the active row while open, after the committed row while closed, wrapping)
+   * whose label starts with the typed text becomes active while open and is committed while closed.
+   * Space joins a search already in progress; otherwise it keeps its activation meaning.
+   */
+  private typeAhead(event: KeyboardEvent): boolean {
+    const { key } = event;
+    if (key.length !== 1 || event.altKey || event.ctrlKey || event.metaKey) return false;
+    if (key === ' ' && this.typeAheadBuffer === '') return false;
+    if (key === ' ') event.preventDefault();
+    const locale = resolveIntlLocale(this.options.locale());
+    this.typeAheadBuffer += key.toLocaleLowerCase(locale);
+    if (this.typeAheadReset) this.typeAheadReset.view.clearTimeout(this.typeAheadReset.handle);
+    this.typeAheadReset = undefined;
+    const view = this.host.ownerDocument?.defaultView;
+    if (view) {
+      const handle = view.setTimeout(() => {
+        this.typeAheadBuffer = '';
+        this.typeAheadReset = undefined;
+      }, TYPE_AHEAD_RESET_MS);
+      this.typeAheadReset = { view, handle };
+    }
+    const buffer = this.typeAheadBuffer;
+    if (!view) this.typeAheadBuffer = '';
+    const rows = this.effectiveEntries;
+    const current = this._open
+      ? this._activeIndex
+      : rows.findIndex((entry) => entry.id === this._value);
+    for (let step = 1; step <= rows.length; step += 1) {
+      const index = (current + step + rows.length) % rows.length;
+      const row = rows[index]!;
+      if (row.disabled === true || !row.label.toLocaleLowerCase(locale).startsWith(buffer)) continue;
+      if (this._open) this.setActiveIndex(index);
+      else this.selectEntry(row);
+      break;
+    }
+    return true;
+  }
+
   handleTriggerKeyDown(event: KeyboardEvent): void {
+    if (this.typeAhead(event)) return;
     const rows = this.effectiveEntries;
     switch (event.key) {
       case 'ArrowDown':

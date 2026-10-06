@@ -1,3 +1,5 @@
+import { devWarnOnce } from './dev-warning.js';
+
 /**
  * The sanitizer capability Lyra consumes from DOMPurify.
  *
@@ -39,4 +41,64 @@ export function isHtmlSanitizer(value: unknown): value is HtmlSanitizer {
     'sanitize' in value &&
     typeof value.sanitize === 'function'
   );
+}
+
+export interface OptionalPeerLoaderOptions<Capability> {
+  /** Imports the peer, normally a literal dynamic `import()` so bundlers can split it. */
+  readonly load: () => Promise<unknown>;
+  /** Validates the capability Lyra calls, on the namespace before its default export. */
+  readonly isCapability: (candidate: unknown) => candidate is Capability;
+  /** Dev-mode dedupe key for {@link OptionalPeerLoaderOptions.warning}. */
+  readonly warningKey: string;
+  /** Fixed development diagnostic; importer errors are never included (they can carry paths). */
+  readonly warning: string;
+}
+
+export interface OptionalPeerLoader<Capability> {
+  /** Imports through `importer` (default: the configured `load`) and resolves the capability. */
+  loadWith(importer?: () => Promise<unknown>): Promise<Capability | null>;
+  /** One shared load for every caller. Only an in-flight or successful load is kept: a failed
+   * import or an unusable module resolves `null` and the next call tries again. */
+  get(): Promise<Capability | null>;
+  /** Forgets the shared load. */
+  clear(): void;
+}
+
+/**
+ * The one cached-import template every optional-peer loader repeats: dynamic import, capability
+ * validation on either module shape, a dev-gated warning (once per key) for an import failure or a
+ * wrong-shape module, and a shared cache that never keeps a failure for the page lifetime.
+ */
+export function createOptionalPeerLoader<Capability>(
+  options: OptionalPeerLoaderOptions<Capability>,
+): OptionalPeerLoader<Capability> {
+  let shared: Promise<Capability | null> | undefined;
+  const loadWith = async (importer = options.load): Promise<Capability | null> => {
+    let module: unknown;
+    try {
+      module = await importer();
+    } catch {
+      devWarnOnce(options.warningKey, options.warning);
+      return null;
+    }
+    const capability = resolveOptionalPeerCapability(module, options.isCapability);
+    if (capability === null) devWarnOnce(options.warningKey, options.warning);
+    return capability;
+  };
+  return {
+    loadWith,
+    get() {
+      if (!shared) {
+        const pending = loadWith();
+        shared = pending;
+        void pending.then((capability) => {
+          if (capability === null && shared === pending) shared = undefined;
+        });
+      }
+      return shared;
+    },
+    clear() {
+      shared = undefined;
+    },
+  };
 }

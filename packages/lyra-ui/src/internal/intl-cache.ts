@@ -89,6 +89,9 @@ function getCached<T>(cache: Map<string, T>, key: string, create: () => T): T {
   return created;
 }
 
+/** Per formatter kind: the previous lookup's `[locale, key, value, ...]` entries and its result. */
+const lastLookups = new Map<object, [readonly unknown[], unknown]>();
+
 function getFormatter<T>(
   locale: string | undefined,
   options: object | undefined,
@@ -96,7 +99,23 @@ function getFormatter<T>(
   create: (safeLocale: string) => T,
 ): T {
   const safeLocale = resolveIntlLocale(locale);
-  return getCached(cache, cacheKey(safeLocale, options), () => create(safeLocale));
+  // Per-row template loops repeat one lookup with a fresh but equal options literal. Comparing
+  // its entries with the previous lookup's (by content, so a reused options object mutated in
+  // between is still re-resolved) skips the sorted serialization and the LRU refresh; that entry
+  // is already the most recently used one of its kind.
+  const entries: unknown[] = [safeLocale];
+  for (const key in options) entries.push(key, (options as Record<string, unknown>)[key]);
+  const last = lastLookups.get(cache);
+  if (
+    last &&
+    last[0].length === entries.length &&
+    last[0].every((entry, index) => Object.is(entry, entries[index]))
+  ) {
+    return last[1] as T;
+  }
+  const value = getCached(cache, cacheKey(safeLocale, options), () => create(safeLocale));
+  lastLookups.set(cache, [entries, value]);
+  return value;
 }
 
 /**

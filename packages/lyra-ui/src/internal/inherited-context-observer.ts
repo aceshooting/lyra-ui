@@ -5,6 +5,12 @@ import {
   resolveLyraDirection,
   resolveLyraLocale,
 } from './localization-runtime.js';
+import {
+  assignedSlotOf,
+  domParentElement,
+  flattenedParentElement,
+  ownerView,
+} from './composed-tree.js';
 
 const INHERITED_CONTEXT_ATTRIBUTES = [
   'locale',
@@ -92,56 +98,23 @@ const hostSubscriptions = new WeakMap<Element, InheritedContextSubscription>();
 const pendingSubscriptions = new Set<InheritedContextSubscription>();
 let flushQueued = false;
 
-function shadowHost(root: Node): Element | null {
-  const candidate = (root as { nodeType?: number; host?: unknown }).host;
-  return root.nodeType === 11 &&
-    candidate !== null &&
-    typeof candidate === 'object' &&
-    typeof (candidate as Element).getAttribute === 'function'
-    ? (candidate as Element)
-    : null;
-}
-
-function assignedSlot(element: Element): Element | null {
-  const candidate = (element as { assignedSlot?: unknown }).assignedSlot;
-  return candidate !== null &&
-    typeof candidate === 'object' &&
-    typeof (candidate as Element).getAttribute === 'function'
-    ? (candidate as Element)
-    : null;
-}
-
-function localeParentElement(element: Element): Element | null {
-  return element.parentElement ?? shadowHost(element.getRootNode());
-}
-
-/**
- * CSS inheritance follows the flattened tree: an exposed assigned slot precedes the light-DOM
- * parent. Closed roots intentionally hide `assignedSlot` from their light children, so code
- * outside such a root cannot observe slot-local styling; descendants physically inside either an
- * open or closed root still use the ordinary shadow-host path below.
- */
-function directionParentElement(element: Element): Element | null {
+function containsSlot(node: Node): boolean {
   return (
-    assignedSlot(element) ??
-    element.parentElement ??
-    shadowHost(element.getRootNode())
+    node.nodeType === 1 &&
+    ((node as Element).localName === 'slot' ||
+      (typeof (node as Element).querySelector === 'function' &&
+        (node as Element).querySelector('slot') !== null))
   );
+}
+
+function someNode(nodes: NodeList, predicate: (node: Node) => boolean): boolean {
+  for (let index = 0; index < nodes.length; index += 1) if (predicate(nodes[index]!)) return true;
+  return false;
 }
 
 function observationTarget(root: Node): Node | null {
   if (root.nodeType === 9) return (root as Document).documentElement;
   return root.nodeType === 11 ? root : null;
-}
-
-function ownerView(
-  host: Element
-): (Window & typeof globalThis) | null | undefined {
-  try {
-    return host.ownerDocument.defaultView;
-  } catch {
-    return undefined;
-  }
 }
 
 function queueSubscription(
@@ -198,11 +171,15 @@ function createRootObservation(
   let slotchange: EventListener | undefined;
   try {
     observer = new Observer((records) => {
+      let flattenedTreeMoved = false;
       for (const record of records) {
         if (record.type === 'childList') {
-          for (const subscription of [...directionSubscriptions]) {
-            queueSubscription(subscription, false, true, true);
-          }
+          // Only a slot can change a host's flattened ancestry without reconnecting it, and a
+          // removed slot's own slotchange fires outside this root. Ordinary template commits
+          // (rows inserted, moved, removed) re-derive nothing.
+          flattenedTreeMoved ||=
+            someNode(record.addedNodes, containsSlot) ||
+            someNode(record.removedNodes, containsSlot);
           continue;
         }
         if (
@@ -236,6 +213,12 @@ function createRootObservation(
           ) ?? []) {
             queueSubscription(subscription, false, true, flattenedTreeChanged);
           }
+        }
+      }
+      // Once per callback, not once per record.
+      if (flattenedTreeMoved) {
+        for (const subscription of [...directionSubscriptions]) {
+          queueSubscription(subscription, false, true, true);
         }
       }
     });
@@ -312,19 +295,19 @@ function groupedAncestors(
     }
   };
   if (kind === 'locale') {
-    addChain(localeParentElement(host), localeParentElement);
+    addChain(domParentElement(host), domParentElement);
   } else {
-    addChain(directionParentElement(host), directionParentElement);
+    addChain(flattenedParentElement(host), flattenedParentElement);
     // `:lang()` matching for a slotted host follows its DOM language ancestry, even though CSS
     // property inheritance follows its assigned slot. Observe both paths so a light-parent lang
     // change cannot leave a direction declaration selected by `:lang()` stale.
-    addChain(localeParentElement(host), localeParentElement);
+    addChain(domParentElement(host), domParentElement);
   }
 
   // An unassigned light child cannot yet expose its eventual slot in the flattened-parent walk.
   // When the parent has an open root, share one root-level slotchange listener so later slot
   // insertion/name changes can rebind it. Closed roots deliberately expose no equivalent handle.
-  if (kind === 'direction' && !assignedSlot(host)) {
+  if (kind === 'direction' && !assignedSlotOf(host)) {
     const prospectiveSlotRoot = openShadowRoot(host.parentElement);
     if (prospectiveSlotRoot && !byRoot.has(prospectiveSlotRoot))
       byRoot.set(prospectiveSlotRoot, []);
@@ -522,6 +505,23 @@ function bind(
   return true;
 }
 
+function sameBindings(
+  previous: readonly RootBinding[],
+  next: readonly RootBinding[]
+): boolean {
+  return (
+    previous.length === next.length &&
+    previous.every((binding, index) => {
+      const other = next[index]!;
+      return (
+        binding.observation === other.observation &&
+        binding.ancestors.length === other.ancestors.length &&
+        binding.ancestors.every((ancestor, position) => ancestor === other.ancestors[position])
+      );
+    })
+  );
+}
+
 function rebind(
   subscription: InheritedContextSubscription,
   kind: InheritedContextKind
@@ -530,6 +530,12 @@ function rebind(
   const next = acquireRootBindings(subscription.host, kind);
   if (!next) return false;
   const previous = currentBindings(subscription, kind);
+  if (sameBindings(previous, next)) {
+    // Unchanged ancestry (the common case after an unrelated slot change): keep the attached
+    // maps and just return the root references the probe acquired.
+    releaseUnattachedBindings(next);
+    return true;
+  }
   detachBindings(subscription, kind, previous);
   releaseUnattachedBindings(previous);
   attachBindings(subscription, kind, next);

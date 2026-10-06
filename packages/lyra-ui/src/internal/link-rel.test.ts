@@ -53,10 +53,14 @@ describe('resolveGuardedRel', () => {
     expect(resolveGuardedRel('noopener noopener', '_blank')).to.equal('noopener noreferrer');
   });
 
-  it('splits on any whitespace, including tab, newline, and a no-break space', () => {
+  it('splits tokens on ASCII whitespace only, exactly as the browser reads rel', () => {
     expect(resolveGuardedRel('me\tnofollow', '')).to.equal('me nofollow');
-    expect(resolveGuardedRel('me\nnofollow\r\nlicense', '')).to.equal('me nofollow license');
-    expect(resolveGuardedRel('me nofollow', '')).to.equal('me nofollow');
-    expect(resolveGuardedRel(' opener ', '_blank')).to.equal('noopener noreferrer');
+    expect(resolveGuardedRel('me\nnofollow\r\nlicense\fhelp', '')).to.equal('me nofollow license help');
+    // A no-break space is token content to the platform, not a separator: one unknown token.
+    expect(resolveGuardedRel('me\u00A0nofollow', '')).to.equal('me\u00A0nofollow');
+    expect(resolveGuardedRel('\u00A0opener\u00A0', '_blank')).to.equal(
+      '\u00A0opener\u00A0 noopener noreferrer',
+    );
+    expect(resolveGuardedRel(' opener ', '_blank')).to.equal('noopener noreferrer');
   });
 });

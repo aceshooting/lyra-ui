@@ -1,5 +1,6 @@
 import { canonicalizeLocaleTag } from './locale-tag.js';
-import { devWarnOnce } from './dev-mode-attribute-warning.js';
+import { warnLocaleFallback } from './dev-warning.js';
+import { domParentElement, flattenedParentElement, ownerView } from './composed-tree.js';
 import { getPluralRules } from './intl-cache.js';
 import type {
   LyraLocaleDirection,
@@ -64,7 +65,15 @@ let activeLocale = '';
 let catalogRevision = 0;
 
 const localeIdentityCache = new Map<string, LocaleIdentity>();
+const EMPTY_LOCALE_IDENTITY: LocaleIdentity = Object.freeze({
+  publicTag: '',
+  lookupKey: '',
+  wellFormed: false,
+  candidateBounded: true,
+  storable: false,
+});
 const localeCandidateCache = new Map<string, readonly string[]>();
+const ENGLISH_ONLY_CANDIDATES: readonly string[] = Object.freeze(['en']);
 
 function cacheBounded<K, V>(cache: Map<K, V>, key: K, value: V): void {
   if (cache.size >= MAX_LOCALE_CACHE_ENTRIES) cache.clear();
@@ -91,22 +100,23 @@ function subtagCountWithinBounds(tag: string): boolean {
  * resolve to English and are never retained by registration/active-locale storage APIs.
  */
 function localeIdentity(locale: string): LocaleIdentity {
+  // Hot path: most lookups repeat an already-seen spelling, so probe before normalizing.
+  const known =
+    typeof locale === 'string' && locale.length <= MAX_CACHEABLE_LOCALE_LENGTH
+      ? localeIdentityCache.get(locale)
+      : undefined;
+  if (known) return known;
   const normalized =
     typeof locale === 'string' ? locale.trim().replace(/_/g, '-') : '';
-  if (!normalized) {
-    return {
-      publicTag: '',
-      lookupKey: '',
-      wellFormed: false,
-      candidateBounded: true,
-      storable: false,
-    };
-  }
+  if (!normalized) return EMPTY_LOCALE_IDENTITY;
   const cached =
     normalized.length <= MAX_CACHEABLE_LOCALE_LENGTH
       ? localeIdentityCache.get(normalized)
       : undefined;
-  if (cached) return cached;
+  if (cached) {
+    rememberLocaleSpelling(locale, normalized, cached);
+    return cached;
+  }
 
   let publicTag = normalized.toLowerCase();
   let wellFormed = false;
@@ -132,7 +142,15 @@ function localeIdentity(locale: string): LocaleIdentity {
   if (normalized.length <= MAX_CACHEABLE_LOCALE_LENGTH) {
     cacheBounded(localeIdentityCache, normalized, identity);
   }
+  rememberLocaleSpelling(locale, normalized, identity);
   return identity;
+}
+
+/** Caches an unnormalized spelling (`' fr_FR '`) too, so its next lookup skips normalization. */
+function rememberLocaleSpelling(locale: string, normalized: string, identity: LocaleIdentity): void {
+  if (locale !== normalized && locale.length <= MAX_CACHEABLE_LOCALE_LENGTH) {
+    cacheBounded(localeIdentityCache, locale, identity);
+  }
 }
 
 function storedLocaleIdentity(
@@ -255,15 +273,15 @@ function isPrefixOf(key: string, requestedKey: string): boolean {
  * Chinese (`zh-CN`, `zh-TW`) catalogs are regional-only and reachable from `pt`/`zh` only through
  * the fallback half.
  */
-function localeCandidates(locale: string): string[] {
+function localeCandidates(locale: string): readonly string[] {
   const identity = localeIdentity(locale);
   const normalized = identity.lookupKey;
-  if (!normalized) return ['en'];
+  if (!normalized) return ENGLISH_ONLY_CANDIDATES;
   const cached =
     normalized.length <= MAX_CACHEABLE_LOCALE_LENGTH
       ? localeCandidateCache.get(normalized)
       : undefined;
-  if (cached) return [...cached];
+  if (cached) return cached;
 
   const candidates: string[] = [];
   if (identity.wellFormed || identity.candidateBounded)
@@ -303,7 +321,7 @@ function localeCandidates(locale: string): string[] {
   if (normalized.length <= MAX_CACHEABLE_LOCALE_LENGTH) {
     cacheBounded(localeCandidateCache, normalized, frozen);
   }
-  return [...frozen];
+  return frozen;
 }
 
 /**
@@ -504,6 +522,46 @@ export function snapshotLyraLocaleStrings(strings: unknown): LyraLocaleStrings {
   return snapshotCatalog(strings) as LyraLocaleStrings;
 }
 
+let emptyLocaleStrings: LyraLocaleStrings | undefined;
+
+/**
+ * The one immutable empty `.strings` snapshot every element starts from; sharing it is safe because
+ * it is frozen, and it spares each instance its own allocation and trusted-record entry.
+ *
+ * @internal
+ */
+export function emptyLyraLocaleStrings(): LyraLocaleStrings {
+  return (emptyLocaleStrings ??= snapshotLyraLocaleStrings({}));
+}
+
+const trustedDefaultCatalogs = new WeakMap<object, Readonly<LyraLocaleStrings>>();
+
+/**
+ * A component class's `static readonly defaultStrings` never changes, so it is snapshotted (and so
+ * trusted) once: each `localize()` then reads it directly instead of re-reading property
+ * descriptors and re-freezing plural records on every lookup. A record larger than the snapshot
+ * bound keeps the exact per-key reads.
+ *
+ * @internal Used by LyraElement for class defaults only; caller-owned defaults stay live.
+ */
+export function trustedLyraDefaultStrings(
+  defaults: Readonly<LyraLocaleStrings>
+): Readonly<LyraLocaleStrings> {
+  const known = trustedDefaultCatalogs.get(defaults);
+  if (known) return known;
+  let trusted = defaults;
+  if (isPlainRecord(defaults) && !trustedMessageRecords.has(defaults)) {
+    try {
+      if (Reflect.ownKeys(defaults).length <= MAX_CATALOG_MESSAGES)
+        trusted = snapshotCatalog(defaults) as Readonly<LyraLocaleStrings>;
+    } catch {
+      // A hostile record keeps the per-key reads, which contain their own failures.
+    }
+  }
+  trustedDefaultCatalogs.set(defaults, trusted);
+  return trusted;
+}
+
 function safeMessageAt(source: unknown, key: string): LyraMessage | undefined {
   if (!isPlainRecord(source)) return undefined;
   if (trustedMessageRecords.has(source)) {
@@ -541,16 +599,6 @@ function deliverLocaleListeners(
 
 function localeUsesCatalog(locale: string, lookupKey: string): boolean {
   return localeCandidates(locale).includes(lookupKey);
-}
-
-function ownerView(
-  host: Element
-): (Window & typeof globalThis) | null | undefined {
-  try {
-    return host.ownerDocument.defaultView;
-  } catch {
-    return undefined;
-  }
 }
 
 /** Remembers that a connected Lyra host's owner was once backed by a browsing context. */
@@ -868,32 +916,6 @@ export function subscribeLyraLocaleForHost(host: HostLocaleTarget): () => void {
   return () => forgetHostLocaleSubscription(subscription);
 }
 
-function composedParentElement(element: Element): Element | null {
-  if (element.parentElement) return element.parentElement;
-  const root = element.getRootNode();
-  // `instanceof ShadowRoot` is realm-bound: a target adopted into an iframe has a shadow root
-  // whose constructor is not the outer window's constructor. The host-bearing document-fragment
-  // shape is the cross-realm platform contract we actually need.
-  const candidate = (root as { nodeType?: number; host?: unknown }).host;
-  return root.nodeType === 11 &&
-    candidate !== null &&
-    typeof candidate === 'object' &&
-    typeof (candidate as Element).getAttribute === 'function'
-    ? (candidate as Element)
-    : null;
-}
-
-function flattenedParentElement(element: Element): Element | null {
-  const slot = (element as { assignedSlot?: unknown }).assignedSlot;
-  if (
-    slot !== null &&
-    typeof slot === 'object' &&
-    typeof (slot as Element).getAttribute === 'function'
-  )
-    return slot as Element;
-  return composedParentElement(element);
-}
-
 /**
  * The locale a component host inherits, resolved in this order:
  *
@@ -930,7 +952,7 @@ function inheritedLocale(host: Element, localeAttribute = host.getAttribute('loc
   if (explicit) return canonicalizeLyraLocale(explicit);
   if (host.getAttribute('lang') === '') return activeLocale || 'en';
   const documentElement = host.ownerDocument?.documentElement;
-  let parent = composedParentElement(host);
+  let parent = domParentElement(host);
   while (parent) {
     const isDocumentElement = parent === documentElement;
     const locale = isDocumentElement
@@ -938,7 +960,7 @@ function inheritedLocale(host: Element, localeAttribute = host.getAttribute('loc
       : parent.getAttribute('locale') || parent.getAttribute('lang');
     if (locale) return canonicalizeLyraLocale(locale);
     if (!isDocumentElement && parent.getAttribute('lang') === '') return activeLocale || 'en';
-    parent = composedParentElement(parent);
+    parent = domParentElement(parent);
   }
   if (activeLocale) return activeLocale;
   const documentLocale = documentElement?.getAttribute('lang');
@@ -1158,30 +1180,6 @@ function selectPluralMessage(
   return message.other;
 }
 
-/** Whether `locale`'s base subtag is English -- resolving `'en'`/`'en-GB'`/... never falling
- *  through to a registered catalog is the ordinary, expected path and must not warn. */
-function isEnglishLocale(locale: string): boolean {
-  const lower = locale.toLowerCase();
-  return lower === 'en' || lower.startsWith('en-');
-}
-
-/**
- * Dev-mode-only, once per (locale, key): warns when resolution found no override, no fallback, and
- * no registered catalog message for a NON-English resolved locale, so it is about to silently fall
- * through to the caller-supplied English `defaults` (or the bare key). Production-silent and gated
- * on Lit's own dev-mode signal, exactly like {@link devWarnOnce}'s other callers -- an English
- * locale never warns, since falling through to `defaults` is simply how English itself resolves.
- */
-function warnLocaleFallback(locale: string, key: string): void {
-  if (isEnglishLocale(locale)) return;
-  devWarnOnce(
-    `lyra-locale-fallback:${locale}:${key}`,
-    `Lyra localization: no "${key}" message registered for locale "${locale}"; falling back to ` +
-      'the English default. Register it with registerLyraLocale(), or accept the fallback ' +
-      'intentionally for a still-partial catalog.'
-  );
-}
-
 /**
  * Resolve a message for a component. An explicit per-component override wins,
  * followed by a non-empty component property fallback, registered locale
@@ -1192,9 +1190,9 @@ function warnLocaleFallback(locale: string, key: string): void {
  * `Intl.PluralRules` before interpolation, so the return type stays `string`
  * and every caller's contract is untouched.
  *
- * In dev mode (see {@link devWarnOnce}), a non-English resolved locale that reaches this point with
- * no registered catalog message warns once per (locale, key) via {@link warnLocaleFallback} --
- * production and non-dev-mode builds stay silent.
+ * In dev mode, a non-English resolved locale that reaches this point with no registered catalog
+ * message warns once per (locale, key) via `warnLocaleFallback()` -- production and non-dev-mode
+ * builds stay silent and ship neither the message nor its construction.
  */
 export function resolveLyraString(
   host: Element,

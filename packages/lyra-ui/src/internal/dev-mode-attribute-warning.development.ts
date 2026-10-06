@@ -127,6 +127,19 @@ function closestObservedAttribute(
   return bestDistance <= SUGGESTION_MAX_DISTANCE ? best : undefined;
 }
 
+const attributeNamesByClass = new WeakMap<object, { observed: readonly string[]; all: ReadonlySet<string> }>();
+
+function attributeNamesFor(ctor: object): { observed: readonly string[]; all: ReadonlySet<string> } {
+  let names = attributeNamesByClass.get(ctor);
+  if (!names) {
+    const observed = (ctor as { observedAttributes?: readonly string[] }).observedAttributes ?? [];
+    const known = (ctor as Partial<KnownUnobservedAttributeHost>).knownUnobservedAttributes ?? [];
+    names = { observed, all: new Set([...observed, ...known]) };
+    attributeNamesByClass.set(ctor, names);
+  }
+  return names;
+}
+
 /**
  * Dev-mode-only: warns once per (tag, attribute-name) when `host` carries an attribute that
  * isn't in `observedAttributes`, isn't in `knownUnobservedAttributes`, and isn't in the
@@ -151,18 +164,34 @@ function closestObservedAttribute(
  */
 export function warnUnknownAttributes(
   host: Element,
-  observedAttributes: readonly string[] = (host.constructor as { observedAttributes?: readonly string[] }).observedAttributes ?? [],
-  knownUnobservedAttributes: readonly string[] = (host.constructor as Partial<KnownUnobservedAttributeHost>).knownUnobservedAttributes ?? []
+  observedAttributes?: readonly string[],
+  knownUnobservedAttributes?: readonly string[]
 ): void {
   const warnings = litDevWarnings();
   if (!warnings) return;
-  const observedSet = new Set([...observedAttributes, ...knownUnobservedAttributes]);
-  for (const name of host.getAttributeNames()) {
+  const names = host.getAttributeNames();
+  if (names.length === 0) return;
+  let observed: readonly string[];
+  let observedSet: ReadonlySet<string>;
+  if (observedAttributes === undefined && knownUnobservedAttributes === undefined) {
+    // A class's observed and known attribute names are fixed once it is defined; resolve them
+    // once per class instead of re-running the `observedAttributes` getter on every connect.
+    const classNames = attributeNamesFor(host.constructor);
+    observed = classNames.observed;
+    observedSet = classNames.all;
+  } else {
+    observed = observedAttributes ?? (host.constructor as { observedAttributes?: readonly string[] }).observedAttributes ?? [];
+    observedSet = new Set([
+      ...observed,
+      ...(knownUnobservedAttributes ?? (host.constructor as Partial<KnownUnobservedAttributeHost>).knownUnobservedAttributes ?? []),
+    ]);
+  }
+  for (const name of names) {
     if (observedSet.has(name) || isExemptAttribute(name)) continue;
     const key = `lyra-unknown-attribute:${host.localName}:${name}`;
     if (warnings.has(key)) continue;
     warnings.add(key);
-    const suggestion = closestObservedAttribute(name, observedAttributes);
+    const suggestion = closestObservedAttribute(name, observed);
     console.warn(
       suggestion
         ? `<${host.localName}>: unknown attribute '${name}' — did you mean '${suggestion}'?`

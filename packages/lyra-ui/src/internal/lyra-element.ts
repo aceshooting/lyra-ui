@@ -2,7 +2,6 @@ import {
   LitElement,
   type CSSResultGroup,
   type CSSResultOrNative,
-  type PropertyDeclaration,
   type PropertyValues,
   type ReactiveController,
 } from 'lit';
@@ -72,6 +71,7 @@ import {
   recordInheritedLocaleRead,
 } from './inherited-context-observer.js';
 import {
+  emptyLyraLocaleStrings,
   enableLyraLocaleCache,
   invalidateLyraLocaleCache,
   lyraLocaleCatalogVersion,
@@ -83,6 +83,7 @@ import {
   resolveLyraLocale,
   snapshotLyraLocaleStrings,
   subscribeLyraLocaleForHost,
+  trustedLyraDefaultStrings,
 } from './localization-runtime.js';
 import type { LyraLocaleStrings } from './localization.js';
 import { trackInputModality } from './focus-modality.js';
@@ -93,18 +94,29 @@ export interface LyraCollectionSupport {
   snapshotEvent(host: LyraElement<any>, name: string, detail: unknown): unknown;
 }
 
-/** Read policy from real prototype constructors; an own `constructor` value is caller data. */
+const collectionSupportByPrototype = new WeakMap<object, LyraCollectionSupport | null>();
+
+/** Read policy from real prototype constructors; an own `constructor` value is caller data. The
+ * answer belongs to the instance's class, so it is resolved once per prototype, not per `emit()`. */
 function collectionSupportFor(host: object): LyraCollectionSupport | undefined {
-  let prototype: object | null = Object.getPrototypeOf(host);
-  while (prototype && prototype !== LitElement.prototype) {
+  const start: object | null = Object.getPrototypeOf(host);
+  if (!start) return undefined;
+  const known = collectionSupportByPrototype.get(start);
+  if (known !== undefined) return known ?? undefined;
+  let found: LyraCollectionSupport | null = null;
+  for (let prototype: object | null = start; prototype && prototype !== LitElement.prototype;) {
     const constructor = Object.getOwnPropertyDescriptor(prototype, 'constructor')?.value as unknown;
     if (typeof constructor === 'function') {
       const support = (constructor as { collectionSupport?: LyraCollectionSupport }).collectionSupport;
-      if (support) return support;
+      if (support) {
+        found = support;
+        break;
+      }
     }
     prototype = Object.getPrototypeOf(prototype);
   }
-  return undefined;
+  collectionSupportByPrototype.set(start, found);
+  return found ?? undefined;
 }
 
 export interface LyraEmitOptions {
@@ -306,7 +318,9 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   /** Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used. */
   @property({ reflect: true }) locale = '';
 
-  private stringsValue: LyraLocaleStrings = snapshotLyraLocaleStrings({});
+  private stringsValue: LyraLocaleStrings = emptyLyraLocaleStrings();
+  /** The object last assigned to `strings`, so a same-reference rebind is recognized. */
+  private stringsSource?: unknown;
 
   /**
    * Immutable, bounded per-instance message overrides, useful for application-specific wording.
@@ -318,7 +332,11 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     return this.stringsValue;
   }
   set strings(value: LyraLocaleStrings) {
+    // A declarative `.strings=${overrides}` binding re-commits the same object on every parent
+    // render; re-snapshotting it would turn each of those into a full update of this element.
+    if (value === this.stringsSource || value === this.stringsValue) return;
     const previous = this.stringsValue;
+    this.stringsSource = value;
     this.stringsValue = snapshotLyraLocaleStrings(value);
     this.requestUpdate('strings', previous);
   }
@@ -326,6 +344,8 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   private stopLocaleSubscription?: () => void;
   private localeSubscriptionNeeded = false;
   private lastLocalizedCatalogVersion?: string;
+  /** Locale of the last `localize()`; its catalog version is captured when it can next matter. */
+  private lastLocalizedLocale?: string;
   private pendingLoadController?: AbortController;
   /** Callbacks scheduled during the current update cycle, keyed so that two callers with
    *  *different* purposes each keep a slot. A single boolean here meant the second caller in a
@@ -409,11 +429,9 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     // Read before `super`, which creates the render root: on the very first connect a shadow root
     // can only already exist because the parser built it from server-rendered declarative markup,
     // which is exactly when the first browser render has to reproduce that markup rather than
-    // whatever the browser alone can see. The SSR generation pass itself (no `Node` global at all)
-    // needs the same deferral for the same reason -- it can't see real light DOM/motion-preference
-    // answers either, and must produce markup a later browser update can reproduce unchanged.
-    this.hydratingServerShadow ??=
-      typeof Node === 'undefined' || (!this.hasUpdated && this.shadowRoot !== null);
+    // whatever the browser alone can see. The SSR generation pass itself never seeds at all (see
+    // SEED_FIRST_RENDER_STATE): the server renderer does not even call connectedCallback.
+    this.hydratingServerShadow ??= !this.hasUpdated && this.shadowRoot !== null;
     super.connectedCallback();
     warnUnknownAttributes(this);
     recordLyraOwnerDocumentConnection(this);
@@ -444,6 +462,10 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   override disconnectedCallback(): void {
     this.pendingLoadController?.abort();
     this.pendingLoadController = undefined;
+    // While connected the locale subscription re-renders on catalog changes; from here on only a
+    // reconnect can notice one, against the catalogs this element last rendered with.
+    if (this.lastLocalizedLocale !== undefined)
+      this.lastLocalizedCatalogVersion = lyraLocaleCatalogVersion(this.lastLocalizedLocale);
     this.stopLocaleSubscription?.();
     this.stopLocaleSubscription = undefined;
     this.stopInheritedContextObservation?.();
@@ -485,8 +507,8 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   protected override firstUpdated(changedProperties: PropertyValues): void {
     super.firstUpdated(changedProperties);
     if (typeof Node === 'undefined') return; // pure SSR string generation: no browser focus concept
-    if (hasOwnAutofocusAccessor(this)) return;
     if (!this.autofocus) return;
+    if (hasOwnAutofocusAccessor(this)) return;
     if (this.focus === HTMLElement.prototype.focus) return; // no component-owned forwarding target
     // Deferred exactly like `<lr-otp-input>`'s own identical block: focusing synchronously here
     // relays the native `focus` event and changes reactive `focused` state, which Lit correctly
@@ -502,14 +524,12 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
    * most once per update cycle no matter how many times a template loop calls
    * `localize()`/`effectiveLocale`/`effectiveDirection`.
    */
-  override requestUpdate(
-    name?: PropertyKey,
-    oldValue?: unknown,
-    options?: PropertyDeclaration
-  ): void {
+  override requestUpdate(...args: Parameters<LitElement['requestUpdate']>): void {
     invalidateLyraLocaleCache(this);
-    super.requestUpdate(name, oldValue, options);
-    syncDeprecatedAlias(this as unknown as Parameters<typeof syncDeprecatedAlias>[0], name, oldValue);
+    // Forward every argument: standard (TC39) decorators pass `useNewValue`/`newValue` because a
+    // private `accessor` cannot be read back through `this[name]`.
+    super.requestUpdate(...args);
+    syncDeprecatedAlias(this as unknown as Parameters<typeof syncDeprecatedAlias>[0], args[0], args[1]);
   }
 
   protected override performUpdate(): void {
@@ -588,6 +608,9 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
 
   /** @internal */
   [SEED_FIRST_RENDER_STATE](seed: () => void): void {
+    // Server rendering (no `Node`) can answer none of these browser-only reads, and its first
+    // render must be the markup the hydrating browser reproduces before it seeds.
+    if (typeof Node === 'undefined') return;
     if (!this.hydratingServerShadow) {
       seed();
       return;
@@ -675,7 +698,19 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
       this.afterUpdateCallbacks = undefined;
       if (!due) return;
       if (this.isConnected) {
-        for (const due_callback of due.values()) due_callback();
+        // One failing callback must not drop the others: the keyed slots exist precisely so that
+        // unrelated work (a load, a locale-driven search refresh, autofocus) all runs.
+        const errors: unknown[] = [];
+        for (const due_callback of due.values()) {
+          try {
+            due_callback();
+          } catch (error) {
+            errors.push(error);
+          }
+        }
+        if (errors.length === 1) throw errors[0];
+        if (errors.length > 1)
+          throw new AggregateError(errors, `${errors.length} after-update callbacks failed.`);
         return;
       }
       const held = (this.deferredAfterUpdate ??= new Map());
@@ -698,12 +733,15 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
       this.strings,
       fallback,
       values,
-      (this.constructor as typeof LyraElement).defaultStrings
+      trustedLyraDefaultStrings((this.constructor as typeof LyraElement).defaultStrings)
     );
     const locale = effectiveLocale ?? peekLyraLocale(this);
-    recordInheritedLocaleRead(this, locale);
+    // effectiveMessageLocale already recorded an inherited (non-overridden) locale it resolved.
+    if (effectiveLocale === undefined || this.locale) recordInheritedLocaleRead(this, locale);
     if (locale !== undefined) {
-      this.lastLocalizedCatalogVersion = lyraLocaleCatalogVersion(locale);
+      this.lastLocalizedLocale = locale;
+      // A detached update has no subscription to rely on, so capture its catalogs right away.
+      if (!this.isConnected) this.lastLocalizedCatalogVersion = lyraLocaleCatalogVersion(locale);
       this.ensureLocaleSubscription();
     }
     return message;

@@ -69,9 +69,10 @@ function attributeName(ctor: AliasConstructor, property: string): string {
  * value `undefined` before the first update) or a write made by this sync never warns.
  */
 export function syncDeprecatedAlias(host: AliasHost, name: PropertyKey | undefined, oldValue: unknown): void {
-  if (typeof name !== 'string' || syncing.has(host)) return;
+  if (typeof name !== 'string') return;
   const ctor = host.constructor as AliasConstructor;
-  if (!ctor.deprecatedAliases) return;
+  // Nearly every class declares no aliases: test that before touching the shared WeakSet.
+  if (!ctor.deprecatedAliases || syncing.has(host)) return;
   const links = linksFor(ctor);
   const own = links.get(name);
   const value = host[name];

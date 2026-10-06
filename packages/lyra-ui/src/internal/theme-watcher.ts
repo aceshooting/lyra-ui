@@ -5,6 +5,8 @@ export type LyraThemeRoot = Document | ShadowRoot | Element;
 
 type BrowserRealm = Window & typeof globalThis;
 type ThemeSubscriber = (mutationSubject?: unknown) => void;
+type ObservedRoot = Document | ShadowRoot;
+type MatchMedia = (query: string) => MediaQueryList;
 
 interface RealmPatch {
   target: object;
@@ -27,6 +29,18 @@ const fallbackHubs = new WeakMap<object, SharedThemeHub>();
 const ELEMENT_NODE = 1;
 const DOCUMENT_NODE = 9;
 const DOCUMENT_FRAGMENT_NODE = 11;
+const BASE_MEDIA_QUERIES = [
+  '(prefers-color-scheme: dark)',
+  '(prefers-contrast: more)',
+  '(forced-colors: active)',
+];
+const OBSERVED_MUTATIONS: MutationObserverInit = {
+  attributes: true,
+  attributeFilter: [...THEME_ATTRIBUTES, 'media', 'href', 'rel', 'disabled'],
+  childList: true,
+  characterData: true,
+  subtree: true,
+};
 
 function realmFor(root?: LyraThemeRoot): BrowserRealm | undefined {
   const fallbackDocument = typeof document === 'undefined' ? undefined : document;
@@ -247,37 +261,40 @@ function containsStyleCarrier(node: Node): boolean {
   return node.nodeType === ELEMENT_NODE && Boolean((node as Element).querySelector('style, link'));
 }
 
-function isComposedAncestor(candidate: Element, descendant: Element): boolean {
-  let current: Element | null = descendant;
-  const seen = new Set<Element>();
-  while (current) {
-    if (seen.has(current)) return false;
-    seen.add(current);
-    if (current === candidate) return true;
-    current = flattenedThemeParent(current);
-  }
+function containsSlot(node: Node): boolean {
+  return node.nodeType === ELEMENT_NODE &&
+    ((node as Element).localName === 'slot' || Boolean((node as Element).querySelector('slot')));
+}
+
+function someNode(nodes: NodeList, predicate: (node: Node) => boolean): boolean {
+  for (let index = 0; index < nodes.length; index += 1) if (predicate(nodes[index]!)) return true;
   return false;
 }
 
-function observationRoots(host: Element): Array<Document | ShadowRoot> {
-  const roots = new Set<Document | ShadowRoot>([host.ownerDocument]);
-  let current: Element | null = host;
-  const seen = new Set<Element>();
-  while (current) {
-    if (seen.has(current)) break;
-    seen.add(current);
-    // A watcher's own `:host` rules and adopted sheets can resolve tokens on the host itself.
-    if (current === host && current.shadowRoot) roots.add(current.shadowRoot);
-    const root = current.getRootNode();
-    if (root.nodeType === DOCUMENT_FRAGMENT_NODE && 'host' in root) {
-      roots.add(root as ShadowRoot);
-    }
-    current = flattenedThemeParent(current);
-  }
-  return [...roots];
+function sameNodes(left: readonly object[], right: readonly object[]): boolean {
+  return left.length === right.length && left.every((node, index) => node === right[index]);
 }
 
-function sheetsForRoot(root: Document | ShadowRoot): CSSStyleSheet[] {
+/**
+ * The host's flattened ancestry (the host first) and every root whose styles or theme attributes
+ * can reach it: the document, the host's own shadow root (its `:host` rules and adopted sheets),
+ * and each shadow root that contains an element of that ancestry.
+ */
+function flattenedPath(host: Element): [Element[], ObservedRoot[]] {
+  const chain: Element[] = [];
+  const roots = new Set<ObservedRoot>([host.ownerDocument]);
+  if (host.shadowRoot) roots.add(host.shadowRoot);
+  const seen = new Set<Element>();
+  for (let current: Element | null = host; current && !seen.has(current); current = flattenedThemeParent(current)) {
+    seen.add(current);
+    chain.push(current);
+    const root = current.getRootNode();
+    if (root.nodeType === DOCUMENT_FRAGMENT_NODE && 'host' in root) roots.add(root as ShadowRoot);
+  }
+  return [chain, [...roots]];
+}
+
+function sheetsForRoot(root: ObservedRoot): CSSStyleSheet[] {
   const sheets = new Set<CSSStyleSheet>();
   if (root.nodeType === DOCUMENT_NODE) {
     for (const sheet of Array.from((root as Document).styleSheets)) sheets.add(sheet as CSSStyleSheet);
@@ -307,26 +324,6 @@ function collectMediaQueries(rules: CSSRuleList, output: Set<string>): void {
   }
 }
 
-function isInlineDeclarationOnComposedAncestry(
-  declaration: CSSStyleDeclaration,
-  host: Element,
-): boolean {
-  let current: Element | null = host;
-  const seen = new Set<Element>();
-  while (current) {
-    if (seen.has(current)) return false;
-    seen.add(current);
-    if (
-      'style' in current &&
-      (current as Element & { readonly style?: CSSStyleDeclaration }).style === declaration
-    ) {
-      return true;
-    }
-    current = flattenedThemeParent(current);
-  }
-  return false;
-}
-
 function rulesContainMediaList(rules: CSSRuleList, target: MediaList): boolean {
   for (const rule of Array.from(rules)) {
     if ('media' in rule && (rule as CSSMediaRule | CSSImportRule).media === target) return true;
@@ -342,20 +339,405 @@ function rulesContainMediaList(rules: CSSRuleList, target: MediaList): boolean {
   return false;
 }
 
+/** One connected watcher: its flattened ancestry, observed roots and media-query subscriptions. */
+interface ThemeBinding {
+  readonly registry: ThemeRegistry;
+  readonly host: Element;
+  readonly onChange: () => void;
+  readonly additionalMediaQueries: readonly string[];
+  chain: Element[];
+  roots: ObservedRoot[];
+  readonly media: Map<string, MediaSubscription>;
+  queued: boolean;
+  mediaQueriesDirty: boolean;
+  active: boolean;
+}
+
+/** One MutationObserver, load and slotchange listener per root, shared by its watchers. */
+interface RootObservation {
+  readonly root: ObservedRoot;
+  readonly bindings: Set<ThemeBinding>;
+  observer?: MutationObserver;
+  /** Media queries this root's stylesheets declare; cleared whenever those stylesheets change. */
+  mediaQueries?: ReadonlySet<string>;
+  rebindQueued: boolean;
+  readonly onLoad: (event: Event) => void;
+  readonly onSlotChange: () => void;
+}
+
+/** One MediaQueryList and change listener per query text, shared by the watchers that need it. */
+interface MediaSubscription {
+  readonly text: string;
+  readonly query: MediaQueryList;
+  readonly bindings: Set<ThemeBinding>;
+  readonly owner: Map<string, MediaSubscription>;
+  readonly onChange: () => void;
+}
+
+/**
+ * Per-realm observation state. Every platform signal is classified once here and delivered only
+ * to the watchers it can reach, so the cost of a page mutation does not grow with the number of
+ * theme-aware components.
+ */
+interface ThemeRegistry {
+  readonly realm: BrowserRealm;
+  readonly bindings: Set<ThemeBinding>;
+  readonly roots: Map<ObservedRoot, RootObservation>;
+  /** Flattened-tree ancestor (each host included) -> the watchers whose host it styles. */
+  readonly ancestors: WeakMap<Element, Set<ThemeBinding>>;
+  /** Keyed by the realm's `matchMedia` so a replaced implementation is never served stale lists. */
+  readonly media: WeakMap<MatchMedia, Map<string, MediaSubscription>>;
+  unsubscribeHub?: () => void;
+}
+
+const registries = new WeakMap<BrowserRealm, ThemeRegistry>();
+
+function registryFor(realm: BrowserRealm): ThemeRegistry {
+  let registry = registries.get(realm);
+  if (!registry) {
+    registry = {
+      realm,
+      bindings: new Set(),
+      roots: new Map(),
+      ancestors: new WeakMap(),
+      media: new WeakMap(),
+    };
+    registries.set(realm, registry);
+  }
+  return registry;
+}
+
+function queueChange(binding: ThemeBinding, refreshMedia: boolean): void {
+  binding.mediaQueriesDirty ||= refreshMedia;
+  if (binding.queued) return;
+  binding.queued = true;
+  queueMicrotask(() => {
+    if (!binding.active) return;
+    binding.queued = false;
+    if (binding.mediaQueriesDirty) {
+      binding.mediaQueriesDirty = false;
+      refreshMediaQueries(binding);
+    }
+    if (binding.host.isConnected) binding.onChange();
+  });
+}
+
+function invalidateRootStyles(observation: RootObservation): void {
+  observation.mediaQueries = undefined;
+  for (const binding of observation.bindings) queueChange(binding, true);
+}
+
+function invalidateAllRoots(registry: ThemeRegistry): void {
+  for (const observation of registry.roots.values()) observation.mediaQueries = undefined;
+  for (const binding of registry.bindings) queueChange(binding, true);
+}
+
+function onRootMutations(
+  registry: ThemeRegistry,
+  observation: RootObservation,
+  records: MutationRecord[],
+): void {
+  let stylesheet = false;
+  let slotRemoved = false;
+  let targets: Node[] | undefined;
+  for (const record of records) {
+    if (record.type === 'attributes') {
+      if (isStyleCarrier(record.target)) stylesheet = true;
+      else (targets ??= []).push(record.target);
+    } else if (record.type === 'characterData') {
+      // Only a <style> element's own text children are stylesheet text.
+      stylesheet ||= record.target.parentElement?.localName === 'style';
+    } else {
+      stylesheet ||= isStyleCarrier(record.target) ||
+        someNode(record.addedNodes, containsStyleCarrier) ||
+        someNode(record.removedNodes, containsStyleCarrier);
+      // A removed slot reassigns its nodes, but its own slotchange fires outside this root.
+      slotRemoved ||= someNode(record.removedNodes, containsSlot);
+    }
+  }
+  if (slotRemoved) queueRootRebind(registry, observation);
+  if (stylesheet) invalidateRootStyles(observation);
+  for (const target of targets ?? []) {
+    const bindings = registry.ancestors.get(target as Element);
+    if (bindings) for (const binding of bindings) queueChange(binding, false);
+  }
+}
+
+function observeRoot(registry: ThemeRegistry, root: ObservedRoot, binding: ThemeBinding): void {
+  let observation = registry.roots.get(root);
+  if (!observation) {
+    const created: RootObservation = {
+      root,
+      bindings: new Set(),
+      rebindQueued: false,
+      onLoad: (event) => {
+        const target = event.target as Node | null;
+        if (target && 'nodeType' in target && isStyleCarrier(target) && target.localName === 'link') {
+          invalidateRootStyles(created);
+        }
+      },
+      onSlotChange: () => queueRootRebind(registry, created),
+    };
+    observation = created;
+    registry.roots.set(root, created);
+    root.addEventListener('load', created.onLoad, true);
+    root.addEventListener('slotchange', created.onSlotChange, true);
+  }
+  if (!observation.observer) {
+    const Observer = registry.realm.MutationObserver;
+    const target = root.nodeType === DOCUMENT_NODE ? (root as Document).documentElement : root;
+    if (Observer && target) {
+      const current = observation;
+      observation.observer = new Observer((records) => onRootMutations(registry, current, records));
+      observation.observer.observe(target, OBSERVED_MUTATIONS);
+    }
+  }
+  observation.bindings.add(binding);
+}
+
+function releaseRoot(registry: ThemeRegistry, root: ObservedRoot, binding: ThemeBinding): void {
+  const observation = registry.roots.get(root);
+  if (!observation) return;
+  observation.bindings.delete(binding);
+  if (observation.bindings.size > 0) return;
+  observation.observer?.disconnect();
+  root.removeEventListener('load', observation.onLoad, true);
+  root.removeEventListener('slotchange', observation.onSlotChange, true);
+  registry.roots.delete(root);
+}
+
+function unindexAncestor(binding: ThemeBinding, element: Element): void {
+  const bindings = binding.registry.ancestors.get(element);
+  bindings?.delete(binding);
+  if (bindings?.size === 0) binding.registry.ancestors.delete(element);
+}
+
+/** Re-resolves a watcher's ancestry and roots; returns whether either changed. */
+function rebind(binding: ThemeBinding): boolean {
+  const { registry } = binding;
+  const [chain, roots] = flattenedPath(binding.host);
+  if (sameNodes(chain, binding.chain) && sameNodes(roots, binding.roots)) return false;
+  const nextChain = new Set(chain);
+  for (const element of binding.chain) if (!nextChain.has(element)) unindexAncestor(binding, element);
+  for (const element of chain) {
+    let bindings = registry.ancestors.get(element);
+    if (!bindings) registry.ancestors.set(element, (bindings = new Set()));
+    bindings.add(binding);
+  }
+  const nextRoots = new Set(roots);
+  for (const root of binding.roots) if (!nextRoots.has(root)) releaseRoot(registry, root, binding);
+  for (const root of roots) observeRoot(registry, root, binding);
+  binding.chain = chain;
+  binding.roots = roots;
+  return true;
+}
+
+/**
+ * Slot (re)assignment changes what a host inherits without reconnecting it, so watchers whose
+ * path crosses a root re-resolve after its slotchange or slot removal and re-read the theme.
+ */
+function queueRootRebind(registry: ThemeRegistry, observation: RootObservation): void {
+  if (observation.rebindQueued) return;
+  observation.rebindQueued = true;
+  queueMicrotask(() => {
+    observation.rebindQueued = false;
+    if (registry.roots.get(observation.root) !== observation) return;
+    for (const binding of [...observation.bindings]) {
+      if (binding.active && rebind(binding)) queueChange(binding, true);
+    }
+  });
+}
+
+function rootMediaQueries(observation: RootObservation): ReadonlySet<string> {
+  if (observation.mediaQueries) return observation.mediaQueries;
+  const queries = new Set<string>();
+  for (const sheet of sheetsForRoot(observation.root)) {
+    const owner = sheet.ownerNode;
+    if (owner?.nodeType === ELEMENT_NODE) {
+      const media = (owner as Element).getAttribute('media')?.trim();
+      if (media) queries.add(media);
+    }
+    try {
+      collectMediaQueries(sheet.cssRules, queries);
+    } catch {
+      // A cross-origin sheet can affect tokens but cannot expose its rule list. Its owner
+      // element's media attribute and load event remain observable.
+    }
+  }
+  observation.mediaQueries = queries;
+  return queries;
+}
+
+function subscribeMedia(registry: ThemeRegistry, matchMedia: MatchMedia, text: string): MediaSubscription {
+  let byText = registry.media.get(matchMedia);
+  if (!byText) registry.media.set(matchMedia, (byText = new Map()));
+  let subscription = byText.get(text);
+  if (!subscription) {
+    const bindings = new Set<ThemeBinding>();
+    const onChange = (): void => {
+      for (const binding of bindings) queueChange(binding, false);
+    };
+    const query = matchMedia.call(registry.realm, text);
+    query.addEventListener('change', onChange);
+    subscription = { text, query, bindings, owner: byText, onChange };
+    byText.set(text, subscription);
+  }
+  return subscription;
+}
+
+function releaseMedia(subscription: MediaSubscription, binding: ThemeBinding): void {
+  subscription.bindings.delete(binding);
+  if (subscription.bindings.size > 0) return;
+  subscription.query.removeEventListener('change', subscription.onChange);
+  subscription.owner.delete(subscription.text);
+}
+
+function refreshMediaQueries(binding: ThemeBinding): void {
+  const { registry } = binding;
+  const matchMedia = registry.realm.matchMedia as MatchMedia | undefined;
+  if (!matchMedia) return;
+  const queries = new Set<string>([...BASE_MEDIA_QUERIES, ...binding.additionalMediaQueries]);
+  for (const root of binding.roots) {
+    const observation = registry.roots.get(root);
+    if (observation) for (const text of rootMediaQueries(observation)) queries.add(text);
+  }
+  for (const [text, subscription] of binding.media) {
+    if (queries.has(text)) continue;
+    releaseMedia(subscription, binding);
+    binding.media.delete(text);
+  }
+  for (const text of queries) {
+    if (binding.media.has(text)) continue;
+    const subscription = subscribeMedia(registry, matchMedia, text);
+    subscription.bindings.add(binding);
+    binding.media.set(text, subscription);
+  }
+}
+
+function sheetChanged(registry: ThemeRegistry, changed: CSSStyleSheet | null | undefined): void {
+  let sheet = changed;
+  // An @import-ed sheet styles the roots of the top-level sheet that imports it.
+  for (let depth = 0; sheet?.ownerRule?.parentStyleSheet && depth < 64; depth += 1) {
+    sheet = sheet.ownerRule.parentStyleSheet;
+  }
+  if (!sheet) return;
+  const owner = sheet.ownerNode;
+  if (owner) {
+    const observation = registry.roots.get(owner.getRootNode() as ObservedRoot);
+    if (observation) invalidateRootStyles(observation);
+    return;
+  }
+  for (const observation of registry.roots.values()) {
+    if (observation.root.adoptedStyleSheets?.includes(sheet)) invalidateRootStyles(observation);
+  }
+}
+
+function mediaListChanged(registry: ThemeRegistry, list: MediaList): void {
+  for (const observation of registry.roots.values()) {
+    for (const sheet of sheetsForRoot(observation.root)) {
+      let found = sheet.media === list;
+      try {
+        found ||= rulesContainMediaList(sheet.cssRules, list);
+      } catch {
+        // A relevant cross-origin sheet is intentionally treated as opaque. Its DOM load/media
+        // signals and invalidateLyraTheme() remain the conservative invalidation paths.
+      }
+      if (found) {
+        invalidateRootStyles(observation);
+        break;
+      }
+    }
+  }
+}
+
+function onStylesheetMutation(registry: ThemeRegistry, subject?: unknown): void {
+  if (subject === undefined) {
+    invalidateAllRoots(registry);
+    return;
+  }
+  const { realm } = registry;
+  if (realm.CSSStyleDeclaration && subject instanceof realm.CSSStyleDeclaration) {
+    // An inline declaration rewrites its element's `style` attribute, which the root observers
+    // deliver to exactly the watchers that element styles; a rule declaration names its sheet.
+    if (subject.parentRule) sheetChanged(registry, subject.parentRule.parentStyleSheet);
+    return;
+  }
+  if (
+    (realm.Document && subject instanceof realm.Document) ||
+    (realm.ShadowRoot && subject instanceof realm.ShadowRoot)
+  ) {
+    const observation = registry.roots.get(subject as ObservedRoot);
+    if (observation) invalidateRootStyles(observation);
+    return;
+  }
+  if (realm.CSSStyleSheet && subject instanceof realm.CSSStyleSheet) {
+    sheetChanged(registry, subject);
+    return;
+  }
+  const CSSRuleCtor = (realm as unknown as { CSSRule?: typeof CSSRule }).CSSRule;
+  if (CSSRuleCtor && subject instanceof CSSRuleCtor) {
+    sheetChanged(registry, subject.parentStyleSheet);
+    return;
+  }
+  if (realm.MediaList && subject instanceof realm.MediaList) {
+    mediaListChanged(registry, subject);
+    return;
+  }
+  // Unknown platform objects are rare and cannot be scoped safely. Preserve the conservative
+  // behavior for those opaque cases; known declarations, sheets and roots above are filtered.
+  invalidateAllRoots(registry);
+}
+
+function bindWatcher(
+  registry: ThemeRegistry,
+  host: Element,
+  onChange: () => void,
+  additionalMediaQueries: readonly string[],
+): () => void {
+  const binding: ThemeBinding = {
+    registry,
+    host,
+    onChange,
+    additionalMediaQueries,
+    chain: [],
+    roots: [],
+    media: new Map(),
+    queued: false,
+    mediaQueriesDirty: false,
+    active: true,
+  };
+  if (registry.bindings.size === 0) {
+    registry.unsubscribeHub = subscribeRealm(registry.realm, (subject) => onStylesheetMutation(registry, subject));
+  }
+  registry.bindings.add(binding);
+  rebind(binding);
+  refreshMediaQueries(binding);
+  return () => {
+    if (!binding.active) return;
+    binding.active = false;
+    for (const element of binding.chain) unindexAncestor(binding, element);
+    for (const root of binding.roots) releaseRoot(registry, root, binding);
+    for (const subscription of binding.media.values()) releaseMedia(subscription, binding);
+    binding.media.clear();
+    binding.chain = [];
+    binding.roots = [];
+    registry.bindings.delete(binding);
+    if (registry.bindings.size === 0) {
+      registry.unsubscribeHub?.();
+      registry.unsubscribeHub = undefined;
+    }
+  };
+}
+
 /**
  * Watches every platform signal that can change token values without a Lit property update:
- * theme attributes, stylesheet DOM/CSSOM/adoption changes, and media-query result changes.
- * Canvas consumers opt in so DOM/SVG components keep relying on the CSS cascade directly.
+ * theme attributes, stylesheet DOM/CSSOM/adoption changes, slot reassignment, and media-query
+ * result changes. Canvas consumers opt in so DOM/SVG components keep relying on the CSS cascade
+ * directly. All watchers of a realm share one observer per root, one listener per media query
+ * and one stylesheet scan per root change.
  */
 export class ThemeWatcher implements ReactiveController {
-  private observer?: MutationObserver;
   private unsubscribeRealm?: () => void;
-  private readonly mediaQueries = new Map<string, MediaQueryList>();
-  private roots: Array<Document | ShadowRoot> = [];
-  private realm?: BrowserRealm;
-  private queued = false;
-  private mediaQueriesDirty = false;
-  private generation = 0;
 
   constructor(
     private readonly host: ReactiveControllerHost & Element,
@@ -368,217 +750,19 @@ export class ThemeWatcher implements ReactiveController {
   }
 
   hostConnected(): void {
-    this.teardown();
-    this.generation += 1;
+    this.hostDisconnected();
     const realm = this.host.ownerDocument.defaultView as BrowserRealm | null;
     if (!realm) return;
-    this.realm = realm;
-    this.roots = observationRoots(this.host);
-    this.unsubscribeRealm = subscribeRealm(realm, this.onStylesheetMutation);
-    this.installObserver();
-    for (const root of this.roots) root.addEventListener('load', this.onStylesheetLoad, true);
-    this.refreshMediaQueries();
+    this.unsubscribeRealm = bindWatcher(
+      registryFor(realm),
+      this.host,
+      () => this.onChange(),
+      this.additionalMediaQueries,
+    );
   }
 
   hostDisconnected(): void {
-    this.generation += 1;
-    this.teardown();
-  }
-
-  private teardown(): void {
-    for (const root of this.roots) root.removeEventListener('load', this.onStylesheetLoad, true);
     this.unsubscribeRealm?.();
     this.unsubscribeRealm = undefined;
-    this.observer?.disconnect();
-    this.observer = undefined;
-    for (const query of this.mediaQueries.values()) {
-      query.removeEventListener('change', this.onMediaQueryChange);
-    }
-    this.mediaQueries.clear();
-    this.roots = [];
-    this.realm = undefined;
-    this.queued = false;
-    this.mediaQueriesDirty = false;
-  }
-
-  private installObserver(): void {
-    const Observer = this.realm?.MutationObserver;
-    if (!Observer) return;
-    this.observer = new Observer(this.onMutations);
-    for (const root of this.roots) {
-      const target = root.nodeType === DOCUMENT_NODE ? (root as Document).documentElement : root;
-      if (!target) continue;
-      this.observer.observe(target, {
-        attributes: true,
-        attributeFilter: [
-          ...THEME_ATTRIBUTES,
-          'media',
-          'href',
-          'rel',
-          'disabled',
-        ],
-        childList: true,
-        characterData: true,
-        subtree: true,
-      });
-    }
-  }
-
-  private onMutations = (records: MutationRecord[]): void => {
-    let relevant = false;
-    let stylesheet = false;
-    for (const record of records) {
-      if (record.type === 'attributes') {
-        const target = record.target as Element;
-        if (isStyleCarrier(target)) {
-          relevant = true;
-          stylesheet = true;
-        } else if (isComposedAncestor(target, this.host)) {
-          relevant = true;
-        }
-        continue;
-      }
-      if (record.type === 'characterData') {
-        const parent = record.target.parentElement;
-        if (parent?.closest('style')) {
-          relevant = true;
-          stylesheet = true;
-        }
-        continue;
-      }
-      if (
-        isStyleCarrier(record.target) ||
-        [...record.addedNodes, ...record.removedNodes].some(containsStyleCarrier)
-      ) {
-        relevant = true;
-        stylesheet = true;
-      }
-    }
-    if (relevant) this.queueChange(stylesheet);
-  };
-
-  private onStylesheetLoad = (event: Event): void => {
-    if (
-      event.target &&
-      'nodeType' in event.target &&
-      isStyleCarrier(event.target as Node) &&
-      (event.target as Element).localName === 'link'
-    ) {
-      this.queueChange(true);
-    }
-  };
-
-  private onStylesheetMutation = (mutationSubject?: unknown): void => {
-    // queueChange(true) would be a no-op in this state.
-    if (this.queued && this.mediaQueriesDirty) return;
-    const Declaration = this.realm?.CSSStyleDeclaration;
-    if (Declaration && mutationSubject instanceof Declaration && mutationSubject.parentRule === null) {
-      // An inline declaration can neither add a media query nor change which sheets apply, so it
-      // skips both the per-write sheet enumeration and the media-query refresh walk. The theme
-      // runtime's token maps write dozens of inline properties on <html> per apply.
-      if (!this.queued && isInlineDeclarationOnComposedAncestry(mutationSubject, this.host)) {
-        this.queueChange(false);
-      }
-      return;
-    }
-    if (mutationSubject !== undefined && !this.mutationCanAffectHost(mutationSubject)) return;
-    this.queueChange(true);
-  };
-
-  private mutationCanAffectHost(subject: unknown): boolean {
-    const realm = this.realm;
-    if (!realm) return false;
-    if (
-      (realm.Document && subject instanceof realm.Document) ||
-      (realm.ShadowRoot && subject instanceof realm.ShadowRoot)
-    ) {
-      return this.roots.includes(subject as Document | ShadowRoot);
-    }
-    const relevantSheets = new Set(this.roots.flatMap((root) => sheetsForRoot(root)));
-
-    if (realm.CSSStyleDeclaration && subject instanceof realm.CSSStyleDeclaration) {
-      if (isInlineDeclarationOnComposedAncestry(subject, this.host)) return true;
-      const sheet = subject.parentRule?.parentStyleSheet;
-      return Boolean(sheet && relevantSheets.has(sheet));
-    }
-    if (realm.CSSStyleSheet && subject instanceof realm.CSSStyleSheet) {
-      return relevantSheets.has(subject);
-    }
-    const CSSRuleCtor = (realm as unknown as { CSSRule?: typeof CSSRule }).CSSRule;
-    if (CSSRuleCtor && subject instanceof CSSRuleCtor) {
-      return Boolean(subject.parentStyleSheet && relevantSheets.has(subject.parentStyleSheet));
-    }
-    if (realm.MediaList && subject instanceof realm.MediaList) {
-      for (const sheet of relevantSheets) {
-        if (sheet.media === subject) return true;
-        try {
-          if (rulesContainMediaList(sheet.cssRules, subject)) return true;
-        } catch {
-          // A relevant cross-origin sheet is intentionally treated as opaque. Its DOM load/media
-          // signals and invalidateLyraTheme() remain the conservative invalidation paths.
-        }
-      }
-      return false;
-    }
-    // Unknown platform objects are rare and cannot be scoped safely. Preserve the conservative
-    // behavior for those opaque cases; known inline declarations and sheets above are filtered.
-    return true;
-  }
-
-  private onMediaQueryChange = (): void => {
-    this.queueChange(false);
-  };
-
-  private refreshMediaQueries(): void {
-    const realm = this.realm;
-    if (!realm?.matchMedia) return;
-    const queries = new Set<string>([
-      '(prefers-color-scheme: dark)',
-      '(prefers-contrast: more)',
-      '(forced-colors: active)',
-      ...this.additionalMediaQueries,
-    ]);
-    for (const root of this.roots) {
-      for (const sheet of sheetsForRoot(root)) {
-        const owner = sheet.ownerNode;
-        if (owner?.nodeType === ELEMENT_NODE) {
-          const media = (owner as Element).getAttribute('media')?.trim();
-          if (media) queries.add(media);
-        }
-        try {
-          collectMediaQueries(sheet.cssRules, queries);
-        } catch {
-          // A cross-origin sheet can affect tokens but cannot expose its rule list. Its owner
-          // element's media attribute and load event remain observable.
-        }
-      }
-    }
-    for (const [text, query] of this.mediaQueries) {
-      if (queries.has(text)) continue;
-      query.removeEventListener('change', this.onMediaQueryChange);
-      this.mediaQueries.delete(text);
-    }
-    for (const text of queries) {
-      if (this.mediaQueries.has(text)) continue;
-      const query = realm.matchMedia(text);
-      query.addEventListener('change', this.onMediaQueryChange);
-      this.mediaQueries.set(text, query);
-    }
-  }
-
-  private queueChange(refreshMediaQueries: boolean): void {
-    this.mediaQueriesDirty ||= refreshMediaQueries;
-    if (this.queued) return;
-    this.queued = true;
-    const generation = this.generation;
-    queueMicrotask(() => {
-      if (generation !== this.generation) return;
-      this.queued = false;
-      if (this.mediaQueriesDirty) {
-        this.mediaQueriesDirty = false;
-        this.refreshMediaQueries();
-      }
-      if (this.host.isConnected) this.onChange();
-    });
   }
 }

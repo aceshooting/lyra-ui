@@ -1,4 +1,4 @@
-import { fixture, expect, oneEvent, waitUntil } from '@open-wc/testing';
+import { aTimeout, fixture, expect, oneEvent, waitUntil } from '@open-wc/testing';
 import { html as litHtml, nothing, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from './lyra-element.js';
@@ -538,6 +538,51 @@ describe('TextViewerTarget mixin', () => {
       await el.updateComplete;
       expect(internals(el).textQuoteScanCount() - afterIdentical).to.be.at.most(8);
       expect(internals(el).highlightPaintedRangeCount()).to.be.at.most(100);
+    });
+
+    it('paints highlights whose optional JSON context is null and skips an unusable quote', async () => {
+      const el = await stubFixture();
+      el.highlights = [
+        { id: 'json', anchor: { kind: 'text-quote', quote: 'brown fox', prefix: null, suffix: null } },
+        { id: 'numeric', anchor: { kind: 'text-quote', quote: 42 } },
+        { id: 'plain', anchor: { kind: 'text-quote', quote: 'lazy dog' } },
+      ] as unknown as typeof el.highlights;
+      await el.updateComplete;
+      expect(internals(el).highlightPaintedRangeCount()).to.equal(2);
+      expect(await el.scrollToAnchor({ kind: 'text-quote', quote: 'bright sun', prefix: null } as never)).to.equal(true);
+    });
+
+    it('repaints more than 64 distinct text-quote highlights from the occurrence cache', async () => {
+      const el = await stubFixture();
+      el.bodyText = Array.from({ length: 80 }, (_, index) => `term${index}x`).join(' ');
+      await el.updateComplete;
+      el.highlights = Array.from({ length: 80 }, (_, index) => ({
+        id: `h${index}`,
+        anchor: { kind: 'text-quote' as const, quote: `term${index}x` },
+      }));
+      await el.updateComplete;
+      expect(internals(el).highlightPaintedRangeCount()).to.equal(80);
+      const scans = internals(el).textQuoteScanCount();
+      el.activeHighlightId = 'h40';
+      await el.updateComplete;
+      expect(internals(el).highlightPaintedRangeCount()).to.equal(80);
+      expect(internals(el).textQuoteScanCount()).to.equal(scans);
+    });
+
+    it('drops instead of rebuilding the corpus on content mutations while nothing searches or highlights', async () => {
+      const el = await stubFixture();
+      await el.search('fox');
+      el.clearSearch();
+      await el.updateComplete;
+      const builds = internals(el).textScopeBuildCount();
+      const paragraph = el.shadowRoot!.querySelector('#section-one')!;
+      for (let edit = 0; edit < 3; edit++) {
+        paragraph.append(` appended${edit}`);
+        await aTimeout(0);
+        await el.updateComplete;
+      }
+      expect(internals(el).textScopeBuildCount()).to.equal(builds);
+      expect(await el.search('appended2')).to.equal(1);
     });
 
     it('retains an active host highlight at the end of the bounded snapshot', async () => {

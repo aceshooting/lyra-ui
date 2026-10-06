@@ -1891,3 +1891,173 @@ describe('normalization and materialization failure boundaries', () => {
     }
   });
 });
+
+describe('TextQuoteIndex anchor field types', () => {
+  type AnchorFields = { quote: string; prefix?: string; suffix?: string };
+  const anchor = (fields: Record<string, unknown>): AnchorFields => fields as unknown as AnchorFields;
+
+  it('treats JSON null context as absent and an unusable quote or context as unresolvable', () => {
+    const root = document.createElement('div');
+    root.textContent = 'A: revenue. B: revenue.';
+    document.body.append(root);
+    try {
+      const index = createTextQuoteIndex(scopeFromElement(root), 'en');
+      expect(index.resolve(anchor({ quote: 'revenue', prefix: null, suffix: null }))?.start).to.equal(3);
+      expect(index.resolve(anchor({ quote: 'revenue', prefix: 'B: ', suffix: null }))?.start).to.equal(15);
+      for (const quote of [null, undefined, 42, {}, ['revenue']]) {
+        expect(index.resolve(anchor({ quote })), String(quote)).to.equal(null);
+      }
+      expect(index.resolve(anchor({ quote: 'revenue', prefix: 7 }))).to.equal(null);
+      expect(index.resolve(anchor({ quote: 'revenue', suffix: { text: 'x' } }))).to.equal(null);
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('fails one accessor-backed anchor closed instead of throwing', () => {
+    const root = document.createElement('div');
+    root.textContent = 'revenue';
+    document.body.append(root);
+    try {
+      const index = createTextQuoteIndex(scopeFromElement(root), 'en');
+      const hostile = {
+        get quote(): string {
+          throw new Error('accessor anchor');
+        },
+      };
+      expect(index.resolve(hostile)).to.equal(null);
+      expect(resolveTextQuote(scopeFromElement(root), anchor({ quote: 'revenue', prefix: null }))?.toString())
+        .to.equal('revenue');
+    } finally {
+      root.remove();
+    }
+  });
+});
+
+describe('TextQuoteIndex occurrence cache', () => {
+  it('keeps every quote of a full highlight paint pass cached across a repaint', () => {
+    const words = Array.from({ length: 100 }, (_, index) => `term${index}x`);
+    const root = document.createElement('div');
+    root.textContent = words.join(' ');
+    document.body.append(root);
+    try {
+      const index = createTextQuoteIndex(scopeFromElement(root), 'en');
+      // Upper-cased quotes miss the exact pass, so each one caches an exact and a folded key.
+      const quotes = [...words, ...words.slice(0, 20).map((word) => word.toUpperCase())];
+      for (const quote of quotes) expect(index.resolve({ quote }), quote).to.not.equal(null);
+      const scans = index.scanCount;
+      for (const quote of quotes) expect(index.resolve({ quote }), quote).to.not.equal(null);
+      expect(index.scanCount).to.equal(scans);
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('refreshes an entry on every hit so the least recently used query is evicted first', () => {
+    const root = document.createElement('div');
+    root.textContent = 'alpha beta gamma';
+    document.body.append(root);
+    try {
+      const index = createTextQuoteIndex(scopeFromElement(root), 'en', { maxCacheEntries: 2 });
+      index.search('alpha');
+      index.search('beta');
+      index.search('alpha');
+      index.search('gamma');
+      const scans = index.scanCount;
+      index.search('alpha');
+      expect(index.scanCount, 'alpha was used more recently than beta').to.equal(scans);
+      index.search('beta');
+      expect(index.scanCount).to.equal(scans + 1);
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('grows the occurrence buffer with the matches found instead of pre-allocating the ceiling', () => {
+    const root = document.createElement('div');
+    root.textContent = `${'ab '.repeat(300)}needle`;
+    document.body.append(root);
+    const Original = globalThis.Uint32Array;
+    let largest = 0;
+    class Recording extends Original {
+      constructor(...args: unknown[]) {
+        super(...(args as [number]));
+        if (typeof args[0] === 'number') largest = Math.max(largest, args[0]);
+      }
+    }
+    try {
+      const scope = scopeFromElement(root);
+      const index = createTextQuoteIndex(scope, 'en');
+      (globalThis as { Uint32Array: unknown }).Uint32Array = Recording;
+      expect(index.resolve({ quote: 'needle' })?.start).to.equal(900);
+      (globalThis as { Uint32Array: unknown }).Uint32Array = Original;
+      expect(largest).to.be.at.most(128);
+      const many = createTextQuoteIndex(scope, 'en').search('ab');
+      expect(many.length).to.equal(300);
+      expect(many.at(299)).to.deep.equal({ start: 897, end: 899 });
+      expect(createTextQuoteIndex(scope, 'en', { maxMatches: 100 }).search('ab').length).to.equal(100);
+    } finally {
+      (globalThis as { Uint32Array: unknown }).Uint32Array = Original;
+      root.remove();
+    }
+  });
+});
+
+describe('corpus normalization fast path', () => {
+  /** Per-code-unit reference of the corpus rule: soft hyphens vanish, each whitespace run becomes
+   * one space, and a space directly after a collapsed space (also across text nodes) is dropped. */
+  function referenceCorpus(raw: string): string {
+    let out = '';
+    let lastWasSpace = false;
+    for (const unit of raw.split('')) {
+      if (unit === '­') continue;
+      if (/\s/.test(unit)) {
+        if (lastWasSpace) continue;
+        lastWasSpace = true;
+        out += ' ';
+      } else {
+        lastWasSpace = false;
+        out += unit;
+      }
+    }
+    return out;
+  }
+
+  it('matches the per-character rule and maps every word back to its raw text', () => {
+    const alphabet = ['a', 'b', 'c', 'd', ' ', ' ', ' ', '\t', '\n', '­', ' ', '　', 'é', '😀'];
+    let seed = 7;
+    const random = (): number => (seed = (seed * 1_103_515_245 + 12_345) % 2_147_483_648) / 2_147_483_648;
+    const sample = (): string => {
+      let raw = '';
+      for (let length = Math.floor(random() * 40); length > 0; length--) {
+        raw += alphabet[Math.floor(random() * alphabet.length)];
+      }
+      return raw;
+    };
+    for (let round = 0; round < 300; round++) {
+      const first = sample();
+      const second = sample();
+      const root = document.createElement('div');
+      root.append(first, second);
+      document.body.append(root);
+      try {
+        const label = JSON.stringify([first, second]);
+        const scope = scopeFromElement(root);
+        expect(scope.text, label).to.equal(referenceCorpus(first + second));
+        for (const word of new Set(scope.text.split(' ').filter(Boolean))) {
+          const range = resolveTextQuote(scope, { quote: word });
+          expect(range !== null, `${label} ${word}`).to.equal(true);
+          expect(normalizeQuoteText(range!.toString()), `${label} ${word}`).to.equal(normalizeQuoteText(word));
+        }
+        const capped = scopeFromElement(root, { maxCorpusCodeUnits: 7 });
+        const prefix = referenceCorpus(first + second).slice(0, 7);
+        // A cap that splits a surrogate pair leaves a lone half, which Gecko's NFC pass replaces.
+        const whole = /[\uD800-\uDBFF]$/.test(prefix) ? prefix.slice(0, -1) : prefix;
+        expect(capped.text.length, label).to.equal(prefix.length);
+        expect(capped.text.slice(0, whole.length), label).to.equal(whole);
+      } finally {
+        root.remove();
+      }
+    }
+  });
+});

@@ -3,6 +3,7 @@ import { html, nothing, render } from 'lit';
 import { styleMap } from 'lit/directives/style-map.js';
 import {
   sanitizeCssColor,
+  sanitizeCssDeclarationValue,
   sanitizeCssInset,
   sanitizeCssLength,
   sanitizeCssResize,
@@ -171,5 +172,96 @@ describe('balanced CSS values', () => {
       render(nothing, container);
       container.remove();
     }
+  });
+});
+
+describe('image-producing CSS functions', () => {
+  // No `;`: the structural guard already rejects that, and this must exercise the function ban.
+  const pixel = 'data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22/%3E';
+  const imagePayloads = [
+    `var(--lr-undefined-token, image-set("${pixel}" 1x))`,
+    `red var(--lr-undefined-token, image-set("${pixel}" 1x))`,
+    `var(--lr-undefined-token, -webkit-image-set("${pixel}" 1x))`,
+    `env(lr-undefined, image-set("${pixel}" 1x))`,
+    `var(--lr-undefined-token, cross-fade(red, blue))`,
+    `var(--lr-undefined-token, image("${pixel}"))`,
+    `var(--lr-undefined-token, src("${pixel}"))`,
+    'var(--lr-undefined-token, element(#target))',
+    'var(--lr-undefined-token, paint(lr-probe))',
+    'var(--lr-undefined-token, attr(data-color))',
+    'var(--lr-undefined-token, IMAGE-SET(red 1x))',
+  ];
+
+  it('rejects a color whose var()/env() fallback or sibling produces an image', () => {
+    for (const value of imagePayloads) expect(sanitizeCssColor(value), value).to.equal(undefined);
+    expect(sanitizeCssColor('var(--lr-undefined-token, "red")'), 'strings are never colors').to.equal(undefined);
+  });
+
+  it('keeps custom-property colors whose fallback is itself a color', () => {
+    for (const value of [
+      'var(--lr-color-brand)',
+      'var(--lr-undefined-token, red)',
+      'var(--lr-undefined-token, rgb(1 2 3))',
+      'var(--lr-undefined-token, var(--lr-color-brand, #fff))',
+      'color-mix(in srgb, var(--lr-color-brand) 40%, transparent)',
+    ]) {
+      expect(sanitizeCssColor(value), value).to.equal(value);
+    }
+  });
+
+  it('never lets a background swatch sink paint a caller image', () => {
+    const container = document.body.appendChild(document.createElement('div'));
+    try {
+      for (const value of imagePayloads) {
+        render(
+          html`<span style=${styleMap({ background: sanitizeCssColor(value) ?? 'transparent' })}></span>`,
+          container,
+        );
+        const span = container.querySelector('span')!;
+        expect(getComputedStyle(span).backgroundImage, value).to.equal('none');
+        render(nothing, container);
+      }
+    } finally {
+      render(nothing, container);
+      container.remove();
+    }
+  });
+});
+
+describe('sanitizeCssDeclarationValue', () => {
+  it('accepts values the named property parses, custom properties, and quoted font names', () => {
+    expect(sanitizeCssDeclarationValue('color', 'red')).to.equal('red');
+    expect(sanitizeCssDeclarationValue('background-color', ' rgb(1 2 3) ')).to.equal(' rgb(1 2 3) ');
+    expect(sanitizeCssDeclarationValue('font-family', '"Inter", sans-serif')).to.equal('"Inter", sans-serif');
+    expect(sanitizeCssDeclarationValue('background', 'linear-gradient(red, blue)')).to.equal(
+      'linear-gradient(red, blue)',
+    );
+    expect(sanitizeCssDeclarationValue('--lr-cell-accent', 'tomato')).to.equal('tomato');
+  });
+
+  it('rejects escapes, comments, url(), image functions, breakouts and unbalanced values', () => {
+    for (const [property, value] of [
+      ['background', '\\75 rl(https://attacker.example/x)'],
+      ['background', 'image-set("https://attacker.example/x" 1x)'],
+      ['background', 'u/**/rl(https://attacker.example/x)'],
+      ['background', 'url(https://attacker.example/x)'],
+      ['--lr-cell-accent', 'url(https://attacker.example/x)'],
+      ['--lr-cell-accent', 'image-set("https://attacker.example/x" 1x)'],
+      ['color', 'red; position: fixed'],
+      ['color', 'red}body{display:none'],
+      ['background', 'rgb(0 0 0'],
+      ['font-family', '"Inter'],
+      ['color', ''],
+      ['color', 42],
+    ] as const) {
+      expect(sanitizeCssDeclarationValue(property, value), `${property}: ${String(value)}`).to.equal(undefined);
+    }
+  });
+
+  it('rejects property names that are not CSS identifiers and values the property does not parse', () => {
+    expect(sanitizeCssDeclarationValue('color;x', 'red')).to.equal(undefined);
+    expect(sanitizeCssDeclarationValue('', 'red')).to.equal(undefined);
+    expect(sanitizeCssDeclarationValue('width', 'red')).to.equal(undefined);
+    expect(sanitizeCssDeclarationValue('not-a-css-property', 'red')).to.equal(undefined);
   });
 });

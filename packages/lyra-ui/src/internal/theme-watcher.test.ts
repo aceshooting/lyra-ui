@@ -1121,21 +1121,23 @@ describe('ThemeWatcher', () => {
 
   it('conservatively invalidates for a mutation subject whose realm constructor is unavailable', async () => {
     const { host, connect, disconnect } = await makeHost();
+    const unrelated = document.body.appendChild(document.createElement('div'));
     let calls = 0;
-    const watcher = new ThemeWatcher(host, () => calls++);
+    new ThemeWatcher(host, () => calls++);
     connect();
-    const realmField = watcher as unknown as { realm?: unknown };
-    const originalRealm = realmField.realm;
-    // None of mutationCanAffectHost's known-constructor branches can match a CSSStyleDeclaration
-    // subject against a realm reference this bare -- the conservative "unknown platform object"
-    // fallback must still invalidate rather than silently dropping the mutation.
-    realmField.realm = {};
+    const realm = window as unknown as Record<string, unknown>;
+    const originalDeclaration = realm['CSSStyleDeclaration'];
+    // Without the realm's CSSStyleDeclaration constructor the write below cannot be classified
+    // (or scoped to an ancestry), so the "unknown platform object" fallback must invalidate
+    // rather than silently dropping it -- even though the element is outside the host's path.
+    realm['CSSStyleDeclaration'] = undefined;
     try {
-      host.style.setProperty('--lr-theme-test', 'value');
+      unrelated.style.setProperty('--lr-theme-test', 'value');
       await aTimeout(0);
       expect(calls).to.equal(1);
     } finally {
-      realmField.realm = originalRealm;
+      realm['CSSStyleDeclaration'] = originalDeclaration;
+      unrelated.remove();
       disconnect();
     }
   });
@@ -1278,6 +1280,167 @@ describe('ThemeWatcher', () => {
     } finally {
       disconnect();
       window.matchMedia = originalMatchMedia;
+    }
+  });
+});
+
+describe('ThemeWatcher shared observation', () => {
+  it('shares one MutationObserver per observed root across every watcher of a realm', async () => {
+    const OriginalObserver = window.MutationObserver;
+    let constructed = 0;
+    window.MutationObserver = class extends OriginalObserver {
+      constructor(callback: MutationCallback) {
+        super(callback);
+        constructed += 1;
+      }
+    };
+    const hosts = await Promise.all([makeHost(), makeHost(), makeHost(), makeHost()]);
+    const calls = hosts.map(() => 0);
+    hosts.forEach(({ host }, index) => new ThemeWatcher(host, () => (calls[index] = (calls[index] ?? 0) + 1)));
+    try {
+      hosts.forEach(({ connect }) => connect());
+      expect(constructed, 'four light-DOM watchers share the document observer').to.be.at.most(1);
+      document.body.setAttribute('data-theme', 'shared-observer');
+      await aTimeout(0);
+      expect(calls).to.deep.equal([1, 1, 1, 1]);
+    } finally {
+      window.MutationObserver = OriginalObserver;
+      document.body.removeAttribute('data-theme');
+      hosts.forEach(({ disconnect }) => disconnect());
+    }
+  });
+
+  it('subscribes each media query once per realm however many watchers need it', async () => {
+    const originalMatchMedia = window.matchMedia;
+    const requested = new Map<string, number>();
+    window.matchMedia = ((query: string) => {
+      requested.set(query, (requested.get(query) ?? 0) + 1);
+      return originalMatchMedia.call(window, query);
+    }) as typeof matchMedia;
+    const hosts = await Promise.all([makeHost(), makeHost(), makeHost()]);
+    hosts.forEach(({ host }) => new ThemeWatcher(host, () => {}));
+    try {
+      hosts.forEach(({ connect }) => connect());
+      expect(requested.get('(prefers-color-scheme: dark)')).to.equal(1);
+      expect(requested.get('(forced-colors: active)')).to.equal(1);
+    } finally {
+      hosts.forEach(({ disconnect }) => disconnect());
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it('collects stylesheet media queries once per root instead of once per watcher', async () => {
+    const style = document.createElement('style');
+    style.textContent = '@media (min-width: 4321px) { :root { --lr-theme-test: 1; } }';
+    document.head.append(style);
+    const rulesDescriptor = Object.getOwnPropertyDescriptor(CSSStyleSheet.prototype, 'cssRules')!;
+    let ruleReads = 0;
+    const hosts = await Promise.all([makeHost(), makeHost(), makeHost(), makeHost()]);
+    hosts.forEach(({ host }) => new ThemeWatcher(host, () => {}));
+    try {
+      Object.defineProperty(CSSStyleSheet.prototype, 'cssRules', {
+        ...rulesDescriptor,
+        get(this: CSSStyleSheet) {
+          if (this === style.sheet) ruleReads += 1;
+          return rulesDescriptor.get!.call(this);
+        },
+      });
+      hosts.forEach(({ connect }) => connect());
+      expect(ruleReads).to.be.at.most(1);
+    } finally {
+      Object.defineProperty(CSSStyleSheet.prototype, 'cssRules', rulesDescriptor);
+      hosts.forEach(({ disconnect }) => disconnect());
+      style.remove();
+    }
+  });
+
+  it('does not walk any watcher ancestry for a style write outside every watched path', async () => {
+    const hosts = await Promise.all([makeHost(), makeHost(), makeHost()]);
+    const unrelated = document.body.appendChild(document.createElement('div'));
+    const slotDescriptor = Object.getOwnPropertyDescriptor(Element.prototype, 'assignedSlot')!;
+    let hostWalks = 0;
+    let calls = 0;
+    hosts.forEach(({ host }) => new ThemeWatcher(host, () => calls++));
+    try {
+      hosts.forEach(({ connect }) => connect());
+      await aTimeout(0);
+      for (const { host } of hosts) {
+        Object.defineProperty(host, 'assignedSlot', {
+          configurable: true,
+          get(this: Element) {
+            hostWalks += 1;
+            return slotDescriptor.get!.call(this);
+          },
+        });
+      }
+      unrelated.style.setProperty('--lr-theme-test', 'elsewhere');
+      unrelated.setAttribute('class', 'elsewhere');
+      await aTimeout(0);
+      expect(calls).to.equal(0);
+      expect(hostWalks).to.equal(0);
+    } finally {
+      for (const { host } of hosts) delete (host as unknown as Record<string, unknown>)['assignedSlot'];
+      unrelated.remove();
+      hosts.forEach(({ disconnect }) => disconnect());
+    }
+  });
+
+  it('follows a slot reassignment: re-reads the theme and observes the new ancestry', async () => {
+    const { host, connect, disconnect } = await makeHost();
+    const shell = document.body.appendChild(document.createElement('div'));
+    const root = shell.attachShadow({ mode: 'open' });
+    const first = root.appendChild(document.createElement('div'));
+    const second = root.appendChild(document.createElement('div'));
+    first.append(Object.assign(document.createElement('slot'), { name: 'a' }));
+    second.append(Object.assign(document.createElement('slot'), { name: 'b' }));
+    host.slot = 'a';
+    shell.append(host);
+    let calls = 0;
+    new ThemeWatcher(host, () => calls++);
+    try {
+      connect();
+      await aTimeout(0);
+      calls = 0;
+      host.slot = 'b';
+      await aTimeout(0);
+      expect(calls, 'a reassignment changes what the host inherits').to.equal(1);
+      second.setAttribute('data-theme', 'dark');
+      await aTimeout(0);
+      expect(calls).to.equal(2);
+      first.setAttribute('data-theme', 'dark');
+      await aTimeout(0);
+      expect(calls, 'the previous slot no longer styles the host').to.equal(2);
+    } finally {
+      disconnect();
+      shell.remove();
+    }
+  });
+
+  it('stops notifying through a removed slot once the host falls back to its shadow host', async () => {
+    const { host, connect, disconnect } = await makeHost();
+    const shell = document.body.appendChild(document.createElement('div'));
+    const root = shell.attachShadow({ mode: 'open' });
+    const wrapper = root.appendChild(document.createElement('div'));
+    wrapper.append(document.createElement('slot'));
+    shell.append(host);
+    let calls = 0;
+    new ThemeWatcher(host, () => calls++);
+    try {
+      connect();
+      await aTimeout(0);
+      calls = 0;
+      wrapper.remove();
+      await aTimeout(0);
+      expect(calls, 'losing the slot changes what the host inherits').to.equal(1);
+      wrapper.setAttribute('data-theme', 'dark');
+      await aTimeout(0);
+      expect(calls).to.equal(1);
+      shell.setAttribute('data-theme', 'dark');
+      await aTimeout(0);
+      expect(calls).to.equal(2);
+    } finally {
+      disconnect();
+      shell.remove();
     }
   });
 });

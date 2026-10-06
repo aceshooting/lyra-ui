@@ -28,6 +28,27 @@ export function devWarnOnce(key: string, message: string): void {
 }
 
 /**
+ * Dev-mode-only, once per (locale, key): reports that a non-English locale has no registered catalog
+ * message for `key`, so resolution falls through to the English default (or the bare key). English
+ * itself resolves through its defaults, so an `en`/`en-*` locale never warns. The message and its
+ * construction live only in this development entry; production bundles carry a no-op.
+ */
+export function warnLocaleFallback(locale: string, key: string): void {
+  const warnings = litDevWarnings();
+  if (!warnings) return;
+  const lower = locale.toLowerCase();
+  if (lower === 'en' || lower.startsWith('en-')) return;
+  const warningKey = `lyra-locale-fallback:${locale}:${key}`;
+  if (warnings.has(warningKey)) return;
+  warnings.add(warningKey);
+  console.warn(
+    `Lyra localization: no "${key}" message registered for locale "${locale}"; falling back to ` +
+      'the English default. Register it with registerLyraLocale(), or accept the fallback ' +
+      'intentionally for a still-partial catalog.'
+  );
+}
+
+/**
  * Kinds of deprecated usage a component or module can observe at runtime. Each is a `kind` of the tag-scoped
  * or module records in the package's deprecation metadata (`scripts/fixtures/component-metadata.json`), so a
  * warning key names exactly one record. The styling kinds (`part`, `css-property`, `css-state`) are

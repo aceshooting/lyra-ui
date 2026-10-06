@@ -168,3 +168,191 @@ it('uses the rendered-root focus boundary when no caller predicate is supplied',
   controller.handleControlFocus(event);
   expect(event.cancelBubble).to.equal(true);
 });
+
+it('reuses normalized rows and lowercased search keys until the catalog, value or locale change', () => {
+  const rows = (prefix: string, count: number): readonly LyraCatalogEntry[] =>
+    Object.freeze(
+      Array.from({ length: count }, (_, index) => Object.freeze({ id: `${prefix}-${index}`, label: `${prefix} ${index}` })),
+    );
+  let catalog = rows('Voice', 40);
+  let locale = 'en';
+  let fieldReads = 0;
+  const host = document.createElement('div') as unknown as PickerHost;
+  const renderRoot = host.attachShadow({ mode: 'open' });
+  Object.defineProperties(host, {
+    effectiveDisabled: { configurable: true, value: false },
+    renderRoot: { configurable: true, value: renderRoot },
+    updateComplete: { configurable: true, value: Promise.resolve(true) },
+  });
+  const controller = new CatalogPickerController(host, {
+    catalog: () => catalog,
+    allowCustom: () => true,
+    isReadonly: () => false,
+    locale: () => locale,
+    searchableFields: (entry) => {
+      fieldReads += 1;
+      return [entry.id, entry.label];
+    },
+    emitChange: () => {},
+    onValueChange: () => {},
+    onDefaultValueChange: () => {},
+    onStateChange: () => {},
+  });
+
+  controller.setQuery('voice 1');
+  const filtered = controller.filteredEntries;
+  expect(filtered.map((entry) => entry.id)).to.deep.equal([
+    'Voice-1', ...Array.from({ length: 10 }, (_, index) => `Voice-${10 + index}`),
+  ]);
+  const reads = fieldReads;
+  for (let render = 0; render < 5; render++) {
+    expect(controller.filteredEntries === filtered).to.equal(true);
+    expect(controller.visibleEntries === filtered).to.equal(true);
+    expect(controller.labelFor('Voice-3')).to.equal('Voice 3');
+  }
+  controller.setQuery('voice 2');
+  expect(controller.filteredEntries.map((entry) => entry.id)).to.include('Voice-2');
+  expect(fieldReads, 'a new query reuses the lowercased keys').to.equal(reads);
+
+  catalog = rows('Model', 3);
+  controller.setQuery('model');
+  expect(controller.filteredEntries.map((entry) => entry.id)).to.deep.equal(['Model-0', 'Model-1', 'Model-2']);
+  catalog = Object.freeze([Object.freeze({ id: 'ist', label: '\u0130stanbul' })]);
+  controller.setQuery('istanbul');
+  expect(controller.filteredEntries, 'English lowercases dotted capital I to i + U+0307').to.have.length(0);
+  locale = 'tr';
+  expect(controller.filteredEntries.map((entry) => entry.id)).to.deep.equal(['ist']);
+});
+
+describe('catalog boundary shared with the international selectors', () => {
+  it('reads rows only through own data properties and never runs a caller getter', () => {
+    let getterRuns = 0;
+    const accessorLabel = Object.defineProperty({ id: 'b' }, 'label', {
+      enumerable: true,
+      get() {
+        getterRuns += 1;
+        return 'Beta';
+      },
+    });
+    const accessorId = Object.defineProperty({ label: 'Gamma' }, 'id', {
+      enumerable: true,
+      get() {
+        getterRuns += 1;
+        return 'g';
+      },
+    });
+    const rows = normalizeCatalog([{ id: 'a', label: 'Alpha' }, accessorLabel, accessorId] as LyraCatalogEntry[]);
+    expect(rows.map((row) => row.id)).to.deep.equal(['a']);
+    const indexed = ['x'];
+    Object.defineProperty(indexed, 1, {
+      enumerable: true,
+      get() {
+        getterRuns += 1;
+        return 'y';
+      },
+    });
+    expect(normalizeCatalog(indexed as readonly string[]).map((row) => row.id)).to.deep.equal(['x']);
+    expect(getterRuns).to.equal(0);
+  });
+
+  it('reads at most the shared catalog row ceiling', () => {
+    const rows = normalizeCatalog(Array.from({ length: 1_500 }, (_, index) => `model-${index}`));
+    expect(rows.length).to.equal(1_024);
+    expect(rows.at(-1)?.id).to.equal('model-1023');
+  });
+
+  it('normalizes a frozen (owned) catalog once and shares the rows', () => {
+    const catalog: readonly LyraCatalogEntry[] = Object.freeze([
+      Object.freeze({ id: 'a', label: 'Ay' }),
+      Object.freeze({ id: 'b', label: 'Bee' }),
+    ]);
+    const first = normalizeCatalog(catalog);
+    expect(normalizeCatalog(catalog) === first).to.equal(true);
+    const mutable = ['a'];
+    expect(normalizeCatalog(mutable) === normalizeCatalog(mutable)).to.equal(false);
+  });
+});
+
+describe('closed-mode type-ahead', () => {
+  function closedPicker(labels: readonly string[], disabled: readonly string[] = []) {
+    const host = document.createElement('div') as unknown as PickerHost;
+    const renderRoot = host.attachShadow({ mode: 'open' });
+    Object.defineProperties(host, {
+      effectiveDisabled: { configurable: true, value: false },
+      renderRoot: { configurable: true, value: renderRoot },
+      updateComplete: { configurable: true, value: Promise.resolve(true) },
+    });
+    const changes: string[] = [];
+    const catalog = Object.freeze(
+      labels.map((label) => Object.freeze({ id: label.toLowerCase(), label, disabled: disabled.includes(label) })),
+    );
+    const controller = new CatalogPickerController(host, {
+      catalog: () => catalog,
+      allowCustom: () => false,
+      isReadonly: () => false,
+      locale: () => 'en',
+      searchableFields: (entry) => [entry.id, entry.label],
+      emitChange: (detail) => changes.push(detail.value),
+      onValueChange: () => {},
+      onDefaultValueChange: () => {},
+      onStateChange: () => {},
+    });
+    const type = (key: string): KeyboardEvent => {
+      const event = new KeyboardEvent('keydown', { key, cancelable: true });
+      controller.handleTriggerKeyDown(event);
+      return event;
+    };
+    return { controller, changes, type };
+  }
+
+  it('commits the next enabled row whose label starts with the typed text while closed', () => {
+    const { controller, changes, type } = closedPicker(['Alpha', 'Beta', 'Bravo', 'Charlie', 'Bistro'], ['Bistro']);
+    type('b');
+    expect(controller.value).to.equal('beta');
+    type('r');
+    expect(controller.value, 'keystrokes inside the quiet window narrow the search').to.equal('bravo');
+    expect(changes).to.deep.equal(['beta', 'bravo']);
+    expect(controller.open).to.equal(false);
+  });
+
+  it('cycles from the current row and skips disabled rows', async () => {
+    const { controller, type } = closedPicker(['Beta', 'Bistro', 'Bravo'], ['Bistro']);
+    type('b');
+    expect(controller.value).to.equal('beta');
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    type('b');
+    expect(controller.value).to.equal('bravo');
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    type('b');
+    expect(controller.value, 'wraps past the end').to.equal('beta');
+  });
+
+  it('only moves the active row while open, and keeps Space as activation until a search starts', () => {
+    const { controller, changes, type } = closedPicker(['Alpha', 'Big Sur', 'Bravo']);
+    controller.setOpen(true);
+    type(' ');
+    expect(controller.open, 'Space with an empty buffer keeps its activation meaning').to.equal(false);
+    expect(changes).to.deep.equal([]);
+    controller.setOpen(true);
+    controller.setActiveIndex(-1);
+    type('b');
+    expect(controller.activeIndex).to.equal(1);
+    expect(type(' ').defaultPrevented).to.equal(true);
+    type('s');
+    expect(controller.activeIndex, '"b s" still matches Big Sur').to.equal(1);
+    type('x');
+    expect(controller.activeIndex, 'no match leaves the active row').to.equal(1);
+    expect(changes).to.deep.equal([]);
+    expect(controller.value).to.equal('');
+  });
+
+  it('ignores modified keys', () => {
+    const { controller, type } = closedPicker(['Alpha', 'Beta']);
+    for (const init of [{ key: 'b', ctrlKey: true }, { key: 'b', metaKey: true }, { key: 'b', altKey: true }]) {
+      controller.handleTriggerKeyDown(new KeyboardEvent('keydown', { ...init, cancelable: true }));
+    }
+    expect(controller.value).to.equal('');
+    type('Tab');
+    expect(controller.value).to.equal('');
+  });
+});

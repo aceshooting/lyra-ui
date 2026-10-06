@@ -14,6 +14,10 @@ export interface SelectionCatalogRow extends SelectionCatalogEntry {
   readonly searchText: string;
 }
 
+/** Source rows any catalog-backed picker inspects: the international selectors here, and the
+ * model/voice pickers through `normalizeCatalog()` in `catalog-picker.ts`. */
+export const CATALOG_ROW_LIMIT = 1_024;
+
 /** A bounded catalog boundary that never evaluates caller-owned property getters. */
 export function snapshotSelectionCatalog(
   source: unknown,
@@ -28,7 +32,7 @@ export function snapshotSelectionCatalog(
   if (typeof length !== 'number' || !Number.isSafeInteger(length) || length < 0) return Object.freeze([]);
   const result: SelectionCatalogEntry[] = [];
   const seen = new Set<string>();
-  for (let index = 0; index < Math.min(length, 1024); index++) {
+  for (let index = 0; index < Math.min(length, CATALOG_ROW_LIMIT); index++) {
     const itemDescriptor = getOwnDataDescriptor(source as object, String(index));
     if (typeof itemDescriptor === 'symbol') continue;
     const item = itemDescriptor.value;
