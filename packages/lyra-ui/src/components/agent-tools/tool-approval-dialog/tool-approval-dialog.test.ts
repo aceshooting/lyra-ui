@@ -1,5 +1,6 @@
 import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
 import './tool-approval-dialog.js';
+import '../../overlays/dialog/dialog.js';
 import { expectFocusReturnsToReshownOpener } from '../../../../test/hidden-opener.js';
 import type { LyraToolApprovalDialog } from './tool-approval-dialog.js';
 import type { LyraJsonViewer } from '../../utility/json-viewer/json-viewer.js';
@@ -196,12 +197,26 @@ describe('editing', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="edit-button"]').length).to.equal(0);
   });
 
+  it('reads an unknown pending-action as unset, keeping both actions and Escape working', async () => {
+    const el = await fixture<LyraToolApprovalDialog>(html`<lr-tool-approval-dialog open tool-name="web_search" pending-action="approving"></lr-tool-approval-dialog>`);
+    expect(el.pendingAction).to.equal(null);
+    expect(el.hasAttribute('pending-action')).to.be.false;
+    el.pendingAction = '' as unknown as 'approve';
+    expect(el.pendingAction).to.equal(null);
+    await el.updateComplete;
+    const approved = oneEvent(el, 'lr-approve-request');
+    approveButton(el).click();
+    await approved;
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+  });
+
   it('defaults readonly to false when the attribute is entirely absent', async () => {
     const el = (await fixture(
       html`<lr-tool-approval-dialog tool-name="delete_file"></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     expect(el.readonly).to.be.false;
-    expect(editButton(el).tagName).to.equal('BUTTON');
+    expect(editButton(el).localName).to.equal('lr-button');
   });
 
   it('swaps to a textarea pre-filled with pretty-printed JSON when Edit is clicked', async () => {
@@ -397,6 +412,9 @@ describe('editing', () => {
     await el.updateComplete;
     const edit = editButton(el);
     expect(edit.disabled).to.be.true;
+    await (edit as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+    const control = edit.shadowRoot!.querySelector<HTMLElement>('[part~="button"]')!;
+    const resting = getComputedStyle(control).backgroundColor;
     const rect = edit.getBoundingClientRect();
 
     try {
@@ -404,9 +422,9 @@ describe('editing', () => {
         type: 'move',
         position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
       });
-      expect(getComputedStyle(edit).backgroundColor).to.equal('rgb(40, 50, 60)');
+      expect(getComputedStyle(control).backgroundColor).to.equal(resting);
       await sendMouse({ type: 'down' });
-      await waitUntil(() => getComputedStyle(edit).backgroundColor === 'rgb(40, 50, 60)', 'edit background color never reached rgb(40, 50, 60)');
+      expect(getComputedStyle(control).backgroundColor).to.equal(resting);
       await sendMouse({ type: 'up' });
     } finally {
       await resetMouse();
@@ -1517,9 +1535,11 @@ it('renders the disabled edit action with the shared disabled opacity token', as
   const edit = editButton(el);
   edit.disabled = true;
   await el.updateComplete;
+  await (edit as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+  const control = edit.shadowRoot!.querySelector<HTMLElement>('[part~="button"]')!;
   const expected = getComputedStyle(el).getPropertyValue('--lr-opacity-disabled').trim();
-  expect(getComputedStyle(edit).opacity).to.equal(expected);
-  expect(getComputedStyle(edit).opacity).not.to.equal('1');
+  expect(getComputedStyle(control).opacity).to.equal(expected);
+  expect(getComputedStyle(control).opacity).not.to.equal('1');
 });
 
 it('reconciles a directly closed native carrier through one public API close', async () => {
@@ -1550,4 +1570,22 @@ it('reconciles a directly closed native carrier through one public API close', a
     await el.updateComplete;
     native.close();
   }
+});
+
+it('joins the top layer above an already open lr-dialog instead of opening beneath it', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div>
+    <lr-dialog open label="Settings"><p>Settings body</p></lr-dialog>
+    <lr-tool-approval-dialog tool-name="run_shell" .args=${ARGS}></lr-tool-approval-dialog>
+  </div>`);
+  const settings = wrapper.querySelector('lr-dialog') as HTMLElement & { updateComplete: Promise<unknown> };
+  await settings.updateComplete;
+  const el = wrapper.querySelector('lr-tool-approval-dialog') as HTMLElement & { open: boolean; updateComplete: Promise<unknown> };
+  el.open = true;
+  await el.updateComplete;
+  // A later top-layer entry paints above earlier ones (hit testing skips the inert dialog below).
+  expect(settings.matches(':popover-open')).to.equal(true);
+  expect(el.matches(':popover-open'), 'the newer modal joins the top layer above the open dialog').to.equal(true);
+  el.open = false;
+  await el.updateComplete;
+  expect(el.matches(':popover-open'), 'closing leaves the top layer').to.equal(false);
 });

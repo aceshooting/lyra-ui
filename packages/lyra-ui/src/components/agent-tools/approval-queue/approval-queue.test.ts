@@ -4,6 +4,20 @@ import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../.
 import './approval-queue.js';
 import type { LyraApprovalQueue, ToolApprovalRequest } from './approval-queue.class.js';
 import type { LyraToolApprovalDialog } from '../tool-approval-dialog/tool-approval-dialog.class.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+function politeAnnouncements(): string[] {
+  return Array.from(
+    document.querySelectorAll<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"] > div`),
+    (node) => node.textContent ?? '',
+  );
+}
+
+function rowFor(el: LyraApprovalQueue, id: string): HTMLButtonElement {
+  return [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="request"]')].find(
+    (row) => row.querySelector('[part="request-id"]')?.textContent === id,
+  )!;
+}
 
 const requests: ToolApprovalRequest[] = [{ id: 'call-1', toolName: 'web_search', args: { query: 'Lyra UI' } }];
 
@@ -78,7 +92,9 @@ describe('lr-approval-queue', () => {
     rows[0]!.click();
     await el.updateComplete;
     let dialog = el.shadowRoot!.querySelector('lr-tool-approval-dialog') as LyraToolApprovalDialog;
+    await dialog.updateComplete;
     const edit = dialog.shadowRoot!.querySelector('[part="edit-button"]') as HTMLButtonElement;
+    await (edit as unknown as { updateComplete: Promise<unknown> }).updateComplete;
     edit.click();
     await dialog.updateComplete;
     expect(dialog.shadowRoot!.querySelector('[part="args-editor"]')).to.exist;
@@ -96,6 +112,112 @@ describe('lr-approval-queue', () => {
     expect(dialog.pendingAction).to.equal(null);
     expect((dialog.shadowRoot!.querySelector('[part="args-editor"]')) == null).to.be.true;
     expect(dialog.shadowRoot!.querySelector('[part="args-view"]')).to.exist;
+  });
+
+  it('keeps the open request draft and pending decision when the host appends another request', async () => {
+    const el = await fixture<LyraApprovalQueue>(html`<lr-approval-queue .requests=${requests}></lr-approval-queue>`);
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="request"]')!.click();
+    await el.updateComplete;
+    const dialog = el.shadowRoot!.querySelector('lr-tool-approval-dialog') as LyraToolApprovalDialog;
+    await dialog.updateComplete;
+    dialog.shadowRoot!.querySelector<HTMLButtonElement>('[part="edit-button"]')!.click();
+    await dialog.updateComplete;
+    const editor = dialog.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="args-editor"]')!;
+    editor.value = '{"query":"corrected"}';
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+    await dialog.updateComplete;
+
+    el.requests = [...el.requests, { id: 'call-2', toolName: 'read_file', args: { path: 'second.md' } }];
+    await el.updateComplete;
+    await dialog.updateComplete;
+    expect(el.shadowRoot!.querySelector('lr-tool-approval-dialog') === dialog).to.be.true;
+    expect(dialog.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="args-editor"]')?.value).to.equal('{"query":"corrected"}');
+
+    el.addEventListener('lr-approval-decision-request', (event) => event.preventDefault(), { once: true });
+    dialog.shadowRoot!.querySelector<HTMLElement>('[part="approve-button"]')!.click();
+    await dialog.updateComplete;
+    expect(dialog.pendingAction).to.equal('approve');
+    el.requests = [...el.requests, { id: 'call-3', toolName: 'list_files', args: {} }];
+    await el.updateComplete;
+    await dialog.updateComplete;
+    expect(dialog.pendingAction).to.equal('approve');
+
+    // A structurally different proposal for the same request is still a new proposal.
+    el.requests = el.requests.map((request) => (request.id === 'call-1' ? { ...request, args: { query: 'replaced' } } : request));
+    await el.updateComplete;
+    await dialog.updateComplete;
+    expect(dialog.pendingAction).to.equal(null);
+    expect(dialog.shadowRoot!.querySelector('[part="args-editor"]') == null).to.be.true;
+  });
+
+  it('moves focus to the next pending row and announces the outcome once a decided request resolves', async () => {
+    const queue: ToolApprovalRequest[] = [
+      { id: 'call-1', toolName: 'web_search', args: { query: 'first' } },
+      { id: 'call-2', toolName: 'read_file', args: { path: 'second.md' } },
+    ];
+    const el = await fixture<LyraApprovalQueue>(html`<lr-approval-queue .requests=${queue}></lr-approval-queue>`);
+    rowFor(el, 'call-1').click();
+    await el.updateComplete;
+    const dialog = el.shadowRoot!.querySelector('lr-tool-approval-dialog') as LyraToolApprovalDialog;
+    await dialog.updateComplete;
+    expect(el.shadowRoot!.activeElement === dialog, 'focus starts inside the open dialog').to.be.true;
+    const before = politeAnnouncements().length;
+    el.addEventListener('lr-approval-decision-request', (event) => {
+      const { invocationId } = (event as CustomEvent<{ invocationId: string }>).detail;
+      el.requests = el.requests.map((request) => (request.id === invocationId ? { ...request, status: 'approved' as const } : request));
+    }, { once: true });
+    dialog.shadowRoot!.querySelector<HTMLElement>('[part="approve-button"]')!.click();
+    await el.updateComplete;
+    await dialog.updateComplete;
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement === rowFor(el, 'call-2')).to.be.true;
+    expect(politeAnnouncements().slice(before)).to.deep.equal(['Approved']);
+
+    // Deciding the last pending request lands on the pending count.
+    rowFor(el, 'call-2').click();
+    await el.updateComplete;
+    const second = el.shadowRoot!.querySelector('lr-tool-approval-dialog') as LyraToolApprovalDialog;
+    await second.updateComplete;
+    el.addEventListener('lr-approval-decision-request', (event) => {
+      const { invocationId } = (event as CustomEvent<{ invocationId: string }>).detail;
+      el.requests = el.requests.map((request) => (request.id === invocationId ? { ...request, status: 'denied' as const } : request));
+    }, { once: true });
+    second.shadowRoot!.querySelector<HTMLElement>('[part="deny-button"]')!.click();
+    await el.updateComplete;
+    await second.updateComplete;
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement === el.shadowRoot!.querySelector('[part="count"]')).to.be.true;
+    expect(politeAnnouncements().slice(before)).to.deep.equal(['Approved', 'Denied']);
+  });
+
+  it('lets a host finalize or revert a vetoed decision through the queue', async () => {
+    const el = await fixture<LyraApprovalQueue>(html`<lr-approval-queue .requests=${requests}></lr-approval-queue>`);
+    rowFor(el, 'call-1').click();
+    await el.updateComplete;
+    const dialog = el.shadowRoot!.querySelector('lr-tool-approval-dialog') as LyraToolApprovalDialog;
+    await dialog.updateComplete;
+    expect(el.pendingApproval).to.equal(null);
+    el.revertPendingApproval();
+    el.finalizePendingApproval();
+    expect(dialog.open).to.be.true;
+
+    el.addEventListener('lr-approval-decision-request', (event) => event.preventDefault());
+    dialog.shadowRoot!.querySelector<HTMLElement>('[part="approve-button"]')!.click();
+    await dialog.updateComplete;
+    expect(el.pendingApproval).to.equal('approve');
+    el.revertPendingApproval();
+    await dialog.updateComplete;
+    expect(el.pendingApproval).to.equal(null);
+    expect(dialog.open).to.be.true;
+
+    dialog.shadowRoot!.querySelector<HTMLElement>('[part="deny-button"]')!.click();
+    await dialog.updateComplete;
+    expect(el.pendingApproval).to.equal('deny');
+    const closed = oneEvent(el, 'lr-approval-close');
+    el.finalizePendingApproval();
+    expect((await closed).detail).to.deep.equal({ invocationId: 'call-1', reason: 'deny' });
+    await el.updateComplete;
+    expect(el.open).to.be.false;
   });
 
   it('translates nested approve and deny requests into correlated queue decisions', async () => {

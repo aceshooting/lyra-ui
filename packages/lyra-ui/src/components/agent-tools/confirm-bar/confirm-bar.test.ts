@@ -563,6 +563,48 @@ describe('focus-on-mount and escape-denies', () => {
     expect(el.shadowRoot!.activeElement!.getAttribute('part')).to.equal('status');
   });
 
+  it('escape-denies leaves the proposal alone when Escape closed a slotted popup or is composing', async () => {
+    const el = await fixture<LyraConfirmBar>(html`
+      <lr-confirm-bar escape-denies tool-name="run_shell">
+        <button slot="footer" id="remember">Remember for…</button>
+        <div slot="footer" open><button id="option">This session</button></div>
+      </lr-confirm-bar>
+    `);
+    let denied = 0;
+    el.addEventListener('lr-deny-request', () => denied++);
+    const remember = el.querySelector<HTMLButtonElement>('#remember')!;
+    // An open select consumes Escape with preventDefault().
+    remember.addEventListener('keydown', (event) => event.preventDefault(), { once: true });
+    remember.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true, cancelable: true }));
+    el.querySelector('#option')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true, cancelable: true }));
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true, cancelable: true, isComposing: true }));
+    await el.updateComplete;
+    expect(denied).to.equal(0);
+    expect(el.decision).to.equal(null);
+  });
+
+  it('reads unknown decision and pending-action values as unset instead of inerting both actions', async () => {
+    const el = await fixture<LyraConfirmBar>(html`<lr-confirm-bar tool-name="run_shell" decision="yes" pending-action="approving"></lr-confirm-bar>`);
+    expect(el.decision).to.equal(null);
+    expect(el.pendingAction).to.equal(null);
+    expect(el.hasAttribute('decision')).to.be.false;
+    expect(el.hasAttribute('pending-action')).to.be.false;
+    expect(el.shadowRoot!.querySelector('[part="status"]')!.textContent!.trim()).to.equal('');
+    const approved = oneEvent(el, 'lr-approve-request');
+    (el.shadowRoot!.querySelector('[part="approve-button"]') as HTMLElement).click();
+    await approved;
+    await el.updateComplete;
+    expect(el.decision).to.equal('approved');
+    el.decision = 'maybe' as unknown as 'approved';
+    expect(el.decision).to.equal(null);
+  });
+
+  it('isolates the tool name for bidirectional text in the heading', async () => {
+    const el = await fixture<LyraConfirmBar>(html`<lr-confirm-bar tool-name="מחק_קובץ"></lr-confirm-bar>`);
+    expect(el.shadowRoot!.querySelector('[part="tool-name"]')!.getAttribute('dir')).to.equal('auto');
+  });
+
   it('escape-denies maps Escape on [part="base"] to the same outcome as clicking Deny', async () => {
     const el = (await fixture(
       html`<lr-confirm-bar escape-denies tool-name="run_shell"></lr-confirm-bar>`,

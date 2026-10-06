@@ -12,6 +12,14 @@ export const styles = css`
     position: fixed;
     inset: 0;
     z-index: var(--lr-overlay-stack-index, var(--lr-layer-modal));
+    /* Neutralizes the user-agent popover styles of the open, top-layer host. */
+    margin: 0;
+    border: none;
+    background: transparent;
+    color: inherit;
+    overflow: visible;
+    inline-size: auto;
+    block-size: auto;
     align-items: center;
     justify-content: center;
     padding-block-start: max(var(--lr-space-l), var(--lr-safe-area-top));

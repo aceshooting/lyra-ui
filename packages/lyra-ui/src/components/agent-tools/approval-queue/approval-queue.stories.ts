@@ -71,3 +71,23 @@ export const HeldDecision: Story = {
   render: () => html`<lr-approval-queue .requests=${requests}
     @lr-approval-decision-request=${(event: Event) => event.preventDefault()}></lr-approval-queue>`,
 };
+
+/** Persists a held decision, then finalizes it -- or releases the same dialog for a retry when the
+ *  simulated save fails (every other attempt). */
+let saveAttempts = 0;
+function persistHeldDecision(event: Event): void {
+  event.preventDefault();
+  const queue = event.currentTarget as LyraApprovalQueue;
+  saveAttempts += 1;
+  const succeeds = saveAttempts % 2 === 0;
+  window.setTimeout(() => {
+    if (succeeds) queue.finalizePendingApproval();
+    else queue.revertPendingApproval();
+  }, 800);
+}
+
+export const SettledHeldDecision: Story = {
+  parameters: { docs: { description: { story: 'A host that vetoes lr-approval-decision-request to persist it settles the held decision with finalizePendingApproval(), or calls revertPendingApproval() after a failed save so the reviewer can retry with the same dialog and argument edits. Here every other save fails.' } } },
+  render: () => html`<lr-approval-queue .requests=${requests}
+    @lr-approval-decision-request=${persistHeldDecision}></lr-approval-queue>`,
+};

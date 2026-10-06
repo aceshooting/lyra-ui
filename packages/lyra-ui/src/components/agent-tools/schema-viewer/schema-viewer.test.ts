@@ -6,6 +6,9 @@ import type {
   SchemaValidationIssue,
 } from './schema-viewer.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { sendKeys } from '@web/test-runner-commands';
+import { render } from 'lit';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 it('registers as lr-json-schema-viewer, freeing the generic lr-schema-viewer tag', async () => {
   const el = (await fixture(
@@ -1068,4 +1071,42 @@ it('owns non-index tuple metadata through the same descriptor-safe value boundar
   const snapshot = el.schema!.items as JsonSchemaNode[] & { note: { label: string } };
   expect(snapshot.note.label).to.equal('Tuple metadata');
   expect(Object.isFrozen(snapshot.note)).to.equal(true);
+});
+
+it('is one tab stop whose node triggers step with ArrowUp/ArrowDown and Home/End', async () => {
+  const el = await fixture<LyraJsonSchemaViewer>(html`<lr-json-schema-viewer .schema=${schema}></lr-json-schema-viewer>`);
+  const triggers = () => [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="node-trigger"]')];
+  expect(triggers().length).to.equal(4);
+  expect(triggers().filter((trigger) => trigger.tabIndex === 0).length).to.equal(1);
+  await focusByKeyboard(triggers()[0]!);
+  await sendKeys({ press: 'ArrowDown' });
+  expect(el.shadowRoot!.activeElement === triggers()[1]).to.equal(true);
+  await sendKeys({ press: 'End' });
+  expect(el.shadowRoot!.activeElement === triggers()[3]).to.equal(true);
+  await sendKeys({ press: 'ArrowDown' });
+  expect(el.shadowRoot!.activeElement === triggers()[3], 'stops at the last node').to.equal(true);
+  await sendKeys({ press: 'Home' });
+  expect(el.shadowRoot!.activeElement === triggers()[0]).to.equal(true);
+  await sendKeys({ press: 'ArrowDown' });
+  expect(triggers().filter((trigger) => trigger.tabIndex === 0).map((trigger) => trigger.dataset['path'])).to.deep.equal(['/properties/query']);
+});
+
+it('keeps its schema snapshot on a same-reference rebind', async () => {
+  const host = document.createElement('div');
+  document.body.append(host);
+  try {
+    const renderParent = (status: string): void => {
+      render(html`<p>${status}</p><lr-json-schema-viewer .schema=${schema}></lr-json-schema-viewer>`, host);
+    };
+    renderParent('first');
+    const el = host.querySelector('lr-json-schema-viewer') as LyraJsonSchemaViewer;
+    await el.updateComplete;
+    const snapshot = el.schema;
+    renderParent('second');
+    await el.updateComplete;
+    expect(el.schema === snapshot, 'an unchanged binding keeps the snapshot').to.equal(true);
+  } finally {
+    render(html``, host);
+    host.remove();
+  }
 });

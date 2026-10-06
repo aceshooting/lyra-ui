@@ -1,6 +1,7 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
+import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -35,6 +36,8 @@ const DECISION_LABEL_KEY: Record<PermissionRuleDecision, string> = {
   ask: 'permissionRulesAsk',
   deny: 'deny',
 };
+
+const normalizedRuleCache = new WeakMap<object, PermissionRule[]>();
 
 /**
  * `<lr-permission-rules>` — a controlled list of host-defined permission rules with a native
@@ -99,6 +102,8 @@ export class LyraPermissionRules extends LyraElement<LyraPermissionRulesEventMap
 
   private get normalizedRules(): PermissionRule[] {
     const rules = Array.isArray(this.rules) ? this.rules : [];
+    const cached = normalizedRuleCache.get(rules);
+    if (cached) return cached;
     const valid = rules.filter((rule): rule is PermissionRule => {
       try {
         return Boolean(
@@ -111,7 +116,10 @@ export class LyraPermissionRules extends LyraElement<LyraPermissionRulesEventMap
         return false;
       }
     });
-    return firstByIdentity(valid, (rule) => rule.id);
+    const normalized = firstByIdentity(valid, (rule) => rule.id);
+    // Only a frozen owned snapshot can never change.
+    if (Object.isFrozen(rules)) normalizedRuleCache.set(rules, normalized);
+    return normalized;
   }
 
   private decisionDispatching = false;
@@ -148,6 +156,7 @@ export class LyraPermissionRules extends LyraElement<LyraPermissionRulesEventMap
           aria-label=${this.localize('permissionRulesDecisionFor', undefined, { label: rule.label })}
           aria-readonly=${this.readonly ? 'true' : nothing}
           ?disabled=${this.disabled || this.readonly}
+          .value=${rule.decision}
           @change=${(event: Event) => this.onDecisionChange(rule, event)}
         >
           ${DECISIONS.map((decision) => html`<option value=${decision} ?selected=${rule.decision === decision}>${this.localize(DECISION_LABEL_KEY[decision])}</option>`)}
@@ -166,7 +175,7 @@ export class LyraPermissionRules extends LyraElement<LyraPermissionRulesEventMap
         <legend part="legend">${visibleLabel}</legend>
         ${rules.length === 0
           ? html`<p part="empty">${this.localize('permissionRulesEmpty')}</p>`
-          : html`<div part="list">${visibleRules.map((rule) => this.renderRule(rule))}</div>`}
+          : html`<div part="list">${repeat(visibleRules, (rule) => rule.id, (rule) => this.renderRule(rule))}</div>`}
         ${rules.length > MAX_RENDERED_RULES
           ? html`<p part="limit">${this.localize('permissionRulesLimit', undefined, {
               count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_RULES),

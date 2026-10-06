@@ -1,6 +1,7 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
+import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
@@ -52,6 +53,8 @@ const STATE_LABEL_KEY: Record<PolicyDecisionState, string> = {
   deny: 'policySummaryStateDeny',
   'needs-review': 'policySummaryStateNeedsReview',
 };
+
+const normalizedDecisionCache = new WeakMap<object, PolicyDecision[]>();
 
 const STATE_COUNT_KEY: Record<PolicyDecisionState, string> = {
   allow: 'policySummaryAllowCount',
@@ -173,19 +176,22 @@ export class LyraPolicySummary extends LyraElement {
   @property({ attribute: false }) decisions: readonly PolicyDecision[] = [];
 
   private get normalizedDecisions(): PolicyDecision[] {
-    const decisions = (Array.isArray(this.decisions) ? this.decisions : []).filter((decision) => {
+    const source = Array.isArray(this.decisions) ? this.decisions : [];
+    const cached = normalizedDecisionCache.get(source);
+    if (cached) return cached;
+    const decisions = source.filter((decision) => {
       try {
         return STATE_SET.has(decision.state) && CATEGORY_SET.has(decision.category);
       } catch {
         return false;
       }
     });
-    return firstByIdentity(decisions, (decision) => decision.id);
+    const normalized = firstByIdentity(decisions, (decision) => decision.id);
+    // Only a frozen owned snapshot can never change.
+    if (Object.isFrozen(source)) normalizedDecisionCache.set(source, normalized);
+    return normalized;
   }
 
-  private countOf(state: PolicyDecisionState): number {
-    return this.normalizedDecisions.filter((decision) => decision.state === state).length;
-  }
 
   private stopNestedLifecycle(event: Event): void {
     event.stopPropagation();
@@ -221,11 +227,13 @@ export class LyraPolicySummary extends LyraElement {
       return html`<lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>`;
     }
     const truncated = decisions.length > MAX_RENDERED_DECISIONS;
+    const counts: Record<PolicyDecisionState, number> = { allow: 0, deny: 0, 'needs-review': 0 };
+    for (const decision of decisions) counts[decision.state] += 1;
     return html`
       <div part="base">
         <div part="summary">
           ${STATES.map((state) => {
-            const count = this.countOf(state);
+            const count = counts[state];
             const formattedCount = getNumberFormat(this.effectiveLocale).format(count);
             return html`<span part="count" data-state=${state}
               >${this.localize(STATE_COUNT_KEY[state], undefined, { count: formattedCount })}</span
@@ -237,7 +245,7 @@ export class LyraPolicySummary extends LyraElement {
           role="list"
           aria-label=${this.localize('policySummaryLabel')}
         >
-          ${decisions.slice(0, MAX_RENDERED_DECISIONS).map((decision) => this.renderDecision(decision))}
+          ${repeat(decisions.slice(0, MAX_RENDERED_DECISIONS), (decision) => decision.id, (decision) => this.renderDecision(decision))}
         </div>
         ${truncated
           ? html`<p part="limit">${this.localize('policySummaryLimit', undefined, {

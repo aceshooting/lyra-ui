@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './permission-grant.js';
 import type { LyraPermissionGrant } from './permission-grant.class.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 const request = {
   requestId: 'request-7',
@@ -99,6 +100,36 @@ describe('lr-permission-grant', () => {
     const freshButton = el.shadowRoot!.querySelector<HTMLButtonElement>('[data-decision="allow-once"]')!;
     freshButton.click();
     expect(requests).to.equal(3);
+  });
+
+  it('accepts the shared approved spelling, keeps granted as its alias, and reads unknown values as pending', async () => {
+    const approved = await fixture<LyraPermissionGrant>(html`<lr-permission-grant request-id="r1" status="approved"></lr-permission-grant>`);
+    expect(approved.shadowRoot!.querySelector('[part="status"]')?.textContent).to.equal('Approved');
+    expect(approved.shadowRoot!.querySelectorAll('[part="decision"]')).to.have.lengthOf(0);
+    const granted = await fixture<LyraPermissionGrant>(html`<lr-permission-grant request-id="r1" status="granted"></lr-permission-grant>`);
+    expect(granted.status).to.equal('granted');
+    expect(granted.shadowRoot!.querySelector('[part="status"]')?.textContent).to.equal('Approved');
+    const unknown = await fixture<LyraPermissionGrant>(html`<lr-permission-grant request-id="r1" status="approvd"></lr-permission-grant>`);
+    expect(unknown.status).to.equal('pending');
+    expect(unknown.shadowRoot!.querySelector('[part="status"]')?.textContent).to.equal('Pending');
+    expect(unknown.shadowRoot!.querySelectorAll('[part="decision"]')).to.have.lengthOf(3);
+  });
+
+  it('moves focus to the settled status text when the host settles the request', async () => {
+    const el = await fixture<LyraPermissionGrant>(html`<lr-permission-grant .requestId=${request.requestId} .scope=${request.scope}></lr-permission-grant>`);
+    const button = el.shadowRoot!.querySelector<HTMLElement>('[data-decision="allow-once"]')!;
+    await focusByKeyboard(button);
+    el.addEventListener('lr-permission-decision', () => { el.status = 'approved'; }, { once: true });
+    button.click();
+    await el.updateComplete;
+    const status = el.shadowRoot!.querySelector('[part="status"]')!;
+    expect(el.shadowRoot!.activeElement === status).to.be.true;
+    expect(status.textContent).to.equal('Approved');
+  });
+
+  it('themes its decision buttons through the shared button tokens', async () => {
+    const el = await fixture<LyraPermissionGrant>(html`<lr-permission-grant style="--lr-button-radius: 7px" .requestId=${request.requestId}></lr-permission-grant>`);
+    expect(getComputedStyle(el.shadowRoot!.querySelector('[part="decision"]')!).borderTopLeftRadius).to.equal('7px');
   });
 
   it('restores the localized visible label when the label attribute is removed', async () => {

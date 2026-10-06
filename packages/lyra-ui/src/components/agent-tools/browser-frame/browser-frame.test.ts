@@ -289,6 +289,34 @@ describe('lr-browser-frame', () => {
     expect(handBackEvent.detail.controller).to.equal('agent');
   });
 
+  it('normalizes an unknown controller so the badge, label and requested controller agree', async () => {
+    const el = await fixture<LyraBrowserFrame>(html`<lr-browser-frame controller="human"></lr-browser-frame>`);
+    expect(el.controller).to.equal('agent');
+    expect(el.getAttribute('controller')).to.equal('agent');
+    expect(el.shadowRoot!.querySelector('[part="controller-badge"]')!.textContent!.trim()).to.equal('Agent');
+    const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="take-over-button"]')!;
+    expect(button.textContent!.trim()).to.equal('Take over');
+    const requested = oneEvent(el, 'lr-take-over');
+    button.click();
+    expect((await requested).detail).to.deep.equal({ controller: 'user' });
+  });
+
+  it('names a screenshot without a URL by the frame purpose', async () => {
+    const el = await fixture<LyraBrowserFrame>(html`<lr-browser-frame frame-src="data:image/gif;base64,R0lGODlhAQABAAAAACw="></lr-browser-frame>`);
+    expect(el.shadowRoot!.querySelector('[part="frame"]')?.getAttribute('alt')).to.equal('Browser view');
+  });
+
+  it('draws its borders from the shared border-width ladder and buttons from the button tokens', async () => {
+    const el = await fixture<LyraBrowserFrame>(html`<lr-browser-frame
+      style="--lr-theme-border-width-thin: 2px; --lr-theme-border-width-medium: 4px; --lr-button-radius: 7px"
+      .pings=${[{ id: 'p', x: 10, y: 10, kind: 'click' }]}
+    ></lr-browser-frame>`);
+    expect(getComputedStyle(el.shadowRoot!.querySelector('[part="base"]')!).borderTopWidth).to.equal('2px');
+    expect(getComputedStyle(el.shadowRoot!.querySelector('[part="toolbar"]')!).borderBottomWidth).to.equal('2px');
+    expect(getComputedStyle(el.shadowRoot!.querySelector('[part="ping"]')!).borderTopWidth).to.equal('4px');
+    expect(getComputedStyle(el.shadowRoot!.querySelector('[part="stop-button"]')!).borderTopLeftRadius).to.equal('7px');
+  });
+
   it('stop button emits lr-stop', async () => {
     const el = (await fixture(html`<lr-browser-frame></lr-browser-frame>`)) as LyraBrowserFrame;
     await el.updateComplete;

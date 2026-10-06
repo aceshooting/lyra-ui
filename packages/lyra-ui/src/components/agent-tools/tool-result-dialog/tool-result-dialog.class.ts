@@ -7,7 +7,6 @@ import {
   type TemplateResult,
   type SVGTemplateResult,
   type PropertyValues,
-  type ComplexAttributeConverter,
 } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -19,7 +18,8 @@ import { closeIcon, expandIcon } from '../../../internal/icons.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { durationMessageValue } from '../../../internal/duration.js';
-import { TOOL_STATUS_LABEL_KEY, isToolCallStatus, toolGlyph, toolStatusIcon } from '../tool-status.js';
+import { TOOL_CALL_STATUSES, TOOL_STATUS_LABEL_KEY, toolGlyph, toolStatusIcon } from '../tool-status.js';
+import { literalSetConverter } from '../../../internal/converters.js';
 import { styles } from './tool-result-dialog.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -76,23 +76,7 @@ function shrinkIcon(): SVGTemplateResult {
 // The status glyphs and label keys are shared with `<lr-tool-call-chip>`, `<lr-tool-timeline>` and
 // `<lr-tool-call-block>` (../tool-status.ts), so a call reads identically wherever it is shown.
 
-/**
- * Normalizes `status` at the attribute boundary -- an out-of-union value
- * (markup a caller doesn't fully control, or a raw string from an untyped
- * consumer) falls back to `'pending'` here rather than reaching
- * the status glyph/label lookups as a bad key and crashing `render()`. This
- * only covers attribute parsing; a `.status = ...` assignment made directly
- * as a property bypasses converters entirely, which is why `render()` below
- * also falls back at the glyph/label lookup itself.
- */
-const statusConverter: ComplexAttributeConverter<ToolResultStatus> = {
-  fromAttribute(value): ToolResultStatus {
-    return value !== null && isToolCallStatus(value) ? value : 'pending';
-  },
-  toAttribute(value): string {
-    return value;
-  },
-};
+const TOOL_RESULT_DIALOG_STATUS = literalSetConverter<ToolResultStatus>(TOOL_CALL_STATUSES, 'pending');
 
 /**
  * `<lr-tool-result-dialog>` — a full tool-call detail overlay: a status/
@@ -151,7 +135,7 @@ const statusConverter: ComplexAttributeConverter<ToolResultStatus> = {
  * @csspart status - The status badge (icon + text).
  * @csspart duration - The formatted `duration-ms` text.
  * @csspart header-actions - The wrapper around the maximize and close buttons.
- * @csspart maximize-button - The built-in maximize/restore toggle button.
+ * @csspart maximize-button - The built-in maximize/restore button, named by its action.
  * @csspart close-button - The built-in close button.
  * @csspart body - The wrapper around the `body` slot.
  * @csspart footer - The wrapper around the `footer` slot.
@@ -226,10 +210,18 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
    * The tool call's current lifecycle state — drives the header's status
    * badge. `incomplete` is a call that ended without a result. An
    * out-of-union value (e.g. a stray `status` attribute, or a direct property
-   * assignment from an untyped caller) is treated as `'pending'` rather than
-   * crashing render.
+   * assignment from an untyped caller) normalizes and reflects as `'pending'`.
    */
-  @property({ reflect: true, converter: statusConverter }) status: ToolResultStatus = 'pending';
+  @property({ reflect: true, converter: TOOL_RESULT_DIALOG_STATUS })
+  get status(): ToolResultStatus {
+    return this.statusValue;
+  }
+  set status(next: ToolResultStatus) {
+    const old = this.statusValue;
+    this.statusValue = TOOL_RESULT_DIALOG_STATUS.normalizeReflected(this, 'status', next);
+    this.requestUpdate('status', old);
+  }
+  private statusValue: ToolResultStatus = 'pending';
 
   /** How long the call took, in milliseconds. Omitted from the header entirely when unset. */
   @property({ type: Number, attribute: 'duration-ms' }) durationMs?: number;
@@ -268,7 +260,7 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
         this.activateOverlay();
       } else {
         const hadOverlay = this.overlay !== undefined;
-        this.nativeModal.hide();
+        this.leaveTopLayer();
         this.deactivateOverlay();
         // The synchronous return keeps the established timing whenever the opener can already
         // take focus; this covers an opener the host only re-shows afterward.
@@ -289,7 +281,7 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
   // focus targets, including controls projected through either slot.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (this.open) this.nativeModal.show();
+    if (this.open) this.enterTopLayer();
     if (changed.has('open') && this.open) {
       this.overlay?.focusInitial();
     }
@@ -314,15 +306,35 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
       this.overlay?.focusInitial();
       void this.updateComplete.then(() => {
         if (!this.open || !this.isConnected) return;
-        this.nativeModal.show();
+        this.enterTopLayer();
         this.overlay?.focusInitial();
       });
     }
   }
 
+  /** Joins the top layer like `<lr-dialog>` so an already open dialog cannot cover it. */
+  private enterTopLayer(): void {
+    if (!this.isConnected || this.nativeModal.show()) return;
+    this.popover = 'manual';
+    try {
+      if (!this.matches(':popover-open')) this.showPopover();
+    } catch {
+      // No popover support: the z-index fallback applies.
+    }
+  }
+
+  private leaveTopLayer(): void {
+    this.nativeModal.hide();
+    try {
+      if (this.matches(':popover-open')) this.hidePopover();
+    } catch {
+      // Never promoted.
+    }
+  }
+
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.nativeModal.hide();
+    this.leaveTopLayer();
     this.overlay?.suspend();
     this.deferredFocusReturn.cancel();
   }
@@ -443,7 +455,7 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
             <span part="tool-name" id=${this.titleId}>${this.toolName || this.localize('toolCall')}</span>
             <span part="status"
               >${toolStatusIcon(this.status)}<span
-                >${this.localize(TOOL_STATUS_LABEL_KEY[this.status] ?? TOOL_STATUS_LABEL_KEY.pending)}</span
+                >${this.localize(TOOL_STATUS_LABEL_KEY[this.status])}</span
               ></span
             >
             ${durationMs != null
@@ -456,7 +468,6 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
             <button
               part="maximize-button"
               type="button"
-              aria-pressed=${this.maximized ? 'true' : 'false'}
               aria-label=${this.maximized ? this.localize('restore') : this.localize('maximize')}
               @click=${this.toggleMaximized}
             >

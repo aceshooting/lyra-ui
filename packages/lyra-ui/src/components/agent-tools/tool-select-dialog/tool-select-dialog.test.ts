@@ -1,7 +1,10 @@
 import { sendKeys } from '@web/test-runner-commands';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
+import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
 import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
 import './tool-select-dialog.js';
+import '../../overlays/dialog/dialog.js';
 import { expectFocusReturnsToReshownOpener } from '../../../../test/hidden-opener.js';
 import type {
   LyraToolSelectDialog,
@@ -1369,6 +1372,7 @@ it('drops malformed tool identities while retaining a valid neighboring tool', a
 });
 
 it('admits only descriptor-safe fully valid tool rows and lets a later valid duplicate win', async () => {
+  expectDevWarning(collectionTruncationWarningKey('lr-tool-select-dialog', 'tools'));
   let accessorReads = 0;
   const accessorTool = { id: 'accessor' } as Record<string, unknown>;
   Object.defineProperty(accessorTool, 'name', {
@@ -1981,3 +1985,68 @@ for (const nativeContext of [false, true]) {
     }
   });
 }
+
+it('keeps an unchecked reserved row, its checkbox node and focus in place', async () => {
+  const many = Array.from({ length: 300 }, (_, index) => ({ id: `t${index}`, name: `Tool ${index}` }));
+  const el = await fixture<LyraToolSelectDialog>(html`
+    <lr-tool-select-dialog open .tools=${many} .selectedToolIds=${['t250']}></lr-tool-select-dialog>
+  `);
+  el.addEventListener('lr-change', (event) => {
+    el.selectedToolIds = event.detail.selectedToolIds;
+  });
+  const reserved = checkboxFor(el, 't250');
+  expect(reserved.checked).to.equal(true);
+  clickCheckbox(reserved);
+  await el.updateComplete;
+  await reserved.updateComplete;
+  expect(reserved.isConnected, 'the edited row stays mounted').to.equal(true);
+  expect(reserved.getAttribute('value')).to.equal('t250');
+  expect(reserved.checked).to.equal(false);
+  expect(checkboxFor(el, 't250') === reserved).to.equal(true);
+  expect(el.shadowRoot!.querySelectorAll('[part="tool-row"]').length).to.equal(200);
+});
+
+it('keeps rows loaded with Load more when an equivalent filter callback is re-assigned', async () => {
+  const many = Array.from({ length: 450 }, (_, index) => ({ id: `t${index}`, name: `Tool ${index}` }));
+  const el = await fixture<LyraToolSelectDialog>(html`
+    <lr-tool-select-dialog open .tools=${many}></lr-tool-select-dialog>
+  `);
+  el.filter = (tool, query) => tool.name.toLowerCase().includes(query);
+  const search = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!;
+  search.value = 'tool';
+  search.dispatchEvent(new Event('input', { bubbles: true }));
+  await el.updateComplete;
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="load-more"]')!.click();
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="tool-row"]').length).to.equal(400);
+  el.filter = (tool, query) => tool.name.toLowerCase().includes(query);
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="tool-row"]').length).to.equal(400);
+});
+
+it('names a dialog whose visible heading is blank with the localized default', async () => {
+  const el = await fixture<LyraToolSelectDialog>(html`<lr-tool-select-dialog open label="" .tools=${TOOLS}></lr-tool-select-dialog>`);
+  const panel = el.shadowRoot!.querySelector('[part="panel"]')!;
+  expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent).to.equal('');
+  expect(panel.getAttribute('aria-label')).to.equal('Select tools');
+  expect(panel.hasAttribute('aria-labelledby')).to.equal(false);
+  await expect(el).to.be.accessible();
+});
+
+it('joins the top layer above an already open lr-dialog instead of opening beneath it', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div>
+    <lr-dialog open label="Settings"><p>Settings body</p></lr-dialog>
+    <lr-tool-select-dialog .tools=${TOOLS}></lr-tool-select-dialog>
+  </div>`);
+  const settings = wrapper.querySelector('lr-dialog') as HTMLElement & { updateComplete: Promise<unknown> };
+  await settings.updateComplete;
+  const el = wrapper.querySelector('lr-tool-select-dialog') as HTMLElement & { open: boolean; updateComplete: Promise<unknown> };
+  el.open = true;
+  await el.updateComplete;
+  // A later top-layer entry paints above earlier ones (hit testing skips the inert dialog below).
+  expect(settings.matches(':popover-open')).to.equal(true);
+  expect(el.matches(':popover-open'), 'the newer modal joins the top layer above the open dialog').to.equal(true);
+  el.open = false;
+  await el.updateComplete;
+  expect(el.matches(':popover-open'), 'closing leaves the top layer').to.equal(false);
+});

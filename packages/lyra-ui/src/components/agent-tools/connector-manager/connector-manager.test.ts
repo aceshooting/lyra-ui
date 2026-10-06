@@ -1,6 +1,19 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './connector-manager.js';
 import type { AgentConnector, LyraConnectorManager } from './connector-manager.class.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+function politeAnnouncements(): string[] {
+  return Array.from(
+    document.querySelectorAll<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"] > div`),
+    (node) => node.textContent ?? '',
+  );
+}
+
+function rowPart(el: LyraConnectorManager, id: string, part: string): HTMLElement | null {
+  return el.shadowRoot!.querySelector<HTMLElement>(`[data-connector-id="${id}"] [part="${part}"]`);
+}
 
 const connectors: AgentConnector[] = [
   { id: 'files', name: 'Project files', description: 'Read selected project files.', kind: 'mcp', status: 'disconnected' },
@@ -10,6 +23,53 @@ const connectors: AgentConnector[] = [
 ];
 
 describe('lr-connector-manager', () => {
+  it('keeps each action bound to its own connector when the host re-sorts rows', async () => {
+    const el = await fixture<LyraConnectorManager>(html`<lr-connector-manager style="--lr-button-radius: 7px" .connectors=${connectors}></lr-connector-manager>`);
+    const filesAction = rowPart(el, 'files', 'action')!;
+    expect(getComputedStyle(filesAction).borderTopLeftRadius).to.equal('7px');
+    el.connectors = [connectors[1]!, connectors[0]!, connectors[2]!, connectors[3]!];
+    await el.updateComplete;
+    expect(filesAction.getAttribute('aria-label')).to.equal('Connect Project files');
+    expect(rowPart(el, 'files', 'action') === filesAction).to.be.true;
+  });
+
+  it('keeps focus on the acted connector and announces its status until it settles', async () => {
+    const el = await fixture<LyraConnectorManager>(html`<lr-connector-manager .connectors=${connectors}></lr-connector-manager>`);
+    const connect = rowPart(el, 'files', 'action')!;
+    await focusByKeyboard(connect);
+    const before = politeAnnouncements().length;
+    el.addEventListener('lr-connector-action', () => {
+      void Promise.resolve().then(() => {
+        el.connectors = el.connectors.map((item) => (item.id === 'files' ? { ...item, status: 'connecting' as const } : item));
+      });
+    }, { once: true });
+    connect.click();
+    await Promise.resolve();
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement === rowPart(el, 'files', 'status')).to.be.true;
+    expect(politeAnnouncements().slice(before)).to.deep.equal(['Connecting']);
+
+    el.connectors = el.connectors.map((item) => (item.id === 'files' ? { ...item, status: 'connected' as const } : item));
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.activeElement === rowPart(el, 'files', 'action'), 'focus moves on to the returned action');
+    expect(rowPart(el, 'files', 'action')?.textContent).to.contain('Disconnect');
+    expect(politeAnnouncements().slice(before)).to.deep.equal(['Connecting', 'Connected']);
+
+    // A settled connector's later, unrelated status changes stay silent.
+    el.connectors = el.connectors.map((item) => (item.id === 'files' ? { ...item, status: 'disconnected' as const } : item));
+    await el.updateComplete;
+    expect(politeAnnouncements().slice(before)).to.deep.equal(['Connecting', 'Connected']);
+  });
+
+  it('announces the host-localized error of a failed connection', async () => {
+    const el = await fixture<LyraConnectorManager>(html`<lr-connector-manager .connectors=${connectors}></lr-connector-manager>`);
+    const before = politeAnnouncements().length;
+    rowPart(el, 'broken', 'action')!.click();
+    el.connectors = el.connectors.map((item) => (item.id === 'broken' ? { ...item, status: 'error' as const, error: 'Token expired.' } : item));
+    await el.updateComplete;
+    expect(politeAnnouncements().slice(before)).to.deep.equal(['Token expired.']);
+  });
+
   it('renders connector kind, status, caller-localized error, and status-appropriate actions', async () => {
     const el = await fixture<LyraConnectorManager>(html`<lr-connector-manager .connectors=${connectors}></lr-connector-manager>`);
     expect(el.shadowRoot!.querySelectorAll('[part="connector"]')).to.have.lengthOf(4);

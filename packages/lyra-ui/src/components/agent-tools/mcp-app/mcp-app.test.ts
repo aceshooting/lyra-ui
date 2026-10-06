@@ -37,6 +37,7 @@ function frameMessage(
   return event;
 }
 
+/** Authenticated frame messages travel on the port (loading the frame first); others hit the window. */
 function dispatchFrameMessage(
   source: MessageEventSource | null,
   data: unknown,
@@ -47,7 +48,8 @@ function dispatchFrameMessage(
   const owner = Array.from(document.querySelectorAll('lr-mcp-app')).find((candidate) =>
     candidate.shadowRoot?.querySelector('iframe')?.contentWindow === source,
   ) as (HTMLElement & { framePort?: MessagePort; onPortMessage?: (event: MessageEvent) => void }) | undefined;
-  if (owner?.framePort && origin === 'null' && authenticate) {
+  if (owner && origin === 'null' && authenticate) {
+    if (!owner.framePort) owner.shadowRoot!.querySelector('iframe')!.dispatchEvent(new Event('load'));
     owner.onPortMessage?.(event);
   } else {
     window.dispatchEvent(event);
@@ -296,6 +298,13 @@ it('forwards typed message, link, and log requests while rejecting malformed lin
   expect(linkCount).to.equal(0);
   dispatch({ type: 'open-link', href: 'javascript:alert(1)' });
   expect(linkCount).to.equal(0);
+  dispatch({ type: 'open-link', href: '/account/delete?confirm=1' });
+  dispatch({ type: 'open-link', href: 'settings' });
+  dispatch({ type: 'open-link', href: 'blob:https://example.test/1f0c' });
+  expect(linkCount).to.equal(0);
+  const mailLink = oneEvent(el, 'lr-mcp-open-link');
+  dispatch({ type: 'open-link', href: 'mailto:help@example.test' });
+  expect((await mailLink).detail.href).to.equal('mailto:help@example.test');
 
   const defaultLog = oneEvent(el, 'lr-mcp-log');
   dispatch({ type: 'log', value: { status: 'ready' } });
@@ -404,7 +413,7 @@ it('fails closed on uncorrelated or ambiguous tool-result options at runtime', (
   expect(messages).to.deep.equal([]);
 });
 
-it('authenticates remote uniquely-origin sandbox messages by frame window and opaque origin', async () => {
+it('accepts a remote app only through its bootstrapped port, never through window messages', async () => {
   const el = (await fixture(html`<lr-mcp-app
     .resource=${{ uri: 'ui://remote/app', src: 'https://apps.example.test/weather' }}
   ></lr-mcp-app>`)) as LyraMcpApp;
@@ -412,6 +421,10 @@ it('authenticates remote uniquely-origin sandbox messages by frame window and op
   let calls = 0;
   el.addEventListener('lr-mcp-tool-call', () => calls++);
   const data = { channel: 'lyra-mcp-app', version: 1, type: 'tool-call', name: 'weather', args: {} };
+
+  // Even a window message from the mounted frame that carries the current nonce is ignored.
+  window.dispatchEvent(frameMessage(iframe.contentWindow, data, 'null'));
+  expect(calls).to.equal(0);
 
   dispatchFrameMessage(iframe.contentWindow, data, 'https://apps.example.test');
   expect(calls).to.equal(0);
@@ -421,6 +434,9 @@ it('authenticates remote uniquely-origin sandbox messages by frame window and op
 
   dispatchFrameMessage(iframe.contentWindow, data, 'null');
   expect(calls).to.equal(1);
+
+  window.dispatchEvent(frameMessage(iframe.contentWindow, data, 'null'));
+  expect(calls, 'the bootstrapped app cannot fall back to window messages either').to.equal(1);
 });
 
 it('never sends the embedding document referrer to a remote app', async () => {
@@ -520,8 +536,8 @@ it('retargets authenticated frame messages to the adopted owner window and clean
     ownerFrame.remove();
   }
 
-  expect(messageListenerAdds).to.equal(2);
-  expect(messageListenerRemoves).to.equal(2);
+  expect(messageListenerAdds).to.equal(0);
+  expect(messageListenerRemoves).to.equal(0);
 });
 
 it('replaces the iframe window across resource navigation so the previous opaque document cannot message the host', async () => {
@@ -878,4 +894,56 @@ describe('CSS-length height and max-height', () => {
     ></lr-mcp-app>`);
     expect(frameHeight(el)).to.equal('320px');
   });
+});
+
+it('never lets a declared domain reshape the trusted policy it is spliced into', async () => {
+  const el = await fixture<LyraMcpApp>(html`<lr-mcp-app
+    .resource=${{
+      uri: 'ui://csp/hostile',
+      html: '<p>App</p>',
+      csp: { resourceDomains: ['https://a"b.example', 'https://x;script-src.example', 'https://good.example'] },
+    }}
+  ></lr-mcp-app>`);
+  const srcdoc = el.shadowRoot!.querySelector('iframe')!.srcdoc;
+  const meta = new DOMParser().parseFromString(srcdoc, 'text/html').querySelector('meta[http-equiv]')!;
+  const policy = meta.getAttribute('content')!;
+  expect(policy).to.contain('https://good.example');
+  expect(policy).not.to.contain('a"b');
+  expect(policy).not.to.contain('script-src.example');
+  expect(policy.endsWith("base-uri 'none'; form-action 'none'")).to.equal(true);
+});
+
+it('keeps the mounted frame when an equal resource record is assigned again', async () => {
+  const resource = { uri: 'ui://stable', html: '<p>Stable</p>', metadata: { theme: 'dark' } };
+  const el = await fixture<LyraMcpApp>(html`<lr-mcp-app .resource=${resource}></lr-mcp-app>`);
+  const frame = el.shadowRoot!.querySelector('iframe')!;
+  const call = oneEvent(el, 'lr-mcp-tool-call');
+  dispatchFrameMessage(frame.contentWindow, {
+    channel: 'lyra-mcp-app', version: 1, type: 'tool-call', requestId: 'r1', name: 'slow', args: {},
+  }, 'null');
+  const generation = (await call).detail.frameGeneration;
+  const before = sinkTexts('polite').length;
+
+  el.resource = { ...resource, metadata: { theme: 'dark' }, title: 'Renamed' };
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('iframe') === frame, 'an equal document keeps its frame').to.equal(true);
+  expect(frame.getAttribute('title')).to.equal('Renamed');
+  expect(sinkTexts('polite').length, 'no loading announcement').to.equal(before);
+  const posted: Record<string, unknown>[] = [];
+  (el as unknown as { post: (message: Record<string, unknown>) => void }).post = (message) => posted.push(message);
+  el.postToolResult('r1', { frameGeneration: generation, result: 'done' });
+  expect(posted.length, 'a pending tool reply still reaches the kept frame').to.equal(1);
+
+  el.resource = { ...resource, metadata: { theme: 'light' } };
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('iframe') === frame, 'changed metadata remounts the app').to.equal(false);
+});
+
+it('renders a remote resource from its URL, never wrapping it in an inline policy', async () => {
+  const el = await fixture<LyraMcpApp>(html`<lr-mcp-app
+    .resource=${{ uri: 'ui://remote/csp', src: 'https://apps.example.test/app', csp: { connectDomains: [] } } as unknown as McpAppResource}
+  ></lr-mcp-app>`);
+  const frame = el.shadowRoot!.querySelector('iframe')!;
+  expect(frame.getAttribute('src')).to.equal('https://apps.example.test/app');
+  expect(frame.hasAttribute('srcdoc')).to.equal(false);
 });

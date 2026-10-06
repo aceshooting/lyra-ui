@@ -57,6 +57,24 @@ it('renders historical explanations without mounting live status or alert roles'
   expect(explanations.every((node) => !node.shadowRoot?.querySelector('[role="status"],[role="alert"]'))).to.be.true;
 });
 
+it('keeps an expanded detail with its own decision when the host inserts one above it', async () => {
+  const el = await fixture<LyraPolicySummary>(html`<lr-policy-summary .decisions=${decisions}></lr-policy-summary>`);
+  const detail = el.shadowRoot!.querySelector('[part="detail"]') as HTMLElement & { open: boolean };
+  detail.open = true;
+  await el.updateComplete;
+  el.decisions = [
+    { id: 'd0', category: 'tool', label: 'New check', state: 'deny', explanation: 'Resolved later.', detail: 'Different evidence' },
+    ...decisions,
+  ];
+  await el.updateComplete;
+  const row = detail.closest('[part="decision"]')!;
+  expect(row.querySelector('[part="label"]')!.textContent).to.equal('Read customer records');
+  expect(detail.textContent).to.contain('no-pii-read');
+  expect(detail.open).to.be.true;
+  const inserted = el.shadowRoot!.querySelector('[part="detail"]') as HTMLElement & { open: boolean };
+  expect(inserted.open).to.be.false;
+});
+
 it('normalizes duplicate decision ids first-wins before counts and disclosure rows', async () => {
   const el = await fixture<LyraPolicySummary>(html`
     <lr-policy-summary .decisions=${[

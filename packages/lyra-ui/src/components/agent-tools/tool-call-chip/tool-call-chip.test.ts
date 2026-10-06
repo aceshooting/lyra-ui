@@ -101,6 +101,8 @@ it('renders a pending fallback for a direct out-of-union status assignment', asy
   el.status = 'bogus' as LyraToolCallChip['status'];
   await el.updateComplete;
 
+  expect(el.status).to.equal('pending');
+  expect(el.getAttribute('status')).to.equal('pending');
   expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Pending');
   expect(el.shadowRoot!.querySelector('slot[name="icon"] svg')).to.exist;
   expect((el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement).ariaLabel).to.contain('Pending');
@@ -554,7 +556,11 @@ describe('detail tooltip', () => {
     await el.updateComplete;
     expect(tooltip.hidden).to.be.false;
 
-    base.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true, cancelable: true, isComposing: true }));
+    await el.updateComplete;
+    expect(tooltip.hidden).to.be.false;
+
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true, cancelable: true }));
     await el.updateComplete;
     expect(tooltip.hidden).to.be.true;
   });

@@ -116,6 +116,39 @@ describe('lr-permission-rules', () => {
     expect(select.value).to.equal('allow');
   });
 
+  it('follows a host acknowledgement that arrives after the change event returns', async () => {
+    const el = await fixture<LyraPermissionRules>(html`<lr-permission-rules .rules=${rules}></lr-permission-rules>`);
+    const select = el.shadowRoot!.querySelector<HTMLSelectElement>('[part="decision"]')!;
+    el.addEventListener('lr-permission-rule-change', (event) => {
+      const { ruleId, decision } = (event as CustomEvent<{ ruleId: string; decision: PermissionRule['decision'] }>).detail;
+      // The host applies the change after the listener returns.
+      void Promise.resolve().then(() => {
+        el.rules = el.rules.map((rule) => (rule.id === ruleId ? { ...rule, decision } : rule));
+      });
+    });
+    select.value = 'allow';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(select.value).to.equal('ask');
+    await Promise.resolve();
+    await el.updateComplete;
+    expect(select.value).to.equal('allow');
+    select.value = 'deny';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    await Promise.resolve();
+    await el.updateComplete;
+    expect(select.value).to.equal('deny');
+  });
+
+  it('keeps each decision select bound to its own rule when the host reorders rules', async () => {
+    const el = await fixture<LyraPermissionRules>(html`<lr-permission-rules .rules=${rules}></lr-permission-rules>`);
+    const readSelect = el.shadowRoot!.querySelector<HTMLSelectElement>('[part="decision"]')!;
+    const readLabel = readSelect.getAttribute('aria-label');
+    el.rules = [rules[1]!, rules[0]!];
+    await el.updateComplete;
+    expect(readSelect.getAttribute('aria-label')).to.equal(readLabel);
+    expect(readSelect.value).to.equal('ask');
+  });
+
   it('uses host aria-label on the semantic group and allows a strings override', async () => {
     const el = await fixture<LyraPermissionRules>(html`
       <lr-permission-rules aria-label="Workspace rules" .strings=${{ permissionRulesLabel: 'Access rules' }} .rules=${rules}></lr-permission-rules>

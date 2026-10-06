@@ -13,6 +13,7 @@ import {
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { resolveLocalizedParts } from '../../../internal/localization-runtime.js';
+import { optionalLiteralSetConverter } from '../../../internal/converters.js';
 import '../../layout/details/details.class.js';
 import '../../utility/json-viewer/json-viewer.class.js';
 import '../../utility/live-region/live-region.class.js';
@@ -63,6 +64,10 @@ export interface LyraConfirmBarEventMap {
   'lr-decision-settled': CustomEvent<{ decision: ApprovalDecision }>;
 }
 
+/** Unknown values read as unset rather than inerting both actions. */
+const CONFIRM_BAR_DECISION = optionalLiteralSetConverter<ApprovalDecision>(['approved', 'denied']);
+const CONFIRM_BAR_PENDING_ACTION = optionalLiteralSetConverter<ApprovalAction>(['approve', 'deny']);
+
 const ICON_VIEW_BOX = '0 0 24 24';
 const ICON_STROKE_WIDTH = '1.75';
 
@@ -91,9 +96,9 @@ function deniedIcon(): SVGTemplateResult {
 /**
  * `<lr-confirm-bar>` — an inline, non-modal approve/deny block for one proposed action: the
  * in-flow sibling of `<lr-tool-approval-dialog>` for confirmations that should sit in the
- * transcript instead of hijacking focus. Same `lr-approve-request`/`lr-deny-request` event shapes as the dialog,
- * and the same `toolApprovalHeading`/`toolApprovalArgsLabel`/`deny`/`approve` localization keys, so
- * the two always translate in lockstep.
+ * transcript instead of hijacking focus. It raises the dialog's `lr-approve-request`/`lr-deny-request`
+ * events, but only the bar's details carry `waitUntil()`, and it shares the dialog's
+ * `toolApprovalHeading`/`toolApprovalArgsLabel`/`deny`/`approve` localization keys.
  *
  * Non-modal by contract: no focus trap, no scroll lock, no Escape/backdrop semantics, and it never
  * steals focus when it appears in the transcript. DOM and tab order put Deny before Approve (the
@@ -118,7 +123,7 @@ function deniedIcon(): SVGTemplateResult {
  * hand-rolling them: `autofocus` moves focus into the bar after its own first render (the Deny
  * control when it's present and enabled, matching the safe-action-first DOM order above, else the
  * always-present `[part="status"]`), and `escape-denies` maps Escape on `[part="base"]` to the same
- * outcome as clicking Deny. `<lr-memory-panel>` predates both and still implements this focus/Escape
+ * outcome as clicking Deny, unless a popup inside the bar handles it. `<lr-memory-panel>` predates both and still implements this focus/Escape
  * handoff itself (`focusPendingConfirmation`/`onConfirmKeyDown`) rather than depending on them.
  * `escape-denies` is scoped to this element's own `[part="base"]`, never `document`: this bar is
  * inline and non-modal, not a member of the shared `activateOverlay()` Escape/stacking contract
@@ -296,11 +301,11 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   /** Decided state. Set by the component on activation *and* host-writable (an externally-resolved
    *  decision -- timeout, another reviewer -- renders identically and emits no `lr-approve-request`/`lr-deny-request`
    *  of its own; the settled notification still fires, because the status really did render). */
-  @property({ reflect: true })
+  @property({ reflect: true, converter: CONFIRM_BAR_DECISION })
   get decision(): ConfirmBarDecision { return this._decision; }
   set decision(value: ConfirmBarDecision) {
     const previous = this._decision;
-    this._decision = value;
+    this._decision = CONFIRM_BAR_DECISION.normalizeReflected(this, 'decision', value) ?? null;
     markVetoGuardWrite(this.dispatchWriteGuard);
     this.requestUpdate('decision', previous);
   }
@@ -308,11 +313,11 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   /** Which action is awaiting host resolution, while an lr-approve-request/lr-deny-request listener has called
    *  preventDefault(). Host-writable: set back to null to bounce back to the undecided state (e.g.
    *  on failure, so the user can retry), or set `decision` to finalize. */
-  @property({ attribute: 'pending-action', reflect: true })
+  @property({ attribute: 'pending-action', reflect: true, converter: CONFIRM_BAR_PENDING_ACTION })
   get pendingAction(): ApprovalAction | null { return this._pending; }
   set pendingAction(value: ApprovalAction | null) {
     const previous = this._pending;
-    this._pending = value;
+    this._pending = CONFIRM_BAR_PENDING_ACTION.normalizeReflected(this, 'pending-action', value) ?? null;
     markVetoGuardWrite(this.dispatchWriteGuard);
     this.requestUpdate('pendingAction', previous);
   }
@@ -453,6 +458,10 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
    *  refuse to close an unrelated enclosing dialog for no reason. */
   private onBaseKeyDown = (event: KeyboardEvent): void => {
     if (!this.escapeDenies || event.key !== 'Escape') return;
+    // An open popup inside the bar (or IME composition) owns this Escape.
+    const path = event.composedPath();
+    const inOpenPopup = path.slice(0, path.indexOf(this)).some((node) => node instanceof Element && node.hasAttribute('open'));
+    if (event.defaultPrevented || event.isComposing || inOpenPopup) return;
     const decisionBefore = this.decision;
     const pendingBefore = this.pendingAction;
     this.decide('denied');
@@ -643,7 +652,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
     );
     return html`${pieces.map((piece, index) =>
       index < pieces.length - 1
-        ? html`${piece}<span part="tool-name">${toolName}</span>`
+        ? html`${piece}<span part="tool-name" dir="auto">${toolName}</span>`
         : piece,
     )}`;
   }

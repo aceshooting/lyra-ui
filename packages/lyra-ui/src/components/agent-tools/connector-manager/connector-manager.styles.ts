@@ -85,6 +85,12 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
 
+  /* no-hover-state: a read-only status that only takes focus by script. */
+  [part='status']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+
   [part='action'] {
     --_lr-connector-manager-action-hover-bg: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
     --_lr-connector-manager-action-active-bg: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
@@ -92,9 +98,9 @@ export const styles = css`
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     max-inline-size: 100%;
-    padding-inline: var(--lr-space-s);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius-xs);
+    padding-inline: var(--lr-button-padding-inline, var(--lr-space-s));
+    border: var(--lr-border-width-thin) solid var(--lr-button-outlined-border, var(--lr-color-border));
+    border-radius: var(--lr-button-radius, var(--lr-radius-xs));
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font: inherit;
@@ -104,11 +110,11 @@ export const styles = css`
   }
 
   [part='action']:not(:disabled):hover {
-    background: var(--_lr-connector-manager-action-hover-bg);
+    background: var(--lr-button-hover-bg, var(--_lr-connector-manager-action-hover-bg));
   }
 
   [part='action']:not(:disabled):active {
-    background: var(--_lr-connector-manager-action-active-bg);
+    background: var(--lr-button-active-bg, var(--_lr-connector-manager-action-active-bg));
   }
 
   [part='action']:focus-visible {

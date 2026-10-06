@@ -11,7 +11,7 @@ export const styles = css`
   [part='base'] {
     display: flex;
     flex-direction: column;
-    border: var(--lr-size-1px) solid var(--lr-color-border-subtle);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
     overflow: hidden;
   }
@@ -22,7 +22,7 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-s);
     padding: var(--lr-space-xs) var(--lr-space-s);
-    border-block-end: var(--lr-size-1px) solid var(--lr-color-border-subtle);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     font-size: var(--lr-font-size-sm);
   }
   [part='url'] {
@@ -53,9 +53,9 @@ export const styles = css`
     font: inherit;
     font-size: var(--lr-font-size-xs);
     background: none;
-    border: var(--lr-size-1px) solid var(--lr-color-border);
-    border-radius: var(--lr-radius-xs);
-    padding: var(--lr-space-2xs) var(--lr-space-s);
+    border: var(--lr-border-width-thin) solid var(--lr-button-outlined-border, var(--lr-color-border));
+    border-radius: var(--lr-button-radius, var(--lr-radius-xs));
+    padding: var(--lr-space-2xs) var(--lr-button-padding-inline, var(--lr-space-s));
     cursor: pointer;
     min-inline-size: 0;
     white-space: normal;
@@ -64,14 +64,14 @@ export const styles = css`
   }
   [part='take-over-button']:hover,
   [part='stop-button']:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-button-hover-bg, var(--lr-color-brand-quiet));
   }
   /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
      --lr-color-mix-partner (which follows the text colour), a distinctly deeper step than hover in
      light and dark themes alike rather than a repeat of it. */
   [part='take-over-button']:active,
   [part='stop-button']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(--lr-button-active-bg, color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
   }
   [part='take-over-button']:focus-visible,
   [part='stop-button']:focus-visible {
@@ -112,7 +112,7 @@ export const styles = css`
     block-size: var(--lr-size-16px);
     translate: -50% -50%;
     border-radius: var(--lr-radius-pill);
-    border: var(--lr-size-2px) solid var(--lr-color-brand);
+    border: var(--lr-border-width-medium) solid var(--lr-color-brand);
     pointer-events: none;
   }
   [part='ping'][data-kind='click'] {

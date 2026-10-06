@@ -57,8 +57,8 @@ its content.
   drives the glyph, accent color, and `status-text`; same status vocabulary as
   `<lr-tool-result-dialog>` so a call's chip and its detail dialog always agree; `incomplete`
   (21.1.0) is a call that ended without a result (an interrupted stream, a cancelled run) and reads
-  `Incomplete` (`statusIncomplete`) with its own static glyph in the neutral `pending` tone; unknown
-  runtime values render the pending icon, text, and accessible label instead of failing the update
+  `Incomplete` (`statusIncomplete`) with its own static glyph in the neutral `pending` tone; an
+  unknown value normalizes and reflects as `pending`
 - `summary: string = ''` — short human-readable status text, e.g. `Searching web…`
 - `durationMs?: number` (attribute `duration-ms`) — how long the call took, in milliseconds; the
   `duration` part is omitted entirely when unset
@@ -422,7 +422,8 @@ either, the visible tool title names it. This precedence applies in ordinary and
 - `status: 'pending'|'running'|'success'|'error'|'denied'|'incomplete' = 'pending'` (reflected) —
   drives the header's status badge; same status vocabulary as `<lr-tool-call-chip>`. `incomplete`
   (21.1.0) is a call that ended without a result; its badge reads `Incomplete` in the neutral
-  pending look, through its own `--lr-tool-result-dialog-incomplete-*` pair
+  pending look, through its own `--lr-tool-result-dialog-incomplete-*` pair; an unknown value
+  normalizes and reflects as `pending`
 - `durationMs?: number` (attribute `duration-ms`) — how long the call took, in milliseconds; omitted
   from the header entirely when unset
 - `maximized: boolean = false` (reflected) — near-fullscreen presentation of the same open dialog
@@ -585,7 +586,8 @@ string; disabled?: boolean; disabledReason?: string }` — one selectable agent 
 - `useDefaults: boolean = false` (attribute `use-defaults`, reflected) — whether the conversation is
   using the default tool set (`true`) or a custom selection (`false`).
 - `label?: string` — the dialog's visible heading and accessible name. Omission uses localized
-  `selectTools`; every supplied string, including `"Select tools"` and `""`, remains literal.
+  `selectTools`; every supplied string, including `"Select tools"` and `""`, remains literal (a blank
+  one still names the dialog with `selectTools`).
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — a non-empty host attribute names
   the semantic dialog owner, taking precedence over a direct property value. Without either, its
   visible heading supplies the accessible name.
@@ -708,7 +710,8 @@ checkboxes for editing.
 - The search input is the first focusable element in the panel and receives focus automatically on open.
 - Matching rows mount in batches of 200. Selected matches reserve positions in the current batch,
   and a localized `[part="limit"]` notice plus `[part="load-more"]` button mounts the next 200;
-  searching always considers the complete first-wins tool catalog.
+  searching always considers the complete first-wins tool catalog. Rows are keyed by tool id, and a
+  toggle never removes a shown row.
 
 ---
 
@@ -1034,7 +1037,8 @@ renders at the start of the action row, before Deny/Edit/Approve.
   `wrap: 'hard'|'soft'|'off' = 'soft'`, `inputMode: string = ''` (attribute `inputmode`),
   and `enterKeyHint: string = ''` (attribute `enterkeyhint`) — forwarded to the raw-JSON
   `<textarea>` while editing; the defaults keep browser editing assistance from changing JSON text.
-- `pendingAction: 'approve' | 'deny' | null = null` (attribute `pending-action`, reflected) — which
+- `pendingAction: 'approve' | 'deny' | null = null` (attribute `pending-action`, reflected; unknown
+  values read as `null`) — which
   decision is awaiting host resolution while an `lr-approve-request`/`lr-deny-request` listener has called
   `preventDefault()` on the now-cancelable event; the pending button shows `loading`, the other is
   `disabled` (Approve is also still `disabled` while an in-progress edit is invalid JSON,
@@ -1083,8 +1087,8 @@ rendered before the built-in Deny/Edit/Approve buttons.
 `approve-button-end`, `approve-button-spinner` (`deny-button`/`approve-button` are each an
 `<lr-button>` host; these five per-button parts are re-exported from its own `lr-button` parts via
 `exportparts`. Each `*-button-base` route accepts the button's same-node `base` and `button`
-wrapper aliases, so either name survives the nested shadow boundary; `edit-button` stays a plain
-`<button>`, unaffected by this).
+wrapper aliases, so either name survives the nested shadow boundary). `edit-button` is an
+`<lr-button>` too, re-exporting `edit-button-base` and `edit-button-label`.
 
 **Themeable custom properties:** `--lr-tool-approval-dialog-overlay-color` (default
 `var(--lr-color-overlay)` — the backdrop scrim color, the same shared token `<lr-dialog>` and
@@ -1163,8 +1167,8 @@ shared composed-tree focus traversal used by the other modal families.
   button is always `brand` here) — `--lr-button-*` theming reaches them directly. A consumer
   previously styling `::part(deny-button)`/`::part(approve-button)` for
   padding/border/font/`:hover`/`:focus-visible` must move that CSS onto the re-exported
-  `deny-button-base`/`approve-button-base` sub-parts instead. `edit-button` is unaffected and stays
-  a raw `<button>`.
+  `deny-button-base`/`approve-button-base` sub-parts instead, and `edit-button` CSS onto
+  `edit-button-base`.
 - Backdrop clicks leave the dialog open by default; add `light-dismiss` to opt in, matching
   `<lr-dialog>`, `<lr-drawer>`, `<lr-lightbox>`, and the sibling tool dialogs.
 - An `lr-approve-request`/`lr-deny-request` listener can call `preventDefault()` to keep the decision open while
@@ -1340,7 +1344,10 @@ the host carries no `required` attribute, so the marker keys off a `data-require
 component sets on each `[part="field"]` wrapper. That attribute is component-owned bookkeeping —
 never write it, and note that `::part(field)[data-required]` is invalid CSS (an attribute selector
 cannot follow `::part()`), so it is not a selector hook you can use from outside. Enum and boolean
-fields render as `<lr-select>` controls with their own labels. The outer schema validator owns
+fields render as `<lr-select>` controls (number fields as `<lr-number-input>`) with their own
+label, hint and error, so `description`/`error` parts belong to text fields and the form. A choice
+error lists the displayed labels of up to 10 single-choice options, else a short invalid-selection
+message. The outer schema validator owns
 presence, so the nested control stays `.required=false` while its host receives
 `aria-required="true"` for a required property.
 
@@ -1434,7 +1441,8 @@ a JSON object, falls back to `{}` for malformed/non-object state, and does not e
 - `value` and `schema` are detached, deeply frozen assignment-time snapshots. Reassign either
   property after changing caller-owned input; direct in-place mutation cannot alter the component,
   and neither its own `checkValidity()`/`reportValidity()` nor native form validation resnapshots the
-  original object.
+  original object. Re-assigning the same object is not a change (a parent re-render keeps the user's
+  edits); assign a new object to discard them.
 - `lr-validity-change` fires once immediately at connect time even before any user interaction, so a
   form with an unmet required field announces `valid: false` on mount, not only after the first edit.
 
@@ -2245,7 +2253,8 @@ diameter in a running test row without requiring an override of `lr-spinner`'s t
 
 An inline, non-modal approve/deny block for one proposed action — the in-flow sibling of
 `lr-tool-approval-dialog` for confirmations that should sit in the transcript instead of hijacking
-focus. Same `lr-approve-request`/`lr-deny-request` event shapes as the dialog, and the same
+focus. It raises the dialog's `lr-approve-request`/`lr-deny-request` events, but only the bar's
+details carry `waitUntil()`. It uses the same
 `toolApprovalHeading`/`toolApprovalArgsLabel`/`deny`/`approve` localization keys, so the two always
 translate in lockstep. Non-modal by contract: no focus trap, no scroll lock, no Escape/backdrop
 semantics, and it never steals focus when it appears in the transcript. "Never steals focus" and
@@ -2291,7 +2300,7 @@ both are set. Before 9.0.0 the density knob alone did both jobs; a bar that reli
 is awaiting host resolution while an `lr-approve-request`/`lr-deny-request` listener has called `preventDefault()` on
 the now-cancelable event; the pending button shows `loading`, the other is `disabled`. Set
 `.decision` to finalize, or clear `.pendingAction` back to `null` to bounce back to the undecided
-state.
+state. Unknown `decision`/`pendingAction` values read as `null`.
 `waitUntil(promise)` in the event detail is the declarative form of that same state machine and
 needs no `preventDefault()`: the bar sets `pendingAction` itself, and the promise's settlement
 finalizes `decision` or clears `pendingAction` and returns focus to the control that can retry.
@@ -2306,6 +2315,7 @@ the document when it finishes parsing, never for one a host swaps in afterward �
 use. Focuses the Deny control when it's present and actually focusable (not `disabled`, not
 hidden), else the always-present `[part="status"]`. `escapeDenies: boolean = false` (attribute
 `escape-denies`, reflected) — maps Escape on `[part="base"]` to the same outcome as clicking Deny.
+An Escape handled by a popup inside the bar (or typed during IME composition) never denies.
 A no-op while `disabled`, already decided, or `pendingAction` is set, exactly like clicking Deny itself, and
 never stops propagation when it was a no-op, so an unrelated enclosing dialog's own Escape handling
 still sees the event. Scoped to this element's own `[part="base"]` rather than `document`: this bar
@@ -2489,11 +2499,13 @@ pan/zoom of the frame content (slot the image/video inside a `lr-zoomable-frame`
 the pings overlay assumes the unzoomed content box in that composition).
 
 **Properties:** `frameSrc: string = ''` (attribute `frame-src`) — image/MJPEG stream URL rendered as
-an `<img>` (safe-URL-gated via `safeMediaSrc`); ignored once the default slot has content. `url:
+an `<img>` (safe-URL-gated via `safeMediaSrc`; its alt falls back to the frame label without a
+`url`); ignored once the default slot has content. `url:
 string = ''` — address shown read-only in the toolbar (`dir="ltr"`, truncating, full value in
 `title`). `phase: LyraStreamPhase = 'idle'` (reflected; `'idle' | 'connecting' | 'streaming' |
 'stalled'`). `controller:
 'agent' | 'user' = 'agent'` (reflected) — who is driving; switches the take-over button's label.
+Unknown values normalize and reflect as `'agent'`.
 `pings: BrowserPing[] = []` (attribute: false, each `{ id, x, y, kind: 'click' | 'type' | 'scroll' |
 'move' }` — `x`/`y` are percent (0–100) of the frame's `object-fit: contain` content box,
 letterboxing-aware). Empty/blank ping ids and later duplicates are omitted before overlay rendering.
@@ -2508,8 +2520,8 @@ the `frame-src` image. `actions` — extra toolbar controls.
 session, no detail.
 
 **CSS parts:** `base` (`role="group"`), `toolbar`, `url`, `status` (visible, non-live text),
-`controller-badge`, `actions`, `take-over-button` and `stop-button` (neither rendered while
-`without-controls`), `viewport`, `frame` (the
+`controller-badge`, `actions`, `take-over-button` and `stop-button` (themed through the shared
+`--lr-button-*` tokens, neither rendered while `without-controls`), `viewport`, `frame` (the
 `frame-src` `<img>`, absent once the default slot is populated), `ping` (one action-ping marker,
 carries `data-kind`).
 
@@ -3199,10 +3211,16 @@ approved, args? }`), and `lr-approval-close` (`{ invocationId, reason }`).
 request and keeps the decision dialog pending.
 The selection and close events are non-cancelable notifications.
 
+**Settling a vetoed decision:** `pendingApproval` (read-only, `'approve' | 'deny' | null`) is the
+held decision; after persisting it call `finalizePendingApproval()` (or resolve the request), after a
+failure `revertPendingApproval()` to retry in the same dialog.
+
 Resolved rows (`approved`/`denied`) are never actionable. Replacing `requests` reconciles stale
 selection and dialog state before another activation can use it; a request that disappears or is
 resolved while open closes the dialog, and reentrant host updates during selection cannot reopen a
-stale request.
+stale request. An open request with unchanged arguments keeps its draft and pending decision across
+new arrays. A resolved decision is announced, and focus lost with it moves to the next pending row
+(else the `count` part). Rows are keyed by request id.
 
 
 **CSS parts:** `base`, `heading-row`, `heading`, `count`, `list`, `request`, `request-info`,
@@ -3229,13 +3247,15 @@ typed events. Capabilities are denied unless explicitly enabled in `resource.per
 **Properties:**
 
 - `resource: McpAppResource | null = null` (attribute: false) — a non-empty logical `uri` plus
-  exactly one executable source: `{ uri, html, src?: never, ... }` for inline content or
-  `{ uri, src, html?: never, ... }` for a relative/HTTP(S) document URL. Shared optional fields are
-  `title`, `csp`, `permissions`, and `metadata`. Runtime validation enforces the non-empty identity,
-  exact-one-source invariant, and remote URL scheme even for untyped JavaScript callers. CSP domain
-  arrays accept HTTP(S) origins only. The resource and nested CSP arrays are clone-owned, bounded,
-  and frozen; reassign a new resource record after changes. Permissions are optional booleans for
-  camera, microphone, geolocation, clipboard read, and clipboard write.
+  exactly one executable source: `{ uri, html, src?: never, csp?, ... }` for inline content or
+  `{ uri, src, html?: never, csp?: never, ... }` for a relative/HTTP(S) document URL (a remote
+  document follows its own server's CSP). Shared optional fields are `title`, `permissions`, and
+  `metadata`. Runtime validation enforces the non-empty identity, exact-one-source invariant, and
+  remote URL scheme even for untyped JavaScript callers. CSP domain arrays accept HTTP(S) origins
+  with a plain DNS or IP host only. The resource and nested CSP arrays are clone-owned, bounded,
+  and frozen; reassign a new resource record after changes (an equal record keeps the frame).
+  Permissions are optional booleans for camera, microphone, geolocation, clipboard read, and
+  clipboard write.
 - `height: number | string = 320`, `maxHeight: number | string = 800` (attribute `max-height`) —
   requested and maximum frame heights: a number of pixels, or a CSS length in `px`, `rem`, `em`,
   `vw` or `vh` (resolved when set; a numeric attribute stays a number). Runtime values and resize
@@ -3253,7 +3273,7 @@ request with exactly one of `{ frameGeneration, result }` or `{ frameGeneration,
 stale, or ambiguous correlation fails closed. Both methods are no-ops before a frame exists.
 
 The initial `host-context` message includes a document-bound nonce and transfers a `MessagePort` to
-the executable document. Frame requests and host messages after bootstrap use that port. A same-frame
+the executable document; that port is the only channel (window messages are ignored). A same-frame
 navigation closes the port, invalidates the nonce and generation, and mounts a fresh sandbox before
 host data can be delivered.
 
@@ -3262,12 +3282,12 @@ host data can be delivered.
 
 **Events:** `lr-mcp-ready` (`{ uri }`), `lr-mcp-tool-call`
 (`{ requestId?, name, args, frameGeneration }`), `lr-mcp-send-message` (`{ message }`),
-`lr-mcp-open-link` (`{ href }`), `lr-mcp-log`
+`lr-mcp-open-link` (`{ href }`, an absolute http(s) or mailto URL), `lr-mcp-log`
 (`{ level, value }`), and `lr-mcp-resize` (`{ height }`). These are host-authorized requests; the
 component does not execute tools, send messages, or navigate itself.
 
-Changing `resource`, adopting the host into another document, or reconnecting it mounts a fresh
-iframe/window generation; messages from the prior `contentWindow` are ignored even when two
+Changing `resource` to a different document, adopting the host into another document, or
+reconnecting it mounts a fresh iframe/window generation; messages from the prior `contentWindow` are ignored even when two
 opaque-origin inline documents otherwise look alike.
 
 The host-to-frame direction is correlated the same way. `lr-mcp-tool-call`'s
@@ -3408,6 +3428,8 @@ keywords. `SchemaValidationIssue = { path: string; message: string; severity?: '
 JSON-Schema required-property list instead of rejecting the entire tree.
 
 **Events:** `lr-schema-select` (`{ schemaPath, schema }`, with an RFC 6901-style JSON Pointer).
+
+**Keyboard:** the tree is one tab stop; ArrowUp/ArrowDown and Home/End move between node triggers.
 
 **CSS parts:** `base`, `tree`, `node`, `node-selected`, `node-trigger`, `name`, `type`, `required`,
 `description`, `constraints`, `issue`, `limit`, `issue-limit`, `empty`. `issue-limit` is the
@@ -4358,7 +4380,9 @@ element.addEventListener('lr-permission-rule-change', (event) => {
 
 `lr-permission-grant` presents one host-defined permission request using its `requestId`, optional
 visible `label`, `description`, and caller-supplied `scope`. Its controlled `status` is `'pending'`,
-`'granted'`, or `'denied'`; only a pending request displays actions. The buttons emit
+`'approved'` (alias `'granted'`), or `'denied'`; unknown values read as `'pending'`. Only a pending
+request displays actions; once settled, focus on a decision button moves to the `status` text. The
+buttons emit
 `lr-permission-decision` with `{ requestId, decision }`, where decision is `'allow-once'`,
 `'allow-session'`, or `'deny'`. A missing/blank identity and `disabled` state gate every action.
 The host must validate the displayed scope, authorize the operation, persist any decision, and
@@ -4375,9 +4399,9 @@ overrides the internal fieldset name.
 | `scope-label` | Localized scope label. |
 | `scope` | Host-supplied requested scope. |
 | `scope-row` | Scope label and value row. |
-| `status` | Localized controlled request status. |
+| `status` | Localized controlled request status (`tabindex="-1"`). |
 | `actions` | Decision buttons, shown only while pending. |
-| `decision` | One native decision button. |
+| `decision` | One native decision button, themed through the shared `--lr-button-*` tokens. |
 
 
 **Events:** non-cancelable `lr-permission-decision` (`detail: { requestId, decision }`) reports the host’s authorization choice; the component does not authorize or persist the operation.
@@ -4398,8 +4422,10 @@ disconnected connector offers Connect, a connected connector offers Disconnect, 
 connector offers Retry, and a connecting connector has no available action. The component never
 reads credentials, starts a server, or makes network requests. Error text is caller-supplied text
 that the host has already localized. Assign a new `.connectors` array after host updates; the
-component takes an owned snapshot, keeps the first nonblank identity, and renders at most 100 rows.
-`disabled` gates every action. Host `aria-label` names the internal group.
+component takes an owned snapshot, keeps the first nonblank identity, and renders at most 100 rows
+keyed by id. `disabled` gates every action. Host `aria-label` names the internal group. An acted-on
+connector's status changes are announced, and focus on its vanished action waits on `status` until
+the next action appears.
 
 **Properties:** `label?: string` (attribute `label`) — visible fieldset legend; when omitted or
 `null`, the component uses the localized `connectorManagerLabel`, while an explicit empty string
@@ -4418,9 +4444,9 @@ remains empty.
 | `name` | Host-supplied connector name. |
 | `kind` | Localized connector kind. |
 | `description` | Optional host-supplied description. |
-| `status` | Localized controlled connection status. |
+| `status` | Localized controlled connection status (`tabindex="-1"`). |
 | `error` | Optional host-localized error text. |
-| `action` | Native action button. |
+| `action` | Native action button, themed through the shared `--lr-button-*` tokens. |
 | `empty` | Empty state. |
 | `limit` | Notice that more than 100 valid connectors were supplied. |
 

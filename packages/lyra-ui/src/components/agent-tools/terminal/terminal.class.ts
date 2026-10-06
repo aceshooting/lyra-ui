@@ -1,4 +1,4 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
@@ -283,7 +283,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     const request = this.emit('lr-download-request', Object.freeze(detail), { cancelable: true });
     return request;
   }
-  protected static override collectionSupport = collectionSupport;
+  protected static override collectionSupport = eventCollectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-text-select',
@@ -311,9 +311,13 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
    *  duplicates normalize first-wins for range ownership, activation, and anchor lookup.
    * @default [] */
   private _highlights: readonly LyraHighlight[] = snapshotLyraHighlights([]);
+  /** Last caller-assigned array: a parent re-committing the same binding is not a change. */
+  private lastHighlightsInput: unknown = this._highlights;
   @property({ attribute: false })
   get highlights(): readonly LyraHighlight[] { return this._highlights; }
   set highlights(value: readonly LyraHighlight[]) {
+    if (value === this._highlights || value === this.lastHighlightsInput) return;
+    this.lastHighlightsInput = value;
     const previous = this._highlights;
     this._highlights = snapshotLyraHighlights(value);
     this.requestUpdate('highlights', previous);
@@ -447,7 +451,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   private appendLine(): void {
     this.buffer.push({ number: ++this.lineSeq, cells: [] });
     const max = this.effectiveMaxScrollback();
-    if (this.buffer.length - max >= SCROLLBACK_PRUNE_BATCH) this.trimScrollback(false);
+    if (this.buffer.length - max >= SCROLLBACK_PRUNE_BATCH) this.trimScrollback(false, false);
     this.column = 0;
   }
 
@@ -455,7 +459,8 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     return Math.max(1, finiteCount(this.maxScrollback, 5000, MAX_SCROLLBACK_LINES));
   }
 
-  private trimScrollback(notifySearch = true): void {
+  /** `refresh` is false inside a write, which refreshes lines and search once for the whole write. */
+  private trimScrollback(notifySearch = true, refresh = true): void {
     const previousSearch = this.searchState();
     const max = this.effectiveMaxScrollback();
     const removeCount = Math.max(0, this.buffer.length - max);
@@ -469,8 +474,10 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     }
     const trimmed = removed.length > 0 || resourceTrimmed;
     if (!trimmed) return;
-    this.lines = [...this.buffer];
-    if (this.searchQuery) this.recomputeSearchMatches();
+    if (refresh) {
+      this.lines = [...this.buffer];
+      if (this.searchQuery) this.recomputeSearchMatches();
+    }
     if (
       this.scrollTargetLineNumber !== null &&
       !this.buffer.some((line) => line.number === this.scrollTargetLineNumber)
@@ -509,7 +516,11 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   private writeInternal(raw: string, notifySearch = true): void {
     const previousSearch = this.searchState();
-    const previousText = this.getPlainText();
+    // A write only edits the cursor line and appends after it; earlier lines stay as they were.
+    const startLine = this.buffer[this.buffer.length - 1];
+    const startNumber = startLine ? startLine.number : this.lineSeq + 1;
+    const announce = this.hasUpdated && this.announceOutput;
+    const startText = announce && startLine ? plainTextOfLine(startLine) : undefined;
     const boundedRaw = raw.slice(0, MAX_INPUT_CHARACTERS);
     if (boundedRaw !== '') {
       const segments = this.ansiParser.push(boundedRaw);
@@ -517,18 +528,15 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
         this.applyChunk(seg.text, seg.styles);
       }
     }
-    this.trimScrollback(false);
+    this.trimScrollback(false, false);
     this.lines = [...this.buffer];
-    if (this.searchQuery) this.recomputeSearchMatches();
+    if (this.searchQuery) this.refreshSearchMatchesFrom(startNumber);
     if (this.follow) {
       const last = this.buffer[this.buffer.length - 1];
       this.scrollTargetLineNumber = last ? last.number : null;
     }
-    const nextText = this.getPlainText();
-    const visibleAnnouncement = nextText.startsWith(previousText)
-      ? nextText.slice(previousText.length)
-      : nextText;
-    if (this.hasUpdated && this.announceOutput && visibleAnnouncement !== '') {
+    const visibleAnnouncement = announce ? this.writtenText(startNumber, startText) : '';
+    if (visibleAnnouncement !== '') {
       // Always hand the *cumulative* not-yet-spoken text to announce() -- Announcer.announce()
       // overwrites (never appends) its own pending text, and only the onFlush callback above
       // (fired at most once per throttle window) clears pendingAnnounceText, so a burst of small
@@ -579,6 +587,23 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     return this.buffer.map(plainTextOfLine).join('\n');
   }
 
+  /** Text a write produced: the start line's new tail (or its whole text if rewritten), then new lines. */
+  private writtenText(startNumber: number, startText: string | undefined): string {
+    const first = this.buffer[0]?.number;
+    if (first === undefined) return '';
+    const pieces: string[] = [];
+    for (let index = Math.max(0, startNumber - first); index < this.buffer.length; index += 1) {
+      const line = this.buffer[index]!; // safe: index < buffer.length
+      const text = plainTextOfLine(line);
+      if (line.number === startNumber && startText !== undefined) {
+        pieces.push(text.startsWith(startText) ? text.slice(startText.length) : text);
+      } else {
+        pieces.push(text);
+      }
+    }
+    return pieces.filter((piece) => piece !== '').join('\n');
+  }
+
   scrollToBottom(): void {
     this.follow = true;
     const last = this.buffer[this.buffer.length - 1];
@@ -597,8 +622,26 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     this.searchMatches = [];
     this.searchMatchCountExact = true;
     if (!this.searchQuery) return;
+    this.scanSearchMatches(0);
+  }
+
+  /** Re-scans only the lines a write touched; a capped previous scan needs a full one. */
+  private refreshSearchMatchesFrom(startNumber: number): void {
+    const first = this.buffer[0]?.number;
+    if (!this.searchMatchCountExact || first === undefined) {
+      this.recomputeSearchMatches();
+      return;
+    }
+    this.searchMatches = this.searchMatches.filter(
+      (match) => match.lineNumber >= first && match.lineNumber < startNumber,
+    );
+    this.scanSearchMatches(Math.max(0, startNumber - first));
+  }
+
+  private scanSearchMatches(fromIndex: number): void {
     const needle = this.searchQuery.toLocaleLowerCase(this.effectiveLocale);
-    for (const line of this.buffer) {
+    for (let index = fromIndex; index < this.buffer.length; index += 1) {
+      const line = this.buffer[index]!; // safe: index < buffer.length
       const haystack = plainTextOfLine(line).toLocaleLowerCase(this.effectiveLocale);
       let from = 0;
       for (;;) {
@@ -980,18 +1023,21 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
         ? highlight
         : undefined;
     const tone: LyraHighlightTone | undefined = highlight?.tone;
-    const lineText = plainTextOfLine(line).trim();
-    const lineLabel =
-      lineText ||
-      this.localize('terminalHighlightLine', undefined, {
-        line: getNumberFormat(this.effectiveLocale).format(line.number),
-      });
-    const highlightLabel = highlightOwner?.label
-      ? [
-          this.localize('highlightWithLabel', undefined, { label: highlightOwner.label }),
-          lineLabel,
-        ].join(this.localize('accessibleLabelSeparator'))
-      : lineLabel;
+    // Only a highlight owner is an interactive, labelled row; plain rows skip the label work.
+    let highlightLabel = '';
+    if (highlightOwner) {
+      const lineLabel =
+        plainTextOfLine(line).trim() ||
+        this.localize('terminalHighlightLine', undefined, {
+          line: getNumberFormat(this.effectiveLocale).format(line.number),
+        });
+      highlightLabel = highlightOwner.label
+        ? [
+            this.localize('highlightWithLabel', undefined, { label: highlightOwner.label }),
+            lineLabel,
+          ].join(this.localize('accessibleLabelSeparator'))
+        : lineLabel;
+    }
     const stateParts = [
       'line',
       highlightOwner ? 'line-interactive' : '',

@@ -23,6 +23,8 @@ const BROWSER_FRAME_PHASE = literalSetConverter<LyraStreamPhase>(
   'idle',
 );
 
+const BROWSER_FRAME_CONTROLLER = literalSetConverter<BrowserFrameController>(['agent', 'user'], 'agent');
+
 /** The `object-fit: contain` content box (in pixels, relative to the container's own top-left) for
  *  an image of `naturalW`x`naturalH` shown inside a `containerW`x`containerH` box -- ping
  *  coordinates are percentages *of this box*, not of the (possibly letterboxed) outer container. */
@@ -168,7 +170,18 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
     this._phase = normalized;
     this.requestUpdate('phase', old);
   }
-  @property({ reflect: true }) controller: BrowserFrameController = 'agent';
+  private _controller: BrowserFrameController = 'agent';
+
+  /** Who controls the session; any other value normalizes and reflects as `'agent'`. */
+  @property({ reflect: true, converter: BROWSER_FRAME_CONTROLLER })
+  get controller(): BrowserFrameController {
+    return this._controller;
+  }
+  set controller(next: BrowserFrameController) {
+    const old = this._controller;
+    this._controller = BROWSER_FRAME_CONTROLLER.normalizeReflected(this, 'controller', next);
+    this.requestUpdate('controller', old);
+  }
   /** Pointer markers keyed by stable id. Empty/blank ids are omitted and duplicates normalize
    *  first-wins before rendering. */
   @property({ attribute: false }) pings: readonly BrowserPing[] = [];
@@ -415,7 +428,9 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
             ? html`<img
                 part="frame"
                 src=${safeSrc}
-                alt=${this.localize('browserFrameViewOf', undefined, { url: this.url })}
+                alt=${this.url.trim()
+                  ? this.localize('browserFrameViewOf', undefined, { url: this.url })
+                  : this.localize('browserFrameLabel')}
                 @load=${this.onFrameLoad}
                 @error=${this.onFrameError}
               />`

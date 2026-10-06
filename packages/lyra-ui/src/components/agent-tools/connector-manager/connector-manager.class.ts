@@ -1,9 +1,11 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
+import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { styles } from './connector-manager.styles.js';
 import { firstByIdentity } from '../collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -59,6 +61,8 @@ const ACTION_ACCESSIBLE_LABEL_KEY: Record<ConnectorAction, string> = {
  * network work. A `connecting` record has no action until the host supplies a new status. Error
  * text is caller data that the host has already localized. Collections are detached snapshots;
  * blank ids are skipped, duplicate ids retain the first valid item, and at most 100 rows render.
+ * Rows are keyed by id. An acted-on connector's status changes are announced, and focus on its
+ * vanished action waits on its `status` until the next action appears.
  *
  * @customElement lr-connector-manager
  * @event lr-connector-action - A connector action was requested. `detail: { connectorId, action }`.
@@ -72,9 +76,9 @@ const ACTION_ACCESSIBLE_LABEL_KEY: Record<ConnectorAction, string> = {
  * @csspart name - The host-supplied connector name.
  * @csspart kind - The localized connector kind.
  * @csspart description - Optional host-supplied description.
- * @csspart status - The localized controlled connection status.
+ * @csspart status - The localized controlled connection status (`tabindex="-1"`).
  * @csspart error - Optional host-localized error text.
- * @csspart action - The native action button.
+ * @csspart action - The native action button, themed through the shared `--lr-button-*` tokens.
  * @csspart empty - The empty state.
  * @csspart limit - Localized notice shown when more than 100 valid connectors are supplied.
  * @status experimental
@@ -122,9 +126,68 @@ export class LyraConnectorManager extends LyraElement<LyraConnectorManagerEventM
   @property({ type: Boolean, reflect: true }) disabled = false;
 
   private dispatchingAction = false;
+  private sink?: AnnouncementSink;
+  private actedConnectorId: string | null = null;
+  private pendingAnnouncement = '';
+  private focusedRowId: string | null = null;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.sink ??= acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.sink?.release();
+    this.sink = undefined;
+    this.actedConnectorId = null;
+    this.pendingAnnouncement = '';
+  }
+
+  private rowPart(connectorId: string, part: 'status' | 'action'): HTMLElement | null {
+    for (const row of this.renderRoot.querySelectorAll<HTMLElement>('[part~="connector"]')) {
+      if (row.dataset['connectorId'] === connectorId) return row.querySelector<HTMLElement>(`[part~="${part}"]`);
+    }
+    return null;
+  }
+
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (!this.hasUpdated || !changed.has('connectors')) return;
+    this.focusedRowId = this.shadowRoot?.activeElement?.closest<HTMLElement>('[part~="connector"]')?.dataset['connectorId'] ?? null;
+    const acted = this.actedConnectorId;
+    if (acted === null) return;
+    const previous = this.normalizedConnectorsFrom(changed.get('connectors')).find((item) => item.id === acted);
+    const current = this.normalizedConnectors.find((item) => item.id === acted);
+    if (!current) this.actedConnectorId = null;
+    else if (previous?.status !== current.status || previous.error !== current.error) {
+      this.pendingAnnouncement = current.status === 'error' && current.error ? current.error : this.localize(STATUS_LABEL_KEY[current.status]);
+      if (current.status !== 'connecting') this.actedConnectorId = null;
+    }
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    const id = this.focusedRowId;
+    this.focusedRowId = null;
+    if (id !== null) {
+      const status = this.rowPart(id, 'status');
+      const active = this.shadowRoot?.activeElement;
+      const action = this.rowPart(id, 'action') as HTMLButtonElement | null;
+      if (!active || active === status) (action && !action.disabled ? action : status)?.focus();
+    }
+    if (this.pendingAnnouncement) {
+      this.sink?.announce(this.pendingAnnouncement);
+      this.pendingAnnouncement = '';
+    }
+  }
 
   private get normalizedConnectors(): AgentConnector[] {
-    const connectors = Array.isArray(this.connectors) ? this.connectors : [];
+    return this.normalizedConnectorsFrom(this.connectors);
+  }
+
+  private normalizedConnectorsFrom(source: unknown): AgentConnector[] {
+    const connectors: readonly AgentConnector[] = Array.isArray(source) ? source : [];
     const valid = connectors.filter((connector): connector is AgentConnector => {
       try {
         return Boolean(
@@ -151,6 +214,7 @@ export class LyraConnectorManager extends LyraElement<LyraConnectorManagerEventM
     const current = this.normalizedConnectors.find((item) => item.id === connector.id);
     if (this.disabled || !current || this.actionFor(current) !== action || this.dispatchingAction) return;
     this.dispatchingAction = true;
+    this.actedConnectorId = current.id;
     try {
       this.emit('lr-connector-action', { connectorId: current.id, action });
     } finally {
@@ -169,7 +233,7 @@ export class LyraConnectorManager extends LyraElement<LyraConnectorManagerEventM
           ${connector.error ? html`<span part="error">${connector.error}</span>` : nothing}
         </div>
         <div part="connector-controls">
-          <span part="status" data-status=${connector.status}>${this.localize(STATUS_LABEL_KEY[connector.status])}</span>
+          <span part="status" tabindex="-1" data-status=${connector.status}>${this.localize(STATUS_LABEL_KEY[connector.status])}</span>
           ${action
             ? html`<button
                 part="action"
@@ -194,7 +258,7 @@ export class LyraConnectorManager extends LyraElement<LyraConnectorManagerEventM
         ${connectors.length === 0
           ? html`<p part="empty">${this.localize('connectorManagerEmpty')}</p>`
           : html`<div part="list" role="list">
-              ${connectors.slice(0, MAX_RENDERED_CONNECTORS).map((connector) => this.renderConnector(connector))}
+              ${repeat(connectors.slice(0, MAX_RENDERED_CONNECTORS), (connector) => connector.id, (connector) => this.renderConnector(connector))}
             </div>`}
         ${connectors.length > MAX_RENDERED_CONNECTORS
           ? html`<p part="limit">${this.localize('connectorManagerLimit', undefined, {

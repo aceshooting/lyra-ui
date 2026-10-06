@@ -2,6 +2,7 @@ import { sendMouse, resetMouse } from '../../../../test/wtr-mouse.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
 import './tool-result-dialog.js';
+import '../../overlays/dialog/dialog.js';
 import type { LyraToolResultDialog } from './tool-result-dialog.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expectFocusReturnsToReshownOpener } from '../../../../test/hidden-opener.js';
@@ -147,6 +148,8 @@ it('falls back to a pending badge instead of throwing when status is assigned an
   )) as LyraToolResultDialog;
   el.status = 'bogus' as LyraToolResultDialog['status'];
   await el.updateComplete;
+  expect(el.status).to.equal('pending');
+  expect(el.getAttribute('status')).to.equal('pending');
   expect(el.shadowRoot!.querySelector('[part="status"]')!.textContent).to.include('Pending');
 });
 
@@ -935,3 +938,32 @@ for (const nativeContext of [false, true]) {
     }
   });
 }
+
+it('joins the top layer above an already open lr-dialog instead of opening beneath it', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div>
+    <lr-dialog open label="Settings"><p>Settings body</p></lr-dialog>
+    <lr-tool-result-dialog tool-name="search" status="success"></lr-tool-result-dialog>
+  </div>`);
+  const settings = wrapper.querySelector('lr-dialog') as HTMLElement & { updateComplete: Promise<unknown> };
+  await settings.updateComplete;
+  const el = wrapper.querySelector('lr-tool-result-dialog') as HTMLElement & { open: boolean; updateComplete: Promise<unknown> };
+  el.open = true;
+  await el.updateComplete;
+  // A later top-layer entry paints above earlier ones (hit testing skips the inert dialog below).
+  expect(settings.matches(':popover-open')).to.equal(true);
+  expect(el.matches(':popover-open'), 'the newer modal joins the top layer above the open dialog').to.equal(true);
+  el.open = false;
+  await el.updateComplete;
+  expect(el.matches(':popover-open'), 'closing leaves the top layer').to.equal(false);
+});
+
+it('names the maximize action by what it does without a contradictory pressed state', async () => {
+  const el = await fixture<LyraToolResultDialog>(html`<lr-tool-result-dialog open tool-name="search"></lr-tool-result-dialog>`);
+  const button = el.shadowRoot!.querySelector('[part="maximize-button"]') as HTMLButtonElement;
+  expect(button.getAttribute('aria-label')).to.equal('Maximize');
+  expect(button.hasAttribute('aria-pressed')).to.equal(false);
+  button.click();
+  await el.updateComplete;
+  expect(button.getAttribute('aria-label')).to.equal('Restore');
+  expect(button.hasAttribute('aria-pressed')).to.equal(false);
+});

@@ -46,7 +46,7 @@ export const Granted: Story = {
       .label=${request.label}
       .description=${request.description}
       .scope=${request.scope}
-      status="granted"
+      status="approved"
     ></lr-permission-grant>
   `,
 };

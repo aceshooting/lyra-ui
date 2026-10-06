@@ -12,7 +12,7 @@ import { styles } from './tool-approval-dialog.styles.js';
 import type { ApprovalAction } from '../approval-state.js';
 import '../../utility/json-viewer/json-viewer.class.js';
 import '../../forms/button/button.class.js';
-import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
+import { optionalLiteralSetConverter, trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
@@ -47,6 +47,9 @@ export type ToolApprovalDialogCloseReason =
  * `ConfirmBarDecision`).
  */
 export type ToolApprovalDialogPending = ApprovalAction | null;
+
+/** An unknown value reads as unset rather than inerting both actions. */
+const TOOL_APPROVAL_PENDING_ACTION = optionalLiteralSetConverter<ApprovalAction>(['approve', 'deny']);
 
 /** The accepted dismissal reason. */
 export interface LyraToolApprovalDialogCloseDetail {
@@ -177,7 +180,9 @@ export interface LyraToolApprovalDialogEventMap {
  * @csspart deny-button-end - Forwarded from the internal Deny `<lr-button>`'s own `end` part.
  * @csspart deny-button-spinner - Forwarded from the internal Deny `<lr-button>`'s own `spinner`
  * part, present only while `pendingAction` is `'deny'`.
- * @csspart edit-button - The built-in Edit/Cancel toggle button (not rendered while `readonly`).
+ * @csspart edit-button - The built-in Edit/Cancel `<lr-button>` (not rendered while `readonly`).
+ * @csspart edit-button-base - The Edit/Cancel button's internal control.
+ * @csspart edit-button-label - The Edit/Cancel button's label wrapper.
  * @csspart approve-button - The built-in Approve `<lr-button>` — `disabled` while an in-progress edit is invalid JSON (or while Deny is pending).
  * @csspart approve-button-base - Forwarded from the internal Approve `<lr-button>`'s same-node
  * `base` and `button` wrapper aliases.
@@ -273,12 +278,12 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
    *  to `null` every time the dialog transitions from closed to open, mirroring
    *  `editing`/`draftText`/`draftError`'s own reset-on-reopen contract below, so a reused instance
    *  never leaks one proposal's stuck pending state into the next. While non-null, Escape and an
-   *  enabled backdrop dismissal are suppressed (see `activateOverlay()`). */
-  @property({ attribute: 'pending-action', reflect: true })
+   *  enabled backdrop dismissal are suppressed (see `activateOverlay()`). Unknown values read as `null`. */
+  @property({ attribute: 'pending-action', reflect: true, converter: TOOL_APPROVAL_PENDING_ACTION })
   get pendingAction(): ToolApprovalDialogPending { return this._pendingAction; }
   set pendingAction(value: ToolApprovalDialogPending) {
     const previous = this._pendingAction;
-    this._pendingAction = value;
+    this._pendingAction = TOOL_APPROVAL_PENDING_ACTION.normalizeReflected(this, 'pending-action', value) ?? null;
     markVetoGuardWrite(this.dispatchWriteGuard);
     this.requestUpdate('pendingAction', previous);
   }
@@ -350,7 +355,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
         this.resetProposalState();
       } else {
         const hadOverlay = this.overlay !== undefined;
-        this.nativeModal.hide();
+        this.leaveTopLayer();
         this.overlay?.deactivate();
         this.overlay = undefined;
         // The synchronous return keeps the established timing whenever the opener can already
@@ -386,7 +391,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   // them -- mirrors lr-dialog's identical ordering rationale.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (this.open) this.nativeModal.show();
+    if (this.open) this.enterTopLayer();
     this.suppressNextErrorAnnouncement = false;
     if (changed.has('open') && this.open) {
       this.overlay?.focusInitial();
@@ -434,15 +439,35 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
       this.overlay?.focusInitial();
       void this.updateComplete.then(() => {
         if (!this.open || !this.isConnected) return;
-        this.nativeModal.show();
+        this.enterTopLayer();
         this.overlay?.focusInitial();
       });
     }
   }
 
+  /** Joins the top layer like `<lr-dialog>` so an already open dialog cannot cover it. */
+  private enterTopLayer(): void {
+    if (!this.isConnected || this.nativeModal.show()) return;
+    this.popover = 'manual';
+    try {
+      if (!this.matches(':popover-open')) this.showPopover();
+    } catch {
+      // No popover support: the z-index fallback applies.
+    }
+  }
+
+  private leaveTopLayer(): void {
+    this.nativeModal.hide();
+    try {
+      if (this.matches(':popover-open')) this.hidePopover();
+    } catch {
+      // Never promoted.
+    }
+  }
+
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.nativeModal.hide();
+    this.leaveTopLayer();
     this.overlay?.suspend();
     this.deferredFocusReturn.cancel();
     this.errorAnnouncementSink?.release();
@@ -679,14 +704,15 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
             @click=${this.onDeny}
           >${this.localize('deny')}</lr-button>
           ${!this.readonly
-            ? html`<button
+            ? html`<lr-button
                 part="edit-button"
+                variant="neutral"
+                appearance="outlined"
                 type="button"
                 ?disabled=${this.pendingAction != null}
+                exportparts="base:edit-button-base, button:edit-button-base, label:edit-button-label"
                 @click=${this.toggleEdit}
-              >
-                ${this.editing ? this.localize('cancel') : this.localize('edit')}
-              </button>`
+              >${this.editing ? this.localize('cancel') : this.localize('edit')}</lr-button>`
             : nothing}
           <lr-button
             part="approve-button"

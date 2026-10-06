@@ -1,7 +1,6 @@
 import {
   html,
   nothing,
-  type ComplexAttributeConverter,
   type TemplateResult,
   type PropertyValues,
 } from 'lit';
@@ -18,7 +17,8 @@ import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { durationMessageValue } from '../../../internal/duration.js';
 
-import { TOOL_STATUS_LABEL_KEY, isToolCallStatus, toolStatusIcon } from '../tool-status.js';
+import { TOOL_CALL_STATUSES, TOOL_STATUS_LABEL_KEY, toolStatusIcon } from '../tool-status.js';
+import { literalSetConverter } from '../../../internal/converters.js';
 import { styles } from './tool-call-chip.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -45,16 +45,7 @@ export interface LyraToolCallChipEventMap {
 // call reads identically wherever it is shown.
 const STATUS_ICON = toolStatusIcon;
 
-const statusConverter: ComplexAttributeConverter<ToolCallStatus> = {
-  fromAttribute(value): ToolCallStatus {
-    return value !== null && isToolCallStatus(value)
-      ? (value as ToolCallStatus)
-      : 'pending';
-  },
-  toAttribute(value): string {
-    return value;
-  },
-};
+const TOOL_CALL_CHIP_STATUS = literalSetConverter<ToolCallStatus>(TOOL_CALL_STATUSES, 'pending');
 
 /**
  * `<lr-tool-call-chip>` — a compact inline pill representing one tool/
@@ -183,11 +174,19 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   /**
    * The call's current lifecycle state — drives the glyph, color, and
    * `status-text`. `incomplete` is a call that ended without a result; it
-   * keeps the neutral tone with its own static glyph and text. Invalid runtime
-   * values use the pending presentation.
+   * keeps the neutral tone with its own static glyph and text. Unknown values
+   * normalize and reflect as `pending`.
    */
-  @property({ reflect: true, converter: statusConverter })
-  status: ToolCallStatus = 'pending';
+  @property({ reflect: true, converter: TOOL_CALL_CHIP_STATUS })
+  get status(): ToolCallStatus {
+    return this.statusValue;
+  }
+  set status(next: ToolCallStatus) {
+    const old = this.statusValue;
+    this.statusValue = TOOL_CALL_CHIP_STATUS.normalizeReflected(this, 'status', next);
+    this.requestUpdate('status', old);
+  }
+  private statusValue: ToolCallStatus = 'pending';
 
   /** Short human-readable status text, e.g. `Searching web…`. Removing the attribute clears its displayed text. */
   @property() summary = '';
@@ -342,7 +341,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   }
 
   // Called both as the actual (unconditional) close -- from onDetailSlotChange
-  // and the Escape handler below, where the tooltip must close regardless of
+  // and the shared overlay stack's Escape route, where the tooltip must close regardless of
   // hover/focus state -- and from onMouseLeave/onBlur once each has already
   // confirmed the *other* modality isn't still holding the tooltip open. The
   // default slot is enforced as an inert, read-only preview (raw args, a
@@ -379,22 +378,6 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
     this.hideTooltip();
   };
 
-  private onKeyDown = (e: KeyboardEvent): void => {
-    // The native <button> already handles Enter/Space activation on its
-    // own -- this only needs to cover dismissing the (non-native) tooltip,
-    // the same Escape-to-close convention every other popup in this library
-    // follows (see lr-combobox's onKeyDown). Not gated on hovering/focused
-    // (Escape is a deliberate dismissal, not transient pointer/focus
-    // travel), but gated on tooltipOverlay.isTopmost() so a genuinely
-    // topmost overlay stacked above this tooltip gets the keypress instead
-    // -- the shared document-level listener still routes it there when this
-    // branch defers.
-    if (e.key === 'Escape' && this.tooltipOpen && this.tooltipOverlay?.isTopmost()) {
-      e.stopPropagation();
-      this.hideTooltip();
-    }
-  };
-
   private onClick = (): void => {
     this.emit('lr-tool-call-chip-select', {
       name: this.name,
@@ -420,10 +403,6 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
     this.baseEl?.click();
   }
 
-  private get effectiveStatus(): ToolCallStatus {
-    return isToolCallStatus(this.status) ? this.status : 'pending';
-  }
-
   /** `durationMs` normalized to a finite, non-negative value, or `null` -- `null`/`undefined`
    *  and a non-finite raw value (e.g. a stray `NaN` assignment) both mean "no duration to show,"
    *  matching this property's own "omitted from the chip entirely when unset" contract, rather
@@ -444,7 +423,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   private get accessibleLabel(): string {
     const parts = [this.shownName];
     if (this.summary) parts.push(this.summary);
-    parts.push(this.localize(TOOL_STATUS_LABEL_KEY[this.effectiveStatus]));
+    parts.push(this.localize(TOOL_STATUS_LABEL_KEY[this.status]));
     const durationMs = this.safeDurationMs;
     if (durationMs != null) {
       parts.push(this.localizedDuration(durationMs));
@@ -466,7 +445,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
     const hasSummary = (this.summary ?? '').length > 0;
     const durationMs = this.safeDurationMs;
     const hasDuration = durationMs != null;
-    const status = this.effectiveStatus;
+    const status = this.status;
 
     return html`
       <button
@@ -481,7 +460,6 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
         @mouseleave=${this.onMouseLeave}
         @focus=${this.onFocus}
         @blur=${this.onBlur}
-        @keydown=${this.onKeyDown}
       >
         <span part="icon" aria-hidden="true" inert>
           <slot name="icon"

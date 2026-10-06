@@ -1,4 +1,4 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
 import {
@@ -26,8 +26,8 @@ import '../../forms/combobox/option.class.js';
 import type { LyraNumberInput } from '../../forms/input/number-input.class.js';
 import '../../forms/input/number-input.class.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
+import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import {
-  attachInternalsSafely,
   getFormOwner,
   installCustomErrorProperty,
   isBarredFromValidation,
@@ -47,12 +47,8 @@ import { LYRA_DEFAULT_fieldMustBeBoolean, LYRA_DEFAULT_fieldMustBeInteger, LYRA_
 
 
 
-function cloneFormValue(
-  value: ToolParamFormValue,
-  _ownerWindow: Window | null,
-): ToolParamFormValue {
-  return snapshotFormValue(value).value;
-}
+/** A single-choice selection error names its choices only up to this many. */
+const MAX_LISTED_CHOICES = 10;
 
 export interface LyraToolParamFormEventMap {
   'lr-invalid': CustomEvent<null>;
@@ -159,8 +155,8 @@ export interface LyraToolParamFormEventMap {
  * replace the field type's native spin buttons — see `<lr-number-input>`'s own docs for its
  * further-forwarded parts). Not present on the `'boolean'`/enum (`<lr-select>`) or
  * unsupported-type fallback branches.
- * @csspart description - A field's helper text, from `schema.description`.
- * @csspart error - A field-level or form-level validation message.
+ * @csspart description - A text field's helper text; composed controls show their own hint.
+ * @csspart error - A text field's or the form's validation message; composed controls show their own.
  * @csspart unsupported - The fallback note rendered in place of a control for
  * a property whose `type` is outside this renderer's scope.
  * @csspart empty - The message shown when `schema.properties` has no entries.
@@ -227,7 +223,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
 
   static formAssociated = true;
   static override styles = [LyraElement.styles, styles];
-  protected static override collectionSupport = collectionSupport;
+  protected static override collectionSupport = eventCollectionSupport;
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-validity-change',
     'lr-input',
@@ -246,7 +242,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   // render observe the same state. Exposed publicly (read-only) via the
   // `errors` getter below, under a leading underscore so the getter itself
   // can be named plain `errors` without a collision.
-  @state() private _errors: Record<string, string> = {};
+  @state() private _errors: Record<string, string> = Object.create(null);
   @state() private _formError = '';
   @state() private showFormError = false;
   // Which fields have been visited (focusout'd) at least once — gates only
@@ -266,6 +262,9 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   private schemaInputShapeError: SchemaSnapshot['shapeError'] = '';
   private schemaInputExceededLimits = false;
   private _value: ToolParamFormValue = Object.freeze({});
+  /** Last caller-assigned inputs: a parent re-committing the same binding is not a change. */
+  private lastSchemaInput: unknown = EMPTY_SCHEMA;
+  private lastValueInput: unknown = this._value;
   private valueInputInvalid = false;
   private valueInputTruncated = false;
   private defaultValueSnapshot: ToolParamFormValue = Object.freeze({});
@@ -375,7 +374,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
 
   private focusFirstControl(options?: FocusOptions): void {
     if (!this.renderRoot) return;
-    const controls = this.renderRoot.querySelectorAll<HTMLElement>('input.control, lr-select');
+    const controls = this.renderRoot.querySelectorAll<HTMLElement>('input.control, lr-select, lr-number-input');
     for (const control of controls) {
       const disabled = (control as HTMLElement & { disabled?: boolean }).disabled
         || control.getAttribute('aria-disabled') === 'true';
@@ -412,7 +411,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
 
   override connectedCallback(): void {
     if (!this.defaultValueCaptured) {
-      this.defaultValueSnapshot = cloneFormValue(this._value, this.ownerDocument.defaultView);
+      this.defaultValueSnapshot = this._value;
       this.defaultValueCaptured = true;
     }
     super.connectedCallback();
@@ -444,7 +443,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
 
   /** `value`, with any property missing from it filled in from `schema`'s own `default` — see the class doc. */
   get effectiveValue(): ToolParamFormValue {
-    return snapshotFormValue(this._effectiveValue).value;
+    return this._effectiveValue;
   }
 
   private get schemaProperties(): Readonly<Record<string, ToolParamFormProperty>> {
@@ -483,11 +482,13 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
 
   /** Detached, deeply frozen schema snapshot. At most 100 fields, 100 required keys, and 500 enum
    * choices per field are retained. Oversized assignments remain invalid until replaced; reassign
-   * the schema after changing it. */
+   * the schema after changing it; re-assigning the same object is not a change. */
   get schema(): FlatToolParamSchema {
     return this._schema;
   }
   set schema(next: FlatToolParamSchema) {
+    if (next === this._schema || next === this.lastSchemaInput) return;
+    this.lastSchemaInput = next;
     const old = this._schema;
     const snapshot = snapshotSchema(next);
     this._schema = snapshot.schema;
@@ -498,11 +499,19 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   }
 
   /** Detached, deeply frozen argument snapshot, bounded to 10,000 entries per array/plain record,
-   * 50,000 total nodes, and 16 nested levels. Reassign after changing it. */
+   * 50,000 total nodes, and 16 nested levels. Reassign after changing it; re-assigning the same
+   * object is not a change and keeps the user's edits. */
   get value(): ToolParamFormValue {
     return this._value;
   }
   set value(next: ToolParamFormValue) {
+    if (next === this._value || next === this.lastValueInput) return;
+    this.lastValueInput = next;
+    this.applyValue(next);
+  }
+
+  /** Own writes (edits, reset, restore) leave the caller's last input untouched. */
+  private applyValue(next: ToolParamFormValue): void {
     const old = this._value;
     const snapshot = snapshotFormValue(next);
     this._value = snapshot.value;
@@ -575,6 +584,18 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     return this._formError;
   }
 
+  /** Names a short single-choice list by its displayed labels, else a generic selection error. */
+  private selectionMessage(prop: ToolParamFormProperty): string {
+    const choices = prop.type === 'string' ? toolParamChoices(prop) : undefined;
+    if (!choices || choices.length === 0 || choices.length > MAX_LISTED_CHOICES) {
+      return this.localize('toolParamInvalidSelection');
+    }
+    return this.localize('fieldMustBeOneOf', undefined, {
+      values: getListFormat(this.effectiveLocale, { style: 'long', type: 'disjunction' })
+        .format(choices.map((choice) => choice.label)),
+    });
+  }
+
   /**
    * Computes the supported flat JSON Schema subset against the exact value
    * that will be submitted. Defaults are already materialized in `effective`.
@@ -585,7 +606,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   } {
     const props = this.schemaProperties;
     const required = new Set(this.requiredKeys);
-    const out: Record<string, string> = {};
+    const out: Record<string, string> = Object.create(null);
     const flags: ValidityStateFlags = {};
     const addError = (key: string, message: string): void => {
       Object.defineProperty(out, key, {
@@ -645,16 +666,6 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
         continue;
       }
 
-      if (type === 'string' && Array.isArray(prop.enum) && !prop.enum.includes(v as string)) {
-        addError(
-          key,
-          this.localize('fieldMustBeOneOf', undefined, {
-            values: getListFormat(this.effectiveLocale, { style: 'long', type: 'disjunction' }).format(prop.enum),
-          }),
-        );
-        flags.customError = true;
-        continue;
-      }
       const constraint = toolParamConstraintFailure(prop, v);
       if (constraint) {
         const number = getNumberFormat(this.effectiveLocale);
@@ -665,7 +676,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
           : constraint === 'minItems' ? this.localize('toolParamMinItems', undefined, { count: number.format(prop.minItems!) })
           : constraint === 'maxItems' ? this.localize('toolParamMaxItems', undefined, { count: number.format(prop.maxItems!) })
           : constraint === 'format' ? this.localize('toolParamFormat', undefined, { format: prop.format! })
-          : this.localize('toolParamInvalidSelection');
+          : this.selectionMessage(prop);
         addError(key, message);
         flags.customError = true;
         continue;
@@ -759,7 +770,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     // Cleared before the `value` assignment below, whose setter is what republishes the custom
     // states — a reset form is pristine again, so `user-valid`/`user-invalid` must drop off it.
     this.hasInteracted = false;
-    this.value = cloneFormValue(this.defaultValueSnapshot, this.ownerDocument.defaultView);
+    this.applyValue(this.defaultValueSnapshot);
     this.touchedFields = new Set();
     this.showFormError = false;
   }
@@ -778,7 +789,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
         // Invalid persisted state restores the safe empty object.
       }
     }
-    this.value = restored;
+    this.applyValue(restored);
   }
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
@@ -910,13 +921,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
       }
     }
 
-    const currentErrors = new Map<string, string>();
-    for (const node of this.renderRoot.querySelectorAll<HTMLElement>('[part="error"]')) {
-      const fieldKey = node.closest<HTMLElement>('[part~="field"]')?.dataset['key'];
-      const key = node.dataset['key'] ?? fieldKey ?? 'form';
-      const text = node.textContent?.trim() ?? '';
-      if (text) currentErrors.set(key, text);
-    }
+    const currentErrors = this.visibleErrors();
     if (!this.suppressNextErrorAnnouncement) {
       const freshMessages: string[] = [];
       for (const [key, text] of currentErrors) {
@@ -932,11 +937,25 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     this.suppressNextErrorAnnouncement = false;
   }
 
+  /** Shown errors by key, from the model: composed controls render theirs in their own shadow. */
+  private visibleErrors(): Map<string, string> {
+    const visible = new Map<string, string>();
+    for (const key of Object.keys(this.schemaProperties)) {
+      const message = this.touchedFields.has(key) ? this._errors[key] : undefined;
+      if (message) visible.set(key, message);
+    }
+    for (const key of this.missingRequiredKeys) {
+      if (this.touchedFields.has(key)) visible.set(key, this.localize('toolParamMissingProperty', undefined, { key }));
+    }
+    if (this.showFormError && this._formError) visible.set('form', this._formError);
+    return visible;
+  }
+
   private setFieldValue(key: string, val: unknown): void {
     if (this.effectiveDisabled) return;
     // Set before the `value` assignment, whose setter republishes the custom states.
     this.hasInteracted = true;
-    this.value = { ...this.value, [key]: val };
+    this.applyValue({ ...this.value, [key]: val });
     this.emit('lr-input', { value: this.effectiveValue });
   }
 
@@ -975,11 +994,11 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
       if (this.effectiveDisabled) return;
       this.hasInteracted = true;
       if (this.schemaProperties[key]?.default !== undefined) {
-        this.value = { ...this.value, [key]: undefined };
+        this.applyValue({ ...this.value, [key]: undefined });
       } else {
         const next = { ...this.value };
         Reflect.deleteProperty(next, key);
-        this.value = next;
+        this.applyValue(next);
       }
       this.emit('lr-input', { value: this.effectiveValue });
       return;
@@ -1121,30 +1140,31 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     const label = prop.title ?? key;
     const fieldId = `${this.baseId}-f${index}`;
     const descId = prop.description ? `${fieldId}-desc` : '';
-    const errId = this._errors[key] ? `${fieldId}-err` : '';
+    const fieldError = this._errors[key];
+    const errId = fieldError ? `${fieldId}-err` : '';
     const describedBy = [descId, this.touchedFields.has(key) ? errId : ''].filter(Boolean).join(' ');
-    const hasError = this.touchedFields.has(key) && Boolean(this._errors[key]);
-    const errorMessage = hasError ? (this._errors[key] ?? '') : '';
+    const hasError = this.touchedFields.has(key) && Boolean(fieldError);
+    const errorMessage = hasError ? (fieldError ?? '') : '';
     const effective = this._effectiveValue[key];
     const isBoolean = prop.type === 'boolean';
     const isComposedSelect = (prop.type === 'string' || prop.type === 'array') && Boolean(toolParamChoices(prop)?.length);
     // number/integer fields compose <lr-number-input>, which renders its own label/hint/error
     // from the props passed in renderControl -- same reasoning as the isComposedSelect branch.
     const isComposedNumber = prop.type === 'number' || prop.type === 'integer';
+    // Boolean fields compose an <lr-select> too, which already renders the hint and error.
+    const ownsChrome = !isBoolean && !isComposedSelect && !isComposedNumber;
 
     return html`
       <div part="field" class="field" data-key=${key} data-type=${prop.type} ?data-required=${required}
         @focusout=${() => this.markTouched(key)}
       >
-        ${isBoolean || isComposedSelect || isComposedNumber
-          ? nothing
-          : html`<label part="label" for=${fieldId}>${label}</label>`}
+        ${ownsChrome ? html`<label part="label" for=${fieldId}>${label}</label>` : nothing}
         ${this.renderControl(key, prop, fieldId, label, required, describedBy, errorMessage, effective)}
-        ${prop.description && !isComposedSelect && !isComposedNumber
+        ${prop.description && ownsChrome
           ? html`<p part="description" id=${descId}>${prop.description}</p>`
           : nothing}
-        ${hasError && !isComposedSelect && !isComposedNumber
-          ? html`<p part="error" id=${errId}>${this._errors[key]}</p>`
+        ${hasError && ownsChrome
+          ? html`<p part="error" id=${errId}>${fieldError}</p>`
           : nothing}
       </div>
     `;

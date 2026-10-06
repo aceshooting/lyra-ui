@@ -674,6 +674,8 @@ function snapshotSchema(value: unknown): JsonSchemaNode | null {
  * array after changes; mutating the assigned value does not update the view.
  *
  * @customElement lr-json-schema-viewer
+ * The tree is one tab stop; ArrowUp/ArrowDown and Home/End move between node triggers.
+ *
  * @event lr-schema-select - A schema node was activated. `detail: { schemaPath, schema }`.
  * @csspart base - The named schema region.
  * @csspart tree - The recursive schema tree.
@@ -725,8 +727,10 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-schema-select',
   ]);
-
   private schemaValue: JsonSchemaNode | null = null;
+  /** Last caller-assigned schema: a parent re-committing the same binding is not a change. */
+  private lastSchemaInput: unknown = null;
+  private focusStopPath: string | null = null;
 
   /** Clone-owned recursive schema snapshot. Reassign a new record after changing any branch.
    *  Bounded and depth-clamped by {@link snapshotSchemaNode}; a malformed branch is omitted
@@ -736,6 +740,8 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
     return this.schemaValue;
   }
   set schema(value: JsonSchemaNode | null) {
+    if (value === this.schemaValue || value === this.lastSchemaInput) return;
+    this.lastSchemaInput = value;
     const previous = this.schemaValue;
     this.schemaValue = snapshotSchema(value);
     this.requestUpdate('schema', previous);
@@ -783,6 +789,7 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
 
   protected override updated(_changed: PropertyValues<this>): void {
     super.updated(_changed);
+    this.syncFocusStop();
     const nodeText =
       this.renderRoot.querySelector('[part="limit"]')?.textContent?.trim() ??
       '';
@@ -800,6 +807,44 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
     this.previousIssueLimitText = issueText;
     this.suppressNextLimitAnnouncement = false;
   }
+
+  private nodeTriggers(): HTMLElement[] {
+    return Array.from(this.renderRoot.querySelectorAll<HTMLElement>('[part~="node-trigger"]'));
+  }
+
+  /** The tab stop: the last focused trigger, else the selected node, else the root. */
+  private syncFocusStop(): void {
+    const triggers = this.nodeTriggers();
+    const stop =
+      triggers.find((trigger) => trigger.dataset['path'] === this.focusStopPath) ??
+      triggers.find((trigger) => trigger.dataset['path'] === this.selectedPath) ??
+      triggers[0];
+    for (const trigger of triggers) trigger.tabIndex = trigger === stop ? 0 : -1;
+  }
+
+  private onTreeFocusIn = (event: FocusEvent): void => {
+    const trigger = (event.target as Element | null)?.closest<HTMLElement>('[part~="node-trigger"]');
+    if (!trigger) return;
+    this.focusStopPath = trigger.dataset['path'] ?? null;
+    this.syncFocusStop();
+  };
+
+  private onTreeKeyDown = (event: KeyboardEvent): void => {
+    if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+    const triggers = this.nodeTriggers();
+    const current = (event.target as Element | null)?.closest<HTMLElement>('[part~="node-trigger"]');
+    const index = current ? triggers.indexOf(current) : -1;
+    if (index < 0) return;
+    const target =
+      event.key === 'ArrowDown' ? triggers[Math.min(triggers.length - 1, index + 1)]
+        : event.key === 'ArrowUp' ? triggers[Math.max(0, index - 1)]
+          : event.key === 'Home' ? triggers[0]
+            : event.key === 'End' ? triggers[triggers.length - 1]
+              : undefined;
+    if (!target) return;
+    event.preventDefault();
+    target.focus();
+  };
 
   private pointerSegment(value: string): string {
     return value.replace(/~/g, '~0').replace(/\//g, '~1');
@@ -1064,6 +1109,7 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
         <button
           part="node-trigger"
           type="button"
+          tabindex="-1"
           data-path=${path}
           aria-pressed=${selected ? 'true' : 'false'}
           @click=${() =>
@@ -1160,7 +1206,7 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
     );
     return html`
       <section part="base" aria-label=${label ?? nothing}>
-        <ul part="tree">${tree}</ul>
+        <ul part="tree" @focusin=${this.onTreeFocusIn} @keydown=${this.onTreeKeyDown}>${tree}</ul>
         ${budget.truncated
           ? html`<p part="limit">${this.localize('schemaViewerLimit', undefined, {
                 count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_SCHEMA_NODES),

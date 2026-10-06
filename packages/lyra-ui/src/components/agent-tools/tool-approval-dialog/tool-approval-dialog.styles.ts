@@ -15,6 +15,14 @@ export const styles = css`
     position: fixed;
     inset: 0;
     z-index: var(--lr-overlay-stack-index, var(--lr-layer-modal));
+    /* Neutralizes the user-agent popover styles of the open, top-layer host. */
+    margin: 0;
+    border: none;
+    background: transparent;
+    color: inherit;
+    overflow: visible;
+    inline-size: auto;
+    block-size: auto;
     align-items: center;
     justify-content: center;
     padding-block-start: max(var(--lr-space-l), var(--lr-safe-area-top));
@@ -152,38 +160,4 @@ export const styles = css`
     margin-inline-end: auto;
   }
 
-  /* deny-button/approve-button are <lr-button> hosts (see tool-approval-dialog.class.ts's
-     render()), so all their chrome lives inside lr-button's own styles.ts. edit-button alone stays
-     a raw <button> and keeps its own rules below. */
-  [part="edit-button"] {
-    font: inherit;
-    font-size: var(--lr-font-size-md-sm);
-    padding: var(--lr-space-xs) var(--lr-space-m);
-    border-radius: var(--lr-radius);
-    cursor: pointer;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
-  }
-  :where([part="edit-button"]):not(:disabled):hover {
-    background: var(--lr-color-brand-quiet);
-  }
-  /* Pressed is the hover tint pushed a further --lr-color-mix-active toward --lr-color-mix-partner
-     (which follows the text colour), a deeper step in both themes. The lr-button-hosted
-     Deny/Approve siblings get the equivalent from lr-button's own styles. */
-  :where([part="edit-button"]):not(:disabled):active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
-  }
-  [part="edit-button"]:disabled {
-    cursor: not-allowed;
-    opacity: var(--lr-opacity-disabled);
-  }
-  [part="edit-button"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
-  }
 `;

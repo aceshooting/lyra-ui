@@ -6,7 +6,7 @@ import { keyed } from 'lit/directives/keyed.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { safeFrameSrc, safeLinkHref } from '../../../internal/safe-url.js';
+import { safeFrameSrc } from '../../../internal/safe-url.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { styles } from './mcp-app.styles.js';
 import { purposeAccessibleLabel } from '../semantic-owner.js';
@@ -33,7 +33,6 @@ export interface McpAppCsp {
 interface McpAppResourceBase {
   readonly uri: string;
   readonly title?: string;
-  readonly csp?: McpAppCsp;
   readonly permissions?: McpAppPermissions;
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
@@ -44,11 +43,13 @@ export type McpAppResource = McpAppResourceBase & (
       /** Executable app document. It is assigned only to a uniquely-origin sandboxed iframe. */
       readonly html: string;
       readonly src?: never;
+      readonly csp?: McpAppCsp;
     }
   | {
-      /** HTTP(S) or relative app URL served as a separate resource. */
+      /** HTTP(S) or relative app URL; its own server's CSP governs it, so it takes no `csp`. */
       readonly src: string;
       readonly html?: never;
+      readonly csp?: never;
     }
 );
 
@@ -119,11 +120,28 @@ function resolveResource(resource: McpAppResource | null | undefined): ResolvedM
   return src ? { resource: resource!, uri, src } : null;
 }
 
+/** Equal app documents (`title` aside) keep the mounted frame, its port and pending replies. */
+function sameAppDocument(a: ResolvedMcpAppResource | null, b: ResolvedMcpAppResource | null): boolean {
+  if (!a || !b || a.uri !== b.uri || a.html !== b.html || a.src !== b.src) return false;
+  const policy = ({ csp, permissions, metadata }: McpAppResource): string =>
+    JSON.stringify([csp, permissions, metadata]);
+  try {
+    return policy(a.resource) === policy(b.resource);
+  } catch {
+    return false;
+  }
+}
+
+/** A plain DNS or IP host; anything else (a quote, a semicolon) could reshape the trusted policy. */
+const CSP_HOST = /^(?:[a-z0-9-]+(?:\.[a-z0-9-]+)*|\[[0-9a-f:.]+\])$/i;
+
 function cspSources(values: readonly string[] | undefined): string[] {
   return (values ?? []).flatMap((value) => {
     try {
       const url = new URL(value);
-      return url.protocol === 'https:' || url.protocol === 'http:' ? [url.origin] : [];
+      return (url.protocol === 'https:' || url.protocol === 'http:') && CSP_HOST.test(url.hostname)
+        ? [url.origin]
+        : [];
     } catch {
       return [];
     }
@@ -157,6 +175,16 @@ function withCsp(htmlSource: string, csp: McpAppCsp | undefined): string {
   return `${meta}${htmlSource}`;
 }
 
+/** Absolute http(s)/mailto only: a relative href would resolve against the host page. */
+function absoluteLinkHref(value: unknown): string | null {
+  try {
+    const url = new URL(typeof value === 'string' ? value : '');
+    return ['http:', 'https:', 'mailto:'].includes(url.protocol) ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Parses `height`/`max-height`: a numeric attribute stays the number it always was, and anything
  *  else is kept as a CSS length string for `resolveCssLength()`. */
 const heightAttributeConverter: ComplexAttributeConverter<number | string | null> = {
@@ -182,7 +210,8 @@ function permissionPolicy(permissions: McpAppPermissions | undefined): string {
  * `<lr-mcp-app>` — hosts an MCP App-style executable UI resource in a uniquely-origin sandbox.
  * Inline resources receive a trusted leading CSP meta before any caller-controlled HTML token, so
  * comments or script strings cannot redirect policy insertion away from the parsed document head.
- * Remote resources accept only relative and HTTP(S) document URLs and never send a referrer.
+ * Remote resources accept only relative and HTTP(S) document URLs and never send a referrer;
+ * `csp` applies to inline resources only. An equal resource record assigned again keeps the frame.
  * The frame can request tools, messages, links, logs, and resizing only through typed events;
  * the component never performs those external actions itself. The initial host context transfers
  * a document-bound message port and nonce; later host messages stay on that port, and a navigation
@@ -198,7 +227,8 @@ function permissionPolicy(permissions: McpAppPermissions | undefined): string {
  *   asynchronous reply arriving after the frame changes is dropped rather than delivered into the
  *   unrelated app now mounted.
  * @event lr-mcp-send-message - The frame requested a conversation message.
- * @event lr-mcp-open-link - The frame requested navigation; the host decides whether to honor it.
+ * @event lr-mcp-open-link - The frame requested navigation to an absolute http(s) or mailto URL;
+ *   the host decides whether to honor it.
  * @event lr-mcp-log - The frame sent a diagnostic value.
  * @event lr-mcp-resize - The frame requested a clamped height.
  * @csspart base - The sandbox frame wrapper.
@@ -246,7 +276,6 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
   private loadingAnnouncementSink?: AnnouncementSink;
   private errorAnnouncementSink?: AnnouncementSink;
   private suppressNextResourceAnnouncement = true;
-  private messageWindow?: Window;
   /** Secret bound to the currently loaded document. It never crosses a navigation. */
   private frameNonce?: string;
   private framePort?: MessagePort;
@@ -300,11 +329,9 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
       this.suppressNextResourceAnnouncement = true;
       this.requestUpdate();
     }
-    this.bindMessageWindow();
   }
 
   override disconnectedCallback(): void {
-    this.unbindMessageWindow();
     this.invalidateFrame();
     this.loadingAnnouncementSink?.release();
     this.errorAnnouncementSink?.release();
@@ -318,25 +345,15 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
     super.adoptedCallback();
     this.invalidateFrame();
     this.syncAnnouncementSinks();
-    this.bindMessageWindow();
-  }
-
-  private bindMessageWindow(): void {
-    const nextWindow = this.isConnected ? this.ownerDocument.defaultView : null;
-    if (this.messageWindow === nextWindow) return;
-    this.unbindMessageWindow();
-    this.messageWindow = nextWindow ?? undefined;
-    this.messageWindow?.addEventListener('message', this.onMessage);
-  }
-
-  private unbindMessageWindow(): void {
-    this.messageWindow?.removeEventListener('message', this.onMessage);
-    this.messageWindow = undefined;
   }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (changed.has('resource')) {
+    const keptFrame = changed.has('resource') && this.hasUpdated && sameAppDocument(
+      resolveResource(changed.get('resource') as McpAppResource | null | undefined),
+      resolveResource(this.resource),
+    );
+    if (changed.has('resource') && !keptFrame) {
       if (this.hasUpdated && !this.suppressNextResourceAnnouncement) {
         const wasAvailable = this.resourceAvailable(
           changed.get('resource') as McpAppResource | null | undefined,
@@ -355,7 +372,7 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
       this.frameNonce = this.resourceAvailable(this.resource) ? this.createFrameNonce() : undefined;
       this.frameGeneration++;
     }
-    if (changed.has('resource') || changed.has('height') || changed.has('maxHeight')) {
+    if ((changed.has('resource') && !keptFrame) || changed.has('height') || changed.has('maxHeight')) {
       this.frameHeight = finiteRange(this.heightPx(), 320, 120, this.maxHeightPx());
     }
   }
@@ -363,14 +380,6 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
   protected override updated(_changed: PropertyValues<this>): void {
     super.updated(_changed);
     this.suppressNextResourceAnnouncement = false;
-  }
-
-  private expectedOrigin(): 'null' | null {
-    if (!resolveResource(this.resource)) return null;
-    // The frame intentionally omits allow-same-origin. Both srcdoc and network documents
-    // therefore have an opaque origin serialized as "null"; the nonce and transferred port are
-    // the authentication boundary, while contentWindow identity rejects foreign frames.
-    return 'null';
   }
 
   private createFrameNonce(): string {
@@ -388,7 +397,7 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
       event.currentTarget !== this.frame
     ) return;
     const currentResource = resolveResource(this.resource);
-    if (!currentResource || currentResource.resource !== resource.resource) return;
+    if (!currentResource || (currentResource.resource !== resource.resource && !sameAppDocument(currentResource, resource))) return;
     // A second load on the same iframe is a navigation inside the sandbox. The WindowProxy is
     // stable across that navigation, so source/origin checks alone would continue trusting the
     // new document. Drop the port and remount before it can receive any host data.
@@ -419,18 +428,7 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
     this.emit('lr-mcp-ready', { uri: resource.uri });
   }
 
-  private onMessage = (event: MessageEvent): void => {
-    // Once the bootstrap port is transferred, window messages are no longer part of the protocol.
-    // A navigated document retains the WindowProxy, so accepting this path after bootstrap would
-    // let a document that learned the nonce impersonate the prior app before its load event.
-    if (this.framePort) return;
-    if (event.currentTarget !== this.messageWindow) return;
-    if (!this.frame?.contentWindow || event.source !== this.frame.contentWindow) return;
-    const expectedOrigin = this.expectedOrigin();
-    if (expectedOrigin && event.origin !== expectedOrigin) return;
-    this.handleMessage(event.data);
-  };
-
+  /** The only inbound channel: window messages are never read. */
   private onPortMessage = (event: MessageEvent): void => {
     this.handleMessage(event.data);
   };
@@ -474,7 +472,7 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
         break;
       case 'open-link':
         {
-          const href = safeLinkHref(message['href']);
+          const href = absoluteLinkHref(message['href']);
           if (href) this.emit('lr-mcp-open-link', { href });
         }
         break;

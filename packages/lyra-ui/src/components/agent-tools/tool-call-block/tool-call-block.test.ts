@@ -6,6 +6,8 @@ import { registerToolRenderer } from '../tool-result-view/registry.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setForcedColors, setReducedMotion } from '../../../../test/wtr-media.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
+import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
 
 // Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
 expectLocaleFallback('de-DE', ['durationSeconds', 'toolCallBlockHeaderPending']);
@@ -321,6 +323,7 @@ describe('<lr-tool-call-block>', () => {
       .result=${{ ok: true }}
       error-text="boom"
     ></lr-tool-call-block>`);
+    expectDevWarning(collectionTruncationWarningKey('lr-tool-call-block', 'redactedFields'));
     const hostile: string[] = [];
     Object.defineProperty(hostile, 'length', { value: 1, writable: true });
     Object.defineProperty(hostile, 0, { get: () => 'args.apiKey', enumerable: true });
