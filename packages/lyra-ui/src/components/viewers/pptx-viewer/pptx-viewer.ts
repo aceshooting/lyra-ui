@@ -2,7 +2,6 @@
 export * from './pptx-viewer.class.js';
 import { html } from 'lit';
 import { defineElement } from '../../../internal/prefix.js';
-import '../../overlays/skeleton/skeleton.js';
 import { LyraPptxViewer } from './pptx-viewer.class.js';
 import { registerDocumentRenderer, type LyraDocumentFile } from '../document-viewer/registry.js';
 
@@ -16,7 +15,7 @@ registerDocumentRenderer('application/vnd.openxmlformats-officedocument.presenta
     .highlights=${file.highlights ?? []}
   ></lr-pptx-viewer>`,
   capabilities: {
-    anchors: ['text-quote', 'fragment'],
+    anchors: ['text-quote', 'fragment', 'page'],
     search: true,
     textSelect: true,
   },

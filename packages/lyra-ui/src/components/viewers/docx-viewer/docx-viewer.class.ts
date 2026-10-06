@@ -57,6 +57,7 @@ export type {
   LyraViewerDiagnosticSeverity,
 } from '../viewer-diagnostics.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import { DeferredTeardown } from '../document-viewer/deferred-teardown.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { sanitizePassiveMarkup } from '../passive-markup.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
@@ -412,25 +413,39 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   private textIndexMappingDirty = false;
   private textIndexLocale?: string;
 
+  private readonly detached = new DeferredTeardown(() => this.releaseDetachedDocument());
+
   override connectedCallback(): void {
     super.connectedCallback();
     this.announcements.connect();
+    const moved = this.detached.cancel();
+    if (moved) {
+      // The mixin's disconnect released the selection listener; the content itself stayed.
+      const root = this.contentRoot();
+      if (root) (this as unknown as { bindTextSelection(root: Element): void }).bindTextSelection(root);
+      return;
+    }
     if (this.hasUpdated && this.src.trim() && this.src === this.lastLoadSrc) {
       this.scheduleAfterUpdate(() => { void this.load(); });
     }
   }
 
   override disconnectedCallback(): void {
-    this.generation++;
-    this.resetResolvedHighlightActions();
     this.announcements.disconnect();
     super.disconnectedCallback(); // reaches DocumentAnchorTarget's own cleanup (anchor retry, selection binding)
+    this.detached.schedule();
+  }
+
+  private releaseDetachedDocument(): void {
+    this.generation++;
+    this.resetResolvedHighlightActions();
     this.highlightHandle?.release();
     this.highlightHandle = undefined;
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.detached.flush(); // a move into another document reloads there
     this.announcements.adopted();
   }
 

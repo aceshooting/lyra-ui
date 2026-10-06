@@ -3,7 +3,6 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    --_lr-docx-viewer-max-height: none;
   }
 
   [part="base"] {
@@ -19,10 +18,7 @@ export const styles = css`
   [part="body"] {
     box-sizing: border-box;
     overflow: auto;
-    max-block-size: var(
-      --lr-docx-viewer-max-height,
-      var(--_lr-docx-viewer-max-height)
-    );
+    max-block-size: var(--lr-docx-viewer-max-height, none);
     padding: var(--lr-space-l);
   }
 

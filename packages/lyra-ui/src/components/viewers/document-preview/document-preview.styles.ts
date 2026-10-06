@@ -3,15 +3,11 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    /* Consumer-tunable scroll cap on [part='body'] -- 'none' grows with the
-       content until a caller opts into an internal scrollbar, the same
-       contract as lr-json-viewer's --lr-json-viewer-max-height. */
-    --_lr-document-preview-max-height: none;
     /* No shared Web Awesome/Lyra monospace token to resolve through (the gap
        lr-json-viewer's --lr-json-viewer-font documents too), contained here so
        a host page can retheme it. */
     --_lr-document-preview-font: var(--lr-font-mono);
-    --_lr-document-preview-spin-duration: var(--lr-transition-ambient);
+    --_lr-document-preview-spin-duration: var(--lr-duration-ambient) var(--lr-easing-linear);
     --_lr-document-preview-download-link-hover-bg: color-mix(
       in oklab,
       var(--lr-color-brand),
@@ -60,10 +56,9 @@ export const styles = css`
     align-items: safe center;
     justify-content: safe center;
     min-block-size: var(--lr-size-10rem);
-    max-block-size: var(
-      --lr-document-preview-max-height,
-      var(--_lr-document-preview-max-height)
-    );
+    /* Consumer-tunable scroll cap -- 'none' grows with the content until a caller opts into an
+       internal scrollbar, the same contract as lr-json-viewer's --lr-json-viewer-max-height. */
+    max-block-size: var(--lr-document-preview-max-height, none);
     box-sizing: border-box;
     overflow: auto;
     flex: 1 1 auto;

@@ -2,6 +2,7 @@ import { expect } from '@open-wc/testing';
 import JSZip from 'jszip';
 import { LyraResourceLimitError } from '../../../internal/resource-loader.js';
 import { assertDocxArchiveWithinLimits } from './docx-resource-guard.js';
+import { assembleZip, zipEntry } from '../archive-viewer/fixtures/zip-builder.js';
 
 function zipWithDeclaredSizes(sizes: number[]): ArrayBuffer {
   const names = sizes.map((_size, index) => `e${index}`);
@@ -74,6 +75,50 @@ describe('DOCX resource guard', () => {
   it('measures deflate output instead of trusting forged uncompressed-size fields', async () => {
     const source = await forgedExpansionZip();
     await expectResourceLimit(() => assertDocxArchiveWithinLimits(source, 10, 1_000));
+  });
+
+  it('node-counts the parts Mammoth resolves through relationships, whatever their names', async () => {
+    const officeRelationship = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/';
+    const body = (paragraphs: number) => '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'
+      + '<w:p><w:r><w:t>hidden part</w:t></w:r></w:p>'.repeat(paragraphs)
+      + '</w:body></w:document>';
+    const relationships = (entries: string) => '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+      + entries + '</Relationships>';
+    const styles = (count: number) => '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+      + '<w:style/>'.repeat(count) + '</w:styles>';
+    const build = async (mainBody: string, stylesPart = styles(0)) => assembleZip([
+      await zipEntry('[Content_Types].xml', '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"/>'),
+      await zipEntry('_rels/.rels', relationships(
+        `<Relationship Id="rId1" Type="${officeRelationship}officeDocument" Target="word/document.bin"/>`,
+      )),
+      await zipEntry('word/_rels/document.bin.rels', relationships(
+        `<Relationship Id="rId1" Type="${officeRelationship}styles" Target="styles&#46;dat"/>`,
+      )),
+      await zipEntry('word/document.bin', mainBody, { deflate: true }),
+      await zipEntry('word/styles.dat', stylesPart, { deflate: true }),
+      await zipEntry('word/media/image1.png', '<a'.repeat(2_048)),
+    ]);
+
+    const mammothModule = (await import('mammoth/mammoth.browser.js')) as unknown as {
+      default: { convertToHtml: (input: { arrayBuffer: ArrayBuffer }) => Promise<{ value: string }> };
+    };
+    const converted = await mammothModule.default.convertToHtml({ arrayBuffer: await build(body(1)) });
+    expect(converted.value).to.contain('hidden part');
+
+    // 5 rels/content-type nodes + (2 + 3 per paragraph) + (1 + n styles): 14 fit a ceiling of 20.
+    await assertDocxArchiveWithinLimits(await build(body(2)), 10, 100_000, { maxXmlNodes: 20 });
+    await expectResourceLimit(async () => assertDocxArchiveWithinLimits(
+      await build(body(10)),
+      10,
+      100_000,
+      { maxXmlNodes: 20 },
+    ));
+    await expectResourceLimit(async () => assertDocxArchiveWithinLimits(
+      await build(body(1), styles(20)),
+      10,
+      100_000,
+      { maxXmlNodes: 20 },
+    ));
   });
 
   it('rejects excessive expanded XML node complexity before Mammoth and honors cancellation', async () => {

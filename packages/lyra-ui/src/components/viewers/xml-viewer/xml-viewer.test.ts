@@ -265,6 +265,17 @@ describe('parsing and tree rendering', () => {
     expect(tags).to.deep.equal(['root', 'data']);
   });
 
+  it('still finds a lowercase doctype that follows comments, CDATA and ordinary markup', async () => {
+    const el = (await fixture(html`<lr-xml-viewer></lr-xml-viewer>`)) as LyraXmlViewer;
+    const eventPromise = oneEvent(el, 'lr-render-error');
+    el.xml = '<?xml version="1.0"?><!-- a < b --><![CDATA[<x>]]>text < more <!doctype root><root/>';
+    await eventPromise;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal(
+      'This document could not be parsed as XML.',
+    );
+  });
+
   it('fails closed with the parse-error state when xml is set without a browsing context', async () => {
     const el = (await fixture(html`<lr-xml-viewer></lr-xml-viewer>`)) as LyraXmlViewer;
     const ownerlessDocument = document.implementation.createHTMLDocument('ownerless');
@@ -483,6 +494,31 @@ describe('loading xml via src', () => {
 });
 
 describe('expandDepth and toggling', () => {
+  it('builds no rows for the descendants of a collapsed node', async () => {
+    const xml = '<root>' + ('<item>' + '<leaf/>'.repeat(10) + '</item>').repeat(100) + '</root>';
+    const prototype = customElements.get('lr-xml-viewer')!.prototype as unknown as {
+      renderNode(...args: unknown[]): unknown;
+    };
+    const original = prototype.renderNode;
+    let calls = 0;
+    prototype.renderNode = function (this: unknown, ...args: unknown[]) {
+      calls++;
+      return original.apply(this, args);
+    };
+    try {
+      const el = await fixture<LyraXmlViewer>(html`<lr-xml-viewer expand-depth="1" .xml=${xml}></lr-xml-viewer>`);
+      await el.updateComplete;
+      calls = 0;
+      el.requestUpdate();
+      await el.updateComplete;
+      // The root and its 100 collapsed items are rendered; their 1,000 leaves are not built.
+      expect(el.shadowRoot!.querySelectorAll('[part="node"]').length).to.equal(101);
+      expect(calls).to.equal(101);
+    } finally {
+      prototype.renderNode = original;
+    }
+  });
+
   it('collapses nodes at or beyond expand-depth, showing a child-count preview', async () => {
     const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML} expand-depth="1"></lr-xml-viewer>`)) as LyraXmlViewer;
     await el.updateComplete;
@@ -1752,4 +1788,51 @@ it('keeps the per-node copy button visible in coarse/no-hover mode instead of de
   } finally {
     restore();
   }
+});
+
+describe('identity re-assignment', () => {
+  it('does not re-parse identical xml text', async () => {
+    const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
+    await el.updateComplete;
+    const original = DOMParser.prototype.parseFromString;
+    let parses = 0;
+    DOMParser.prototype.parseFromString = function (this: DOMParser, ...args: Parameters<DOMParser['parseFromString']>): Document {
+      parses++;
+      return original.apply(this, args);
+    };
+    try {
+      el.xml = SIMPLE_XML;
+      await el.updateComplete;
+      expect(parses).to.equal(0);
+    } finally {
+      DOMParser.prototype.parseFromString = original;
+    }
+  });
+});
+
+describe('DOM moves', () => {
+  it('keeps a src-loaded document across a same-task move, and reloads after a genuine reconnect', async () => {
+    let fetches = 0;
+    const restore = stubFetch(async () => {
+      fetches++;
+      return textResponse(SIMPLE_XML);
+    });
+    const host = document.createElement('div');
+    document.body.append(host);
+    try {
+      const el = (await fixture(html`<lr-xml-viewer src="https://example.test/a.xml"></lr-xml-viewer>`)) as LyraXmlViewer;
+      await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="tag"]').length > 0);
+      host.append(el); // a move: disconnect and reconnect within one task
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      expect(fetches).to.equal(1);
+      expect(el.shadowRoot!.querySelectorAll('[part="tag"]').length).to.be.greaterThan(0);
+      el.remove();
+      await new Promise((resolve) => setTimeout(resolve, 0)); // a genuine disconnect
+      host.append(el);
+      await waitUntil(() => fetches === 2);
+    } finally {
+      host.remove();
+      restore();
+    }
+  });
 });

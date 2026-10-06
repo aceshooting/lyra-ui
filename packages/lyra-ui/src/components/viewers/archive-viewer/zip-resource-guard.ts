@@ -7,6 +7,14 @@ const ZIP64_U16 = 0xffff;
 const ZIP64_U32 = 0xffffffff;
 const ZIP_COMPRESSION_STORE = 0;
 const ZIP_COMPRESSION_DEFLATE = 8;
+const ZIP_FLAG_ENCRYPTED = 0x0001;
+const ZIP_FLAG_DATA_DESCRIPTOR = 0x0008;
+const ZIP_EXTRA_ZIP64 = 0x0001;
+const ZIP_EXTRA_UNICODE_PATH = 0x7075;
+const ZIP_EXTRA_AES = 0x9901;
+// Bounded input views cap what one decoder step can expand.
+const INFLATE_INPUT_SLICE_BYTES = 16 * 1024;
+const XML_TAG_OPEN = 0x3c;
 
 export interface ZipEntryInfo {
   name: string;
@@ -32,7 +40,11 @@ interface ParsedZipEntry extends ZipEntryInfo {
   dir: boolean;
   flags: number;
   compression: number;
+  crc: number;
+  nameOffset: number;
+  nameLength: number;
   localOffset: number;
+  dataOffset: number;
 }
 
 /** Immutable central-directory entry metadata safe to expose without an archive peer. */
@@ -71,10 +83,49 @@ function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError';
 }
 
+/** JSZip 3.8+ entry-name normalisation: drops "." and inner empty segments, resolves "..". */
+function resolveArchivePath(path: string): string {
+  const parts = path.split('/');
+  const resolved: string[] = [];
+  parts.forEach((part, index) => {
+    if (part === '.' || (part === '' && index !== 0 && index !== parts.length - 1)) return;
+    if (part === '..') resolved.pop();
+    else resolved.push(part);
+  });
+  return resolved.join('/');
+}
+
+/** Names a peer may resolve an entry under: stored, JSZip-normalised, and with `\` as `/`. */
+export function zipEntryLookupNames(name: string): string[] {
+  return [...new Set([name, resolveArchivePath(name), resolveArchivePath(name.replace(/\\/g, '/'))])];
+}
+
+function isElementNameStart(byte: number): boolean {
+  return (byte >= 0x61 && byte <= 0x7a)
+    || (byte >= 0x41 && byte <= 0x5a)
+    || byte === 0x5f
+    || byte === 0x3a
+    || byte >= 0x80;
+}
+
+function isElementNameByte(byte: number): boolean {
+  return isElementNameStart(byte) || (byte >= 0x30 && byte <= 0x39) || byte === 0x2d || byte === 0x2e;
+}
+
+function bytesEqual(source: ArrayBuffer, first: number, second: number, length: number): boolean {
+  const bytes = new Uint8Array(source);
+  for (let index = 0; index < length; index++) {
+    if (bytes[first + index] !== bytes[second + index]) return false;
+  }
+  return true;
+}
+
+/** Scanner position: in text, just after `<`, or inside an element name. */
+type TagScanState = 'text' | 'open' | 'name';
+
 /**
  * Creates per-entry streaming XML inspectors backed by one archive-wide complexity budget.
- * Tokenization keeps only a short opening-tag prefix, so a large text node or attribute cannot
- * become a second unbounded allocation while the ZIP output itself is being measured.
+ * Every `<` + name-start byte counts as an element: an upper bound for every peer's parser.
  */
 export function createXmlComplexityInspectorFactory(
   limits: XmlComplexityLimits,
@@ -83,68 +134,135 @@ export function createXmlComplexityInspectorFactory(
   let rows = 0;
   let cells = 0;
 
-  return (entry) => {
-    if (!limits.includeEntry(entry.name)) return undefined;
-    const decoder = new TextDecoder();
-    let insideTag = false;
-    let quote: '"' | "'" | null = null;
-    let prefix = '';
+  const fail = (): never => {
+    throw new LyraResourceLimitError('The expanded archive contains too many document nodes.');
+  };
 
-    const finishTag = (): void => {
-      const match = /^<([A-Za-z_][\w:.-]*)(?:\s|\/|$)/.exec(prefix);
-      if (!match) return;
-      const localName = match[1]!.split(':').at(-1)!.toLowerCase();
+  return (entry) => {
+    if (!zipEntryLookupNames(entry.name).some((name) => limits.includeEntry(name))) return undefined;
+    let state: TagScanState = 'text';
+    // Local-name length and last three lower-cased bytes, to spot `row` and `c`.
+    let localLength = 0;
+    let localTail = 0;
+
+    const startElement = (byte: number): void => {
       nodes++;
-      if (localName === 'row') rows++;
-      if (localName === 'c') cells++;
+      if (nodes > limits.maxNodes) fail();
+      state = 'name';
+      localLength = 0;
+      localTail = 0;
+      continueName(byte);
+    };
+
+    const continueName = (byte: number): void => {
+      if (byte === 0x3a) {
+        localLength = 0;
+        localTail = 0;
+        return;
+      }
+      localLength++;
+      localTail = ((localTail << 8) | (byte >= 0x41 && byte <= 0x5a ? byte | 0x20 : byte)) & 0xffffff;
+    };
+
+    const finishName = (): void => {
+      state = 'text';
+      if (localLength === 3 && localTail === 0x726f77) rows++;
+      else if (localLength === 1 && localTail === 0x63) cells++;
+      else return;
       if (
-        nodes > limits.maxNodes
-        || (limits.maxRows !== undefined && rows > limits.maxRows)
+        (limits.maxRows !== undefined && rows > limits.maxRows)
         || (limits.maxCells !== undefined && cells > limits.maxCells)
       ) {
-        throw new LyraResourceLimitError('The expanded archive contains too many document nodes.');
+        fail();
       }
     };
 
-    const consume = (text: string): void => {
-      for (const character of text) {
-        if (!insideTag) {
-          if (character === '<') {
-            insideTag = true;
-            quote = null;
-            prefix = '<';
+    const consume = (chunk: Uint8Array): void => {
+      let index = 0;
+      while (index < chunk.length) {
+        if (state === 'name') {
+          const byte = chunk[index]!;
+          if (!isElementNameByte(byte)) {
+            finishName();
+            continue;
+          }
+          continueName(byte);
+          index++;
+          continue;
+        }
+        if (state === 'open') {
+          const byte = chunk[index]!;
+          if (isElementNameStart(byte)) {
+            startElement(byte);
+            index++;
+          } else {
+            // Reconsider this byte as text: it may itself open the next tag.
+            state = 'text';
           }
           continue;
         }
-        if (quote) {
-          if (character === quote) quote = null;
-          if (prefix.length < 256) prefix += character;
-          continue;
-        }
-        if (character === '"' || character === "'") {
-          quote = character;
-          if (prefix.length < 256) prefix += character;
-          continue;
-        }
-        if (character === '>') {
-          finishTag();
-          insideTag = false;
-          prefix = '';
-          continue;
-        }
-        if (prefix.length < 256) prefix += character;
+        const tagOpen = chunk.indexOf(XML_TAG_OPEN, index);
+        if (tagOpen < 0) return;
+        state = 'open';
+        index = tagOpen + 1;
       }
     };
 
     return {
       write(chunk) {
-        consume(decoder.decode(chunk, { stream: true }));
+        consume(chunk);
       },
       close() {
-        consume(decoder.decode());
+        if (state === 'name') finishName();
+        state = 'text';
       },
     };
   };
+}
+
+/** Extra fields may only restate the measured name and sizes (peers rename and resize by them). */
+function assertExtraFields(
+  source: ArrayBuffer,
+  view: DataView,
+  start: number,
+  length: number,
+  entry: { nameOffset: number; nameLength: number; compressedBytes: number; uncompressedBytes: number },
+  description: string,
+): void {
+  const end = start + length;
+  let offset = start;
+  while (offset + 4 <= end) {
+    const id = view.getUint16(offset, true);
+    const fieldLength = view.getUint16(offset + 2, true);
+    const dataOffset = offset + 4;
+    if (dataOffset + fieldLength > end) {
+      throw new LyraResourceLimitError(`The ${description} archive is malformed.`);
+    }
+    if (id === ZIP_EXTRA_AES) {
+      throw new LyraResourceLimitError(`Encrypted ${description} entries are not supported.`);
+    }
+    if (id === ZIP_EXTRA_ZIP64) {
+      const declared = [entry.uncompressedBytes, entry.compressedBytes];
+      for (let slot = 0; slot < declared.length; slot++) {
+        const at = dataOffset + slot * 8;
+        if (at + 8 > end) break;
+        const value = view.getUint32(at, true) + view.getUint32(at + 4, true) * 2 ** 32;
+        if (value !== 0 && value !== declared[slot]) {
+          throw new LyraResourceLimitError(`The ${description} archive is malformed or uses ZIP64.`);
+        }
+      }
+    }
+    if (
+      id === ZIP_EXTRA_UNICODE_PATH
+      && (fieldLength < 5 || (view.getUint8(dataOffset) === 1 && (
+        fieldLength - 5 !== entry.nameLength
+        || !bytesEqual(source, dataOffset + 5, entry.nameOffset, entry.nameLength)
+      )))
+    ) {
+      throw new LyraResourceLimitError(`The ${description} archive is malformed.`);
+    }
+    offset = dataOffset + fieldLength;
+  }
 }
 
 function parseZipArchiveMetadata(
@@ -188,6 +306,12 @@ function parseZipArchiveMetadata(
     }
   }
   if (endOffset < 0) throw new LyraResourceLimitError(`The ${options.description} archive is malformed.`);
+  // Peers open the last end-record signature, so none may follow this one.
+  for (let offset = endOffset + 1; offset <= source.byteLength - 4; offset++) {
+    if (view.getUint32(offset, true) === ZIP_END_SIGNATURE) {
+      throw new LyraResourceLimitError(`The ${options.description} archive is malformed.`);
+    }
+  }
 
   const entryCount = view.getUint16(endOffset + 10, true);
   const entriesOnDisk = view.getUint16(endOffset + 8, true);
@@ -206,7 +330,8 @@ function parseZipArchiveMetadata(
   if (entryCount > options.maxEntries) {
     throw new LyraResourceLimitError(`The ${options.description} archive contains too many entries.`);
   }
-  if (directoryOffset + directorySize > endOffset) {
+  // JSZip re-bases every offset by a gap before the end record.
+  if (directoryOffset + directorySize !== endOffset) {
     throw new LyraResourceLimitError(`The ${options.description} archive is malformed.`);
   }
 
@@ -248,6 +373,14 @@ function parseZipArchiveMetadata(
     if (!name || name.includes('\0')) {
       throw new LyraResourceLimitError(`The ${options.description} archive has an invalid entry name.`);
     }
+    assertExtraFields(
+      source,
+      view,
+      offset + 46 + nameLength,
+      extraLength,
+      { nameOffset: offset + 46, nameLength, compressedBytes, uncompressedBytes },
+      options.description,
+    );
     const externalAttributes = view.getUint32(offset + 38, true);
     const unixMode = externalAttributes >>> 16;
     entries.push({
@@ -257,9 +390,13 @@ function parseZipArchiveMetadata(
         || (unixMode & 0xf000) === 0x4000,
       flags: view.getUint16(offset + 8, true),
       compression: view.getUint16(offset + 10, true),
+      crc: view.getUint32(offset + 16, true),
       compressedBytes,
       uncompressedBytes,
+      nameOffset: offset + 46,
+      nameLength,
       localOffset,
+      dataOffset: -1,
     });
     offset = nextOffset;
   }
@@ -267,7 +404,65 @@ function parseZipArchiveMetadata(
     throw new LyraResourceLimitError(`The ${options.description} archive is malformed.`);
   }
 
+  assertLocalRecords(source, view, directoryOffset, entries, options);
   return { view, directoryOffset, entries };
+}
+
+/** Local headers must restate their central records (peers read them) and entries may not overlap. */
+function assertLocalRecords(
+  source: ArrayBuffer,
+  view: DataView,
+  directoryOffset: number,
+  entries: ParsedZipEntry[],
+  options: ZipArchiveGuardOptions,
+): void {
+  const malformed = (): LyraResourceLimitError =>
+    new LyraResourceLimitError(`The ${options.description} archive is malformed.`);
+  for (const entry of entries) {
+    if (
+      entry.localOffset + 30 > directoryOffset
+      || view.getUint32(entry.localOffset, true) !== ZIP_LOCAL_FILE_SIGNATURE
+    ) {
+      throw malformed();
+    }
+    const localFlags = view.getUint16(entry.localOffset + 6, true);
+    if (((entry.flags | localFlags) & ZIP_FLAG_ENCRYPTED) !== 0) {
+      throw new LyraResourceLimitError(`Encrypted ${options.description} entries are not supported.`);
+    }
+    const localNameLength = view.getUint16(entry.localOffset + 26, true);
+    const localExtraLength = view.getUint16(entry.localOffset + 28, true);
+    const dataOffset = entry.localOffset + 30 + localNameLength + localExtraLength;
+    if (
+      dataOffset + entry.compressedBytes > directoryOffset
+      || localNameLength !== entry.nameLength
+      || !bytesEqual(source, entry.localOffset + 30, entry.nameOffset, localNameLength)
+    ) {
+      throw malformed();
+    }
+    const descriptor = ((entry.flags | localFlags) & ZIP_FLAG_DATA_DESCRIPTOR) !== 0;
+    for (const [field, expected] of [
+      [14, entry.crc],
+      [18, entry.compressedBytes],
+      [22, entry.uncompressedBytes],
+    ] as const) {
+      const actual = view.getUint32(entry.localOffset + field, true);
+      if (actual !== expected && !(descriptor && actual === 0)) throw malformed();
+    }
+    assertExtraFields(
+      source,
+      view,
+      entry.localOffset + 30 + localNameLength,
+      localExtraLength,
+      entry,
+      options.description,
+    );
+    entry.dataOffset = dataOffset;
+  }
+  const ordered = [...entries].sort((first, second) => first.localOffset - second.localOffset);
+  for (let index = 1; index < ordered.length; index++) {
+    const previous = ordered[index - 1]!;
+    if (previous.dataOffset + previous.compressedBytes > ordered[index]!.localOffset) throw malformed();
+  }
 }
 
 /**
@@ -280,31 +475,14 @@ export function assertZipArchiveMetadataWithinLimits(
 ): ZipArchiveMetadata | null {
   const metadata = parseZipArchiveMetadata(source, options);
   if (!metadata) return null;
-  const { view, directoryOffset, entries } = metadata;
+  const { view, entries } = metadata;
   for (const entry of entries) {
-    if (
-      entry.localOffset + 30 > directoryOffset
-      || view.getUint32(entry.localOffset, true) !== ZIP_LOCAL_FILE_SIGNATURE
-    ) {
-      throw new LyraResourceLimitError(`The ${options.description} archive is malformed.`);
-    }
-    const localFlags = view.getUint16(entry.localOffset + 6, true);
     const localCompression = view.getUint16(entry.localOffset + 8, true);
-    if ((entry.flags & 1) !== 0 || (localFlags & 1) !== 0) {
-      throw new LyraResourceLimitError(`Encrypted ${options.description} entries are not supported.`);
-    }
     if (
       localCompression !== entry.compression
       || (entry.compression !== ZIP_COMPRESSION_STORE && entry.compression !== ZIP_COMPRESSION_DEFLATE)
     ) {
       throw new LyraResourceLimitError(`The ${options.description} archive uses an unsupported or inconsistent compression method.`);
-    }
-    const dataOffset = entry.localOffset
-      + 30
-      + view.getUint16(entry.localOffset + 26, true)
-      + view.getUint16(entry.localOffset + 28, true);
-    if (dataOffset > directoryOffset || dataOffset + entry.compressedBytes > directoryOffset) {
-      throw new LyraResourceLimitError(`The ${options.description} archive is malformed.`);
     }
   }
   return Object.freeze({
@@ -329,33 +507,16 @@ export async function assertZipArchiveWithinLimits(
 ): Promise<void> {
   const metadata = parseZipArchiveMetadata(source, options);
   if (!metadata) return;
-  const { view, directoryOffset, entries } = metadata;
+  const { view, entries } = metadata;
 
   let measuredBytes = 0;
   for (const entry of entries) {
     throwIfAborted(options.signal);
-    if (
-      entry.localOffset + 30 > directoryOffset
-      || view.getUint32(entry.localOffset, true) !== ZIP_LOCAL_FILE_SIGNATURE
-    ) {
+    if (view.getUint16(entry.localOffset + 8, true) !== entry.compression) {
       throw new LyraResourceLimitError(`The ${options.description} archive is malformed.`);
     }
-    const localFlags = view.getUint16(entry.localOffset + 6, true);
-    const localCompression = view.getUint16(entry.localOffset + 8, true);
-    if ((entry.flags & 1) !== 0 || (localFlags & 1) !== 0) {
-      throw new LyraResourceLimitError(`Encrypted ${options.description} entries are not supported.`);
-    }
-    if (localCompression !== entry.compression) {
-      throw new LyraResourceLimitError(`The ${options.description} archive is malformed.`);
-    }
-    const dataOffset = entry.localOffset
-      + 30
-      + view.getUint16(entry.localOffset + 26, true)
-      + view.getUint16(entry.localOffset + 28, true);
+    const { dataOffset } = entry;
     const dataEnd = dataOffset + entry.compressedBytes;
-    if (dataOffset > directoryOffset || dataEnd > directoryOffset) {
-      throw new LyraResourceLimitError(`The ${options.description} archive is malformed.`);
-    }
     const inspector = options.createInspector?.(entry);
     let actualBytes: number;
     if (entry.compression === ZIP_COMPRESSION_STORE) {
@@ -399,9 +560,16 @@ async function measureDeflateOutput(
   let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
   try {
     throwIfAborted(signal);
-    const compressed = new Blob([source.slice(start, end)]).stream();
-    const inflated = compressed.pipeThrough(new DecompressionStream('deflate-raw' as CompressionFormat));
-    reader = inflated.getReader();
+    const inflater = new DecompressionStream('deflate-raw' as CompressionFormat);
+    const writer = inflater.writable.getWriter();
+    // Backpressure: a slice is decoded only after the previous output was measured.
+    void (async () => {
+      for (let offset = start; offset < end; offset += INFLATE_INPUT_SLICE_BYTES) {
+        await writer.write(new Uint8Array(source, offset, Math.min(INFLATE_INPUT_SLICE_BYTES, end - offset)));
+      }
+      await writer.close();
+    })().catch(() => undefined);
+    reader = inflater.readable.getReader();
     let total = 0;
     while (true) {
       const result = await reader.read();
@@ -422,6 +590,7 @@ async function measureDeflateOutput(
     if (error instanceof LyraResourceLimitError || isAbortError(error)) throw error;
     throw new LyraResourceLimitError(`The ${description} archive contains invalid compressed data.`);
   } finally {
+    await reader?.cancel().catch(() => undefined);
     reader?.releaseLock();
   }
 }

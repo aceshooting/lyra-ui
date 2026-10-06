@@ -18,6 +18,7 @@ import { loadNotebookSanitizer } from './dompurify-loader.js';
 import { styles } from './notebook-viewer.styles.js';
 import { sanitizeCssColor, sanitizeCssLength } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import { DeferredTeardown } from '../document-viewer/deferred-teardown.js';
 import { sanitizePassiveMarkup } from '../passive-markup.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { resolveViewerSource, type LyraViewerSource } from '../viewer-source.js';
@@ -241,16 +242,52 @@ function* notebookSearchTextParts(text: unknown): Generator<string> {
   for (const part of text) if (typeof part === 'string') yield part;
 }
 
+const MARKUP_ENTITIES: Readonly<Record<string, string>> = { lt: '<', gt: '>', quot: '"', apos: '\'', amp: '&' };
+
+/** Visible text of HTML/SVG markup (no tags, comments, script/style), in one linear pass. */
+function visibleMarkupText(markup: string): string {
+  const lower = markup.toLowerCase();
+  let text = '';
+  let index = 0;
+  while (index < markup.length) {
+    const open = markup.indexOf('<', index);
+    if (open < 0) {
+      text += markup.slice(index);
+      break;
+    }
+    text += markup.slice(index, open) + ' ';
+    if (lower.startsWith('<!--', open)) {
+      const end = markup.indexOf('-->', open + 4);
+      index = end < 0 ? markup.length : end + 3;
+      continue;
+    }
+    const close = markup.indexOf('>', open + 1);
+    if (close < 0) break;
+    const rawText = lower.startsWith('<script', open) ? '</script' : lower.startsWith('<style', open) ? '</style' : '';
+    if (rawText) {
+      const end = lower.indexOf(rawText, close + 1);
+      const endClose = end < 0 ? -1 : markup.indexOf('>', end);
+      index = endClose < 0 ? markup.length : endClose + 1;
+      continue;
+    }
+    index = close + 1;
+  }
+  return text.replace(/&(lt|gt|quot|apos|amp);/g, (_entity, name: string) => MARKUP_ENTITIES[name]!);
+}
+
+/** Searches only what `renderOutput()` shows for each output. */
 function* notebookOutputSearchParts(outputs: readonly NotebookOutput[]): Generator<string> {
   for (const output of outputs) {
     yield* notebookSearchTextParts(output.text);
     const data = output.data;
-    if (data) {
-      for (const key in data) {
-        if (Object.prototype.hasOwnProperty.call(data, key)) {
-          yield* notebookSearchTextParts(data[key]);
-        }
-      }
+    if (data && Object.prototype.hasOwnProperty.call(data, 'text/plain')) {
+      yield* notebookSearchTextParts(data['text/plain']);
+      yield ' ';
+    }
+    if (data && !data['image/png'] && !data['image/jpeg']) {
+      if (data['image/svg+xml']) yield visibleMarkupText(joinText(data['image/svg+xml']));
+      else if (data['text/html']) yield visibleMarkupText(joinText(data['text/html']));
+      else if (data['application/json']) yield* notebookSearchTextParts(data['application/json']);
     }
     yield ' ';
   }
@@ -528,12 +565,15 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
 
   /** A parsed notebook document, or its raw JSON text. Presence wins over `src` (including `''`)
    *  and is parsed synchronously. Assigning `undefined` clears inline authority, invalidates its
-   *  rendering/sanitization work, and immediately resumes the already configured `src`. */
+   *  rendering/sanitization work, and immediately resumes the already configured `src`.
+   *  Re-assigning the same document is a no-op. */
   @property({ attribute: false })
   get notebook(): NotebookDoc | string | undefined {
     return this._notebook;
   }
   set notebook(value: NotebookDoc | string | undefined) {
+    if (value !== undefined && (value === this.notebookSource || value === this._notebook)) return;
+    this.notebookSource = value;
     const old = this._notebook;
     const next = typeof value === 'string' || value === undefined
       ? value
@@ -554,6 +594,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
     }
   }
   private _notebook?: NotebookDoc | string;
+  private notebookSource?: NotebookDoc | string;
 
   /** Readonly discriminated snapshot of the effective source authority. */
   get source(): LyraNotebookViewerSource {
@@ -576,8 +617,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
   @property({ type: Number, attribute: 'output-collapse-lines' }) outputCollapseLines = 40;
 
   /** A CSS length (e.g. `"30rem"`); once set, the notebook scrolls internally past this height
-   *  instead of growing the page. */
-  /** A CSS `max-height`; invalid values are ignored. */
+   *  instead of growing the page. Invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
 
   /** Anchor kinds this component resolves via `scrollToAnchor()`. */
@@ -646,21 +686,29 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
     }
   }
 
+  private readonly detached = new DeferredTeardown(() => this.releaseDetachedNotebook());
+
   override connectedCallback(): void {
     super.connectedCallback();
     this.announcements.connect();
+    const moved = this.detached.cancel();
+    if (moved) return;
     if (this.hasUpdated && this.src && this._notebook === undefined) {
       this.scheduleSourceLoad();
     }
     if (this.hasUpdated && this._notebook !== undefined && this.loadState.kind === 'loaded') {
-      // Disconnect invalidates and clears every in-flight/cached sanitizer result. A pure DOM move
-      // schedules no Lit update of its own, so explicitly repaint the retained inline document to
-      // let each still-visible HTML/SVG output enqueue fresh sanitization work.
+      // A genuine disconnect cleared sanitizer results: repaint so visible outputs re-sanitize.
       this.requestUpdate();
     }
   }
 
   override disconnectedCallback(): void {
+    this.announcements.disconnect();
+    super.disconnectedCallback();
+    this.detached.schedule();
+  }
+
+  private releaseDetachedNotebook(): void {
     this.generation++;
     this.sanitizerGeneration++;
     this.beginAbortableLoad();
@@ -669,12 +717,11 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
     this.sanitizerFailureReported = false;
     this.sourceLoadScheduled = false;
     if (this._notebook === undefined) this.loadState = { kind: 'idle' };
-    this.announcements.disconnect();
-    super.disconnectedCallback();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.detached.flush(); // a move into another document reloads there
     this.announcements.adopted();
   }
 
@@ -1214,7 +1261,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
           ? renderViewerLoading(this.localize('loadingDocument'))
           : this.loadState.kind === 'error'
             ? html`<div part="error">${this.loadState.message}</div>`
-            : html`<p>${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`}
+            : html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`}
       ${this.renderAnchorLiveRegion()}
     </div>`;
   }

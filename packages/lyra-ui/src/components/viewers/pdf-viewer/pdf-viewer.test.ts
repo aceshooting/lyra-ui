@@ -16,7 +16,9 @@ import {
 import type { LyraPageRail } from "../page-rail/page-rail.js";
 import type { LyraPdfViewer } from "./pdf-viewer.js";
 import { TEXT_QUOTE_LIMITS } from "../../../internal/text-quote.js";
-import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { sendKeys } from '@web/test-runner-commands';
 import { LYRA_DEFAULT_STRINGS, registerLyraLocale } from '../../../internal/localization.js';
 
 // These fixtures test locale-sensitive search, not missing translations. Supply their UI
@@ -209,7 +211,7 @@ describe("lr-pdf-viewer", () => {
     expect(el.shadowRoot!.querySelector(".empty-note")).to.exist;
   });
 
-  it("keeps the nested loading skeleton out of the viewer live-region contract", async () => {
+  it("shows the shared viewer loading treatment, outside the viewer live-region contract", async () => {
     const el = await fixture<LyraPdfViewer>(
       html`<lr-pdf-viewer></lr-pdf-viewer>`
     );
@@ -219,19 +221,13 @@ describe("lr-pdf-viewer", () => {
     (el as unknown as { loadState: unknown }).loadState = { kind: "loading" };
     el.requestUpdate();
     await el.updateComplete;
-    expect(
-      el.shadowRoot!.querySelector('[part="spinner"] .sr-only')?.textContent
-    ).to.equal("Loading document…");
+    const spinner = el.shadowRoot!.querySelector('[part="spinner"]');
+    expect(spinner?.classList.contains("viewer-loading")).to.equal(true);
+    expect(spinner?.querySelector(".viewer-loading-label")?.textContent).to.equal("Loading document…");
     expect(
       el.shadowRoot!.querySelector('[part="base"]')!.getAttribute("aria-busy")
     ).to.equal("true");
-    expect(el.shadowRoot!.querySelectorAll("lr-skeleton").length).to.equal(1);
-    const skeleton = el.shadowRoot!.querySelector(
-      "lr-skeleton"
-    ) as HTMLElement & {
-      updateComplete: Promise<unknown>;
-    };
-    await skeleton.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll("lr-skeleton").length).to.equal(0);
     expect(
       el.shadowRoot!.querySelectorAll(
         '[role="status"], [role="alert"], [aria-live]'
@@ -985,9 +981,43 @@ describe("lr-pdf-viewer", () => {
       void el.renderPageThumbnail(1, canvas); // a second, separately-tracked in-flight render task
       await aTimeout(30);
       if (document.body.contains(el)) el.remove();
+      await aTimeout(0); // teardown runs once the element has really left (not on a same-task move)
       expect(cancels.length).to.be.greaterThan(1); // both the page-render task and the thumbnail task were cancelled
     } finally {
       restore();
+    }
+  });
+
+  it("keeps the loaded document, page and search across a same-task DOM move", async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(3));
+    const original = window.fetch;
+    let fetches = 0;
+    window.fetch = (() => {
+      fetches++;
+      return Promise.resolve(response());
+    }) as typeof window.fetch;
+    const host = document.createElement("div");
+    document.body.append(host);
+    try {
+      el.src = "https://example.test/report.pdf";
+      await waitUntil(() => el.pageViewerSnapshot.status === "ready");
+      el.page = 2;
+      await el.updateComplete;
+      const snapshot = el.pageViewerSnapshot;
+      host.append(el); // a move: disconnect and reconnect within one task
+      await el.updateComplete;
+      await aTimeout(30);
+      expect(fetches).to.equal(1);
+      expect(el.page).to.equal(2);
+      expect(el.pageViewerSnapshot.identity).to.equal(snapshot.identity);
+      expect(el.pageViewerSnapshot.status).to.equal("ready");
+      expect(
+        (el as unknown as { textSelectionCleanup?: () => void }).textSelectionCleanup,
+      ).to.exist;
+    } finally {
+      window.fetch = original;
+      host.remove();
     }
   });
 
@@ -1000,11 +1030,12 @@ describe("lr-pdf-viewer", () => {
     try {
       el.src = "https://example.test/report.pdf";
       await waitFor(el, '[part="toolbar"]'); // hasUpdated is now true, and src is already set
-      el.remove(); // disconnectedCallback clears textSelectionCleanup and resets loadState to idle
+      el.remove(); // disconnectedCallback clears textSelectionCleanup; the document is released a microtask later
       expect(
         (el as unknown as { textSelectionCleanup?: () => void })
           .textSelectionCleanup
       ).to.be.undefined;
+      await aTimeout(0); // a genuine disconnect, not a same-task move: loadState is reset to idle
       document.body.appendChild(el); // reconnect while hasUpdated -- must rebind selection and re-load
       // The disconnect's own idle re-render and the reconnect-triggered reload both land asynchronously
       // (and the shadow root isn't cleared by disconnection), so poll for the settled end state rather
@@ -2296,6 +2327,48 @@ describe("anchor-target adoption", () => {
       expect(detail.text).to.equal("Page 1 of 1");
     } finally {
       window.getSelection = originalGetSelection;
+      restore();
+    }
+  });
+
+  it("emits lr-text-select once when a page-text drag ends, never while the button is held", async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    let events = 0;
+    el.addEventListener("lr-text-select", () => events++);
+    const frames = async (count = 2): Promise<void> => {
+      for (let index = 0; index < count; index += 1) {
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      }
+    };
+    try {
+      el.src = "https://example.test/report.pdf";
+      await waitFor(el, "lr-virtual-list");
+      const list = el.shadowRoot!.querySelector("lr-virtual-list") as HTMLElement;
+      await waitUntil(() => list.shadowRoot!.querySelectorAll('[part="text-layer"] span').length > 3);
+      const spans = [...list.shadowRoot!.querySelectorAll<HTMLElement>('[part="text-layer"] span')];
+      const first = spans[0]!.getBoundingClientRect();
+      const last = spans[3]!.getBoundingClientRect();
+      const y = Math.round(first.top + first.height / 2);
+      const startX = Math.round(first.left + 1);
+      const endX = Math.round(last.right - 1);
+      await sendMouse({ type: "move", position: [startX, y] });
+      await sendMouse({ type: "down" });
+      for (let step = 1; step <= 6; step += 1) {
+        await sendMouse({ type: "move", position: [Math.round(startX + ((endX - startX) * step) / 6), y] });
+        await frames();
+      }
+      expect(events, "no event while the selecting button is still held").to.equal(0);
+      await sendMouse({ type: "up" });
+      await frames(3);
+      expect(events, "one event for the finished selection").to.equal(1);
+      spans[0]!.dispatchEvent(new KeyboardEvent("keyup", { key: "Control", bubbles: true, composed: true }));
+      await frames();
+      expect(events, "a keystroke that leaves the selection unchanged does not re-fire").to.equal(1);
+    } finally {
+      await resetMouse();
+      window.getSelection()?.removeAllRanges();
       restore();
     }
   });
@@ -4249,6 +4322,7 @@ describe("search", () => {
         Promise.resolve('cat');
       expect(await el.search('cat')).to.equal(1);
       el.remove();
+      await aTimeout(0); // the search reset happens once the element has really left
       expect(await el.searchNext()).to.be.false;
       const detached = el as unknown as {
         searchQuery: string;
@@ -4539,12 +4613,72 @@ describe("styling", () => {
       el.src = 'https://example.test/report.pdf';
       await waitFor(el, '[part="toolbar"]');
       const button = el.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement;
-      button.focus();
+      await focusByKeyboard(button);
       expect(button.matches(':focus-visible')).to.equal(true);
       const computed = getComputedStyle(button);
       expect(computed.outlineStyle).to.equal('dashed');
       expect(computed.outlineWidth).to.equal('5px');
       expect(computed.outlineColor).to.equal('rgb(1, 2, 3)');
+    } finally {
+      restore();
+    }
+  });
+
+  it('bounds page and thumbnail canvas backing stores while keeping their CSS size', async () => {
+    // A hostile or large-format MediaBox: 14,400 x 14,400 pt pages, and a 1 x 10,000 pt sliver.
+    const hugePage = (pageNumber: number) => ({
+      ...fakePage(pageNumber),
+      getViewport: ({ scale = 1 }: { scale?: number } = {}) => pageNumber === 2
+        ? { width: 1 * scale, height: 10_000 * scale, scale }
+        : { width: 14_400 * scale, height: 14_400 * scale, scale },
+    });
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    installFakeLoader(el, { numPages: 2, getPage: (pageNumber: number) => Promise.resolve(hugePage(pageNumber)) } as never);
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/huge.pdf';
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot
+        ?.querySelector('[part="page"] canvas') != null);
+      const canvas = listShadowRoot(el).querySelector('[part="page"] canvas') as HTMLCanvasElement;
+      await waitUntil(() => canvas.width > 1);
+      expect(canvas.width * canvas.height).to.be.at.most(16_777_216);
+      expect(Math.max(canvas.width, canvas.height)).to.be.at.most(16_384);
+      expect(canvas.style.width).to.equal('14400px');
+
+      const thumbnail = document.createElement('canvas');
+      expect(await el.renderPageThumbnail(2, thumbnail, { width: 96 })).to.equal(true);
+      expect(Math.max(thumbnail.width, thumbnail.height)).to.be.at.most(16_384);
+      expect(thumbnail.style.height).to.equal('960000px');
+    } finally {
+      restore();
+    }
+  });
+
+  it('moves keyboard focus to the twin control when a focused pager or zoom button disables itself', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    installFakeLoader(el, fakeDocument(2));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      const control = (part: string) => el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLButtonElement;
+      const focusedPart = () => el.shadowRoot!.activeElement?.getAttribute('part') ?? null;
+
+      await focusByKeyboard(control('next-button'));
+      await sendKeys({ press: 'Enter' });
+      await waitUntil(() => el.page === 2);
+      await el.updateComplete;
+      expect(control('next-button').disabled).to.equal(true);
+      expect(focusedPart()).to.equal('previous-button');
+
+      el.zoom = 3.75;
+      await el.updateComplete;
+      await focusByKeyboard(control('zoom-in-button'));
+      await sendKeys({ press: 'Enter' });
+      await waitUntil(() => el.zoom === 4);
+      await el.updateComplete;
+      expect(control('zoom-in-button').disabled).to.equal(true);
+      expect(focusedPart()).to.equal('zoom-out-button');
     } finally {
       restore();
     }

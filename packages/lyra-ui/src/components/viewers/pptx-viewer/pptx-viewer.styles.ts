@@ -3,7 +3,6 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    --_lr-pptx-viewer-max-height: none;
   }
   [part="base"] {
     display: flex;
@@ -103,19 +102,12 @@ export const styles = css`
   }
   [part="container"] {
     min-block-size: var(--lr-size-10rem);
-    max-block-size: var(
-      --lr-pptx-viewer-max-height,
-      var(--_lr-pptx-viewer-max-height)
-    );
+    max-block-size: var(--lr-pptx-viewer-max-height, none);
     overflow: auto;
     position: relative;
   }
   [part="error"] {
     padding: var(--lr-space-l);
     color: var(--lr-color-danger);
-  }
-  lr-skeleton {
-    display: block;
-    min-block-size: var(--lr-size-10rem);
   }
 `;

@@ -17,6 +17,9 @@ import type {
 import { getDefaultDocumentRendererRegistry } from "../document-viewer/registry.js";
 import type { LyraHighlight } from "../document-viewer/anchors.js";
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { LyraUserFacingError } from '../../../internal/resource-loader.js';
+import { sendKeys } from '@web/test-runner-commands';
 import {
   VIEWER_SEARCH_QUERY_LIMIT,
   VIEWER_SEARCH_WORK_LIMIT,
@@ -223,7 +226,7 @@ describe("lr-pptx-viewer", () => {
     ).to.equal("32rem");
   });
 
-  it("keeps the nested loading skeleton out of the viewer live-region contract", async () => {
+  it("shows the shared viewer loading treatment, outside the viewer live-region contract", async () => {
     const el = await fixture<LyraPptxViewer>(
       html`<lr-pptx-viewer></lr-pptx-viewer>`
     );
@@ -233,19 +236,13 @@ describe("lr-pptx-viewer", () => {
     (el as unknown as { phase: string }).phase = "loading";
     el.requestUpdate();
     await el.updateComplete;
-    expect(
-      el.shadowRoot!.querySelector("lr-skeleton + .sr-only")?.textContent
-    ).to.equal("Loading…");
+    const spinner = el.shadowRoot!.querySelector('[part="spinner"]');
+    expect(spinner?.classList.contains("viewer-loading")).to.equal(true);
+    expect(spinner?.querySelector(".viewer-loading-label")?.textContent).to.equal("Loading…");
     expect(
       el.shadowRoot!.querySelector('[part="base"]')!.getAttribute("aria-busy")
     ).to.equal("true");
-    expect(el.shadowRoot!.querySelectorAll("lr-skeleton").length).to.equal(1);
-    const skeleton = el.shadowRoot!.querySelector(
-      "lr-skeleton"
-    ) as HTMLElement & {
-      updateComplete: Promise<unknown>;
-    };
-    await skeleton.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll("lr-skeleton").length).to.equal(0);
     expect(
       el.shadowRoot!.querySelectorAll(
         '[role="status"], [role="alert"], [aria-live]'
@@ -271,6 +268,7 @@ describe("lr-pptx-viewer", () => {
       ).click();
       expect(fake.calls.goToSlide).to.equal(1);
       el.remove();
+      await aTimeout(0); // the renderer is destroyed once the element has really left
       expect(fake.calls.destroy).to.equal(1);
     } finally {
       restore();
@@ -648,16 +646,11 @@ describe("lr-pptx-viewer", () => {
     }
   });
 
-  it("remounts the presentation after a synchronous reparent while connected, instead of leaving stale-looking live controls over an empty container", async () => {
-    // Regression test: disconnectedCallback() used to tear the renderer down
-    // without resetting `phase`/`slideCount`/`currentSlideIndex` -- and
-    // nothing re-armed the mount on reconnect, since updated()'s
-    // `changed.has('src')` gate never fires again for a reparent that leaves
-    // `src` unchanged. The element re-rendered as an empty container with
-    // live-looking nav controls whose prev/next buttons silently no-op
-    // against a destroyed (undefined) viewer.
+  it("keeps the mounted presentation across a synchronous reparent, and remounts after a genuine disconnect", async () => {
     const fake = fakeModule();
     const restore = stubFetch();
+    const otherContainer = document.createElement("div");
+    document.body.appendChild(otherContainer);
     try {
       const el = (await fixture(
         html`<lr-pptx-viewer></lr-pptx-viewer>`
@@ -666,31 +659,26 @@ describe("lr-pptx-viewer", () => {
       el.src = "https://example.test/deck.pptx";
       await aTimeout(30);
       expect(el.shadowRoot!.querySelector('[part="container"]')).to.exist;
+      (el.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement).click();
+      await waitUntil(() => el.page === 2);
 
-      const otherContainer = document.createElement("div");
-      document.body.appendChild(otherContainer);
-      otherContainer.appendChild(el); // disconnect + reconnect synchronously, same instance
+      otherContainer.appendChild(el); // a move: disconnect + reconnect synchronously, same instance
       await el.updateComplete;
-
-      // Right after the reparent, the previous renderer was torn down -- the
-      // viewer must fall back to an idle/empty state, not keep rendering nav
-      // controls against a destroyed viewer.
-      expect(fake.calls.destroy).to.equal(1);
-      expect(
-        el.shadowRoot!.querySelector('[part="container"]') == null,
-        "must not still render a container as if a presentation were mounted"
-      ).to.be.true;
-
-      // The reconnect re-arms the mount, so the presentation comes back
-      // rather than the viewer staying permanently blank.
       await aTimeout(30);
-      expect(
-        el.shadowRoot!.querySelector('[part="container"]'),
-        "a reconnect must remount the presentation"
-      ).to.exist;
+      expect(fake.calls.destroy).to.equal(0);
+      expect(fake.calls.open).to.equal(1);
+      expect(el.page).to.equal(2);
+      expect(el.shadowRoot!.querySelector('[part="container"]')).to.exist;
 
-      otherContainer.remove();
+      // A genuine disconnect releases the renderer; reconnecting remounts it.
+      el.remove();
+      await aTimeout(0);
+      expect(fake.calls.destroy).to.equal(1);
+      otherContainer.appendChild(el);
+      await waitUntil(() => fake.calls.open === 2, "a reconnect must remount the presentation");
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="container"]') !== null);
     } finally {
+      otherContainer.remove();
       restore();
     }
   });
@@ -716,6 +704,33 @@ describe("lr-pptx-viewer", () => {
       expect(getComputedStyle(previous).minBlockSize).to.equal("36px");
       expect(getComputedStyle(next).minInlineSize).to.equal("36px");
       expect(getComputedStyle(next).minBlockSize).to.equal("36px");
+    } finally {
+      restore();
+    }
+  });
+
+  it('moves keyboard focus to the other pager button when the focused one disables itself', async () => {
+    const fake = fakeModule(2);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(html`<lr-pptx-viewer></lr-pptx-viewer>`)) as LyraPptxViewer;
+      el.loadRenderer = async () => fake.module;
+      el.src = "https://example.test/deck.pptx";
+      const control = (part: string) => el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLButtonElement | null;
+      const focusedPart = () => el.shadowRoot!.activeElement?.getAttribute("part") ?? null;
+      await waitUntil(() => control("next-button") !== null && !control("next-button")!.disabled);
+
+      await focusByKeyboard(control("next-button")!);
+      await sendKeys({ press: "Enter" });
+      await waitUntil(() => el.page === 2);
+      await el.updateComplete;
+      expect(control("next-button")!.disabled).to.equal(true);
+      expect(focusedPart()).to.equal("previous-button");
+
+      await sendKeys({ press: "Enter" });
+      await waitUntil(() => el.page === 1);
+      await el.updateComplete;
+      expect(focusedPart()).to.equal("next-button");
     } finally {
       restore();
     }
@@ -866,6 +881,56 @@ describe("lr-pptx-viewer", () => {
     }
   });
 
+  it('resolves text-quote anchors on slides the windowed renderer has not mounted, and page anchors', async () => {
+    const slides = [
+      'Agenda for today',
+      'Revenue grew in the north',
+      'Quarterly revenue grew 12% in the south',
+      'Revenue grew in the west',
+    ];
+    const fake = fakeModule(slides.length);
+    let container: HTMLElement | undefined;
+    const mount = (index: number) => {
+      // Windowed rendering: only the current slide is in the DOM.
+      container!.replaceChildren(Object.assign(document.createElement('p'), { textContent: slides[index] }));
+    };
+    const goToSlide = fake.viewer.goToSlide;
+    fake.viewer.goToSlide = async (index: number) => {
+      mount(index);
+      await goToSlide(index);
+    };
+    fake.viewer.searchText = (query: string) => slides.flatMap((text, slideIndex) => {
+      const matchStart = text.toLowerCase().indexOf(query.toLowerCase());
+      return matchStart < 0 ? [] : [{ slideIndex, nodeId: `n${slideIndex}`, matchStart, matchEnd: matchStart + query.length, text }];
+    });
+    const module = fake.module as unknown as { PptxViewer: { open: (...args: unknown[]) => Promise<unknown> } };
+    const open = module.PptxViewer.open;
+    module.PptxViewer.open = async (...args: unknown[]) => {
+      container = args[1] as HTMLElement;
+      const viewer = await open(...args);
+      mount(0);
+      return viewer;
+    };
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      const loaded = oneEvent(el, 'lr-load');
+      el.src = 'https://example.test/deck.pptx';
+      await loaded;
+      expect(await el.scrollToAnchor({ kind: 'text-quote', quote: 'Quarterly revenue grew 12%' })).to.equal(true);
+      expect(el.page).to.equal(3);
+      // Context picks the cited occurrence among several slides.
+      expect(await el.scrollToAnchor({ kind: 'text-quote', quote: 'revenue grew', prefix: 'Agenda', suffix: 'in the west' })).to.equal(true);
+      expect(el.page).to.equal(4);
+      expect(await el.scrollToAnchor({ kind: 'page', page: 2 })).to.equal(true);
+      expect(el.page).to.equal(2);
+      expect(el.anchorKinds).to.include('page');
+    } finally {
+      restore();
+    }
+  });
+
   it("is accessible with a mounted presentation and its slide-nav controls visible", async () => {
     const fake = fakeModule();
     const restore = stubFetch();
@@ -921,7 +986,7 @@ describe("lr-pptx-viewer", () => {
     )) as LyraPptxViewer;
     const unsafeEvent = oneEvent(unsafe, "lr-render-error");
     unsafe.src = "javascript:alert(1)";
-    expect((await unsafeEvent).detail.error).to.exist;
+    expect((await unsafeEvent).detail.error).to.be.instanceOf(LyraUserFacingError);
 
     const restoreOk = stubFetch();
     try {
@@ -931,7 +996,7 @@ describe("lr-pptx-viewer", () => {
       missing.loadRenderer = async () => null;
       const missingEvent = oneEvent(missing, "lr-render-error");
       missing.src = "https://example.test/deck.pptx";
-      expect((await missingEvent).detail.error).to.exist;
+      expect((await missingEvent).detail.error).to.be.instanceOf(LyraUserFacingError);
     } finally {
       restoreOk();
     }
@@ -1734,6 +1799,14 @@ describe("styling", () => {
 });
 
 describe("PPTX registry", () => {
+  it("advertises every anchor kind the element resolves, page included, from the element entry", async () => {
+    const definition = getDefaultDocumentRendererRegistry().get(
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    )!;
+    const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+    expect([...(definition.capabilities?.anchors ?? [])]).to.deep.equal([...el.anchorKinds]);
+  });
+
   it("forwards document anchors/highlights and advertises its text contracts", () => {
     const definition = getDefaultDocumentRendererRegistry().get(
       "application/vnd.openxmlformats-officedocument.presentationml.presentation"
@@ -1758,7 +1831,7 @@ describe("PPTX registry", () => {
     expect(rendered.anchor).to.deep.equal(anchor);
     expect(rendered.highlights).to.deep.equal(highlights);
     expect(definition.capabilities).to.deep.equal({
-      anchors: ["text-quote", "fragment"],
+      anchors: ["text-quote", "fragment", "page"],
       search: true,
       textSelect: true,
     });

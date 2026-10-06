@@ -427,7 +427,7 @@ describe('lr-docx-viewer', () => {
     }
   });
 
-  it('reloads an already-loaded source after reconnecting', async () => {
+  it('keeps a converted document across a same-task move, and reloads after a genuine reconnect', async () => {
     const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
     useLibrary(el, {
       mammoth: { convertToHtml: () => Promise.resolve({ value: '<p>Ready</p>', messages: [] }) },
@@ -441,6 +441,35 @@ describe('lr-docx-viewer', () => {
       await waitUntil(() => calls === 1 && el.shadowRoot!.querySelector('[part="content"]') !== null);
       const parent = el.parentElement!;
       el.remove();
+      parent.append(el); // a move: disconnect and reconnect within one task
+      await aTimeout(30);
+      expect(calls).to.equal(1);
+      const content = el.shadowRoot!.querySelector('[part="content"]') as HTMLElement;
+      expect(content.textContent).to.include('Ready');
+      // Selection still reports after the move (stubbed: WebKit drops shadow-tree ranges).
+      const range = document.createRange();
+      range.selectNodeContents(content.querySelector('p')!);
+      const originalGetSelection = window.getSelection;
+      window.getSelection = (() => ({
+        getComposedRanges: () => [{
+          startContainer: range.startContainer,
+          startOffset: range.startOffset,
+          endContainer: range.endContainer,
+          endOffset: range.endOffset,
+        }],
+        getRangeAt: () => range,
+        isCollapsed: false,
+        rangeCount: 1,
+      })) as unknown as typeof window.getSelection;
+      try {
+        const selected = oneEvent(el, 'lr-text-select');
+        content.querySelector('p')!.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, composed: true }));
+        expect((await selected).detail.text).to.equal('Ready');
+      } finally {
+        window.getSelection = originalGetSelection;
+      }
+      el.remove();
+      await aTimeout(0); // a genuine disconnect
       parent.append(el);
       await waitUntil(() => calls === 2);
     } finally { window.fetch = original; }
@@ -1228,6 +1257,7 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
         DOMPurify: { sanitize: (value: string) => value },
       });
       el.remove();
+      await aTimeout(0); // a genuine disconnect: the highlight actions are released a microtask later
       await el.updateComplete;
       expect(el.shadowRoot!.querySelectorAll('[part="highlight-action"]').length).to.equal(0);
       reconnectHost.append(el);

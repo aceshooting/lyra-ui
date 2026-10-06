@@ -640,6 +640,18 @@ describe('loading a notebook from src', () => {
     expect(el.shadowRoot!.textContent).to.contain('No document to display.');
   });
 
+  it('renders the idle note with the reset, quiet colour and tokenized spacing of other viewer states', async () => {
+    const el = await fixture<LyraNotebookViewer>(html`<lr-notebook-viewer></lr-notebook-viewer>`);
+    const note = el.shadowRoot!.querySelector('.empty-note') as HTMLElement | null;
+    expect(note === null).to.equal(false);
+    expect(note!.textContent).to.equal('No document to display.');
+    const style = getComputedStyle(note!);
+    expect(style.marginBlockStart).to.equal('0px');
+    expect(style.marginBlockEnd).to.equal('0px');
+    expect(parseFloat(style.paddingBlockStart)).to.be.greaterThan(0);
+    expect(style.textAlign).to.equal('center');
+  });
+
   it('assigning inline authority aborts and cannot be overwritten by an in-flight src', async () => {
     const original = window.fetch;
     let signal: AbortSignal | null | undefined;
@@ -849,7 +861,7 @@ describe('loading a notebook from src', () => {
     }
   });
 
-  it('resets to idle on disconnect and re-fetches from src on reconnect (a pure DOM move, unlike the inline-authority reconnect above)', async () => {
+  it('resets to idle on a genuine disconnect and re-fetches from src on reconnect (unlike the inline-authority reconnect above)', async () => {
     const original = window.fetch;
     let fetches = 0;
     window.fetch = (() => {
@@ -864,6 +876,7 @@ describe('loading a notebook from src', () => {
       expect(fetches).to.equal(1);
 
       el.remove();
+      await aTimeout(0); // a genuine disconnect (a same-task move keeps the notebook)
       expect((el as unknown as { loadState: { kind: string } }).loadState.kind).to.equal('idle');
 
       document.body.append(el);
@@ -894,6 +907,7 @@ describe('rendering non-text outputs', () => {
     await el.updateComplete;
     await aTimeout(0);
     el.remove();
+    await aTimeout(0); // a genuine disconnect invalidates in-flight sanitization
     expect((el as unknown as { sanitizationTasks: Map<string, unknown> }).sanitizationTasks.size).to.equal(0);
     __setNotebookSanitizerForTesting(second);
     document.body.append(el);
@@ -1250,7 +1264,7 @@ describe('event boundaries', () => {
 
   it('keeps a real nested code selection and its line-range anchor off the notebook host', async function () {
     const { el, codeBlock } = await mountComposedChildren();
-    await waitUntil(() => codeBlock.shadowRoot!.querySelectorAll('[data-line]').length >= 2);
+    await waitUntil(() => codeBlock.shadowRoot!.querySelectorAll('[data-line]').length >= 2, undefined, { timeout: 5000 });
     const [line1, line2] = codeBlock.shadowRoot!.querySelectorAll('[data-line]');
     const textNodeOf = (line: Element): Text => {
       const walker = document.createTreeWalker(
@@ -1386,6 +1400,48 @@ describe('search', () => {
     const el = (await fixture(html`<lr-notebook-viewer .notebook=${NOTEBOOK}></lr-notebook-viewer>`)) as LyraNotebookViewer;
     const count = await el.search('hi');
     expect(count).to.equal(1);
+  });
+
+  it('searches the text an output shows, never image payloads or raw markup', async () => {
+    const notebook = {
+      nbformat: 4, nbformat_minor: 5,
+      cells: [
+        { cell_type: 'code', source: 'plot()', outputs: [{
+          output_type: 'display_data',
+          data: { 'image/png': 'iVBORw0KGgoSUMx', 'text/plain': '<Figure size 640x480>' },
+        }] },
+        { cell_type: 'code', source: 'frame', outputs: [{
+          output_type: 'execute_result',
+          data: { 'text/html': '<div class="sum"><b>total</b> 4</div>' },
+        }] },
+        { cell_type: 'code', source: 'chart', outputs: [{
+          output_type: 'display_data',
+          data: { 'image/svg+xml': '<svg><text id="sum">Revenue</text></svg>' },
+        }] },
+        { cell_type: 'code', source: 'print(4)', outputs: [{ output_type: 'stream', name: 'stdout', text: 'the sum is 4' }] },
+        { cell_type: 'code', source: 'frame2', outputs: [{
+          output_type: 'execute_result',
+          data: { 'text/html': '<table><tr><td>sum of sales</td></tr></table>' },
+        }] },
+      ],
+    };
+    const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
+    expect(await el.search('sum')).to.equal(2);
+    expect(await el.search('div')).to.equal(0);
+    expect(await el.search('Revenue')).to.equal(1);
+    expect(await el.search('Figure size')).to.equal(1);
+  });
+
+  it('keeps output search linear on markup made of unterminated tags and comments', async () => {
+    const hostile = '<'.repeat(400_000) + '<!--'.repeat(100_000) + '<style>'.repeat(50_000);
+    const notebook = {
+      nbformat: 4, nbformat_minor: 5,
+      cells: [{ cell_type: 'code', source: 'x', outputs: [{ output_type: 'execute_result', data: { 'text/html': hostile } }] }],
+    };
+    const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
+    const started = performance.now();
+    expect(await el.search('needle')).to.equal(0);
+    expect(performance.now() - started).to.be.below(2_000);
   });
 
   it('scrolls the virtualized target cell for the initial and next search matches', async () => {
@@ -2208,4 +2264,65 @@ it('keeps a raw cell source LTR-isolated and start-aligned under RTL', async () 
   const start = raw.getBoundingClientRect().left + parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft);
   expect(glyphRect(raw, 'const').left - start).to.be.at.most(2);
   expect(glyphRect(raw, ';').left).to.be.greaterThan(glyphRect(raw, 'const').right);
+});
+
+describe('identity re-assignment', () => {
+  it('does not re-parse or reset rendering when the identical notebook is re-assigned', async () => {
+    const prototype = customElements.get('lr-notebook-viewer')!.prototype as unknown as {
+      parseInline(...args: unknown[]): unknown;
+    };
+    const original = prototype.parseInline;
+    let parses = 0;
+    prototype.parseInline = function (this: unknown, ...args: unknown[]) {
+      parses++;
+      return original.apply(this, args);
+    };
+    try {
+      const el = (await fixture(html`<lr-notebook-viewer .notebook=${NOTEBOOK}></lr-notebook-viewer>`)) as LyraNotebookViewer;
+      await el.updateComplete;
+      const before = parses;
+      el.notebook = NOTEBOOK;
+      await el.updateComplete;
+      el.notebook = el.notebook;
+      await el.updateComplete;
+      expect(parses).to.equal(before);
+    } finally {
+      prototype.parseInline = original;
+    }
+  });
+});
+
+describe('DOM moves', () => {
+  it('keeps a src-loaded notebook across a same-task move, and reloads after a genuine reconnect', async () => {
+    let fetches = 0;
+    const original = window.fetch;
+    window.fetch = (() => {
+      fetches++;
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        headers: { get: () => null },
+        text: () => Promise.resolve(JSON.stringify(NOTEBOOK)),
+      } as unknown as Response);
+    }) as typeof window.fetch;
+    const host = document.createElement('div');
+    document.body.append(host);
+    try {
+      const el = (await fixture(html`<lr-notebook-viewer src="https://example.test/a.ipynb"></lr-notebook-viewer>`)) as LyraNotebookViewer;
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null && fetches === 1);
+      await el.updateComplete;
+      host.append(el); // a move: disconnect and reconnect within one task
+      await aTimeout(30);
+      expect(fetches).to.equal(1);
+      expect(el.shadowRoot!.querySelector('lr-virtual-list') !== null).to.equal(true);
+      el.remove();
+      await aTimeout(0); // a genuine disconnect
+      host.append(el);
+      await waitUntil(() => fetches === 2);
+    } finally {
+      host.remove();
+      window.fetch = original;
+    }
+  });
 });

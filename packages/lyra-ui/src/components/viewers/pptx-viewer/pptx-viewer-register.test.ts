@@ -30,7 +30,7 @@ describe('pptx registry', () => {
   it('matches by extension and declares capabilities', () => {
     expect(findDocumentRenderer(pptx)).to.exist;
     expect(findDocumentRenderer(pptx)!.capabilities).to.deep.equal({
-      anchors: ['text-quote', 'fragment'],
+      anchors: ['text-quote', 'fragment', 'page'],
       search: true,
       textSelect: true,
     });

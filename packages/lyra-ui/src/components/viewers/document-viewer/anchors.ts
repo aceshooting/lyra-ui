@@ -55,6 +55,16 @@ export interface LyraHighlight {
  *  anchor's `prefix`/`suffix` (see `internal/text-quote.ts`'s `buildQuoteAnchor`). */
 export const TEXT_QUOTE_CONTEXT_CHARS = 32;
 
+const foldQuoteContext = (value: string): string => value.replace(/\s+/g, ' ').trim().toLowerCase();
+
+/** How many provided `prefix`/`suffix` sides (0-2) surround `text.slice(start, end)`. */
+export function textQuoteContextScore(text: string, start: number, end: number, prefix = '', suffix = ''): number {
+  const before = foldQuoteContext(prefix).slice(-TEXT_QUOTE_CONTEXT_CHARS).trim();
+  const after = foldQuoteContext(suffix).slice(0, TEXT_QUOTE_CONTEXT_CHARS).trim();
+  return (before && foldQuoteContext(text.slice(0, start)).endsWith(before) ? 1 : 0)
+    + (after && foldQuoteContext(text.slice(end)).startsWith(after) ? 1 : 0);
+}
+
 /** A renderer's/viewer's anchor-related capability declaration, so a host can feature-detect before
  *  relying on anchor/highlight/search/text-select support. */
 export interface AnchorTargetCapabilities {

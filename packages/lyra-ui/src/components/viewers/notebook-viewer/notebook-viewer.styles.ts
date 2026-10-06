@@ -169,6 +169,12 @@ export const styles = css`
     padding: var(--lr-space-l);
     text-align: center;
   }
+  .empty-note {
+    margin: 0;
+    padding: var(--lr-space-l);
+    color: var(--lr-color-text-quiet);
+    text-align: center;
+  }
   /* Container-query evaluation walks the flat tree, so it crosses the <lr-virtual-list> shadow
      boundary and still resolves against the :host container above -- these narrow-allocation
      ::part() rules keep working. */

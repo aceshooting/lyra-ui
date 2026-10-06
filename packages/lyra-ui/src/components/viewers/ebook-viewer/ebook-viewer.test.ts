@@ -307,6 +307,20 @@ describe("lr-ebook-viewer", () => {
     expect(mount.getAttribute("aria-label")).to.equal("");
   });
 
+  it("does not repeat a non-empty host aria-label on a second shadow region owner", async () => {
+    const el = (await fixture(
+      html`<lr-ebook-viewer name="Named book" aria-label="Moby-Dick"></lr-ebook-viewer>`
+    )) as LyraEbookViewer;
+    const mount = el.shadowRoot!.querySelector('[part="mount"]')!;
+    expect(mount.hasAttribute("aria-label")).to.equal(false);
+    expect(mount.hasAttribute("role")).to.equal(false);
+
+    el.removeAttribute("aria-label");
+    await el.updateComplete;
+    expect(mount.getAttribute("role")).to.equal("region");
+    expect(mount.getAttribute("aria-label")).to.equal("Named book");
+  });
+
   it("gives the page-turn buttons the shared minimum hit area", async () => {
     const el = (await fixture(
       html`<lr-ebook-viewer></lr-ebook-viewer>`
@@ -2459,6 +2473,42 @@ describe("scrollToAnchor (ebook)", () => {
     }
   });
 
+  it("uses a text-quote anchor's prefix/suffix to pick the cited occurrence, with the quote trimmed", async () => {
+    const fake = fakeBookWithFeatures({
+      "ch1.xhtml": "The total was 42 last year.",
+      "ch2.xhtml": "This year the total was 42 again.",
+    });
+    const queries: string[] = [];
+    for (const item of fake.book.spine.spineItems) {
+      const find = item.find;
+      item.find = (query: string) => {
+        queries.push(query);
+        return find(query);
+      };
+    }
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(
+        html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`
+      )) as LyraEbookViewer;
+      await aTimeout(20);
+      expect(await el.scrollToAnchor({
+        kind: "text-quote",
+        quote: " the total was 42 ",
+        prefix: "This year",
+        suffix: "again",
+      })).to.be.true;
+      expect(fake.displayedCfis.at(-1)).to.equal("epubcfi(/6/2!/4/ch2.xhtml)");
+      expect(queries.every((query) => query === "the total was 42")).to.equal(true);
+      // Without context the first occurrence still wins.
+      expect(await el.scrollToAnchor({ kind: "text-quote", quote: "total was 42" })).to.be.true;
+      expect(fake.displayedCfis.at(-1)).to.equal("epubcfi(/6/2!/4/ch1.xhtml)");
+    } finally {
+      restore();
+    }
+  });
+
   it("resolves a text-quote anchor past a spine section that throws, instead of aborting the scan", async () => {
     const fake = fakeBookWithFeatures({
       "ch1.xhtml": "apple",
@@ -3346,7 +3396,7 @@ describe("adversarial rendition boundaries", () => {
     const target = el as unknown as {
       book: typeof book;
       rendition: typeof rendition;
-      findTextQuoteCfi(quote: string): Promise<string | null>;
+      findTextQuoteCfi(anchor: { quote: string }): Promise<string | null>;
     };
     target.book = book;
     target.rendition = rendition;
@@ -3363,7 +3413,7 @@ describe("adversarial rendition boundaries", () => {
       const changed = oneEvent(el, 'lr-search-change');
       expect(await el.search('needle')).to.equal(1);
       expect((await changed).detail).to.deep.include({ matchCount: 1, matchCountExact: false });
-      expect(await target.findTextQuoteCfi('needle')).to.equal(validCfi);
+      expect(await target.findTextQuoteCfi({ quote: 'needle' })).to.equal(validCfi);
       expect(oversizedTrimCalls).to.equal(0);
     } finally {
       String.prototype.trim = originalTrim;
@@ -3422,4 +3472,53 @@ it('marks search counts inexact when inspecting results leaves no budget to reta
     expect(await el.search('needle')).to.equal(0);
     expect(exact).to.equal(false);
   } finally { restore(); }
+});
+
+describe("DOM moves", () => {
+  it("keeps the open book across a state-preserving moveBefore(), which keeps chapter iframes alive", async function () {
+    if (!("moveBefore" in Element.prototype)) this.skip();
+    const fake = fakeBook();
+    let opened = 0;
+    __setEpubJsForTesting((() => {
+      opened++;
+      return fake.book;
+    }) as never);
+    const restore = stubFetch();
+    const host = document.createElement("div");
+    document.body.append(host);
+    try {
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
+      await waitUntil(() => opened === 1);
+      await aTimeout(20);
+      (host as unknown as { moveBefore(node: Node, child: Node | null): void }).moveBefore(el, null);
+      await aTimeout(30);
+      expect(fake.calls.destroy).to.equal(0);
+      expect(opened).to.equal(1);
+    } finally {
+      host.remove();
+      restore();
+    }
+  });
+});
+
+describe("element entry registration", () => {
+  it("registers the EPUB document kind for <lr-document-viewer>, like the other viewer element entries", async () => {
+    const { findDocumentRenderer, loadDocumentRenderer } = await import("../document-viewer/registry.js");
+    const file = { name: "a.epub", mimeType: "application/epub+zip", src: "https://example.test/a.epub" };
+    const definition = findDocumentRenderer(file);
+    expect(definition?.capabilities?.anchors).to.deep.equal(["cfi", "text-quote"]);
+    const resolved = await loadDocumentRenderer(definition!);
+    expect(typeof resolved.render).to.equal("function");
+  });
+});
+
+describe("loading treatment", () => {
+  it("shows the shared viewer loading treatment while a book loads", async () => {
+    const el = (await fixture(html`<lr-ebook-viewer></lr-ebook-viewer>`)) as LyraEbookViewer;
+    (el as unknown as { ebookState: unknown }).ebookState = { kind: "loading" };
+    await el.updateComplete;
+    const spinner = el.shadowRoot!.querySelector('[part="spinner"]');
+    expect(spinner?.classList.contains("viewer-loading")).to.equal(true);
+    expect(spinner?.querySelector(".viewer-loading-label")?.textContent).to.equal("Loading document…");
+  });
 });

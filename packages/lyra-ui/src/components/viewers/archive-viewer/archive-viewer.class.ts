@@ -17,12 +17,13 @@ import {
   TEXT_QUOTE_LIMITS,
   type TextQuoteWorkBudget,
 } from '../../../internal/text-quote.js';
-import { FILE_SIZE_UNIT_KEYS, formatFileSize } from '../../media/attachment-chip/attachment-chip.class.js';
+import { FILE_SIZE_UNIT_KEYS, formatFileSize } from '../../media/attachment-chip/file-size.js';
 import type { LyraAnchor } from '../document-viewer/anchors.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
 import { assertZipArchiveMetadataWithinLimits } from './zip-resource-guard.js';
 import { styles, virtualListHighlightStyles } from './archive-viewer.styles.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import { DeferredTeardown } from '../document-viewer/deferred-teardown.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { boundedViewerSearchQuery, ViewerSearchWorkBudget } from '../viewer-search-limits.js';
@@ -37,7 +38,8 @@ type ArchiveState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; e
 export interface LyraArchiveViewerEventMap extends LyraTextViewerTargetEventMap { 'lr-render-error': CustomEvent<{ error: unknown }>; }
 
 const MAX_ARCHIVE_ENTRIES = 10_000;
-const MAX_ARCHIVE_UNCOMPRESSED_BYTES = 100 * 1024 * 1024;
+// The listing never inflates, so a declared expanded size is not a resource.
+const MAX_ARCHIVE_UNCOMPRESSED_BYTES = Number.POSITIVE_INFINITY;
 class LyraArchiveViewerBase extends LyraElement<LyraArchiveViewerEventMap> {}
 const ArchiveTextViewerTargetBase = TextViewerTarget(LyraArchiveViewerBase);
 
@@ -80,8 +82,8 @@ function archiveSelectionRange(viewer: LyraElement, contentRoot: Element): Range
 
 /** Lists names and declared uncompressed sizes in a ZIP archive without rendering entry contents
  * or loading an archive parser. One owned central-directory parser is the listing and validation
- * authority: it enforces the 10,000-entry and 100 MB declared-expansion ceilings, validates local
- * header bounds and supported compression methods, and never inflates entry bodies.
+ * authority: it enforces the 10,000-entry ceiling, validates local header bounds and supported
+ * compression methods, and never inflates entry bodies.
  * Fragment anchors use the exact ZIP entry path as their `id`; rendered rows do not expose that
  * path as a DOM `id`, so the viewer resolves entry metadata before mounting and scrolling the
  * matching virtual row. A ZIP central directory may legally repeat an entry path across multiple
@@ -273,23 +275,27 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     }
   }
 
+  private readonly detached = new DeferredTeardown(() => { this.generation++; });
+
   override connectedCallback(): void {
     super.connectedCallback();
     this.announcements.connect();
-    if (this.hasUpdated && this.src) this.scheduleAfterUpdate(() => { void this.load(); });
+    const moved = this.detached.cancel();
+    if (this.hasUpdated && this.src && !moved) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
   override disconnectedCallback(): void {
-    this.generation++;
     this.archiveSelectionCleanup?.();
     this.archiveSelectionCleanup = undefined;
     this.archiveSelectionRoot = null;
     this.announcements.disconnect();
     super.disconnectedCallback();
+    this.detached.schedule();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.detached.flush(); // a move into another document reloads there
     this.announcements.adopted();
   }
 
@@ -486,20 +492,61 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
       this.archiveSelectionCleanup = undefined;
       this.archiveSelectionRoot = root;
       if (root) {
+        const ownerDocument = root.ownerDocument;
+        const view = ownerDocument.defaultView;
+        // Shared cadence: report each settled selection once; touch handles only fire selectionchange.
+        let pointerSelecting = false;
+        let reported: readonly [Node, number, Node, number] | undefined;
         const emitSelection = (): void => {
           const range = archiveSelectionRange(this, root);
-          if (!range || !root.contains(range.startContainer) || !root.contains(range.endContainer)) return;
+          if (!range || !root.contains(range.startContainer) || !root.contains(range.endContainer)) {
+            reported = undefined;
+            return;
+          }
+          if (
+            reported
+            && reported[0] === range.startContainer && reported[1] === range.startOffset
+            && reported[2] === range.endContainer && reported[3] === range.endOffset
+          ) return;
           const text = boundedSelectionText(range);
           if (!text) return;
+          reported = [range.startContainer, range.startOffset, range.endContainer, range.endOffset];
           const anchor = this.computeSelectionAnchor(range);
           const rects = boundedSelectionRects(range);
           this.emit('lr-text-select', { text, anchor, rects });
         };
+        let debounceHandle: number | undefined;
+        const onSelectionChange = (): void => {
+          if (pointerSelecting || !view) return;
+          if (debounceHandle !== undefined) view.cancelAnimationFrame(debounceHandle);
+          debounceHandle = view.requestAnimationFrame(() => {
+            debounceHandle = undefined;
+            emitSelection();
+          });
+        };
+        const onPointerDown = (event: PointerEvent): void => {
+          if (event.isPrimary && event.button === 0) pointerSelecting = true;
+        };
+        // Document-level, so a drag released outside the listing still ends its selection.
+        const onPointerRelease = (): void => {
+          if (!pointerSelecting) return;
+          pointerSelecting = false;
+          emitSelection();
+        };
         root.addEventListener('pointerup', emitSelection);
         root.addEventListener('keyup', emitSelection);
+        ownerDocument.addEventListener('selectionchange', onSelectionChange);
+        ownerDocument.addEventListener('pointerdown', onPointerDown, true);
+        ownerDocument.addEventListener('pointerup', onPointerRelease, true);
+        ownerDocument.addEventListener('pointercancel', onPointerRelease, true);
         this.archiveSelectionCleanup = () => {
           root.removeEventListener('pointerup', emitSelection);
           root.removeEventListener('keyup', emitSelection);
+          ownerDocument.removeEventListener('selectionchange', onSelectionChange);
+          ownerDocument.removeEventListener('pointerdown', onPointerDown, true);
+          ownerDocument.removeEventListener('pointerup', onPointerRelease, true);
+          ownerDocument.removeEventListener('pointercancel', onPointerRelease, true);
+          if (debounceHandle !== undefined) view?.cancelAnimationFrame(debounceHandle);
         };
       }
     }

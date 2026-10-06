@@ -27,3 +27,11 @@ it('forwards registry anchors and highlights to the lazy ebook renderer', async 
   expect(viewer.anchor).to.deep.equal(anchor);
   expect(viewer.highlights).to.deep.equal(highlights);
 });
+
+it('declares its capabilities before the lazy renderer loads', () => {
+  expect(findDocumentRenderer(file)!.capabilities).to.deep.equal({
+    anchors: ['cfi', 'text-quote'],
+    search: true,
+    textSelect: true,
+  });
+});

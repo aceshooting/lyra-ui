@@ -5,7 +5,6 @@ import { LyraPdfViewer } from './pdf-viewer.class.js';
 import { defineElement } from '../../../internal/prefix.js';
 import '../highlight-layer/highlight-layer.js';
 import '../../layout/virtual-list/virtual-list.js';
-import '../../overlays/skeleton/skeleton.js';
 import { registerDocumentRenderer, type LyraDocumentFile } from '../document-viewer/registry.js';
 
 defineElement('pdf-viewer', LyraPdfViewer);

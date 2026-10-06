@@ -35,6 +35,7 @@ import {
 } from '../../../internal/clipboard.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import { DeferredTeardown } from '../document-viewer/deferred-teardown.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 import { boundedViewerSearchQuery, ViewerSearchWorkBudget } from '../viewer-search-limits.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -124,7 +125,8 @@ class XmlDoctypeError extends Error {
  * Rejecting it before DOMParser is important: browser XML parsers do not fetch external entities,
  * but they can expand an internal entity graph before Lyra gets a document to count. */
 function containsXmlDoctype(raw: string): boolean {
-  for (let offset = 0; offset < raw.length;) {
+  // Every construct examined starts with "<", so jump between them.
+  for (let offset = raw.indexOf('<'); offset >= 0; offset = raw.indexOf('<', offset)) {
     if (raw.startsWith('<!--', offset)) {
       const end = raw.indexOf('-->', offset + 4);
       if (end < 0) return false;
@@ -137,7 +139,7 @@ function containsXmlDoctype(raw: string): boolean {
       offset = end + 3;
       continue;
     }
-    if (raw.slice(offset, offset + 9).toUpperCase() === '<!DOCTYPE') return true;
+    if (raw.startsWith('<!', offset) && raw.slice(offset, offset + 9).toUpperCase() === '<!DOCTYPE') return true;
     offset++;
   }
   return false;
@@ -360,12 +362,14 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   /** URL to fetch and parse as XML. Ignored once `xml` is set. */
   @property() src = '';
 
-  /** Raw XML text to parse and render, wins over `src`. Setting this parses synchronously. */
+  /** Raw XML text to parse and render, wins over `src`. Setting this parses synchronously;
+   *  re-assigning identical text is a no-op. */
   @property({ attribute: false })
   get xml(): string | undefined {
     return this._xml;
   }
   set xml(value: string | undefined) {
+    if (value === this._xml) return;
     const old = this._xml;
     this._xml = value;
     this.requestUpdate('xml', old);
@@ -395,8 +399,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   @property({ type: Boolean, reflect: true }) copyable = false;
 
   /** A CSS length (e.g. `"20rem"`); once set, the viewer scrolls internally past this height
-   *  instead of growing the page. */
-  /** A CSS `max-height`; invalid values are ignored. */
+   *  instead of growing the page. Invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
 
   /** Anchor kinds this component resolves via `scrollToAnchor()`. */
@@ -473,10 +476,13 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     }
   }
 
+  private readonly detached = new DeferredTeardown(() => this.releaseDetachedDocument());
+
   override connectedCallback(): void {
     super.connectedCallback();
     this.announcements.connect();
-    if (this.hasUpdated && this.src && this._xml === undefined) {
+    const moved = this.detached.cancel();
+    if (this.hasUpdated && this.src && this._xml === undefined && !moved) {
       this.scheduleAfterUpdate(() => {
         void this.loadFromSrc();
       });
@@ -484,16 +490,21 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   }
 
   override disconnectedCallback(): void {
-    this.generation++;
-    this.beginAbortableLoad();
-    if (this._xml === undefined) this.xmlState = { kind: 'idle' };
     this.announcements.disconnect();
     this.resetCopyFeedback();
     super.disconnectedCallback();
+    this.detached.schedule();
+  }
+
+  private releaseDetachedDocument(): void {
+    this.generation++;
+    this.beginAbortableLoad();
+    if (this._xml === undefined) this.xmlState = { kind: 'idle' };
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.detached.flush(); // a move into another document reloads there
     this.announcements.adopted();
     this.resetCopyFeedback();
   }
@@ -965,7 +976,8 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     const highlight = this.renderedHighlights.get(pathKey);
     const toggleLabel = el.tagName;
     let elementIndex = 0;
-    const childRows = renderedChildren.map((node) => {
+    // A collapsed node's descendants are never shown, so their rows are not built at all.
+    const childRows = !expanded ? nothing : renderedChildren.map((node) => {
       if (node.nodeType === Node.ELEMENT_NODE) {
         return this.renderNode(node as Element, [...path, elementIndex++], depth + 1);
       }
@@ -1045,9 +1057,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
           : nothing}
         ${this.renderCopyButton(() => el, toggleLabel, pathKey)}
       </div>
-      ${expanded
-        ? childRows
-        : nothing}
+      ${childRows}
     `;
   }
 

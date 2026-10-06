@@ -2,6 +2,7 @@ import { expect } from '@open-wc/testing';
 import JSZip from 'jszip';
 import { LyraResourceLimitError } from '../../../internal/resource-loader.js';
 import { assertPptxArchiveWithinLimits } from './pptx-resource-guard.js';
+import { assembleZip, zipEntry } from '../archive-viewer/fixtures/zip-builder.js';
 
 function zipWithDeclaredSizes(sizes: number[]): ArrayBuffer {
   const names = sizes.map((_size, index) => `e${index}`);
@@ -86,5 +87,20 @@ describe('PPTX resource guard', () => {
       maxEntries: 10,
       maxUncompressedBytes: 1_000,
     }));
+  });
+
+  it('enforces an XML node ceiling on the parts the renderer parses, and only on those', async () => {
+    const deck = async (slideNodes: number, slideName = 'ppt/slides/slide1.xml') => assembleZip([
+      await zipEntry('ppt/presentation.xml', '<p:presentation/>'),
+      await zipEntry(slideName, '<p:sld>' + '<a:t/>'.repeat(slideNodes) + '</p:sld>', { deflate: true }),
+      await zipEntry('ppt/media/image1.png', '<a'.repeat(2_048)),
+    ]);
+    await assertPptxArchiveWithinLimits(await deck(10), { maxXmlNodes: 20 });
+    await expectResourceLimit(async () => assertPptxArchiveWithinLimits(await deck(30), { maxXmlNodes: 20 }));
+    await expectResourceLimit(async () => assertPptxArchiveWithinLimits(
+      await deck(30, 'ppt\\slides\\slide1.xml'),
+      { maxXmlNodes: 20 },
+    ));
+    await expectResourceLimit(async () => assertPptxArchiveWithinLimits(await deck(1_000_000)));
   });
 });

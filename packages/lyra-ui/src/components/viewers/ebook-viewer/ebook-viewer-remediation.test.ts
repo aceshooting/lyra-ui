@@ -110,3 +110,57 @@ it('contains arbitrary peer accessors and ignores selected callbacks after sourc
   selected[1]!('epubcfi(/6/2!/4)', { window: view });
   expect(events).to.equal(0);
 });
+
+/** Writes a chapter like epub.js's iframe view; reports beacons that got a response (`responseStart > 0`). */
+async function requestedBeacons(markup: string, beacon: string): Promise<string[]> {
+  const frame = document.createElement('iframe');
+  frame.setAttribute('sandbox', 'allow-same-origin');
+  document.body.append(frame);
+  try {
+    const chapterDocument = frame.contentDocument!;
+    chapterDocument.open();
+    chapterDocument.write(markup);
+    chapterDocument.close();
+    // Real timers with a margin: give an unblocked request time to be recorded.
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    return (frame.contentWindow!.performance.getEntriesByType('resource') as PerformanceResourceTiming[])
+      .filter((entry) => entry.name.startsWith(beacon) && entry.responseStart > 0)
+      .map((entry) => entry.name);
+  } finally {
+    frame.remove();
+  }
+}
+
+it('makes every epub.js chapter document network-silent before it reaches the chapter iframe', async () => {
+  const contentHooks: Array<(document: Document, section: unknown) => unknown> = [];
+  const rendition = {
+    display: () => Promise.resolve(), prev: () => Promise.resolve(), next: () => Promise.resolve(),
+    annotations: { highlight: () => {}, remove: () => {} },
+    on: () => {},
+  };
+  const book = {
+    ready: Promise.resolve(), load: () => Promise.resolve(), destroy: () => {},
+    spine: { hooks: { content: { register: (hook: (document: Document, section: unknown) => unknown) => contentHooks.push(hook) } } },
+    renderTo: () => rendition,
+  } as unknown as EpubBook;
+  __setEpubJsForTesting(() => book);
+  const bytes = Uint8Array.from(atob(MINIMAL_EPUB_BASE64), (character) => character.charCodeAt(0));
+  window.fetch = (() => Promise.resolve(new Response(bytes))) as typeof fetch;
+  await fixture<LyraEbookViewer>(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`);
+  await waitUntil(() => contentHooks.length === 1, 'the viewer never registered a chapter content hook');
+
+  const beacon = `${location.origin}/__ebook-network-beacon-${Date.now()}`;
+  const chapterMarkup = '<?xml version="1.0" encoding="UTF-8"?>'
+    + '<html xmlns="http://www.w3.org/1999/xhtml"><head><title>Chapter</title>'
+    + `<link rel="dns-prefetch" href="//network-beacon.invalid"/><link rel="stylesheet" href="${beacon}.css"/>`
+    + `<style>@import url("${beacon}-import.css"); p { background: url("${beacon}-bg.png"); }</style></head>`
+    + `<body><p>Remote beacon</p><img src="${beacon}.png" alt=""/></body></html>`;
+  const parse = () => new DOMParser().parseFromString(chapterMarkup, 'application/xhtml+xml');
+  // The harness itself sees requests from an untouched chapter.
+  expect((await requestedBeacons(new XMLSerializer().serializeToString(parse()), beacon)).length).to.be.greaterThan(0);
+
+  const chapter = parse();
+  contentHooks[0]!(chapter, {});
+  expect(chapter.querySelector('link[rel~="dns-prefetch"]') === null).to.equal(true);
+  expect(await requestedBeacons(new XMLSerializer().serializeToString(chapter), beacon)).to.deep.equal([]);
+});

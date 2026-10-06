@@ -1,9 +1,11 @@
 Viewer loading contract: `lr-archive-viewer`, `lr-calendar-viewer`, `lr-contact-viewer`,
-`lr-csv-viewer`, `lr-dataset-viewer`, `lr-docx-viewer`, `lr-email-viewer`, `lr-html-viewer`,
-`lr-notebook-viewer`, `lr-spreadsheet-viewer`, `lr-svg-viewer`, and `lr-xml-viewer` use one shared
-visible `[part="spinner"]` treatment. Its localized label is ordinary readable text (including
-without CSS), its decorative ring stops under reduced motion, and `[part="base"]` exposes explicit
-`aria-busy="true"|"false"` while transition announcements remain in the shared document-level sink.
+`lr-csv-viewer`, `lr-dataset-viewer`, `lr-document-viewer`, `lr-docx-viewer`, `lr-ebook-viewer`,
+`lr-email-viewer`, `lr-html-viewer`, `lr-notebook-viewer`, `lr-pdf-viewer`, `lr-pptx-viewer`,
+`lr-spreadsheet-viewer`, `lr-svg-viewer`, and `lr-xml-viewer` use one shared visible
+`[part="spinner"]` treatment. Its localized label is ordinary readable text (including without
+CSS), its decorative ring stops under reduced motion, and `[part="base"]` (`[part="body"]` for
+`lr-document-viewer`) exposes explicit `aria-busy="true"|"false"` while transition announcements
+remain in the shared document-level sink.
 That shared ring uses `--lr-duration-ambient` with `--lr-easing-linear`; reduced motion stops the
 ring rather than merely shortening the animation.
 
@@ -152,7 +154,8 @@ consumer-tunable scroll cap on `[part="body"]`, set from `max-height`; `none` me
 with its content until a caller opts in. `--lr-document-preview-font` (default
 `var(--lr-font-mono)`, so a themed monospace stack reaches plain-text previews with no
 per-component override) and `--lr-document-preview-spin-duration` (default
-`var(--lr-transition-ambient)`, stopped under reduced motion). `--lr-document-preview-progress`
+`var(--lr-duration-ambient) var(--lr-easing-linear)`, a duration plus optional easing; stopped under
+reduced motion). `--lr-document-preview-progress`
 (default `0`) — a unitless
 0–100 number the determinate spinner's `conic-gradient` fill reads; written inline on the ring by
 the component itself from the clamped `progress` property, so overriding it only makes sense to
@@ -285,10 +288,10 @@ value, without suppressing the visible `name` heading.
   Unset lets the renderer derive its fallback; an explicit `''` preserves decorative media.
 - `anchor: LyraAnchor | string | null = null` (attribute: false) — declarative scroll-to-anchor
   target forwarded to the resolved renderer; a string is a highlight id in `highlights`.
-  `hasChanged: () => true`, so re-assigning the same value (e.g. re-clicking the same citation
-  badge) still re-fires.
+  Re-assigning the identical value does not re-scroll; call `scrollToAnchor()` to repeat a jump.
 - `highlights: readonly LyraHighlight[] = []` (attribute: false) — highlights forwarded to the resolved
-  renderer after the shared trimmed, nonempty, first-wins identity normalization.
+  renderer after the shared trimmed, nonempty, first-wins identity normalization. Re-assigning the
+  same array or `payload` object is a no-op.
 
 **Events:**
 
@@ -316,12 +319,23 @@ value, without suppressing the visible `name` heading.
   (a highlight id) counts as supported by any renderer declaring at least one anchor kind.
 - `lr-render-error` — `detail: { error }`. The fallback preview or an embedded renderer emits this
   when fetching, parsing, sanitizing, or rendering fails; the composed event reaches the document
-  viewer unchanged.
+  viewer unchanged. The shell also emits it when a renderer fails to load or throws.
+- Composed through from the open renderer and typed on `LyraDocumentViewerEventMap`: `lr-load`
+  (`{ pageCount }` PDF, `{ slideCount }` PPTX, `{ cellCount, language }` notebook),
+  `lr-text-select`, `lr-highlight-activate`, `lr-search-change`, `lr-page-change`/`lr-zoom-change`
+  (PDF), `lr-page-viewer-state-change` (PDF/PPTX), `lr-slide-change` (PPTX), `lr-location-change`
+  (EPUB), and `lr-viewer-diagnostic`.
+
+**Methods:** `scrollToAnchor(target): Promise<boolean>` jumps to `target` (also to repeat a jump).
+`search(query): Promise<number>`, `searchNext()`, `searchPrevious()` and `clearSearch()` drive the
+open renderer's search when it declares `capabilities.search`, else resolve `0`/`false` (closed,
+loading, or the fallback preview).
 
 **CSS parts:** `body` — wrapper around the active renderer, loading/error state, or fallback preview;
 it renders explicit `aria-busy="true"|"false"`. Visible loading/error text is ordinary non-live
 shadow content; later loading and error transitions use the pre-mounted shared document-level
-polite and assertive sinks, respectively;
+polite and assertive sinks, respectively; `spinner` and `error` — the shared loading treatment and
+the generic error text inside `body`;
 `download-link` — the native download action, rendered when `src` passes Lyra's safe-link policy.
 
 **Themeable custom properties:** `--lr-document-viewer-max-height` (default `70vh`) — maximum block
@@ -382,12 +396,14 @@ for the native download action's hover and pressed backgrounds.
 Every built-in kind ships a lazy, register-only entry named `<kind>-viewer-register.js`
 (`archive-viewer-register.js`, `ebook-viewer-register.js`, `pdf-viewer-register.js`,
 `docx-viewer-register.js`, `pptx-viewer-register.js`, `spreadsheet-viewer-register.js`,
-`csv-viewer-register.js`, `xml-viewer-register.js`), which installs that kind's registration
+`csv-viewer-register.js`, `xml-viewer-register.js`, `notebook-viewer-register.js`), which installs
+that kind's registration — including its declared `capabilities`, available before anything loads —
 without pulling its element class module into the importing graph until a matching file is
 actually opened, and exports a `<KIND>_VIEWER_TAG` string constant naming the tag it eventually
-registers. `document-viewer/document-viewer-kinds.js` imports and re-exports all eight at once, for
+registers. `document-viewer/document-viewer-kinds.js` imports and re-exports all nine at once, for
 a consumer who wants every built-in kind available lazily without importing each entry
 individually. `<lr-document-viewer>` itself (`document-viewer.js`) is always a separate import.
+A lazy registration's declared capabilities apply unless its loaded definition declares its own.
 
 ```html
 <lr-document-viewer
@@ -701,9 +717,9 @@ eager tree.
 Lists entry names and human-readable declared uncompressed sizes inside a `.zip` archive. It is
 listing-only: entry content is never inflated, rendered, or previewed, and the component has no
 runtime archive-parser dependency. One owned central-directory parser validates local-header
-bounds, supported compression methods, entry names, and the 10,000-entry/100 MB declared-expansion
-ceilings, then returns the immutable metadata used directly by the listing. The list composes
-`<lr-virtual-list>` for large archives.
+bounds, supported compression methods, entry names, and the 10,000-entry ceiling (nothing is
+inflated, so a large declared size is listed), then returns the immutable metadata used directly by
+the listing. The list composes `<lr-virtual-list>` for large archives.
 
 **Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
 `max-height`) — a host-level `aria-label` takes precedence over `name` by attribute presence,
@@ -795,9 +811,10 @@ Genuine native `Selection`/`Range` objects from the current chapter iframe are a
 platform accessors, including across document realms. Arbitrary peer-owned accessors remain
 uninvoked, and callbacks from replaced or disconnected books cannot emit stale selections.
 
-**Properties:** `src: string = ''` and `name: string = ''`. A plain `aria-label` attribute on the
-host overrides the reading region's accessible name — by attribute presence, so an explicitly empty
-`aria-label=""` still wins over `name`. (There is no matching JS property: the `accessibleLabel`
+**Properties:** `src: string = ''` and `name: string = ''`. A non-empty host `aria-label` names the
+host, and the inner reading region then drops its own `role="region"` and name (the shared viewer
+rule); an explicitly empty `aria-label=""` still wins over `name` on that region. (There is
+no matching JS property: the `accessibleLabel`
 property was removed in 9.0.0, where it had never been readable or writable to any effect — set the
 attribute.) `maxHeight: string = ''`
 (attribute `max-height`) caps the `mount` area epub.js renders into; invalid CSS `max-height`
@@ -809,7 +826,8 @@ loading it's recorded and applied once ready, set after it applies immediately, 
 call. A controlled `location` assignment made synchronously inside `lr-location-change` wins over
 the peer-reported CFI and is displayed. `anchorKinds: readonly LyraAnchorKind[] = ['cfi',
 'text-quote']` (this
-viewer's supported `LyraAnchor.kind` values for the shared anchor-target contract).
+viewer's supported `LyraAnchor.kind` values for the shared anchor-target contract). A `text-quote`
+anchor's trimmed quote is found section by section, its `prefix`/`suffix` picking among repeats.
 
 **Methods:** `getToc()` resolves the EPUB's own navigation document (`book.navigation.toc`,
 populated once `book.ready` resolves) flattened into document-ordered `EbookTocItem[]` (`{ id,
@@ -838,7 +856,7 @@ Selection text is capped at 4,096 code units and selection rectangles at 1,000.
 **CSS parts:** `base` (explicit `aria-busy="true"|"false"`; visible loading text is ordinary
 non-live shadow content and later loading transitions use the shared document-level polite sink),
 `toolbar`, `previous-button`, `next-button`, `previous-icon`, `next-icon`,
-`mount`, and `error` (ordinary visible text; later error transitions use the shared document-level
+`mount`, `spinner` (the shared loading treatment), and `error` (ordinary visible text; later error transitions use the shared document-level
 assertive sink), plus `anchor-live-region` (an aria-hidden, non-live shadow mirror of the latest
 anchor-jump message; the spoken copy is appended to the shared document-level polite sink only
 while the viewer and its composed ancestors are exposed to the accessibility tree). Search results
@@ -894,10 +912,12 @@ speaker notes, and several advanced effects are not rendered.
 `label` and `name`. `maxHeight` caps the scrollable `[part="container"]`; invalid CSS `max-height`
 values, declaration breaks, and `url()` are ignored. `highlights`, `activeHighlightId`, `anchor`,
 and `anchorKinds`
-(`['text-quote', 'fragment']`) provide the shared text-viewer contract when the renderer exposes
-DOM text. Lyra defines no fragment ids for slides. A fragment can resolve only an exact DOM `id`
-exposed by the optional renderer in its currently mounted output; renderer-owned ids are not a
-stable Lyra navigation contract. Use `page`/`goToSlide()` or a text-quote anchor instead.
+(`['text-quote', 'fragment', 'page']`) provide the shared text-viewer contract when the renderer
+exposes DOM text. A `text-quote` anchor resolves anywhere in the deck (its `prefix`/`suffix` picking
+among repeats), and a `{ kind: 'page', page }` anchor goes to that one-based slide. Lyra defines no fragment ids for slides. A fragment can
+resolve only an exact DOM `id` exposed by the optional renderer in its currently mounted output;
+renderer-owned ids are not a stable Lyra navigation contract. Use `page`/`goToSlide()` or a
+text-quote anchor instead.
 
 **Methods:** `goToSlide(index)` returns a promise and navigates the mounted presentation using the
 renderer's zero-based index. A current renderer rejection is contained, enters the localized error
@@ -941,13 +961,13 @@ highlights are passive and cannot be activated.
 The three shared text-viewer events bubble and compose and are non-cancelable.
 
 **CSS parts:** `base` (the named region with explicit `aria-busy="true"|"false"`), `header`, `name`,
-`notice`, `error`, `nav`, `previous-button`, `previous-icon`, `slide-count`, `next-button`,
-`next-icon`, `container`, and `anchor-live-region` (an aria-hidden, non-live shadow mirror of the
+`notice`, `spinner`, `error`, `nav`, `previous-button`, `previous-icon`, `slide-count`,
+`next-button`, `next-icon`, `container`, and `anchor-live-region` (an aria-hidden, non-live shadow mirror of the
 latest anchor-jump message; the spoken copy is appended to the shared document-level polite sink
 only while the viewer and its composed ancestors are exposed to the accessibility tree). While
-loading, the decorative skeleton is paired with an ordinary visually-hidden localized label; later
-loading and error transitions use the shared document-level polite and assertive sinks,
-respectively, without adding live semantics inside the viewer shadow. The previous/next chevrons
+loading, `spinner` shows the shared visible loading treatment; later loading and error transitions
+use the shared document-level polite and assertive sinks, respectively, without adding live
+semantics inside the viewer shadow. The previous/next chevrons
 mirror under effective RTL direction, including inherited `dir` changes.
 
 **Themeable custom properties:** `--lr-pptx-viewer-max-height` (default `none`) — maximum block
@@ -956,7 +976,7 @@ property, which writes this token inline.
 
 **Optional peer dependency:** install `@aiden0z/pptx-renderer` with
 `pnpm add @aiden0z/pptx-renderer`. The registry matches the official PPTX MIME type and `.pptx`
-filenames, declaring `{ anchors: ['text-quote', 'fragment'], search: true, textSelect: true }`
+filenames, declaring `{ anchors: ['text-quote', 'fragment', 'page'], search: true, textSelect: true }`
 capabilities and forwarding `anchor`/`highlights` to the mounted viewer. That forwarding preserves
 the request across the registry hop; it does not create stable fragment ids in renderer output.
 
@@ -1375,9 +1395,9 @@ to the shared document-level polite sink only while the viewer and its composed 
 exposed to the accessibility tree). Search painting is best-effort: a page outside the virtualized
 render window is skipped and repainted once its text layer mounts, and a match spanning a text-layer
 span boundary that `Range.surroundContents()` can't wrap stays unpainted (still reachable via
-`searchNext()`). The loading skeleton is decorative and paired with an ordinary visually-hidden
-localized label; later loading and error transitions use the shared document-level polite and
-assertive sinks, respectively, without adding live semantics inside the viewer shadow.
+`searchNext()`). While loading, `spinner` shows the shared visible loading treatment; later
+loading and error transitions use the shared document-level polite and assertive sinks,
+respectively, without adding live semantics inside the viewer shadow.
 
 **Known capability boundaries** — deliberate, not defects, and stated here so they need not be
 rediscovered: text search and `LyraAnchor` text-quote resolution match **exact** text only, after
@@ -1396,7 +1416,8 @@ matched against the element the selected text originates in:
 
 **Themeable custom properties:** `--lr-pdf-viewer-height` (default `var(--lr-size-24rem)`) — block
 size of the virtualized page list (`[part="pages"]`); also settable via the `maxHeight` property,
-which writes this token inline on `[part="base"]`. `--lr-pdf-viewer-toolbar-bg` (default
+which writes this token inline on `[part="base"]`; unlike the siblings' `max-height` it is a fixed
+height, not a cap. `--lr-pdf-viewer-toolbar-bg` (default
 `var(--lr-color-brand-quiet)`) — background of the `toolbar` part, independent of the shared
 `--lr-color-brand-quiet` token. `--lr-pdf-viewer-toolbar-button-hover-bg`
 (default `var(--lr-color-surface)`) — hover fill of the toolbar buttons; it defaults to the surface

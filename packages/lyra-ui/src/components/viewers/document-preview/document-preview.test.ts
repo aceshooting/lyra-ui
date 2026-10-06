@@ -491,6 +491,7 @@ describe("text/* and application/json dispatch", () => {
       await aTimeout(20);
       const parent = el.parentElement!;
       el.remove();
+      await aTimeout(0); // a genuine disconnect (a same-task move keeps the fetched text)
       parent.append(el);
       await aTimeout(20);
       expect(fetchCount).to.equal(2);
@@ -1144,6 +1145,25 @@ describe("motion", () => {
       expect(matchMedia('(prefers-reduced-motion: reduce)').matches).to.equal(true);
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       expect(getComputedStyle(ring).animationName).to.equal("none");
+    } finally {
+      await setReducedMotion('no-preference');
+    }
+  });
+});
+
+describe("default spin timing", () => {
+  it("turns at the constant ambient speed of the shared viewer loading ring", async () => {
+    await setReducedMotion('no-preference');
+    try {
+      const el = await fixture<LyraDocumentPreview>(
+        html`<lr-document-preview status="converting"></lr-document-preview>`
+      );
+      const ring = el.shadowRoot!.querySelector(".ring") as HTMLElement;
+      const computed = getComputedStyle(ring);
+      const ambient = getComputedStyle(el).getPropertyValue("--lr-duration-ambient").trim();
+      expect(computed.animationName).to.equal("lr-document-preview-spin");
+      expect(computed.animationTimingFunction).to.equal("linear");
+      expect(computed.animationDuration).to.equal(ambient);
     } finally {
       await setReducedMotion('no-preference');
     }
@@ -1919,4 +1939,59 @@ it("moves focus across region-highlight actions with ArrowDown/ArrowUp and clamp
   expect((actions[0]!.getRootNode() as ShadowRoot).activeElement === actions[1]).to.be.true;
   press(actions[1]!, "ArrowUp");
   expect((actions[0]!.getRootNode() as ShadowRoot).activeElement === actions[0]).to.be.true;
+});
+
+describe("identity re-assignment", () => {
+  it("does not re-project region highlights when the identical array is re-assigned", async () => {
+    const prototype = customElements.get("lr-document-preview")!.prototype as unknown as {
+      projectRegionHighlights(...args: unknown[]): unknown;
+    };
+    const original = prototype.projectRegionHighlights;
+    let projections = 0;
+    prototype.projectRegionHighlights = function (this: unknown, ...args: unknown[]) {
+      projections++;
+      return original.apply(this, args);
+    };
+    try {
+      const highlights = [{ id: "h1", anchor: { kind: "region" as const, page: 1, rect: { x: 0, y: 0, width: 10, height: 10 } } }];
+      const el = (await fixture(html`<lr-document-preview .highlights=${highlights}></lr-document-preview>`)) as LyraDocumentPreview;
+      await el.updateComplete;
+      const before = projections;
+      el.highlights = highlights;
+      el.highlights = el.highlights;
+      await el.updateComplete;
+      expect(projections).to.equal(before);
+    } finally {
+      prototype.projectRegionHighlights = original;
+    }
+  });
+});
+
+describe("DOM moves", () => {
+  it("keeps a fetched text preview across a same-task move, and refetches after a genuine reconnect", async () => {
+    let fetches = 0;
+    const restore = stubFetch(async () => {
+      fetches++;
+      return textResponse("hello world");
+    });
+    const host = document.createElement("div");
+    document.body.append(host);
+    try {
+      const el = (await fixture(
+        html`<lr-document-preview mime-type="text/plain" src="https://example.test/a.txt"></lr-document-preview>`
+      )) as LyraDocumentPreview;
+      await waitUntil(() => el.shadowRoot!.textContent!.includes("hello world"));
+      host.append(el); // a move: disconnect and reconnect within one task
+      await aTimeout(30);
+      expect(fetches).to.equal(1);
+      expect(el.shadowRoot!.textContent).to.include("hello world");
+      el.remove();
+      await aTimeout(0); // a genuine disconnect
+      host.append(el);
+      await waitUntil(() => fetches === 2);
+    } finally {
+      host.remove();
+      restore();
+    }
+  });
 });

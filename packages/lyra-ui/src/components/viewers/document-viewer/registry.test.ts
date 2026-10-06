@@ -50,6 +50,29 @@ describe('exact mimeType dispatch', () => {
   });
 });
 
+describe('lookup without a MIME type', () => {
+  it('treats an empty or blank mimeType as "no exact key" and still runs the matchers', () => {
+    const def: LyraDocumentRendererDefinition = {
+      matches: (file) => file.name.toLowerCase().endsWith('.pdf'),
+      render: () => 'by-name',
+    };
+    registerDocumentRenderer('application/pdf', def);
+    for (const mimeType of ['', '   ']) {
+      const file = { ...PDF_FILE, mimeType };
+      expect(findDocumentRenderer(file)?.render?.(file), JSON.stringify(mimeType)).to.equal('by-name');
+    }
+    expect(findDocumentRenderer({ ...CSV_FILE, mimeType: '' })).to.be.undefined;
+    const registry = createDocumentRendererRegistry();
+    expect(registry.get('')).to.be.undefined;
+    expect(registry.has('  ')).to.equal(false);
+  });
+
+  it('still refuses to register an empty key', () => {
+    expect(() => registerDocumentRenderer(' ', { render: () => null })).to.throw(TypeError);
+    expect(() => createDocumentRendererRegistry([['', { render: () => null }]])).to.throw(TypeError);
+  });
+});
+
 describe('matches() shape-based fallback dispatch', () => {
   it('falls back to a matches() scan when no exact mimeType key matches', () => {
     const def: LyraDocumentRendererDefinition = {

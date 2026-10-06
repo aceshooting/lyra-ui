@@ -9,6 +9,7 @@ import {
   SPREADSHEET_VIEWER_TAG,
   CSV_VIEWER_TAG,
   XML_VIEWER_TAG,
+  NOTEBOOK_VIEWER_TAG,
 } from './document-viewer-kinds.js';
 import { findDocumentRenderer, type LyraDocumentFile } from './registry.js';
 
@@ -42,6 +43,7 @@ const files: readonly [tag: string, file: LyraDocumentFile][] = [
   ],
   [CSV_VIEWER_TAG, { name: 'a.csv', mimeType: 'text/csv', src: 'https://example.test/a.csv' }],
   [XML_VIEWER_TAG, { name: 'a.xml', mimeType: 'application/xml', src: 'https://example.test/a.xml' }],
+  [NOTEBOOK_VIEWER_TAG, { name: 'a.ipynb', mimeType: 'application/x-ipynb+json', src: 'https://example.test/a.ipynb' }],
 ];
 
 function fetchedModuleEnding(suffix: string): boolean {
@@ -61,7 +63,7 @@ describe('document-viewer-kinds bundle entry', () => {
     );
   });
 
-  it('never fetches any of the eight heavy viewer class modules merely by importing the bundle', () => {
+  it('never fetches any of the heavy viewer class modules merely by importing the bundle', () => {
     for (const suffix of [
       '/archive-viewer.class.ts',
       '/ebook-viewer.class.ts',
@@ -71,6 +73,7 @@ describe('document-viewer-kinds bundle entry', () => {
       '/spreadsheet-viewer.class.ts',
       '/csv-viewer.class.ts',
       '/xml-viewer.class.ts',
+      '/notebook-viewer.class.ts',
     ]) {
       expect(fetchedModuleEnding(suffix), `the bundle must not eagerly fetch ${suffix}`).to.equal(false);
     }

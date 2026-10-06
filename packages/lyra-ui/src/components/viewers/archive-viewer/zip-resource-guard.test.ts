@@ -7,6 +7,16 @@ import {
   createXmlComplexityInspectorFactory,
   type ZipArchiveGuardOptions,
 } from './zip-resource-guard.js';
+import {
+  centralRecord,
+  concatBytes,
+  crc32,
+  endRecord,
+  extraField,
+  localRecord,
+  toArrayBuffer,
+  zipEntry,
+} from './fixtures/zip-builder.js';
 
 const CENTRAL_SIGNATURE = 0x02014b50;
 const END_SIGNATURE = 0x06054b50;
@@ -256,15 +266,17 @@ describe('ZIP resource guard', () => {
 
     const inconsistent = await buildZip('hello');
     {
-      const { central } = offsets(inconsistent);
+      const { central, local } = offsets(inconsistent);
       new DataView(inconsistent).setUint32(central + 24, 6, true);
+      new DataView(inconsistent).setUint32(local + 22, 6, true);
     }
     await expectLimit(inconsistent, /inconsistent entry sizes/);
 
     const measuredOverBudget = await buildZip('123456');
     {
-      const { central } = offsets(measuredOverBudget);
+      const { central, local } = offsets(measuredOverBudget);
       new DataView(measuredOverBudget).setUint32(central + 24, 5, true);
+      new DataView(measuredOverBudget).setUint32(local + 22, 5, true);
     }
     await expectLimit(measuredOverBudget, /expanded test archive is too large/, {
       maxUncompressedBytes: 5,
@@ -468,7 +480,249 @@ describe('assertZipArchiveMetadataWithinLimits()', () => {
   });
 });
 
+async function loadWithJsZip(source: ArrayBuffer): Promise<string[]> {
+  const module = (await import('jszip')) as unknown as {
+    default: { loadAsync(data: ArrayBuffer): Promise<{ files: Record<string, unknown> }> };
+  };
+  const zip = await module.default.loadAsync(source);
+  return Object.keys(zip.files).sort();
+}
+
+describe('ZIP resource guard agrees with the archive the peer readers open', () => {
+  it('rejects an end-record comment that hides the end record the peers select', async () => {
+    // The benign end record's comment hides a second archive plus one trailing byte.
+    const benign = await zipEntry('benign.txt', 'ok');
+    const hidden = await zipEntry('hidden.bin', new Uint8Array(4_096), { deflate: true });
+    const benignLocal = localRecord(benign);
+    const benignCentral = centralRecord(benign, 0);
+    const benignEnd = benignLocal.length + benignCentral.length;
+    const hiddenLocalOffset = benignEnd + 22;
+    const hiddenLocal = localRecord(hidden);
+    const hiddenCentral = centralRecord(hidden, hiddenLocalOffset);
+    const hiddenDirectoryOffset = hiddenLocalOffset + hiddenLocal.length;
+    const hiddenEndRecord = endRecord({
+      records: 1,
+      directorySize: hiddenCentral.length,
+      directoryOffset: hiddenDirectoryOffset,
+    });
+    const trailing = new Uint8Array([0]);
+    const commentLength = hiddenLocal.length + hiddenCentral.length + hiddenEndRecord.length + trailing.length;
+    const source = toArrayBuffer(concatBytes(
+      benignLocal,
+      benignCentral,
+      endRecord({ records: 1, directorySize: benignCentral.length, directoryOffset: benignLocal.length, commentLength }),
+      hiddenLocal,
+      hiddenCentral,
+      hiddenEndRecord,
+      trailing,
+    ));
+
+    expect(await loadWithJsZip(clone(source))).to.deep.equal(['hidden.bin']);
+    await expectLimit(source, /malformed/, { maxUncompressedBytes: 1_024 });
+    expect(() => assertZipArchiveMetadataWithinLimits(clone(source), options))
+      .to.throw(LyraResourceLimitError, /malformed/);
+  });
+
+  it('rejects a gap between the central directory and its end record', async () => {
+    const entry = await zipEntry('document.xml', '<root/>');
+    const local = localRecord(entry);
+    const central = centralRecord(entry, 0);
+    const source = toArrayBuffer(concatBytes(
+      local,
+      central,
+      new Uint8Array(8),
+      endRecord({ records: 1, directorySize: central.length, directoryOffset: local.length }),
+    ));
+    await expectLimit(source, /malformed/);
+    expect(() => assertZipArchiveMetadataWithinLimits(clone(source), options))
+      .to.throw(LyraResourceLimitError, /malformed/);
+  });
+
+  it('rejects a local file name that differs from the central-directory name', async () => {
+    const entry = await zipEntry('word/document.bin', '<w:document/>');
+    const local = localRecord(entry, { name: 'word/document.xml' });
+    const central = centralRecord(entry, 0);
+    const source = toArrayBuffer(concatBytes(
+      local,
+      central,
+      endRecord({ records: 1, directorySize: central.length, directoryOffset: local.length }),
+    ));
+    expect(await loadWithJsZip(clone(source))).to.deep.equal(['word/document.xml']);
+    await expectLimit(source, /malformed/);
+  });
+
+  it('rejects a Unicode-path extra field that renames the entry for the peer reader', async () => {
+    const entry = await zipEntry('word/document.bin', '<w:document/>');
+    const realName = new TextEncoder().encode('word/document.bin');
+    const unicodePath = new Uint8Array(5 + 'word/document.xml'.length);
+    unicodePath[0] = 1;
+    new DataView(unicodePath.buffer).setUint32(1, crc32(realName), true);
+    unicodePath.set(new TextEncoder().encode('word/document.xml'), 5);
+    const local = localRecord(entry);
+    const central = centralRecord(entry, 0, { extra: extraField(0x7075, unicodePath) });
+    const source = toArrayBuffer(concatBytes(
+      local,
+      central,
+      endRecord({ records: 1, directorySize: central.length, directoryOffset: local.length }),
+    ));
+    expect(await loadWithJsZip(clone(source))).to.deep.equal(['word/document.xml']);
+    await expectLimit(source, /malformed/);
+  });
+
+  it('accepts a Unicode-path extra field that spells the entry name exactly', async () => {
+    const entry = await zipEntry('word/document.xml', '<w:document/>');
+    const name = new TextEncoder().encode('word/document.xml');
+    const unicodePath = new Uint8Array(5 + name.length);
+    unicodePath[0] = 1;
+    new DataView(unicodePath.buffer).setUint32(1, crc32(name), true);
+    unicodePath.set(name, 5);
+    const local = localRecord(entry);
+    const central = centralRecord(entry, 0, { extra: extraField(0x7075, unicodePath) });
+    await assertZipArchiveWithinLimits(toArrayBuffer(concatBytes(
+      local,
+      central,
+      endRecord({ records: 1, directorySize: central.length, directoryOffset: local.length }),
+    )), options);
+  });
+
+  it('rejects local header sizes or checksums that disagree with the central directory', async () => {
+    const entry = await zipEntry('document.xml', '<root/>');
+    for (const overrides of [{ compressedSize: 1 }, { uncompressedSize: 1 }, { crc: 1 }]) {
+      const local = localRecord(entry, overrides);
+      const central = centralRecord(entry, 0);
+      await expectLimit(toArrayBuffer(concatBytes(
+        local,
+        central,
+        endRecord({ records: 1, directorySize: central.length, directoryOffset: local.length }),
+      )), /malformed/);
+    }
+    const local = localRecord(entry, { flags: 8, crc: 0, compressedSize: 0, uncompressedSize: 0 });
+    const central = centralRecord(entry, 0, { flags: 8 });
+    await assertZipArchiveWithinLimits(toArrayBuffer(concatBytes(
+      local,
+      central,
+      endRecord({ records: 1, directorySize: central.length, directoryOffset: local.length }),
+    )), options);
+  });
+
+  it('rejects a ZIP64 extended-information field that disagrees with the 32-bit sizes', async () => {
+    const entry = await zipEntry('document.xml', '<root/>');
+    const sizes = new Uint8Array(16);
+    new DataView(sizes.buffer).setUint32(0, 50_000_000, true);
+    for (const location of ['central', 'local'] as const) {
+      const extra = extraField(0x0001, sizes);
+      const local = localRecord(entry, location === 'local' ? { extra } : {});
+      const central = centralRecord(entry, 0, location === 'central' ? { extra } : {});
+      await expectLimit(toArrayBuffer(concatBytes(
+        local,
+        central,
+        endRecord({ records: 1, directorySize: central.length, directoryOffset: local.length }),
+      )), /ZIP64/);
+    }
+  });
+
+  it('rejects overlapping entries before inflating any of them', async () => {
+    const entry = await zipEntry('a.xml', 'x'.repeat(2_000), { deflate: true });
+    const local = localRecord(entry);
+    const directory = concatBytes(...[0, 1, 2].map(() => centralRecord(entry, 0)));
+    let inspected = 0;
+    await expectLimit(toArrayBuffer(concatBytes(
+      local,
+      directory,
+      endRecord({ records: 3, directorySize: directory.length, directoryOffset: local.length }),
+    )), /malformed/, {
+      maxUncompressedBytes: 10_000,
+      createInspector: () => {
+        inspected++;
+        return undefined;
+      },
+    });
+    expect(inspected).to.equal(0);
+  });
+
+  it('accepts entries separated by data descriptors and keeps measuring them', async () => {
+    const first = await zipEntry('a.xml', 'first', { deflate: true });
+    const second = await zipEntry('b.xml', 'second');
+    const firstLocal = localRecord(first, { flags: 8, crc: 0, compressedSize: 0, uncompressedSize: 0 });
+    const descriptor = new Uint8Array(16);
+    const descriptorView = new DataView(descriptor.buffer);
+    descriptorView.setUint32(0, 0x08074b50, true);
+    descriptorView.setUint32(4, first.crc, true);
+    descriptorView.setUint32(8, first.compressedSize, true);
+    descriptorView.setUint32(12, first.uncompressedSize, true);
+    const secondOffset = firstLocal.length + descriptor.length;
+    const secondLocal = localRecord(second);
+    const directory = concatBytes(
+      centralRecord(first, 0, { flags: 8 }),
+      centralRecord(second, secondOffset),
+    );
+    const chunks: string[] = [];
+    await assertZipArchiveWithinLimits(toArrayBuffer(concatBytes(
+      firstLocal,
+      descriptor,
+      secondLocal,
+      directory,
+      endRecord({ records: 2, directorySize: directory.length, directoryOffset: secondOffset + secondLocal.length }),
+    )), {
+      ...options,
+      createInspector: () => ({
+        write: (chunk) => chunks.push(new TextDecoder().decode(chunk)),
+        close: () => undefined,
+      }),
+    });
+    expect(chunks.join('|')).to.equal('first|second');
+  });
+
+  it('inspects entries under the names the peers resolve, not only the stored name', async () => {
+    const seen: string[] = [];
+    const inspect = createXmlComplexityInspectorFactory({
+      includeEntry: (name) => /\.xml$/i.test(name),
+      maxNodes: 10,
+    });
+    for (const name of ['word/document.xml/.', 'word/document.xml/x/..', 'ppt\\slides\\slide1.xml', 'notes.txt']) {
+      if (inspect({ name, compressedBytes: 0, uncompressedBytes: 0 })) seen.push(name);
+    }
+    expect(seen).to.deep.equal(['word/document.xml/.', 'word/document.xml/x/..', 'ppt\\slides\\slide1.xml']);
+  });
+});
+
 describe('streaming XML complexity inspector', () => {
+  it('counts every element a lenient XML or HTML parser could build', () => {
+    for (const xml of [
+      '<r>' + '<é/>'.repeat(5) + '</r>',
+      '<p a"b>' + '<a/>'.repeat(5),
+      '< <a/>< <a/>< <a/>< <a/>< <a/>< <a/>',
+      '<a title="x' + '<b/>'.repeat(5),
+    ]) {
+      const inspect = createXmlComplexityInspectorFactory({ includeEntry: () => true, maxNodes: 4 });
+      const inspector = inspect({ name: 'document.xml', compressedBytes: 0, uncompressedBytes: 0 })!;
+      expect(() => {
+        inspector.write(new TextEncoder().encode(xml));
+        inspector.close();
+      }, xml).to.throw(LyraResourceLimitError, /too many document nodes/);
+    }
+  });
+
+  it('counts element names split across chunk boundaries once, with their row and cell kind', () => {
+    const inspect = createXmlComplexityInspectorFactory({
+      includeEntry: () => true,
+      maxNodes: 100,
+      maxRows: 1,
+      maxCells: 2,
+    });
+    const inspector = inspect({ name: 'sheet.xml', compressedBytes: 0, uncompressedBytes: 0 })!;
+    for (const chunk of ['<x:r', 'ow><x:', 'c/><', 'c', '/></x:row><x:', 'cell/>']) {
+      inspector.write(new TextEncoder().encode(chunk));
+    }
+    inspector.close();
+    const rows = inspect({ name: 'sheet2.xml', compressedBytes: 0, uncompressedBytes: 0 })!;
+    expect(() => {
+      rows.write(new TextEncoder().encode('<ro'));
+      rows.write(new TextEncoder().encode('w/>'));
+      rows.close();
+    }).to.throw(LyraResourceLimitError, /too many document nodes/);
+  });
+
   it('counts namespaced nodes, rows, and cells across chunk and quote boundaries', () => {
     const inspect = createXmlComplexityInspectorFactory({
       includeEntry: (name) => name.endsWith('.xml'),

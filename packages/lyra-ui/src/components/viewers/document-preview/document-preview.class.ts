@@ -27,6 +27,7 @@ import {
   type SafePercentRect,
 } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import { DeferredTeardown } from '../document-viewer/deferred-teardown.js';
 import {
   snapshotLyraHighlightAnchorKind,
   snapshotLyraHighlights,
@@ -265,8 +266,8 @@ export interface LyraDocumentPreviewEventMap {
  * @cssprop [--lr-document-preview-font=var(--lr-font-mono)] - Font used for plain-text previews.
  * @cssprop [--lr-document-preview-download-link-hover-bg=color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover))] - Hover background of the generic download link.
  * @cssprop [--lr-document-preview-download-link-active-bg=color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Pressed background of the generic download link.
- * @cssprop [--lr-document-preview-spin-duration=var(--lr-transition-ambient)] - Timing of one
- *   indeterminate loading-indicator rotation.
+ * @cssprop [--lr-document-preview-spin-duration=var(--lr-duration-ambient) var(--lr-easing-linear)] -
+ *   Timing (duration and optional easing) of one indeterminate loading-ring turn.
  * @cssprop [--lr-document-preview-progress=0] - Unitless 0-100 completion of the determinate
  *   loading ring (multiplied by `1%` in its conic gradient). Written inline by the component from
  *   the clamped `progress` value, so it is a read-out rather than a consumer knob.
@@ -355,13 +356,17 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   @property({ attribute: false }) suppressDownload = false;
 
   private _highlights: readonly LyraHighlight[] = snapshotLyraHighlights([]);
+  private highlightsSource?: readonly LyraHighlight[];
   private _regionHighlights: readonly ProjectedRegionHighlight[] = EMPTY_REGION_HIGHLIGHTS;
   /** Display-only region highlights over the image-format preview (see the class doc's format-
    * dispatch scope -- text/generic formats never render these). IDs are trimmed and must be
-   * nonempty; the first record for an ID is retained and blank or later duplicates are ignored. */
+   * nonempty; the first record for an ID is retained and blank or later duplicates are ignored.
+   * Re-assigning the same array is a no-op. */
   @property({ attribute: false })
   get highlights(): readonly LyraHighlight[] { return this._highlights; }
   set highlights(value: readonly LyraHighlight[]) {
+    if (value === this.highlightsSource || value === this._highlights) return;
+    this.highlightsSource = value;
     const previous = this._highlights;
     this._highlights = snapshotLyraHighlights(value);
     this._regionHighlights = this.projectRegionHighlights(this._highlights);
@@ -381,10 +386,13 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   private invalidUrlReportedFor: string | null = null;
   private readonly announcements = new ViewerAnnouncementController(this);
 
+  private readonly detached = new DeferredTeardown(() => this.releaseDetachedPreview());
+
   override connectedCallback(): void {
     super.connectedCallback();
     this.announcements.connect();
-    if (this.hasUpdated && this.src && classifyFormat(this.mimeType) === 'text') {
+    const moved = this.detached.cancel();
+    if (this.hasUpdated && this.src && classifyFormat(this.mimeType) === 'text' && !moved) {
       this.textFetch = IDLE_TEXT_FETCH;
       this.scheduleAfterUpdate(() => {
         const url = safeFetchUrl(this.src);
@@ -394,15 +402,20 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   }
 
   override disconnectedCallback(): void {
+    this.announcements.disconnect();
+    super.disconnectedCallback();
+    this.detached.schedule();
+  }
+
+  private releaseDetachedPreview(): void {
     this.generation++;
     this.beginAbortableLoad();
     this.textFetch = IDLE_TEXT_FETCH;
-    this.announcements.disconnect();
-    super.disconnectedCallback();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.detached.flush(); // a move into another document reloads there
     this.announcements.adopted();
   }
 

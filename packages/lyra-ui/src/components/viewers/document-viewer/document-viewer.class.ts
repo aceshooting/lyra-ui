@@ -25,8 +25,15 @@ import type {
   LyraHighlight,
 } from './anchors.js';
 import type { LyraDocumentPreview } from '../document-preview/document-preview.class.js';
+import type { LyraSearchChangeDetail, LyraTextViewerTarget } from '../../../internal/text-viewer-target.js';
+import type { LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
+import type { LyraEbookViewerEventMap } from '../ebook-viewer/ebook-viewer.class.js';
+import type { LyraPdfViewerEventMap } from '../pdf-viewer/pdf-viewer.class.js';
+import type { LyraPptxViewerEventMap } from '../pptx-viewer/pptx-viewer.class.js';
+import type { LyraNotebookViewerEventMap } from '../notebook-viewer/notebook-viewer.class.js';
 import { styles } from './document-viewer.styles.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { snapshotLyraHighlights } from '../../../internal/highlight-collection.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -46,6 +53,21 @@ export interface LyraDocumentViewerEventMap {
   'lr-download': CustomEvent<{ src: string; filename: string }>;
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
+  // Composed through from the open renderer.
+  'lr-load': CustomEvent<
+    | LyraPdfViewerEventMap['lr-load']['detail']
+    | LyraPptxViewerEventMap['lr-load']['detail']
+    | LyraNotebookViewerEventMap['lr-load']['detail']
+  >;
+  'lr-text-select': LyraAnchorTargetEventMap['lr-text-select'];
+  'lr-highlight-activate': LyraAnchorTargetEventMap['lr-highlight-activate'];
+  'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
+  'lr-page-change': LyraPdfViewerEventMap['lr-page-change'];
+  'lr-zoom-change': LyraPdfViewerEventMap['lr-zoom-change'];
+  'lr-page-viewer-state-change': LyraPdfViewerEventMap['lr-page-viewer-state-change'];
+  'lr-slide-change': LyraPptxViewerEventMap['lr-slide-change'];
+  'lr-location-change': LyraEbookViewerEventMap['lr-location-change'];
+  'lr-viewer-diagnostic': LyraPptxViewerEventMap['lr-viewer-diagnostic'];
 }
 
 /**
@@ -61,6 +83,7 @@ export interface LyraDocumentViewerEventMap {
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
+ * The `search*()` methods drive the open renderer's search when it declares `capabilities.search`.
  *
  * @customElement lr-document-viewer
  * @event lr-close - Fired when the viewer's shell dialog dismisses the viewer. The detail is `{ reason: DocumentViewerCloseReason }`. A registered renderer's own descendant dialog keeps its independent
@@ -76,10 +99,23 @@ export interface LyraDocumentViewerEventMap {
  *   `DocumentAnchorTarget` mixin, which composes up through this element unchanged.
  * @event lr-render-error - Fired by the fallback preview or an embedded renderer when fetching,
  *   parsing, sanitizing, or rendering fails. `detail: { error }` composes through this shell
- *   unchanged.
+ *   unchanged. The shell also emits it when a renderer fails to load or throws.
+ * @event lr-load - From the open renderer: `{ pageCount }` (PDF), `{ slideCount }` (PPTX) or
+ *   `{ cellCount, language }` (notebook).
+ * @event lr-text-select - From the open renderer.
+ * @event lr-highlight-activate - From the open renderer.
+ * @event lr-search-change - From the open renderer.
+ * @event lr-page-change - From a PDF renderer.
+ * @event lr-zoom-change - From a PDF renderer.
+ * @event lr-page-viewer-state-change - From a PDF or PPTX renderer.
+ * @event lr-slide-change - From a PPTX renderer.
+ * @event lr-location-change - From an EPUB renderer.
+ * @event lr-viewer-diagnostic - From the open renderer.
  * @csspart body - Wrapper around the active renderer or fallback preview. It exposes explicit
  *   `aria-busy`; visible loading/error text is ordinary content and transitions announce through
  *   the shared document-level polite/assertive sinks.
+ * @csspart spinner - The shared loading treatment inside `body`.
+ * @csspart error - The generic error text inside `body`.
  * @csspart download-link - The native download action shown when `src` is safe.
  * @cssprop [--lr-document-viewer-max-height=70vh] - Maximum block size of the dialog body before it scrolls internally.
  * @cssprop [--lr-document-viewer-min-height=var(--lr-size-12rem)] - Minimum block size of the
@@ -112,7 +148,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     'registry',
   ]);
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles, viewerLoadingStyles];
 
   /** Whether the viewer is open. */
   @property({ type: Boolean, reflect: true }) open = false;
@@ -128,22 +164,26 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   @property() src = '';
 
   private _payload?: LyraDocumentRendererPayload;
+  private payloadSource?: LyraDocumentRendererPayload;
 
   /**
    * Optional renderer-specific file payload. Assignment clones, bounds, and freezes the complete
    * snapshot immediately. While set, `payload.file` is authoritative for dispatch, heading,
    * renderer/fallback input, and download; `name`, `mimeType`, `src`, `anchor`, `highlights`, and
-   * `alt` resume their legacy authority when this is reset to `undefined`.
+   * `alt` resume their legacy authority when this is reset to `undefined`. Re-assigning the same
+   * object is a no-op.
    */
   @property({ attribute: false })
   get payload(): LyraDocumentRendererPayload | undefined {
     return this._payload;
   }
   set payload(value: LyraDocumentRendererPayload | undefined) {
+    if (value === this.payloadSource || value === this._payload) return;
     const old = this._payload;
     this._payload = value === undefined
       ? undefined
       : snapshotLyraDocumentRendererPayload(value);
+    this.payloadSource = value;
     this.requestUpdate('payload', old);
   }
 
@@ -178,18 +218,21 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   }
 
   /** Declarative scroll-to-anchor target, forwarded to the resolved renderer. A string is a
-   *  highlight id in `highlights`. `hasChanged: () => true` so re-assigning the same value (e.g.
-   *  re-clicking the same citation badge) still re-fires, mirroring the anchor-target mixin's
-   *  identical property. */
-  @property({ attribute: false, hasChanged: () => true }) anchor: LyraAnchor | string | null = null;
+   *  highlight id in `highlights`. An identical re-assignment does not re-scroll; `scrollToAnchor()`
+   *  repeats a jump. */
+  @property({ attribute: false }) anchor: LyraAnchor | string | null = null;
 
   private _highlights: readonly LyraHighlight[] = snapshotLyraHighlights([]);
-  /** Highlights forwarded to the resolved renderer. IDs are trimmed, nonempty, and first-wins. */
+  private highlightsSource?: readonly LyraHighlight[];
+  /** Highlights forwarded to the resolved renderer. IDs are trimmed, nonempty, and first-wins.
+   *  Re-assigning the same array is a no-op. */
   @property({ attribute: false })
   get highlights(): readonly LyraHighlight[] { return this._highlights; }
   set highlights(value: readonly LyraHighlight[]) {
+    if (value === this.highlightsSource || value === this._highlights) return;
     const previous = this._highlights;
     this._highlights = snapshotLyraHighlights(value);
+    this.highlightsSource = value;
     this.requestUpdate('highlights', previous);
   }
 
@@ -205,6 +248,8 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     | { kind: 'error' } = { kind: 'fallback' };
 
   private generation = 0;
+  /** Capabilities of the renderer showing the current file (loaded, else lazily declared). */
+  private rendererCapabilities: AnchorTargetCapabilities | undefined;
   private readonly builtInRegistry = createDocumentRendererRegistry();
   private resolvedLazy?: {
     def: LyraDocumentRendererDefinition;
@@ -295,13 +340,14 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   private async resolve(): Promise<void> {
     if (!this.isConnected || !this.open) return;
     const generation = ++this.generation;
+    this.rendererCapabilities = undefined;
     const file = this.currentFile();
     const registry = this.registry ?? this.builtInRegistry;
     let def: LyraDocumentRendererDefinition | undefined;
     try {
       def = findDocumentRenderer(file, registry);
-    } catch {
-      this.failResolution(file, generation);
+    } catch (error) {
+      this.failResolution(file, generation, error);
       return;
     }
 
@@ -313,23 +359,13 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     }
 
     if (this.resolvedLazy?.def === def) {
-      const capabilities = this.renderWith(this.resolvedLazy.resolved, file);
-      if (capabilities === false) {
-        this.failResolution(file, generation);
-        return;
-      }
-      this.finishAnchorResult(capabilities, file, generation);
+      this.finishRender(def, this.renderWith(this.resolvedLazy.resolved, file), file, generation);
       return;
     }
 
     if (!def.load) {
       this.resolvedLazy = { def, resolved: def };
-      const capabilities = this.renderWith(def, file);
-      if (capabilities === false) {
-        this.failResolution(file, generation);
-        return;
-      }
-      this.finishAnchorResult(capabilities, file, generation);
+      this.finishRender(def, this.renderWith(def, file), file, generation);
       return;
     }
 
@@ -337,28 +373,41 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     let resolved: LyraResolvedDocumentRendererDefinition;
     try {
       resolved = await loadDocumentRenderer(def);
-    } catch {
+    } catch (error) {
       if (generation === this.generation && this.isConnected && this.open) {
         this.renderState = { kind: 'error' };
+        this.emit('lr-render-error', { error });
         this.finishAnchorResult(undefined, file, generation);
       }
       return;
     }
     if (generation !== this.generation || !this.isConnected || !this.open) return;
     this.resolvedLazy = { def, resolved };
-    const capabilities = this.renderWith(resolved, file);
-    if (capabilities === false) {
-      this.failResolution(file, generation);
+    this.finishRender(def, this.renderWith(resolved, file), file, generation);
+  }
+
+  private finishRender(
+    def: LyraDocumentRendererDefinition,
+    rendered: { capabilities: AnchorTargetCapabilities | undefined } | { error: unknown },
+    file: LyraDocumentFile,
+    generation: number,
+  ): void {
+    if ('error' in rendered) {
+      this.failResolution(file, generation, rendered.error);
       return;
     }
+    // A lazy registration's declared capabilities stand unless the loaded definition has its own.
+    const capabilities = rendered.capabilities ?? def.capabilities;
+    this.rendererCapabilities = capabilities;
     this.finishAnchorResult(capabilities, file, generation);
   }
 
   /** Consumer registries are extension points, so a throwing matcher/renderer must fail like a
    * rejected lazy loader instead of escaping `resolve()` as an unhandled rejection. */
-  private failResolution(file: LyraDocumentFile, generation: number): void {
+  private failResolution(file: LyraDocumentFile, generation: number, error: unknown): void {
     if (generation !== this.generation || !this.isConnected || !this.open) return;
     this.renderState = { kind: 'error' };
+    this.emit('lr-render-error', { error });
     if (file.anchor == null) return;
     this.scheduleAfterUpdate(() => {
       if (generation !== this.generation || !this.isConnected || !this.open) return;
@@ -410,14 +459,70 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   private renderWith(
     definition: LyraResolvedDocumentRendererDefinition,
     file: LyraDocumentFile,
-  ): AnchorTargetCapabilities | undefined | false {
+  ): { capabilities: AnchorTargetCapabilities | undefined } | { error: unknown } {
     try {
       const adapted = adaptDocumentRenderer(definition, file, this.payload);
       this.renderState = { kind: 'rendered', template: adapted.render() };
-      return adapted.capabilities;
-    } catch {
-      return false;
+      return { capabilities: adapted.capabilities };
+    } catch (error) {
+      return { error };
     }
+  }
+
+  /** The renderer element showing the current file, if one is rendered. */
+  private renderedElement(): Partial<LyraTextViewerTarget> | undefined {
+    if (!this.open || this.renderState.kind !== 'rendered') return undefined;
+    return (this.renderRoot.querySelector('[part="body"]')?.firstElementChild ?? undefined) as
+      | Partial<LyraTextViewerTarget>
+      | undefined;
+  }
+
+  private currentSearchTarget(): LyraTextViewerTarget | undefined {
+    if (this.rendererCapabilities?.search !== true) return undefined;
+    const element = this.renderedElement();
+    return typeof element?.search === 'function' ? element as LyraTextViewerTarget : undefined;
+  }
+
+  /** Jumps to `target` in the open file (also to repeat a jump); resolves whether it was found. */
+  async scrollToAnchor(target: LyraAnchor | string): Promise<boolean> {
+    await this.updateComplete;
+    if (!this.open) return false;
+    if (this.renderState.kind === 'fallback') {
+      const found = (await this.fallbackPreviewEl?.scrollToAnchor(target)) ?? false;
+      this.emit('lr-anchor-result', { found });
+      return found;
+    }
+    const element = this.renderedElement();
+    if (this.isAnchorCapable(this.rendererCapabilities, target) && typeof element?.scrollToAnchor === 'function') {
+      return element.scrollToAnchor(target);
+    }
+    this.emit('lr-anchor-result', { found: false });
+    return false;
+  }
+
+  private async searchTarget(): Promise<LyraTextViewerTarget | undefined> {
+    await this.updateComplete;
+    return this.currentSearchTarget();
+  }
+
+  /** Searches the open file through a search-capable renderer; resolves its match count, else `0`. */
+  async search(query: string): Promise<number> {
+    return (await (await this.searchTarget())?.search(query)) ?? 0;
+  }
+
+  /** Moves to the renderer's next match; resolves `false` without a searchable renderer or match. */
+  async searchNext(): Promise<boolean> {
+    return (await (await this.searchTarget())?.searchNext()) ?? false;
+  }
+
+  /** Moves to the renderer's previous match; resolves `false` without a searchable renderer or match. */
+  async searchPrevious(): Promise<boolean> {
+    return (await (await this.searchTarget())?.searchPrevious()) ?? false;
+  }
+
+  /** Clears the renderer's search state; a no-op when there is no searchable renderer. */
+  clearSearch(): void {
+    this.currentSearchTarget()?.clearSearch();
   }
 
   /** The shell dialog's lifecycle and dismissal proposals are internal to this viewer: `lr-close`
@@ -449,9 +554,9 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
       case 'rendered':
         return this.renderState.template;
       case 'loading':
-        return html`<p>${this.localize('loadingDocument')}</p>`;
+        return renderViewerLoading(this.localize('loadingDocument'));
       case 'error':
-        return html`<div>${this.localize('documentPreviewGenericError')}</div>`;
+        return html`<div part="error">${this.localize('documentPreviewGenericError')}</div>`;
       case 'fallback':
       default:
         return html`

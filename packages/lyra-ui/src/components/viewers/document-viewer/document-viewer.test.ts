@@ -202,6 +202,25 @@ describe("registry dispatch", () => {
     expect(matched!.textContent).to.equal("report.pdf");
   });
 
+  it("resolves by file name, or falls back to the preview, when no MIME type is given", async () => {
+    registerDocumentRenderer("application/pdf", {
+      matches: (file) => file.name.toLowerCase().endsWith(".pdf"),
+      render: (file) => html`<p id="by-name">${file.name}</p>`,
+    });
+    const named = (await fixture(html`
+      <lr-document-viewer open name="report.pdf" src="https://example.test/report.pdf"></lr-document-viewer>
+    `)) as LyraDocumentViewer;
+    await named.updateComplete;
+    expect(named.shadowRoot!.querySelector('[part="body"] #by-name')?.textContent).to.equal("report.pdf");
+
+    const unknown = (await fixture(html`
+      <lr-document-viewer open name="notes.bin" mime-type="  " src="https://example.test/notes.bin"></lr-document-viewer>
+    `)) as LyraDocumentViewer;
+    await unknown.updateComplete;
+    const preview = unknown.shadowRoot!.querySelector('[part="body"] lr-document-preview');
+    expect(preview?.getAttribute("filename")).to.equal("notes.bin");
+  });
+
   it("falls back to lr-document-preview when no renderer matches", async () => {
     const el = (await fixture(html`
       <lr-document-viewer
@@ -322,6 +341,81 @@ describe("registry dispatch", () => {
     await waitUntil(() => el.shadowRoot!.querySelector('#retry-output')?.textContent === 'retry.bin');
     expect(loads).to.equal(2);
     expect(body.textContent).to.not.include('Localized preview failure.');
+  });
+
+  it('honors capabilities a lazy registration declares before loading', async () => {
+    const results: boolean[] = [];
+    const registry = new Map([
+      ['text/x-lazy-anchors', {
+        capabilities: { anchors: ['text-quote' as const] },
+        load: () => Promise.resolve({ render: () => html`<p id="lazy-anchor-target">quoted text</p>` }),
+      }],
+    ]);
+    const el = await fixture<LyraDocumentViewer>(html`
+      <lr-document-viewer name="a.txt" mime-type="text/x-lazy-anchors" src="https://example.test/a.txt"
+        .registry=${registry} .anchor=${{ kind: 'text-quote', quote: 'quoted text' }}></lr-document-viewer>
+    `);
+    el.addEventListener('lr-anchor-result', (event) => results.push((event as CustomEvent<{ found: boolean }>).detail.found));
+    el.open = true;
+    await waitUntil(() => el.shadowRoot!.querySelector('#lazy-anchor-target') !== null);
+    await aTimeout(50);
+    // The declared-capable renderer owns the result; the shell must not answer `{ found: false }`.
+    expect(results).to.deep.equal([]);
+  });
+
+  it('reports its own renderer failures through lr-render-error', async () => {
+    const thrown = new Error('renderer exploded');
+    const loadError = new Error('chunk failed');
+    const registry = new Map([
+      ['application/x-throws', { render: () => { throw thrown; } }],
+      ['application/x-chunk', { load: () => Promise.reject(loadError) }],
+    ]);
+    for (const [mimeType, expected] of [['application/x-throws', thrown], ['application/x-chunk', loadError]] as const) {
+      const el = await fixture<LyraDocumentViewer>(html`
+        <lr-document-viewer name="file.bin" mime-type=${mimeType} src="https://example.test/file.bin" .registry=${registry}></lr-document-viewer>
+      `);
+      const failure = oneEvent(el, 'lr-render-error');
+      el.open = true;
+      const event = await failure as CustomEvent<{ error: unknown }>;
+      expect(event.detail.error === expected, mimeType).to.equal(true);
+    }
+  });
+
+  it('forwards search to a renderer that declares search support, and resolves no matches otherwise', async () => {
+    const calls: string[] = [];
+    if (!customElements.get('x-k09-searchable-renderer')) {
+      customElements.define('x-k09-searchable-renderer', class extends HTMLElement {
+        async search(query: string): Promise<number> { calls.push(`search:${query}`); return 3; }
+        async searchNext(): Promise<boolean> { calls.push('next'); return true; }
+        async searchPrevious(): Promise<boolean> { calls.push('previous'); return true; }
+        clearSearch(): void { calls.push('clear'); }
+      });
+    }
+    const registry = new Map([
+      ['text/x-searchable', {
+        capabilities: { search: true },
+        render: () => html`<x-k09-searchable-renderer></x-k09-searchable-renderer>`,
+      }],
+      ['text/x-plain', { render: () => html`<x-k09-searchable-renderer></x-k09-searchable-renderer>` }],
+    ]);
+    const el = await fixture<LyraDocumentViewer>(html`
+      <lr-document-viewer open name="a.txt" mime-type="text/x-searchable" src="https://example.test/a.txt" .registry=${registry}></lr-document-viewer>
+    `);
+    await el.updateComplete;
+    expect(await el.search('needle')).to.equal(3);
+    expect(await el.searchNext()).to.equal(true);
+    expect(await el.searchPrevious()).to.equal(true);
+    el.clearSearch();
+    expect(calls).to.deep.equal(['search:needle', 'next', 'previous', 'clear']);
+
+    el.mimeType = 'text/x-plain';
+    await el.updateComplete;
+    calls.length = 0;
+    expect(await el.search('needle')).to.equal(0);
+    expect(await el.searchNext()).to.equal(false);
+    expect(await el.searchPrevious()).to.equal(false);
+    el.clearSearch();
+    expect(calls).to.deep.equal([]);
   });
 
   it('keeps a newer renderer visible when an earlier lazy load rejects', async () => {
@@ -1083,6 +1177,52 @@ describe("anchor/highlights/alt widening", () => {
     await secondPromise;
   });
 
+  it("ignores re-assignment of the identical anchor, payload or highlights; scrollToAnchor() repeats a jump", async () => {
+    let renders = 0;
+    registerDocumentRenderer("application/pdf", {
+      render: () => {
+        renders++;
+        return html`<div>stub</div>`;
+      },
+    });
+    const el = await fixture<LyraDocumentViewer>(html`
+      <lr-document-viewer open name="report.pdf" mime-type="application/pdf" src="https://example.test/report.pdf"></lr-document-viewer>
+    `);
+    const results: boolean[] = [];
+    el.addEventListener("lr-anchor-result", (event) => results.push((event as CustomEvent<{ found: boolean }>).detail.found));
+    const anchor = { kind: "page" as const, page: 1 };
+    el.anchor = anchor;
+    await waitUntil(() => results.length === 1);
+    const rendersAfterAnchor = renders;
+    el.anchor = anchor;
+    await el.updateComplete;
+    await aTimeout(20);
+    expect(results.length).to.equal(1);
+    expect(renders).to.equal(rendersAfterAnchor);
+
+    const highlights = [{ id: "h1", anchor: { kind: "page" as const, page: 1 } }];
+    el.highlights = highlights;
+    await el.updateComplete;
+    const rendersAfterHighlights = renders;
+    el.highlights = highlights;
+    await el.updateComplete;
+    expect(renders).to.equal(rendersAfterHighlights);
+
+    const payload = { kind: "document" as const, file: { name: "report.pdf", mimeType: "application/pdf", src: "https://example.test/report.pdf" } };
+    el.payload = payload;
+    await el.updateComplete;
+    const rendersAfterPayload = renders;
+    el.payload = payload;
+    await el.updateComplete;
+    expect(renders).to.equal(rendersAfterPayload);
+
+    // The explicit repeat: this stub renderer cannot honor anchors, so the shell answers again.
+    const before = results.length;
+    expect(await el.scrollToAnchor(anchor)).to.equal(false);
+    await waitUntil(() => results.length === before + 1);
+    expect(results.at(-1)).to.equal(false);
+  });
+
   it("existing <lr-document-viewer name= mime-type= src=> usage renders identically with anchor/highlights/alt unset", async () => {
     registerDocumentRenderer("application/pdf", {
       render: (file) => html`<div>${file.name}</div>`,
@@ -1473,5 +1613,33 @@ describe('shell dialog lifecycle containment', () => {
 
     expect(received).to.deep.equal(SHELL_EVENTS);
     expect(el.open).to.equal(true);
+  });
+});
+
+describe("loading and error treatment", () => {
+  it("shows the shared viewer loading treatment and a styleable error part", async () => {
+    let rejectLoad!: (error: Error) => void;
+    const registry = new Map([
+      ["text/x-slow", {
+        load: () => new Promise<{ render: () => unknown }>((_resolve, reject) => {
+          rejectLoad = reject;
+        }),
+      }],
+    ]);
+    const el = await fixture<LyraDocumentViewer>(html`
+      <lr-document-viewer name="a.txt" mime-type="text/x-slow" src="https://example.test/a.txt" .registry=${registry}></lr-document-viewer>
+    `);
+    el.open = true;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="body"] [part="spinner"]') !== null);
+    const spinner = el.shadowRoot!.querySelector('[part="body"] [part="spinner"]')!;
+    expect(spinner.classList.contains("viewer-loading")).to.equal(true);
+    expect(spinner.querySelector(".viewer-loading-label")?.textContent).to.equal("Loading document…");
+    const failure = oneEvent(el, "lr-render-error");
+    rejectLoad(new Error("offline"));
+    await failure;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="body"] [part="error"]')?.textContent).to.equal(
+      "Something went wrong.",
+    );
   });
 });

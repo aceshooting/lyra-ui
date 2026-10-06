@@ -5,6 +5,7 @@ import { LyraResourceLimitError, LyraUserFacingError } from '../../../internal/r
 import './archive-viewer.js';
 import type { LyraArchiveViewer } from './archive-viewer.js';
 import type JSZipType from 'jszip';
+import { assembleZip, zipEntry } from './fixtures/zip-builder.js';
 
 function deferred<T>(): {
   promise: Promise<T>;
@@ -369,6 +370,24 @@ describe('lr-archive-viewer', () => {
       restore();
     }
   });
+  it('lists an archive whose declared expanded size is large, since entry bodies are never expanded', async () => {
+    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
+    const logs = await Promise.all(['a.log', 'b.log'].map((name) => zipEntry(name, 'x'.repeat(64), { deflate: true })));
+    // Each entry declares 80 MiB, both headers agreeing: 160 MiB declared in total.
+    const declared = logs.map((entry) => ({ ...entry, uncompressedSize: 80 * 1024 * 1024 }));
+    const restore = stubFetch(assembleZip(declared));
+    try {
+      el.src = 'https://example.test/logs.zip';
+      const listed = (): string[] => (
+        (el.shadowRoot!.querySelector('lr-virtual-list') as { items?: { name: string }[] } | null)?.items ?? []
+      ).map((item) => item.name);
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null || listed().length === 2);
+      expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent ?? null).to.equal(null);
+      expect(listed()).to.deep.equal(['a.log', 'b.log']);
+    } finally {
+      restore();
+    }
+  });
   it('rejects an arbitrary prefix before a valid ZIP', async () => {
     const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
     const zip = new Uint8Array(await buildZip({ 'one.txt': 'one' }));
@@ -471,7 +490,7 @@ describe('lr-archive-viewer', () => {
   });
 
 
-  it('reloads its source after reconnecting the same element instance', async () => {
+  it('keeps its listing across a same-task move, and reloads after a genuine reconnect', async () => {
     const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
     const buffer = await buildZip({});
     const original = window.fetch;
@@ -489,6 +508,11 @@ describe('lr-archive-viewer', () => {
       await waitUntil(() => fetchCount === 1);
       const container = document.createElement('div');
       document.body.append(container);
+      container.append(el); // a move: disconnect and reconnect within one task
+      await aTimeout(30);
+      expect(fetchCount).to.equal(1);
+      el.remove();
+      await aTimeout(0); // a genuine disconnect
       container.append(el);
       await waitUntil(() => fetchCount === 2);
       container.remove();
@@ -497,7 +521,7 @@ describe('lr-archive-viewer', () => {
     }
   });
 
-  it('invalidates a stale fetch rejection before a synchronous reconnect', async () => {
+  it('invalidates a stale fetch rejection across a disconnect and reconnect', async () => {
     const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
     const firstFetch = deferred<Response>();
     const emptyZip = await buildZip({});
@@ -520,6 +544,7 @@ describe('lr-archive-viewer', () => {
       el.src = 'https://example.test/archive.zip';
       await waitUntil(() => fetchCalls === 1);
       el.remove();
+      await aTimeout(0); // a genuine disconnect (a same-task move keeps the in-flight load)
       firstFetch.reject(new Error('stale archive failure'));
       reconnectHost.append(el);
       await waitUntil(() => fetchCalls === 2);
@@ -531,7 +556,7 @@ describe('lr-archive-viewer', () => {
     }
   });
 
-  it('never accepts stale archive bytes resolved before a synchronous reconnect', async () => {
+  it('never accepts stale archive bytes resolved across a disconnect and reconnect', async () => {
     const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
     const firstBytes = deferred<ArrayBuffer>();
     const staleZip = await buildZip({ 'stale/old.txt': 'old' });
@@ -552,6 +577,7 @@ describe('lr-archive-viewer', () => {
       el.src = 'https://example.test/archive.zip';
       await waitUntil(() => fetchCalls === 1);
       el.remove();
+      await aTimeout(0); // a genuine disconnect (a same-task move keeps the in-flight load)
       firstBytes.resolve(staleZip);
       reconnectHost.append(el);
       await waitUntil(() => fetchCalls === 2);
@@ -898,6 +924,51 @@ describe('lr-archive-viewer part reachability through the embedded virtual list'
     }
   });
 
+  it('reports a selection that only fires selectionchange (touch handles) once, and not again for an unchanged keyup', async () => {
+    const { el, vlistRoot, restore } = await listing();
+    const name = Array.from(vlistRoot.querySelectorAll<HTMLElement>('[part~="entry-name"]'))
+      .find((node) => node.textContent === 'README.txt')!;
+    const textNode = Array.from(name.childNodes)
+      .find((node): node is Text => node.nodeType === Node.TEXT_NODE && node.textContent === 'README.txt')!;
+    const range = document.createRange();
+    range.setStart(textNode, 0);
+    range.setEnd(textNode, 'README'.length);
+    const originalGetSelection = window.getSelection;
+    const events: CustomEvent[] = [];
+    el.addEventListener('lr-text-select', (event) => events.push(event as CustomEvent));
+    const frames = async (count = 2): Promise<void> => {
+      for (let index = 0; index < count; index += 1) {
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      }
+    };
+    try {
+      // WebKit drops programmatic shadow selections, so the reported selection is stubbed.
+      window.getSelection = (() => ({
+        getComposedRanges: () => [{
+          startContainer: range.startContainer,
+          startOffset: range.startOffset,
+          endContainer: range.endContainer,
+          endOffset: range.endOffset,
+        }],
+        getRangeAt: () => range,
+        isCollapsed: false,
+        rangeCount: 1,
+      })) as unknown as typeof window.getSelection;
+      document.dispatchEvent(new Event('selectionchange'));
+      await frames();
+      expect(events.length, 'a settled selectionchange reports the selection').to.equal(1);
+      expect(events[0]!.detail.text).to.equal('README');
+      name.dispatchEvent(new KeyboardEvent('keyup', { key: 'Control', bubbles: true, composed: true }));
+      name.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true }));
+      document.dispatchEvent(new Event('selectionchange'));
+      await frames();
+      expect(events.length, 'an unchanged selection is not reported again').to.equal(1);
+    } finally {
+      window.getSelection = originalGetSelection;
+      restore();
+    }
+  });
+
   it('does not emit lr-text-select when there is no active selection', async () => {
     const { el, vlistRoot, restore } = await listing();
     const selection = (
@@ -1230,5 +1301,17 @@ describe('lr-archive-viewer canonical -bg custom properties after alias retireme
 
   it('lets the canonical -bg property win when both spellings are set', async () => {
     expect(await paints(`${declarations('background', 50)} ${declarations('bg', 0)}`)).to.deep.equal(expected(0));
+  });
+});
+
+describe('element entry registration', () => {
+  it('registers the ZIP document kind for <lr-document-viewer>, like the other viewer element entries', async () => {
+    const { findDocumentRenderer, loadDocumentRenderer } = await import('../document-viewer/registry.js');
+    const file = { name: 'a.zip', mimeType: 'application/zip', src: 'https://example.test/a.zip' };
+    const definition = findDocumentRenderer(file);
+    expect(definition?.capabilities?.anchors).to.deep.equal(['text-quote', 'fragment']);
+    expect(findDocumentRenderer({ ...file, mimeType: 'application/x-zip-compressed' })).to.exist;
+    const resolved = await loadDocumentRenderer(definition!);
+    expect(typeof resolved.render).to.equal('function');
   });
 });

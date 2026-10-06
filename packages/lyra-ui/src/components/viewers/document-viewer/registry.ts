@@ -177,10 +177,19 @@ const builtInDefinitions = new Map<string, LyraDocumentRendererDefinition>();
 let loadCache = new WeakMap<LyraDocumentRendererDefinition, Promise<LyraResolvedDocumentRendererDefinition>>();
 let validatedDefinitionCache = new WeakMap<object, LyraDocumentRendererDefinition>();
 
+function registryKeyEssence(normalized: string): string {
+  return normalized.includes('/') ? normalized.split(';', 1)[0]!.trim() : normalized;
+}
+
 function normalizeRegistryKey(key: string): string {
   const normalized = key.trim().toLowerCase();
   if (!normalized) throw new TypeError('A document renderer key must not be empty.');
-  return normalized.includes('/') ? normalized.split(';', 1)[0]!.trim() : normalized;
+  return registryKeyEssence(normalized);
+}
+
+/** Lookup-side normalisation: a missing or blank MIME type matches no key instead of throwing. */
+function lookupRegistryKey(key: string): string {
+  return typeof key === 'string' ? registryKeyEssence(key.trim().toLowerCase()) : '';
 }
 
 function freezeCapabilities(
@@ -373,11 +382,11 @@ class ImmutableDocumentRendererRegistry implements ReadonlyMap<string, LyraDocum
   }
 
   get(key: string): LyraDocumentRendererDefinition | undefined {
-    return this.#entries.get(normalizeRegistryKey(key));
+    return this.#entries.get(lookupRegistryKey(key));
   }
 
   has(key: string): boolean {
-    return this.#entries.has(normalizeRegistryKey(key));
+    return this.#entries.has(lookupRegistryKey(key));
   }
 
   entries(): MapIterator<[string, LyraDocumentRendererDefinition]> {
@@ -435,12 +444,12 @@ export function getDefaultDocumentRendererRegistry(): DocumentRendererRegistry {
   return createDocumentRendererRegistry();
 }
 
-/** Finds an exact normalized MIME essence, then the first matching shape-based renderer. */
+/** Finds an exact normalized MIME essence (if any), then the first matching shape-based renderer. */
 export function findDocumentRenderer(
   file: LyraDocumentFile,
   registry: DocumentRendererRegistry = createDocumentRendererRegistry(),
 ): LyraDocumentRendererDefinition | undefined {
-  const exact = registry.get(normalizeRegistryKey(file.mimeType));
+  const exact = registry.get(lookupRegistryKey(file.mimeType));
   if (exact) return validateDefinition(exact);
   for (const candidate of registry.values()) {
     const definition = validateDefinition(candidate);

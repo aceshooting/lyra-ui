@@ -8,6 +8,7 @@ export const EBOOK_VIEWER_TAG = tag('ebook-viewer');
 
 registerDocumentRenderer('application/epub+zip', {
   matches: (file: LyraDocumentFile) => file.name.toLowerCase().endsWith('.epub'),
+  capabilities: { anchors: ['cfi', 'text-quote'], search: true, textSelect: true },
   load: () => import('./ebook-viewer.js').then(() => ({
     render: (file: LyraDocumentFile) => html`
       <lr-ebook-viewer
@@ -17,6 +18,5 @@ registerDocumentRenderer('application/epub+zip', {
         .highlights=${file.highlights ?? []}
       ></lr-ebook-viewer>
     `,
-    capabilities: { anchors: ['cfi', 'text-quote'], search: true, textSelect: true },
   })),
 });

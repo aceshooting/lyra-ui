@@ -300,9 +300,15 @@ export const CitationToDocument: Story = {
             highlights: unknown[];
             anchor: unknown;
             open: boolean;
+            scrollToAnchor: (target: string) => Promise<boolean>;
           })
         | null;
       if (!dv) return;
+      if (dv.open && dv.src === source.src && dv.anchor === source.highlight.id) {
+        // Re-assigning the identical anchor is a no-op; repeat the jump explicitly.
+        void dv.scrollToAnchor(source.highlight.id);
+        return;
+      }
       dv.name = source.name;
       dv.mimeType = source.mimeType;
       dv.src = source.src;

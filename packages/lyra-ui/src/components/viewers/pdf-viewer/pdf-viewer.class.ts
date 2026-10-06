@@ -5,6 +5,8 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { invalidateLyraLocaleCache } from '../../../internal/localization-runtime.js';
 import { finiteCount, finiteNumber, finiteRange } from '../../../internal/numbers.js';
+import { resolveBoundedCanvasAllocation, type BoundedCanvasAllocation } from '../../../internal/canvas.js';
+import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import {
   isAbortError,
   isResourceLimitError,
@@ -43,6 +45,7 @@ import type {
 } from '../page-rail/page-rail.class.js';
 import type { LyraVirtualListIndexedSource } from '../../layout/virtual-list/virtual-list.class.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import { DeferredTeardown } from '../document-viewer/deferred-teardown.js';
 import { boundedViewerSearchQuery } from '../viewer-search-limits.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import {
@@ -65,6 +68,16 @@ import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAUL
 const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 4;
 const ZOOM_STEP = 0.25;
+// Canvas backing-store ceilings (iOS Safari's per-canvas area); bigger pages render at lower resolution.
+const MAX_PDF_CANVAS_PIXELS = 16_777_216;
+const MAX_PDF_CANVAS_DIMENSION = 16_384;
+/** The control that takes keyboard focus when a focused toolbar button disables itself. */
+const TOOLBAR_FOCUS_TWINS = new Map([
+  ['previous-button', 'next-button'],
+  ['next-button', 'previous-button'],
+  ['zoom-out-button', 'zoom-in-button'],
+  ['zoom-in-button', 'zoom-out-button'],
+]);
 const PAGE_TEXT_CACHE_LIMIT = 64;
 const PAGE_SEARCH_INDEX_CACHE_LIMIT = 8;
 const DEFAULT_THUMBNAIL_WIDTH = 96;
@@ -293,6 +306,20 @@ function boundedPdfTextLayerSource(source: unknown): unknown {
  *  to `1` (100%) rather than letting it reach the PDF.js viewport scale unsanitized. */
 function clampZoom(value: number): number {
   return finiteRange(value, 1, MIN_ZOOM, MAX_ZOOM);
+}
+
+/** devicePixelRatio-aware backing store for a page/thumbnail viewport, within the canvas ceilings. */
+function boundedPdfCanvas(
+  canvas: HTMLCanvasElement,
+  viewport: { width: number; height: number },
+): Readonly<BoundedCanvasAllocation> {
+  return resolveBoundedCanvasAllocation({
+    cssWidth: viewport.width,
+    cssHeight: viewport.height,
+    desiredScale: canvas.ownerDocument.defaultView?.devicePixelRatio || 1,
+    maxDimension: MAX_PDF_CANVAS_DIMENSION,
+    maxPixels: MAX_PDF_CANVAS_PIXELS,
+  });
 }
 
 /** `Node.contains()` never crosses a shadow boundary -- it walks plain light-DOM `parentNode` links,
@@ -549,15 +576,15 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  * @csspart search-match-active - The currently active search match (also carries `search-match`).
  * @csspart error - Visible ordinary error text; transitions announce through the shared
  *   document-level assertive region.
- * @csspart spinner - The decorative loading placeholder and its ordinary visually-hidden label;
- *   transitions announce through the shared document-level polite region.
+ * @csspart spinner - The shared loading treatment; transitions announce through the shared
+ *   document-level polite region.
  * @cssprop [--lr-pdf-viewer-height=var(--lr-size-24rem)] - Block size of the virtualized page list.
+ *   Also settable via the `max-height` property, which sets this fixed height (not a cap).
  * @cssprop [--lr-pdf-viewer-toolbar-bg=var(--lr-color-brand-quiet)] - Background of the `toolbar`
  *   part, independent of the shared `--lr-color-brand-quiet` token.
  * @cssprop [--lr-pdf-viewer-toolbar-button-hover-bg=var(--lr-color-surface)] - Hover fill of the
  *   toolbar buttons. Defaults to the surface fill rather than the toolbar's own tint so the hover
  *   state is actually visible against it.
- *   Also settable via the `max-height` property.
  * @cssprop [--lr-pdf-viewer-text-selection-bg=var(--lr-color-brand-quiet)] - Background of a
  *   native text selection over a `text-span`, independent of the shared `--lr-color-brand-quiet`
  *   token.
@@ -593,7 +620,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly, viewerLoadingStyles];
 
   /** URL to fetch and render as a PDF document. */
   @property() src = '';
@@ -606,8 +633,8 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   /** A CSS length (e.g. `"30rem"`); once set, overrides `--lr-pdf-viewer-height` -- the block size
    *  of the virtualized page list -- declaratively, the same `max-height` attribute
    *  `<lr-notebook-viewer>`/`<lr-svg-viewer>`/`<lr-xml-viewer>` expose, rather than requiring a
-   *  consumer to set the differently-named CSS custom property inline. Invalid values are
-   *  ignored. */
+   *  consumer to set the differently-named CSS custom property inline. Unlike those siblings it
+   *  sets a fixed height, not a cap. Invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
   /** URL of the `pdfjs-dist` web worker chunk (`pdfjs-dist/build/pdf.worker.min.mjs`) as emitted by
    *  the consuming application's own bundler. PDF.js rejects every `getDocument()` call with
@@ -700,8 +727,26 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     // Deliberate no-op; see getter doc comment above.
   }
 
+  /** `part` of the enabled toolbar button that had focus when the current update started. */
+  private focusedToolbarPart: string | null = null;
+
+  /** Moves focus to the opposite control when the focused toolbar button disabled itself. */
+  private keepToolbarFocus(): void {
+    const part = this.focusedToolbarPart;
+    this.focusedToolbarPart = null;
+    const twin = part === null ? undefined : TOOLBAR_FOCUS_TWINS.get(part);
+    const root = this.shadowRoot;
+    if (!twin || !root) return;
+    if (!root.querySelector<HTMLButtonElement>(`[part="${part}"]`)?.disabled) return;
+    root.querySelector<HTMLButtonElement>(`[part="${twin}"]:not(:disabled)`)?.focus();
+  }
+
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // reaches DocumentAnchorTarget's own willUpdate (declarative `anchor`)
+    const active = this.shadowRoot?.activeElement;
+    this.focusedToolbarPart = active?.localName === 'button' && !(active as HTMLButtonElement).disabled
+      ? active.getAttribute('part')
+      : null;
     if (changed.has('page')) this.page = this.clampPage(this.page);
     if (changed.has('page') && !changed.has('scrollDrivenPage')) this.scrollDrivenPage = false;
     if (changed.has('zoom')) {
@@ -721,6 +766,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.keepToolbarFocus();
     const locale = this.effectiveLocale;
     const localeChanged = this.textIndexLocale !== undefined && this.textIndexLocale !== locale;
     this.textIndexLocale = locale;
@@ -787,25 +833,34 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     if (base) this.bindTextSelection(base);
   }
 
+  private readonly detached = new DeferredTeardown(() => this.teardownDetachedDocument());
+
   override connectedCallback(): void {
     super.connectedCallback();
     this.announcements.connect();
+    const moved = this.detached.cancel();
     if (this.hasUpdated) {
       const base = this.shadowRoot?.querySelector('[part="base"]') as HTMLElement | null;
       if (base && !this.textSelectionCleanup) this.bindTextSelection(base);
-      if (this.src) this.scheduleAfterUpdate(() => { void this.load(); }, 'pdf-load');
+      if (this.src && !moved) this.scheduleAfterUpdate(() => { void this.load(); }, 'pdf-load');
     }
   }
 
   override disconnectedCallback(): void {
+    this.textSelectionCleanup?.();
+    this.textSelectionCleanup = undefined;
+    this.announcements.disconnect();
+    super.disconnectedCallback();
+    this.detached.schedule();
+  }
+
+  private teardownDetachedDocument(): void {
     this.generation++;
     this.resetSearchState();
     this.pendingSearchResetEvent = false;
     this.anchorOperationGeneration++;
     this.beginAbortableLoad();
     this.cancelPendingPageMountWaits();
-    this.textSelectionCleanup?.();
-    this.textSelectionCleanup = undefined;
     for (const task of this.pageRenderTasks.values()) task.cancel();
     for (const layer of this.textLayers.values()) layer.cancel();
     for (const task of this.thumbnailRenderTasks.values()) task.cancel();
@@ -829,12 +884,11 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       page: 1,
       pageCount: 0,
     });
-    this.announcements.disconnect();
-    super.disconnectedCallback();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.detached.flush(); // a move into another document reloads there
     this.cancelPendingPageMountWaits();
     this.announcements.adopted();
   }
@@ -1283,12 +1337,27 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       return selection.getRangeAt(0);
     };
 
+    // Shared cadence: report each settled selection once, never mid-drag.
+    let pointerSelecting = false;
+    let reported: readonly [Node, number, Node, number] | undefined;
+
     const onSelectionEnd = (): void => {
       const range = resolveSelectionRange();
-      if (!range) return;
-      if (!containsAcrossShadowBoundaries(contentRoot, range.commonAncestorContainer) && range.commonAncestorContainer !== contentRoot) return;
+      if (
+        !range
+        || (!containsAcrossShadowBoundaries(contentRoot, range.commonAncestorContainer) && range.commonAncestorContainer !== contentRoot)
+      ) {
+        reported = undefined;
+        return;
+      }
+      if (
+        reported
+        && reported[0] === range.startContainer && reported[1] === range.startOffset
+        && reported[2] === range.endContainer && reported[3] === range.endOffset
+      ) return;
       const text = boundedSelectionText(range);
       if (!text) return;
+      reported = [range.startContainer, range.startOffset, range.endContainer, range.endOffset];
       const anchor = this.computeSelectionAnchor(range);
       const rects = boundedSelectionRects(range);
       this.emit('lr-text-select', { text, anchor, rects });
@@ -1296,21 +1365,37 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
 
     let debounceHandle: number | undefined;
     const onSelectionChange = (): void => {
+      if (pointerSelecting) return;
       if (debounceHandle !== undefined) view.cancelAnimationFrame(debounceHandle);
       debounceHandle = view.requestAnimationFrame(() => {
         debounceHandle = undefined;
         onSelectionEnd();
       });
     };
+    const onPointerDown = (event: PointerEvent): void => {
+      if (event.isPrimary && event.button === 0) pointerSelecting = true;
+    };
+    // Document-level, so a drag released outside the content root still ends its selection.
+    const onPointerRelease = (): void => {
+      if (!pointerSelecting) return;
+      pointerSelecting = false;
+      onSelectionEnd();
+    };
 
     contentRoot.addEventListener('pointerup', onSelectionEnd);
     contentRoot.addEventListener('keyup', onSelectionEnd);
     ownerDocument.addEventListener('selectionchange', onSelectionChange);
+    ownerDocument.addEventListener('pointerdown', onPointerDown, true);
+    ownerDocument.addEventListener('pointerup', onPointerRelease, true);
+    ownerDocument.addEventListener('pointercancel', onPointerRelease, true);
 
     this.textSelectionCleanup = () => {
       contentRoot.removeEventListener('pointerup', onSelectionEnd);
       contentRoot.removeEventListener('keyup', onSelectionEnd);
       ownerDocument.removeEventListener('selectionchange', onSelectionChange);
+      ownerDocument.removeEventListener('pointerdown', onPointerDown, true);
+      ownerDocument.removeEventListener('pointerup', onPointerRelease, true);
+      ownerDocument.removeEventListener('pointercancel', onPointerRelease, true);
       if (debounceHandle !== undefined) view.cancelAnimationFrame(debounceHandle);
     };
   }
@@ -1461,14 +1546,14 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       if (!Number.isFinite(unscaledViewport.width) || unscaledViewport.width <= 0) return false;
       const scale = width / unscaledViewport.width;
       const viewport = pdfPage.getViewport({ scale });
-      const dpr = canvas.ownerDocument.defaultView?.devicePixelRatio || 1;
-      canvas.width = Math.floor(viewport.width * dpr);
-      canvas.height = Math.floor(viewport.height * dpr);
+      const allocation = boundedPdfCanvas(canvas, viewport);
+      canvas.width = allocation.pixelWidth;
+      canvas.height = allocation.pixelHeight;
       canvas.style.width = `${viewport.width}px`;
       canvas.style.height = `${viewport.height}px`;
       const context = canvas.getContext('2d');
       if (!context) return false;
-      context.setTransform(dpr, 0, 0, dpr, 0, 0);
+      context.setTransform(allocation.scaleX, 0, 0, allocation.scaleY, 0, 0);
       renderTask = pdfPage.render({ canvasContext: context, viewport });
       this.thumbnailRenderTasks.set(canvas, renderTask);
       await renderTask.promise;
@@ -2263,9 +2348,9 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
         this.pageCanvases.get(pageNumber) !== canvas
       ) return;
       const viewport = page.getViewport({ scale: zoom });
-      const dpr = canvas.ownerDocument.defaultView?.devicePixelRatio || 1;
-      canvas.width = Math.floor(viewport.width * dpr);
-      canvas.height = Math.floor(viewport.height * dpr);
+      const allocation = boundedPdfCanvas(canvas, viewport);
+      canvas.width = allocation.pixelWidth;
+      canvas.height = allocation.pixelHeight;
       canvas.style.width = `${viewport.width}px`;
       canvas.style.height = `${viewport.height}px`;
       const container = this.textLayerContainers.get(pageNumber);
@@ -2281,7 +2366,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       }
       const canvasContext = canvas.getContext('2d');
       if (!canvasContext) throw new Error('Canvas 2D context is unavailable.');
-      canvasContext.setTransform(dpr, 0, 0, dpr, 0, 0);
+      canvasContext.setTransform(allocation.scaleX, 0, 0, allocation.scaleY, 0, 0);
       renderTask = page.render({ canvasContext, viewport });
       this.pageRenderTasks.set(pageNumber, renderTask);
       void this.renderTextLayer(pageNumber, page, viewport, version).catch((error: unknown) => {
@@ -2465,10 +2550,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       case 'ready': {
         return html`${this.renderToolbar()}<lr-virtual-list part="pages" exportparts="page:page, page-canvas:page-canvas, page-error:page-error, text-layer:text-layer, text-span:text-span, search-match:search-match, search-match-active:search-match-active" .source=${this.indexedPages(this.loadState.pageCount)} .renderItem=${this.renderPageItem} .activeItemId=${this.scrollDrivenPage ? '' : this.page} @lr-visible-range-change=${this.onVisibleRangeChanged} @lr-virtual-scroll=${this.stopInternalEvent}></lr-virtual-list>`;
       }
-      case 'loading': return html`<div part="spinner">
-        <lr-skeleton shape="rect" .announce=${false}></lr-skeleton>
-        <span class="sr-only">${this.localize('loadingDocument')}</span>
-      </div>`;
+      case 'loading': return renderViewerLoading(this.localize('loadingDocument'));
       case 'error': return html`<div part="error">${this.loadState.message}</div>`;
       case 'idle': default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
     }

@@ -30,6 +30,7 @@ import type {
   LyraHighlightTone,
   TextSelectRect,
 } from '../document-viewer/anchors.js';
+import { textQuoteContextScore } from '../document-viewer/anchors.js';
 import {
   getEpubJs,
   type EpubBook,
@@ -37,6 +38,8 @@ import {
 import { assertEpubArchiveWithinLimits } from './epub-resource-guard.js';
 import { styles } from './ebook-viewer.styles.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
+import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 import { boundedViewerSearchQuery, ViewerSearchWorkBudget, VIEWER_SEARCH_QUERY_LIMIT } from '../viewer-search-limits.js';
@@ -202,6 +205,55 @@ function awaitPeerResult(value: unknown): Promise<{ readonly value: unknown }> {
       reject(error);
     }
   });
+}
+
+/** Best prefix/suffix score of the quote's occurrences in an `item.find()` excerpt. */
+function quoteContextScore(excerpt: string, quote: string, prefix?: string, suffix?: string): number {
+  const text = excerpt.replace(/\s+/g, ' ').toLowerCase();
+  const needle = quote.replace(/\s+/g, ' ').toLowerCase();
+  let best = 0;
+  for (let at = text.indexOf(needle); at >= 0; at = text.indexOf(needle, at + 1)) {
+    best = Math.max(best, textQuoteContextScore(text, at, at + needle.length, prefix, suffix));
+  }
+  return best;
+}
+
+/** Chapter policy: the book's own archived resources (blob/data URLs) and inline styles only. */
+const EPUB_CHAPTER_CONTENT_SECURITY_POLICY =
+  'default-src \'none\'; img-src blob: data:; media-src blob: data:; font-src blob: data:; style-src blob: \'unsafe-inline\'';
+
+/** Prepends a CSP `<meta>` to a parsed chapter and drops what a policy cannot stop (hints, refresh, PIs). */
+function silenceChapterNetwork(chapter: Document): void {
+  const root = chapter.documentElement;
+  if (!root) return;
+  for (const node of [...chapter.childNodes]) {
+    if (node.nodeType === Node.PROCESSING_INSTRUCTION_NODE) chapter.removeChild(node);
+  }
+  for (const element of [...chapter.querySelectorAll('link, meta')]) {
+    const rel = ` ${(element.getAttribute('rel') ?? '').toLowerCase()} `;
+    if (
+      / (?:dns-prefetch|preconnect) /.test(rel)
+      || (element.getAttribute('http-equiv') ?? '').trim().toLowerCase() === 'refresh'
+    ) {
+      element.remove();
+    }
+  }
+  const namespace = root.namespaceURI ?? 'http://www.w3.org/1999/xhtml';
+  let head = chapter.querySelector('head');
+  if (!head) {
+    head = chapter.createElementNS(namespace, 'head') as HTMLHeadElement;
+    root.insertBefore(head, root.firstChild);
+  }
+  const policy = chapter.createElementNS(namespace, 'meta');
+  policy.setAttribute('http-equiv', 'Content-Security-Policy');
+  policy.setAttribute('content', EPUB_CHAPTER_CONTENT_SECURITY_POLICY);
+  head.insertBefore(policy, head.firstChild);
+}
+
+/** epub.js runs spine content hooks on every loaded chapter before rendering it. */
+function registerNetworkSilentChapters(book: SafeEpubBook): void {
+  const contentHooks = inheritedDataValue(inheritedDataValue(book.spine, 'hooks'), 'content');
+  savedCallable(contentHooks, 'register')?.(silenceChapterNetwork);
 }
 
 /** Captures mandatory book capabilities once, and captures optional navigation only after
@@ -513,6 +565,7 @@ class LyraEbookViewerBase extends LyraElement<LyraEbookViewerEventMap> {}
  * @csspart previous-icon - The previous button icon.
  * @csspart next-icon - The next button icon.
  * @csspart mount - The stable element epub.js renders into.
+ * @csspart spinner - The shared loading treatment.
  * @csspart error - Visible ordinary error text; transitions announce through the shared
  *   document-level assertive region. Search announcements are appended to the shared
  *   document-level polite region, which lives in the host's light DOM and has no part here.
@@ -555,19 +608,12 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly, viewerLoadingStyles];
 
   /** URL fetched as an ArrayBuffer and rendered as an EPUB. */
   @property() src = '';
   /** Display name used as the reading region's accessible-name fallback. */
   @property() name = '';
-  /** Host-level `aria-label` override for the internal reading region -- wins by attribute
-   *  presence, including an explicitly empty value, over `name` and the localized fallback. Set as
-   *  a plain `aria-label` attribute on `<lr-ebook-viewer>` itself, not a public JS property: the
-   *  declaration exists only so Lit observes the attribute (the same private attribute-observer
-   *  `<lr-dialog>`, `<lr-page>`, `<lr-app-rail>` and `<lr-tour>` use). */
-  @property({ attribute: 'aria-label' }) private accessibleLabel: string | null = null;
-
   /** A CSS `max-height` that caps the mount area epub.js renders into; invalid values are
    *  ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
@@ -689,6 +735,9 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     super.disconnectedCallback(); // reaches DocumentAnchorTarget's own cleanup (anchor retry, selection binding)
   }
 
+  /** @internal Defining this keeps the open book across `moveBefore()`, which keeps iframes alive. */
+  connectedMoveCallback(): void {}
+
   override adoptedCallback(): void {
     super.adoptedCallback();
     const ownerWindow = this.ownerDocument.defaultView;
@@ -805,6 +854,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
       const book = normalizeBook(factory(data));
       if (!book) throw new Error('EPUB peer returned an unusable book.');
       candidateBook = book;
+      registerNetworkSilentChapters(book);
       const rendition = normalizeRendition(book.renderTo(mount, { width: '100%', height: '100%' }));
       if (!rendition) throw new Error('EPUB peer returned an unusable rendition.');
       await book.ready;
@@ -1094,7 +1144,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
         && rendition === this.rendition;
     }
     if (anchor.kind === 'text-quote') {
-      const cfi = await this.findTextQuoteCfi(anchor.quote);
+      const cfi = await this.findTextQuoteCfi(anchor);
       if (!cfi) return false;
       if (
         operation !== this.anchorOperationGeneration
@@ -1110,19 +1160,23 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     return false;
   }
 
-  /** Scans the book's spine sections, in document order, for the first `item.find()` match of
-   *  `quote` -- the same section-by-section load/find/unload cycle `search()` uses, but stops at
-   *  the first hit instead of collecting every match. `null` when no section matches. */
-  private async findTextQuoteCfi(quote: string): Promise<string | null> {
+  /** First spine hit of the trimmed quote carrying all its prefix/suffix context, else the best hit. */
+  private async findTextQuoteCfi(
+    anchor: { readonly quote: string; readonly prefix?: string; readonly suffix?: string },
+  ): Promise<string | null> {
     const book = this.book;
     const generation = this.generation;
     const ownerView = this.ownerDocument.defaultView;
+    const quote = anchor.quote.trim();
     const boundedQuery = boundedViewerSearchQuery(quote, this.effectiveLocale);
     if (!book || !ownerView || !boundedQuery.accepted || !boundedQuery.needle) return null;
+    const fullContextScore = (anchor.prefix?.trim() ? 1 : 0) + (anchor.suffix?.trim() ? 1 : 0);
+    let bestMatch: string | null = null;
+    let bestScore = -1;
     const work = new ViewerSearchWorkBudget();
     const spine = projectSpineItems(book);
     for (const item of spine.items) {
-      if (!work.consume('')) return null;
+      if (!work.consume('')) return bestMatch;
       let loaded = false;
       try {
         await awaitPeerResult(item.load(book.load));
@@ -1132,8 +1186,15 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
         const results = projectFindResults(rawResults, work);
         if (!this.isCurrentLoad(generation, ownerView) || this.book !== book) return null;
         for (const result of results.matches) {
-          if (!work.consume('')) return null;
-          return result.cfi;
+          if (!work.consume('')) return bestMatch;
+          const score = fullContextScore === 0
+            ? 0
+            : quoteContextScore(result.excerpt, quote, anchor.prefix, anchor.suffix);
+          if (score === fullContextScore) return result.cfi;
+          if (score > bestScore) {
+            bestMatch = result.cfi;
+            bestScore = score;
+          }
         }
       } catch {
         continue;
@@ -1147,7 +1208,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
         }
       }
     }
-    return null;
+    return bestMatch;
   }
 
   // -- highlight painting --------------------------------------------------------------------------
@@ -1479,9 +1540,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
   // -- rendering --------------------------------------------------------------------------------------------
 
   private renderStatus(): TemplateResult | typeof nothing {
-    if (this.ebookState.kind === 'loading') {
-      return html`<p class="status-note">${this.localize('loadingDocument')}</p>`;
-    }
+    if (this.ebookState.kind === 'loading') return renderViewerLoading(this.localize('loadingDocument'));
     if (this.ebookState.kind === 'error') return html`<div part="error">${this.ebookState.message}</div>`;
     if (this.ebookState.kind === 'idle') {
       return html`<p class="status-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
@@ -1508,7 +1567,12 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
             <span part="next-icon" aria-hidden="true">${chevronIcon()}</span>
           </button>
         </div>
-        <div part="mount" role="region" aria-label=${this.accessibleLabel ?? (this.name || this.localize('ebookViewerRegionLabel'))} ${ref(this.mountRef)}></div>
+        <div
+          part="mount"
+          role=${viewerSemanticRole(this, 'region') ?? nothing}
+          aria-label=${viewerSemanticLabel(this, this.name || this.localize('ebookViewerRegionLabel')) ?? nothing}
+          ${ref(this.mountRef)}
+        ></div>
         ${this.renderStatus()}
         ${this.renderAnchorLiveRegion()}
       </div>
