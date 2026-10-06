@@ -15,6 +15,7 @@ import { SlotPresenceController } from '../../../internal/slot-presence-controll
 import { styles } from './lightbox.styles.js';
 import '../pan-zoom/pan-zoom.class.js';
 import type { LyraPanZoom } from '../pan-zoom/pan-zoom.class.js';
+import { ownsKeyboardInput } from '../pan-zoom/key-ownership.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_close, LYRA_DEFAULT_lightboxImagePosition, LYRA_DEFAULT_lightboxLabel, LYRA_DEFAULT_next, LYRA_DEFAULT_previous } from '../../../internal/default-strings.generated.js';
@@ -107,21 +108,6 @@ export interface LyraLightboxEventMap {
   'lr-zoom-change': CustomEvent<{ zoom: number }>;
 }
 
-function ownsNavigationKey(event: KeyboardEvent): boolean {
-  for (const target of event.composedPath()) {
-    const element = target as Element;
-    if (typeof element.matches !== 'function') continue;
-    if (element.localName === 'lr-pan-zoom') return true;
-    if (element.matches(
-      'input, textarea, select, [contenteditable]:not([contenteditable="false"]), ' +
-      '[role="textbox"], [role="searchbox"], [role="combobox"], [role="spinbutton"], ' +
-      '[role="slider"], [role="listbox"], [role="menu"], [role="menuitem"], [role="radio"], ' +
-      '[role="radiogroup"], [role="grid"], [role="tree"], [role="tablist"]',
-    )) return true;
-  }
-  return false;
-}
-
 function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction): void {
   const ownerWindow = ownerDocument.defaultView;
   if (ownerWindow) {
@@ -193,8 +179,9 @@ function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction)
  * @event lr-after-show - Fired after a successful `show()` has rendered the open panel.
  * @event lr-after-hide - Fired after a successful `hide()`/`close()` has rendered closed.
  * @event lr-index-change - Fired for `next()`/`previous()`/`goTo()` navigation, including the
- *   built-in button and keyboard paths. Not fired when a consumer sets `index`/`images` directly.
- *   `detail: { index }` is always the rendered integer index.
+ *   built-in button and keyboard paths, and when a shrinking `images` moves the shown image. Not
+ *   fired when a consumer sets `index` directly. `detail: { index }` is always the rendered
+ *   integer index.
  * @event lr-zoom-change - Not emitted by `LyraLightbox` itself -- see the interface doc above.
  *   `detail: { zoom }`.
  * @csspart backdrop - The full-viewport scrim, positioned behind `panel`.
@@ -268,6 +255,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   }
 
   private _images: readonly LyraLightboxImage[] = EMPTY_LIGHTBOX_IMAGES;
+  private _imagesSource?: unknown;
   private _fit: LyraImageFit = 'actual';
 
   /** The ordered, bounded, immutable set of images being browsed. Assign a new collection to
@@ -277,14 +265,15 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     return this._images;
   }
   set images(value: readonly LyraLightboxImage[]) {
+    if (value === this._imagesSource || value === this._images) return;
+    this._imagesSource = value;
     const old = this._images;
     this._images = snapshotLightboxImages(value);
     this.requestUpdate('images', old);
   }
 
   /** The currently displayed image. Clamped defensively for rendering (out-of-range/negative/
-   *  non-integer never throws) and silently re-synced onto this property (no event) when
-   *  `images` shrinks -- mirrors `<lr-carousel>`'s `normalizedIndex()`/`syncSlides()` split. */
+   *  non-integer never throws) and re-synced onto this property when `images` shrinks. */
   @property({ type: Number, reflect: true }) index = 0;
 
   /** Wraps prev/next past the ends. Mirrors `<lr-carousel>`'s `loop` 1:1. */
@@ -366,9 +355,6 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     return finiteCount(this.index, 0, count - 1);
   }
 
-  // Silently re-syncs `index` onto the clamped value with no event -- mirrors
-  // <lr-carousel>'s syncSlides() clamp-without-event behavior, e.g. when `images` shrinks out
-  // from under the current index.
   private syncImages(): void {
     const current = this.currentIndex();
     if (this.index !== current) this.index = current;
@@ -387,14 +373,20 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   }
 
   /** Advances to the next image, respecting `loop`. */
-  next: () => void = (): void => this.changeTo(this.currentIndex() + 1);
+  next(): void {
+    this.changeTo(this.currentIndex() + 1);
+  }
   /** Moves to the previous image, respecting `loop`. */
-  previous: () => void = (): void => this.changeTo(this.currentIndex() - 1);
+  previous(): void {
+    this.changeTo(this.currentIndex() - 1);
+  }
 
   /** Jumps to a finite image index. Fractional values are truncated toward zero before
    *  clamping or loop wrapping, so `lr-index-change.detail.index` is always the rendered
    *  integer index. Non-finite values are no-ops. */
-  goTo: (index: number) => void = (index: number): void => this.changeTo(index);
+  goTo(index: number): void {
+    this.changeTo(index);
+  }
 
   /** Request opening, then resolve once the open panel is rendered. */
   async show(): Promise<void> {
@@ -509,7 +501,9 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('images') || changed.has('index')) {
+      const index = changed.has('index') ? undefined : this.index;
       this.syncImages();
+      if (index !== undefined && this.index !== index) this.emit('lr-index-change', { index: this.index });
     }
     // Purely derived from already-current state (images/the just-synced index/strings/locale)
     // with no DOM measurement involved, so this belongs here, not in updated(): setting `liveText`
@@ -690,12 +684,12 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     void this.closeFrom('close-button', button);
   };
 
-  // RTL-aware, exactly mirroring <lr-carousel>'s onViewportKeyDown. Attached on part="panel"
+  // RTL-aware. Attached on part="panel"
   // itself so it sees keydowns bubbling from anywhere inside, including from within the embedded
   // <lr-pan-zoom>'s own shadow tree. Never conflicts with the frame's own +/-/0/=/_ zoom
   // shortcuts, which don't intercept Arrow/Home/End.
   private onPanelKeyDown = (event: KeyboardEvent): void => {
-    if (ownsNavigationKey(event)) return;
+    if (ownsKeyboardInput(event, 'lr-pan-zoom')) return;
     const rtl = this.effectiveDirection === 'rtl';
     const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
     const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';

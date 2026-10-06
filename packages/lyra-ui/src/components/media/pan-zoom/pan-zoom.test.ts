@@ -193,14 +193,13 @@ it('normalizes malformed zoom configuration to finite usable values', async () =
   expect(el.zoom).to.be.greaterThan(before);
 });
 
-it('keeps the host name on the host and gives the focusable viewport a purpose name', async () => {
+it('forwards the host name to the focusable viewport', async () => {
   const el = await fixture<LyraPanZoom>(html`
     <lr-pan-zoom aria-label="Map preview" .strings=${{ pdfViewerCurrentZoom: '{percent} pourcent' }}></lr-pan-zoom>
   `);
   const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
   expect(viewport.getAttribute('role')).to.equal('group');
-  expect(el.getAttribute('aria-label')).to.equal('Map preview');
-  expect(viewport.getAttribute('aria-label')).to.equal('Zoomable content');
+  expect(viewport.getAttribute('aria-label')).to.equal('Map preview');
   const reset = el.shadowRoot!.querySelector('[part="reset"]') as HTMLButtonElement;
   expect(reset.textContent).to.contain('Reset zoom');
   expect(reset.textContent).to.contain('100 pourcent');
@@ -295,7 +294,7 @@ it('forwards host focus()/blur()/click() to the keyboard-zoomable viewport', asy
   expect(aliases, 'lr-focus/lr-blur compatibility aliases must not fire').to.deep.equal([]);
 });
 
-it('preserves host aria-label presence without duplicating it on the nested semantic owner', async () => {
+it('forwards host aria-label changes, including an empty one, to the viewport', async () => {
   const el = await fixture<LyraPanZoom>(html`
     <lr-pan-zoom aria-label="" .strings=${{ zoomableFrameLabel: 'Localized zoom surface' }}></lr-pan-zoom>
   `);
@@ -306,15 +305,15 @@ it('preserves host aria-label presence without duplicating it on the nested sema
   expect(base.hasAttribute('role')).to.equal(false);
   expect(base.hasAttribute('aria-label')).to.equal(false);
   expect(viewport.getAttribute('role')).to.equal('group');
-  expect(labels()).to.deep.equal(['', 'Localized zoom surface']);
+  expect(labels()).to.deep.equal(['', '']);
 
   el.setAttribute('aria-label', 'Updated zoom surface');
   await el.updateComplete;
-  expect(labels()).to.deep.equal(['Updated zoom surface', 'Localized zoom surface']);
+  expect(labels()).to.deep.equal(['Updated zoom surface', 'Updated zoom surface']);
 
   el.setAttribute('aria-label', '');
   await el.updateComplete;
-  expect(labels()).to.deep.equal(['', 'Localized zoom surface']);
+  expect(labels()).to.deep.equal(['', '']);
 
   el.removeAttribute('aria-label');
   await el.updateComplete;

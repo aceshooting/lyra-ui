@@ -11,6 +11,24 @@ export const styles = css`
     gap: var(--lr-space-s);
     min-inline-size: 0;
     max-inline-size: 100%;
+    block-size: 100%;
+  }
+  /* A host given a block size passes it down to the viewport. */
+  [part="frame"] {
+    flex: 1 1 auto;
+    min-block-size: 0;
+  }
+  [part="frame"]::part(base) {
+    block-size: 100%;
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+  /* 'contain' and 'width' size the image against the viewport, which must not grow with it. */
+  :host([fit="contain"]) [part="frame"]::part(viewport) {
+    container-type: size;
+  }
+  :host([fit="width"]) [part="frame"]::part(viewport) {
+    container-type: inline-size;
+    contain-intrinsic-inline-size: var(--lr-size-20rem);
   }
   [part="toolbar"] {
     display: flex;
@@ -126,6 +144,9 @@ export const styles = css`
     /* policy-allow(physical-css): rotation geometry is a physical raster coordinate system. */
     left: 50%;
     top: 50%;
+    /* Sized by the image alone, so the frame measured from it cannot shrink it. */
+    inline-size: max-content;
+    max-inline-size: none;
   }
   [part="image-wrapper"] {
     position: relative;
@@ -149,10 +170,7 @@ export const styles = css`
       transition: none;
     }
   }
-  /* The embedded pan-zoom's [part='content'] defaults to a max-content track, leaving percentage
-     sizing on the image below no definite basis. Giving it the viewport's inline size is what lets
-     'contain' and 'width' scale to the available frame rather than natural pixels; 'actual' keeps
-     the max-content default. */
+  /* 'contain' and 'width' center the image in a viewport-wide box; 'actual' keeps max-content. */
   :host([fit="contain"]) [part="frame"]::part(content),
   :host([fit="width"]) [part="frame"]::part(content) {
     inline-size: 100%;
@@ -160,17 +178,23 @@ export const styles = css`
   [part="image"] {
     display: block;
   }
-  :host(:not([fit="actual"])) [part="image"] {
-    max-inline-size: 100%;
-  }
   :host([fit="width"]) [part="image"] {
-    inline-size: 100%;
+    inline-size: 100cqi;
     block-size: auto;
+  }
+  :host([fit="width"]) :is([data-rotation="90"], [data-rotation="270"]) [part="image"] {
+    inline-size: auto;
+    block-size: 100cqi;
   }
   :host([fit="contain"]) [part="image"] {
-    max-block-size: var(--lr-pan-zoom-min-block-size, var(--lr-size-10rem));
+    max-inline-size: 100cqi;
+    max-block-size: 100cqb;
     block-size: auto;
     object-fit: contain;
+  }
+  :host([fit="contain"]) :is([data-rotation="90"], [data-rotation="270"]) [part="image"] {
+    max-inline-size: 100cqb;
+    max-block-size: 100cqi;
   }
   [part="highlight-layer"] {
     position: absolute;

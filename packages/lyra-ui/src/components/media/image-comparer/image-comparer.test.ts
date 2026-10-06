@@ -203,6 +203,14 @@ it('renders the handle slot and resolves both upstream sizing properties', async
   expect(getComputedStyle(handleVisual).blockSize).to.equal('31px');
 });
 
+it('draws the handle ring from the thin border-width token', async () => {
+  const el = (await fixture(html`<lr-image-comparer
+    style="--lr-theme-border-width-thin: 3px"
+  ></lr-image-comparer>`)) as LyraImageComparer;
+  const handleVisual = el.shadowRoot!.querySelector('.handle-visual') as HTMLElement;
+  expect(getComputedStyle(handleVisual).borderTopWidth).to.equal('3px');
+});
+
 it('exposes namespaced sizing properties that the bare upstream names still feed', async () => {
   const namespaced = (await fixture(html`<lr-image-comparer
     style="--lr-image-comparer-divider-width: 9px; --lr-image-comparer-handle-size: 37px"

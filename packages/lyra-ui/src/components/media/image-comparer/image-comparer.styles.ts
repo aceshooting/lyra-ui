@@ -140,7 +140,7 @@ export const styles = css`
       --lr-image-comparer-handle-size,
       var(--_lr-image-comparer-handle-size)
     );
-    border: var(--lr-size-1px) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius-pill);
     background: var(--lr-color-surface);
     color: var(--lr-color-text);

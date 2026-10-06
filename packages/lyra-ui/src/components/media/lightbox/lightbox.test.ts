@@ -1,5 +1,5 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import type { PropertyValues } from 'lit';
+import { render, type PropertyValues } from 'lit';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import './lightbox.js';
 import { expectFocusReturnsToReshownOpener } from '../../../../test/hidden-opener.js';
@@ -746,6 +746,48 @@ it('announces navigation through light DOM and keeps an aria-hidden part mirror 
   expect(Array.from(sink.children, (child) => child.textContent)).to.deep.equal(['Image 2 of 3']);
 
   el.open = false;
+});
+
+it('announces each navigation once while a parent re-renders the same images and mirrors the index', async () => {
+  const images = [image, { ...image, caption: 'Second' }, { ...image, caption: 'Third' }];
+  const mount = await fixture<HTMLElement>(html`<div></div>`);
+  let index = 0;
+  const view = () => html`<lr-lightbox .images=${images} .index=${index} open
+    @lr-index-change=${(event: CustomEvent<{ index: number }>) => {
+      index = event.detail.index;
+      render(view(), mount);
+    }}></lr-lightbox>`;
+  render(view(), mount);
+  const el = mount.querySelector('lr-lightbox') as LyraLightbox;
+  await el.updateComplete;
+  const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)!;
+  const before = sink.childElementCount;
+  el.next();
+  await el.updateComplete;
+  render(view(), mount);
+  await el.updateComplete;
+  expect(Array.from(sink.children, (child) => child.textContent).slice(before)).to.deep.equal(['Image 2 of 3']);
+  el.open = false;
+});
+
+it('emits lr-index-change when a shrinking images moves the shown image, not for index writes', async () => {
+  const images = [image, { ...image, caption: 'Second' }, { ...image, caption: 'Third' }];
+  const el = (await fixture(html`<lr-lightbox .images=${images} index="2"></lr-lightbox>`)) as LyraLightbox;
+  const changes: number[] = [];
+  el.addEventListener('lr-index-change', (event) => changes.push((event as CustomEvent<{ index: number }>).detail.index));
+  el.images = images.slice(0, 2);
+  await el.updateComplete;
+  expect(el.index).to.equal(1);
+  el.index = 9;
+  await el.updateComplete;
+  expect(el.index).to.equal(1);
+  expect(changes).to.deep.equal([1]);
+});
+
+it('declares next/previous/goTo as methods', () => {
+  for (const name of ['next', 'previous', 'goTo']) {
+    expect(typeof (customElements.get('lr-lightbox')!.prototype as Record<string, unknown>)[name]).to.equal('function');
+  }
 });
 
 it('keeps consumer-driven index announcements silent when the host or a composed ancestor is accessibility-excluded', async () => {

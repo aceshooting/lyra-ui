@@ -106,6 +106,7 @@ export interface LyraImageViewerEventMap {
   'lr-zoom-change': CustomEvent<{ zoom: number }>;
   'lr-rotation-change': CustomEvent<{ rotation: LyraImageRotation }>;
   'lr-fit-change': CustomEvent<{ fit: LyraImageFit }>;
+  'lr-annotatable-change': CustomEvent<{ annotatable: boolean }>;
   'lr-highlight-activate': CustomEvent<HighlightActivateDetail>;
   'lr-annotation-create': CustomEvent<LyraEventDetailSnapshot<{ anchor: LyraAnchor }>>;
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
@@ -143,8 +144,9 @@ class LyraImageViewerBase extends LyraElement<LyraImageViewerEventMap> {}
  * @customElement lr-image-viewer
  * @event lr-load - Image finished loading. `detail: { naturalWidth, naturalHeight }`.
  * @event lr-zoom-change - `detail: { zoom }`, bubbles from the embedded pan-zoom surface.
- * @event lr-rotation-change - `detail: { rotation }`.
- * @event lr-fit-change - `detail: { fit }`.
+ * @event lr-rotation-change - `detail: { rotation }`; also fires for programmatic changes.
+ * @event lr-fit-change - `detail: { fit }`; also fires for programmatic changes.
+ * @event lr-annotatable-change - The annotate toggle was used. `detail: { annotatable }`.
  * @event lr-highlight-activate - A highlight box was clicked/keyboard-activated.
  *   `detail: { highlightId }`.
  * @event lr-annotation-create - A drawn/keyed region was committed. `detail: { anchor }` (kind
@@ -311,17 +313,6 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
   @query('[part="image-wrapper"]') private wrapperEl?: HTMLElement;
 
-  /** `rotation` normalized to one of the four right-angle steps this component actually supports
-   *  (`0`/`90`/`180`/`270`) -- `rotate()`'s own `% 360` step only ever produces one of these four
-   *  values from an already-valid `rotation`, but a directly-assigned `rotation` (attribute or
-   *  property) isn't guaranteed to be: a non-finite/negative/non-multiple-of-90 value would
-   *  otherwise reach the CSS `rotate(${rotation}deg)` transform and
-   *  `screenPercentToImagePercent()`'s right-angle-only coordinate math unnormalized. Rounds to
-   *  the nearest right angle, then wraps into `[0, 360)`. */
-  private get safeRotation(): LyraImageRotation {
-    return this.rotation;
-  }
-
   private get hasOperableContent(): boolean {
     return this.loadState.kind === 'loaded';
   }
@@ -343,7 +334,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('rotation') && changed.get('rotation') !== undefined) this.emit('lr-rotation-change', { rotation: this.safeRotation });
+    if (changed.has('rotation') && changed.get('rotation') !== undefined) this.emit('lr-rotation-change', { rotation: this.rotation });
     if (changed.has('fit') && changed.get('fit') !== undefined) this.emit('lr-fit-change', { fit: this.fit });
     if (
       (changed.has('annotatable') || changed.has('loadState')) &&
@@ -357,14 +348,20 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   }
 
   /** Increases the embedded pan/zoom scale by one configured step. */
-  zoomIn: () => void = (): void => this.frameEl?.zoomIn();
+  zoomIn(): void {
+    this.frameEl?.zoomIn();
+  }
   /** Decreases the embedded pan/zoom scale by one configured step. */
-  zoomOut: () => void = (): void => this.frameEl?.zoomOut();
-  /** Restores the embedded pan/zoom scale and translation. */
-  resetZoom: () => void = (): void => this.frameEl?.resetZoom();
+  zoomOut(): void {
+    this.frameEl?.zoomOut();
+  }
+  /** Restores the embedded pan/zoom scale to `1`, keeping the pan position. */
+  resetZoom(): void {
+    this.frameEl?.resetZoom();
+  }
 
   rotate(): void {
-    this.rotation = ((this.safeRotation + 90) % 360) as LyraImageRotation;
+    this.rotation = ((this.rotation + 90) % 360) as LyraImageRotation;
   }
 
   protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
@@ -409,6 +406,8 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   override connectedCallback(): void {
     super.connectedCallback();
     this.syncErrorAnnouncementSink();
+    // A plain DOM move schedules no update, and disconnect released the observer.
+    if (this.hasUpdated) this.syncGeometryObserver();
   }
 
   override adoptedCallback(): void {
@@ -496,6 +495,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   private toggleAnnotatable = (): void => {
     if (!this.hasOperableContent) return;
     this.annotatable = !this.annotatable;
+    this.emit('lr-annotatable-change', { annotatable: this.annotatable });
   };
 
   private onFitChange = (event: Event): void => {
@@ -608,7 +608,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     const rect = this.wrapperEl.getBoundingClientRect();
     const px = clamp(((event.clientX - rect.left) / rect.width) * 100, 0, 100);
     const py = clamp(((event.clientY - rect.top) / rect.height) * 100, 0, 100);
-    const origin = screenPercentToImagePercent(px, py, this.safeRotation);
+    const origin = screenPercentToImagePercent(px, py, this.rotation);
     this.pointerOrigin = origin;
     this.pointerDraftId = event.pointerId;
     try {
@@ -626,7 +626,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     const rect = this.wrapperEl.getBoundingClientRect();
     const px = clamp(((event.clientX - rect.left) / rect.width) * 100, 0, 100);
     const py = clamp(((event.clientY - rect.top) / rect.height) * 100, 0, 100);
-    const point = screenPercentToImagePercent(px, py, this.safeRotation);
+    const point = screenPercentToImagePercent(px, py, this.rotation);
     const x = Math.min(this.pointerOrigin.x, point.x);
     const y = Math.min(this.pointerOrigin.y, point.y);
     const width = Math.abs(point.x - this.pointerOrigin.x);
@@ -644,7 +644,11 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     }
   };
 
+  private regionHighlights?: [readonly LyraHighlight[], NormalizedRegionHighlight[]];
+
   private canonicalRegionHighlights(): NormalizedRegionHighlight[] {
+    const source = this.highlights;
+    if (this.regionHighlights?.[0] === source) return this.regionHighlights[1];
     const ids = new Set<string>();
     const result: NormalizedRegionHighlight[] = [];
     for (const highlight of this.highlights) {
@@ -655,6 +659,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
       ids.add(highlight.id);
       result.push({ highlight, rect });
     }
+    this.regionHighlights = [source, result];
     return result;
   }
 
@@ -693,7 +698,6 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     const target = buttons[next]!;
     this.highlightFocusId = target.dataset['highlightId'] ?? null;
     target.focus();
-    this.requestUpdate();
   }
 
   private renderHighlights(): TemplateResult | typeof nothing {
@@ -735,13 +739,13 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
             width: `${rect.width}%`,
             height: `${rect.height}%`,
           })}
-          aria-label=${h.label || this.localize('imageViewerUnlabeledHighlight', undefined, {
+          aria-label=${h.label?.trim() ? h.label : this.localize('imageViewerUnlabeledHighlight', undefined, {
             index: formatter.format(index + 1),
           })}
           @click=${() => this.onHighlightActivate(h.id)}
           @focus=${() => this.onHighlightFocus(h.id)}
           @keydown=${(event: KeyboardEvent) => this.onHighlightKeyDown(event, h.id)}
-        >${h.label ? html`<span part="highlight-label">${h.label}</span>` : nothing}</button>
+        >${h.label?.trim() ? html`<span part="highlight-label">${h.label}</span>` : nothing}</button>
       `,
       )}
     </div>`;
@@ -778,7 +782,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
       return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeImage') })}</p>`;
     }
     const safeSrc = safeMediaSrc(this.src);
-    const swapped = this.safeRotation === 90 || this.safeRotation === 270;
+    const swapped = this.rotation === 90 || this.rotation === 270;
     const layout = this.mediaLayoutSize;
     const rotationFrameStyle = layout
       ? styleMap({
@@ -800,7 +804,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     >
       <div
         part="rotation-frame"
-        data-rotation=${String(this.safeRotation)}
+        data-rotation=${String(this.rotation)}
         ?data-measured=${layout !== null}
         style=${rotationFrameStyle}
       >
@@ -812,8 +816,8 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
           aria-description=${effectiveAnnotatable ? this.localize('imageViewerAnnotationHint') : nothing}
           style=${styleMap({
             transform: layout
-              ? `translate(-50%, -50%) rotate(${this.safeRotation}deg)`
-              : `rotate(${this.safeRotation}deg)`,
+              ? `translate(-50%, -50%) rotate(${this.rotation}deg)`
+              : `rotate(${this.rotation}deg)`,
           })}
           @keydown=${this.onWrapperKeyDown}
           @pointerdown=${this.onWrapperPointerDown}
@@ -834,7 +838,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   }
 
   override render(): TemplateResult {
-    const label = hostAriaLabel(this) ?? (this.name || this.localize('imageViewerLabel'));
+    const label = hostAriaLabel(this) ?? (this.name?.trim() ? this.name : this.localize('imageViewerLabel'));
     const operable = this.hasOperableContent;
     return html`<div part="base" role="region" aria-label=${label}>
       <div part="toolbar">

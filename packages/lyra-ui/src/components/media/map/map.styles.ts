@@ -289,7 +289,7 @@ export const styles = css`
     background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
   }
   button[part='legend-disclosure']:where(:active) {
-    background: color-mix(in oklab, var(--lr-color-text-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   button[part='legend-disclosure']:where(:focus-visible) {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -396,7 +396,7 @@ export const styles = css`
     background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
   }
   button[part~='legend-toggle']:where(:active) {
-    background: color-mix(in oklab, var(--lr-color-text-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   button[part~='legend-toggle']:where(:focus-visible) {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -571,8 +571,7 @@ export const styles = css`
     color: var(--lr-color-brand);
   }
   .maplibregl-ctrl-group button:active:where(:not(:disabled)) {
-    background: var(--lr-color-brand);
-    color: var(--lr-color-on-brand);
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   .maplibregl-ctrl-group button:focus-visible {
     outline: var(--lr-focus-ring);

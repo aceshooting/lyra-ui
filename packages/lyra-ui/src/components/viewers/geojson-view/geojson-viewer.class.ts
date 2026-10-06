@@ -758,7 +758,8 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
 
   private get effectiveLabel(): string {
     return (
-      hostAriaLabel(this) ?? (this.name || this.localize('geojsonViewLabel'))
+      hostAriaLabel(this) ??
+      (this.name?.trim() ? this.name : this.localize('geojsonViewLabel'))
     );
   }
 
@@ -805,6 +806,10 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
             label=${this.effectiveLabel}
             @lr-map-load=${this.stopChildEvent}
             @lr-map-click=${this.stopChildEvent}
+            @lr-map-view-change=${this.stopChildEvent}
+            @lr-map-marker-activate=${this.stopChildEvent}
+            @lr-map-legend-toggle-request=${this.stopChildEvent}
+            @lr-map-legend-panel-toggle-request=${this.stopChildEvent}
           ></lr-map>
         `;
       }

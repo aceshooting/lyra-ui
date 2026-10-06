@@ -1,12 +1,13 @@
 import { html, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { srOnly } from '../../../internal/a11y.js';
+import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { normalizeImageFit, type LyraImageFit } from '../../../internal/image-fit.js';
+import { ownsKeyboardInput } from './key-ownership.js';
 import { styles } from './pan-zoom.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -14,24 +15,6 @@ import { LYRA_DEFAULT_pdfViewerCurrentZoom, LYRA_DEFAULT_resetZoom, LYRA_DEFAULT
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraImageFit } from '../../../internal/image-fit.js';
-
-function isElementTarget(target: EventTarget): target is Element {
-  const candidate = target as Partial<Element> & { nodeType?: number };
-  return candidate.nodeType === 1 && typeof candidate.matches === 'function';
-}
-
-function ownsKeyboardInput(event: KeyboardEvent): boolean {
-  for (const target of event.composedPath()) {
-    if (!isElementTarget(target)) continue;
-    if (target.matches(
-      'input, textarea, select, [contenteditable]:not([contenteditable="false"]), ' +
-      '[role="textbox"], [role="searchbox"], [role="combobox"], [role="spinbutton"], ' +
-      '[role="slider"], [role="listbox"], [role="menu"], [role="menuitem"], [role="radio"], ' +
-      '[role="radiogroup"], [role="grid"], [role="tree"], [role="tablist"]',
-    )) return true;
-  }
-  return false;
-}
 
 export interface LyraPanZoomEventMap {
   'lr-zoom-change': CustomEvent<{ zoom: number }>;
@@ -103,8 +86,7 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
   }
   @property() src = '';
   @property() alt = '';
-  /** Overall host name when supplied as `aria-label`. A property-only value names the focusable
-   * viewport; when the host already owns a name, the viewport keeps its localized purpose name. */
+  /** Names the focusable viewport, like a host `aria-label`; defaults to a localized purpose name. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   private get safeMinZoom(): number {
@@ -150,7 +132,7 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
 
   resetView(): void {
     this.resetZoom();
-    this.renderRoot.querySelector<HTMLElement>('[part="viewport"]')?.scrollTo({ left: 0, top: 0 });
+    this.viewportEl?.scrollTo({ left: 0, top: 0 });
   }
 
   private get viewportEl(): HTMLElement | null {
@@ -181,7 +163,7 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
   };
 
   private onViewportKeyDown = (event: KeyboardEvent): void => {
-    if (ownsKeyboardInput(event)) return;
+    if (event.altKey || event.ctrlKey || event.metaKey || ownsKeyboardInput(event)) return;
     if (event.key === '+' || event.key === '=') {
       event.preventDefault();
       this.zoomIn();
@@ -198,10 +180,7 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
     const zoom = this.safeZoom;
     const min = this.safeMinZoom;
     const max = this.safeMaxZoom;
-    const explicitHostLabel = this.getAttribute('aria-label');
-    const viewportLabel = explicitHostLabel !== null
-      ? this.localize('zoomableFrameLabel')
-      : this.accessibleLabel ?? this.localize('zoomableFrameLabel');
+    const viewportLabel = hostAriaLabel(this) ?? this.localize('zoomableFrameLabel');
     const safeSrc = safeMediaSrc(this.src);
     return html`<div part="base">
       <div

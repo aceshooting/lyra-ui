@@ -4,7 +4,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './pan-zoom.js';
 import type { LyraPanZoom } from './pan-zoom.js';
 
-it('names the viewport from a direct property while preserving host naming ownership', async () => {
+it('names the viewport from the property or the host aria-label', async () => {
   const el = await fixture<LyraPanZoom>(html`<lr-pan-zoom .strings=${{ zoomableFrameLabel: 'Viewport' }}></lr-pan-zoom>`);
   const viewport = el.shadowRoot!.querySelector('[part="viewport"]')!;
   el.accessibleLabel = 'Inspection';
@@ -16,18 +16,34 @@ it('names the viewport from a direct property while preserving host naming owner
   expect(viewport.getAttribute('aria-label')).to.equal('Updated inspection');
   el.accessibleLabel = '';
   await el.updateComplete;
-  expect(viewport.getAttribute('aria-label')).to.equal('');
+  expect(viewport.getAttribute('aria-label')).to.equal('Viewport');
   el.setAttribute('aria-label', 'Host purpose');
   await el.updateComplete;
-  expect(viewport.getAttribute('aria-label')).to.equal('Viewport');
+  expect(viewport.getAttribute('aria-label')).to.equal('Host purpose');
   el.setAttribute('aria-label', '');
   await el.updateComplete;
-  expect(viewport.getAttribute('aria-label')).to.equal('Viewport');
+  expect(viewport.getAttribute('aria-label')).to.equal('');
   el.removeAttribute('aria-label');
   await el.updateComplete;
   expect(viewport.getAttribute('aria-label')).to.equal('Viewport');
 });
 
+
+it('leaves browser zoom shortcuts with Ctrl, Meta or Alt to the browser', async () => {
+  const el = await fixture<LyraPanZoom>(html`<lr-pan-zoom></lr-pan-zoom>`);
+  const viewport = el.shadowRoot!.querySelector('[part="viewport"]')!;
+  for (const modifier of ['ctrlKey', 'metaKey', 'altKey']) {
+    for (const key of ['+', '=', '-', '0']) {
+      const event = new KeyboardEvent('keydown', { key, [modifier]: true, bubbles: true, cancelable: true });
+      viewport.dispatchEvent(event);
+      expect(event.defaultPrevented, `${modifier} ${key}`).to.equal(false);
+    }
+  }
+  expect(el.zoom).to.equal(1);
+  const plain = new KeyboardEvent('keydown', { key: '+', bubbles: true, cancelable: true });
+  viewport.dispatchEvent(plain);
+  expect(plain.defaultPrevented).to.equal(true);
+});
 
 for (const width of [640, 320]) {
   for (const direction of ['ltr', 'rtl']) {

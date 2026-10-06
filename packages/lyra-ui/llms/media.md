@@ -409,6 +409,8 @@ modes use the same expression semantics at initial render and after a theme chan
   did not assign is not left wherever the interrupted movement stopped; with nothing in flight,
   only the assigned axis moves. Because both track the settled camera, a map rebuilt after a
   disconnect/reconnect opens at the last settled camera rather than the originally declared one.
+  Re-assigning the identical `center` array (a parent re-render) is not a new request, even after
+  a gesture or fit; assign a new array to re-centre.
 - `renderWorldCopies?: boolean` (attribute: false) — forwarded to MapLibre when its map is
   constructed. Leave it unset to preserve MapLibre's own current default; set `false` before
   construction to stop repeating the world horizontally. This is a construction-time option, so a
@@ -810,12 +812,10 @@ large collection is invisible until someone walks the data by hand. Both `chorop
 reduced figure in the feature — a log, a bucket, an index — and keep the exact value in your own
 payload beside the map.
 
-- `label?: string` — purpose-specific accessible name for MapLibre's actual focusable canvas.
-  A nonempty host `aria-label` remains on the host and is not duplicated onto the canvas; the canvas
-  uses `label` or the localized map name. Omitting `label` localizes the default `map` message; an
-  explicit empty string suppresses that default and renders an empty canvas name. An explicitly
-  empty host `aria-label` is separately preserved as an empty canvas name. The non-semantic
-  `[part="base"]` wrapper is not named instead.
+- `label?: string` — accessible name for MapLibre's actual focusable canvas. A host `aria-label`
+  (an empty one included) wins and names the canvas. Omitting `label` localizes the default `map`
+  message; an explicit empty string suppresses that default and renders an empty canvas name. The
+  non-semantic `[part="base"]` wrapper is not named instead.
 
 **Authoring types:** `LyraMapLegendEntry`, `LyraMapLegendPattern`, `LyraMapLegendProjection`, `LyraMapChoroplethLayer`,
 `LyraMapGeoJsonDataLayer`, `LyraMapDataLayerKind`, `LyraMapClusterOptions`, `LyraMapHeatmapOptions`,
@@ -1704,10 +1704,9 @@ a focused zoom control.
   sequential-keyboard iframe interaction by making the browsing context native `inert`, and opt
   into best-effort same-origin theme sync. The inert frame also refuses programmatic focus/click
   and carries no unsupported `aria-disabled` claim.
-- `accessibleLabel: string | null` (attribute `aria-label`) — a declarative attribute remains on
-  the host while the iframe gets its localized purpose title, avoiding a duplicate name on two
-  semantic owners. A property-only value names the iframe and updates reactively without creating a host attribute. Explicit empty host naming is preserved
-  as an empty iframe title rather than replaced through truthiness.
+- `accessibleLabel: string | null` (attribute `aria-label`) — titles the iframe; a host
+  `aria-label` attribute does the same, and an empty attribute stays an empty title. Without
+  either (or with an empty property) the iframe gets its localized purpose title.
 - readonly `iframe?: HTMLIFrameElement`, `contentWindow: Window | null`, and
   `contentDocument: Document | null`. Both content accessors return `null` while detached;
   `contentDocument` also returns `null` across an origin boundary.
@@ -1733,7 +1732,8 @@ flattened subtrees are always inert and hidden from assistive technology, so use
 rather than a second interactive control; the native zoom buttons remain the sole focus and pointer
 actions.
 
-**Events:** internal `focus`/`blur` from the iframe are relayed exactly once as owner-realm native
+**Events:** `lr-zoom-change` (`detail: { zoom }`) when `zoomIn()`/`zoomOut()` (buttons or keys)
+change `zoom`; assigning `zoom` stays silent. Internal `focus`/`blur` from the iframe are relayed exactly once as owner-realm native
 `FocusEvent`s (bubbling and composed, preserving external `relatedTarget`; a transition to or from an internal zoom control uses `null` because retargeting that control to the host would suppress the relay);
 native `load` and `error` are relayed exactly once from the current iframe
 generation as non-bubbling, non-composed `Event` instances. Navigation/source-policy changes
@@ -1798,15 +1798,15 @@ import to `LyraPanZoom`); `lr-zoomable-frame` now means the mapped iframe compon
   `src`, using the same `contain`/`width`/`actual` vocabulary as `<lr-image-viewer>`. `actual`
   preserves the historical natural-size layout; the other modes resolve against the viewport and
   update with its allocation, including when an image loads after the frame first renders.
-- `accessibleLabel: string | null` (attribute `aria-label`) — a declarative host label remains on
-  the host while the focusable viewport receives the localized inspection-surface purpose name.
-  A property-only value names the viewport and updates reactively without creating a host attribute. This avoids cloning one author label onto both the outer component and nested `role="group"`. An explicitly empty direct property remains empty; a present host attribute, including an empty one, leaves the viewport's localized purpose name intact.
+- `accessibleLabel: string | null` (attribute `aria-label`) — names the focusable viewport; a host
+  `aria-label` attribute does the same, and an empty attribute stays empty. Without either (or with
+  an empty property) the viewport gets the localized inspection-surface name.
 
 **Methods:** `zoomIn()`, `zoomOut()`, and `resetZoom()` update zoom and emit `lr-zoom-change`
 (`detail: { zoom }`). `resetZoom()` preserves pan; `resetView()` also scrolls the viewport to the
 origin. Reset reaches 100% exactly whenever it is within `minZoom`/`maxZoom`; it is not quantized to
 the nearest `zoomStep`. The viewport accepts `+`/`=`, `-`/`_`, and `0`, without consuming keys from
-a slotted editor. The three zoom buttons are independently tabbable inside a labelled `group`; the
+a slotted editor; with Ctrl, Cmd or Alt they stay the browser's page-zoom shortcuts. The three zoom buttons are independently tabbable inside a labelled `group`; the
 container does not claim toolbar arrow-key navigation.
 
 **Slots:** default — inspected content, ignored while `src` renders an image.
@@ -2812,8 +2812,8 @@ A lightbox opened outside an existing native `dialog.showModal()` stays interact
   Assignment clones/freezes the records and inspects at most 10,000 candidates; malformed records
   are omitted and updates require a new collection assignment. `src` is passed to the embedded
   frame, which runs it through `safeMediaSrc()`. `alt`/`caption` are caller data, never localized.
-- `index: number = 0` (reflected) — clamped defensively for rendering and silently re-synced (no
-  event) when `images` shrinks.
+- `index: number = 0` (reflected) — clamped defensively for rendering and re-synced (emitting
+  `lr-index-change`) when `images` shrinks.
 - `loop: boolean = false` (reflected) — wraps prev/next past the ends.
 - `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to backdrop dismissal. Off by default, matching `lr-dialog`.
 - `withoutCounter: boolean = false` (attribute `without-counter`, **not reflected**) — hides the
@@ -2853,8 +2853,9 @@ object. Use
 `lr-close-request` for vetoes and `lr-close` for accepted dismissals.
 `lr-after-hide` follows the closed render. Removal while open cannot be vetoed and reports reason
 `unmount`. `lr-index-change` (`detail: { index }`, fired
-only for internally-driven navigation — a button, a keyboard shortcut, or `next()`/`previous()`/
-`goTo()`; **not** when a consumer sets `index`/`images` directly); `lr-zoom-change` (`detail: {
+for internally-driven navigation — a button, a keyboard shortcut, or `next()`/`previous()`/
+`goTo()` — and when a shrinking `images` moves the shown image; **not** when a consumer sets
+`index` directly); `lr-zoom-change` (`detail: {
 zoom }`) is not emitted by the lightbox itself — it bubbles up composed from the embedded frame.
 
 **Slots:** `actions` — extra toolbar buttons (download/share/delete), rendered in `[part="toolbar"]`
@@ -2980,15 +2981,16 @@ inherited anchor-target surface is
 `anchorKinds: readonly LyraAnchorKind[] = ['region']`.
 
 **Methods:** `rotate()` advances `rotation` by 90°. `zoomIn()`, `zoomOut()`, and `resetZoom()` adjust
-the embedded pan-zoom surface's zoom. `scrollToAnchor(target: LyraAnchor | string):
+the embedded pan-zoom surface's zoom; `resetZoom()` keeps the pan position. `scrollToAnchor(target: LyraAnchor | string):
 Promise<boolean>` resolves a canonical finite, positive, in-bounds `region` anchor (or unique
 highlight id) after the image loads, scrolls its rendered target into the pan/zoom viewport, and
 reports true only when the target visibly intersects that viewport. Malformed/out-of-range regions
 report false.
 
 **Events:** `lr-load` (`detail: { naturalWidth, naturalHeight }`), `lr-zoom-change` (`detail: {
-zoom }`), `lr-rotation-change` (`detail: { rotation }`), `lr-fit-change` (`detail: { fit }`),
-`lr-highlight-activate` (`detail: { highlightId }`), `lr-annotation-create` (`detail: { anchor }`, kind
+zoom }`), `lr-rotation-change` (`detail: { rotation }`) and `lr-fit-change` (`detail: { fit }`),
+which also fire for programmatic changes, `lr-annotatable-change` (`detail: { annotatable }`, the
+annotate toggle only), `lr-highlight-activate` (`detail: { highlightId }`), `lr-annotation-create` (`detail: { anchor }`, kind
 `'region'`), `lr-anchor-result` (`detail: { found }`), and `lr-render-error` (`detail: { error
 }`).
 

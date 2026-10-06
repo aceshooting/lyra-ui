@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
@@ -141,6 +142,7 @@ function parseZoomLevels(value: unknown): readonly number[] {
 }
 
 export interface LyraZoomableFrameEventMap {
+  'lr-zoom-change': CustomEvent<{ zoom: number }>;
   load: Event;
   error: Event;
   blur: FocusEvent;
@@ -174,6 +176,7 @@ export interface LyraZoomableFrameEventMap {
  *   and hidden from assistive technology; the native zoom-in button remains the sole action.
  * @slot zoom-out-icon - Override for the decorative zoom-out glyph. Its flattened subtree is inert
  *   and hidden from assistive technology; the native zoom-out button remains the sole action.
+ * @event lr-zoom-change - `zoomIn()`/`zoomOut()` (controls and keys) changed `zoom`. `detail: { zoom }`.
  * @event load - Relayed native iframe load event; non-bubbling and non-composed.
  * @event error - Relayed native iframe error event; non-bubbling and non-composed.
  * @event {FocusEvent} focus - Relayed once from the internal iframe as a bubbling, composed native
@@ -231,9 +234,8 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
    * same-origin iframe document. Turning it off restores only the iframe state this component
    * changed; cross-origin access remains untouched. */
   @property({ type: Boolean, attribute: 'with-theme-sync', reflect: true }) withThemeSync = false;
-  /** Accessible-name input. A declarative `aria-label` remains on the host while the iframe keeps
-   * a localized purpose title; a property-only value names the iframe. An explicitly empty host
-   * name is preserved as an empty iframe title instead of being replaced through truthiness. */
+  /** Titles the iframe, like a host `aria-label` (an empty attribute stays empty); defaults to a
+   * localized purpose title. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   /** The internal iframe; replaced whenever navigation policy changes. An explicit `get` (rather
@@ -391,12 +393,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
   private syncedThemeClasses = new Set<string>();
   private syncedThemeProperties = new Set<string>();
   private themeSyncState?: ThemeSyncState;
-  private lyraThemeObserver?: MutationObserver;
-
-  constructor() {
-    super();
-    new ThemeWatcher(this, () => this.syncTheme());
-  }
+  private themeWatcher?: ThemeWatcher;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -405,15 +402,6 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
     this.ownerDocument.addEventListener('keydown', this.onFocusBoundaryKeyDown, true);
     this.ownerDocument.defaultView?.addEventListener('focus', this.scheduleFrameFocusReconciliation);
     this.ownerDocument.defaultView?.addEventListener('blur', this.scheduleFrameFocusReconciliation);
-    const Observer = this.ownerDocument.defaultView?.MutationObserver;
-    if (Observer) {
-      this.lyraThemeObserver?.disconnect();
-      this.lyraThemeObserver = new Observer(() => this.syncTheme());
-      this.lyraThemeObserver.observe(this.ownerDocument.documentElement, {
-        attributes: true,
-        attributeFilter: ['data-lr-theme'],
-      });
-    }
     if (this.needsReconnectFrame) {
       this.needsReconnectFrame = false;
       this.requestUpdate();
@@ -434,8 +422,6 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
     this.hasEmittedFocus = false;
     this.setFrameFocused(false);
     this.resetFocusBoundaryDocument();
-    this.lyraThemeObserver?.disconnect();
-    this.lyraThemeObserver = undefined;
     this.resetThemeSyncState();
     super.disconnectedCallback();
   }
@@ -479,8 +465,11 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
     if (!changed.has('withThemeSync')) return;
-    if (this.withThemeSync) this.syncTheme();
-    else this.restoreTheme();
+    if (this.withThemeSync) {
+      // Theme observation is armed only once sync is first wanted.
+      this.themeWatcher ??= new ThemeWatcher(this, () => this.syncTheme());
+      this.syncTheme();
+    } else this.restoreTheme();
   }
 
   /** Returns the current iframe window while connected. Cross-origin windows are still opaque. */
@@ -535,7 +524,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
   zoomIn(): void {
     const current = this.safeZoom;
     const next = this.availableZoomLevels.find(level => level > current);
-    if (next !== undefined) this.zoom = next;
+    if (next !== undefined) this.zoomTo(next);
   }
 
   /** Zooms to the largest configured stop below the current programmatic value. */
@@ -545,10 +534,15 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
     for (let index = levels.length - 1; index >= 0; index--) {
       const previous = levels[index];
       if (previous !== undefined && previous < current) {
-        this.zoom = previous;
+        this.zoomTo(previous);
         return;
       }
     }
+  }
+
+  private zoomTo(zoom: number): void {
+    this.zoom = zoom;
+    this.emit('lr-zoom-change', { zoom });
   }
 
   private isZoomInDisabled(): boolean {
@@ -771,12 +765,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
     const inline = this.hasInlineDocument;
     const src = inline ? null : safeZoomableFrameSrc(this.src);
     const referrerPolicy = safeReferrerPolicy(this.referrerpolicy);
-    const explicitHostLabel = this.getAttribute('aria-label');
-    const label = explicitHostLabel === ''
-      ? ''
-      : explicitHostLabel !== null
-        ? this.localize('zoomableFrameLabel')
-        : this.accessibleLabel ?? this.localize('zoomableFrameLabel');
+    const label = hostAriaLabel(this) ?? this.localize('zoomableFrameLabel');
     const zoom = this.safeZoom;
     const frame = html`<iframe
       part="iframe"

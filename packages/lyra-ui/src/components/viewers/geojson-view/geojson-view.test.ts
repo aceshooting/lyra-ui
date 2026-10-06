@@ -85,11 +85,19 @@ class DeferredStyleMap {
   readonly listeners = new Map<string, Array<(event?: unknown) => void>>();
   readonly sources = new Map<string, { setData: (_data: unknown) => void }>();
   readonly layers = new Set<string>();
+  readonly setCenterCalls: unknown[] = [];
+  center: { lng: number; lat: number };
+  zoom: number;
 
   constructor(options: {
     container: HTMLElement;
     locale?: Record<string, string>;
+    center?: readonly [number, number];
+    zoom?: number;
   }) {
+    const [lng, lat] = options.center ?? [0, 0];
+    this.center = { lng, lat };
+    this.zoom = options.zoom ?? 0;
     this.canvas = options.container.ownerDocument.createElement('canvas');
     this.canvas.setAttribute('role', 'region');
     this.canvas.setAttribute(
@@ -152,8 +160,16 @@ class DeferredStyleMap {
   }
 
   setPaintProperty(): void {}
-  setCenter(): void {}
+  setCenter(center: unknown): void {
+    this.setCenterCalls.push(center);
+  }
   setZoom(): void {}
+  getCenter(): { lng: number; lat: number } {
+    return { ...this.center };
+  }
+  getZoom(): number {
+    return this.zoom;
+  }
 
   emit(type: string, event?: unknown): void {
     for (const listener of this.listeners.get(type) ?? []) listener(event);
@@ -621,15 +637,50 @@ describe('child map event ownership', () => {
     );
     const child = el.shadowRoot!.querySelector('lr-map')!;
     const leaked: string[] = [];
-    el.addEventListener('lr-map-load', () => leaked.push('lr-map-load'));
-    el.addEventListener('lr-map-click', () => leaked.push('lr-map-click'));
-    child.dispatchEvent(
-      new CustomEvent('lr-map-load', { bubbles: true, composed: true })
-    );
-    child.dispatchEvent(
-      new CustomEvent('lr-map-click', { bubbles: true, composed: true })
-    );
+    // Every event lr-map documents; none is part of this viewer's own contract.
+    const mapEvents = [
+      'lr-map-load',
+      'lr-map-click',
+      'lr-map-view-change',
+      'lr-map-marker-activate',
+      'lr-map-legend-toggle-request',
+      'lr-map-legend-panel-toggle-request',
+    ];
+    for (const type of mapEvents) el.addEventListener(type, () => leaked.push(type));
+    for (const type of mapEvents) {
+      child.dispatchEvent(new CustomEvent(type, { bubbles: true, composed: true }));
+    }
     expect(leaked).to.deep.equal([]);
+  });
+});
+
+describe('child map camera', () => {
+  it('keeps a user gesture when the viewer re-renders', async () => {
+    stubFetch(FEATURE_COLLECTION);
+    const el = await fixture<LyraGeoJsonViewer>(
+      html`<lr-geojson-viewer src=${GEOJSON_URL}></lr-geojson-viewer>`
+    );
+    await waitUntil(() => el.shadowRoot!.querySelector('lr-map') !== null);
+    await useDeterministicMapStyle(el);
+    const map = el.shadowRoot!.querySelector('lr-map') as unknown as HTMLElement & {
+      map?: DeferredStyleMap;
+      center: readonly [number, number];
+      updateComplete: Promise<unknown>;
+    };
+    await map.updateComplete;
+    const engine = map.map!;
+    engine.center = { lng: 40, lat: 10 };
+    engine.zoom = 7;
+    engine.emit('moveend', { originalEvent: new MouseEvent('mouseup') });
+    await map.updateComplete;
+    expect(map.center).to.deep.equal([40, 10]);
+    engine.setCenterCalls.length = 0;
+
+    // Searching the metadata re-renders the viewer, which re-commits the map's bindings.
+    expect(await el.search('Point')).to.be.greaterThan(0);
+    await el.updateComplete;
+    await map.updateComplete;
+    expect(engine.setCenterCalls, 'the map keeps where the user moved it').to.deep.equal([]);
   });
 });
 
@@ -641,6 +692,14 @@ describe('aria-label forwarding', () => {
     expect(
       el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')
     ).to.equal('Zones');
+  });
+
+  it('names the region with the localized default when name is whitespace only', async () => {
+    const el = (await fixture(
+      html`<lr-geojson-viewer name="   "></lr-geojson-viewer>`
+    )) as LyraGeoJsonViewer;
+    const label = el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label');
+    expect(label?.trim()).to.not.equal('');
   });
 
   it('lets a host aria-label override the name property', async () => {

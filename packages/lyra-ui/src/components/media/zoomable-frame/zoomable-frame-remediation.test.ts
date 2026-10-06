@@ -4,7 +4,7 @@ import './zoomable-frame.js';
 import type { LyraZoomableFrame } from './zoomable-frame.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
-it('uses a reactive property-only iframe title while retaining host-name and empty-title rules', async () => {
+it('titles the iframe from the property or the host aria-label', async () => {
   const el = await fixture<LyraZoomableFrame>(html`<lr-zoomable-frame .strings=${{ zoomableFrameLabel: 'Frame' }}></lr-zoomable-frame>`);
   const frame = el.shadowRoot!.querySelector('iframe')!;
   el.accessibleLabel = 'Preview';
@@ -16,10 +16,10 @@ it('uses a reactive property-only iframe title while retaining host-name and emp
   expect(frame.title).to.equal('Updated preview');
   el.accessibleLabel = '';
   await el.updateComplete;
-  expect(frame.title).to.equal('');
+  expect(frame.title).to.equal('Frame');
   el.setAttribute('aria-label', 'Host purpose');
   await el.updateComplete;
-  expect(frame.title).to.equal('Frame');
+  expect(frame.title).to.equal('Host purpose');
   el.setAttribute('aria-label', '');
   await el.updateComplete;
   expect(frame.title).to.equal('');
@@ -86,4 +86,32 @@ it('distinguishes zoom control focus from iframe entry, exit, public blur and re
   await aTimeout(25);
   expect(el.hasAttribute('data-frame-focused')).to.equal(false);
   expect(relays).to.deep.equal(['focus', 'blur', 'focus', 'blur']);
+});
+
+it('emits lr-zoom-change for zoomIn()/zoomOut() but not for zoom assignments', async () => {
+  const el = await fixture<LyraZoomableFrame>(html`<lr-zoomable-frame zoom-levels="50% 100% 150%"></lr-zoomable-frame>`);
+  const zooms: unknown[] = [];
+  el.addEventListener('lr-zoom-change', (event) => zooms.push((event as CustomEvent).detail));
+  el.zoom = 0.5;
+  await el.updateComplete;
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="zoom-in-button"]')!.click();
+  el.zoomOut();
+  expect(zooms).to.deep.equal([{ zoom: 1 }, { zoom: 0.5 }]);
+});
+
+it('observes no theme while theme sync is off', async () => {
+  let themeObservers = 0;
+  const observe = MutationObserver.prototype.observe;
+  MutationObserver.prototype.observe = function (target: Node, options?: MutationObserverInit) {
+    if (target === document.documentElement && options?.attributeFilter?.join() === 'data-lr-theme') {
+      themeObservers += 1;
+    }
+    return observe.call(this, target, options);
+  };
+  try {
+    await fixture<LyraZoomableFrame>(html`<lr-zoomable-frame></lr-zoomable-frame>`);
+  } finally {
+    MutationObserver.prototype.observe = observe;
+  }
+  expect(themeObservers).to.equal(0);
 });

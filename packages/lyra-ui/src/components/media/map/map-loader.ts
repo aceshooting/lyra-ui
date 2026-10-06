@@ -27,6 +27,7 @@ export interface MapLibrePopupCapability {
   on?(type: 'open' | 'close', listener: () => void): this;
   isOpen?(): boolean;
   getElement?(): HTMLElement | undefined;
+  options?: { focusAfterOpen?: boolean };
 }
 
 export interface MapLibreMarkerCapability {

@@ -48,7 +48,7 @@ describe('mapped iframe surface', () => {
     expect(frame.getAttribute('loading')).to.equal('lazy');
     expect(frame.getAttribute('referrerpolicy')).to.equal('same-origin');
     expect(frame.getAttribute('sandbox')).to.equal('allow-forms allow-same-origin');
-    expect(frame.title).to.equal('Zoomable content');
+    expect(frame.title).to.equal('Component preview');
   });
 
   it('gives present srcdoc precedence and omits src entirely', async () => {

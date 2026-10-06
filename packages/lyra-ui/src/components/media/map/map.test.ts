@@ -23,6 +23,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { setMapCanvasReadyCallback } from '../../../internal/map-canvas-ready.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import { toRgba } from '../../../../test/color-contrast.js';
 // Registers the real 'ar'/'fr' catalogs so the lang="ar"/"fr-FR" tests below -- which exercise
@@ -2332,17 +2333,16 @@ describe('aria-label forwarding', () => {
     expect(el.map!.getCanvas().getAttribute('aria-label')).to.equal('');
   });
 
-  it('keeps a nonempty host aria-label on the host and gives the canvas a purpose name', async function () {
+  it('forwards a nonempty host aria-label to the canvas', async function () {
     if (!hasWebGL2) this.skip();
     const el = (await fixture(html`
       <lr-map aria-label="Forwarded label" .mapStyle=${LOCAL_STYLE}></lr-map>
     `)) as LyraMap;
     await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
-    expect(el.getAttribute('aria-label')).to.equal('Forwarded label');
-    expect(el.map!.getCanvas().getAttribute('aria-label')).to.equal('Map');
+    expect(el.map!.getCanvas().getAttribute('aria-label')).to.equal('Forwarded label');
   });
 
-  it('uses the purpose-specific label prop without cloning the overall host name', async function () {
+  it('lets a host aria-label win over the label prop', async function () {
     if (!hasWebGL2) this.skip();
     const el = (await fixture(
       html`<lr-map
@@ -2352,8 +2352,7 @@ describe('aria-label forwarding', () => {
       ></lr-map>`,
     )) as LyraMap;
     await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
-    expect(el.getAttribute('aria-label')).to.equal('Forwarded label');
-    expect(el.map!.getCanvas().getAttribute('aria-label')).to.equal('Delivery regions');
+    expect(el.map!.getCanvas().getAttribute('aria-label')).to.equal('Forwarded label');
   });
 
   it('preserves an explicit empty host aria-label on the MapLibre canvas, updates it live, and restores the label fallback after removal', async function () {
@@ -2372,8 +2371,7 @@ describe('aria-label forwarding', () => {
 
     el.setAttribute('aria-label', 'Live delivery map');
     await el.updateComplete;
-    expect(el.getAttribute('aria-label')).to.equal('Live delivery map');
-    expect(canvas()?.getAttribute('aria-label')).to.equal('Delivery regions');
+    expect(canvas()?.getAttribute('aria-label')).to.equal('Live delivery map');
 
     el.removeAttribute('aria-label');
     await el.updateComplete;
@@ -3772,6 +3770,83 @@ it('updates the reused marker popup when unsafeHtml changes for a persisting id'
   expect(el.shadowRoot!.querySelector('.maplibregl-popup-content')!.textContent).to.contain('Station A2');
 });
 
+it('leaves focus and an open popup alone when markers are re-assigned unchanged', async function () {
+  if (!hasWebGL2) this.skip();
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  el.mapStyle = LOCAL_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  el.map!.fire('load');
+  const outside = document.createElement('input');
+  outside.setAttribute('aria-label', 'Search');
+  document.body.append(outside);
+  try {
+    const markers: LyraMapMarker[] = [
+      { id: 'a', lngLat: [10, 20], label: 'Station A' },
+      { id: 'b', lngLat: [11, 21], unsafeHtml: '<strong>Station B</strong>' },
+    ];
+    el.markers = markers;
+    await el.updateComplete;
+    const markerEl = el.shadowRoot!.querySelector('.maplibregl-marker') as HTMLElement;
+    markerEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('.maplibregl-popup-content') != null,
+      'popup never opened',
+    );
+    const content = el.shadowRoot!.querySelector('.maplibregl-popup-content');
+    const closeButton = el.shadowRoot!.querySelector('.maplibregl-popup-close-button');
+    await focusByKeyboard(outside);
+
+    // A parent template re-commits its unchanged array, then rebuilds an equal one.
+    el.markers = markers;
+    await el.updateComplete;
+    el.markers = markers.map((marker) => ({ ...marker }));
+    await el.updateComplete;
+
+    expect(document.activeElement === outside, 'focus stays in the outside field').to.equal(true);
+    expect(
+      el.shadowRoot!.querySelector('.maplibregl-popup-content') === content &&
+        el.shadowRoot!.querySelector('.maplibregl-popup-close-button') === closeButton,
+      'the open popup keeps its content nodes',
+    ).to.equal(true);
+  } finally {
+    outside.remove();
+  }
+});
+
+it('updates an open popup without moving focus into it when its marker content changes', async function () {
+  if (!hasWebGL2) this.skip();
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  el.mapStyle = LOCAL_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  el.map!.fire('load');
+  const outside = document.createElement('input');
+  outside.setAttribute('aria-label', 'Search');
+  document.body.append(outside);
+  try {
+    el.markers = [{ id: 'a', lngLat: [10, 20], label: 'Truck 1' }];
+    await el.updateComplete;
+    const markerEl = el.shadowRoot!.querySelector('.maplibregl-marker') as HTMLElement;
+    markerEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('.maplibregl-popup-content') != null,
+      'popup never opened',
+    );
+    await focusByKeyboard(outside);
+
+    el.markers = [{ id: 'a', lngLat: [10.5, 20.5], label: 'Truck 1 - arriving' }];
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelector('.maplibregl-popup-content')!.textContent).to.contain(
+      'Truck 1 - arriving',
+    );
+    expect(document.activeElement === outside, 'a data update never moves focus').to.equal(true);
+  } finally {
+    outside.remove();
+  }
+});
+
 it('adds popup semantics when persisted plain markers later gain label or unsafeHtml content', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
@@ -3972,7 +4047,7 @@ it('renders a colored marker and derives its accessible name from visible popup 
   expect(popupContent.textContent).to.contain('Station A');
 });
 
-it('keeps the host name on the host and a localized purpose name on the real MapLibre focus owner', async function () {
+it('forwards the host name to the real MapLibre focus owner and follows its changes', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`
     <lr-map
@@ -3988,15 +4063,16 @@ it('keeps the host name on the host and a localized purpose name on the real Map
   const canvas = el.map!.getCanvas() as HTMLCanvasElement;
   const container = el.shadowRoot!.querySelector('[part="container"]') as HTMLElement;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  expect(el.getAttribute('aria-label')).to.equal('Delivery map');
-  expect(canvas.getAttribute('aria-label')).to.equal('Carte');
+  expect(canvas.getAttribute('aria-label')).to.equal('Delivery map');
   expect(container.getAttribute('lang')).to.equal('fr-FR');
   expect(base.getAttribute('role')).to.equal(null);
   expect(base.getAttribute('aria-label')).to.equal(null);
 
   el.setAttribute('aria-label', 'Carte des livraisons');
   await el.updateComplete;
-  expect(el.getAttribute('aria-label')).to.equal('Carte des livraisons');
+  expect(canvas.getAttribute('aria-label')).to.equal('Carte des livraisons');
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
   expect(canvas.getAttribute('aria-label')).to.equal('Carte');
 });
 
@@ -4238,6 +4314,26 @@ it('defaults an omitted marker color to the themed brand token instead of the un
 
   expect(constructedOptions).to.have.lengthOf(1);
   expect(constructedOptions[0]?.color).to.equal('rgb(9, 8, 7)');
+});
+
+it('rebuilds default-coloured markers when the theme changes the brand token', async () => {
+  const el = (await fixture(
+    html`<lr-map style="--lr-color-brand: rgb(9, 8, 7)"></lr-map>`,
+  )) as LyraMap;
+  const constructedOptions = stubMarkerConstruction(el);
+  el.markers = [
+    { id: 'unstyled', lngLat: [0, 0] },
+    { id: 'styled', lngLat: [1, 1], color: 'rgb(4, 5, 6)' },
+  ];
+  await el.updateComplete;
+  expect(constructedOptions.map((options) => options?.color)).to.deep.equal([
+    'rgb(9, 8, 7)',
+    'rgb(4, 5, 6)',
+  ]);
+
+  el.style.setProperty('--lr-color-brand', 'rgb(1, 2, 3)');
+  await waitUntil(() => constructedOptions.length === 3, 'the default pin never followed the theme');
+  expect(constructedOptions[2]?.color, 'only the default pin is rebuilt').to.equal('rgb(1, 2, 3)');
 });
 
 it("leaves an explicit invalid marker color to maplibre-gl's own default, unlike an omitted color", async () => {
@@ -5070,6 +5166,88 @@ describe('incremental GeoJSON updates', () => {
       expect(setCenterCalls, 'the unchanged tuple must remain referentially stable').to.equal(0);
       expect(setDataCalls, 'neither source should be fully replaced').to.equal(0);
       expect(updateDataCalls, 'choropleth and dataLayers each update incrementally').to.equal(2);
+    } finally {
+      mount.remove();
+    }
+  });
+
+  it('pushes no GeoJSON and repaints nothing when a parent re-renders unchanged configuration', async () => {
+    const regions = collection(1);
+    // Without feature ids every push of this source would be a full `setData()`.
+    const points = {
+      type: 'FeatureCollection',
+      features: [{ type: 'Feature', geometry: { type: 'Point', coordinates: [1, 1] }, properties: {} }],
+    };
+    const legend = [{ label: 'Low', color: '#000000', value: 'low' }];
+    const hidden = ['low'];
+    const mount = document.createElement('div');
+    const view = () => html`
+      <lr-map
+        .mapStyle=${LOCAL_STYLE}
+        .choropleth=${{ sourceId: 'regions', geojson: regions, field: 'value', stops: [[0, '#000000'], [10, '#ffffff']] }}
+        .dataLayers=${[{ sourceId: 'points', geojson: points, tone: 'success' }]}
+        .legend=${legend}
+        .hiddenCategories=${hidden}
+      ></lr-map>
+    `;
+    render(view(), mount);
+    const el = mount.querySelector('lr-map') as LyraMap;
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () =>
+      new Promise(() => {});
+    document.body.append(mount);
+
+    try {
+      await el.updateComplete;
+      const calls = { setData: 0, updateData: 0, setPaintProperty: 0 };
+      const sources = new Map<string, unknown>();
+      const layers = new Map<string, Record<string, unknown>>();
+      const map = {
+        once: () => map,
+        setStyle: () => map,
+        setCenter: () => map,
+        getSource: (id: string) => sources.get(id),
+        addSource: (id: string) => {
+          sources.set(id, {
+            setData: () => { calls.setData += 1; },
+            updateData: () => { calls.updateData += 1; },
+          });
+        },
+        removeSource: (id: string) => sources.delete(id),
+        getLayer: (id: string) => layers.get(id),
+        addLayer: (layer: Record<string, unknown>) => layers.set(String(layer['id']), layer),
+        removeLayer: (id: string) => layers.delete(id),
+        setPaintProperty: () => {
+          calls.setPaintProperty += 1;
+          return map;
+        },
+        getStyle: () => ({ layers: [] }),
+        getCanvas: () => document.createElement('canvas'),
+      };
+      const privateMap = el as unknown as {
+        _map: unknown;
+        _styleLoaded: boolean;
+        applyChoropleth(): void;
+        applyDataLayers(): void;
+      };
+      privateMap._map = map;
+      privateMap._styleLoaded = true;
+      privateMap.applyDataLayers();
+      privateMap.applyChoropleth();
+      calls.setData = 0;
+      calls.updateData = 0;
+      calls.setPaintProperty = 0;
+
+      render(view(), mount);
+      await el.updateComplete;
+      render(view(), mount);
+      await el.updateComplete;
+      expect([calls.setData, calls.updateData]).to.deep.equal([0, 0]);
+
+      calls.setPaintProperty = 0;
+      el.hiddenCategories = hidden;
+      el.legend = legend;
+      await el.updateComplete;
+      expect(calls.setPaintProperty).to.equal(0);
     } finally {
       mount.remove();
     }
@@ -8483,6 +8661,69 @@ describe('fitBounds and lr-map-view-change', () => {
       await waitUntil(() => engine.fitCalls.length > 0, 'the queued fit never ran');
       await new Promise((resolve) => setTimeout(resolve, 0));
       expect(engine.fitCalls.map((call) => call.bounds)).to.deep.equal([[[20, 20], [30, 30]]]);
+    });
+
+    it('keeps a user gesture and a fit when a parent template re-renders its unchanged center', async () => {
+      preferReducedMotion(false);
+      const home = Object.freeze([6, 49] as const);
+      const wrapper = (await fixture(html`<div style="inline-size: 32rem"></div>`)) as HTMLElement;
+      const mount = document.createElement('div');
+      const view = () => html`<lr-map .center=${home} .zoom=${4} .mapStyle=${EMPTY_STYLE}></lr-map>`;
+      // Rendered detached so the peer import can be replaced before connectedCallback runs.
+      render(view(), mount);
+      const el = mount.querySelector('lr-map') as LyraMap;
+      (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () =>
+        Promise.resolve({ Map: ScriptedCameraMap });
+      wrapper.append(mount);
+      await el.updateComplete;
+      await waitUntil(() => el.map != null, 'scripted map never initialized', { timeout: 2000 });
+      const engine = el.map as unknown as ScriptedCameraMap;
+      await el.updateComplete;
+
+      const gesture = await viewChanges(el, () => {
+        engine.center = { lng: 12, lat: 34 };
+        engine.zoom = 5;
+        engine.fire('moveend', { originalEvent: new MouseEvent('mouseup') });
+      });
+      expect(gesture.map((detail) => detail['source'])).to.deep.equal(['user']);
+      // The parent re-renders for an unrelated reason and re-commits the same `home` array.
+      render(view(), mount);
+      await el.updateComplete;
+      expect(engine.setCenterCalls, 'the re-render does not snap back after a gesture').to.deep.equal([]);
+      expect(el.center).to.deep.equal([12, 34]);
+
+      expect(el.fitBounds([[20, 20], [30, 30]], { animate: false })).to.equal(true);
+      await el.updateComplete;
+      render(view(), mount);
+      await el.updateComplete;
+      expect(engine.setCenterCalls, 'the re-render does not snap back after a fit').to.deep.equal([]);
+      expect(el.center).to.deep.equal([25, 25]);
+
+      // A different value is still a real request.
+      el.center = [1, 2];
+      await el.updateComplete;
+      expect(engine.setCenterCalls).to.deep.equal([[1, 2]]);
+    });
+
+    it('skips the marker and peer-chrome semantics pass for a camera-only update', async () => {
+      preferReducedMotion(false);
+      const { el, engine } = await liveScriptedMap();
+      await viewChanges(el, () => undefined);
+      const privateMap = el as unknown as { syncMapSemantics(): void };
+      const sync = privateMap.syncMapSemantics.bind(el);
+      let syncs = 0;
+      privateMap.syncMapSemantics = () => {
+        syncs += 1;
+        sync();
+      };
+      await viewChanges(el, () => {
+        engine.center = { lng: 12, lat: 34 };
+        engine.fire('moveend', { originalEvent: new MouseEvent('mouseup') });
+      });
+      expect(syncs, 'a settled gesture').to.equal(0);
+      el.label = 'Depots';
+      await el.updateComplete;
+      expect(syncs).to.equal(1);
     });
 
     it('reflects a settled user gesture into center/zoom and reports it; programmatic moves stay silent', async () => {

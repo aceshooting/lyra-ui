@@ -12,6 +12,7 @@ import {
 } from '../../../internal/data-descriptors.js';
 import { literalSetConverter, trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import { litDevWarnings } from '../../../internal/dev-warning.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { resolveCanvasColor } from '../../../internal/canvas-color.js';
@@ -20,7 +21,7 @@ import { prefersReducedMotion } from '../../../internal/motion.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { notifyMapCanvasReady } from '../../../internal/map-canvas-ready.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
-import { srOnly } from '../../../internal/a11y.js';
+import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import {
   loadMaplibre,
@@ -102,8 +103,7 @@ export interface LyraMapLegendEntry {
    * retained in the canonical readback, unlike the `value` on the `icon` record below, which is
    * still dropped. A row that carries one becomes a keyboard-operable visibility toggle under
    * `legendInteractive`; a row without one stays inert. An absent, non-string, empty or
-   * whitespace-only key leaves no `value` key at all, so a legend that never used categories
-   * reads back exactly as it did before this field existed.
+   * whitespace-only key leaves no `value` key at all.
    */
   readonly value?: string;
   /**
@@ -132,8 +132,7 @@ export interface LyraMapLegendEntry {
    */
   readonly icon?: LyraMapPointIcon | Omit<LyraMapPointIcon, 'value'>;
   /**
-   * Optional section this row belongs to. A key describing two layers at once could previously
-   * only be one flat list, with nothing saying which rows belonged to which.
+   * Optional section this row belongs to.
    *
    * **The grouping rule, which is pinned rather than inferred:** CONSECUTIVE entries sharing an
    * identical `group` render as one section -- a visible heading plus a `role="group"` the heading
@@ -145,8 +144,7 @@ export interface LyraMapLegendEntry {
    * It is caller-supplied DATA, so it renders verbatim and is never passed through the locale
    * catalog. It is trimmed and bounded to 256 characters (ellipsized, since it is rendered prose
    * rather than a matched key); a non-string, empty or whitespace-only value leaves no `group` key
-   * at all, so an empty string means "ungrouped" instead of an empty heading, and a legend that
-   * never used sections reads back exactly as it did before this field existed.
+   * at all, so an empty string means "ungrouped" instead of an empty heading.
    *
    * Like the row-level `value`, it is NOT charged to the aggregate label budget: a budget bounds
    * rendered text, and the rendered total here is already finite and stated -- at most one heading
@@ -496,8 +494,8 @@ export interface LyraMapChoroplethLayer {
    */
   readonly stops: readonly (readonly [number, string])[];
   /**
-   * How the fill color is interpolated between `stops`. `'linear'` (the default, and the only
-   * previous behavior) spaces the ramp evenly in value; `'logarithmic'` compresses it, which is
+   * How the fill color is interpolated between `stops`. `'linear'` (the default) spaces the ramp
+   * evenly in value; `'logarithmic'` compresses it, which is
    * what a heavy-tailed quantity — price, population, income — needs. On a linear ramp every value
    * below the maximum falls into the first color band, so the map reads as one flat color plus a
    * couple of outliers.
@@ -626,7 +624,7 @@ function choroplethLegendGradientImage(
 /**
  * What a `dataLayers` entry renders.
  *
- * `'auto'` (the default, and the only previous behavior) splits the source by geometry into the
+ * `'auto'` (the default) splits the source by geometry into the
  * fill/line/circle layers below. `'heatmap'` replaces that split with MapLibre's own first-class
  * `heatmap` layer — a density surface, which the geometry split cannot express at all: thousands of
  * overlapping circles read as one opaque blob, not as where the data is concentrated.
@@ -833,7 +831,7 @@ export interface LyraMapGeoJsonDataLayer {
    * Categories share this source and therefore cluster together. No DOM marker is allocated per point. */
   readonly point?: LyraMapPointOptions;
 
-  /** What this entry renders. Defaults to `'auto'` — today's geometry split, unchanged. */
+  /** What this entry renders. Defaults to `'auto'`. */
   readonly kind?: LyraMapDataLayerKind;
 
   /**
@@ -976,29 +974,23 @@ function projectMapDataLayer(value: unknown): CanonicalMapDataLayer | undefined 
     )
       return undefined;
 
-    const optionalValue = (
-      descriptor: ReturnType<typeof getOwnDataDescriptor>,
-    ): unknown | undefined =>
-      descriptor === MISSING_OWN_DATA_DESCRIPTOR || isUnsafeDescriptor(descriptor)
-        ? undefined
-        : descriptor.value;
-    const tone = mapTone(optionalValue(toneDescriptor));
-    const colorValue = optionalValue(colorDescriptor);
-    const strokeColorValue = optionalValue(strokeColorDescriptor);
-    const kindValue = optionalValue(kindDescriptor);
-    const heatmapValue = optionalValue(heatmapDescriptor);
-    const clusterValue = optionalValue(clusterDescriptor);
+    const tone = mapTone(optionalDescriptorValue(toneDescriptor));
+    const colorValue = optionalDescriptorValue(colorDescriptor);
+    const strokeColorValue = optionalDescriptorValue(strokeColorDescriptor);
+    const kindValue = optionalDescriptorValue(kindDescriptor);
+    const heatmapValue = optionalDescriptorValue(heatmapDescriptor);
+    const clusterValue = optionalDescriptorValue(clusterDescriptor);
     const kind: LyraMapDataLayerKind = kindValue === 'heatmap' ? 'heatmap' : 'auto';
     return Object.freeze({
       sourceId: sourceId.trim(),
       // GeoJSON is deliberately retained as one opaque identity. MapLibre owns its validation and
       // may accept a runtime payload broader than this component's type declaration.
       geojson: geojson as Feature | FeatureCollection,
-      geojsonProjection: projectGeoJson(geojson),
+      geojsonProjection: projectAdmittedGeoJson(geojson),
       tone,
       color: typeof colorValue === 'string' ? colorValue : undefined,
       strokeColor: typeof strokeColorValue === 'string' ? strokeColorValue : undefined,
-      line: kind === 'auto' ? projectLineOptions(optionalValue(lineDescriptor)) : undefined,
+      line: kind === 'auto' ? projectLineOptions(optionalDescriptorValue(lineDescriptor)) : undefined,
       point: kind === 'auto' ? projectPointOptions(optionalDescriptorValue(ownDataValue(value, 'point'))) : undefined,
       kind,
       heatmap: kind === 'heatmap' ? projectHeatmapOptions(heatmapValue) : undefined,
@@ -1566,7 +1558,7 @@ function projectMapChoropleth(value: unknown): CanonicalMapChoropleth | undefine
     return Object.freeze({
       sourceId: sourceId.trim(),
       geojson: geojson as FeatureCollection,
-      geojsonProjection: projectGeoJson(geojson),
+      geojsonProjection: projectAdmittedGeoJson(geojson),
       field: field.trim(),
       stops: normalizedSteps(optionalDescriptorValue(stopsDescriptor), isColorOutput),
       interpolation,
@@ -1675,6 +1667,17 @@ function projectMapMarkers(value: unknown): readonly CanonicalMapMarker[] {
   } catch {
     return EMPTY_CANONICAL_MAP_MARKERS;
   }
+}
+
+/** Sets popup content without MapLibre moving focus into an already open popup. */
+function setPopupContent(popup: MapLibrePopupCapability, marker: CanonicalMapMarker): MapLibrePopupCapability {
+  const options = popup.options;
+  const focus = options?.focusAfterOpen;
+  if (options) options.focusAfterOpen = false;
+  if (marker.unsafeHtml) popup.setHTML(marker.unsafeHtml as string);
+  else popup.setText(marker.label!);
+  if (options) options.focusAfterOpen = focus;
+  return popup;
 }
 
 /** Peer-neutral subset of a MapLibre style accepted by `mapStyle`. */
@@ -2392,6 +2395,7 @@ function warnOnUntileableProperties(
   projection: CanonicalGeoJsonProjection,
   sourceLabel: string,
 ): void {
+  if (!litDevWarnings()) return;
   for (const feature of projection.diagnostics) {
     for (const [key, value] of feature.properties) {
       if (typeof value !== 'number' || !Number.isFinite(value)) continue;
@@ -2563,6 +2567,16 @@ function buildProjectedGeoJsonPropertyDiff(
   };
 }
 
+const admittedGeoJson = new WeakMap<object, CanonicalGeoJsonProjection>();
+
+/** Admitted GeoJSON is never inspected again, so one projection per object suffices. */
+function projectAdmittedGeoJson(value: unknown): CanonicalGeoJsonProjection {
+  if (!isRuntimeRecord(value)) return projectGeoJson(value);
+  let projection = admittedGeoJson.get(value);
+  if (!projection) admittedGeoJson.set(value, (projection = projectGeoJson(value)));
+  return projection;
+}
+
 export function buildGeoJsonPropertyDiff(
   previous: unknown,
   next: unknown,
@@ -2695,9 +2709,8 @@ export interface LyraMapEventMap {
  *  positioned with the map instead of floating beside it. Slotted content is never made
  *  interactive by `legendInteractive`, which only reaches rows projected from `legend`.
  * @slot legend-start - The same extension point at the TOP of the legend panel: it renders ahead
- *  of the gradient bar and every projected row, where `legend` renders after them. A panel header
- *  -- a title, a source note, a host-built control -- could previously only ever be a footer,
- *  because `legend` was the only slot. Content here alone opens the panel, exactly as `legend`
+ *  of the gradient bar and every projected row, where `legend` renders after them. Content here
+ *  alone opens the panel, exactly as `legend`
  *  content alone does, and it is never made interactive by `legendInteractive`.
  * @csspart legend - The map legend.
  * @csspart legend-swatch - A legend color swatch, or the entry's glyph when it carries an `icon`
@@ -2847,7 +2860,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   constructor() {
     super();
-    new ThemeWatcher(this, () => this.refreshThemePaint());
+    new ThemeWatcher(this, () => {
+      this.refreshThemePaint();
+      this.legendIsLine = this.legendDescribesLine();
+      this.applyMarkers();
+    });
     new GlassScrollLayer(this, '[part="legend"]');
   }
 
@@ -2855,8 +2872,16 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * a user gesture or `fitBounds()`, it holds that camera (see `lr-map-view-change`), so a map
    * rebuilt after a reconnect opens where the user left it. Assigning a value the map already
    * shows moves nothing; an assignment that interrupts an animation or gesture applies `zoom`
-   * too, so the camera never keeps a half-finished axis. */
-  @property({ type: Array }) center: readonly [number, number] = [0, 0];
+   * too, so the camera never keeps a half-finished axis. Re-assigning the identical array is not a
+   * new request, even after a gesture or fit. */
+  @property({ type: Array })
+  get center(): readonly [number, number] {
+    return this._center;
+  }
+  set center(value: readonly [number, number]) {
+    this._center = value;
+  }
+  private _center: readonly [number, number] = Object.freeze([0, 0] as [number, number]);
   /** Initial and controlled map zoom level. Tracks the settled camera and reconciles the same way
    * as `center`. */
   @property({ type: Number }) zoom = 2;
@@ -2866,6 +2891,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private pendingFit?: PendingMapFit;
   /** Identifies this element's own fits when their `moveend` arrives from the peer. */
   private readonly fitToken = Object.freeze({});
+  /** Whether a non-camera update is pending, so `syncMapSemantics()` has work to do. */
+  private semanticsStale = true;
   /** The camera just read back from the peer into `center`/`zoom`. The update that write schedules
    *  consumes it, so that update does not push the same camera straight back. */
   private reflectedCamera?: { readonly center: readonly [number, number]; readonly zoom: number };
@@ -2898,6 +2925,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * unless a consumer assigns this property. */
   @property({ attribute: false }) mapStyle?: Readonly<LyraMapStyleSpecification> | string;
   private _legend = EMPTY_MAP_LEGEND;
+  private _legendSource?: unknown;
   private _legendProjection = EMPTY_MAP_LEGEND_PROJECTION;
   private _legendGrouped = false;
   /** Immutable, bounded entries rendered in the optional map legend. A required pattern keeps
@@ -2907,6 +2935,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     return this._legend;
   }
   set legend(value: readonly LyraMapLegendEntry[]) {
+    if (value === this._legendSource || value === this._legend) return;
+    this._legendSource = value;
     const previous = this._legend;
     const normalized = normalizeMapLegend(value);
     this._legend = normalized.entries;
@@ -2936,6 +2966,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     return false;
   }
   private _legendGradient: readonly (readonly [number, string])[] = Object.freeze([]);
+  private _legendGradientSource?: unknown;
+  private legendIsLine = false;
   /**
    * Renders the legend as a **continuous** gradient bar with endpoint labels instead of (or
    * alongside) the discrete `legend` swatches — the standard key for a choropleth, whose
@@ -2946,8 +2978,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * copy that drifts from the layer. Stops are sorted ascending, bounded, and filtered to finite
    * values carrying a CSS-parsable color; fewer than two usable stops render no bar at all, since a
    * one-stop "gradient" is a flat block that describes nothing. A logarithmic choropleth samples
-   * the same exponential interpolation in its visible key; unset (the default) renders exactly
-   * today's markup.
+   * the same exponential interpolation in its visible key.
    *
    * Endpoint labels default to this component's locale-aware formatting of the lowest and highest
    * stop values; `legendGradientLoLabel`/`legendGradientHiLabel` override them.
@@ -2956,6 +2987,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     return this._legendGradient;
   }
   set legendGradient(value: readonly (readonly [number, string])[]) {
+    if (value === this._legendGradientSource || value === this._legendGradient) return;
+    this._legendGradientSource = value;
     const previous = this._legendGradient;
     this._legendGradient = normalizeMapLegendGradient(value);
     this.requestUpdate('legendGradient', previous);
@@ -2964,7 +2997,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   /** Dev-mode-only: catches a gradient key whose value/color stops disagree with the layer it
    * claims to describe. Warning preserves explicit override behavior while making drift visible. */
   private warnOnLegendChoroplethMismatch(): void {
-    if (this.legendDescribesLine()) return;
+    if (!litDevWarnings() || this.legendIsLine) return;
     const layer = this.canonicalChoropleth;
     const legend = this.legendGradient;
     if (!layer || legend.length === 0 || layer.stops.length === 0) {
@@ -3019,9 +3052,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   /**
    * Turns every legend row that carries a `value` into a keyboard-operable visibility toggle;
-   * rows without one stay inert. Default `false`, and an unset map renders exactly the read-only
-   * key it rendered before this property existed -- no button, no extra attribute, and no extra
-   * MapLibre paint key.
+   * rows without one stay inert. Default `false`.
    *
    * Each toggle is an independently tabbable native `button`, so Enter and Space are the
    * platform's own activation and no roving tabindex is involved. The consequence is stated
@@ -3038,8 +3069,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * How each keyed `legendInteractive` row's toggle control presents itself to assistive tech.
    * Inert while `legendInteractive` is unset, exactly like the toggle itself.
    *
-   * - `'button'` (default) -- `<button aria-pressed>`, byte-identical to every 18.1.0 interactive
-   *   legend. Leaving this property unset changes nothing.
+   * - `'button'` (default) -- `<button aria-pressed>`.
    * - `'checkbox'` -- the SAME `<button>` element `renderLegendRow()` already renders, with its
    *   implicit role overridden to `role="checkbox"` and `aria-checked` in place of `aria-pressed`.
    *   A native `<input type="checkbox">` was considered and rejected: it would need its own
@@ -3069,8 +3099,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   /**
    * Renders a disclosure button inside the legend panel that collapses the key down to its header.
-   * Default `false`, and an unset map renders exactly the panel it rendered before this property
-   * existed -- no button, no `id` minted on the row list, and no `hidden` attribute anywhere.
+   * Default `false`.
    *
    * A collapsed panel hides the gradient bar, the rows, the `legend-limit` summary and the
    * trailing `legend` slot; the `legend-start` slot and the disclosure itself stay visible, so a
@@ -3137,6 +3166,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   private _hiddenCategories: readonly string[] = EMPTY_HIDDEN_CATEGORIES;
+  private _hiddenCategoriesSource?: unknown;
   /**
    * Complete controlled set of muted category keys, mirroring `lr-chart`'s `hiddenDatasets`.
    * Clone-owned and frozen; non-string, empty, whitespace-only and duplicate entries are dropped,
@@ -3152,6 +3182,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     return this._hiddenCategories;
   }
   set hiddenCategories(value: readonly string[]) {
+    if (value === this._hiddenCategoriesSource || value === this._hiddenCategories) return;
+    this._hiddenCategoriesSource = value;
     const previous = this._hiddenCategories;
     this._hiddenCategories = normalizeMapHiddenCategories(value);
     this.requestUpdate('hiddenCategories', previous);
@@ -3165,7 +3197,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   /**
    * Additive GeoJSON layers rendered alongside the choropleth/markers -- each entry becomes a
    * source plus fill/line/circle layers. `sourceId` values are trimmed, must be nonempty, and retain
-   * only their first occurrence. Defaults empty (zero behavior change).
+   * only their first occurrence. Defaults empty.
    *
    * An entry opts into either of two other renderings, both strictly additive: `cluster` turns its
    * source into a natively clustered one (aggregate circle, count label, unclustered points), which
@@ -3208,11 +3240,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     return this._canonicalMarkers;
   }
 
-  /** Accessible name for MapLibre's focusable canvas. A nonempty host `aria-label` remains the
-   *  overall component name and is not cloned onto the nested focus owner; the canvas uses this
-   *  purpose-specific label or the localized `map` message. An explicit empty string (`label=""`
-   *  or `.label = ''`) suppresses that localized default. An explicit empty host name is
-   *  preserved on the canvas for deliberately decorative embeddings. */
+  /** Accessible name for MapLibre's focusable canvas; a host `aria-label` wins. Defaults to the
+   *  localized `map` message, which an explicit empty string suppresses. */
   @property() label?: string;
 
   /** True until the lazy-loaded `maplibre-gl` peer dependency has settled (success or failure). */
@@ -3313,6 +3342,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   // constructed with, keyed the same as `_markerInstances`, so `applyMarkers`
   // can detect that mismatch without re-deriving it from the DOM.
   private _markerColors = new Map<string, string | undefined>();
+  /** The canonical marker each live instance last rendered, keyed like `_markerInstances`. */
+  private _markerSources = new Map<string, CanonicalMapMarker>();
   // Bumped on every connectedCallback and captured by value in its
   // loadMaplibre().then() closure below. A disconnect immediately followed
   // by a reconnect (fast remounts, route/tab switches, etc.) before that
@@ -3343,6 +3374,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     projection: CanonicalGeoJsonProjection = projectGeoJson(geojson),
   ): void {
     const previous = this._appliedGeoJson.get(resolvedSourceId);
+    if (previous === projection) return;
     const diff =
       typeof source.updateData === 'function' && previous !== undefined
         ? buildProjectedGeoJsonPropertyDiff(previous, projection)
@@ -3549,7 +3581,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const center = Object.freeze(camera.center);
     const { zoom } = camera;
     this.reflectedCamera = { center, zoom };
-    this.center = center;
+    // Past the collection boundary, so a host re-committing its own array stays a no-op.
+    const previousCenter = this._center;
+    this._center = center;
+    this.requestUpdate('center', previousCenter);
     this.zoom = zoom;
     this.emit('lr-map-view-change', { center, zoom, source });
   }
@@ -3694,6 +3729,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this._markerColors.clear();
     this._markerLabels.clear();
     this._markerPopupIds.clear();
+    this._markerSources.clear();
   }
 
   private failureMessage(reason: MapFailureReason = this.failure ?? 'initialization-failed'): string {
@@ -3925,6 +3961,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (this.pendingFit) this.scheduleAfterUpdate(() => this.applyPendingFit(), 'map-pending-fit');
   }
 
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    super.requestUpdate(...args);
+    // A no-op property write schedules nothing and must not mark the semantics stale.
+    if (this.isUpdatePending && args[0] !== 'center' && args[0] !== 'zoom') this.semanticsStale = true;
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.setAttribute('aria-busy', String(this.loading));
@@ -4022,11 +4064,17 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.pushCamera(changed);
     if (changed.has('maxBounds') && this._map) this.writeCamera(() => this.applyMaxBounds());
     if (changed.has('markers') && this._map) this.applyMarkers();
-    this.syncMapSemantics();
+    if (this.semanticsStale) {
+      this.semanticsStale = false;
+      this.syncMapSemantics();
+    }
   }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (changed.has('legendGradient') || changed.has('dataLayers')) {
+      this.legendIsLine = this.legendDescribesLine();
+    }
     if (
       changed.has('mapStyle') &&
       !this._map &&
@@ -4760,6 +4808,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // order in the accepted marker sequence doesn't change.
     const coordCounts = new Map<string, number>();
     const explicitIds = new Set<string>();
+    let defaultColor: string | undefined;
     for (const m of this.canonicalMarkers) {
       const lngLat = m.lngLat;
       const mapLngLat: [number, number] = [lngLat[0], lngLat[1]];
@@ -4784,8 +4833,16 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       // an untoned data layer, so a default pin retextures with the rest of the map instead of
       // staying pinned to maplibre-gl's unthemed `#3FB1CE`.
       const markerColor =
-        sanitizeCssColor(m.color) ?? (m.color === undefined ? dataLayerColor(this, 'accent') : undefined);
-      if (existing && this._markerColors.get(key) !== markerColor) {
+        sanitizeCssColor(m.color) ??
+        (m.color === undefined ? (defaultColor ??= dataLayerColor(this, 'accent')) : undefined);
+      const previous = this._markerSources.get(key);
+      this._markerSources.set(key, m);
+      const sameColor = this._markerColors.get(key) === markerColor;
+      const sameContent = previous !== undefined && previous.label === m.label &&
+        Object.is(previous.unsafeHtml, m.unsafeHtml);
+      if (existing && sameColor && sameContent && previous.lngLat[0] === lngLat[0] &&
+        previous.lngLat[1] === lngLat[1]) continue;
+      if (existing && !sameColor) {
         // `color` is baked into the marker's SVG at construction time with
         // no way to mutate it afterwards -- fall through to the "no existing
         // marker" branch below to reconstruct it instead. Note: this closes
@@ -4802,9 +4859,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       if (!existing) {
         const marker = new mod.Marker(markerColor ? { color: markerColor } : undefined).setLngLat(mapLngLat);
         if (m.unsafeHtml || m.label) {
-          const popup = new mod.Popup({ offset: 12 });
-          if (m.unsafeHtml) popup.setHTML(m.unsafeHtml as string);
-          else if (m.label) popup.setText(m.label);
+          const popup = setPopupContent(new mod.Popup({ offset: 12 }), m);
           marker.setPopup(popup);
           this.configurePopupSemantics(key, marker, popup);
         }
@@ -4814,22 +4869,14 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       } else {
         existing.setLngLat(mapLngLat);
         const popup = existing.getPopup();
-        if (m.unsafeHtml) {
-          if (popup) popup.setHTML(m.unsafeHtml as string);
-          else {
-            const nextPopup = new mod.Popup({ offset: 12 }).setHTML(m.unsafeHtml as string);
-            existing.setPopup(nextPopup);
-            this.configurePopupSemantics(key, existing, nextPopup);
-          }
-        } else if (m.label) {
-          if (popup) popup.setText(m.label);
-          else {
-            const nextPopup = new mod.Popup({ offset: 12 }).setText(m.label);
-            existing.setPopup(nextPopup);
-            this.configurePopupSemantics(key, existing, nextPopup);
-          }
-        } else if (popup) {
-          existing.setPopup(undefined);
+        if (!m.unsafeHtml && !m.label) {
+          if (popup) existing.setPopup(undefined);
+        } else if (!popup) {
+          const nextPopup = setPopupContent(new mod.Popup({ offset: 12 }), m);
+          existing.setPopup(nextPopup);
+          this.configurePopupSemantics(key, existing, nextPopup);
+        } else if (!sameContent) {
+          setPopupContent(popup, m);
         }
       }
       const markerLabel = m.label?.trim() || markerPopupText(this, m.unsafeHtml);
@@ -4838,14 +4885,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         ?.getElement?.();
       if (markerElement) {
         addPartToken(markerElement, 'marker');
-        markerElement.setAttribute('aria-label', markerLabel || this.localize('map'));
-        markerElement.setAttribute('lang', this.effectiveLocale);
         const currentMarker = this._markerInstances.get(key);
         this.configureMarkerInteraction(markerElement, {
           id,
           lngLat,
           marker: m as LyraMapMarker,
-        });
+        }, markerLabel);
         const popup = currentMarker?.getPopup();
         if (popup && currentMarker) {
           this.configurePopupSemantics(key, currentMarker, popup);
@@ -4866,6 +4911,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         this._markerColors.delete(key);
         this._markerLabels.delete(key);
         this._markerPopupIds.delete(key);
+        this._markerSources.delete(key);
       }
     }
   }
@@ -4875,12 +4921,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private configureMarkerInteraction(
     markerElement: HTMLElement,
     activation: Omit<LyraMapMarkerActivationDetail, 'source'>,
+    markerLabel = activation.marker.label?.trim() || markerPopupText(this, activation.marker.unsafeHtml),
   ): void {
     this.markerActivationDetails.set(markerElement, activation);
     markerElement.setAttribute('role', 'button');
     markerElement.tabIndex = 0;
-    const markerLabel = activation.marker.label?.trim()
-      || markerPopupText(this, activation.marker.unsafeHtml);
     markerElement.setAttribute('aria-label', markerLabel || this.localize('map'));
     markerElement.setAttribute('lang', this.effectiveLocale);
     if (this.configuredMarkerElements.has(markerElement)) return;
@@ -4913,8 +4958,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   private get effectiveMapLabel(): string {
-    if (this.getAttribute('aria-label') === '') return '';
-    return this.label == null ? this.localize('map') : this.label;
+    return hostAriaLabel(this) ?? this.label ?? this.localize('map');
   }
 
   private popupId(key: string): string {
@@ -5364,7 +5408,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const lo = stops[0]!;
     const hi = stops[stops.length - 1]!;
     const image = choroplethLegendGradientImage(stops,
-      this.legendDescribesLine() ? 'linear' : this.canonicalChoropleth?.interpolation);
+      this.legendIsLine ? 'linear' : this.canonicalChoropleth?.interpolation);
     return html`<div class="legend-gradient" ?hidden=${this.legendCollapsed}>
       <span part="legend-lo">${this.legendGradientLoLabel ?? this.formatCount(lo[0])}</span>
       <span
