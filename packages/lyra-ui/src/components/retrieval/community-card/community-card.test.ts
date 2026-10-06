@@ -137,19 +137,23 @@ it('falls back to the documented default of 8 for a non-numeric max-members', as
   expect(el.shadowRoot!.querySelector('[part="overflow"]') == null).to.be.true;
 });
 
-it('emits lr-entity-activate when a member chip is activated', async () => {
+it('emits lr-entity-select, then the deprecated lr-entity-activate, when a member chip is activated', async () => {
   const el = (await fixture(
     html`<lr-community-card></lr-community-card>`
   )) as LyraCommunityCard;
   el.community = community;
   el.members = members;
   await el.updateComplete;
-  const listener = oneEvent(el, 'lr-entity-activate');
+  const events: [string, unknown][] = [];
+  for (const type of ['lr-entity-select', 'lr-entity-activate'])
+    el.addEventListener(type, (event) => events.push([type, (event as CustomEvent).detail]));
   (
     el.shadowRoot!.querySelectorAll('[part="member"]')[0] as HTMLButtonElement
   ).click();
-  const event = await listener;
-  expect(event.detail).to.deep.equal({ entityId: 'e1' });
+  expect(events).to.deep.equal([
+    ['lr-entity-select', { entityId: 'e1' }],
+    ['lr-entity-activate', { entityId: 'e1' }],
+  ]);
 });
 
 it('emits lr-drill from the drill button, the header, and the overflow chip', async () => {
@@ -431,4 +435,24 @@ describe('lr-community-card size and the retired compact alias', () => {
     expect(regular).to.not.equal(dense);
     expect(warnings).to.have.length(0);
   });
+});
+
+it('stretches [part="base"] to fill a flex row with a taller sibling', async () => {
+  const wrapper = await fixture<HTMLElement>(html`<div style="display: flex; inline-size: 600px;">
+    <lr-community-card .community=${community}></lr-community-card>
+    <div style="block-size: 400px;">tall sibling</div>
+  </div>`);
+  const el = wrapper.querySelector<LyraCommunityCard>('lr-community-card')!;
+  await el.updateComplete;
+  const host = el.getBoundingClientRect().height;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getBoundingClientRect().height).to.be.closeTo(host, 1);
+});
+
+it('forwards a host aria-level to its title heading and restores level 3 on removal', async () => {
+  const el = await fixture<LyraCommunityCard>(html`<lr-community-card aria-level="4" .community=${community}></lr-community-card>`);
+  const title = () => el.shadowRoot!.querySelector('[part="title"]')!.getAttribute('aria-level');
+  expect(title()).to.equal('4');
+  el.removeAttribute('aria-level');
+  await el.updateComplete;
+  expect(title()).to.equal('3');
 });

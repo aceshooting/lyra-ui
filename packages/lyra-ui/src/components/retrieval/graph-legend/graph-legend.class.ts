@@ -42,22 +42,6 @@ export interface LyraGraphLegendEventMap {
   >;
 }
 
-const PALETTE_SIZE = 8;
-/** Read from `--lr-graph-cat-1`..`-8` (defined by `lr-graph` type-styling) with this
- *  hardcoded fallback -- the same computed-style-with-a-hardcoded-fallback pattern
- *  `lr-word-cloud`'s own `--lr-word-cloud-color-1`..`-8` palette already uses, so this legend
- *  renders sensible colors even when no theme defines those variables. */
-const FALLBACK_PALETTE = [
-  '#0969da',
-  '#1a7f37',
-  '#9a6700',
-  '#cf222e',
-  '#8250df',
-  '#bf3989',
-  '#0a7d91',
-  '#57606a',
-];
-
 /**
  * `<lr-graph-legend>` — a node-type legend for a paired `lr-graph`: one swatch + label + count
  * row per `lr-graph` node type, doubling as visibility filters. Never reads or writes a graph directly —
@@ -130,10 +114,10 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
   /** Renders a read-only legend (no buttons, no toggling). */
   @property({ type: Boolean, attribute: 'without-interaction', reflect: true })
   withoutInteraction = false;
-  /** Fallback name for the group; defaults to localized `graphLegendLabel`. A non-empty host
-   *  `aria-label` makes the host the sole overall owner; an explicitly empty host label stays
-   *  empty on the group. */
-  @property() label = '';
+  /** Fallback name for the group; defaults to localized `graphLegendLabel`, and an explicitly empty
+   *  value stays empty. A non-empty host `aria-label` makes the host the sole overall owner; an
+   *  explicitly empty host label stays empty on the group. */
+  @property() label?: string;
 
 
   @state() private liveText = '';
@@ -153,31 +137,6 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
     this.announcementSink?.release();
     this.announcementSink = undefined;
     super.disconnectedCallback();
-  }
-
-  private paletteColor(index: number): string {
-    const cs = getComputedStyle(this);
-    const varValue = cs
-      .getPropertyValue(`--lr-graph-cat-${(index % PALETTE_SIZE) + 1}`)
-      .trim();
-    return varValue || FALLBACK_PALETTE[index % PALETTE_SIZE]!;
-  }
-
-  /** Builds a `paletteColor()` resolver that reads `getComputedStyle(this)` at most once per
-   *  distinct `index % PALETTE_SIZE` slot, reused across the rest of one `render()` pass, instead
-   *  of once per legend entry -- the underlying `--lr-graph-cat-N` value cannot change between two
-   *  entries in the same synchronous render. */
-  private paletteColorResolver(): (index: number) => string {
-    const cache = new Map<number, string>();
-    return (index: number) => {
-      const slot = index % PALETTE_SIZE;
-      let color = cache.get(slot);
-      if (color === undefined) {
-        color = this.paletteColor(index);
-        cache.set(slot, color);
-      }
-      return color;
-    };
   }
 
   private isVisible(id: string): boolean {
@@ -214,10 +173,10 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
     color: string
   ): TemplateResult {
     if (shape === 'square')
-      return svg`<rect x="1" y="1" width="10" height="10" fill=${color}></rect>`;
+      return svg`<rect x="1" y="1" width="10" height="10" style="fill: ${color}"></rect>`;
     if (shape === 'diamond')
-      return svg`<polygon points="6,0 12,6 6,12 0,6" fill=${color}></polygon>`;
-    return svg`<circle cx="6" cy="6" r="5" fill=${color}></circle>`;
+      return svg`<polygon points="6,0 12,6 6,12 0,6" style="fill: ${color}"></polygon>`;
+    return svg`<circle cx="6" cy="6" r="5" style="fill: ${color}"></circle>`;
   }
 
   override render(): TemplateResult {
@@ -229,10 +188,9 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
     );
     const groupLabel = retrievalSemanticLabel(
       this,
-      this.label || this.localize('graphLegendLabel')
+      this.label == null ? this.localize('graphLegendLabel') : this.label
     );
     const groupRole = retrievalSemanticRole(this, 'group');
-    const resolvePaletteColor = this.paletteColorResolver();
     return html`
       <div
         part="base"
@@ -241,7 +199,8 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
       >
         ${types.map((type, index) => {
           const visible = this.isVisible(type.id);
-          const color = sanitizeCssColor(type.color) ?? resolvePaletteColor(index);
+          // The graph's own live palette, so a theme switch repaints both alike.
+          const color = sanitizeCssColor(type.color) ?? `var(--lr-graph-cat-${(index % 8) + 1})`;
           const count = this.counts?.[type.id];
           const content = html`
             <svg

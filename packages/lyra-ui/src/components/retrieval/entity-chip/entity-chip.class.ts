@@ -226,12 +226,9 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (e.key === 'Escape' && this.popoverOpen && this.overlayHandle?.isTopmost()) {
-      // Swallow it here rather than letting it bubble to e.g. a containing lr-dialog's own
-      // Escape-to-close handler. Gated on isTopmost() so a genuinely topmost overlay stacked
-      // above this one gets the keypress instead (the shared document-level listener still
-      // routes it there when this branch defers).
-      e.stopPropagation();
+    if (e.key === 'Escape' && !e.isComposing && this.popoverOpen && this.overlayHandle?.isTopmost()) {
+      // preventDefault, as lr-tooltip does: the overlay stack then leaves a containing dialog open.
+      e.preventDefault();
       this.hidePreviewNow();
       return;
     }

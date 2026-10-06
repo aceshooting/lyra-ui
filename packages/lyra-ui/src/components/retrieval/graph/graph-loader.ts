@@ -1,4 +1,7 @@
-import { resolveOptionalPeerCapability } from '../../../internal/optional-peer-capabilities.js';
+import {
+  createOptionalPeerLoader,
+  resolveOptionalPeerCapability,
+} from '../../../internal/optional-peer-capabilities.js';
 
 export interface D3SimulationNodeDatum {
   index?: number;
@@ -213,41 +216,28 @@ export async function loadD3Modules(
       'zoomTransform',
       'select',
     ] as const;
-    const missing = callableNames.find((name) => typeof modules[name] !== 'function');
-    const identity = modules.zoomIdentity;
-    if (
-      missing ||
-      !identity ||
-      typeof (identity as { translate?: unknown }).translate !== 'function' ||
-      typeof (identity as { scale?: unknown }).scale !== 'function'
-    ) {
-      throw new TypeError(
-        missing
-          ? `The optional d3 peers do not provide the required ${missing}() function.`
-          : 'The optional d3-zoom peer does not provide a usable zoomIdentity transform.',
-      );
-    }
-    return modules as unknown as D3Modules;
-  } catch (err) {
-    console.warn(
-      '<lr-graph> needs the optional peer dependencies `d3-force`, `d3-drag`, ' +
-        '`d3-zoom`, and `d3-selection` — install them with `pnpm add d3-force d3-drag d3-zoom d3-selection`:',
-      err,
-    );
+    const missing = callableNames.some((name) => typeof modules[name] !== 'function');
+    const identity = modules.zoomIdentity as { translate?: unknown; scale?: unknown } | undefined;
+    return missing ||
+      typeof identity?.translate !== 'function' ||
+      typeof identity.scale !== 'function'
+      ? null
+      : (modules as unknown as D3Modules);
+  } catch {
     return null;
   }
 }
 
-let d3Modules: Promise<D3Modules | null> | undefined;
+const d3 = /* @__PURE__ */ createOptionalPeerLoader<D3Modules>({
+  load: () => loadD3Modules(),
+  isCapability: (candidate): candidate is D3Modules => candidate !== null,
+  warningKey: 'lyra-graph-d3-unavailable',
+  warning:
+    '<lr-graph> needs the optional peers d3-force, d3-drag, d3-zoom and d3-selection ' +
+    '(pnpm add d3-force d3-drag d3-zoom d3-selection).',
+});
 
-/**
- * Lazily loads the d3 peer dependencies (see `loadD3Modules()`) once per
- * page. Resolves to `null` if they aren't installed — mirrors
- * `<lr-flag>`'s peer-dependency pattern.
- */
+/** Loads the d3 peers once for every graph; a failed load resolves `null` and the next call retries. */
 export function loadD3(): Promise<D3Modules | null> {
-  if (!d3Modules) {
-    d3Modules = loadD3Modules();
-  }
-  return d3Modules;
+  return d3.get();
 }

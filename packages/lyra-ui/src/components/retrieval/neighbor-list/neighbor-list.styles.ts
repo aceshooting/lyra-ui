@@ -101,7 +101,7 @@ export const styles = css`
   }
   [part='expand-button']:hover,
   lr-virtual-list::part(expand-button):hover {
-    background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover));
   }
   [part='expand-button']:active,
   lr-virtual-list::part(expand-button):active {

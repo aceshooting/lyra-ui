@@ -279,9 +279,11 @@ describe('canvas renderer — static draw', () => {
 
 describe('canvas renderer — interaction and a11y', () => {
   async function mountCanvas(): Promise<LyraGraph> {
+    // A seed settles the layout synchronously, so positions are final for hit-testing.
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
+        seed="1"
         width="400"
         height="300"
         style="width:400px;height:300px"
@@ -293,7 +295,6 @@ describe('canvas renderer — interaction and a11y', () => {
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    await aTimeout(400); // let the force layout settle so node positions are stable for hit-testing
     return el;
   }
 
@@ -413,6 +414,7 @@ describe('canvas renderer — interaction and a11y', () => {
       html`<lr-graph
         renderer="canvas"
         selection-mode="single"
+        seed="1"
         width="400"
         height="300"
         style="width:400px;height:300px"
@@ -425,7 +427,6 @@ describe('canvas renderer — interaction and a11y', () => {
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    await aTimeout(400);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
     let detail: { selectedNodeIds: string[]; selectedEdgeIds: string[] } | undefined;

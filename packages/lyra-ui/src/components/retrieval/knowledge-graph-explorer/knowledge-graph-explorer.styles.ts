@@ -63,7 +63,7 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast);
   }
   [part='search-result'] button:hover {
-    background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover));
   }
   [part='search-result'] button:active {
     background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));

@@ -125,63 +125,22 @@ describe('loadD3Modules (uncached, dependency-injectable)', () => {
     }
   });
 
-  it('reports the exact missing callable capability', async () => {
-    const peers = createD3PeerApis();
-    const warnings: unknown[][] = [];
-    const originalWarn = console.warn;
-    console.warn = (...args: unknown[]) => warnings.push(args);
-    try {
-      const modules = await loadD3Modules(
-        () => Promise.resolve(peers.force),
-        () => Promise.resolve(peers.drag),
-        () => Promise.resolve(peers.zoom),
-        () => Promise.resolve({}),
-      );
-
-      expect(modules).to.equal(null);
-      const error = warnings.flat().find((value) => value instanceof TypeError);
-      expect((error as TypeError).message).to.include('select()');
-    } finally {
-      console.warn = originalWarn;
-    }
-  });
-
-  it('resolves null when any one of the four peer dependencies fails to load', async () => {
-    const err = new Error('d3-force boom');
+  it('resolves null without logging the importer error when a peer fails to load', async () => {
     const originalWarn = console.warn;
     const calls: unknown[][] = [];
     console.warn = (...args: unknown[]) => calls.push(args);
     try {
       const mods = await loadD3Modules(
-        () => Promise.reject(err),
+        () => Promise.reject(new Error('d3-force boom')),
         () => import('d3-drag'),
         () => import('d3-zoom'),
         () => import('d3-selection'),
       );
       expect(mods).to.equal(null);
-      expect(calls.flat()).to.contain(err);
+      expect(calls).to.deep.equal([]);
     } finally {
       console.warn = originalWarn;
     }
-  });
-
-  it('logs the real caught error (not a generic message) on failure', async () => {
-    const err = new Error('specific d3 failure reason');
-    const originalWarn = console.warn;
-    const calls: unknown[][] = [];
-    console.warn = (...args: unknown[]) => calls.push(args);
-    try {
-      await loadD3Modules(
-        () => Promise.reject(err),
-        () => import('d3-drag'),
-        () => import('d3-zoom'),
-        () => import('d3-selection'),
-      );
-    } finally {
-      console.warn = originalWarn;
-    }
-    const loggedArgs = calls.flat();
-    expect(loggedArgs).to.contain(err);
   });
 
   it('fails closed when resolved peer modules omit a required callable capability', async () => {

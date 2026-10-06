@@ -17,6 +17,9 @@ export const styles = css`
        entirely. */
     background: var(--lr-community-card-bg, var(--lr-color-surface));
     color: var(--lr-color-text);
+    min-inline-size: 0;
+    block-size: 100%;
+    box-sizing: border-box;
   }
   /* Density escape -- same convention as sibling lr-entity-card's identical dense-size rule. Values
      sit behind inline var() fallbacks, not a :host declaration that every instance re-declares and

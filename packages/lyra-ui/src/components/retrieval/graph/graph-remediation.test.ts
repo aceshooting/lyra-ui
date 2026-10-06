@@ -9,6 +9,7 @@ import {
 } from '../../../../test/wtr-mouse.js';
 import { LyraGraph, type LyraGraphEdge } from './graph.js';
 import { drawGraphScene } from './graph-canvas.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 const nodes = [
   { id: 'a', label: 'Alpha', color: 'blue' },
@@ -291,6 +292,64 @@ describe('graph rendered interaction contracts', () => {
   });
 });
 
+describe('graph activation and selection state', () => {
+  const ab = [{ id: 'ab', source: 'a', target: 'b' }];
+
+  it('ignores Enter auto-repeat for the double-activate expand gesture', async () => {
+    const graph = await readyGraph('svg', ab);
+    const node = graph.shadowRoot!.querySelector<SVGElement>('[part="node"]')!;
+    let expands = 0;
+    graph.addEventListener('lr-node-expand', () => (expands += 1));
+    node.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    node.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', repeat: true, bubbles: true }));
+    expect(expands).to.equal(0);
+  });
+
+  it('keeps a single-mode selection through the double-activate expand gesture', async () => {
+    const graph = await readyGraph('svg', ab);
+    graph.selectionMode = 'single';
+    await graph.updateComplete;
+    const selections: string[][] = [];
+    graph.addEventListener('lr-selection-change', (event) => {
+      const { selectedNodeIds } = event.detail;
+      selections.push([...selectedNodeIds]);
+      graph.selectedNodeIds = selectedNodeIds;
+    });
+    const node = graph.shadowRoot!.querySelector<SVGElement>('[part="node"]')!;
+    node.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    node.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    node.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    expect(selections).to.deep.equal([['a']]);
+  });
+
+  for (const renderer of ['svg', 'canvas'] as const) {
+    it(`exposes a non-interactive ${renderer} selection as aria-current`, async () => {
+      const graph = await readyGraph(renderer, ab);
+      graph.selectedNodeIds = ['a'];
+      await graph.updateComplete;
+      const part = renderer === 'svg' ? 'node' : 'cursor-item';
+      const items = [...graph.shadowRoot!.querySelectorAll(`[part="${part}"]`)].slice(0, 2);
+      expect(items.map((item) => item.getAttribute('aria-current'))).to.deep.equal(['true', null]);
+    });
+  }
+
+  it('repaints the canvas without the keyboard ring once focus leaves the graph', async () => {
+    const graph = await readyGraph('canvas', ab);
+    const outside = document.createElement('button');
+    document.body.append(outside);
+    type Scene = { canvasScene?: { keyboardFocusRing?: unknown } };
+    try {
+      const item = graph.shadowRoot!.querySelector<HTMLButtonElement>('[part="cursor-item"]')!;
+      await focusByKeyboard(item);
+      await waitUntil(() => !!(graph as unknown as Scene).canvasScene?.keyboardFocusRing, 'ring drawn');
+      await focusByKeyboard(outside);
+      await waitUntil(() => !(graph as unknown as Scene).canvasScene?.keyboardFocusRing, 'ring cleared');
+    } finally {
+      outside.remove();
+    }
+  });
+});
+
 describe('zero-width canvas link paint', () => {
   for (const directed of [false, true]) {
     it(`omits all pixels for a zero-width ${
@@ -342,5 +401,29 @@ describe('zero-width canvas link paint', () => {
         false
       );
     });
+  }
+});
+
+it('resolves the canvas stroke widths from the border-width tokens', async () => {
+  const graph = await readyGraph('canvas', [{ id: 'ab', source: 'a', target: 'b' }]);
+  graph.style.setProperty('--lr-border-width-thick', '7px');
+  const scene = (graph as unknown as {
+    buildCanvasScene(style: CSSStyleDeclaration): { borderWidths?: readonly number[] };
+  }).buildCanvasScene(getComputedStyle(graph));
+  expect(scene.borderWidths).to.deep.equal([1, 2, 7]);
+});
+
+it('tints a hovered selected SVG link from the selected color', async () => {
+  const graph = await readyGraph('svg', [{ id: 'ab', source: 'a', target: 'b' }]);
+  graph.selectedEdgeIds = ['ab'];
+  await graph.updateComplete;
+  const link = graph.shadowRoot!.querySelector<SVGElement>('[part="link"]')!;
+  link.style.transition = 'none';
+  const resting = getComputedStyle(link).stroke;
+  try {
+    await hoverUntilMatched(link, 'selected link hovered');
+    expect(getComputedStyle(link).stroke).to.not.equal(resting);
+  } finally {
+    await resetMouse();
   }
 });

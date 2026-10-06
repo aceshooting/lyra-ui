@@ -219,6 +219,20 @@ export const styles = css`
     stroke: var(--lr-graph-selected-color, var(--lr-color-success)) !important;
     stroke-width: var(--lr-border-width-thick);
   }
+  [part="link"][data-selected]:hover {
+    stroke: color-mix(
+      in oklab,
+      var(--lr-graph-selected-color, var(--lr-color-success)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+    ) !important;
+  }
+  [part="link"][data-selected]:active {
+    stroke: color-mix(
+      in oklab,
+      var(--lr-graph-selected-color, var(--lr-color-success)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    ) !important;
+  }
   [part="node"][data-dimmed] {
     opacity: var(--lr-graph-dimmed-opacity, 0.35);
   }

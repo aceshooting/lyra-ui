@@ -106,8 +106,9 @@ expandable?: boolean; communityId?: string }`;
 color?: string; shape?: 'circle' | 'square' | 'diamond' }`, one entry per `LyraGraphNode.type` value:
   `label` feeds the spoken "typed node" summary, and `shape`/`color` drive rendering per node.
   Per-node fill resolution precedence is `LyraGraphNode.color` (most specific) > the matched
-  `LyraNodeTypeStyle.color` > an ordered categorical fallback palette assigned by the type's index in
-  `nodeTypes` (`--lr-graph-cat-1` through `-8`, wrapping every 8 entries) > the untyped
+  `LyraNodeTypeStyle.color` > an ordered categorical fallback palette assigned by the type's index among
+  the label-bearing `nodeTypes` entries, matching `lr-graph-legend`'s rows (`--lr-graph-cat-1` through
+  `-8`, wrapping every 8 entries) > the untyped
   `--lr-graph-node-fill` default; both data-driven color sources are sanitized the same way as
   `LyraGraphNode.color` itself. A typed node with no matching `nodeTypes` entry renders as a plain
   circle with the untyped default fill
@@ -119,7 +120,7 @@ color?: string; shape?: 'circle' | 'square' | 'diamond' }`, one entry per `LyraG
 string; width?: number; label?: string; accessibleLabel?: string; description?: string; directed?:
 boolean; color?: string; dash?: number[] }` (source/target are node ids). `directed` adds an
   arrowhead; `color` and `dash` style the individual stroke; `label` provides a spoken-name and SVG
-  tooltip fallback but is not rendered as visible edge text; `accessibleLabel` and `description`
+  tooltip fallback and is drawn as visible edge text only with `withEdgeLabels`; `accessibleLabel` and `description`
   can override the spoken name and tooltip independently. `width` is normalized before reaching
   SVG, canvas paint, or canvas picking: negative values clamp to `0`, while a non-finite or unset
   value uses `1.5`. A zero-width or fully transparent edge remains in the nonvisual topology
@@ -197,7 +198,8 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
   DPR-aware `<canvas>`; every event/method/property behaves identically to `'svg'`, with hit-testing
   resolved via an offscreen color-picking canvas instead of DOM event targets. Trade-offs: no
   `::part(node)`/`::part(link)` styling (pixels, not elements — theme via cssprops instead), no
-  native SVG `<title>` tooltip (replaced by `part="tooltip"`), and a drawn focus ring instead of a
+  native SVG `<title>` tooltip (replaced by `part="tooltip"`), no per-item hover/press tint (hover
+  still emits its events and shows the tooltip), and a drawn focus ring instead of a
   CSS one. Keyboard roving/announcements are preserved through an offscreen `part="cursor-item"`
   button per visible node/link/hull; the canvas repaints a non-color dashed/ring focus cue for the
   currently focused node, link, or hull and uses a system color under forced colors. In both renderers, node, link, and community-hull picking keeps at
@@ -219,7 +221,7 @@ edgeId? }`; the optional `edgeId` is the stable `LyraGraphEdge.id` supplied by t
 Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable`), `lr-community-activate`
 (`detail: { communityId }`, a hull was activated by pointer or keyboard), `lr-selection-change`
 (`detail: { selectedNodeIds, selectedEdgeIds }`, a controlled selection intent), and `lr-viewport-change`
-(`detail: { k, x, y }`, a frame-coalesced camera/layout signal).
+(`detail: { zoom, x, y }`, as on `lr-flow-canvas`, plus `k`, a deprecated alias of `zoom`; a frame-coalesced camera/layout signal).
 
 **Slots:** none.
 
@@ -254,7 +256,7 @@ The ordered categorical fallback palette for a typed node with no `LyraNodeTypeS
 `--lr-graph-cat-6` (default `var(--lr-theme-graph-cat-6,#f470b8)`),
 `--lr-graph-cat-7` (default `var(--lr-theme-graph-cat-7,#52d6e8)`), and
 `--lr-graph-cat-8` (default `var(--lr-theme-graph-cat-8,#c9d1d9)`). Assignment follows the type's
-index in `nodeTypes` and wraps every eight entries; the `--lr-theme-graph-cat-*` inputs are the
+index among label-bearing `nodeTypes` entries (the legend's row order) and wraps every eight entries; the `--lr-theme-graph-cat-*` inputs are the
 preferred theme-level overrides.
 `--lr-graph-edge-label-halo` (default `var(--lr-color-surface)`) — the legibility halo painted
 behind a drawn `[part="link-label"]` (via `paint-order: stroke`).
@@ -272,9 +274,9 @@ adopted stylesheets, and media-query theme transitions); a host does not need to
 to make new token values visible.
 
 **Optional peer deps:** `d3-force`, `d3-drag`, `d3-zoom`, `d3-selection` (all four required
-together; lazy-`import()`ed once per page). Each loaded module is validated for the named callable
-capabilities the graph uses; a missing package or malformed module fails closed through the
-localized `part="error"` alert. Install with
+together; lazy-`import()`ed once per page, and a failed load is retried by the next graph). Each loaded
+module is validated for the named callable capabilities the graph uses; a missing package or malformed
+module fails closed through the localized `part="error"` alert. Install with
 `pnpm add d3-force d3-drag d3-zoom d3-selection`.
 
 ```html
@@ -371,7 +373,9 @@ part="link">` with no extra wrapping element, so existing consumers who never se
 `selection-mode`) gates click/keyboard selection; the component never mutates
 `selectedNodeIds: string[] = []` / `selectedEdgeIds: string[] = []` (both attribute: false) itself,
 only emits `lr-selection-change` (`detail: { selectedNodeIds, selectedEdgeIds }`) — the host assigns them back,
-mirroring `lr-heatmap`'s `selectedCell` contract. `dimmedNodeIds: string[] = []` / `dimmedEdgeIds:
+mirroring `lr-heatmap`'s `selectedCell` contract. In `'none'`, a controlled selection still paints
+`data-selected` and reads as `aria-current="true"`; in `'single'`, activating the selected item clears
+it, except as the second press of the double-activate expand gesture (Enter auto-repeat never counts). `dimmedNodeIds: string[] = []` / `dimmedEdgeIds:
 string[] = []` (both attribute: false) are the same controlled shape for dimming instead of
 selecting — the component never assigns either itself, only renders `data-dimmed` on the matching
 `[part="node"]`/`[part="link"]`, themed via `--lr-graph-dimmed-opacity` (default `0.35` — visible out
@@ -392,7 +396,7 @@ matches the entry id. `focusNodeId: string | null = null` (attribute `focus-node
 focus ring (`[part="focus-halo"]`) around one node;
 `focusNode(id, options?)` and `fit(options?)` are the imperative camera-tween counterparts (pan/zoom
 to a node, or to fit the whole graph), both resolving once the tween settles. `lr-viewport-change`
-(`detail: { k, x, y }`, the live d3-zoom camera transform) fires at most once per animation frame,
+(`detail: { zoom, x, y }` plus the deprecated alias `k`, the live d3-zoom camera transform) fires at most once per animation frame,
 coalescing every source that can move a rendered node's screen position — a pan/zoom gesture, a
 `focusNode()`/`fit()` tween, and every simulation tick — so a consumer anchoring its own UI (e.g. a
 details popover) to a node's `getBoundingClientRect()` can re-read it from this event instead of
@@ -512,7 +516,8 @@ string; shape?: 'circle' | 'square' | 'diamond' }`, the shared `lr-graph.nodeTyp
   `lr-visibility-change`
 - `withoutInteraction: boolean = false` (attribute `without-interaction`, reflected) — renders plain,
   non-interactive rows instead of the default toggle `<button>` rows.
-- `label: string = ''` — fallback accessible name for the `role="group"` wrapper. A non-empty host
+- `label?: string` — fallback accessible name for the `role="group"` wrapper; omitted, the localized
+  default applies, while an explicitly empty `label` stays empty. A non-empty host
   `aria-label` makes the host the sole overall owner (the wrapper omits its duplicate role/name);
   an explicitly empty host label stays empty on the wrapper
 
@@ -530,8 +535,8 @@ accepted assignment and announcement.
 `var(--lr-color-text-quiet)`) — text color of a filtered-out (hidden) row's `label`/`count`,
 independent of the shared quiet-text token so a host can retint "hidden" rows without repainting
 every other quiet-text surface; `--lr-graph-legend-hidden-swatch-opacity` (default `0.5`) controls
-only that row's decorative swatch opacity. Also reads `--lr-graph-cat-1` through `-8`
-(the same computed-style fallback palette `lr-graph`/`lr-word-cloud` use) plus shared tokens.
+only that row's decorative swatch opacity. Also paints `--lr-graph-cat-1` through `-8` live, exactly
+as `lr-graph` paints untyped-color nodes, so a theme switch repaints both alike, plus shared tokens.
 
 **Optional peer deps:** none.
 
@@ -730,6 +735,9 @@ graph data) and never mutates a graph.
 
 - `rows: LyraNeighborRow[] = []` (attribute: false) — `LyraNeighborRow { relation: string; direction:
 'in' | 'out' | 'both'; node: LyraEntity }`
+- `types: LyraNodeTypeStyle[] = []` (attribute: false) — `lr-graph` `nodeTypes` pass-through that names
+  each node's type by its label, as `lr-entity-card` does; lr-knowledge-graph-explorer and
+  lr-entity-dossier forward theirs
 - `groupByRelation: boolean = false` (attribute `group-by-relation`) — inserts a `group-header` row per
   distinct `relation`
 - `expandable: boolean = false` — renders a per-row expand-in-graph icon button
@@ -798,7 +806,8 @@ reverse?: boolean }`
   non-empty host `aria-label` makes
   the host the sole overall owner; an explicitly empty host label stays empty on the group
 
-**Events:** `lr-entity-activate` (`detail: { entityId, occurrenceIndex }`, a node element activated),
+**Events:** `lr-entity-select` (`detail: { entityId, occurrenceIndex }`, a node element activated;
+the deprecated alias `lr-entity-activate` follows with the same detail),
 `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, an edge element activated —
 source/target resolved from the adjacent node elements, `undefined` when the path is malformed at
 that position. `occurrenceIndex` is the original supplied array position, so repeated entity ids
@@ -863,12 +872,14 @@ string; summary?: string; memberCount?: number }`; `memberCount` is a non-negati
   union.
 
 **Events:** `lr-drill` (`detail: { communityId }`, the drill button, header, or overflow chip — all three
-mean "show me this whole community"), `lr-entity-activate` (`detail: { entityId }`, a member chip was
-activated).
+mean "show me this whole community"), `lr-entity-select` (`detail: { entityId }`, a member chip was
+activated; the deprecated alias `lr-entity-activate` follows with the same detail).
 
 **Slots:** `actions` — extra header actions alongside the built-in drill button.
 
-**CSS parts:** `base`, `header`, `title` (`role="heading" aria-level="3"` wrapping a `<button>`),
+The host `aria-level` attribute overrides the title heading level live; removing it restores 3.
+
+**CSS parts:** `base`, `header`, `title` (`role="heading" aria-level="3"` by default, wrapping a `<button>`),
 `member-count`, `summary` and `members` (both omitted while `size` is `s` or smaller), `member`,
 `overflow` (the "+N" chip button), `drill-button`, `actions`, `empty` (shown when `community` is
 `null`).
@@ -1221,7 +1232,9 @@ radial layout is closed-form arithmetic, in its own `mind-map-layout.ts` module,
 **Properties:**
 
 - `topics: LyraTopic[] = []` (attribute: false) — `LyraTopic { id: string; label: string; children?:
-LyraTopic[] }`; a single root sits at the center, multiple roots hang off an implicit center hub
+LyraTopic[] }`; a single root sits at the center, multiple roots hang off an implicit center hub.
+  A tree too large for one collection snapshot (10,000 entries / 50,000 values) keeps its first
+  50,000 topics, shallowest first, as `{ id, label, children }` records
 - `label?: string` — accessible name for the SVG group and the implicit hub's text; omission uses
   the localized mind-map label, while an explicit empty string stays empty
 - `expandDepth: number = 1` (attribute `expand-depth`) — initial expansion depth (root + first
@@ -1248,7 +1261,7 @@ render-cap notice, present only above 500 currently-visible nodes), `live-region
 announcement region), `empty` (shown when `topics` is empty).
 
 **Themeable custom properties:** `--lr-mind-map-ring-gap` (default `6rem`, radius step per depth
-ring). `--lr-mind-map-node-hover-halo` (default `var(--lr-color-brand-quiet)`) — stroke color of
+ring, read on each relayout: connect, resize, `dir`/`lang`, data or expansion change). `--lr-mind-map-node-hover-halo` (default `var(--lr-color-brand-quiet)`) — stroke color of
 the halo drawn around a topic node's dot on `:hover`, giving mouse users the same "this is
 clickable" feedback keyboard users already get from the drawn `focus-ring` part.
 
@@ -1629,10 +1642,9 @@ shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape
   `aria-label` names the dossier as a whole and is not cloned onto the strip
 
 **Events:** declares none of its own. Every composed child's event bubbles through unmodified
-(`composed: true`): `lr-entity-select` (`detail: { entityId }`, surfaced from the embedded entity
-card or neighbor list), `lr-entity-activate` (`detail: { entityId, occurrenceIndex? }` — surfaced
-from the embedded provenance panel's own community card or relationship path strip, the only
-source carrying `occurrenceIndex`), `lr-node-expand` (`detail: { nodeId }`),
+(`composed: true`): `lr-entity-select` (`detail: { entityId, occurrenceIndex? }`, surfaced from the
+embedded entity card, neighbor list, or the provenance panel's community card or path strip, which
+add `occurrenceIndex`), its deprecated alias `lr-entity-activate` (from those last two only), `lr-node-expand` (`detail: { nodeId }`),
 `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`), `lr-chunk-toggle` (`detail: { chunkId,
 expanded }`), `lr-toggle` (`detail: { section, expanded }`), and `lr-tab-show`
 (`detail: { tabId: LyraEntityDossierTab }`, where `LyraEntityDossierTab = 'relationships' | 'chunks'
@@ -1925,7 +1937,7 @@ overlay. Composes `lr-graph`, `lr-graph-legend`, `lr-entity-card`, `lr-neighbor-
 
 Removing `query` retains `null` property readback while clearing the search input, results
 and search dimming; an explicitly empty value remains empty and later queries work normally.
-Path-node `lr-entity-activate` is consumed by the explorer and enters the same selection, graph
+Path-node `lr-entity-select` (and its deprecated alias) is consumed by the explorer and enters the same selection, graph
 focus and details flow as other entity activations, emitting one `lr-selection-change`.
 `lr-relation-activate` continues to pass through unchanged. The canonical search event fields remain
 `query`, `matchCount`, and `matchCountExact`.
@@ -2008,7 +2020,8 @@ filtered-out id). None change `selectedNodeId` or filters.
 
 **Events:**
 
-- `lr-selection-change` (`detail: { selectedNodeId: string | null }`) — emitted after the explorer
+- `lr-selection-change` (`detail: { selectedNodeId: string | null, selectedNodeIds, selectedEdgeIds }`, the last two
+  in `lr-graph`'s shape) — emitted after the explorer
   changes its own selection through search, graph, keyboard/neighborhood/path activation, or
   closing/invalidating the details selection. Clearing reports `null`. Direct host assignments to
   `selectedNodeId` remain silent, and one interaction emits at most once even when a composed
@@ -2044,7 +2057,8 @@ pin toggle; no effect while `details` is overridden.
 
 **CSS parts:** `base` (`role="group"` unless a non-empty host label owns the component), `toolbar`,
 `search` (the search `lr-input`), `legend` (the
-composed `lr-graph-legend`), `search-results` (only while `query` is non-empty),
+composed `lr-graph-legend`), `search-results` (only while `query` is non-empty; at most 50 rows,
+one tab stop moved with ArrowUp/ArrowDown/Home/End, while the announced count covers every match),
 `search-result` (`role="listitem"` wrapping a `<button>`), `search-empty`, `pinned` (only while
 `pinnedNodeIds` is non-empty), `pinned-heading`, `graph` (the composed `lr-graph`), `path` (only
 while `path` is non-empty), `detail-popover`, `detail-card`.
@@ -2568,9 +2582,11 @@ Above 1,000 points, the plot renders a deterministic, evenly spaced sample of th
 count bounded while the sampled points stay representative of the full plotted distribution; a
 localized "showing N of M" notice appears in `[part="limit"]`. `bounds` and the cluster legend
 still derive from the complete `points` array, so a decimated view keeps the same scale and the
-same complete legend as the full plot.
+same complete legend as the full plot. The selected point is always drawn, even when the sample
+skipped it. An assignment too large for one collection snapshot (10,000 entries / 50,000 values) is
+itself sampled evenly across its whole length, and the notice counts the full input.
 
-**Events:** `lr-point-select` (`{ point }`), activated by click or Enter/Space.
+**Events:** `lr-point-select` (`{ point }`), activated by click or Enter/Space (not on key repeat).
 
 **CSS parts:** `base`, `plot`, `point`, `legend`, `legend-item`, `legend-swatch`, `legend-label`,
 `limit` (the "showing N of M" render-cap notice, present only above 1,000 points), `empty`.

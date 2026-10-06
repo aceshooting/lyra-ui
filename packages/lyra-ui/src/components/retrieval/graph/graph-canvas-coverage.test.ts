@@ -153,9 +153,11 @@ describe('coverage: canvas renderer internals', () => {
       navigableLinksCache?: unknown[];
       navigableLinks(): unknown[];
       createCanvasColorProbe(): HTMLElement;
+      resolvedCssColorCache: Map<string, string>;
     };
     const internals = el as unknown as Internals;
     internals.navigableLinksCache = undefined;
+    internals.resolvedCssColorCache.clear();
     const createProbe = internals.createCanvasColorProbe;
     let probeCount = 0;
     internals.createCanvasColorProbe = () => {
@@ -163,6 +165,10 @@ describe('coverage: canvas renderer internals', () => {
       return createProbe.call(el);
     };
     try {
+      expect(internals.navigableLinks().length).to.equal(3);
+      expect(probeCount).to.equal(1);
+      // A warm color cache adds no probe at all.
+      internals.navigableLinksCache = undefined;
       expect(internals.navigableLinks().length).to.equal(3);
       expect(probeCount).to.equal(1);
     } finally {

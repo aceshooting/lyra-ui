@@ -35,6 +35,10 @@ export const Compact: Story = {
   render: () => html`<lr-community-card .community=${community} .members=${members} size="s"></lr-community-card>`,
 };
 
+export const HeadingLevel: Story = {
+  render: () => html`<lr-community-card aria-level="4" .community=${community} .members=${members}></lr-community-card>`,
+};
+
 export const Empty: Story = {
   render: () => html`<lr-community-card></lr-community-card>`,
 };

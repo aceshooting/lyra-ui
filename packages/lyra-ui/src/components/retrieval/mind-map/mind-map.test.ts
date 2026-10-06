@@ -250,6 +250,50 @@ it('keyboard: ArrowDown descends into children, auto-expanding a collapsed paren
   ); // rag is collapsed -- auto-expands
   const event = await listener;
   expect(event.detail).to.deep.equal({ topicId: 'rag', expanded: true });
+  expect((el as unknown as { focusedId: string | null }).focusedId).to.equal('chunking');
+  expect(sinkTexts().at(-1)).to.include('Chunking');
+});
+
+it('does not toggle a parent again while Enter or Space auto-repeats', async () => {
+  const el = (await fixture(html`<lr-mind-map .topics=${topics}></lr-mind-map>`)) as LyraMindMap;
+  const svg = el.shadowRoot!.querySelector('[part="svg"]')!;
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  let toggles = 0;
+  el.addEventListener('lr-topic-toggle', () => (toggles += 1));
+  for (const key of ['Enter', ' '])
+    svg.dispatchEvent(new KeyboardEvent('keydown', { key, repeat: true, bubbles: true, cancelable: true }));
+  expect(toggles).to.equal(0);
+});
+
+it('keeps a topic tree larger than one collection snapshot instead of emptying it', async () => {
+  const children = Array.from({ length: 15_000 }, (_, index) => ({ id: `c-${index}`, label: `Child ${index}` }));
+  const el = (await fixture(html`<lr-mind-map
+    .topics=${[{ id: 'root', label: 'Root', children }]}
+  ></lr-mind-map>`)) as LyraMindMap;
+  expect(el.shadowRoot!.querySelector('[part="empty"]') === null, 'empty state').to.equal(true);
+  expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.include('15,001');
+});
+
+it('does not re-read the ring gap for a keyboard step', async () => {
+  const el = (await fixture(html`<lr-mind-map .topics=${topics}></lr-mind-map>`)) as LyraMindMap;
+  const svg = el.shadowRoot!.querySelector('[part="svg"]')!;
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  const prototype = CSSStyleDeclaration.prototype;
+  const native = prototype.getPropertyValue;
+  let reads = 0;
+  prototype.getPropertyValue = function (this: CSSStyleDeclaration, name: string) {
+    if (name === '--lr-mind-map-ring-gap') reads += 1;
+    return native.call(this, name);
+  };
+  try {
+    svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+  } finally {
+    prototype.getPropertyValue = native;
+  }
+  expect(reads).to.equal(0);
 });
 
 it('ignores a non-navigation key', async () => {

@@ -63,14 +63,14 @@ export interface LyraGraphCommunity {
  *  wiki-style `[[link]]` reference to a not-yet-created page. An edge whose `source` id has no
  *  matching node is still dropped entirely (there is no position to draw a stub from). */
 export interface LyraGraphEdge {
-  /** Optional stable id returned by `lr-link-click`. */
+  /** Optional stable id returned by `lr-edge-activate`. */
   readonly id?: string;
   readonly source: string;
   readonly target: string;
   /** Stroke/picking width. Negative values clamp to 0; non-finite or unset values use 1.5. */
   readonly width?: number;
-  /** Optional spoken-name and SVG-tooltip fallback used before the generated source/target text.
-   * It is not rendered as a visible edge label. */
+  /** Optional spoken-name and SVG-tooltip fallback used before the generated source/target text;
+   * drawn as a visible edge label only with `withEdgeLabels`. */
   readonly label?: string;
   /** Spoken label for the keyboard-operable link. */
   readonly accessibleLabel?: string;

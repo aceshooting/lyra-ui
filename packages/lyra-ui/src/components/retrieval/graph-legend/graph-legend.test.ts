@@ -4,7 +4,7 @@ import { sendKeys } from '@web/test-runner-commands';
 import './graph-legend.js';
 import type { LyraGraphLegend } from './graph-legend.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import {
   captureDeprecationWarnings,
   type DeprecatedUsage,
@@ -36,7 +36,7 @@ const types = [
 expectLocaleFallback('ar-EG', [
   'graphLegendLabel',
 ]);
-it('defaults to empty types/counts/hiddenTypes, withoutInteraction=false, empty label', async () => {
+it('defaults to empty types/counts/hiddenTypes, withoutInteraction=false, an unset label', async () => {
   const el = (await fixture(
     html`<lr-graph-legend></lr-graph-legend>`
   )) as LyraGraphLegend;
@@ -44,7 +44,7 @@ it('defaults to empty types/counts/hiddenTypes, withoutInteraction=false, empty 
   expect(el.counts).to.equal(undefined);
   expect(el.hiddenTypes).to.deep.equal([]);
   expect(el.withoutInteraction).to.be.false;
-  expect(el.label).to.equal('');
+  expect(el.label).to.equal(undefined);
 });
 
 it('renders one [part="item"] button per type, with visible text = label (+ count when given)', async () => {
@@ -89,18 +89,41 @@ it("uses a type's own color for its swatch when set, and a palette fallback othe
   )) as LyraGraphLegend;
   el.types = types;
   await el.updateComplete;
-  const swatches = el.shadowRoot!.querySelectorAll('[part~="swatch"]');
-  expect(
-    swatches[1]!.getAttribute('fill') ??
-      swatches[1]!.querySelector('[fill]')?.getAttribute('fill')
-  ).to.equal('#7c3aed');
-  // 'person' has no explicit color -- falls back to the categorical palette. The design tokens
-  // define `--lr-graph-cat-1` (specialist-tokens.styles.ts), so the computed style resolves to
-  // that real token value rather than this component's own hardcoded FALLBACK_PALETTE[0].
-  const personFill =
-    swatches[0]!.getAttribute('fill') ??
-    swatches[0]!.querySelector('[fill]')?.getAttribute('fill');
-  expect(personFill).to.equal('#8250df');
+  const fills = [...el.shadowRoot!.querySelectorAll('[part~="swatch"] > :first-child')].map(
+    (shape) => getComputedStyle(shape).fill
+  );
+  // 'person' has no explicit color: the graph's own `--lr-graph-cat-1`.
+  expect(fills).to.deep.equal(['rgb(130, 80, 223)', 'rgb(124, 58, 237)']);
+});
+
+it('repaints palette swatches when the theme switches, like the graph nodes', async () => {
+  const el = await fixture<LyraGraphLegend>(html`<lr-graph-legend .types=${types}></lr-graph-legend>`);
+  const swatch = el.shadowRoot!.querySelector('[part~="swatch"] > :first-child')!;
+  expect(getComputedStyle(swatch).fill).to.equal('rgb(130, 80, 223)');
+  el.setAttribute('data-lr-theme', 'dark');
+  expect(getComputedStyle(swatch).fill).to.equal('rgb(181, 140, 255)');
+});
+
+it('keeps an explicitly empty label empty', async () => {
+  const el = await fixture<LyraGraphLegend>(html`<lr-graph-legend label="" .types=${types}></lr-graph-legend>`);
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
+});
+
+it('tints a hovered item from the shared mix tokens', async () => {
+  const el = await fixture<LyraGraphLegend>(html`<lr-graph-legend
+    style="--lr-color-mix-partner: rgb(255, 0, 0)"
+    .types=${types}
+  ></lr-graph-legend>`);
+  const item = el.shadowRoot!.querySelector<HTMLElement>('button[part~="item"]')!;
+  item.style.transition = 'none';
+  try {
+    await hoverUntilMatched(item, 'legend item hovered');
+    const red = getComputedStyle(item).backgroundColor;
+    el.style.setProperty('--lr-color-mix-partner', 'rgb(0, 0, 255)');
+    expect(getComputedStyle(item).backgroundColor).to.not.equal(red);
+  } finally {
+    await resetMouse();
+  }
 });
 
 it('rejects url paint servers and falls back to the categorical palette', async () => {
@@ -115,11 +138,8 @@ it('rejects url paint servers and falls back to the categorical palette', async 
     },
   ];
   await el.updateComplete;
-  const swatch = el.shadowRoot!.querySelector('[part~="swatch"]')!;
-  const fill =
-    swatch.getAttribute('fill') ??
-    swatch.querySelector('[fill]')?.getAttribute('fill');
-  expect(fill).to.equal('#8250df');
+  const swatch = el.shadowRoot!.querySelector('[part~="swatch"] > :first-child')!;
+  expect(getComputedStyle(swatch).fill).to.equal('rgb(130, 80, 223)');
 });
 
 it('toggles hiddenTypes and emits lr-visibility-change with the full updated array on click', async () => {
@@ -578,13 +598,10 @@ it('normalizes non-finite public counts to a finite non-negative fallback', asyn
   ).to.deep.equal(['0', '0']);
 });
 
-it('resolves each distinct palette slot once per render, not once per legend entry', async () => {
+it('reads no computed style to paint palette swatches', async () => {
   const el = (await fixture(
     html`<lr-graph-legend></lr-graph-legend>`
   )) as LyraGraphLegend;
-  // 10 types with no explicit color, so every swatch falls back to the --lr-graph-cat-N palette.
-  // PALETTE_SIZE is 8, so indices 8 and 9 land back on the same slots as 0 and 1 -- the fill space
-  // one render actually needs is 8 distinct {slot} lookups, not 10.
   el.types = Array.from({ length: 10 }, (_unused, index) => ({
     id: `type-${index}`,
     label: `Type ${index}`,
@@ -600,10 +617,7 @@ it('resolves each distinct palette slot once per render, not once per legend ent
   try {
     el.types = [...el.types];
     await el.updateComplete;
-    expect(
-      calls,
-      'one getComputedStyle call per distinct palette slot this render needed, not per legend entry'
-    ).to.equal(8);
+    expect(calls).to.equal(0);
   } finally {
     window.getComputedStyle = original;
   }

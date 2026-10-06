@@ -107,6 +107,8 @@ export interface CanvasScene {
    *  Optional for the same reason as `expandBadgeFill`. */
   expandBadgeStroke?: string;
   font: string;
+  /** `--lr-border-width-thin`/`-medium`/`-thick` in px, as the SVG strokes use them (default 1/2/3). */
+  borderWidths?: readonly [number, number, number];
 }
 
 /** Matches the SVG renderer's community-hull stroke width (`2 * --lr-size-24px`, i.e. 2x a 24
@@ -118,20 +120,15 @@ const MIN_PICK_TARGET_PX = 24;
 /** Exact-color picking deliberately rejects anti-aliased edge pixels. One physical pixel on each
  *  side keeps the full 24px interior decodable instead of rounding its outermost color to zero. */
 const PICK_RASTER_GUARD_PX = 2;
-/** Matches the SVG renderer's edge/community label halo stroke width (`--lr-border-width-thick`). */
-const LABEL_HALO_WIDTH = 3;
-/** Matches the SVG renderer's `[part="link"][data-selected]` rule, which always sets
- *  stroke-width to `var(--lr-border-width-thick)` -- overriding the link's own configured
- *  `width` rather than adding to it -- so a selected link reads identically thick in either
- *  renderer. */
-const SELECTED_LINK_STROKE_WIDTH = 3;
-/** Matches `graph.class.ts`'s own `EXPAND_BADGE_R` (world px, the "+" badge circle radius) --
- *  reimplemented locally so this module stays independent of `graph.class.ts` (same rationale as
- *  this file's local shape-path math). */
-const EXPAND_BADGE_R = 5;
-/** Matches `graph.class.ts`'s own `EXPAND_BADGE_OFFSET` -- places the badge at the node's edge,
- *  diagonally upper-right. */
-const EXPAND_BADGE_OFFSET = Math.SQRT1_2;
+/** World px radius of the "+" expand badge, shared with the SVG renderer. */
+export const EXPAND_BADGE_R = 5;
+/** Places the expand badge at the node's edge, diagonally upper-right. */
+export const EXPAND_BADGE_OFFSET = Math.SQRT1_2;
+
+/** Half the side of a square area-matched to a circle of radius `r` (side^2 = pi * r^2). */
+export function shapeHalfSide(r: number): number {
+  return (r * Math.sqrt(Math.PI)) / 2;
+}
 
 function pathForShape(
   x: number,
@@ -144,10 +141,7 @@ function pathForShape(
     path.arc(x, y, r, 0, Math.PI * 2);
     return path;
   }
-  // side = r * sqrt(pi), area-matched to a circle of radius r -- mirrors graph.class.ts's own
-  // shapeHalfSide()/squarePath()/diamondPath() math, reimplemented locally so this module stays
-  // independent of graph.class.ts.
-  const s = (r * Math.sqrt(Math.PI)) / 2;
+  const s = shapeHalfSide(r);
   if (shape === 'square') {
     path.rect(x - s, y - s, s * 2, s * 2);
     return path;
@@ -184,10 +178,11 @@ function drawArrowhead(ctx: CanvasRenderingContext2D, link: CanvasLink): void {
 function drawRing(
   ctx: CanvasRenderingContext2D,
   ring: CanvasRing,
-  color: string
+  color: string,
+  width: number
 ): void {
   ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = width;
   ctx.beginPath();
   ctx.arc(ring.x, ring.y, ring.r, 0, Math.PI * 2);
   ctx.stroke();
@@ -213,7 +208,7 @@ function drawKeyboardFocusCue(
   }
   ctx.setLineDash([]);
   if (scene.keyboardFocusRing)
-    drawRing(ctx, scene.keyboardFocusRing, scene.haloColor);
+    drawRing(ctx, scene.keyboardFocusRing, scene.haloColor, scene.borderWidths?.[1] ?? 2);
 }
 
 /**
@@ -246,19 +241,33 @@ export function drawGraphScene(
   }
 
   const dimmedOpacity = scene.dimmedOpacity ?? 1;
-  for (const link of scene.links) {
-    // Canvas ignores lineWidth=0 and retains the preceding stroke width. Skip both the stroke
-    // and its arrowhead while the caller keeps the link in the graph's topology.
-    if (link.width <= 0) continue;
+  const [thin, medium, thick] = scene.borderWidths ?? [1, 2, 3];
+  const styleLink = (link: CanvasLink): void => {
     ctx.strokeStyle = link.selected ? scene.selectedColor : link.color;
-    ctx.lineWidth = link.selected ? SELECTED_LINK_STROKE_WIDTH : link.width;
+    ctx.lineWidth = link.selected ? thick : link.width;
     ctx.setLineDash(link.dash ? [...link.dash] : []);
     ctx.globalAlpha = link.dimmed ? dimmedOpacity : 1;
-    ctx.beginPath();
+  };
+  // Same-style runs share one stroke; skip width 0, which canvas ignores (keeping the last width).
+  let style = '';
+  ctx.beginPath();
+  for (const link of scene.links) {
+    if (link.width <= 0) continue;
+    const linkStyle = [link.selected || link.color, link.selected || link.width, link.dash, link.dimmed].join('|');
+    if (linkStyle !== style) {
+      ctx.stroke();
+      ctx.beginPath();
+      styleLink(link);
+      style = linkStyle;
+    }
     ctx.moveTo(link.x1, link.y1);
     ctx.lineTo(link.x2, link.y2);
-    ctx.stroke();
-    if (link.directed) drawArrowhead(ctx, link);
+  }
+  ctx.stroke();
+  for (const link of scene.links) {
+    if (link.width <= 0 || !link.directed) continue;
+    styleLink(link);
+    drawArrowhead(ctx, link);
   }
   ctx.globalAlpha = 1;
   ctx.setLineDash([]);
@@ -267,7 +276,7 @@ export function drawGraphScene(
     ctx.font = scene.font;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.lineWidth = LABEL_HALO_WIDTH;
+    ctx.lineWidth = thick;
     for (const label of scene.edgeLabels) {
       ctx.strokeStyle = scene.labelHaloColor;
       ctx.strokeText(label.text, label.x, label.y);
@@ -283,7 +292,7 @@ export function drawGraphScene(
     ctx.fill(path);
     if (node.selected) {
       ctx.strokeStyle = scene.selectedColor;
-      ctx.lineWidth = 2;
+      ctx.lineWidth = medium;
       ctx.stroke(path);
     }
   }
@@ -303,7 +312,7 @@ export function drawGraphScene(
 
   const expandIndicators = scene.expandIndicators ?? [];
   if (expandIndicators.length) {
-    ctx.lineWidth = 1; // matches --lr-size-1px, the SVG expand-indicator's own stroke-width
+    ctx.lineWidth = thin;
     for (const indicator of expandIndicators) {
       const bx = indicator.x + indicator.r * EXPAND_BADGE_OFFSET;
       const by = indicator.y - indicator.r * EXPAND_BADGE_OFFSET;
@@ -323,7 +332,7 @@ export function drawGraphScene(
     }
   }
 
-  if (scene.focusHalo) drawRing(ctx, scene.focusHalo, scene.haloColor);
+  if (scene.focusHalo) drawRing(ctx, scene.focusHalo, scene.haloColor, medium);
   drawKeyboardFocusCue(ctx, scene);
 
   ctx.restore();

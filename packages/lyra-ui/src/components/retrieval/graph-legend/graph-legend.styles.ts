@@ -38,7 +38,7 @@ export const styles = css`
     transition: var(--lr-transition-interactive);
   }
   button[part~='item']:hover {
-    background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover));
   }
   button[part~='item']:active {
     background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));

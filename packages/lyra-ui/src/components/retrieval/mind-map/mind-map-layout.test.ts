@@ -375,3 +375,18 @@ describe('decimateMindMapLayout', () => {
     );
   });
 });
+
+describe('layoutMindMap cost', () => {
+  it('counts visible leaves once per topic, not once per ancestor', () => {
+    let chain: LyraTopic = { id: 't-200', label: 'Leaf' };
+    for (let depth = 199; depth >= 0; depth -= 1)
+      chain = { id: `t-${depth}`, label: `Topic ${depth}`, children: [chain] };
+    let calls = 0;
+    layoutMindMap([chain], 'Hub', {
+      ringGap: 10,
+      rtl: false,
+      isExpanded: () => (calls += 1) > 0,
+    });
+    expect(calls).to.be.below(3 * 201);
+  });
+});

@@ -843,7 +843,11 @@ describe('lr-knowledge-graph-explorer', () => {
     await aTimeout(0);
 
     expect(events.length).to.equal(1);
-    expect(events[0]!.detail).to.deep.equal({ selectedNodeId: 'polonium' });
+    expect(events[0]!.detail).to.deep.equal({
+      selectedNodeId: 'polonium',
+      selectedNodeIds: ['polonium'],
+      selectedEdgeIds: [],
+    });
     expect(events[0]!.bubbles).to.be.true;
     expect(events[0]!.composed).to.be.true;
   });
@@ -1403,7 +1407,9 @@ describe('lr-knowledge-graph-explorer', () => {
     });
     await aTimeout(0);
 
-    expect(details).to.deep.equal([{ selectedNodeId: 'marie' }]);
+    expect(details).to.deep.equal([
+      { selectedNodeId: 'marie', selectedNodeIds: ['marie'], selectedEdgeIds: [] },
+    ]);
   });
 
   it("re-anchors the open popover from lr-graph's own lr-viewport-change, and stops once it closes", async () => {
@@ -1499,6 +1505,8 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(el.selectedNodeId).to.equal(null);
     expect((await selectionChange).detail).to.deep.equal({
       selectedNodeId: null,
+      selectedNodeIds: [],
+      selectedEdgeIds: [],
     });
   });
 
@@ -1681,6 +1689,8 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(popover.open).to.be.false;
     expect((await selectionChange).detail).to.deep.equal({
       selectedNodeId: null,
+      selectedNodeIds: [],
+      selectedEdgeIds: [],
     });
   });
 

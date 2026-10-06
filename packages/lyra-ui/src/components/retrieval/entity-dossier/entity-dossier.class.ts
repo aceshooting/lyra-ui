@@ -65,12 +65,9 @@ export interface LyraEntityDossierEventMap
     LyraChunkInspectorEventMap,
     Omit<LyraProvenancePanelEventMap, 'lr-entity-activate' | 'lr-entity-select'>,
     Omit<LyraTabGroupEventMap, 'lr-tab-show'> {
-  /** Canonical name for the "user picked this entity" gesture, surfaced unchanged from the
-   *  embedded entity card or neighbor list. No composed child emits this with an
-   *  `occurrenceIndex` (only the embedded provenance panel's own `lr-entity-activate` does, via
-   *  its community card and relationship path strip), so unlike that one this stays the plain
-   *  shape. */
-  'lr-entity-select': CustomEvent<{ entityId: string }>;
+  /** Canonical "user picked this entity" gesture from any composed child; a path strip adds `occurrenceIndex`. */
+  'lr-entity-select': CustomEvent<{ entityId: string; occurrenceIndex?: number }>;
+  /** @deprecated Use `lr-entity-select`. */
   'lr-entity-activate': CustomEvent<{
     entityId: string;
     occurrenceIndex?: number;
@@ -111,10 +108,10 @@ export interface LyraEntityDossierEventMap
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-entity-dossier
- * @event lr-entity-select - Surfaced unchanged from the embedded entity card or neighbor list.
- *   `detail: { entityId }`.
- * @event lr-entity-activate - Surfaced unchanged from the embedded provenance panel's own
- *   community card or relationship path strip. `detail: { entityId, occurrenceIndex? }`.
+ * @event lr-entity-select - Surfaced unchanged from the embedded entity card, neighbor list, or
+ *   the provenance panel's community card or path strip. `detail: { entityId, occurrenceIndex? }`.
+ * @event lr-entity-activate - Deprecated alias of `lr-entity-select` from the provenance panel's
+ *   community card or path strip, dispatched right after it.
  * @event lr-node-expand - Surfaced unchanged from the embedded neighbor list.
  *   `detail: { nodeId }`.
  * @event lr-chunk-open - Surfaced unchanged from the embedded chunk inspector.
@@ -300,6 +297,7 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
             <lr-neighbor-list
               part="neighbor-list"
               .rows=${this.neighbors}
+              .types=${this.types}
               .groupByRelation=${this.groupByRelation}
               .expandable=${this.expandable}
             ></lr-neighbor-list>

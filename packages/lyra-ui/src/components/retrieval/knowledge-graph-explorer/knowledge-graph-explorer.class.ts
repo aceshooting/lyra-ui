@@ -2,6 +2,7 @@ import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
+import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { srOnly } from '../../../internal/a11y.js';
@@ -55,6 +56,9 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_graphExplorerFindPath, LYRA_DEFAULT_graphExplorerLabel, LYRA_DEFAULT_graphExplorerPin, LYRA_DEFAULT_graphExplorerPinned, LYRA_DEFAULT_graphExplorerPinnedHeading, LYRA_DEFAULT_graphExplorerSearchPlaceholder, LYRA_DEFAULT_graphExplorerSearchResultsLabel, LYRA_DEFAULT_graphExplorerUnpin, LYRA_DEFAULT_graphExplorerUnpinned, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+/** Search results rendered at once; the match count still covers every match. */
+const SEARCH_RESULT_LIMIT = 50;
+
 function isElementNode(value: EventTarget): value is Element {
   if (typeof value !== 'object' || value === null) return false;
   const candidate = value as Partial<Element> & { nodeType?: unknown };
@@ -82,7 +86,13 @@ export interface LyraKnowledgeGraphExplorerEventMap {
   /** The explorer changed its self-managed selection. Fires after `selectedNodeId` is updated for
    *  search, graph, neighbor, path, entity-card, invalidation, and popover-close paths. Direct
    *  host assignments remain silent. */
-  'lr-selection-change': CustomEvent<{ selectedNodeId: string | null }>;
+  'lr-selection-change': CustomEvent<
+    LyraEventDetailSnapshot<{
+      selectedNodeId: string | null;
+      selectedNodeIds: string[];
+      selectedEdgeIds: string[];
+    }>
+  >;
   /** The user asked to find a path between the two currently pinned nodes (the "Find path" action,
    *  only rendered once exactly two nodes are pinned). `detail: { sourceNodeId, targetNodeId }` -- this
    *  component has no graph-traversal algorithm of its own (client-side, backend call, whatever the
@@ -198,7 +208,8 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  * @slot detail-actions - Additive content appended into the default `lr-entity-card`'s `actions`
  *   slot, beside its built-in pin toggle. No effect while `details` is overridden.
  * @event lr-selection-change - The explorer changed its self-managed selection. `detail:
- *   { selectedNodeId: string | null }`. Direct host assignments do not emit.
+ *   { selectedNodeId, selectedNodeIds, selectedEdgeIds }`, the last two in `lr-graph`'s shape.
+ *   Direct host assignments do not emit.
  * @event lr-path-request - `detail: { sourceNodeId, targetNodeId }`. See the class doc above.
  * @event lr-pin-change - `detail: { pinnedNodeIds }`. See the class doc above.
  * @event lr-search-change - The user typed in the toolbar's search box. `detail:
@@ -222,7 +233,8 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  * @csspart toolbar - The row wrapping the search input and the type-filter legend.
  * @csspart search - The composed `lr-entity-card` search `lr-input`.
  * @csspart legend - The composed `lr-graph-legend`.
- * @csspart search-results - The search-match list, only rendered while `query` is non-empty.
+ * @csspart search-results - The search-match list, only rendered while `query` is non-empty: at most
+ *   50 rows sharing one tab stop (ArrowUp/ArrowDown/Home/End); the announced count covers every match.
  * @csspart search-result - One search-match row (`role="listitem"`, wrapping a `<button>`).
  * @csspart search-empty - The "no matches" message, shown when `query` is non-empty but no node matches.
  * @csspart pinned - The pinned-nodes row, only rendered while `pinnedNodeIds` is non-empty.
@@ -273,6 +285,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
 
   static override styles = [LyraElement.styles, styles, srOnly];
   protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-selection-change',
     'lr-pin-change',
     'lr-hidden-types-change',
   ]);
@@ -350,6 +363,8 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   /** Currently pointer-hovered node id, set only while `highlight === 'hover'` (see
    *  `onGraphNodeEnter`/`onGraphNodeLeave`) -- read by `computedDimmedNodeIds`. */
   @state() private hoveredNodeId: string | null = null;
+  /** The search result holding the list's single tab stop. */
+  @state() private activeResult = 0;
 
   @query('[part="graph"]') private graphEl?: LyraGraph;
   @query('[part="detail-popover"]') private popoverEl?: LyraPopover;
@@ -370,6 +385,8 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   private linksByNodeId = new Map<string, LyraGraphEdge[]>();
   private degreeByNodeId = new Map<string, number>();
   private communityLabelById = new Map<string, string | undefined>();
+  /** Query, locale, model, hidden types and their matches: one filter pass per change. */
+  private matchesMemo?: [string, string, NormalizedGraphModel, readonly string[], LyraGraphNode[] | undefined];
   private normalizedGraphModel?: NormalizedGraphModel;
   private normalizedGraphSources?: readonly [
     readonly LyraGraphNode[],
@@ -445,6 +462,8 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     ) {
       this.rebuildDerivedCollections();
     }
+    if (this.hoveredNodeId && !this.isVisibleNode(this.hoveredNodeId))
+      this.hoveredNodeId = null;
     // A node removed from `nodes` (or `hiddenTypes` hiding its whole type) shouldn't leave a
     // dangling selection/popover pointed at nothing. `entityFor()` intentionally still resolves
     // hidden nodes for neighbor/path data, so visibility must be checked separately here.
@@ -624,13 +643,18 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     if (Object.is(this.selectedNodeId, value)) return;
     this.internalSelectionAssignment = { value };
     this.selectedNodeId = value;
-    this.emit('lr-selection-change', { selectedNodeId: value });
+    this.emit('lr-selection-change', {
+      selectedNodeId: value,
+      selectedNodeIds: value ? [value] : [],
+      selectedEdgeIds: [],
+    });
   }
 
   override disconnectedCallback(): void {
     this.invalidateActivation();
     this.pendingNodeId = undefined;
     this.trackedNodeEl = undefined;
+    this.hoveredNodeId = null;
     this.announcementSink?.release();
     this.announcementSink = undefined;
     super.disconnectedCallback();
@@ -667,20 +691,18 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     this.degreeByNodeId = degrees;
   }
 
+  private isVisibleGraphNode(node: LyraGraphNode): boolean {
+    return node.type == null || !this.canonicalHiddenTypes.includes(node.type);
+  }
+
   private isVisibleNode(id: string): boolean {
     const node = this.nodeById.get(id);
-    return (
-      !!node &&
-      (node.type == null || !this.canonicalHiddenTypes.includes(node.type))
-    );
+    return !!node && this.isVisibleGraphNode(node);
   }
 
   private canActivateNode(id: string): boolean {
-    const node = this.graphModel.nodes.find((candidate) => candidate.id === id);
-    if (node)
-      return (
-        node.type == null || !this.canonicalHiddenTypes.includes(node.type)
-      );
+    const node = this.nodeById.get(id);
+    if (node) return this.isVisibleGraphNode(node);
     return !this.hasUpdated && this.graphModel.nodes.length === 0;
   }
 
@@ -750,15 +772,25 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   }
 
   private matchingNodes(): LyraGraphNode[] | undefined {
-    const q = (this.query ?? '').trim().toLocaleLowerCase(this.effectiveLocale);
-    if (!q) return undefined;
-    return this.graphModel.nodes.filter(
-      (node) =>
-        this.isVisibleNode(node.id) &&
-        this.searchableNamesOf(node).some((name) =>
-          name.toLocaleLowerCase(this.effectiveLocale).includes(q)
+    const query = this.query ?? '';
+    const locale = this.effectiveLocale;
+    const model = this.graphModel;
+    const hidden = this.canonicalHiddenTypes;
+    const memo = this.matchesMemo;
+    if (memo?.[0] === query && memo[1] === locale && memo[2] === model && memo[3] === hidden)
+      return memo[4];
+    const q = query.trim().toLocaleLowerCase(locale);
+    const matches = q
+      ? model.nodes.filter(
+          (node) =>
+            this.isVisibleGraphNode(node) &&
+            this.searchableNamesOf(node).some((name) =>
+              name.toLocaleLowerCase(locale).includes(q)
+            )
         )
-    );
+      : undefined;
+    this.matchesMemo = [query, locale, model, hidden, matches];
+    return matches;
   }
 
   private searchResultAnnouncement(matches = this.matchingNodes()): string {
@@ -1047,6 +1079,18 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
       this.hoveredNodeId = null;
   };
 
+  private onResultKeyDown = (event: KeyboardEvent): void => {
+    const buttons = [
+      ...this.renderRoot.querySelectorAll<HTMLButtonElement>('[part="search-result"] button'),
+    ];
+    const index = buttons.indexOf(event.target as HTMLButtonElement);
+    const next = ({ ArrowDown: index + 1, ArrowUp: index - 1, Home: 0, End: buttons.length - 1 } as Record<string, number>)[event.key];
+    if (index < 0 || next === undefined) return;
+    event.preventDefault();
+    this.activeResult = Math.max(0, Math.min(buttons.length - 1, next));
+    buttons[this.activeResult]!.focus();
+  };
+
   private onPopoverHide = (): void => {
     this.invalidateActivation();
     this.trackedNodeEl = undefined;
@@ -1069,6 +1113,9 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     const isPinned =
       this.selectedNodeId != null &&
       pinnedNodeIds.includes(this.selectedNodeId);
+    // Unchanged inputs re-commit nothing, so the composed children skip their rebuilds.
+    const dimmedDeps = [this.highlight, matches, this.selectedNodeId, this.hoveredNodeId, model];
+    const detailDeps = [this.selectedNodeId, model, hiddenTypes, this.entityDetails];
     return html`
       <div
         part="base"
@@ -1103,12 +1150,14 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
                   ? html`<div part="search-empty" role="listitem">
                       ${this.localize('viewerSearchNoMatches')}
                     </div>`
-                  : matches.map(
-                      (n) => html`
+                  : matches.slice(0, SEARCH_RESULT_LIMIT).map(
+                      (n, index, shown) => html`
                         <div part="search-result" role="listitem">
                           <button
                             type="button"
+                            tabindex=${index === Math.min(this.activeResult, shown.length - 1) ? '0' : '-1'}
                             @click=${() => void this.activateEntity(n.id)}
+                            @keydown=${this.onResultKeyDown}
                           >
                             ${n.label || n.accessibleLabel || n.id}
                           </button>
@@ -1150,7 +1199,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
           ? html`<lr-path-strip
               part="path"
               .path=${this.path}
-              @lr-entity-activate=${this.onEntityActivate}
+              @lr-entity-activate=${(event: Event) => event.stopPropagation()}
             ></lr-path-strip>`
           : nothing}
         <lr-graph
@@ -1160,9 +1209,11 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
           .nodeTypes=${model.nodeTypes}
           .communities=${model.communities}
           .hiddenTypes=${hiddenTypes}
-          .selectedNodeIds=${this.selectedNodeId ? [this.selectedNodeId] : []}
-          .dimmedNodeIds=${this.computedDimmedNodeIds}
-          .dimmedEdgeIds=${this.computedDimmedLinkIds}
+          .selectedNodeIds=${guard([this.selectedNodeId], () =>
+            this.selectedNodeId ? [this.selectedNodeId] : []
+          )}
+          .dimmedNodeIds=${guard(dimmedDeps, () => this.computedDimmedNodeIds)}
+          .dimmedEdgeIds=${guard(dimmedDeps, () => this.computedDimmedLinkIds)}
           renderer=${this.renderer}
           fit-to=${this.fitTo}
           node-labels=${this.nodeLabels ?? nothing}
@@ -1184,19 +1235,17 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
               ? html`
                   <lr-entity-card
                     part="detail-card"
-                    .entity=${selectedEntity}
+                    .entity=${guard(detailDeps, () => selectedEntity)}
                     .types=${model.nodeTypes}
                     community-label=${this.communityLabelFor(
                       selectedEntity.communityId
                     )}
                   >
                     <lr-neighbor-list
-                      .rows=${this.neighborRowsFor(
-                        // selectedEntity (this block's guard, computed above) is only ever
-                        // non-null when this.selectedNodeId was truthy at that same point in
-                        // this render() call, so this can never actually be null here.
-                        this.selectedNodeId!
+                      .rows=${guard(detailDeps, () =>
+                        this.neighborRowsFor(this.selectedNodeId!)
                       )}
+                      .types=${model.nodeTypes}
                       expandable
                     ></lr-neighbor-list>
                     <slot name="detail-body"></slot>

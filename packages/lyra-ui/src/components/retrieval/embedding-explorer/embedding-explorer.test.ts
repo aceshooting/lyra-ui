@@ -228,6 +228,18 @@ describe('lr-embedding-explorer', () => {
     ).to.deep.equal(['-1', '0']);
   });
 
+  it('activates once while Enter or Space auto-repeats', async () => {
+    const el = (await fixture(
+      html`<lr-embedding-explorer .points=${points}></lr-embedding-explorer>`
+    )) as LyraEmbeddingExplorer;
+    let selections = 0;
+    el.addEventListener('lr-point-select', () => (selections += 1));
+    const point = el.shadowRoot!.querySelector<SVGGElement>('[part="point"]')!;
+    for (const key of ['Enter', ' '])
+      point.dispatchEvent(new KeyboardEvent('keydown', { key, repeat: true, bubbles: true }));
+    expect(selections).to.equal(0);
+  });
+
   it('supports bounded vertical arrow aliases', async () => {
     const el = (await fixture(
       html`<lr-embedding-explorer .points=${points}></lr-embedding-explorer>`
@@ -811,6 +823,55 @@ describe('lr-embedding-explorer point count past the render cap', () => {
       n.getAttribute('data-id')
     );
     expect(second).to.deep.equal(first);
+  });
+
+  it('samples an input too large for one snapshot across its whole length', async () => {
+    const el = (await fixture(
+      html`<lr-embedding-explorer
+        .points=${manyPoints(20_000).map((point) => ({ ...point, cluster: 'c' }))}
+      ></lr-embedding-explorer>`
+    )) as LyraEmbeddingExplorer;
+    await el.updateComplete;
+    const ids = [...el.shadowRoot!.querySelectorAll('[part="point"]')].map((node) =>
+      Number(node.getAttribute('data-id')!.slice(2))
+    );
+    expect(Math.max(...ids)).to.be.above(19_000);
+    expect(el.shadowRoot!.querySelector('[part="limit"]')!.textContent).to.equal(
+      'Showing 1,000 of 20,000 points.'
+    );
+  });
+
+  it('draws a controlled selection the sample skipped', async () => {
+    const el = (await fixture(
+      html`<lr-embedding-explorer
+        selected-point-id="p-1"
+        .points=${manyPoints(1500)}
+      ></lr-embedding-explorer>`
+    )) as LyraEmbeddingExplorer;
+    await el.updateComplete;
+    const selected = el.shadowRoot!.querySelector('[part="point"][data-id="p-1"]');
+    expect(selected?.getAttribute('aria-selected')).to.equal('true');
+  });
+
+  it('derives the sample once per input, not on every arrow key', async () => {
+    const el = (await fixture(
+      html`<lr-embedding-explorer .points=${manyPoints(1500)}></lr-embedding-explorer>`
+    )) as LyraEmbeddingExplorer;
+    await el.updateComplete;
+    const first = el.shadowRoot!.querySelector<SVGGElement>('[part="point"]')!;
+    const nativeAdd = Set.prototype.add;
+    let adds = 0;
+    Set.prototype.add = function (this: Set<unknown>, value: unknown) {
+      adds += 1;
+      return nativeAdd.call(this, value);
+    };
+    try {
+      first.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+      await el.updateComplete;
+    } finally {
+      Set.prototype.add = nativeAdd;
+    }
+    expect(adds).to.be.below(500);
   });
 
   it('shows no truncation notice and renders every point when the array is at or below the cap', async () => {

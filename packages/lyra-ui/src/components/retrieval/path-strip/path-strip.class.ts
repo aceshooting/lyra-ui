@@ -29,6 +29,8 @@ export type LyraPathElement =
   | { kind: 'edge'; relation: string; directed?: boolean; reverse?: boolean };
 
 export interface LyraPathStripEventMap {
+  'lr-entity-select': CustomEvent<{ entityId: string; occurrenceIndex?: number }>;
+  /** @deprecated Use `lr-entity-select`. */
   'lr-entity-activate': CustomEvent<{
     entityId: string;
     occurrenceIndex: number;
@@ -56,7 +58,8 @@ interface PathOccurrence {
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-path-strip
- * @event lr-entity-activate - A node element activated. `detail: { entityId, occurrenceIndex }`.
+ * @event lr-entity-select - A node element activated. `detail: { entityId, occurrenceIndex }`.
+ * @event lr-entity-activate - Deprecated alias of `lr-entity-select`, dispatched right after it.
  * @event lr-relation-activate - An edge element activated. `detail: { relation, sourceNodeId?,
  * targetNodeId?, occurrenceIndex }` — source/target resolved from the adjacent retained node
  * elements, `undefined` when the path is malformed at that position. `occurrenceIndex` is the
@@ -174,10 +177,9 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
     if (!occurrence) return;
     const el = occurrence.element;
     if (el.kind === 'node') {
-      this.emit('lr-entity-activate', {
-        entityId: el.node.id,
-        occurrenceIndex: occurrence.occurrenceIndex,
-      });
+      const detail = { entityId: el.node.id, occurrenceIndex: occurrence.occurrenceIndex };
+      this.emit('lr-entity-select', { ...detail });
+      this.emit('lr-entity-activate', detail);
       return;
     }
     const source = this.pathOccurrences[index - 1]?.element;
@@ -235,7 +237,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
     if (count === 0) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      this.activate(this.activeIndex);
+      if (!e.repeat) this.activate(this.activeIndex);
       return;
     }
     const rtl = isRtl(this);

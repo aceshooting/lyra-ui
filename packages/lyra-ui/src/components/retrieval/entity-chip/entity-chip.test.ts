@@ -542,3 +542,26 @@ describe('disabled affordance (an entity-less chip)', () => {
     }
   });
 });
+
+it('lets Escape reach document listeners and ignores it during IME composition', async () => {
+  const el = await fixture<LyraEntityChip>(html`<lr-entity-chip text="Marie Curie">Physicist</lr-entity-chip>`);
+  const wrapper = el.shadowRoot!.querySelector('.wrapper') as HTMLElement;
+  const hidden = () => el.shadowRoot!.querySelector('[part="popover"]')!.hasAttribute('hidden');
+  wrapper.dispatchEvent(new Event('pointerenter', { bubbles: true }));
+  await el.updateComplete;
+  wrapper.dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'Escape', isComposing: true, bubbles: true, composed: true })
+  );
+  await el.updateComplete;
+  expect(hidden(), 'closed while composing').to.equal(false);
+  let reached = false;
+  const listener = () => (reached = true);
+  document.addEventListener('keydown', listener);
+  try {
+    wrapper.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true }));
+  } finally {
+    document.removeEventListener('keydown', listener);
+  }
+  await el.updateComplete;
+  expect([reached, hidden()]).to.deep.equal([true, true]);
+});

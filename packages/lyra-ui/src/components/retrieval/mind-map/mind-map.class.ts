@@ -1,4 +1,4 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { snapshotPublicCollection } from '../../../internal/collection-snapshot.js';
 import {
   html,
   nothing,
@@ -43,6 +43,29 @@ const DEFAULT_RING_GAP_PX = 96; // 6rem at the default 16px root font size
  *  sample rather than rendering every node, bounding DOM node/listener count while keeping the
  *  radial layout's branch proportions representative. */
 const MAX_RENDERED_MIND_MAP_NODES = 500;
+/** Topics kept, shallowest first, from a tree too large for one collection snapshot. */
+const TOPIC_COPY_LIMIT = 50_000;
+
+/** Copies a topic tree breadth-first as frozen `{ id, label, children }` records. */
+function copyTopicTree(roots: unknown): readonly LyraTopic[] {
+  const top: LyraTopic[] = [];
+  type Copy = { id: string; label: string; children?: LyraTopic[] };
+  const copies: Copy[] = [];
+  const queue: [unknown, LyraTopic[]][] = (Array.isArray(roots) ? roots : []).map((root) => [root, top]);
+  for (let i = 0; i < queue.length && copies.length < TOPIC_COPY_LIMIT; i++) {
+    const [topic, siblings] = queue[i]!;
+    if (topic === null || typeof topic !== 'object') continue;
+    const { id, label, children } = topic as LyraTopic;
+    const copy: Copy = Array.isArray(children) ? { id, label, children: [] } : { id, label };
+    copies.push(copy);
+    siblings.push(copy);
+    for (const child of copy.children ? children! : [])
+      if (queue.length < TOPIC_COPY_LIMIT) queue.push([child, copy.children!]);
+  }
+  for (const copy of copies) Object.freeze(Object.freeze(copy).children);
+  return Object.freeze(top);
+}
+
 const NAV_KEYS = new Set([
   'ArrowUp',
   'ArrowDown',
@@ -106,20 +129,33 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
     noData: LYRA_DEFAULT_noData,
   };
   // GENERATED DEFAULT-STRING SLICE: END
-  protected static override collectionSupport = collectionSupport;
-
-  protected static override readonly ownedCollectionProperties = Object.freeze([
-    'topics',
-  ]);
 
   static override styles = [LyraElement.styles, styles, srOnly];
   static override get observedAttributes(): string[] {
     return [...new Set([...super.observedAttributes, 'dir', 'lang'])];
   }
 
+  private _topics: readonly LyraTopic[] = Object.freeze([]);
+  private topicsSource: unknown = this._topics;
+
   /** A single root sits at the center; multiple roots hang off an implicit center hub whose
-   *  visible text is `label`. */
-  @property({ attribute: false }) topics: readonly LyraTopic[] = [];
+   *  visible text is `label`. A tree too large for one collection snapshot keeps its first
+   *  50,000 topics, shallowest first, as `{ id, label, children }`. */
+  @property({ attribute: false })
+  get topics(): readonly LyraTopic[] {
+    return this._topics;
+  }
+  set topics(value: readonly LyraTopic[]) {
+    if (Object.is(value, this.topicsSource) || Object.is(value, this._topics)) return;
+    const previous = this._topics;
+    let truncated = false;
+    const snapshot = snapshotPublicCollection(value, this.ownerDocument?.defaultView, {
+      onTruncate: () => (truncated = true),
+    });
+    this.topicsSource = value;
+    this._topics = (truncated ? copyTopicTree(value) : snapshot) as readonly LyraTopic[];
+    this.requestUpdate('topics', previous);
+  }
   /** Accessible name for the SVG group *and* the implicit hub's text; falls back to the localized
    *  `mindMapLabel` when omitted. An explicitly empty override stays empty. */
   @property() label?: string;
@@ -311,9 +347,8 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
     super.willUpdate(changed);
     const hubLabel =
       this.label == null ? this.localize('mindMapLabel') : this.label;
-    const context = `${hubLabel}\u0000${
-      isRtl(this) ? 'rtl' : 'ltr'
-    }\u0000${this.ringGapPx()}`;
+    // The ring gap is re-read only by a relayout (connect, resize, dir/lang, structural change).
+    const context = `${hubLabel}\u0000${isRtl(this) ? 'rtl' : 'ltr'}`;
     const structuralChange =
       changed.has('topics') ||
       changed.has('expandDepth') ||
@@ -407,7 +442,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
     if (!current) return;
 
     if (e.key === 'Enter' || e.key === ' ') {
-      this.activate(current);
+      if (!e.repeat) this.activate(current);
       return;
     }
     if (e.key === 'ArrowUp') {
@@ -418,8 +453,10 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
       if (!current.hasChildren) return;
       // The destination topic status is the useful announcement for this single gesture. The old
       // shadow live region batched the intermediate expansion text away in the same Lit update.
-      if (!this.isExpanded(current.id, current.depth))
+      if (!this.isExpanded(current.id, current.depth)) {
         this.toggle(current, false);
+        this.relayout();
+      }
       const child = this.childrenOf(current.id)[0];
       if (child) this.focusNodeById(child.id);
       return;

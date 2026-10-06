@@ -53,7 +53,7 @@ it('routes native path-node activation through selection, graph focus and detail
     await waitUntil(() => el.selectedNodeId === 'b', 'path selects Beta');
     const popover = el.shadowRoot!.querySelector<LyraPopover>('lr-popover')!;
     await waitUntil(() => popover.open, 'selected entity details open');
-    expect(selections).to.deep.equal([{ selectedNodeId: 'b' }]);
+    expect(selections).to.deep.equal([{ selectedNodeId: 'b', selectedNodeIds: ['b'], selectedEdgeIds: [] }]);
     expect(raw).to.equal(0);
     expect(graph.selectedNodeIds).to.deep.equal(['b']);
     expect(el.shadowRoot!.querySelector('lr-entity-card')!.entity?.label).to.equal('Beta');

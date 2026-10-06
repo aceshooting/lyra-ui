@@ -107,10 +107,20 @@ function syntheticHubIdentity(topics: readonly LyraTopic[]): string {
   return identity;
 }
 
+// Normalized topics are fresh objects per layout, so one cached count per object is per layout.
+const leafCounts = new WeakMap<LyraTopic, number>();
+
 function visibleLeafCount(node: LyraTopic, depth: number, opts: MindMapLayoutOptions): number {
-  const children = node.children ?? [];
-  if (children.length === 0 || !opts.isExpanded(node.id, depth)) return 1;
-  return Math.max(1, children.reduce((sum, c) => sum + visibleLeafCount(c, depth + 1, opts), 0));
+  let count = leafCounts.get(node);
+  if (count === undefined) {
+    const children = node.children ?? [];
+    count =
+      children.length === 0 || !opts.isExpanded(node.id, depth)
+        ? 1
+        : Math.max(1, children.reduce((sum, c) => sum + visibleLeafCount(c, depth + 1, opts), 0));
+    leafCounts.set(node, count);
+  }
+  return count;
 }
 
 function place(

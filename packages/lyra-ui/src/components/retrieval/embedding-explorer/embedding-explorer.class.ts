@@ -1,4 +1,7 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import {
+  snapshotPublicCollection,
+  type CollectionTruncation,
+} from '../../../internal/collection-snapshot.js';
 import { nativeSvgTitle } from '../../../internal/svg-title.js';
 import {
   html,
@@ -131,16 +134,39 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     embeddingExplorerPointLimit: LYRA_DEFAULT_embeddingExplorerPointLimit,
   };
   // GENERATED DEFAULT-STRING SLICE: END
-  protected static override collectionSupport = collectionSupport;
-
-  protected static override readonly ownedCollectionProperties = Object.freeze([
-    'points',
-  ]);
 
   static override styles = [LyraElement.styles, specialistTokens, styles];
 
-  /** Projected points in host order. Non-finite coordinates are omitted. */
-  @property({ attribute: false }) points: readonly EmbeddingPoint[] = [];
+  private _points: readonly EmbeddingPoint[] = Object.freeze([]);
+  private pointsSource: unknown = this._points;
+  /** Source length of an assignment too large for one snapshot, else 0. */
+  private sampledFrom = 0;
+  private validPoints: EmbeddingPoint[] = [];
+  private renderedPoints: EmbeddingPoint[] = [];
+  private bounds = { minX: 0, maxX: 0, minY: 0, maxY: 0 };
+  private clusters: string[] = [];
+
+  /** Projected points in host order. Non-finite coordinates are omitted. An input too large for
+   *  one snapshot keeps an evenly spaced sample of the whole array. */
+  @property({ attribute: false })
+  get points(): readonly EmbeddingPoint[] {
+    return this._points;
+  }
+  set points(value: readonly EmbeddingPoint[]) {
+    if (Object.is(value, this.pointsSource) || Object.is(value, this._points)) return;
+    const previous = this._points;
+    const view = this.ownerDocument?.defaultView;
+    let truncation = undefined as CollectionTruncation | undefined;
+    let snapshot = snapshotPublicCollection(value, view, {
+      onTruncate: (report) => (truncation = report),
+    });
+    if (truncation && Array.isArray(value))
+      snapshot = snapshotPublicCollection(decimatePoints(value, truncation.retained), view);
+    this.pointsSource = value;
+    this.sampledFrom = truncation?.source ?? 0;
+    this._points = snapshot as readonly EmbeddingPoint[];
+    this.requestUpdate('points', previous);
+  }
   /** The selected point id. Controlled by the host. */
   @property({ attribute: 'selected-point-id' }) selectedPointId = '';
   /**
@@ -157,26 +183,34 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
   @state() private activeIndex = 0;
   private refocusAfterUpdate = false;
 
-  private get validPoints(): EmbeddingPoint[] {
-    return firstByRetrievalIdentity(
-      Array.isArray(this.points) ? this.points : [],
-      (point) =>
-        Number.isFinite(point.x) && Number.isFinite(point.y)
-          ? point.id
-          : undefined
-    );
-  }
-
-  /** `validPoints`, decimated to `MAX_RENDERED_POINTS` -- the set actually rendered, focusable,
-   *  and reachable by roving-tabindex arrow navigation. `bounds` and the cluster legend still
-   *  derive from the full `validPoints`, so a decimated view keeps the same scale and the same
-   *  complete legend as the full plot. */
-  private get renderedPoints(): EmbeddingPoint[] {
-    return decimatePoints(this.validPoints, MAX_RENDERED_POINTS);
-  }
-
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
+    if (changed.has('points') || changed.has('selectedPointId')) {
+      this.validPoints = firstByRetrievalIdentity(
+        Array.isArray(this.points) ? this.points : [],
+        (point) =>
+          Number.isFinite(point.x) && Number.isFinite(point.y)
+            ? point.id
+            : undefined
+      );
+      // The rendered set: an even sample (bounds and legend use every point) plus the selection.
+      const sample = new Set(decimatePoints(this.validPoints, MAX_RENDERED_POINTS));
+      this.renderedPoints = this.validPoints.filter(
+        (point) => sample.has(point) || point.id === this.selectedPointId
+      );
+      this.bounds = this.validPoints.reduce(
+        (result, point) => ({
+          minX: Math.min(result.minX, point.x),
+          maxX: Math.max(result.maxX, point.x),
+          minY: Math.min(result.minY, point.y),
+          maxY: Math.max(result.maxY, point.y),
+        }),
+        { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity }
+      );
+      this.clusters = [
+        ...new Set(this.validPoints.map((point) => String(point.cluster ?? '').trim())),
+      ].sort();
+    }
     if (!changed.has('points')) return;
     const active = activeElementIn(this.shadowRoot) ?? null;
     const focusedId = active?.getAttribute('data-id');
@@ -255,7 +289,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     const points = this.renderedPoints;
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      this.select(point);
+      if (!event.repeat) this.select(point);
       return;
     }
     const rtl = this.effectiveDirection === 'rtl';
@@ -335,18 +369,8 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
         <p part="empty">${this.localize('embeddingExplorerEmpty')}</p>
       </div>`;
     const renderedPoints = this.renderedPoints;
-    const bounds = points.reduce(
-      (result, point) => ({
-        minX: Math.min(result.minX, point.x),
-        maxX: Math.max(result.maxX, point.x),
-        minY: Math.min(result.minY, point.y),
-        maxY: Math.max(result.maxY, point.y),
-      }),
-      { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity }
-    );
-    const clusters = [
-      ...new Set(points.map((point) => String(point.cluster ?? '').trim())),
-    ].sort();
+    const bounds = this.bounds;
+    const clusters = this.clusters;
     const clusterIndices = new Map(
       clusters.map((cluster, index) => [cluster, index])
     );
@@ -363,10 +387,10 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
           this.renderPoint(point, index, bounds, clusterIndices)
         )}
       </svg>
-      ${renderedPoints.length < points.length
+      ${renderedPoints.length < (this.sampledFrom || points.length)
         ? html`<p part="limit" role="note">${this.localize('embeddingExplorerPointLimit', undefined, {
               shown: numberFormat.format(renderedPoints.length),
-              total: numberFormat.format(points.length),
+              total: numberFormat.format(this.sampledFrom || points.length),
             })}</p>`
         : nothing}
       ${visibleClusters.length > 0

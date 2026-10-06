@@ -976,8 +976,10 @@ describe('focus and camera fit', () => {
         k: number;
         x: number;
         y: number;
+        zoom: number;
       };
       expect(detail.k).to.be.closeTo(2, 0.01);
+      expect(detail.zoom).to.equal(detail.k);
     } finally {
       window.matchMedia = originalMatchMedia;
     }
@@ -1182,6 +1184,7 @@ describe('selection', () => {
 
     el.selectedNodeIds = ['a']; // host reflects the controlled prop back, per the contract
     await el.updateComplete;
+    await aTimeout(550); // a later click, outside the 500 ms double-activate (expand) window
     nodeEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(detail).to.deep.equal({ selectedNodeIds: [], selectedEdgeIds: [] });
   });
@@ -1435,7 +1438,6 @@ describe('type filtering', () => {
 
   it('hide then re-show restores each node at its remembered settled position (distance ~ 0)', async () => {
     const el = await mountFiltered();
-    await aTimeout(400); // let the force layout settle
     const before = new Map(
       el.simNodes.map((n) => [n.id, { x: n.x!, y: n.y! }])
     );
@@ -1466,7 +1468,6 @@ describe('type filtering', () => {
 
   it('prunes the remembered-position cache when a node is removed from nodes entirely (not just hidden)', async () => {
     const el = await mountFiltered();
-    await aTimeout(400);
     el.nodes = typedFilterNodes.filter((n) => n.id !== 'a');
     el.edges = typedFilterLinks.filter(
       (l) => l.source !== 'a' && l.target !== 'a'

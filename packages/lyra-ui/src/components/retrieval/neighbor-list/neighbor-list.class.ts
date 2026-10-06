@@ -12,8 +12,8 @@ import {
   getNumberFormat,
 } from '../../../internal/intl-cache.js';
 import type { LyraEntity } from '../entity-card/entity-card.class.js';
+import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 import type { LyraVirtualListGroup } from '../../layout/virtual-list/virtual-list.class.js';
-import '../../layout/virtual-list/virtual-list.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './neighbor-list.styles.js';
 import {
@@ -24,6 +24,8 @@ import {
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_neighborDirectionBoth, LYRA_DEFAULT_neighborDirectionIn, LYRA_DEFAULT_neighborDirectionOut, LYRA_DEFAULT_neighborExpand, LYRA_DEFAULT_neighborGroupHeader, LYRA_DEFAULT_neighborListEmpty, LYRA_DEFAULT_neighborListLabel, LYRA_DEFAULT_neighborRowLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+let virtualListRegistration: Promise<unknown> | undefined;
 
 export interface LyraNeighborRow {
   /** Edge label, e.g. `'works_for'`. */
@@ -88,12 +90,17 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'rows',
+    'types',
   ]);
 
   static override styles = [LyraElement.styles, styles];
 
   /** Neighbor relationships to render, including direction, relation, and target node data. */
   @property({ attribute: false }) rows: readonly LyraNeighborRow[] = [];
+  /** `lr-graph` `nodeTypes` pass-through that names each node's type by its label, as
+   *  `lr-entity-card` does; an unresolvable type shows its raw id. */
+  @property({ attribute: false }) types: readonly LyraNodeTypeStyle[] = [];
+  private typeLabels?: [readonly LyraNodeTypeStyle[], Map<string, string | undefined>];
   /** Stable-sorts rows by relation and renders one group header per relation with a count. */
   @property({ type: Boolean, attribute: 'group-by-relation' }) groupByRelation =
     false;
@@ -142,6 +149,11 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
       this.sortedRowsCache = this.computeSortedRows();
       this.groupsCache = this.computeGroups(this.sortedRowsCache);
     }
+    // Registered on first need, so bundles whose lists stay short never load the virtualizer.
+    if (this.sortedRowsCache.length > this.effectiveVirtualizeAt)
+      virtualListRegistration ??= import('../../layout/virtual-list/virtual-list.js').catch(
+        () => (virtualListRegistration = undefined)
+      );
   }
 
   private sortedRows(): readonly LyraNeighborRow[] {
@@ -241,8 +253,13 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
       typeof row.node.type === 'string' && row.node.type.trim() !== ''
         ? row.node.type
         : undefined;
+    if (this.typeLabels?.[0] !== this.types)
+      this.typeLabels = [
+        this.types,
+        new Map(firstByRetrievalIdentity(this.types, (type) => type?.id).map((type) => [type.id, type.label])),
+      ];
     const meta = [
-      nodeType,
+      nodeType && (this.typeLabels[1].get(nodeType) ?? nodeType),
       row.node.degree != null
         ? getNumberFormat(this.effectiveLocale).format(
             finiteCount(row.node.degree)

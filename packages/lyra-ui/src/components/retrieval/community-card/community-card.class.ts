@@ -33,6 +33,8 @@ export type CommunityCardAppearance = LyraFrame;
 export interface LyraCommunityCardEventMap {
   /** The drill button, header, or overflow chip -- all three mean "show me this whole community". */
   'lr-drill': CustomEvent<{ communityId: string }>;
+  'lr-entity-select': CustomEvent<{ entityId: string }>;
+  /** @deprecated Use `lr-entity-select`. */
   'lr-entity-activate': CustomEvent<{ entityId: string }>;
 }
 
@@ -54,10 +56,13 @@ function isDenseSize(size: LyraSize): boolean {
  * @customElement lr-community-card
  * @slot actions - Extra header actions alongside the built-in drill button.
  * @event lr-drill - `detail: { communityId }`.
- * @event lr-entity-activate - A member chip was activated. `detail: { entityId }`.
+ * @event lr-entity-select - A member chip was activated. `detail: { entityId }`.
+ * @event lr-entity-activate - Deprecated alias of `lr-entity-select`, dispatched right after it.
  * @csspart base - The outer bordered container.
  * @csspart header - The header row.
- * @csspart title - The community label, `role="heading" aria-level="3"` wrapping a `<button>`.
+ * @attr {string | number | null} aria-level - Heading level forwarded to the title. An absent or empty value
+ *   uses level 3.
+ * @csspart title - The community label, `role="heading" aria-level="3"` by default, wrapping a `<button>`.
  * @csspart member-count - The `"{count} members"` text.
  * @csspart summary - The LLM summary excerpt, omitted while `size` is `s` or smaller.
  * @csspart members - The wrapper around member chips, omitted while `size` is `s` or smaller.
@@ -92,6 +97,15 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
   protected static override readonly ownedCollectionProperties = Object.freeze(['members']);
 
   static override styles = [LyraElement.styles, styles];
+
+  static override get observedAttributes(): string[] {
+    return [...super.observedAttributes, 'aria-level'];
+  }
+
+  override attributeChangedCallback(name: string, oldValue: string | null, value: string | null): void {
+    super.attributeChangedCallback(name, oldValue, value);
+    if (name === 'aria-level' && oldValue !== value) this.requestUpdate();
+  }
 
   /** `null` renders the `noData` empty state. */
   @property({ attribute: false }) community: LyraCommunity | null = null;
@@ -159,7 +173,7 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
     return html`
       <div part="base">
         <div part="header">
-          <span part="title" role="heading" aria-level="3"
+          <span part="title" role="heading" aria-level=${this.getAttribute('aria-level') || '3'}
             ><button type="button" @click=${this.onDrill}>
               ${titleText}
             </button></span
@@ -185,8 +199,10 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
                 (m) => html`<button
                   part="member"
                   type="button"
-                  @click=${() =>
-                    this.emit('lr-entity-activate', { entityId: m.id })}
+                  @click=${() => {
+                    this.emit('lr-entity-select', { entityId: m.id });
+                    this.emit('lr-entity-activate', { entityId: m.id });
+                  }}
                 >
                   <lr-chip>${m.label || m.id}</lr-chip>
                 </button>`

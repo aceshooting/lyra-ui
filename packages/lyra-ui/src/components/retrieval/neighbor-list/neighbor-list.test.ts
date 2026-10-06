@@ -1,6 +1,8 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './neighbor-list.js';
+// lr-neighbor-list registers its virtualizer lazily (see neighbor-list-lazy.test.ts); these cases need it now.
+import '../../layout/virtual-list/virtual-list.js';
 import type { LyraNeighborList, LyraNeighborRow } from './neighbor-list.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
@@ -44,6 +46,16 @@ it('defaults to empty rows, groupByRelation=false, expandable=false, virtualizeA
   expect(el.groupByRelation).to.be.false;
   expect(el.expandable).to.be.false;
   expect(el.virtualizeAt).to.equal(100);
+});
+
+it('names each node type by its label from types', async () => {
+  const el = await fixture<LyraNeighborList>(html`<lr-neighbor-list
+    .rows=${rows}
+    .types=${[{ id: 'org', label: 'Organization' }]}
+  ></lr-neighbor-list>`);
+  const description = el.shadowRoot!.querySelector('[part="node-label"]')!.getAttribute('aria-description');
+  expect(description).to.contain('Organization');
+  expect(description).to.not.contain('org');
 });
 
 it('includes visible type and localized degree metadata in the row description', async () => {

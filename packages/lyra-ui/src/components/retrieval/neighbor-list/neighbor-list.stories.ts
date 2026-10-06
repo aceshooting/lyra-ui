@@ -29,6 +29,17 @@ export const Expandable: Story = {
   render: () => html`<lr-neighbor-list .rows=${rows} expandable></lr-neighbor-list>`,
 };
 
+export const TypeLabels: Story = {
+  render: () => html`<lr-neighbor-list
+    .rows=${rows}
+    .types=${[
+      { id: 'org', label: 'Organization' },
+      { id: 'person', label: 'Person' },
+      { id: 'element', label: 'Chemical element' },
+    ]}
+  ></lr-neighbor-list>`,
+};
+
 export const Empty: Story = {
   render: () => html`<lr-neighbor-list></lr-neighbor-list>`,
 };
