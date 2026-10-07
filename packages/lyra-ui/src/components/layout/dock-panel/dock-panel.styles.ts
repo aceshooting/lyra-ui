@@ -67,6 +67,7 @@ export const styles = css`
     position: absolute;
     background: var(--lr-color-border);
     touch-action: none;
+    transition: background var(--lr-transition-fast);
   }
   /* --lr-dock-panel-handle-hover-color/-active-color deliberately do not reuse the bare
      --lr-color-brand the collapse-toggle's tokens fall back to below: a drag-affordance accent and

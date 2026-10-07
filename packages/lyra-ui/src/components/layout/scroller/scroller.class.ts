@@ -82,8 +82,8 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
   @property({ type: Number, attribute: 'scroll-step' }) scrollStep = 0;
   @property() label = '';
 
-  @state() private canScrollStart = false;
-  @state() private canScrollEnd = false;
+  @state() private atStart = false;
+  @state() private atEnd = false;
   @state() private measured = false;
   @query('[part="viewport"]') private viewport?: HTMLElement;
   @query('[part="content"]') private content?: HTMLElement;
@@ -176,6 +176,13 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
     });
   }
 
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    const active = this.hasUpdated ? (this.renderRoot as ShadowRoot).activeElement : null;
+    if (active?.matches('[part~="previous"]') ? this.atStart : active?.matches('[part~="next"]') && this.atEnd)
+      this.viewport?.focus();
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('orientation') || changed.has('controls'))
@@ -216,11 +223,11 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
     const detail = this.edgeDetail();
     const changed =
       !this.measured ||
-      detail.scrollStart !== this.canScrollStart ||
-      detail.scrollEnd !== this.canScrollEnd;
+      detail.scrollStart !== this.atStart ||
+      detail.scrollEnd !== this.atEnd;
     this.measured = true;
-    this.canScrollStart = detail.scrollStart;
-    this.canScrollEnd = detail.scrollEnd;
+    this.atStart = detail.scrollStart;
+    this.atEnd = detail.scrollEnd;
     if (changed || emitForPositionChange) this.emit('lr-scroll', detail);
   }
 
@@ -320,7 +327,7 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
             part="control previous"
             type="button"
             aria-label=${this.localize('scrollPrevious')}
-            ?disabled=${!this.measured || this.canScrollStart}
+            ?disabled=${!this.measured || this.atStart}
             @click=${() => this.scrollByDirection(-1)}
             @dblclick=${() => this.scrollToEdge('start')}
           >
@@ -333,7 +340,7 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
         <span
           part="start-shadow"
           aria-hidden="true"
-          ?hidden=${!this.measured || this.withoutShadow || this.canScrollStart}
+          ?hidden=${!this.measured || this.withoutShadow || this.atStart}
         ></span>
         <div
           part="viewport"
@@ -347,7 +354,7 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
         <span
           part="end-shadow"
           aria-hidden="true"
-          ?hidden=${!this.measured || this.withoutShadow || this.canScrollEnd}
+          ?hidden=${!this.measured || this.withoutShadow || this.atEnd}
         ></span>
       </div>
       ${this.controls
@@ -355,7 +362,7 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
             part="control next"
             type="button"
             aria-label=${this.localize('scrollNext')}
-            ?disabled=${!this.measured || this.canScrollEnd}
+            ?disabled=${!this.measured || this.atEnd}
             @click=${() => this.scrollByDirection(1)}
             @dblclick=${() => this.scrollToEdge('end')}
           >

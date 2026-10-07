@@ -1,4 +1,4 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
@@ -132,7 +132,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
-  protected static override collectionSupport = collectionSupport;
+  protected static override collectionSupport = eventCollectionSupport;
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-reorder-request',
   ]);
@@ -215,7 +215,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
   private syncBoundaryState(): void {
     const directItems = this.directItemElements;
     const items = this.itemElements;
-    const validItems = new Set(items);
+    const indexOf = new Map(items.map((item, index) => [item, index]));
     const heldMove = this.pendingMove?.phase === 'held';
     const reconciliation = this.pendingReconciliation;
     const busy = heldMove || reconciliation !== null;
@@ -224,7 +224,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
       if (!nextStateItems.has(item)) releaseReorderOwnerState(item, this);
     }
     directItems.forEach((item) => {
-      const i = items.indexOf(item);
+      const i = indexOf.get(item) ?? -1;
       updateReorderOwnerState(item, this, {
         atStart: i === 0,
         atEnd: i >= 0 && i === items.length - 1,
@@ -233,7 +233,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
           (heldMove && this.pendingMove?.item === item) ||
           (reconciliation !== null && item.value === reconciliation.value),
         busy,
-        validIdentity: validItems.has(item),
+        validIdentity: indexOf.has(item),
       });
     });
     this.stateItems = nextStateItems;
@@ -295,11 +295,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     const Observer = this.ownerDocument.defaultView?.MutationObserver;
     if (!Observer || !this.isConnected) return;
     this.itemObserver = new Observer(() => this.onSlotChange());
-    this.itemObserver.observe(this, {
-      attributes: true,
-      childList: true,
-      attributeFilter: ['disabled', 'value'],
-    });
+    this.itemObserver.observe(this, { childList: true });
   }
 
   private pendingMembershipIsCurrent(): boolean {

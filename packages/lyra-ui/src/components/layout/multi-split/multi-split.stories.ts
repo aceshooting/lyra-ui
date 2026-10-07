@@ -421,7 +421,7 @@ export const CancelableResize: Story = {
     docs: {
       description: {
         story:
-          'The `lr-resize-request` event proposes each pointer or keyboard size change before the split commits it. This example vetoes a first-panel size above 65%, so the existing `lr-resize` event only follows accepted proposals.',
+          'The `lr-resize-request` event proposes each pointer or keyboard size change before the split commits it. This example vetoes a first-panel size above 65%, so the existing `lr-resize` event only follows accepted proposals; `lr-resize-change` fires once when a drag or keyboard step settles.',
       },
     },
   },

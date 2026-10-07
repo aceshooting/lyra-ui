@@ -3519,6 +3519,9 @@ describe("defensive edge cases", () => {
 
     el.layout = authored;
     await el.updateComplete;
+    expect(el.layout, 'the same array is ignored').to.have.length(2);
+    el.layout = [...authored];
+    await el.updateComplete;
     expect(el.layout).to.have.length(1);
     expect(el.layout[0]!.x).to.equal(4);
   });

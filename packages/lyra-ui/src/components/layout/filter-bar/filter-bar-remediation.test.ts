@@ -1,6 +1,8 @@
 import { aTimeout, expect, fixture, html } from '@open-wc/testing';
+import { LitElement, type TemplateResult } from 'lit';
+import { state } from 'lit/decorators.js';
 import './filter-bar.js';
-import type { LyraFilterBar, LyraFilterBarCustomControlContext, LyraFilterBarFilterDefinition } from './filter-bar.class.js';
+import type { LyraFilterBar, LyraFilterBarCustomControlContext, LyraFilterBarFilterDefinition, LyraFilterBarValue } from './filter-bar.class.js';
 
 for (const type of ['select', 'combobox'] as const) {
   it(`keeps valid ${type} options and sibling filters around malformed entries`, async () => {
@@ -21,6 +23,18 @@ for (const type of ['select', 'combobox'] as const) {
     expect(element.shadowRoot!.textContent).to.contain('Alpha');
   });
 }
+
+it('admits the options of an unrecognised filter type like a choice type instead of blanking the bar', async () => {
+  const element = await fixture<LyraFilterBar>(html`<lr-filter-bar></lr-filter-bar>`);
+  element.filters = [
+    { filterId: 'multi', label: 'Multi', type: 'multiselect', options: [null, { value: 'a', label: 'Alpha' }] },
+    { filterId: 'bad', label: 'Bad', type: 'multiselect', options: 'oops' },
+    { filterId: 'text', label: 'Text', type: 'text' },
+  ] as unknown as LyraFilterBarFilterDefinition[];
+  await element.updateComplete;
+  expect(element.shadowRoot!.querySelectorAll('[part="filter-control"]').length).to.equal(3);
+  expect([...element.shadowRoot!.querySelectorAll('lr-option')].map(option => option.getAttribute('value'))).to.deep.equal(['a']);
+});
 
 it('omits missing/noncallable custom renderers before reserving identities and retains callable context', async () => {
   const element = await fixture<LyraFilterBar>(html`<lr-filter-bar></lr-filter-bar>`);
@@ -101,5 +115,43 @@ describe('filter-bar debounce controller lifecycle', () => {
     element.filters = [{ filterId: 'other', label: 'Other', type: 'text', debounce: 40 }];
     await element.updateComplete;
     expect(controllerCount(element), 'the removed id keeps nothing alive').to.equal(0);
+  });
+});
+
+const REBIND_FILTERS: LyraFilterBarFilterDefinition[] = [
+  { filterId: 'q', label: 'Search', type: 'text', debounce: 200 },
+  { filterId: 'custom', label: 'Custom', type: 'custom', custom: {
+    adapter: { valueFromEvent: () => true, clearValue: false },
+    render: (context) => { rebindSignals.push(context.signal); return html`<span>${context.label}</span>`; },
+  } },
+];
+const rebindSignals: AbortSignal[] = [];
+
+class FilterBarRebindHost extends LitElement {
+  @state() tick = 0;
+  @state() value: LyraFilterBarValue = {};
+  protected override render(): TemplateResult {
+    return html`<span>${this.tick}</span><lr-filter-bar .filters=${REBIND_FILTERS} .value=${this.value}
+      @lr-input=${(event: CustomEvent<{ value: LyraFilterBarValue }>) => { this.value = event.detail.value; }}></lr-filter-bar>`;
+  }
+}
+customElements.define('filter-bar-rebind-host', FilterBarRebindHost);
+
+describe('filter-bar under a re-rendering parent', () => {
+  it('keeps a pending debounced edit and its custom signal when the parent rebinds the same inputs', async () => {
+    rebindSignals.length = 0;
+    const host = await fixture<FilterBarRebindHost>(html`<filter-bar-rebind-host></filter-bar-rebind-host>`);
+    const bar = host.shadowRoot!.querySelector('lr-filter-bar') as LyraFilterBar;
+    await bar.updateComplete;
+    const native = await nativeInput(bar, 'q');
+    native.value = 'abc';
+    native.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    host.tick += 1;
+    await host.updateComplete;
+    await bar.updateComplete;
+    expect(native.value, 'the pending text stays in the field').to.equal('abc');
+    expect(rebindSignals[0]!.aborted, 'an identical schema is not a replacement').to.equal(false);
+    await aTimeout(300);
+    expect(bar.value).to.deep.equal({ q: 'abc' });
   });
 });

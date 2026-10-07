@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
+import { flattenedParentElement } from '../../../internal/composed-tree.js';
 import { styles } from './dock-panel.styles.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -210,15 +211,23 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
    *  reallocation whose parent box itself did not resize. */
   private armContainerResizeObserver(): void {
     const ResizeObserverCtor = this.ownerDocument.defaultView?.ResizeObserver;
-    if (!this.parentElement || !ResizeObserverCtor) return;
+    const container = this.container;
+    if (!container || !ResizeObserverCtor) return;
     this.containerResizeObserver ??= new ResizeObserverCtor(() => {
       if (!this.isConnected) return;
       if (this.drag && !this.dragSnapshotIsCurrent(this.drag)) this.endDrag();
       this.reconcileLiveExtent();
       this.requestUpdate();
     });
-    this.containerResizeObserver.observe(this.parentElement);
+    this.containerResizeObserver.observe(container);
     this.containerResizeObserver.observe(this);
+  }
+
+  /** The element this panel docks to: its flat-tree parent, looking through slots. */
+  private get container(): Element | null {
+    let parent = flattenedParentElement(this);
+    while (parent?.localName === 'slot') parent = flattenedParentElement(parent);
+    return parent;
   }
 
   // Applied in willUpdate (before render), not updated (after render): the
@@ -228,6 +237,11 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   // read back the size from one update cycle ago.
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (
+      this.hasUpdated &&
+      ((changed.has('collapsed') && this.collapsed && this.matches(':focus-within')) ||
+        (changed.has('withoutResize') && this.withoutResize && (this.renderRoot as ShadowRoot).activeElement?.matches('[part="handle"]')))
+    ) this.renderRoot.querySelector<HTMLElement>('[part="collapse-toggle"]')?.focus();
     if (
       changed.has('extent') ||
       changed.has('minExtent') ||
@@ -287,10 +301,9 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
 
   /** Live pixel size of the containing block along the resize axis, used both to resolve a `%`
    *  `min-extent`/`max-extent` and as the `max-extent` fallback when unset. Falls back to the viewport
-   *  when there's no parent element (e.g. not yet connected). */
+   *  when there's no container (e.g. not yet connected). */
   private containerPx(): number {
-    const parent = this.parentElement;
-    const rect = parent?.getBoundingClientRect();
+    const rect = this.container?.getBoundingClientRect();
     const ownerWindow = this.ownerDocument.defaultView;
     if (this.axis === 'inline')
       return rect?.width ?? ownerWindow?.innerWidth ?? 0;
@@ -452,7 +465,11 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
       acceptedResize: false,
     };
     this.dragOwnerWindow = ownerWindow;
-    handle.setPointerCapture(e.pointerId);
+    try {
+      handle.setPointerCapture(e.pointerId);
+    } catch {
+      // A synthetic or detached pointer cannot be captured; the window listeners still end the drag.
+    }
     ownerWindow.addEventListener('pointermove', this.onPointerMove);
     ownerWindow.addEventListener('pointerup', this.onPointerUp);
     // A drag can end without a pointerup: a system gesture / palm rejection
@@ -522,7 +539,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   }
 
   private onHandleKeyDown = (e: KeyboardEvent): void => {
-    if (this.withoutResize || this.collapsed) return;
+    if (this.withoutResize || this.collapsed || e.altKey || e.ctrlKey || e.metaKey || e.isComposing) return;
     // The physical "positive direction" key is always Right/Down; growSign
     // already encodes whether that direction grows or shrinks the panel for
     // the current edge + RTL-ness, exactly mirroring how onPointerMove folds
@@ -530,7 +547,11 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     const forwardKey = this.axis === 'inline' ? 'ArrowRight' : 'ArrowDown';
     const backwardKey = this.axis === 'inline' ? 'ArrowLeft' : 'ArrowUp';
     let proposal: { bounds: { minPx: number; maxPx: number }; nextExtent: string } | undefined;
-    if (e.key === forwardKey) {
+    if (e.key === 'Home' || e.key === 'End') {
+      e.preventDefault();
+      const { minPx, maxPx } = this.resolveBoundsPx();
+      proposal = this.resolveProposal(e.key === 'Home' ? minPx : maxPx);
+    } else if (e.key === forwardKey) {
       e.preventDefault();
       proposal = this.resolveProposal(
         this.currentSizePx() + this.growSign * KEYBOARD_STEP_PX
@@ -582,10 +603,10 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     const { minPx, maxPx } = this.resolveBoundsPx();
     const nowPx = Math.min(Math.max(this.currentSizePx(), minPx), maxPx);
     // hit-area-exempt: a drag-handle separator (role="separator",
-    // mouse-drag/arrow-key resize), not a tap-to-activate icon button --
-    // mirrors lr-multi-split's own [part="divider"] precedent exactly: the
+    // mouse-drag/arrow-key resize), not a tap-to-activate icon button: the
     // visible bar stays a slim 3px while [part='handle']::before (see
-    // dock-panel.styles.ts) widens the real pointer-capture hit-slop.
+    // dock-panel.styles.ts) widens the real pointer-capture hit-slop, which
+    // the base's overflow clip limits to the panel's own edge.
     return html`<div
       part="handle"
       role="separator"

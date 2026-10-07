@@ -23,6 +23,7 @@ import {
   finiteNumber,
 } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { composedParentElement, deepActiveElementIn } from '../../../internal/active-element.js';
 import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
@@ -183,6 +184,10 @@ function isIndexedSource(
   return !Array.isArray(source);
 }
 
+function sameSequence(a: unknown, b: unknown): boolean {
+  return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((item, index) => item === b[index]);
+}
+
 /** `Node.ELEMENT_NODE`, spelled out so the check below needs no live `Node` binding (the value is
  *  identical in every realm, including the one a server render runs in). */
 const ELEMENT_NODE_TYPE = 1;
@@ -202,6 +207,8 @@ function domKeyToken(key: VirtualListKey): string {
   }
   return `${typeof key}:${String(key)}`;
 }
+
+const SCROLL_KEYS = new Set(['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' ']);
 
 /** `lr-virtual-scroll` detail -- the scroll position and height after a coalesced tick. */
 export interface LyraVirtualListScroll {
@@ -351,8 +358,10 @@ export interface LyraVirtualListEventMap {
  * row around this component (see `<lr-dataset-viewer>`), where `row-index-offset="1"` accounts for
  * that external header row occupying `aria-rowindex="1"`.
  *
- * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
- * collection and reassign it after changes; mutating the assigned array does not update the view.
+ * Public collection properties take bounded (10,000 entries, 50,000 nested values), clone-owned
+ * readonly snapshots; use an indexed `source` beyond that. Create a new collection and reassign it
+ * after changes; mutating the assigned array does not update the view. The row holding focus stays
+ * mounted outside the window until focus leaves it.
  *
  * @customElement lr-virtual-list
  * @event lr-load-more - Fired once per approach to the bottom of the list
@@ -901,6 +910,8 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    *  in `row-height="auto"` mode) only runs when something that actually
    *  affects row heights or ordering changed. */
   private offsetsDirty = true;
+  /** Row identities depend only on the rows and `keyFunction`, not on measured heights. */
+  private identitiesDirty = true;
   /** Set alongside `offsetsDirty` specifically when `items` changed (not
    *  just `rowHeight`/`keyFunction`/a measurement) -- consumed by the next
    *  `recomputeOffsets()` call to prune `measuredHeights` entries for keys
@@ -909,6 +920,8 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
 
   private renderStart = 0;
   private renderEnd = -1;
+  /** Index of the focused row kept mounted outside the window by the last render, else -1. */
+  private pinnedRow = -1;
   /** The window the most recent shadow `render()` emitted, with each row's identity already
    *  resolved. `row-projection="light"` renders the SAME array, keyed by the SAME identity, so the
    *  two sides can never disagree about which rows exist or what they are called. */
@@ -1236,31 +1249,34 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       this.seedFirstRenderState(this.releaseRowProjection);
     this.isFirstUpdate = !this.hasUpdated;
     if (this.hasUpdated) this.noTopLayer = !nativePopoverSupported();
+    // A re-commit of element-wise identical rows still re-renders them, but moves no row.
+    const sequence =
+      (changed.has('items') && !sameSequence(changed.get('items'), this.items)) ||
+      (changed.has('source') && !sameSequence(changed.get('source'), this.source));
     if (
-      changed.has('items') ||
-      changed.has('source') ||
+      sequence ||
       changed.has('keyFunction') ||
       changed.has('rowHeight') ||
       changed.has('groups') ||
       changed.has('activeItemId') ||
       changed.has('scrollElement')
     ) this.pendingScrollCorrection = undefined;
+    else if (this.pendingScrollCorrection) this.pendingScrollCorrection.source = this.effectiveSource;
+    if (sequence || changed.has('keyFunction')) this.identitiesDirty = true;
     if (
-      changed.has('items') ||
-      changed.has('source') ||
+      sequence ||
       changed.has('rowHeight') ||
       changed.has('keyFunction') ||
       changed.has('groups')
     ) {
       this.offsetsDirty = true;
     }
-    if (changed.has('items') || changed.has('source')) {
+    if (sequence) {
       this.itemsChangedPendingPrune = true;
     }
     if (
       changed.has('keyFunction') ||
-      (isIndexedSource(this.effectiveSource) &&
-        (changed.has('items') || changed.has('source')))
+      (isIndexedSource(this.effectiveSource) && sequence)
     ) {
       // Measurements belong to the current row identities. A new key function can reuse an old
       // key for a different row, so retaining the cache would apply the old row's height to it.
@@ -1288,7 +1304,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       this.observedGroups.clear();
       this.deferredGroupObservations.clear();
     }
-    if (changed.has('items') || changed.has('source') || changed.has('groups')) {
+    if (sequence || changed.has('groups')) {
       this.recomputeGroups();
     }
     if (changed.has('rowHeight')) {
@@ -1390,6 +1406,11 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
 
   /** Marker height before and at `index`, from the sparse normalized group metadata. */
   private groupContributionThrough(index: number): number {
+    return this.groupHeightPrefix[this.groupCountThrough(index)] ?? 0;
+  }
+
+  /** How many normalized groups start at or before `index` (the groups are sorted by `startIndex`). */
+  private groupCountThrough(index: number): number {
     let low = 0;
     let high = this.normalizedGroups.length;
     while (low < high) {
@@ -1397,7 +1418,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       if (this.normalizedGroups[middle]!.startIndex <= index) low = middle + 1;
       else high = middle;
     }
-    return this.groupHeightPrefix[low] ?? 0;
+    return low;
   }
 
   private recomputeGroupHeightPrefix(): void {
@@ -1538,16 +1559,19 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       this.itemsChangedPendingPrune && this.fixedRowHeight == null;
     const liveKeys = pruneStale ? new Set<string>() : null;
     const occurrences = new Map<string, number>();
-    const identities = new Array<string>(n);
+    const reuse = !this.identitiesDirty && this.rowIdentities.length === n;
+    const identities = reuse ? this.rowIdentities : new Array<string>(n);
     for (let i = 0; i < n; i++) {
       cursor = finiteAdd(cursor, this.groupHeightAt(i));
       offsets[i] = cursor;
-      const key = this.keyOf(this.itemAt(i), i);
-      const token = domKeyToken(key);
-      const occurrence = occurrences.get(token) ?? 0;
-      occurrences.set(token, occurrence + 1);
-      const identity = this.rowIdentity(key, occurrence);
-      identities[i] = identity;
+      if (!reuse) {
+        const key = this.keyOf(this.itemAt(i), i);
+        const token = domKeyToken(key);
+        const occurrence = occurrences.get(token) ?? 0;
+        occurrences.set(token, occurrence + 1);
+        identities[i] = this.rowIdentity(key, occurrence);
+      }
+      const identity = identities[i]!;
       let h: number;
       if (this.fixedRowHeight != null) {
         h = this.fixedRowHeight;
@@ -1560,6 +1584,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     offsets[n] = cursor;
     this.offsets = offsets;
     this.rowIdentities = identities;
+    this.identitiesDirty = false;
     this.itemsChangedPendingPrune = false;
     if (liveKeys) {
       for (const key of this.measuredHeights.keys()) {
@@ -1781,18 +1806,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   };
 
   private onUserScrollIntent = (event: Event): void => {
-    if (event instanceof KeyboardEvent) {
-      const scrollKeys = new Set([
-        'ArrowUp',
-        'ArrowDown',
-        'PageUp',
-        'PageDown',
-        'Home',
-        'End',
-        ' ',
-      ]);
-      if (!scrollKeys.has(event.key)) return;
-    }
+    if (event instanceof KeyboardEvent && !SCROLL_KEYS.has(event.key)) return;
     this.pendingScrollCorrection = undefined;
   };
 
@@ -2411,6 +2425,25 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     );
   }
 
+  /** The focused row's index when it sits outside the window: it stays mounted until focus leaves. */
+  private focusedRowOutsideWindow(): number {
+    for (let node = deepActiveElementIn(this.ownerDocument); node && node !== this; node = composedParentElement(node)) {
+      if (node.getAttribute('part') !== 'row' || node.getRootNode() !== this.renderRoot) continue;
+      const index = Number(node.getAttribute('data-row-index'));
+      return Number.isInteger(index) && index >= 0 && index < this.itemCount &&
+        (index < this.renderStart || index > this.renderEnd) &&
+        node.getAttribute('data-row-key') === domKeyToken(this.keyOf(this.itemAt(index), index))
+        ? index
+        : -1;
+    }
+    return -1;
+  }
+
+  private onFocusOut = (event: FocusEvent): void => {
+    const next = event.relatedTarget as Node | null;
+    if (this.pinnedRow >= 0 && !(next && (this.contains(next) || this.renderRoot.contains(next)))) this.requestUpdate();
+  };
+
   private renderRow(
     item: unknown,
     index: number,
@@ -2513,11 +2546,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       this.normalizedGroups
         // A positioned marker outside the overscanned row window cannot be seen. Windowing it keeps
         // one-group-per-row catalogs bounded by the same DOM ceiling as the rows themselves.
-        .filter(
-          (group) =>
-            group.startIndex >= this.renderStart &&
-            group.startIndex <= this.renderEnd
-        )
+        .slice(this.groupCountThrough(this.renderStart - 1), this.groupCountThrough(this.renderEnd))
         // An explicitly empty label means "anchor only" -- the host renders its own header for this
         // group (typically as a real row), so a marker here would duplicate it.
         .filter((group) => group.label !== '')
@@ -2632,10 +2661,14 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     // template (and, in projection mode, by the light-DOM template through `renderedWindow`), so
     // enabling projection adds no extra `identityAt()` call per row per frame.
     const windowed: { item: unknown; index: number; identity: string }[] = [];
-    for (let i = this.renderStart; i <= this.renderEnd; i++) {
+    const add = (i: number): void => {
       const item = this.itemAt(i);
       windowed.push({ item, index: i, identity: this.identityAt(i, item) });
-    }
+    };
+    const pinned = (this.pinnedRow = this.focusedRowOutsideWindow());
+    if (pinned >= 0 && pinned < this.renderStart) add(pinned);
+    for (let i = this.renderStart; i <= this.renderEnd; i++) add(i);
+    if (pinned > this.renderEnd) add(pinned);
     this.renderedWindow = windowed;
     const isRowMode = this.itemRole === 'row';
     // Native keyboard/anchor scrolling gets the same treatment as the programmatic paths, from one
@@ -2658,6 +2691,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
           : nothing}
         aria-label=${this.hasAttribute('aria-label') ? this.getAttribute('aria-label')! : nothing}
         aria-busy=${this.loading ? 'true' : 'false'}
+        @focusout=${this.onFocusOut}
       >
         <div
           part="spacer"

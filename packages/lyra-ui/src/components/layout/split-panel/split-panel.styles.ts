@@ -134,12 +134,19 @@ export const styles = css`
      --lr-color-brand/--lr-color-border-strong tokens: the divider's drag-affordance accent is its
      own purpose that merely defaults to those colors. Mirrors lr-dock-panel's [part='handle']
      hover/active tokens. */
-  [part~='divider']:where(:hover) {
+  [part~='divider']:where(:hover, :focus-visible) {
     background: var(--lr-split-panel-divider-hover-color, var(--lr-color-brand));
   }
 
   [part~='divider']:where(:active, [data-dragging]) {
-    background: var(--lr-split-panel-divider-active-color, var(--lr-color-border-strong));
+    background: var(
+      --lr-split-panel-divider-active-color,
+      color-mix(
+        in oklab,
+        var(--lr-split-panel-divider-hover-color, var(--lr-color-brand)),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
+    );
   }
 
   [part~='divider']:where(:focus-visible) {

@@ -55,3 +55,40 @@ for (const route of ['attribute', 'property'] as const) {
     });
   }
 }
+
+it('derives boundary state without a per-item array search', async () => {
+  const list = await fixture<LyraReorderList>(html`<lr-reorder-list>
+    ${Array.from({ length: 300 }, (_, index) => html`<lr-reorder-item value=${`row-${index}`}>Row</lr-reorder-item>`)}
+  </lr-reorder-list>`);
+  const original = Array.prototype.indexOf;
+  let searches = 0;
+  Array.prototype.indexOf = function (this: unknown[], ...args: [unknown, number?]) {
+    searches += 1;
+    return original.apply(this, args);
+  };
+  try {
+    (list as unknown as { syncBoundaryState(): void }).syncBoundaryState();
+  } finally {
+    Array.prototype.indexOf = original;
+  }
+  expect(searches).to.be.lessThan(20);
+});
+
+it('does not rewrite an item role that is already listitem on every update', async () => {
+  const item = await fixture<LyraReorderItem>(html`<lr-reorder-item value="a">A</lr-reorder-item>`);
+  let writes = 0;
+  const observer = new MutationObserver((records) => { writes += records.length; });
+  observer.observe(item, { attributes: true, attributeFilter: ['role'] });
+  try {
+    item.setAttribute('aria-label', 'Row A');
+    await item.updateComplete;
+    await Promise.resolve();
+    expect(writes).to.equal(0);
+    item.setAttribute('role', 'presentation');
+    item.setAttribute('aria-label', 'Row A again');
+    await item.updateComplete;
+    expect(item.getAttribute('role')).to.equal('listitem');
+  } finally {
+    observer.disconnect();
+  }
+});

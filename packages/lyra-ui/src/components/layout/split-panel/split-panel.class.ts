@@ -221,8 +221,8 @@ function nearlyEqual(left: number | undefined, right: number | undefined): boole
  * @cssprop [--lr-split-panel-divider-hover-color=var(--lr-color-brand)] - Background of `divider`
  *   on hover/keyboard focus, independent of any other component's own hover token that happens to
  *   default to the same shared brand color.
- * @cssprop [--lr-split-panel-divider-active-color=var(--lr-color-border-strong)] - Background of
- *   `divider` while being dragged (or focused and pressed via the keyboard).
+ * @cssprop [--lr-split-panel-divider-active-color=color-mix(in oklab, var(--lr-split-panel-divider-hover-color, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
+ *   Background of `divider` while being dragged.
  * @status stable
  * @since 8.0.0
  */
@@ -842,7 +842,7 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
   }
 
   private onKeyDown(event: KeyboardEvent): void {
-    if (this.disabled || this.availableSize <= 0) return;
+    if (this.disabled || this.availableSize <= 0 || event.altKey || event.ctrlKey || event.metaKey || event.isComposing) return;
     const current = this.positionInPixels;
     if (current == null) return;
 

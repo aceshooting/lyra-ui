@@ -176,6 +176,7 @@ export interface LyraMultiSplitOrientationChangeDetail {
 export interface LyraMultiSplitEventMap {
   'lr-resize-request': CustomEvent<LyraEventDetailSnapshot<LyraMultiSplitResizeDetail>>;
   'lr-resize': CustomEvent<LyraEventDetailSnapshot<LyraMultiSplitResizeDetail>>;
+  'lr-resize-change': CustomEvent<LyraEventDetailSnapshot<LyraMultiSplitResizeDetail>>;
   'lr-multi-split-collapse-change': CustomEvent<LyraMultiSplitCollapseChangeDetail>;
   'lr-toggle-request': CustomEvent<LyraMultiSplitToggleDetail>;
   'lr-toggle': CustomEvent<LyraMultiSplitToggleDetail>;
@@ -256,7 +257,11 @@ export interface LyraMultiSplitEventMap {
  *   consumer sets `sizes` directly. `detail: { sizes }` (`LyraMultiSplitResizeDetail`).
  * @event lr-resize - `detail: { sizes }`, fired on every drag movement that changes sizes and every
  *   keyboard step after `sizes` is assigned. Non-cancelable; not fired when a consumer sets
- *   `sizes` directly. Pointer release persists the settled sizes but emits no additional event.
+ *   `sizes` directly.
+ * @event lr-resize-change - `detail: { sizes }`, fired once after each keyboard step and once on
+ *   pointer release after a drag that changed sizes, right after the settled sizes persist. Like the
+ *   other resize events it bubbles composed, so a listener on an ancestor split should ignore
+ *   events whose `target` is not the split itself.
  * @event lr-multi-split-collapse-change - `detail: { state }` (`LyraMultiSplitCollapseChangeDetail`),
  *   fired whenever the responsive `collapseState` actually transitions between
  *   `'wide'`/`'rail'`/`'floating'` — whether from a breakpoint crossing or an
@@ -276,8 +281,8 @@ export interface LyraMultiSplitEventMap {
  * @event lr-toggle - Non-cancelable notification after an accepted or forced overlay change.
  *   Detail carries the resulting `expanded` state.
  * @event lr-multi-split-constraints-invalid - `detail: LyraMultiSplitConstraintIssueDetail`,
- *   fired once when the configured panel minimums/maximums cannot describe a
- *   layout that fits the track. The splitter rejects that infeasible set for
+ *   fired once per configuration when the configured panel minimums/maximums cannot describe a
+ *   layout that fits the track (resizing the container does not repeat it). The splitter rejects that infeasible set for
  *   interaction and falls back to a normalized percent minimum.
  * @event lr-multi-split-orientation-change - `detail: { orientation }`, fired when an enabled
  *   `orientationBreakpoint` changes the effective resize/layout axis.
@@ -343,6 +348,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-resize-request',
     'lr-resize',
+    'lr-resize-change',
   ]);
 
   // `collapseState` needs a custom accessor (force/auto semantics -- see the
@@ -639,6 +645,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   private panelOwnershipObserverDocument?: Document;
   private panelOwnershipObserverGeneration = 0;
   private constraintIssueKey = '';
+  private constraintConfigVersion = 0;
   private initializedSizes = false;
   private measuredInlineSize = Number.POSITIVE_INFINITY;
   private _effectiveOrientation: LyraOrientation = 'horizontal';
@@ -2202,8 +2209,13 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     if (request.defaultPrevented) return false;
     this.sizes = next;
     this.emit('lr-resize', { sizes: [...this.sizes] });
-    if (commit) this.persist();
+    if (commit) this.settle();
     return true;
+  }
+
+  private settle(): void {
+    this.persist();
+    this.emit('lr-resize-change', { sizes: [...this.sizes] });
   }
 
   private applyDelta(index: number, delta: number, commit: boolean): boolean {
@@ -2332,7 +2344,11 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       appliedDelta: 0,
       acceptedResize: false,
     });
-    divider.setPointerCapture(e.pointerId);
+    try {
+      divider.setPointerCapture(e.pointerId);
+    } catch {
+      // A synthetic or detached pointer cannot be captured; the window listeners still end the drag.
+    }
     if (this.drags.size === 1) {
       this.dragOwnerWindow = ownerWindow;
       ownerWindow.addEventListener('pointermove', this.onPointerMove);
@@ -2416,7 +2432,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     const drag = this.drags.get(e.pointerId);
     if (!drag) return;
     this.drags.delete(e.pointerId);
-    if (e.type === 'pointerup' && drag.acceptedResize) this.persist();
+    if (e.type === 'pointerup' && drag.acceptedResize) this.settle();
     if (this.drags.size === 0) this.removeDragListeners();
   };
 
@@ -2436,7 +2452,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
 
   private onDividerKeyDown = (e: KeyboardEvent, index: number): void => {
     // Same rail/floating-adjacent guard as onPointerDown.
-    if (this.isDividerDisabled(index)) return;
+    if (this.isDividerDisabled(index) || e.altKey || e.ctrlKey || e.metaKey || e.isComposing) return;
     // Mirror the same swap as onPointerMove for horizontal+RTL.
     const rtl = this.effectiveOrientation === 'horizontal' && isRtl(this);
     const forwardKey =
@@ -2464,6 +2480,21 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       if (this.applyDelta(index, -KEYBOARD_STEP, true)) e.preventDefault();
     }
   };
+
+  private dividerName(index: number): string {
+    let label: unknown;
+    try {
+      label = this.dividerLabel?.(index, this.panelCount);
+    } catch {
+      // A throwing callback falls back to the localized default below.
+    }
+    return typeof label === 'string' && label.trim()
+      ? label
+      : this.localize('resizeDivider', undefined, {
+          a: getNumberFormat(this.effectiveLocale).format(index + 1),
+          b: getNumberFormat(this.effectiveLocale).format(index + 2),
+        });
+  }
 
   private dividerValueRange(
     index: number,
@@ -2507,14 +2538,13 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     } else {
       this.removeAttribute('data-effective-orientation');
     }
+    if (changed.has('panelConstraints') || changed.has('min')) this.constraintConfigVersion += 1;
     const constraintResolution = this.resolveConstraintBounds(
       this.getContainerSize()
     );
     const issue = constraintResolution.issue;
     const issueKey = issue
-      ? `${issue.reason}:${issue.panelCount}:${issue.minimumTotal}:${
-          issue.maximumTotal ?? 'unbounded'
-        }`
+      ? `${issue.reason}:${issue.panelCount}:${this.constraintConfigVersion}`
       : '';
     if (issueKey !== this.constraintIssueKey) {
       this.constraintIssueKey = issueKey;
@@ -2815,12 +2845,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       dividers.push(html`<div
         part="divider"
         role="separator"
-        aria-label=${this.dividerLabel
-          ? this.dividerLabel(i, this.panelCount)
-          : this.localize('resizeDivider', undefined, {
-              a: getNumberFormat(this.effectiveLocale).format(i + 1),
-              b: getNumberFormat(this.effectiveLocale).format(i + 2),
-            })}
+        aria-label=${this.dividerName(i)}
         aria-orientation=${this.effectiveOrientation === 'vertical'
           ? 'horizontal'
           : 'vertical'}

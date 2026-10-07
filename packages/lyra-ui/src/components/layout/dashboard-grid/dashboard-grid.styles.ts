@@ -140,7 +140,7 @@ export const styles = css`
   }
 
   [part="resize-handle"]:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-dashboard-grid-resize-handle-hover-bg, var(--lr-color-brand-quiet));
   }
   /* Unlike [part="cell"] above, this handle is a leaf button with nothing slotted inside, so
      :active means only that the resize gesture is under way; pointer capture holds it for the
@@ -148,7 +148,7 @@ export const styles = css`
   [part="resize-handle"]:active {
     background: color-mix(
       in oklab,
-      var(--lr-color-brand-quiet),
+      var(--lr-dashboard-grid-resize-handle-hover-bg, var(--lr-color-brand-quiet)),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }

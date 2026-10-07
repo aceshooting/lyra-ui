@@ -1,8 +1,6 @@
 import { css } from 'lit';
-import { srOnly } from '../../../internal/a11y.js';
 
 export const styles = css`
-  ${srOnly}
   :host {
     display: block;
     /* Query container, so the label-auto rule at the end of this sheet reacts to the bar's own

@@ -270,7 +270,8 @@ only the one beside the pane. `collapse="none"` (the default) is byte-for-byte i
 pre-collapse-feature behavior.
 
 `dividerLabel?: (index: number, panelCount: number) => string` (attribute: false) customizes the
-localized accessible label generated for each auto-inserted divider.
+localized accessible label generated for each auto-inserted divider; a blank result or a throw falls
+back to the localized default.
 
 **Events:** `lr-resize-request` (cancelable; `detail: { sizes }` is the proposed constrained size
 array from a divider drag or keyboard step. Call `preventDefault()` to leave `sizes` and its
@@ -278,8 +279,12 @@ persisted layout unchanged. It is not emitted when a consumer assigns `sizes` di
 keyboard/pointer proposal clamps to the already-current sizes),
 `lr-resize` (non-cancelable; the same `detail: { sizes }`, emitted after an accepted drag movement
 or keyboard step commits. A genuine pointer gesture has one terminal persistence write on
-`pointerup`; no-move, fully clamped, vetoed, canceled, and lost-capture gestures have none. Pointer
-release emits no additional event; direct `sizes` assignments stay silent),
+`pointerup`; no-move, fully clamped, vetoed, canceled, and lost-capture gestures have none; direct
+`sizes` assignments stay silent), `lr-resize-change` (non-cancelable; `detail: { sizes }`, once after each
+keyboard step and once on pointer release after a drag that changed sizes, right after persistence — the
+hook for "save when the drag ends"). All three resize events bubble composed: a listener on an ancestor
+split should ignore events whose `target` is not the split (for example the `lr-resize-request` of an
+`lr-dock-panel` nested in a pane carries `{ extent }`, not `{ sizes }`),
 `lr-multi-split-collapse-change` (`detail: { state: 'wide'|'rail'|'floating' }`, fired only
 on a real `collapse`-state transition, never on every resize/render. It fires *after* the collapsing
 panel is decorated for the new state — its `data-collapse-state` marker, the closed drawer's `hidden`
@@ -294,8 +299,8 @@ preventing the event or making a synchronous reentrant mutation aborts the propo
 `lr-toggle` (non-cancelable; the same detail contains the resulting drawer state) fires after an
 accepted change, or after a responsive transition leaves `floating` and forces `open` to false.
 Forced closes emit no request. Direct `open` writes and no-op dismissals emit neither event,
-`lr-multi-split-constraints-invalid` (`detail: LyraMultiSplitConstraintIssueDetail`, fired once when the configured
-panel minimums/maximums cannot fit the track; the infeasible set is rejected for interaction and a
+`lr-multi-split-constraints-invalid` (`detail: LyraMultiSplitConstraintIssueDetail`, fired once per configuration when the
+configured panel minimums/maximums cannot fit the track; resizing the container does not repeat it; the infeasible set is rejected for interaction and a
 normalized percent minimum is used instead), `lr-multi-split-orientation-change` (`detail: { orientation }`,
 fired only when an enabled `orientationBreakpoint` actually changes `effectiveOrientation`)
 
@@ -500,14 +505,15 @@ spellings are set, the Lyra-prefixed value wins. Constraint values may be length
 
 `--lr-split-panel-divider-hover-color` (default `var(--lr-color-brand)`) is the divider's background
 on hover/keyboard focus. `--lr-split-panel-divider-active-color` (default
-`var(--lr-color-border-strong)`) is its background while being dragged, or focused and pressed via
-the keyboard. Both are independent, component-scoped hooks rather than the bare shared token, so
+a `color-mix()` of the hover color, so the pressed divider deepens like the other splitters) is its
+background while being dragged. Both are independent, component-scoped hooks rather than the bare shared token, so
 retinting this divider does not also retint any other component that happens to default to the same
 color.
 
 Keyboard: focus the divider, then use Left/Right for a horizontal split or Up/Down for a vertical
 split. Each arrow moves one percent of the current allocation; horizontal arrows mirror under RTL.
-`Home` and `End` move to the current `--min` and `--max` bounds. Pointer dragging uses capture and
+`Home` and `End` move to the current `--min` and `--max` bounds; Alt, Ctrl and Meta chords are left to
+the browser. Pointer dragging uses capture and
 cleans up on pointer up, cancellation, capture loss, disconnect, and orientation changes.
 
 **Optional peer deps:** none.
@@ -1001,7 +1007,9 @@ scroller's own event shape, not `lr-virtual-list`'s `lr-virtual-scroll` event
 each, mirrored under RTL). Each shadow is hidden at its corresponding measured edge and uses
 logical positioning, so both cues and gradients mirror under RTL and rotate to the block axis in a
 vertical scroller. Before the first client measurement, both cues are hidden and both optional
-controls are disabled, so server-rendered markup never advertises a false scroll direction.
+controls are disabled, so server-rendered markup never advertises a false scroll direction. A control
+that has focus when it reaches its edge and disables hands focus to the viewport rather than
+dropping it to `<body>`.
 
 **Themeable custom properties:** `--lr-scroller-control-size` (default `var(--lr-size-2rem)`) — the
 previous/next control's box size; the interactive target never shrinks below `--lr-icon-button-size`
@@ -1947,8 +1955,10 @@ contract.
 
 - `items: readonly unknown[] = []` (attribute: false) — the full, non-windowed item collection. JS-only; set via
   a property/lit-html binding (`.items=`), not an HTML attribute. This remains the compatibility
-  source whenever `source` is unset. Its sequence is copied, bounded, and frozen while generic row
-  identities are retained; reassign a new array after sequence changes.
+  source whenever `source` is unset. Its sequence is copied, bounded (the first 10,000 rows; a
+  development warning names the property), and frozen while generic row identities are retained;
+  reassign a new array after sequence changes. Re-committing the same rows re-renders them without
+  moving any row or cancelling a pending `scrollToIndex()` correction.
 - `source?: LyraVirtualListSource` (attribute: false) — a readonly array or a count/index-backed
   `{ readonly count: number; itemAt(index): unknown; keyAt?(index): string | number;
 indexOfKey?(key): number }`. When set it takes precedence over `items`. The indexed form performs
@@ -1957,7 +1967,8 @@ indexOfKey?(key): number }`. When set it takes precedence over `items`. The inde
   for synthetic, paged, or remote collections. `indexOfKey` is required when `active-item-id` should
   target an indexed source: the list never performs a count-sized fallback scan; invalid or
   out-of-range results mean no match. An array source receives the same clone-owned frozen sequence
-  and row-identity contract as `items`; an indexed-source object passes through by identity.
+  and row-identity contract as `items`; an indexed-source object passes through by identity and is
+  not capped, so use one beyond 10,000 rows. `groups` keeps at most 10,000 entries and 50,000 nested values.
 - `renderItem: (item: unknown, index: number) => unknown = () => nothing` (attribute: false) — renders
   one row's content, typically returning a `lit-html` `TemplateResult`. JS-only. The returned value
   is stamped inside `<lr-virtual-list>`'s own shadow root, not the caller's light DOM, so
@@ -2039,7 +2050,8 @@ list's `base` scroll container exposes horizontal scrolling for that explicit op
   `'listitem'` mode.
 - `overscan: number = 6` — extra rows rendered beyond the visible viewport on each side; finite
   values are floored and clamped to 0–100, while non-finite values use the default 6, so an invalid
-  runtime value cannot disable windowing and render the entire collection.
+  runtime value cannot disable windowing and render the entire collection. The row holding focus stays
+  mounted outside this window until focus leaves it, so keyboard scrolling never drops focus to `<body>`.
 - `activeItemId: string | number | '' = ''` (attribute `active-item-id`) — when set and it matches a row's `keyFunction`
   result (compared with `Object.is` against the typed value — attribute values arrive as strings, so
   assign the property directly for a numeric key), that row is smoothly scrolled into view whenever
@@ -3724,8 +3736,9 @@ docked case.
 - `extent: string = '280px'` — the current docked size along the resize axis, as a CSS length.
 - `minExtent: string = '160px'` (attribute `min-extent`) — minimum resize bound, as a CSS length.
 - `maxExtent: string = ''` (attribute `max-extent`) — maximum resize bound. Empty means "no explicit
-  cap": the live extent of the containing element is used instead (falling back to the viewport if
-  there's no parent, e.g. not yet connected). An explicit maximum is still capped to that live
+  cap": the live extent of the containing element is used instead (the shadow host when the panel sits
+  at the top of a shadow root, looking through a slot; falling back to the viewport if there is no
+  container, e.g. not yet connected). An explicit maximum is still capped to that live
   containing extent, and an effective minimum above the maximum is reduced to the maximum, so the
   separator always exposes `min <= now <= max`.
 - `collapsible: boolean = false` (reflected)
@@ -3768,6 +3781,12 @@ resolved in the host's owner realm.
   (non-cancelable; `detail: { expanded }` is
   the accepted built-in-toggle state. Not fired when a consumer assigns `collapsed` directly). Both
   details are fresh readonly/frozen snapshots.
+
+Events bubble and are composed, so a listener on an ancestor (for example an `lr-multi-split` that
+contains this panel and listens for its own `lr-resize-request`) should ignore events whose `target`
+is not the element it listens on. Keyboard: the arrow keys step by 16px and Home/End jump to the
+minimum/maximum extent, each through `lr-resize-request`; Alt, Ctrl and Meta chords are left to the
+browser. Collapsing while focus is in the content or on the handle moves focus to the collapse toggle.
 
 The Lyra-original v9 event migration is mechanical: listen for `lr-resize-input` for live layout
 feedback and `lr-resize-change` for persistence/telemetry instead of the removed `lr-resize` name.
@@ -4598,8 +4617,9 @@ accessibility tree.
 **Slots:** `cell-{cellId}`. **CSS parts:** `base`, `cell`, `empty`, `resize-handle`, `live-region` (an
 `aria-hidden` shadow mirror of the latest spoken message).
 
-`layout` is normalized into an immutable snapshot before rendering. Reads are bounded to the first
-1,000 positions; foreign-realm arrays are accepted; malformed records, hostile accessors, and later
+`layout` is normalized into an immutable snapshot before rendering; assigning the same array again is
+ignored (assign a new array after changes), and a new array with unchanged cell geometry keeps a drag
+or resize in progress. Reads are bounded to the first 1,000 positions; foreign-realm arrays are accepted; malformed records, hostile accessors, and later
 duplicate cell IDs are skipped without discarding valid neighbors. Geometry and min/max constraints
 are finite and consistent, and neither the returned array nor its cells alias caller-owned objects.
 Each admitted `cell.widget` is also copied immediately through the canonical bounded widget-document
@@ -4613,7 +4633,7 @@ attribute for a library-owned node.
 The default content assigns a version-two document created from `cell.widget` to
 `<lr-widget-renderer>.document`; it never uses the legacy `tree` input. Pointer gestures admit only
 the primary button/pointer and ignore controls, links, labels, editable content, and interactive
-roles in the composed path. Keyboard resizing uses physical directions in both LTR and RTL:
+roles in the composed path; the press still propagates, so an open dropdown or popover light-dismisses. Keyboard resizing uses physical directions in both LTR and RTL:
 Right/Down grow and Left/Up shrink, while pointer resizing retains the logical inline-end handle.
 
 In the narrow stacked layout, a cell that currently owns a resize handle keeps at least the shared
@@ -4647,6 +4667,7 @@ draggable/resizable target; set it to `transparent` to opt out of the hover trea
   interfaces used by `LyraDashboardGridEventMap`.
 - `--lr-dashboard-grid-collision-outline-color` — Outline color of a cell whose current drag/resize preview collides with another cell. Default: `var(--lr-color-danger)`.
 - `--lr-dashboard-grid-interaction-shadow` — Box shadow applied during a cell drag or resize. Default: `var(--lr-shadow-m)`.
+- `--lr-dashboard-grid-resize-handle-hover-bg` — Background of `resize-handle` on hover, also mixed deeper for its pressed state. Default: `var(--lr-color-brand-quiet)`.
 
 ## `lr-drilldown-panel`
 
@@ -4764,12 +4785,13 @@ until something else registers it, the same trade `icon-button-register.js` docu
   blank `label`) and later duplicate filter IDs are ignored deterministically. The first 10,000
   definitions and nested collection entries are detached and deeply frozen at assignment; the
   optional Lit `icon` payload retains its rendering identity. Create and reassign a new array after
-  changes. Writing `null` or `undefined` clears the schema; reads remain the canonical non-null
+  changes; reassigning the same array is ignored, so a parent re-render keeps a pending debounced edit. Writing `null` or `undefined` clears the schema; reads remain the canonical non-null
   empty array.
 - `value: LyraFilterBarValue = {}` (attribute: false) — sparse current values keyed by `filterId`.
   Cleared fields are omitted. Reads, writes, event details, and string-array fields are immutable
   snapshots rather than references to caller-owned data, capped at 10,000 record keys and 10,000
-  entries per string-array field. Create and reassign a new record after changes. Writing `null` or
+  entries per string-array field. Create and reassign a new record after changes (the same record is
+  ignored). Writing `null` or
   `undefined` clears the value; reads remain the canonical non-null empty record. Built-in controls
   use strings/string arrays; if an untyped boundary supplies a boolean, `false` is canonical empty
   and omitted while `true` remains set. Custom controls instead use their adapter's `isEmpty` or

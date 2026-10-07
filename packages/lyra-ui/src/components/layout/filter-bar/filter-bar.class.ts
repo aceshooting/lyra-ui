@@ -1,4 +1,4 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import type { LyraDateRangePreset } from '../../forms/date-picker/date-picker.class.js';
 import type { LyraInputType } from '../../forms/input/input.class.js';
@@ -1092,7 +1092,7 @@ export class LyraFilterBar<
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, srOnly, styles];
-  protected static override collectionSupport = collectionSupport;
+  protected static override collectionSupport = eventCollectionSupport;
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-validity-change',
   ]);
@@ -1150,6 +1150,9 @@ export class LyraFilterBar<
 
   private _filters: readonly LyraFilterBarFilterDefinition[] = EMPTY_FILTERS;
   private _value: LyraFilterBarValue = EMPTY_VALUE;
+  /** The last assigned inputs; re-assigning the same reference is a no-op. */
+  private filtersInput?: unknown;
+  private valueInput?: unknown;
   /** The last value passed to the `value` setter, cloned but NOT yet filtered down to the filter
    *  ids known at that moment. `filters`'s setter re-derives `_value` from this (not from the
    *  already-filtered `_value`) so a `value` assignment landing before its matching `filters`
@@ -1174,7 +1177,7 @@ export class LyraFilterBar<
   private schemaAbortController?: AbortController;
 
   /** Host-declared filter definitions, rendered in array order. The first 10,000 definitions and
-   * nested collection entries are deeply snapshotted and frozen; reassign after changing them.
+   * nested collection entries are deeply snapshotted and frozen; assign a new array after changing them (the same array is ignored).
    * `null`/`undefined` is treated as an empty array rather than throwing. Choice options require
    * string value/label data fields; malformed entries are omitted independently. Custom definitions
    * require a callable renderer and adapter. Exceptions thrown by admitted renderers propagate.
@@ -1188,6 +1191,8 @@ export class LyraFilterBar<
     return this._filters as Defs;
   }
   set filters(next: Defs | null | undefined) {
+    if (next === this.filtersInput) return;
+    this.filtersInput = next;
     const old = this._filters;
     // Pinned to the un-narrowed class: inside the class body `Defs` is an unresolved type
     // parameter, which leaves it opaque to every concrete array below -- the same reason
@@ -1221,8 +1226,9 @@ export class LyraFilterBar<
         return false;
       }
     }).map((definition) => {
-      if (!isChoiceDefinition(definition)) return definition;
-      const options = definition.options.filter((option) => {
+      const choices = (definition as { options?: unknown }).options;
+      if (choices === undefined) return definition;
+      const options = (Array.isArray(choices) ? choices : []).filter((option) => {
         try {
           return option !== null && typeof option === 'object'
             && typeof Object.getOwnPropertyDescriptor(option, 'value')?.value === 'string'
@@ -1244,7 +1250,7 @@ export class LyraFilterBar<
   /** The current value of every filter -- see the class doc's serialization contract. Reads and
    *  writes clone and freeze the record and each string-array field, bounded to 10,000 keys and
    *  10,000 array entries, so mutations never affect this component's state or a subsequent
-   *  `lr-input` detail. Reassign after changes. `null`/`undefined` writes clear to the canonical
+   *  `lr-input` detail. Assign a new record after changes (the same record is ignored). `null`/`undefined` writes clear to the canonical
    *  empty record while reads stay non-null.
    *
    *  `LyraFilterBarValueFor<Defs>` narrows each key to the value type the matching entry in
@@ -1256,6 +1262,8 @@ export class LyraFilterBar<
     return cloneFilterValue(this._value) as LyraFilterBarValueFor<Defs>;
   }
   set value(next: LyraFilterBarValueFor<Defs> | null | undefined) {
+    if (next === this.valueInput) return;
+    this.valueInput = next;
     const old = this._value;
     // Pinned to the un-narrowed class -- see the `filters` setter's identical note.
     const widened = next as LyraFilterBarValue | null | undefined;

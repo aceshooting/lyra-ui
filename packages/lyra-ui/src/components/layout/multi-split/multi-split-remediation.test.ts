@@ -227,3 +227,77 @@ it('cancels pending native gutter observation before disconnect and restores liv
     split.remove();
   }
 });
+
+describe('multi-split divider contract', () => {
+  const split = async (extra = ''): Promise<{ element: LyraMultiSplit; divider: HTMLElement }> => {
+    const element = await fixture<LyraMultiSplit>(html`<lr-multi-split style="inline-size:600px;block-size:200px" .sizes=${[50, 50]}
+      ${extra}><div>A</div><div>B</div></lr-multi-split>`);
+    await element.updateComplete;
+    return { element, divider: element.shadowRoot!.querySelector<HTMLElement>('[part="divider"]')! };
+  };
+
+  it('leaves modified arrows to the browser', async () => {
+    const { element, divider } = await split();
+    for (const init of [{ altKey: true }, { ctrlKey: true }, { metaKey: true }]) {
+      const event = new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true, ...init });
+      divider.dispatchEvent(event);
+      expect(event.defaultPrevented, JSON.stringify(init)).to.equal(false);
+    }
+    expect(element.sizes).to.deep.equal([50, 50]);
+  });
+
+  it('survives a pointerdown whose pointer cannot be captured', async () => {
+    const { element, divider } = await split();
+    const down = (pointerId: number): void => {
+      divider.dispatchEvent(new PointerEvent('pointerdown', { pointerId, isPrimary: true, button: 0, clientX: 300, bubbles: true }));
+    };
+    down(99);
+    window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 99 }));
+    down(100);
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 100, clientX: 360 }));
+    window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 100 }));
+    expect(element.sizes[0], 'a later drag still resizes').to.be.greaterThan(50);
+  });
+
+  it('settles a keyboard step and a drag release with lr-resize-change', async () => {
+    const { element, divider } = await split();
+    const settled: number[][] = [];
+    element.addEventListener('lr-resize-change', (event) => settled.push([...(event as CustomEvent<{ sizes: number[] }>).detail.sizes]));
+    divider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    expect(settled.length).to.equal(1);
+    divider.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 7, isPrimary: true, button: 0, clientX: 300, bubbles: true }));
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 7, clientX: 340 }));
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 7, clientX: 380 }));
+    expect(settled.length, 'no settle event while the drag is in flight').to.equal(1);
+    window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 7 }));
+    expect(settled.length).to.equal(2);
+    expect(settled[1]).to.deep.equal([...element.sizes]);
+  });
+
+  it('names a divider with the localized default when dividerLabel returns a blank string or throws', async () => {
+    const { element, divider } = await split();
+    const defaultName = divider.getAttribute('aria-label');
+    for (const label of [() => '', () => '   ', () => { throw new Error('label'); }]) {
+      element.dividerLabel = label;
+      await element.updateComplete;
+      expect(element.shadowRoot!.querySelector('[part="divider"]')!.getAttribute('aria-label')).to.equal(defaultName);
+    }
+    element.dividerLabel = (index) => `Divider ${index}`;
+    await element.updateComplete;
+    expect(element.shadowRoot!.querySelector('[part="divider"]')!.getAttribute('aria-label')).to.equal('Divider 0');
+  });
+
+  it('reports infeasible pixel constraints once per configuration, not once per container size', async () => {
+    const element = await fixture<LyraMultiSplit>(html`<lr-multi-split style="inline-size:600px;block-size:200px"
+      .panelConstraints=${[{ minPx: 400 }, { minPx: 400 }]}><div>A</div><div>B</div></lr-multi-split>`);
+    let issues = 0;
+    element.addEventListener('lr-multi-split-constraints-invalid', () => { issues += 1; });
+    await element.updateComplete;
+    for (const width of [550, 500, 450]) {
+      element.style.inlineSize = `${width}px`;
+      await waitUntil(() => element.getBoundingClientRect().width <= width + 1);
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    }
+    expect(issues).to.be.at.most(1);
+  });
+});

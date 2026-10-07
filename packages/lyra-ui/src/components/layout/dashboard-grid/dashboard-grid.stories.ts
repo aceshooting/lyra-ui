@@ -114,7 +114,7 @@ export const ThemedInteractionElevation: Story = {
     docs: {
       description: {
         story:
-          "Start dragging or resizing a cell to see a component-scoped --lr-dashboard-grid-interaction-shadow override.",
+          "Start dragging or resizing a cell to see a component-scoped --lr-dashboard-grid-interaction-shadow override, and hover a resize handle to see --lr-dashboard-grid-resize-handle-hover-bg.",
       },
     },
   },
@@ -124,6 +124,7 @@ export const ThemedInteractionElevation: Story = {
         width:100%;
         --lr-dashboard-grid-interaction-shadow:
           0 0 var(--lr-space-xs) var(--lr-space-2xs) var(--lr-color-brand);
+        --lr-dashboard-grid-resize-handle-hover-bg: var(--lr-color-warning-quiet);
       "
       cells-draggable
       cells-resizable

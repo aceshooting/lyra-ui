@@ -85,14 +85,6 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  override attributeChangedCallback(
-    name: string,
-    oldValue: string | null,
-    newValue: string | null
-  ): void {
-    super.attributeChangedCallback(name, oldValue, newValue);
-  }
-
   private readonly reorderInternals = attachInternalsSafely(this);
   private readonly moveUpLabelId = nextId('reorder-move-up');
   private readonly moveDownLabelId = nextId('reorder-move-down');
@@ -295,7 +287,7 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
     if (changed.has('value')) {
       (this.owner as Partial<ReorderIdentityOwner> | null)?.[reorderIdentityChange]?.(this);
     }
-    this.setAttribute('role', 'listitem');
+    if (this.getAttribute('role') !== 'listitem') this.setAttribute('role', 'listitem');
   }
 
   override render(): TemplateResult {

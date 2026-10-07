@@ -868,15 +868,15 @@ it('visibly changes the divider on hover and press', async () => {
   element.shadowRoot!.append(probe);
   probe.style.color = 'var(--lr-color-brand)';
   const brand = getComputedStyle(probe).color;
-  probe.style.color = 'var(--lr-color-border-strong)';
-  const borderStrong = getComputedStyle(probe).color;
+  probe.style.color = 'color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))';
+  const pressed = getComputedStyle(probe).color;
   probe.remove();
   try {
     await hoverUntilMatched(handle, 'divider never reported :hover');
     await waitUntil(() => getComputedStyle(handle).backgroundColor === brand, 'divider background never eased to the hover colour');
     expect(getComputedStyle(handle).backgroundColor).to.not.equal(resting);
     await sendMouse({ type: 'down' });
-    await waitUntil(() => getComputedStyle(handle).backgroundColor === borderStrong, 'divider background never eased to the pressed colour');
+    await waitUntil(() => getComputedStyle(handle).backgroundColor === pressed, 'divider background never eased to the pressed colour');
     await sendMouse({ type: 'up' });
   } finally {
     await resetMouse();

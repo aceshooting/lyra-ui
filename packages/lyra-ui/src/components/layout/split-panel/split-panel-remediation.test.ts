@@ -1,4 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './split-panel.js';
 import type { LyraSplitPanel } from './split-panel.class.js';
 
@@ -35,3 +36,25 @@ for (const primary of ['start', 'end'] as const) {
     });
   }
 }
+
+describe('split-panel divider keyboard and paint', () => {
+  it('leaves modified arrows to the browser', async () => {
+    const element = await fixture<LyraSplitPanel>(html`<lr-split-panel position="40" style="inline-size:400px;block-size:100px"></lr-split-panel>`);
+    await waitUntil(() => element.positionInPixels > 0);
+    const divider = element.shadowRoot!.querySelector<HTMLElement>('[part~="divider"]')!;
+    for (const init of [{ altKey: true }, { ctrlKey: true }, { metaKey: true }]) {
+      const event = new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true, ...init });
+      divider.dispatchEvent(event);
+      expect(event.defaultPrevented, JSON.stringify(init)).to.equal(false);
+    }
+    expect(element.position).to.equal(40);
+  });
+
+  it('tints a keyboard-focused divider with the hover color', async () => {
+    const element = await fixture<LyraSplitPanel>(html`<lr-split-panel
+      style="inline-size:400px;block-size:100px;--lr-split-panel-divider-hover-color: rgb(70, 80, 90)"></lr-split-panel>`);
+    const divider = element.shadowRoot!.querySelector<HTMLElement>('[part~="divider"]')!;
+    await focusByKeyboard(divider);
+    await waitUntil(() => getComputedStyle(divider).backgroundColor === 'rgb(70, 80, 90)', 'focus-visible divider paint');
+  });
+});
